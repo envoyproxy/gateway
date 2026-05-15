@@ -14,12 +14,14 @@ import (
 	"time"
 
 	perr "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -68,6 +70,8 @@ func BuildBTPRoutingTypeIndex(
 	btps []*egv1a1.BackendTrafficPolicy,
 	routes []client.Object,
 	gateways []*GatewayContext,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	namespaceLookup func(string) *corev1.Namespace,
 ) *BTPRoutingTypeIndex {
 	idx := &BTPRoutingTypeIndex{
 		routeRuleLevel: make(map[btpRoutingKey]*egv1a1.RoutingType),
@@ -87,8 +91,15 @@ func BuildBTPRoutingTypeIndex(
 		if btp.Spec.RoutingType == nil {
 			continue
 		}
-
-		refs := getPolicyTargetRefs(btp.Spec.PolicyTargetReferences, allTargets, btp.Namespace)
+		refs := resolvePolicyTargets(
+			btp.Spec.PolicyTargetReferences,
+			allTargets,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
+			btp.Namespace,
+			namespaceLookup,
+		)
 		for _, ref := range refs {
 			kind := string(ref.Kind)
 			key := btpRoutingKey{
@@ -248,6 +259,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		SectionIndex: make(map[types.NamespacedName]sets.Set[string], gatewayMapSize),
 	}
 
+	policyCopies := backendTrafficPolicyCopiesWithStatusDeepCopy(backendTrafficPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
 
 	// Translate
@@ -257,18 +270,18 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// 4. Finally, the policies targeting Gateways
 
 	// Build gateway policy maps, which are needed when processing the policies targeting xRoutes.
-	t.buildGatewayPolicyMap(backendTrafficPolicies, gateways, gatewayMap, gatewayPolicyMap)
+	t.buildGatewayPolicyMap(backendTrafficPolicies, gateways, gatewayMap, gatewayPolicyMap, resources.ReferenceGrants)
 
 	// Process the policies targeting RouteRules
-	for _, currPolicy := range backendTrafficPolicies {
+	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
+		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
-			// If the target is not a gateway, then it's an xRoute. If the section name is defined, then it's a route rule.
-			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
+			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -280,15 +293,21 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	}
 
 	// Process the policies targeting Routes
-	for _, currPolicy := range backendTrafficPolicies {
+	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
+		targetRefs := resolvePolicyTargets(
+			currPolicy.Spec.PolicyTargetReferences,
+			routes,
+			resources.ReferenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace)
 		for _, currTarget := range targetRefs {
-			// If the target is not a gateway, then it's an xRoute. If the section name is not defined, then it's a route.
-			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
+			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -300,15 +319,15 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	}
 
 	// Process the policies targeting Listeners
-	for _, currPolicy := range backendTrafficPolicies {
+	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
+		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
-			// If the target is a gateway and the section name is defined, then it's a listener.
-			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
+			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -319,15 +338,21 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	}
 
 	// Process the policies targeting Gateways
-	for _, currPolicy := range backendTrafficPolicies {
+	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
+		targetRefs := resolvePolicyTargets(
+			currPolicy.Spec.PolicyTargetReferences,
+			gateways,
+			resources.ReferenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace)
 		for _, currTarget := range targetRefs {
-			// If the target is a gateway and the section name is not defined, then it's a gateway.
-			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
+			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -351,15 +376,23 @@ func (t *Translator) buildGatewayPolicyMap(
 	gateways []*GatewayContext,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
 ) {
 	for _, currPolicy := range backendTrafficPolicies {
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
+		targetRefs := resolvePolicyTargets(
+			currPolicy.Spec.PolicyTargetReferences,
+			gateways,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == resource.KindGateway {
 				// Check if the gateway exists
 				key := types.NamespacedName{
 					Name:      string(currTarget.Name),
-					Namespace: currPolicy.Namespace,
+					Namespace: string(currTarget.Namespace),
 				}
 				gateway, ok := gatewayMap[key]
 				if !ok {
@@ -397,14 +430,14 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
 	policy *egv1a1.BackendTrafficPolicy,
-	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	currTarget policyTargetReferenceWithSectionName,
 ) {
 	var (
 		targetedRoute RouteContext
 		resolveErr    *status.PolicyResolveError
 	)
 
-	targetedRoute, resolveErr = resolveBackendTrafficPolicyRouteTargetRef(policy, currTarget, routeMap)
+	targetedRoute, resolveErr = resolveBackendTrafficPolicyRouteTargetRef(currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the BackendTrafficPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -568,7 +601,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	key := policyTargetRouteKey{
 		Kind:      string(currTarget.Kind),
 		Name:      string(currTarget.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(currTarget.Namespace),
 	}
 	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
@@ -590,7 +623,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	gatewayRouteMap *GatewayPolicyRouteMap,
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	policy *egv1a1.BackendTrafficPolicy,
-	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	currTarget policyTargetReferenceWithSectionName,
 ) {
 	var (
 		targetedGateway *GatewayContext
@@ -598,7 +631,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	)
 
 	// Negative statuses have already been assigned so it's safe to skip
-	targetedGateway, resolveErr = resolveBackendTrafficPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+	targetedGateway, resolveErr = resolveBackendTrafficPolicyGatewayTargetRef(currTarget, gatewayMap)
 	if targetedGateway == nil {
 		return
 	}
@@ -664,14 +697,13 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 }
 
 func resolveBackendTrafficPolicyGatewayTargetRef(
-	policy *egv1a1.BackendTrafficPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(target.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(target.Namespace),
 	}
 	gateway, ok := gateways[key]
 
@@ -728,15 +760,14 @@ func resolveBackendTrafficPolicyGatewayTargetRef(
 }
 
 func resolveBackendTrafficPolicyRouteTargetRef(
-	policy *egv1a1.BackendTrafficPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
 ) (RouteContext, *status.PolicyResolveError) {
 	// Check if the route exists
 	key := policyTargetRouteKey{
 		Kind:      string(target.Kind),
 		Name:      string(target.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(target.Namespace),
 	}
 
 	route, ok := routes[key]
@@ -789,7 +820,7 @@ func resolveBackendTrafficPolicyRouteTargetRef(
 func (t *Translator) translateBackendTrafficPolicyForRoute(
 	policy *egv1a1.BackendTrafficPolicy,
 	route RouteContext,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 	policyTargetGatewayNN *types.NamespacedName,
 	policyTargetListener *gwapiv1.SectionName,
@@ -815,7 +846,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 
 func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	policy, parentPolicy *egv1a1.BackendTrafficPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	policyTargetGatewayNN types.NamespacedName, policyTargetListener *gwapiv1.SectionName, route RouteContext,
 	xdsIR resource.XdsIRMap,
 ) error {
@@ -876,7 +907,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	tf *ir.TrafficFeatures, errs error,
 	policy *egv1a1.BackendTrafficPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	x *ir.Xds,
 	policyTargetListener *gwapiv1.SectionName,
 ) {
@@ -989,9 +1020,6 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 					r.Traffic.Timeout = localTo
 				}
 
-				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
-				r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-
 				if policy.Spec.UseClientProtocol != nil {
 					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
@@ -1029,11 +1057,13 @@ func (t *Translator) mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.Bac
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.TrafficFeatures, error) {
 	var (
 		rl          *ir.RateLimit
+		bl          *ir.BandwidthLimit
 		lb          *ir.LoadBalancer
 		pp          *ir.ProxyProtocol
 		hc          *ir.HealthCheck
 		cb          *ir.CircuitBreaker
 		fi          *ir.FaultInjection
+		ac          *ir.AdmissionControl
 		to          *ir.Timeout
 		ka          *ir.TCPKeepalive
 		rt          *ir.Retry
@@ -1053,6 +1083,12 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 			errs = errors.Join(errs, err)
 		}
 	}
+	if policy.Spec.BandwidthLimit != nil {
+		if bl, err = buildBandwidthLimit(policy.Spec.BandwidthLimit); err != nil {
+			err = perr.WithMessage(err, "BandwidthLimit")
+			errs = errors.Join(errs, err)
+		}
+	}
 	if lb, err = buildLoadBalancer(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
@@ -1065,6 +1101,9 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 	}
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
+	}
+	if policy.Spec.AdmissionControl != nil {
+		ac = t.buildAdmissionControl(policy)
 	}
 	if ka, err = buildTCPKeepAlive(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "TCPKeepalive")
@@ -1114,16 +1153,23 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		err = perr.WithMessage(err, "RequestBuffer")
 		errs = errors.Join(errs, err)
 	}
+	if rb != nil && len(dp) > 0 {
+		err = errors.New("requestBuffer cannot be used together with decompressor")
+		err = perr.WithMessage(err, "RequestBuffer")
+		errs = errors.Join(errs, err)
+	}
 
 	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
 		RateLimit:         rl,
+		BandwidthLimit:    bl,
 		LoadBalancer:      lb,
 		ProxyProtocol:     pp,
 		HealthCheck:       hc,
 		CircuitBreaker:    cb,
 		FaultInjection:    fi,
+		AdmissionControl:  ac,
 		TCPKeepalive:      ka,
 		Retry:             rt,
 		BackendConnection: bc,
@@ -1171,7 +1217,7 @@ func buildBackendMetrics(metrics *egv1a1.BackendMetrics) *ir.BackendMetrics {
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
-	policy *egv1a1.BackendTrafficPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	policy *egv1a1.BackendTrafficPolicy, target policyTargetReferenceWithSectionName,
 	gateway *GatewayContext, xdsIR resource.XdsIRMap,
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy)
@@ -1279,9 +1325,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				r.Traffic.Timeout = localTo
 			}
 
-			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
-			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-
 			if policy.Spec.UseClientProtocol != nil {
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
 			}
@@ -1338,6 +1381,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	// EG uses the first rule without clientSelectors as the default route-level
 	// limit. If no such rule is found, EG uses a default limit of uint32 max.
 	var defaultLimit *ir.RateLimitValue
+	var defaultXRateLimitOption *egv1a1.XRateLimitHeadersOption
 	for _, rule := range local.Rules {
 		if len(rule.ClientSelectors) == 0 {
 			if defaultLimit != nil {
@@ -1347,6 +1391,8 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 				Requests: rule.Limit.Requests,
 				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 			}
+			// Capture the xRateLimit setting for the default bucket
+			defaultXRateLimitOption = rule.XRateLimitHeaders
 		}
 	}
 	// If no rule without clientSelectors is found, use uint32 max as the default
@@ -1379,7 +1425,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 			continue
 		}
 
-		irRule, err = buildRateLimitRule(rule)
+		irRule, err = buildRateLimitRule(&rule)
 		if err != nil {
 			return nil, err
 		}
@@ -1390,8 +1436,9 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 
 	rateLimit := &ir.RateLimit{
 		Local: &ir.LocalRateLimit{
-			Default: *defaultLimit,
-			Rules:   irRules,
+			Default:                 *defaultLimit,
+			Rules:                   irRules,
+			DefaultXRateLimitOption: defaultXRateLimitOption,
 		},
 	}
 
@@ -1416,7 +1463,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	irRules := rateLimit.Global.Rules
 	var err error
 	for i, rule := range global.Rules {
-		irRules[i], err = buildRateLimitRule(rule)
+		irRules[i], err = buildRateLimitRule(&rule)
 		if err != nil {
 			return nil, err
 		}
@@ -1456,16 +1503,17 @@ func (t *Translator) buildBothRateLimit(policy *egv1a1.BackendTrafficPolicy) (*i
 	return rl, nil
 }
 
-func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
+func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	irRule := &ir.RateLimitRule{
 		Limit: ir.RateLimitValue{
 			Requests: rule.Limit.Requests,
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
-		HeaderMatches: make([]*ir.StringMatch, 0),
-		MethodMatches: make([]*ir.StringMatch, 0),
-		Shared:        rule.Shared,
-		ShadowMode:    rule.ShadowMode,
+		HeaderMatches:    make([]*ir.StringMatch, 0),
+		MethodMatches:    make([]*ir.StringMatch, 0),
+		Shared:           rule.Shared,
+		ShadowMode:       rule.ShadowMode,
+		XRateLimitOption: rule.XRateLimitHeaders,
 	}
 
 	for _, match := range rule.ClientSelectors {
@@ -1663,6 +1711,73 @@ func int64ToUint32(in int64) (uint32, bool) {
 	return 0, false
 }
 
+func buildBandwidthLimit(bandwidth *egv1a1.BandwidthLimitSpec) (*ir.BandwidthLimit, error) {
+	if bandwidth == nil {
+		return nil, nil
+	}
+
+	bl := &ir.BandwidthLimit{}
+
+	if bandwidth.Request != nil {
+		bytes, ok := bandwidth.Request.Limit.Value.AsInt64()
+		if !ok {
+			return nil, fmt.Errorf("request limit value must be convertible to an int64")
+		}
+		if bytes < 0 {
+			return nil, fmt.Errorf("request limit value must be positive")
+		}
+		kibps, err := bandwidthToKibps(uint64(bytes), bandwidth.Request.Limit.Unit)
+		if err != nil {
+			return nil, fmt.Errorf("request: %w", err)
+		}
+		bl.Request = &ir.BandwidthLimitConfig{
+			LimitKibps: kibps,
+		}
+	}
+	if bandwidth.Response != nil {
+		bytes, ok := bandwidth.Response.Limit.Value.AsInt64()
+		if !ok {
+			return nil, fmt.Errorf("response limit value must be convertible to an int64")
+		}
+		if bytes < 0 {
+			return nil, fmt.Errorf("response limit value must be positive")
+		}
+		kibps, err := bandwidthToKibps(uint64(bytes), bandwidth.Response.Limit.Unit)
+		if err != nil {
+			return nil, fmt.Errorf("response: %w", err)
+		}
+		bl.Response = &ir.BandwidthLimitConfig{
+			LimitKibps: kibps,
+		}
+
+		if bandwidth.Response.ResponseTrailers != nil {
+			bl.Response.ResponseTrailers = &ir.BandwidthLimitResponseTrailers{
+				Prefix: bandwidth.Response.ResponseTrailers.Prefix,
+			}
+		}
+	}
+	return bl, nil
+}
+
+// bandwidthToKibps converts bytes-per-unit to kibibytes-per-second (KiB/s).
+// Returns an error if the result is below Envoy's minimum of 1 KiB/s.
+func bandwidthToKibps(limit uint64, unit egv1a1.BandwidthLimitUnit) (uint64, error) {
+	var secondsPerUnit uint64
+	switch unit {
+	case egv1a1.BandwidthLimitUnitMinute:
+		secondsPerUnit = 60
+	case egv1a1.BandwidthLimitUnitHour:
+		secondsPerUnit = 3600
+	default: // Second
+		secondsPerUnit = 1
+	}
+	kibps := limit / (secondsPerUnit * 1024)
+	if kibps == 0 {
+		return 0, fmt.Errorf("bandwidth limit of %d bytes per %s is below the minimum of 1 KiB/s", limit, unit)
+	}
+	return kibps, nil
+}
+
 func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *ir.FaultInjection {
 	var (
 		fi  *ir.FaultInjection
@@ -1690,7 +1805,7 @@ func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *i
 			}
 
 			if policy.Spec.FaultInjection.Abort.GrpcStatus != nil {
-				fi.Abort.GrpcStatus = policy.Spec.FaultInjection.Abort.GrpcStatus
+				fi.Abort.GrpcStatus = new(uint32(*policy.Spec.FaultInjection.Abort.GrpcStatus))
 			}
 			if policy.Spec.FaultInjection.Abort.HTTPStatus != nil {
 				fi.Abort.HTTPStatus = policy.Spec.FaultInjection.Abort.HTTPStatus
@@ -1698,6 +1813,51 @@ func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *i
 		}
 	}
 	return fi
+}
+
+func (t *Translator) buildAdmissionControl(policy *egv1a1.BackendTrafficPolicy) *ir.AdmissionControl {
+	if policy.Spec.AdmissionControl == nil {
+		return nil
+	}
+
+	ac := &ir.AdmissionControl{
+		MinSuccessRate:      policy.Spec.AdmissionControl.MinSuccessRate,
+		RejectionAggression: policy.Spec.AdmissionControl.RejectionAggression,
+		MinRequestRate:      policy.Spec.AdmissionControl.MinRequestRate,
+		MaxRejectionPercent: policy.Spec.AdmissionControl.MaxRejectionPercent,
+	}
+
+	if policy.Spec.AdmissionControl.SamplingWindow != nil {
+		if d, err := time.ParseDuration(string(*policy.Spec.AdmissionControl.SamplingWindow)); err == nil {
+			ac.SamplingWindow = &metav1.Duration{Duration: d}
+		}
+	}
+
+	if policy.Spec.AdmissionControl.SuccessCriteria != nil {
+		ac.SuccessCriteria = &ir.AdmissionControlSuccessCriteria{}
+
+		if policy.Spec.AdmissionControl.SuccessCriteria.HTTP != nil {
+			httpStatuses := make([]int32, len(policy.Spec.AdmissionControl.SuccessCriteria.HTTP.StatusCodes))
+			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.HTTP.StatusCodes {
+				httpStatuses[i] = int32(s)
+			}
+			ac.SuccessCriteria.HTTP = &ir.HTTPSuccessCriteria{
+				StatusCodes: httpStatuses,
+			}
+		}
+
+		if policy.Spec.AdmissionControl.SuccessCriteria.GRPC != nil {
+			grpcStatuses := make([]string, len(policy.Spec.AdmissionControl.SuccessCriteria.GRPC.StatusCodes))
+			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.GRPC.StatusCodes {
+				grpcStatuses[i] = string(s)
+			}
+			ac.SuccessCriteria.GRPC = &ir.GRPCSuccessCriteria{
+				StatusCodes: grpcStatuses,
+			}
+		}
+	}
+
+	return ac
 }
 
 func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
@@ -1796,6 +1956,7 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 				Name:     defaultResponseOverrideRuleName(policy, index),
 				Match:    match,
 				Redirect: redirect,
+				Source:   sourceFromAPI(ro.Source),
 			})
 		} else {
 			response := &ir.CustomResponse{
@@ -1834,6 +1995,7 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 				Name:     defaultResponseOverrideRuleName(policy, index),
 				Match:    match,
 				Response: response,
+				Source:   sourceFromAPI(ro.Source),
 			})
 		}
 	}
@@ -1921,6 +2083,13 @@ func (t *Translator) resolveLocalObjectRefsInPolicy(policy *egv1a1.BackendTraffi
 		}
 	}
 	return nil
+}
+
+func sourceFromAPI(s *egv1a1.ResponseOverrideSource) egv1a1.ResponseOverrideSource {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {
@@ -2040,4 +2209,16 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	}
 
 	return &statName
+}
+
+// backendTrafficPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func backendTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.BackendTrafficPolicy) []*egv1a1.BackendTrafficPolicy {
+	copies := make([]*egv1a1.BackendTrafficPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

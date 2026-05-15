@@ -28,6 +28,7 @@ metadata:
 spec:
   parentRefs:
     - name: same-namespace
+    - name: ratelimit-gateway
   rules:
     - matches:
         - path:
@@ -36,3 +37,27 @@ spec:
       backendRefs:
         - name: infra-backend-v1
           port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ratelimit-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http-1
+      port: 80
+      protocol: HTTP
+      hostname: app1.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-2
+      port: 80
+      protocol: HTTP
+      hostname: app2.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+---

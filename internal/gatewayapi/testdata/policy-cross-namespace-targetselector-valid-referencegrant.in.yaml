@@ -1,0 +1,198 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: policy-target-a
+    name: target-gateway
+    labels:
+      policy: selected
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: policy-target-selector
+    name: selector-gateway
+    labels:
+      policy: namespace-selector
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: policy-target-a
+    name: target-route
+  spec:
+    parentRefs:
+    - name: target-gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /
+      backendRefs:
+      - name: target-service
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: policy-target-selector
+    name: selector-route
+  spec:
+    parentRefs:
+    - name: selector-gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /
+      backendRefs:
+      - name: selector-service
+        port: 8080
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: policy-ns
+    name: cross-ns-policy
+  spec:
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespaces:
+        from: All
+      matchLabels:
+        policy: selected
+    useClientProtocol: true
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: policy-ns
+    name: cross-ns-selector-policy
+  spec:
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            team: blue
+      matchLabels:
+        policy: namespace-selector
+    cors:
+      allowOrigins:
+      - https://example.com
+      allowMethods:
+      - GET
+      allowHeaders:
+      - x-example
+      exposeHeaders:
+      - x-exposed
+      maxAge: 1000s
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: policy-target-a
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: policy-target-selector
+    labels:
+      team: blue
+referenceGrants:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: ReferenceGrant
+  metadata:
+    namespace: policy-target-a
+    name: allow-btp
+  spec:
+    from:
+    - group: gateway.envoyproxy.io
+      kind: BackendTrafficPolicy
+      namespace: policy-ns
+    to:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: target-gateway
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: ReferenceGrant
+  metadata:
+    namespace: policy-target-selector
+    name: allow-selector-btp
+  spec:
+    from:
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: policy-ns
+    to:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: selector-gateway
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: policy-target-a
+    name: target-service
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: policy-target-selector
+    name: selector-service
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-target-service
+    namespace: policy-target-a
+    labels:
+      kubernetes.io/service-name: target-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-selector-service
+    namespace: policy-target-selector
+    labels:
+      kubernetes.io/service-name: selector-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.4.4
+    conditions:
+      ready: true

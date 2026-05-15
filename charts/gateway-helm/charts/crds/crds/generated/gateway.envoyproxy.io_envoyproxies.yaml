@@ -450,6 +450,8 @@ spec:
 
                   - envoy.filters.http.ratelimit
 
+                  - envoy.filters.http.bandwidth_limit
+
                   - envoy.filters.http.grpc_web
 
                   - envoy.filters.http.grpc_stats
@@ -457,6 +459,8 @@ spec:
                   - envoy.filters.http.credential_injector
 
                   - envoy.filters.http.compressor
+
+                  - envoy.filters.http.decompressor
 
                   - envoy.filters.http.dynamic_forward_proxy
 
@@ -492,6 +496,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
@@ -524,6 +529,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
@@ -554,6 +560,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
@@ -1121,7 +1128,6 @@ spec:
                                       procMount denotes the type of proc mount to use for the containers.
                                       The default value is Default which uses the container runtime defaults for
                                       readonly paths and masked paths.
-                                      This requires the ProcMountType feature flag to be enabled.
                                       Note that this field cannot be set when spec.os.name is windows.
                                     type: string
                                   readOnlyRootFilesystem:
@@ -3722,7 +3728,7 @@ spec:
                                         A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
                                         The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                                         The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-                                        The volume will be mounted read-only (ro) and non-executable files (noexec).
+                                        The volume will be mounted read-only (ro).
                                         Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                                         The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                                       properties:
@@ -3896,8 +3902,7 @@ spec:
                                       description: |-
                                         portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
                                         Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-                                        are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-                                        is on.
+                                        are redirected to the pxd.portworx.com CSI driver.
                                       properties:
                                         fsType:
                                           description: |-
@@ -5130,7 +5135,6 @@ spec:
                                       procMount denotes the type of proc mount to use for the containers.
                                       The default value is Default which uses the container runtime defaults for
                                       readonly paths and masked paths.
-                                      This requires the ProcMountType feature flag to be enabled.
                                       Note that this field cannot be set when spec.os.name is windows.
                                     type: string
                                   readOnlyRootFilesystem:
@@ -6443,7 +6447,6 @@ spec:
                                         procMount denotes the type of proc mount to use for the containers.
                                         The default value is Default which uses the container runtime defaults for
                                         readonly paths and masked paths.
-                                        This requires the ProcMountType feature flag to be enabled.
                                         Note that this field cannot be set when spec.os.name is windows.
                                       type: string
                                     readOnlyRootFilesystem:
@@ -9282,7 +9285,7 @@ spec:
                                         A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
                                         The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                                         The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-                                        The volume will be mounted read-only (ro) and non-executable files (noexec).
+                                        The volume will be mounted read-only (ro).
                                         Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                                         The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                                       properties:
@@ -9456,8 +9459,7 @@ spec:
                                       description: |-
                                         portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
                                         Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-                                        are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-                                        is on.
+                                        are redirected to the pxd.portworx.com CSI driver.
                                       properties:
                                         fsType:
                                           description: |-
@@ -11834,8 +11836,9 @@ spec:
                                                         type: array
                                                       hostname:
                                                         description: |-
-                                                          Hostname defines the HTTP host that will be requested during health checking.
-                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                          Host selection uses this order: this field, the associated Backend endpoint
+                                                          hostname if available, then the effective Route hostname.
                                                         maxLength: 253
                                                         minLength: 1
                                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -12102,6 +12105,8 @@ spec:
                                                       of hosts in a cluster that can
                                                       be ejected.
                                                     format: int32
+                                                    maximum: 100
+                                                    minimum: 0
                                                     type: integer
                                                   splitExternalLocalOriginErrors:
                                                     default: false
@@ -12588,12 +12593,17 @@ spec:
                                               rule: 'self.type == ''ConsistentHash''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
-                                            - message: ZoneAware routing is not supported
-                                                for BackendUtilization and DynamicModule
-                                                load balancers.
-                                              rule: 'self.type in [''BackendUtilization'',
-                                                ''DynamicModule''] ? !has(self.zoneAware)
+                                            - message: PreferLocal zone-aware routing
+                                                is not currently supported for BackendUtilization
+                                                load balancers. Only WeightedZones
+                                                can be used with BackendUtilization.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
+                                            - message: ZoneAware routing is not supported
+                                                for DynamicModule load balancers.
+                                              rule: 'self.type == ''DynamicModule''
+                                                ? !has(self.zoneAware) : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -13358,8 +13368,9 @@ spec:
                                                         type: array
                                                       hostname:
                                                         description: |-
-                                                          Hostname defines the HTTP host that will be requested during health checking.
-                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                          Host selection uses this order: this field, the associated Backend endpoint
+                                                          hostname if available, then the effective Route hostname.
                                                         maxLength: 253
                                                         minLength: 1
                                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -13626,6 +13637,8 @@ spec:
                                                       of hosts in a cluster that can
                                                       be ejected.
                                                     format: int32
+                                                    maximum: 100
+                                                    minimum: 0
                                                     type: integer
                                                   splitExternalLocalOriginErrors:
                                                     default: false
@@ -14112,12 +14125,17 @@ spec:
                                               rule: 'self.type == ''ConsistentHash''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
-                                            - message: ZoneAware routing is not supported
-                                                for BackendUtilization and DynamicModule
-                                                load balancers.
-                                              rule: 'self.type in [''BackendUtilization'',
-                                                ''DynamicModule''] ? !has(self.zoneAware)
+                                            - message: PreferLocal zone-aware routing
+                                                is not currently supported for BackendUtilization
+                                                load balancers. Only WeightedZones
+                                                can be used with BackendUtilization.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
+                                            - message: ZoneAware routing is not supported
+                                                for DynamicModule load balancers.
+                                              rule: 'self.type == ''DynamicModule''
+                                                ? !has(self.zoneAware) : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -15069,8 +15087,9 @@ spec:
                                                   type: array
                                                 hostname:
                                                   description: |-
-                                                    Hostname defines the HTTP host that will be requested during health checking.
-                                                    Default: HTTPRoute or GRPCRoute hostname.
+                                                    Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                    Host selection uses this order: this field, the associated Backend endpoint
+                                                    hostname if available, then the effective Route hostname.
                                                   maxLength: 253
                                                   minLength: 1
                                                   pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -15322,6 +15341,8 @@ spec:
                                                 the maximum percentage of hosts in
                                                 a cluster that can be ejected.
                                               format: int32
+                                              maximum: 100
+                                              minimum: 0
                                               type: integer
                                             splitExternalLocalOriginErrors:
                                               default: false
@@ -15794,11 +15815,16 @@ spec:
                                         rule: 'self.type == ''ConsistentHash'' &&
                                           has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                           : true'
+                                      - message: PreferLocal zone-aware routing is
+                                          not currently supported for BackendUtilization
+                                          load balancers. Only WeightedZones can be
+                                          used with BackendUtilization.
+                                        rule: 'self.type == ''BackendUtilization''
+                                          && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                          : true'
                                       - message: ZoneAware routing is not supported
-                                          for BackendUtilization and DynamicModule
-                                          load balancers.
-                                        rule: 'self.type in [''BackendUtilization'',
-                                          ''DynamicModule''] ? !has(self.zoneAware)
+                                          for DynamicModule load balancers.
+                                        rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
                                           : true'
                                       - message: ZoneAware PreferLocal and WeightedZones
                                           cannot be specified together.
@@ -16670,8 +16696,9 @@ spec:
                                             type: array
                                           hostname:
                                             description: |-
-                                              Hostname defines the HTTP host that will be requested during health checking.
-                                              Default: HTTPRoute or GRPCRoute hostname.
+                                              Hostname defines the HTTP Host header used for active HTTP health checks.
+                                              Host selection uses this order: this field, the associated Backend endpoint
+                                              hostname if available, then the effective Route hostname.
                                             maxLength: 253
                                             minLength: 1
                                             pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -16923,6 +16950,8 @@ spec:
                                           percentage of hosts in a cluster that can
                                           be ejected.
                                         format: int32
+                                        maximum: 100
+                                        minimum: 0
                                         type: integer
                                       splitExternalLocalOriginErrors:
                                         default: false
@@ -17383,10 +17412,15 @@ spec:
                                     instead.
                                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                     ? !has(self.zoneAware.preferLocal) : true'
+                                - message: PreferLocal zone-aware routing is not currently
+                                    supported for BackendUtilization load balancers.
+                                    Only WeightedZones can be used with BackendUtilization.
+                                  rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                    ? !has(self.zoneAware.preferLocal) : true'
                                 - message: ZoneAware routing is not supported for
-                                    BackendUtilization and DynamicModule load balancers.
-                                  rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                    ? !has(self.zoneAware) : true'
+                                    DynamicModule load balancers.
+                                  rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                    : true'
                                 - message: ZoneAware PreferLocal and WeightedZones
                                     cannot be specified together.
                                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)

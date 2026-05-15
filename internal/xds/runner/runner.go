@@ -204,6 +204,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		grpcOpts = append(grpcOpts,
 			grpc.Creds(creds),
 			grpc.StreamInterceptor(jwtInterceptor.Stream()),
+			grpc.UnaryInterceptor(jwtInterceptor.Unary()),
 		)
 	}
 
@@ -263,6 +264,8 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 		r.Logger,
 		message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
+			message.PublishRunnerEventMetric(r.Name(), update.Delete)
+
 			parentCtx := context.Background()
 			if update.Value != nil && update.Value.Context != nil {
 				parentCtx = update.Value.Context

@@ -100,6 +100,7 @@ verbs:
 apiGroups:
 - gateway.envoyproxy.io
 resources:
+- envoyproxies/status
 - envoypatchpolicies/status
 - clienttrafficpolicies/status
 - backendtrafficpolicies/status
@@ -215,6 +216,7 @@ verbs:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -223,9 +225,11 @@ verbs:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - autoscaling
   - policy
@@ -239,6 +243,7 @@ verbs:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - certificates.k8s.io
   resources:

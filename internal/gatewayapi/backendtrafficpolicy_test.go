@@ -246,6 +246,52 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 	})
 }
 
+func TestBuildTrafficFeaturesRejectsRequestBufferWithDecompressor(t *testing.T) {
+	t.Run("same policy", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+				},
+				Decompressor: []*egv1a1.Decompressor{
+					{Type: egv1a1.GzipDecompressorType},
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy)
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with decompressor")
+		require.NotNil(t, tf)
+	})
+
+	t.Run("merged policy", func(t *testing.T) {
+		tr := &Translator{}
+		parentPolicy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+				},
+			},
+		}
+		routePolicy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				Decompressor: []*egv1a1.Decompressor{
+					{Type: egv1a1.GzipDecompressorType},
+				},
+			},
+		}
+
+		mergedPolicy, err := tr.mergeBackendTrafficPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
+
+		tf, err := tr.buildTrafficFeatures(mergedPolicy)
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with decompressor")
+		require.NotNil(t, tf)
+	})
+}
+
 func TestBuildPassiveHealthCheck(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -272,7 +318,7 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 			expected: &ir.OutlierDetection{
 				Interval:             ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:     ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:   new(int32(10)),
+				MaxEjectionPercent:   new(uint32(10)),
 				Consecutive5xxErrors: new(uint32(5)),
 			},
 		},
@@ -290,7 +336,7 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 			expected: &ir.OutlierDetection{
 				Interval:                   ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:           ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:         new(int32(10)),
+				MaxEjectionPercent:         new(uint32(10)),
 				Consecutive5xxErrors:       new(uint32(5)),
 				FailurePercentageThreshold: new(uint32(90)),
 			},
@@ -317,7 +363,7 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 				ConsecutiveGatewayErrors:       new(uint32(2)),
 				Consecutive5xxErrors:           new(uint32(5)),
 				BaseEjectionTime:               ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:             new(int32(10)),
+				MaxEjectionPercent:             new(uint32(10)),
 				FailurePercentageThreshold:     new(uint32(85)),
 				AlwaysEjectOneEndpoint:         new(true),
 			},
@@ -1001,7 +1047,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := buildRateLimitRule(tc.rule)
+			got, err := buildRateLimitRule(&tc.rule)
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.errorMsg)
@@ -1803,7 +1849,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			idx := BuildBTPRoutingTypeIndex(tt.btps, tt.routes, tt.gateways)
+			idx := BuildBTPRoutingTypeIndex(tt.btps, tt.routes, tt.gateways, nil, nil)
 			got := idx.LookupBTPRoutingType(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
 			require.Equal(t, tt.expected, got)
 		})

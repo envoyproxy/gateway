@@ -1193,8 +1193,9 @@ spec:
                                         type: array
                                       hostname:
                                         description: |-
-                                          Hostname defines the HTTP host that will be requested during health checking.
-                                          Default: HTTPRoute or GRPCRoute hostname.
+                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                          Host selection uses this order: this field, the associated Backend endpoint
+                                          hostname if available, then the effective Route hostname.
                                         maxLength: 253
                                         minLength: 1
                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -1437,6 +1438,8 @@ spec:
                                       percentage of hosts in a cluster that can be
                                       ejected.
                                     format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   splitExternalLocalOriginErrors:
                                     default: false
@@ -1891,10 +1894,15 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                and DynamicModule load balancers.
-                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                ? !has(self.zoneAware) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -2589,8 +2597,9 @@ spec:
                                         type: array
                                       hostname:
                                         description: |-
-                                          Hostname defines the HTTP host that will be requested during health checking.
-                                          Default: HTTPRoute or GRPCRoute hostname.
+                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                          Host selection uses this order: this field, the associated Backend endpoint
+                                          hostname if available, then the effective Route hostname.
                                         maxLength: 253
                                         minLength: 1
                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -2833,6 +2842,8 @@ spec:
                                       percentage of hosts in a cluster that can be
                                       ejected.
                                     format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   splitExternalLocalOriginErrors:
                                     default: false
@@ -3287,10 +3298,15 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                and DynamicModule load balancers.
-                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                ? !has(self.zoneAware) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -3508,6 +3524,15 @@ spec:
                           For example, if the original request path is "/hello", and the path specified here is "/auth",
                           then the path of the authorization request will be "/auth/hello". If the path is not specified,
                           the path of the authorization request will be "/hello".
+                          Only one of Path or PathOverride can be set.
+                        type: string
+                      pathOverride:
+                        description: |-
+                          PathOverride replaces the original request path in the authorization request.
+                          If set, the path will be overridden to this value during authorization.
+                          For example, if the original request path is "/hello", and PathOverride is set to "/auth",
+                          then the path of the authorization request will be "/auth".
+                          Only one of Path or PathOverride can be set.
                         type: string
                     type: object
                     x-kubernetes-validations:
@@ -3523,6 +3548,8 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: only one of path or pathOverride can be specified
+                      rule: '!(has(self.path) && has(self.pathOverride))'
                   includeRouteMetadata:
                     description: |-
                       IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
@@ -4253,8 +4280,9 @@ spec:
                                               type: array
                                             hostname:
                                               description: |-
-                                                Hostname defines the HTTP host that will be requested during health checking.
-                                                Default: HTTPRoute or GRPCRoute hostname.
+                                                Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                Host selection uses this order: this field, the associated Backend endpoint
+                                                hostname if available, then the effective Route hostname.
                                               maxLength: 253
                                               minLength: 1
                                               pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -4506,6 +4534,8 @@ spec:
                                             maximum percentage of hosts in a cluster
                                             that can be ejected.
                                           format: int32
+                                          maximum: 100
+                                          minimum: 0
                                           type: integer
                                         splitExternalLocalOriginErrors:
                                           default: false
@@ -4969,10 +4999,17 @@ spec:
                                       Use weightedZones instead.
                                     rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                       ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: PreferLocal zone-aware routing is not
+                                      currently supported for BackendUtilization load
+                                      balancers. Only WeightedZones can be used with
+                                      BackendUtilization.
+                                    rule: 'self.type == ''BackendUtilization'' &&
+                                      has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                      : true'
                                   - message: ZoneAware routing is not supported for
-                                      BackendUtilization and DynamicModule load balancers.
-                                    rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                      ? !has(self.zoneAware) : true'
+                                      DynamicModule load balancers.
+                                    rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                      : true'
                                   - message: ZoneAware PreferLocal and WeightedZones
                                       cannot be specified together.
                                     rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -5958,8 +5995,9 @@ spec:
                                         type: array
                                       hostname:
                                         description: |-
-                                          Hostname defines the HTTP host that will be requested during health checking.
-                                          Default: HTTPRoute or GRPCRoute hostname.
+                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                          Host selection uses this order: this field, the associated Backend endpoint
+                                          hostname if available, then the effective Route hostname.
                                         maxLength: 253
                                         minLength: 1
                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -6202,6 +6240,8 @@ spec:
                                       percentage of hosts in a cluster that can be
                                       ejected.
                                     format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   splitExternalLocalOriginErrors:
                                     default: false
@@ -6656,10 +6696,15 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                and DynamicModule load balancers.
-                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                ? !has(self.zoneAware) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -7090,8 +7135,86 @@ spec:
                       additionalProperties:
                         type: string
                       description: MatchLabels are the set of label selectors for
-                        identifying the targeted resource
+                        identifying the targeted resource.
                       type: object
+                    namespaces:
+                      description: |-
+                        Namespaces determines which namespaces are considered for target selection.
+
+                        If unspecified, only targets in the same namespace as this policy are considered.
+
+                        When specified, the effective set of namespaces is always constrained to the
+                        namespaces watched by Envoy Gateway.
+
+                        Selecting targets across namespaces requires a ReferenceGrant in the target
+                        namespace that allows this policy kind to reference the selected target kind.
+                        Cross-namespace targets without a matching ReferenceGrant are ignored.
+                      properties:
+                        from:
+                          default: Same
+                          description: |-
+                            From indicates how namespaces are selected for this target selector.
+
+                            All means all namespaces watched by Envoy Gateway.
+                            Selector means namespaces watched by Envoy Gateway that match Selector.
+                          enum:
+                          - Same
+                          - All
+                          - Selector
+                          type: string
+                        selector:
+                          description: Selector selects namespaces when From is set
+                            to Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - from
+                      type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object

@@ -110,7 +110,8 @@ lint.markdown: $(tools/markdownlint)
 		--ignore site/content/en/v1.3/ \
 		--ignore site/content/en/v1.4/ \
 		--ignore site/content/en/v1.5/ \
-		--ignore site/content/en/v1.6/
+		--ignore site/content/en/v1.6/ \
+		--ignore site/content/en/v1.8/
 		
 		
 

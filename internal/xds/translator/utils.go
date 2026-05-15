@@ -219,6 +219,7 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
 	args.backendConnection = traffic.BackendConnection
 	args.dns = traffic.DNS
 	args.http2Settings = traffic.HTTP2
+	args.admissionControl = traffic.AdmissionControl
 }
 
 // determineIPFamily determines the IP family based on multiple destination settings

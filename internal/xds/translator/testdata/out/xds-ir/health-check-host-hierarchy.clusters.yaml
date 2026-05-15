@@ -1,0 +1,139 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
+      host: btp-health.example.com
+      method: GET
+      path: /healthz
+    interval: 5s
+    timeout: 2s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  loadAssignment:
+    clusterName: btp-host-route-dest
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: backend-address.example.com
+              portValue: 443
+          hostname: backend-endpoint.example.com
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: btp-host-route-dest/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: btp-host-route-dest
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
+      host: backend-route.example.com
+      method: GET
+      path: /healthz
+    interval: 5s
+    timeout: 2s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  loadAssignment:
+    clusterName: backend-host-route-dest
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: backend-address.example.com
+              portValue: 443
+          healthCheckConfig:
+            hostname: backend-endpoint.example.com
+          hostname: backend-endpoint.example.com
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: backend-host-route-dest/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: backend-host-route-dest
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
+      host: route-fallback.example.com
+      method: GET
+      path: /healthz
+    interval: 5s
+    timeout: 2s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  loadAssignment:
+    clusterName: route-host-route-dest
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: backend-no-endpoint-host.example.com
+              portValue: 443
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: route-host-route-dest/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: route-host-route-dest
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS

@@ -1,0 +1,80 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: policy-target-ns
+    name: target-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: policy-target-ns
+    name: target-route
+    labels:
+      policy: selected
+  spec:
+    parentRefs:
+    - name: target-gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /
+      backendRefs:
+      - name: target-service
+        port: 8080
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: policy-ns
+    name: cross-ns-policy
+  spec:
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespaces:
+        from: All
+      matchLabels:
+        policy: selected
+    useClientProtocol: true
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: policy-target-ns
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: policy-target-ns
+    name: target-service
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-target-service
+    namespace: policy-target-ns
+    labels:
+      kubernetes.io/service-name: target-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true

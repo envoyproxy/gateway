@@ -109,6 +109,11 @@ gateways:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
         reason: Invalid
         status: "False"
@@ -326,13 +331,6 @@ infraIR:
       namespace: envoy-gateway-system
   envoy-gateway/unresolved-gateway-with-one-attached-unresolved-route:
     proxy:
-      listeners:
-      - name: envoy-gateway/unresolved-gateway-with-one-attached-unresolved-route/tls
-        ports:
-        - containerPort: 10443
-          name: https-443
-          protocol: HTTPS
-          servicePort: 443
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: unresolved-gateway-with-one-attached-unresolved-route
@@ -487,21 +485,6 @@ xdsIR:
             sectionName: "8080"
           name: envoy-gateway/unresolved-gateway-with-one-attached-unresolved-route
           protocol: TCP
-    http:
-    - address: 0.0.0.0
-      externalPort: 443
-      hostnames:
-      - '*'
-      metadata:
-        kind: Gateway
-        name: unresolved-gateway-with-one-attached-unresolved-route
-        namespace: envoy-gateway
-        sectionName: tls
-      name: envoy-gateway/unresolved-gateway-with-one-attached-unresolved-route/tls
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10443
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

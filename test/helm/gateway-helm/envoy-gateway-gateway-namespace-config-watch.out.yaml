@@ -64,6 +64,12 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: gateway-helm-envoy-gateway-role
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
   - ""
@@ -123,6 +129,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gateway-helm-envoy-gateway-rolebinding
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -159,6 +171,12 @@ metadata:
   creationTimestamp: null
   name: gateway-helm-envoy-gateway-role
   namespace: "default"
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
   - ""
@@ -205,6 +223,7 @@ rules:
 - apiGroups:
   - gateway.envoyproxy.io
   resources:
+  - envoyproxies/status
   - envoypatchpolicies/status
   - clienttrafficpolicies/status
   - backendtrafficpolicies/status
@@ -261,6 +280,12 @@ metadata:
   creationTimestamp: null
   name: gateway-helm-envoy-gateway-role
   namespace: "app-ns"
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
   - ""
@@ -307,6 +332,7 @@ rules:
 - apiGroups:
   - gateway.envoyproxy.io
   resources:
+  - envoyproxies/status
   - envoypatchpolicies/status
   - clienttrafficpolicies/status
   - backendtrafficpolicies/status
@@ -382,6 +408,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -390,9 +417,11 @@ rules:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - autoscaling
   - policy
@@ -406,6 +435,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - certificates.k8s.io
   resources:
@@ -495,6 +525,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -503,9 +534,11 @@ rules:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - autoscaling
   - policy
@@ -519,6 +552,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - certificates.k8s.io
   resources:
@@ -555,6 +589,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -563,9 +598,11 @@ rules:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - autoscaling
   - policy
@@ -579,6 +616,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - certificates.k8s.io
   resources:
@@ -594,6 +632,12 @@ kind: RoleBinding
 metadata:
   name: gateway-helm-envoy-gateway-rolebinding
   namespace: "default"
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -609,6 +653,12 @@ kind: RoleBinding
 metadata:
   name: gateway-helm-envoy-gateway-rolebinding
   namespace: "app-ns"
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -856,7 +906,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -871,7 +921,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
 rules:
   - apiGroups:
     - admissionregistration.k8s.io
@@ -904,7 +954,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -928,7 +978,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
 rules:
 - apiGroups:
   - ""
@@ -953,7 +1003,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

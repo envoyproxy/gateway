@@ -1,0 +1,157 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: btp-cross-ns-granted
+  labels:
+    policy-target: granted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: btp-cross-ns-denied
+  labels:
+    policy-target: denied
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: cross-namespace-btp
+  namespace: btp-cross-ns-granted
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    hostname: "granted.cross-namespace-btp.example.com"
+    port: 80
+    protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: cross-namespace-btp
+  namespace: btp-cross-ns-denied
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    hostname: "denied.cross-namespace-btp.example.com"
+    port: 80
+    protocol: HTTP
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: direct-response-ok
+  namespace: btp-cross-ns-granted
+spec:
+  directResponse:
+    body:
+      type: Inline
+      inline: "ok"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: direct-response-ok
+  namespace: btp-cross-ns-denied
+spec:
+  directResponse:
+    body:
+      type: Inline
+      inline: "ok"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cross-namespace-btp
+  namespace: btp-cross-ns-granted
+spec:
+  parentRefs:
+  - name: cross-namespace-btp
+  hostnames:
+  - granted.cross-namespace-btp.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: direct-response-ok
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cross-namespace-btp
+  namespace: btp-cross-ns-denied
+spec:
+  parentRefs:
+  - name: cross-namespace-btp
+  hostnames:
+  - denied.cross-namespace-btp.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: direct-response-ok
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-cross-namespace-btp
+  namespace: btp-cross-ns-granted
+spec:
+  from:
+  - group: gateway.envoyproxy.io
+    kind: BackendTrafficPolicy
+    namespace: gateway-conformance-infra
+  to:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: cross-namespace-btp
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: cross-namespace-btp-granted
+  namespace: gateway-conformance-infra
+spec:
+  targetSelectors:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespaces:
+      from: Selector
+      selector:
+        matchLabels:
+          policy-target: granted
+  faultInjection:
+    abort:
+      httpStatus: 418
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: cross-namespace-btp-denied            # this BackendTrafficPolicy will be rejected due to missing ReferenceGrant
+  namespace: gateway-conformance-infra
+spec:
+  targetSelectors:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespaces:
+      from: Selector
+      selector:
+        matchLabels:
+          policy-target: denied
+  faultInjection:
+    abort:
+      httpStatus: 419

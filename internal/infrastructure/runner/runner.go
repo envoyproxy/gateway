@@ -64,17 +64,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		sub := r.InfraIR.Subscribe(ctx)
 		go r.updateProxyInfraFromSubscription(ctx, sub)
 
-		// Enable global ratelimit if it has been configured.
-		if r.EnvoyGateway.RateLimit != nil {
-			go r.enableRateLimitInfra(ctx)
-		} else {
-			// Delete the ratelimit infra if it exists.
-			go func() {
-				if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
-					r.Logger.Error(err, "failed to delete ratelimit infra")
-				}
-			}()
-		}
+		// Create the shared ratelimit infra during startup.
+		go r.initializeRateLimitInfra(ctx)
+
 		r.Logger.Info("started")
 		<-ctx.Done()
 		r.InfraIR.Close()
@@ -109,12 +101,24 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 		r.Logger,
 		message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
 		func(update message.Update[string, *ir.Infra], errChan chan error) {
+			// Check if context is done before logging to avoid writing to test output after test completes
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
+			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 			val := update.Value
 
 			if update.Delete {
 				if err := r.mgr.DeleteProxyInfra(ctx, val); err != nil {
-					r.Logger.Error(err, "failed to delete infra")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						r.Logger.Error(err, "failed to delete infra")
+					}
 					errChan <- err
 				}
 			} else {
@@ -123,22 +127,61 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 				// e.g.https://github.com/envoyproxy/gateway/issues/3044 --- Invalid Listener
 				//     https://github.com/envoyproxy/gateway/issues/7735 --- Invalid EnvoyProxy
 				if len(val.Proxy.Listeners) == 0 {
-					r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+					}
 					return
 				}
 
 				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
-					r.Logger.Error(err, "failed to create new infra")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						r.Logger.Error(err, "failed to create new infra")
+					}
 					errChan <- err
 				}
 			}
 		},
 	)
-	r.Logger.Info("infra subscriber shutting down")
+	select {
+	case <-ctx.Done():
+		return
+	default:
+		r.Logger.Info("infra subscriber shutting down")
+	}
 }
 
-func (r *Runner) enableRateLimitInfra(ctx context.Context) {
-	if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
-		r.Logger.Error(err, "failed to create ratelimit infra")
+func (r *Runner) initializeRateLimitInfra(ctx context.Context) {
+	if !r.waitForProviderReady(ctx) {
+		return
+	}
+
+	if r.EnvoyGateway.RateLimit != nil {
+		if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
+			r.Logger.Error(err, "failed to create ratelimit infra")
+		}
+		return
+	}
+
+	if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
+		r.Logger.Error(err, "failed to delete ratelimit infra")
+	}
+}
+
+func (r *Runner) waitForProviderReady(ctx context.Context) bool {
+	if r.EnvoyGateway.Provider.Type != egv1a1.ProviderTypeKubernetes {
+		return true
+	}
+
+	select {
+	case <-ctx.Done():
+		return false
+	case <-r.ProviderReady:
+		return true
 	}
 }
