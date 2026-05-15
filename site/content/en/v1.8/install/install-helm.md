@@ -29,6 +29,13 @@ You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gat
 
 Install the Gateway API CRDs and Envoy Gateway:
 
+{{% alert title="Gateway API CRD compatibility" color="warning" %}}
+The default Helm install applies both Gateway API CRDs and Envoy Gateway CRDs. If your Kubernetes provider already
+manages Gateway API CRDs for the cluster, confirm that the provider-installed Gateway API version and channel are
+compatible with the Envoy Gateway release and the Gateway API resources you plan to use. If they are compatible,
+install only the Envoy Gateway CRDs separately, then install the Envoy Gateway Helm chart with `--skip-crds`.
+{{% /alert %}}
+
 ```shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
 ```
@@ -91,6 +98,38 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm \
   --create-namespace \
   --skip-crds
 ```
+
+### Clusters with compatible provider-managed Gateway API CRDs
+
+Some Kubernetes providers can manage Gateway API CRDs for the cluster. For example, GKE can install Gateway API
+Standard Channel CRDs when Gateway API is enabled for a cluster. Before relying on provider-managed CRDs, compare the
+provider-installed Gateway API version and channel with the [Envoy Gateway compatibility matrix](/news/releases/matrix)
+and the Gateway API resources required by your configuration.
+
+If the provider-managed Gateway API CRDs are compatible, leave the provider as the owner of those CRDs and install only
+the Envoy Gateway CRDs:
+
+```shell
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
+  --version {{< helm-version >}} \
+  --set crds.gatewayAPI.enabled=false \
+  --set crds.envoyGateway.enabled=true \
+  | kubectl apply --server-side -f -
+```
+
+Then install the main Envoy Gateway Helm chart without re-applying CRDs:
+
+```shell
+helm install eg oci://docker.io/envoyproxy/gateway-helm \
+  --version {{< helm-version >}} \
+  -n envoy-gateway-system \
+  --create-namespace \
+  --skip-crds
+```
+
+If the provider-managed Gateway API CRDs are not compatible with your Envoy Gateway release or required Gateway API
+resources, do not mix them with another copy installed by Envoy Gateway. Use a compatible Gateway API CRD installation
+method for the cluster first, then install Envoy Gateway with `--skip-crds`.
 
 ## Upgrading from the previous version
 

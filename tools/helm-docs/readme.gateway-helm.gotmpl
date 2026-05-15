@@ -25,6 +25,11 @@ Once Helm has been set up correctly, install the chart from dockerhub:
 ``` shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
+This command installs both Gateway API CRDs and Envoy Gateway CRDs. If your Kubernetes provider already manages
+Gateway API CRDs for the cluster, confirm that the provider-installed Gateway API version and channel are compatible
+with the Envoy Gateway release and the Gateway API resources you plan to use. If they are compatible, install only the
+Envoy Gateway CRDs separately and use `--skip-crds` when installing this chart.
+
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-helm/tags)
 
 ### Install from Source Code
@@ -44,6 +49,16 @@ You can install the eg chart along without Gateway API CRDs and Envoy Gateway CR
 ``` shell
 helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds
 ```
+
+If your Kubernetes provider manages compatible Gateway API CRDs, install only the Envoy Gateway CRDs before running the command above:
+
+``` shell
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm --set 'crds.gatewayAPI.enabled=false' --set 'crds.envoyGateway.enabled=true' \
+    --version v0.0.0-latest | kubectl apply --server-side -f -
+```
+
+If the provider-managed Gateway API CRDs are not compatible, use a compatible Gateway API CRD installation method for
+the cluster first, then install this chart with `--skip-crds`.
 
 To uninstall the chart:
 
