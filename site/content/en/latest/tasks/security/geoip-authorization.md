@@ -360,6 +360,6 @@ Checkout the following related guides:
 [SecurityPolicy]: ../../api/extension_types#securitypolicy
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
 [ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/

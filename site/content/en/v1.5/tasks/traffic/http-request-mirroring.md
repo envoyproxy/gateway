@@ -439,6 +439,6 @@ spec:
 
 
 [Traffic Splitting]: ../http-traffic-splitting/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[backendRefs]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#backendref
-[HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#httprequestmirrorfilter
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[backendRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#backendref
+[HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httprequestmirrorfilter

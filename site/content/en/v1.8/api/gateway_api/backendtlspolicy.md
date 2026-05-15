@@ -5,7 +5,7 @@ title = "BackendTLSPolicy"
 
     The `BackendTLSPolicy` resource is GA and has been part of the Standard
     Channel since `v1.4.0`. For more information on release channels, refer
-    to our [versioning guide](https://gateway-api.sigs.k8s.io/concepts/versioning).
+    to our [versioning guide](https://gateway-api.sigs.k8s.io/docs/concepts/versioning/).
 
 [BackendTLSPolicy][backendtlspolicy] is a Gateway API type for specifying the TLS configuration
 of the connection from the Gateway to a backend pod(s) via the Service API object.
@@ -90,7 +90,7 @@ flowchart LR
 
 
     While the diagram above shows an HTTPRoute, BackendTLSPolicy is a
-    [union feature](https://gateway-api.sigs.k8s.io/guides/implementers#union-feature-conformance) and
+    [union feature](https://gateway-api.sigs.k8s.io/docs/concepts/conformance/#union-feature-conformance) and
     works with any route type that forwards traffic to backends, including
     GRPCRoute and TLSRoute (when in Terminate mode).
 
@@ -173,12 +173,12 @@ Status defines the observed state of the BackendTLSPolicy and is not user-config
 way you do for other Gateway API objects to verify correct operation.  Note that the status in BackendTLSPolicy
 uses `PolicyAncestorStatus` to allow you to know which parentReference set that particular status.
 
-[backendtlspolicy]: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendtlspolicy
-[validation]: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendtlspolicyvalidation
-[caCertificateRefs]: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#localobjectreference
-[wellKnownCACertificates]: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#localobjectreference
-[hostname]: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#precisehostname
+[backendtlspolicy]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#backendtlspolicy
+[validation]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#backendtlspolicyvalidation
+[caCertificateRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#localobjectreference
+[wellKnownCACertificates]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#localobjectreference
+[hostname]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#precisehostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[targetRefs]: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#localpolicytargetreferencewithsectionname
-[subjectAltNames]: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#subjectaltname
-[options]: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendtlspolicyspec
+[targetRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#localpolicytargetreferencewithsectionname
+[subjectAltNames]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#subjectaltname
+[options]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#backendtlspolicyspec
