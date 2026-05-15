@@ -82,14 +82,14 @@ Users can consume metadata in various ways:
 [metadata formatters]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto.html#formatter-extension-for-printing-various-types-of-metadata-proto
 [custom tags]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/tracing/v3/custom_tag.proto.html#envoy-v3-api-msg-type-tracing-v3-customtag-metadata
 [gw_api]: https://gateway-api.sigs.k8s.io
-[gc]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass
-[gw]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway
-[tlsr]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute
-[tcpr]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#tcproute-and-udproute
+[gc]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gatewayclass
+[gw]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway
+[tlsr]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#tlsroute
+[tcpr]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#tcproute-and-udproute
 [listener]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-msg-config-listener-v3-listener
 [virtual host]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
-[grpcr]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#grpcroute
-[httpr]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute
+[grpcr]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#grpcroute
+[httpr]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#httproute
 [named route rules]: https://gateway-api.sigs.k8s.io/geps/gep-995/
 [route]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-route
 [cluster]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto

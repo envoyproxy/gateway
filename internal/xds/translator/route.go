@@ -387,7 +387,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	// According to the Gateway API:
 	// 500 status code should be returned for invalid HTTPBackendRef
 	// 503 status code should be returned for Services without ready endpoints
-	// Reference: https://gateway-api.sigs.k8s.io/reference/spec/#httprouterule
+	// Reference: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule
 	clusterNotFoundResponseCode := routev3.RouteAction_INTERNAL_SERVER_ERROR
 	// Envoy can't handle mixed 500 and 503 responses, so we use 503 when both invalid and empty
 	if backendWeights.NoEndpoints > 0 {
