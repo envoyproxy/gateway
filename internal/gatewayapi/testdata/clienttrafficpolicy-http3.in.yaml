@@ -22,7 +22,7 @@ gateways:
     - name: https-wildcard
       protocol: HTTPS
       port: 443
-      hostname: "*.example.com"
+      hostname: "*.wildcard.example.com"
       allowedRoutes:
         namespaces:
           from: All

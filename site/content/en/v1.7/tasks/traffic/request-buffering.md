@@ -207,5 +207,5 @@ kubectl delete backendtrafficpolicy/request-buffer
 
 [Envoy buffer filter]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/buffer_filter
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/

@@ -41,7 +41,7 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      hostname: '*.example.com'
+      hostname: '*.wildcard.example.com'
       name: https-wildcard
       port: 443
       protocol: HTTPS
@@ -90,12 +90,6 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: The hostname *.example.com overlaps with the hostname bar.example.com
-          in listener https-bar.
-        reason: OverlappingHostnames
-        status: "True"
-        type: OverlappingTLSConfig
       name: https-wildcard
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -119,12 +113,6 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: The hostname foo.example.com overlaps with the hostname *.example.com
-          in listener https-wildcard.
-        reason: OverlappingHostnames
-        status: "True"
-        type: OverlappingTLSConfig
       name: https-foo
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -148,12 +136,6 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: The hostname bar.example.com overlaps with the hostname *.example.com
-          in listener https-wildcard.
-        reason: OverlappingHostnames
-        status: "True"
-        type: OverlappingTLSConfig
       name: https-bar
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -281,7 +263,7 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 443
       hostnames:
-      - '*.example.com'
+      - '*.wildcard.example.com'
       http3: {}
       metadata:
         kind: Gateway

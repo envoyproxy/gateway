@@ -205,6 +205,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		grpcOpts = append(grpcOpts,
 			grpc.Creds(credentials.NewTLS(serverTLSConfig)),
 			grpc.StreamInterceptor(jwtInterceptor.Stream()),
+			grpc.UnaryInterceptor(jwtInterceptor.Unary()),
 		)
 	}
 

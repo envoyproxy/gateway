@@ -444,4 +444,4 @@ Refer to the steps mentioned earlier under [Testing in clusters with External Lo
 
 Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
-[ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
+[ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/

@@ -10080,7 +10080,7 @@ spec:
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
-                  specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)
+                  specification (https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule)
                   or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.
                   Default: False
                 type: boolean
