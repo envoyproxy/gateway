@@ -807,7 +807,12 @@ func buildPathPredicate(path *egv1a1.PathMatch) (*matcherv3.Matcher_MatcherList_
 			}
 		}
 	case gwapiv1.PathMatchExact:
-		stringMatcher.MatchPattern = &matcherv3.StringMatcher_Exact{Exact: path.Value}
+		stringMatcher.MatchPattern = &matcherv3.StringMatcher_SafeRegex{
+			SafeRegex: &matcherv3.RegexMatcher{
+				Regex:      regex.PathExactRegex(path.Value),
+				EngineType: &matcherv3.RegexMatcher_GoogleRe2{GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{}},
+			},
+		}
 	case gwapiv1.PathMatchRegularExpression:
 		stringMatcher.MatchPattern = &matcherv3.StringMatcher_SafeRegex{
 			SafeRegex: &matcherv3.RegexMatcher{

@@ -73,7 +73,9 @@
                                 '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
                                 headerName: :path
                             valueMatch:
-                              exact: /admin
+                              safeRegex:
+                                googleRe2: {}
+                                regex: ^/admin(\?.*|#.*|;.*|$)
                       - singlePredicate:
                           input:
                             name: http_header

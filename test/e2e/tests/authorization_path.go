@@ -26,14 +26,15 @@ func init() {
 
 var AuthorizationPathTest = suite.ConformanceTest{
 	ShortName:   "AuthzWithPath",
-	Description: "Authorization with HTTP path match (PathPrefix and RegularExpression with invert)",
+	Description: "Authorization with HTTP path match (Exact, PathPrefix and RegularExpression with invert)",
 	Manifests:   []string{"testdata/authorization-path.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		prefixRouteNN := types.NamespacedName{Name: "http-with-authorization-path-prefix", Namespace: ns}
+		exactRouteNN := types.NamespacedName{Name: "http-with-authorization-path-exact", Namespace: ns}
 		invertRouteNN := types.NamespacedName{Name: "http-with-authorization-path-regex-invert", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), prefixRouteNN, invertRouteNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), prefixRouteNN, exactRouteNN, invertRouteNN)
 
 		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -42,6 +43,7 @@ var AuthorizationPathTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "authorization-path-prefix", Namespace: ns}, suite.ControllerName, ancestorRef)
+		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "authorization-path-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "authorization-path-regex-invert", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 		// PathPrefix tests
@@ -96,6 +98,59 @@ var AuthorizationPathTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/auth-path-prefix/private/resource",
+					Headers: map[string]string{
+						"x-user-id": "john",
+					},
+				},
+				Response:  http.Response{StatusCodes: []int{403}},
+				Namespace: ns,
+			})
+		})
+
+		// Exact path tests
+		t.Run("exact path match with correct header should be allowed", func(t *testing.T) {
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/auth-path-exact/resource",
+					Headers: map[string]string{
+						"x-user-id": "john",
+					},
+				},
+				Response:  http.Response{StatusCodes: []int{200}},
+				Namespace: ns,
+			})
+		})
+
+		t.Run("exact path match with query string and correct header should be allowed", func(t *testing.T) {
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/auth-path-exact/resource?foo=bar",
+					Headers: map[string]string{
+						"x-user-id": "john",
+					},
+				},
+				Response:  http.Response{StatusCodes: []int{200}},
+				Namespace: ns,
+			})
+		})
+
+		t.Run("exact path match with wrong header should be denied", func(t *testing.T) {
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/auth-path-exact/resource",
+					Headers: map[string]string{
+						"x-user-id": "eve",
+					},
+				},
+				Response:  http.Response{StatusCodes: []int{403}},
+				Namespace: ns,
+			})
+		})
+
+		t.Run("sub-path of exact path with correct header should be denied", func(t *testing.T) {
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/auth-path-exact/resource/extra",
 					Headers: map[string]string{
 						"x-user-id": "john",
 					},
