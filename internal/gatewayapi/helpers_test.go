@@ -67,6 +67,18 @@ func TestValidateGRPCFilterRef(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "valid Envoy Gateway HTTPRouteFilter extension resource",
+			filter: &gwapiv1.GRPCRouteFilter{
+				Type: gwapiv1.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1.LocalObjectReference{
+					Group: gwapiv1.Group(egv1a1.GroupName),
+					Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
+					Name:  "test",
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "unsupported extended filter",
 			filter: &gwapiv1.GRPCRouteFilter{
 				Type: gwapiv1.GRPCRouteFilterExtensionRef,

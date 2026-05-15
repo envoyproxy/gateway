@@ -1,0 +1,69 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.envoyproxy.io"
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - method:
+          service: echo.EchoService
+          method: Ping
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: mirror-filter
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    namespace: default
+    name: mirror-filter
+  spec:
+    requestMirror:
+      backendRef:
+        kind: Service
+        name: service-1
+        port: 8080
+      fraction:
+        numerator: 1
+        denominator: 4
+      traceSampled: false
+      requestHeadersMutations:
+        add:
+        - name: x-mirror-added
+          value: "true"
+        set:
+        - name: x-mirror-set
+          value: shadow
+        remove:
+        - x-mirror-remove
+      hostRewriteLiteral: shadow.example.com

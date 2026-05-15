@@ -244,3 +244,101 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPRouteFilterGRPCRouteIndexFunc(t *testing.T) {
+	testCases := []struct {
+		name     string
+		route    *gwapiv1.GRPCRoute
+		expected []string
+	}{
+		{
+			name: "rule filter references Envoy Gateway HTTPRouteFilter",
+			route: &gwapiv1.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "grpcroute-1",
+					Namespace: "default",
+				},
+				Spec: gwapiv1.GRPCRouteSpec{
+					Rules: []gwapiv1.GRPCRouteRule{
+						{
+							Filters: []gwapiv1.GRPCRouteFilter{
+								{
+									Type: gwapiv1.GRPCRouteFilterExtensionRef,
+									ExtensionRef: &gwapiv1.LocalObjectReference{
+										Group: gwapiv1.Group(egv1a1.GroupName),
+										Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
+										Name:  "mirror-filter",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"default/mirror-filter"},
+		},
+		{
+			name: "backend filter references Envoy Gateway HTTPRouteFilter",
+			route: &gwapiv1.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "grpcroute-1",
+					Namespace: "default",
+				},
+				Spec: gwapiv1.GRPCRouteSpec{
+					Rules: []gwapiv1.GRPCRouteRule{
+						{
+							BackendRefs: []gwapiv1.GRPCBackendRef{
+								{
+									Filters: []gwapiv1.GRPCRouteFilter{
+										{
+											Type: gwapiv1.GRPCRouteFilterExtensionRef,
+											ExtensionRef: &gwapiv1.LocalObjectReference{
+												Group: gwapiv1.Group(egv1a1.GroupName),
+												Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
+												Name:  "backend-filter",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"default/backend-filter"},
+		},
+		{
+			name: "non HTTPRouteFilter extension is ignored",
+			route: &gwapiv1.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "grpcroute-1",
+					Namespace: "default",
+				},
+				Spec: gwapiv1.GRPCRouteSpec{
+					Rules: []gwapiv1.GRPCRouteRule{
+						{
+							Filters: []gwapiv1.GRPCRouteFilter{
+								{
+									Type: gwapiv1.GRPCRouteFilterExtensionRef,
+									ExtensionRef: &gwapiv1.LocalObjectReference{
+										Group: "example.io",
+										Kind:  "OtherFilter",
+										Name:  "other-filter",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := httpRouteFilterGRPCRouteIndexFunc(tc.route)
+			require.ElementsMatch(t, tc.expected, result)
+		})
+	}
+}

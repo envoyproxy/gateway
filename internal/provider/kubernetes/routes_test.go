@@ -815,8 +815,10 @@ func TestProcessGRPCRoutes(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		routes                []*gwapiv1.GRPCRoute
+		httpRouteFilters      []*egv1a1.HTTPRouteFilter
 		extensionAPIGroups    []schema.GroupVersionKind
 		gatewayToListenerSets []types.NamespacedName
+		expectedBackends      []types.NamespacedName
 		expected              bool
 	}{
 		{
@@ -859,6 +861,133 @@ func TestProcessGRPCRoutes(t *testing.T) {
 						},
 					},
 				},
+			},
+			expected: true,
+		},
+		{
+			name: "grpcroute with request mirror backend",
+			routes: []*gwapiv1.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "mirror",
+					},
+					Spec: gwapiv1.GRPCRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.GRPCRouteRule{
+							{
+								BackendRefs: []gwapiv1.GRPCBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
+												Name:  "primary-service",
+												Port:  new(gwapiv1.PortNumber(80)),
+											},
+										},
+									},
+								},
+								Filters: []gwapiv1.GRPCRouteFilter{
+									{
+										Type: gwapiv1.GRPCRouteFilterRequestMirror,
+										RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
+											BackendRef: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
+												Name:  "mirror-service",
+												Port:  new(gwapiv1.PortNumber(8080)),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedBackends: []types.NamespacedName{
+				{Namespace: "test", Name: "primary-service"},
+				{Namespace: "test", Name: "mirror-service"},
+			},
+			expected: true,
+		},
+		{
+			name: "grpcroute with Envoy Gateway HTTPRouteFilter request mirror backend",
+			routes: []*gwapiv1.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "extension-mirror",
+					},
+					Spec: gwapiv1.GRPCRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.GRPCRouteRule{
+							{
+								BackendRefs: []gwapiv1.GRPCBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
+												Name:  "primary-service",
+												Port:  new(gwapiv1.PortNumber(80)),
+											},
+										},
+									},
+								},
+								Filters: []gwapiv1.GRPCRouteFilter{
+									{
+										Type: gwapiv1.GRPCRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1.LocalObjectReference{
+											Group: gwapiv1.Group(egv1a1.GroupName),
+											Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
+											Name:  "mirror-filter",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			httpRouteFilters: []*egv1a1.HTTPRouteFilter{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       egv1a1.KindHTTPRouteFilter,
+						APIVersion: egv1a1.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "mirror-filter",
+					},
+					Spec: egv1a1.HTTPRouteFilterSpec{
+						RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+							BackendRef: &gwapiv1.BackendObjectReference{
+								Group: gatewayapi.GroupPtr(corev1.GroupName),
+								Kind:  gatewayapi.KindPtr(resource.KindService),
+								Name:  "mirror-service",
+								Port:  new(gwapiv1.PortNumber(8080)),
+							},
+						},
+					},
+				},
+			},
+			expectedBackends: []types.NamespacedName{
+				{Namespace: "test", Name: "primary-service"},
+				{Namespace: "test", Name: "mirror-service"},
 			},
 			expected: true,
 		},
@@ -960,11 +1089,15 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			r := &gatewayAPIReconciler{
 				log:             logger,
 				classController: gcCtrlName,
+				hrfCRDExists:    true,
 			}
 
 			// Add the test case objects to the reconciler client.
 			for _, route := range tc.routes {
 				objs = append(objs, route)
+			}
+			for _, filter := range tc.httpRouteFilters {
+				objs = append(objs, filter)
 			}
 			if len(tc.extensionAPIGroups) > 0 {
 				r.extGVKs = append(r.extGVKs, tc.extensionAPIGroups...)
@@ -987,6 +1120,19 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.GRPCRoutes)
+				require.Len(t, resourceTree.HTTPRouteFilters, len(tc.httpRouteFilters))
+				if tc.expectedBackends != nil {
+					backendRefs := map[types.NamespacedName]struct{}{}
+					for _, backendRef := range resourceMap.allAssociatedBackendRefs {
+						backendRefs[types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, ""),
+							Name:      string(backendRef.Name),
+						}] = struct{}{}
+					}
+					for _, backendRef := range tc.expectedBackends {
+						require.Contains(t, backendRefs, backendRef)
+					}
+				}
 			} else {
 				require.Error(t, err)
 			}

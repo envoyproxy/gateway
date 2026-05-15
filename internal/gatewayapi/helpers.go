@@ -261,6 +261,10 @@ func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.G
 		case nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
 		default:
+			if string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+				string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter {
+				return nil
+			}
 			for _, gk := range extGKs {
 				if filter.ExtensionRef.Group == gwapiv1.Group(gk.Group) &&
 					filter.ExtensionRef.Kind == gwapiv1.Kind(gk.Kind) {
