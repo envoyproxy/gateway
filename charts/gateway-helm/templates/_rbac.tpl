@@ -232,9 +232,19 @@ verbs:
   - watch
 - apiGroups:
   - autoscaling
-  - policy
   resources:
   - horizontalpodautoscalers
+  verbs:
+  - create
+  - get
+  - list
+  - delete
+  - deletecollection
+  - patch
+  - watch
+- apiGroups:
+  - policy
+  resources:
   - poddisruptionbudgets
   verbs:
   - create
