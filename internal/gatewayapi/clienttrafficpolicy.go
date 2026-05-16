@@ -214,134 +214,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		}
 	}
 
-	// ListenerSet policies with no sectionName (targeting all listeners in a ListenerSet)
-	for i, currPolicy := range clientTrafficPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
-		for _, targetRef := range targetRefs {
-			if targetRef.Kind != resource.KindListenerSet || hasSectionName(&targetRef) {
-				continue
-			}
-
-			policy, found := handledPolicies[policyName]
-			if !found {
-				policy = policyCopies[i]
-				handledPolicies[policyName] = policy
-				res = append(res, policy)
-			}
-
-			gateway, ls, resolveErr := resolveClientTrafficPolicyTargetRefForListenerSet(&targetRef, resources.ListenerSets, gatewayMap)
-
-			// Negative statuses have already been assigned so its safe to skip
-			if gateway == nil {
-				continue
-			}
-			gatewayKey := utils.NamespacedName(gateway)
-			lsKey := types.NamespacedName{Namespace: ls.Namespace, Name: ls.Name}
-			ancestorRef := getAncestorRefForPolicy(gatewayKey, nil)
-
-			// Set conditions for resolve error, then skip current gateway
-			if resolveErr != nil {
-				status.SetResolveErrorForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
-				continue
-			}
-
-			// Check if another policy has already targeted this ListenerSet
-			s, ok := policyMap[gatewayKey]
-			lsAllSections := "listenerset/" + lsKey.String()
-			if ok && s.Has(lsAllSections) {
-				message := fmt.Sprintf("Unable to target ListenerSet %s, another ClientTrafficPolicy has already attached to it",
-					string(targetRef.Name))
-
-				resolveErr = &status.PolicyResolveError{
-					Reason:  gwapiv1.PolicyReasonConflicted,
-					Message: message,
-				}
-
-				status.SetResolveErrorForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
-				continue
-			}
-
-			// Check if specific listeners in this ListenerSet are already targeted
-			if ok && s.Len() > 0 {
-				sections := s.UnsortedList()
-				sort.Strings(sections)
-				message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", sections)
-
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionOverridden,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonOverridden,
-					message,
-					policy.Generation,
-				)
-			}
-
-			if s == nil {
-				policyMap[gatewayKey] = sets.New[string]()
-			}
-			policyMap[gatewayKey].Insert(lsAllSections)
-
-			var (
-				errs                   error
-				http3DisabledListeners []string
-			)
-			for _, l := range gateway.listeners {
-				if !l.isFromListenerSet() || l.listenerSet.Name != ls.Name || l.listenerSet.Namespace != ls.Namespace {
-					continue
-				}
-				// Skip if this specific listener was already targeted by a sectionName policy
-				if s != nil && s.Has(string(l.Name)) {
-					continue
-				}
-				irKey := t.getIRKey(l.gateway.Gateway)
-				gwXdsIR := xdsIR[irKey]
-				if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false); err != nil {
-					errs = errors.Join(errs, err)
-				} else {
-					if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
-						http3DisabledListeners = append(http3DisabledListeners, string(l.Name))
-					}
-					if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
-						errs = errors.Join(errs, err)
-					}
-				}
-			}
-
-			// Set conditions for translation error if it got any
-			if errs != nil {
-				status.SetTranslationErrorForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					policy.Generation,
-					status.Error2ConditionMsg(errs),
-				)
-			}
-
-			// Set Accepted condition if it is unset
-			status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
-
-			// Set Warning condition if HTTP/3 was disabled for the listener
-			if len(http3DisabledListeners) > 0 {
-				status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
-					status.PolicyReasonUnsupportedHTTP3ClientValidation, disabledHTTP3WarningMessage(http3DisabledListeners), policy.Generation)
-			}
-		}
-	}
-
-	// Policy with no section set (targeting all sections)
+	// Policy with no section set (targeting all sections of a Gateway or ListenerSet)
 	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := resolvePolicyTargets(
@@ -363,7 +236,16 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					handledPolicies[policyName] = policy
 				}
 
-				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(&currTarget, gatewayMap)
+				var (
+					gateway    *GatewayContext
+					ls         *gwapiv1.ListenerSet
+					resolveErr *status.PolicyResolveError
+				)
+				if currTarget.Kind == resource.KindListenerSet {
+					gateway, ls, resolveErr = resolveClientTrafficPolicyTargetRefForListenerSet(&currTarget, resources.ListenerSets, gatewayMap)
+				} else {
+					gateway, resolveErr = resolveClientTrafficPolicyTargetRef(&currTarget, gatewayMap)
+				}
 
 				// Negative statuses have already been assigned so its safe to skip
 				if gateway == nil {
@@ -385,11 +267,26 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					continue
 				}
 
-				// Check if another policy targeting the same Gateway exists
+				// Compute the all-sections conflict key: for a ListenerSet target, use a
+				// synthetic key scoped to that ListenerSet so Gateway-wide and per-set policies
+				// don't collide in policyMap. For a Gateway target, use AllSections.
+				allSectionsKey := AllSections
+				targettingLS := ls != nil
+				if targettingLS {
+					lsKey := types.NamespacedName{Namespace: ls.Namespace, Name: ls.Name}
+					allSectionsKey = "listenerset/" + lsKey.String()
+				}
+
 				s, ok := policyMap[key]
-				if ok && s.Has(AllSections) {
-					message := fmt.Sprintf("Unable to target Gateway %s, another ClientTrafficPolicy has already attached to it",
-						string(currTarget.Name))
+				if ok && s.Has(allSectionsKey) {
+					var message string
+					if targettingLS {
+						message = fmt.Sprintf("Unable to target ListenerSet %s, another ClientTrafficPolicy has already attached to it",
+							string(currTarget.Name))
+					} else {
+						message = fmt.Sprintf("Unable to target Gateway %s, another ClientTrafficPolicy has already attached to it",
+							string(currTarget.Name))
+					}
 
 					resolveErr = &status.PolicyResolveError{
 						Reason:  gwapiv1.PolicyReasonConflicted,
@@ -406,8 +303,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					continue
 				}
 
-				// Check if another policy targeting the same Gateway exists
-				if ok && (s.Len() > 0) {
+				competingPolicy := ok && (s.Len() > 0)
+				if competingPolicy {
 					// Maintain order here to ensure status/string does not change with same data
 					sections := s.UnsortedList()
 					sort.Strings(sections)
@@ -428,7 +325,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				if s == nil {
 					policyMap[key] = sets.New[string]()
 				}
-				policyMap[key].Insert(AllSections)
+				policyMap[key].Insert(allSectionsKey)
 
 				// Translate sections that have not yet been targeted
 				var (
@@ -436,6 +333,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					http3DisabledListeners []string
 				)
 				for _, l := range gateway.listeners {
+					if targettingLS {
+						listenersDontBelongToLS := !l.isFromListenerSet() || l.listenerSet.Name != ls.Name || l.listenerSet.Namespace != ls.Namespace
+						if listenersDontBelongToLS {
+							continue
+						}
+					}
 					// Skip if section has already been targeted
 					if s != nil && s.Has(string(l.Name)) {
 						continue
@@ -445,7 +348,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					irKey := t.getIRKey(l.gateway.Gateway)
 					// It must exist since we've already finished processing the gateways
 					gwXdsIR := xdsIR[irKey]
-					if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
+					if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, !targettingLS); err != nil {
 						errs = errors.Join(errs, err)
 					} else {
 						if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
