@@ -12,6 +12,7 @@ new features: |
 
 bug fixes: |
   Fixed Gateway getting stuck at `Programmed=False` after its LoadBalancer Service IP was restored, by ignoring `LastTransitionTime` when comparing status conditions.
+  Fixed controller panic when processing backend tls settings.
 
 # Enhancements that improve performance.
 performance improvements: |

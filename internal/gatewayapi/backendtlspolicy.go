@@ -142,10 +142,12 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the client certificate and common TLS settings from EnvoyProxy resource.
-	if gtwBackendTLSConfig, owner := gtwCtx.GetBackendTLSConfig(); gtwBackendTLSConfig != nil {
-		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(
-			gtwBackendTLSConfig, owner); err != nil {
-			return nil, err
+	if gtwCtx != nil {
+		if gtwBackendTLSConfig, owner := gtwCtx.GetBackendTLSConfig(); gtwBackendTLSConfig != nil {
+			if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(
+				gtwBackendTLSConfig, owner); err != nil {
+				return nil, err
+			}
 		}
 	}
 
