@@ -98,21 +98,13 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				var (
-					gateway    *GatewayContext
-					ls         *gwapiv1.ListenerSet
-					resolveErr *status.PolicyResolveError
-				)
-				if targetRef.Kind == resource.KindListenerSet {
-					gateway, ls, resolveErr = resolveClientTrafficPolicyTargetRefForListenerSet(&targetRef, resources.ListenerSets, gatewayMap)
-				} else {
-					gateway, resolveErr = resolveClientTrafficPolicyTargetRef(&targetRef, gatewayMap)
-				}
+				resolved, resolveErr := resolveClientTrafficPolicyTargetRef(&targetRef, gatewayMap, resources.ListenerSets)
 
 				// Negative statuses have already been assigned so its safe to skip
-				if gateway == nil {
+				if resolved == nil {
 					continue
 				}
+				gateway, ls := resolved.gateway, resolved.listenerSet
 				key := utils.NamespacedName(gateway)
 				ancestorRef := getAncestorRefForPolicy(key, targetRef.SectionName)
 
@@ -168,11 +160,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					gwXdsIR := xdsIR[irKey]
 
 					targettingLS := ls != nil
-					if targettingLS {
-						listenersDontBelongToLS := !l.isFromListenerSet() || l.listenerSet.Name != ls.Name || l.listenerSet.Namespace != ls.Namespace
-						if listenersDontBelongToLS {
-							continue
-						}
+					if targettingLS && listenersDontBelongToLS(l, ls) {
+						continue
 					}
 					if string(l.Name) == section {
 						err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false)
@@ -236,22 +225,13 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					handledPolicies[policyName] = policy
 				}
 
-				var (
-					gateway    *GatewayContext
-					ls         *gwapiv1.ListenerSet
-					resolveErr *status.PolicyResolveError
-				)
-				if currTarget.Kind == resource.KindListenerSet {
-					gateway, ls, resolveErr = resolveClientTrafficPolicyTargetRefForListenerSet(&currTarget, resources.ListenerSets, gatewayMap)
-				} else {
-					gateway, resolveErr = resolveClientTrafficPolicyTargetRef(&currTarget, gatewayMap)
-				}
+				resolved, resolveErr := resolveClientTrafficPolicyTargetRef(&currTarget, gatewayMap, resources.ListenerSets)
 
 				// Negative statuses have already been assigned so its safe to skip
-				if gateway == nil {
+				if resolved == nil {
 					continue
 				}
-
+				gateway, ls := resolved.gateway, resolved.listenerSet
 				key := utils.NamespacedName(gateway)
 				ancestorRef := getAncestorRefForPolicy(key, nil)
 
@@ -330,11 +310,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					http3DisabledListeners []string
 				)
 				for _, l := range gateway.listeners {
-					if targettingLS {
-						listenersDontBelongToLS := !l.isFromListenerSet() || l.listenerSet.Name != ls.Name || l.listenerSet.Namespace != ls.Namespace
-						if listenersDontBelongToLS {
-							continue
-						}
+					if targettingLS && listenersDontBelongToLS(l, ls) {
+						continue
 					}
 					entireGatewayHasPolicy := s != nil && s.Has(AllSections)
 					// Skip if section has already been targeted
@@ -397,18 +374,66 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	return res
 }
 
+// ctpResolvedTarget is the result of resolving a ClientTrafficPolicy targetRef.
+// listenerSet is non-nil when the target is a ListenerSet rather than a Gateway directly.
+type ctpResolvedTarget struct {
+	gateway     *GatewayContext
+	listenerSet *gwapiv1.ListenerSet
+}
+
 func resolveClientTrafficPolicyTargetRef(
 	targetRef *policyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
-) (*GatewayContext, *status.PolicyResolveError) {
-	// Check if the gateway exists
+	listenerSets []*gwapiv1.ListenerSet,
+) (*ctpResolvedTarget, *status.PolicyResolveError) {
+	if targetRef.Kind == resource.KindListenerSet {
+		var ls *gwapiv1.ListenerSet
+		for _, candidate := range listenerSets {
+			if candidate.Name == string(targetRef.Name) && candidate.Namespace == string(targetRef.Namespace) {
+				ls = candidate
+				break
+			}
+		}
+		if ls == nil {
+			return nil, nil
+		}
+
+		parentNamespace := NamespaceDerefOr(ls.Spec.ParentRef.Namespace, ls.Namespace)
+		gatewayKey := types.NamespacedName{
+			Namespace: parentNamespace,
+			Name:      string(ls.Spec.ParentRef.Name),
+		}
+		gateway, ok := gateways[gatewayKey]
+		if !ok {
+			return nil, nil
+		}
+
+		if targetRef.SectionName != nil {
+			foundListenerInSection := false
+			for i := range ls.Spec.Listeners {
+				if ls.Spec.Listeners[i].Name == *targetRef.SectionName {
+					foundListenerInSection = true
+					break
+				}
+			}
+			if !foundListenerInSection {
+				return &ctpResolvedTarget{gateway.GatewayContext, ls}, &status.PolicyResolveError{
+					Reason: gwapiv1.PolicyReasonTargetNotFound,
+					Message: fmt.Sprintf("ListenerSet %s/%s does not have a listener named %q",
+						ls.Namespace, ls.Name, *targetRef.SectionName),
+				}
+			}
+		}
+
+		return &ctpResolvedTarget{gateway.GatewayContext, ls}, nil
+	}
+
+	// Gateway target
 	key := types.NamespacedName{
 		Name:      string(targetRef.Name),
 		Namespace: string(targetRef.Namespace),
 	}
 	gateway, ok := gateways[key]
-
-	// Gateway not found
 	if !ok {
 		return nil, nil
 	}
@@ -420,60 +445,15 @@ func resolveClientTrafficPolicyTargetRef(
 			key,
 			gateway.listeners,
 		); err != nil {
-			return gateway.GatewayContext, err
+			return &ctpResolvedTarget{gateway: gateway.GatewayContext}, err
 		}
 	}
 
-	return gateway.GatewayContext, nil
+	return &ctpResolvedTarget{gateway: gateway.GatewayContext}, nil
 }
 
-func resolveClientTrafficPolicyTargetRefForListenerSet(
-	targetRef *policyTargetReferenceWithSectionName,
-	listenerSets []*gwapiv1.ListenerSet,
-	gateways map[types.NamespacedName]*policyGatewayTargetContext,
-) (*GatewayContext, *gwapiv1.ListenerSet, *status.PolicyResolveError) {
-	// Find the ListenerSet by name/namespace
-	var ls *gwapiv1.ListenerSet
-	for _, candidate := range listenerSets {
-		if candidate.Name == string(targetRef.Name) && candidate.Namespace == string(targetRef.Namespace) {
-			ls = candidate
-			break
-		}
-	}
-	if ls == nil {
-		return nil, nil, nil
-	}
-
-	// Find the parent Gateway via the ListenerSet's parentRef
-	parentNamespace := NamespaceDerefOr(ls.Spec.ParentRef.Namespace, ls.Namespace)
-	gatewayKey := types.NamespacedName{
-		Namespace: parentNamespace,
-		Name:      string(ls.Spec.ParentRef.Name),
-	}
-	gateway, ok := gateways[gatewayKey]
-	if !ok {
-		return nil, nil, nil
-	}
-
-	// If sectionName is set, validate it refers to a listener defined in the ListenerSet
-	if targetRef.SectionName != nil {
-		found := false
-		for i := range ls.Spec.Listeners {
-			if ls.Spec.Listeners[i].Name == *targetRef.SectionName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return gateway.GatewayContext, ls, &status.PolicyResolveError{
-				Reason: gwapiv1.PolicyReasonTargetNotFound,
-				Message: fmt.Sprintf("ListenerSet %s/%s does not have a listener named %q",
-					ls.Namespace, ls.Name, *targetRef.SectionName),
-			}
-		}
-	}
-
-	return gateway.GatewayContext, ls, nil
+func listenersDontBelongToLS(l *ListenerContext, ls *gwapiv1.ListenerSet) bool {
+	return !l.isFromListenerSet() || l.listenerSet.Name != ls.Name || l.listenerSet.Namespace != ls.Namespace
 }
 
 func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, attachedToGateway bool) error {
