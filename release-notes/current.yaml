@@ -11,6 +11,11 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
+  Fixed ListenerSet and its listeners incorrectly setting `Accepted: False` for InvalidCertificateRef and RefNotPermitted, inconsistent with Gateway behavior and the Gateway API spec.
+  Fixed active HTTP health checks to use Backend endpoint hostnames before falling back to the effective Route hostname.
+  Fixed HTTPS listeners with overlapping hostnames but disjoint certificate SANs to preserve HTTP/2 ALPN by default.
+  Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
   Fixed controller panic when processing backend tls settings.
 
 # Enhancements that improve performance.
