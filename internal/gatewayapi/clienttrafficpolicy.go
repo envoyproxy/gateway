@@ -267,16 +267,13 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					continue
 				}
 
-				// Compute the all-sections conflict key: for a ListenerSet target, use a
-				// synthetic key scoped to that ListenerSet so Gateway-wide and per-set policies
-				// don't collide in policyMap. For a Gateway target, use AllSections.
-				allSectionsKey := AllSections
 				targettingLS := ls != nil
+				allSectionsKey := AllSections
 				if targettingLS {
-					lsKey := types.NamespacedName{Namespace: ls.Namespace, Name: ls.Name}
-					allSectionsKey = "listenerset/" + lsKey.String()
+					allSectionsKey = "listenerset/" + types.NamespacedName{Namespace: ls.Namespace, Name: ls.Name}.String()
 				}
 
+				// Check if another policy targeting the same Gateway exists
 				s, ok := policyMap[key]
 				if ok && s.Has(allSectionsKey) {
 					var message string
@@ -339,8 +336,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							continue
 						}
 					}
+					entireGatewayHasPolicy := s != nil && s.Has(AllSections)
 					// Skip if section has already been targeted
-					if s != nil && s.Has(string(l.Name)) {
+					if s.Has(string(l.Name)) || (targettingLS && entireGatewayHasPolicy) {
 						continue
 					}
 
@@ -356,6 +354,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						}
 						if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
 							errs = errors.Join(errs, err)
+						}
+						if targettingLS {
+							policyMap[key].Insert(string(l.Name))
 						}
 					}
 				}
