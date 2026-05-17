@@ -271,8 +271,8 @@ The `unit` field controls the time window: `Second`, `Minute`, or `Hour`.
 
 [envoy-bandwidth-limit-filter]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/bandwidth_limit_filter
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
 [resource-quantity]: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/
 [httpbin]: https://httpbin.org
