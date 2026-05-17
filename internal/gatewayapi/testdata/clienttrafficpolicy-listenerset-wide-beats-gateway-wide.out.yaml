@@ -47,7 +47,7 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: There are existing ClientTrafficPolicies that are overriding these
-          sections [ext-http-1 ext-http-2 listenerset/envoy-gateway/ext-listeners]
+          sections [ext-http-1 ext-http-2]
         reason: Overridden
         status: "True"
         type: Overridden

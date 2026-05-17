@@ -28,8 +28,7 @@ import (
 )
 
 const (
-	// Use an invalid string to represent all sections (listeners) within a Gateway
-	AllSections = "/"
+	entireGatewayScope = "/entireGatewayScope"
 )
 
 func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
@@ -68,7 +67,13 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	clientTrafficPolicies := resources.ClientTrafficPolicies
 	// ClientTrafficPolicies are already sorted by the provider layer
 
-	policyMap := make(map[types.NamespacedName]sets.Set[string])
+	// claimedScopes tracks entire Gateway or entire ListenerSet claims per gateway key.
+	// Used to mark duplicate whole-scope policies as Conflicted.
+	claimedScopes := make(map[types.NamespacedName]sets.Set[string])
+	// claimedSections tracks individual section names claimed per gateway key.
+	// Used to mark sectionName policies as Conflicted, skip already-translated sections,
+	// and build Overridden status messages.
+	claimedSections := make(map[types.NamespacedName]sets.Set[string])
 
 	// Build a map out of gateways for faster lookup since users might have hundreds of gateway or more.
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
@@ -122,8 +127,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Check if another policy targeting the same section exists
 				section := string(*(targetRef.SectionName))
-				s, ok := policyMap[key]
-				if ok && s.Has(section) {
+				if claimedSections[key].Has(section) {
 					message := fmt.Sprintf("Unable to target section of %s, another ClientTrafficPolicy has already attached to it",
 						string(targetRef.Name))
 
@@ -142,11 +146,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					continue
 				}
 
-				// Add section to policy map
-				if s == nil {
-					policyMap[key] = sets.New[string]()
+				if claimedSections[key] == nil {
+					claimedSections[key] = sets.New[string]()
 				}
-				policyMap[key].Insert(section)
+				claimedSections[key].Insert(section)
 
 				// Translate for listener matching section name
 				var (
@@ -253,14 +256,14 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						continue
 					}
 					policyTargetsLS := currTarget.Kind == resource.KindListenerSet
-					allSectionsKey := AllSections
+					scopeKey := entireGatewayScope
 					if policyTargetsLS {
-						allSectionsKey = "listenerset/" + types.NamespacedName{Namespace: ls.Namespace, Name: ls.Name}.String()
+						scopeKey = "listenerset/" + types.NamespacedName{Namespace: ls.Namespace, Name: ls.Name}.String()
 					}
 
-					// Check if another policy targeting the same Gateway exists
-					s, ok := policyMap[key]
-					if ok && s.Has(allSectionsKey) {
+					scope, scopeExists := claimedScopes[key]
+					conflictingScope := scopeExists && scope.Has(scopeKey)
+					if conflictingScope {
 						var message string
 						if policyTargetsLS {
 							message = fmt.Sprintf("Unable to target ListenerSet %s, another ClientTrafficPolicy has already attached to it",
@@ -285,10 +288,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						continue
 					}
 
-					competingPolicy := ok && (s.Len() > 0)
+					competingPolicy := claimedSections[key] != nil && claimedSections[key].Len() > 0
 					if competingPolicy {
 						// Maintain order here to ensure status/string does not change with same data
-						sections := s.UnsortedList()
+						sections := claimedSections[key].UnsortedList()
 						sort.Strings(sections)
 						message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", sections)
 
@@ -303,11 +306,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						)
 					}
 
-					// Add section to policy map
-					if s == nil {
-						policyMap[key] = sets.New[string]()
+					if scope == nil {
+						claimedScopes[key] = sets.New[string]()
 					}
-					policyMap[key].Insert(allSectionsKey)
+					claimedScopes[key].Insert(scopeKey)
 
 					// Translate sections that have not yet been targeted
 					var (
@@ -319,7 +321,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							continue
 						}
 						// Skip if section has already been targeted
-						if s != nil && s.Has(string(l.Name)) {
+						if claimedSections[key].Has(string(l.Name)) {
 							continue
 						}
 
@@ -337,7 +339,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 								errs = errors.Join(errs, err)
 							}
 							if policyTargetsLS {
-								policyMap[key].Insert(string(l.Name))
+								if claimedSections[key] == nil {
+									claimedSections[key] = sets.New[string]()
+								}
+								claimedSections[key].Insert(string(l.Name))
 							}
 						}
 					}
@@ -393,8 +398,9 @@ func resolveClientTrafficPolicyTargetRef(
 ) (*ctpResolvedTarget, *status.PolicyResolveError) {
 	if targetRef.Kind == resource.KindListenerSet {
 		var ls *gwapiv1.ListenerSet
+		targetKey := types.NamespacedName{Name: string(targetRef.Name), Namespace: string(targetRef.Namespace)}
 		for _, candidate := range listenerSets {
-			if candidate.Name == string(targetRef.Name) && candidate.Namespace == string(targetRef.Namespace) {
+			if utils.NamespacedName(candidate) == targetKey {
 				ls = candidate
 				break
 			}
