@@ -74,6 +74,12 @@ After the required CRDs are installed, install the eg chart with `--skip-crds`:
 helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds
 ```
 
+The Gateway API safe-upgrades ValidatingAdmissionPolicy is rendered from the chart templates. If you also manage that policy outside of this chart, disable it explicitly:
+
+``` shell
+helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds --set crds.gatewayAPI.validatingAdmissionPolicy.enabled=false
+```
+
 To uninstall the chart:
 
 ``` shell
