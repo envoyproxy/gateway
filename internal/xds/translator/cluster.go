@@ -1025,9 +1025,18 @@ func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpo
 	return *ep.Hostname
 }
 
+func hasTimeoutArgs(args *xdsClusterArgs) bool {
+	if args.timeout == nil || args.timeout.HTTP == nil {
+		return false
+	}
+	timeout := args.timeout.HTTP
+	return timeout.MaxConnectionDuration != nil ||
+		timeout.ConnectionIdleTimeout != nil ||
+		timeout.MaxStreamDuration != nil
+}
+
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
-	requiresCommonHTTPOptions := (args.timeout != nil && args.timeout.HTTP != nil &&
-		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)) ||
+	requiresCommonHTTPOptions := hasTimeoutArgs(args) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
 	requiresHTTP1Options := args.http1Settings != nil &&
@@ -1052,6 +1061,10 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 
 			if args.timeout.HTTP.MaxConnectionDuration != nil {
 				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
+			}
+
+			if args.timeout.HTTP.MaxStreamDuration != nil {
+				protocolOptions.CommonHttpProtocolOptions.MaxStreamDuration = durationpb.New(args.timeout.HTTP.MaxStreamDuration.Duration)
 			}
 		}
 

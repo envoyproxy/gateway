@@ -58,6 +58,10 @@ infraIR:
                     - name: access-logger
                       namespace: default
                       port: 50051
+                    backendSettings:
+                      timeout:
+                        http:
+                          maxConnectionDuration: 30s
                     type: HTTP
                   type: ALS
         status: {}
@@ -100,6 +104,10 @@ xdsIR:
             name: accesslog_als_0_0/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/als-backend
+        traffic:
+          timeout:
+            http:
+              maxConnectionDuration: 30s
         type: HTTP
     globalResources:
       proxyServiceCluster:

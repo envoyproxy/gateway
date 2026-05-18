@@ -16,6 +16,10 @@ envoyProxyForGatewayClass:
                       namespace: default
                       port: 50051
                   type: HTTP
+                  backendSettings:
+                    timeout:
+                      http:
+                        maxConnectionDuration: 30s
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway

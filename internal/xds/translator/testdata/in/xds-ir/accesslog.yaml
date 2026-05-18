@@ -18,6 +18,10 @@ accesslog:
       value: "%START_TIME%"
   als:
   - name: als
+    traffic:
+      timeout:
+        http:
+          maxStreamDuration: 30s
     destination:
       name: accesslog/monitoring/envoy-als/port/9000
       settings:
@@ -53,6 +57,10 @@ accesslog:
     - key: "cluster_name"
       value: "cluster1"
     authority: "otel-collector.default.svc.cluster.local"
+    traffic:
+      timeout:
+        http:
+          maxStreamDuration: 30s
     destination:
       name: "accesslog-0"
       settings:
