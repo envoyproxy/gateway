@@ -983,9 +983,8 @@ func (t *Translator) buildListenerTLSParameters(
 					)
 				}
 			}
-			irCACert.Certificate = append(irCACert.Certificate, validCaCertBytes...)
+			irCACert.Certificate = appendDedupPEMCerts(irCACert.Certificate, validCaCertBytes)
 		}
-		irCACert.Certificate = deduplicatePEMCerts(irCACert.Certificate)
 
 		// CA certificates are required for verification modes.
 		if (mode == egv1a1.ClientValidationVerifyIfGiven || mode == egv1a1.ClientValidationRequireAndVerify) && len(irCACert.Certificate) == 0 {

@@ -279,19 +279,29 @@ func validateCipherSuites(ciphers []string) error {
 	return nil
 }
 
-// deduplicatePEMCerts removes duplicate PEM certificate blocks from data.
-func deduplicatePEMCerts(data []byte) []byte {
+// appendDedupPEMCerts appends PEM certificate blocks from src to dst, skipping
+// any CERTIFICATE block whose DER bytes are already present in dst.
+func appendDedupPEMCerts(dst, src []byte) []byte {
 	seen := make(map[[sha256.Size]byte]struct{})
-	result := make([]byte, 0, len(data))
-
-	rest := data
+	rest := dst
 	for len(rest) > 0 {
 		block, remaining := pem.Decode(rest)
 		if block == nil {
 			break
 		}
 		rest = remaining
+		if block.Type == "CERTIFICATE" {
+			seen[sha256.Sum256(block.Bytes)] = struct{}{}
+		}
+	}
 
+	rest = src
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
 		if block.Type == "CERTIFICATE" {
 			hash := sha256.Sum256(block.Bytes)
 			if _, exists := seen[hash]; exists {
@@ -299,9 +309,8 @@ func deduplicatePEMCerts(data []byte) []byte {
 			}
 			seen[hash] = struct{}{}
 		}
-
-		result = append(result, pem.EncodeToMemory(block)...)
+		dst = append(dst, pem.EncodeToMemory(block)...)
 	}
 
-	return result
+	return dst
 }

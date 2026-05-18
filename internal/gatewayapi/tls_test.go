@@ -341,7 +341,7 @@ func TestFilterValidCertificates(t *testing.T) {
 	}
 }
 
-func TestDeduplicatePEMCerts(t *testing.T) {
+func TestAppendDedupPEMCerts(t *testing.T) {
 	rsaCert, err := os.ReadFile(filepath.Join("testdata", "tls", "rsa-cert.pem"))
 	require.NoError(t, err)
 
@@ -350,44 +350,57 @@ func TestDeduplicatePEMCerts(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		input    []byte
+		dst      []byte
+		src      []byte
 		expected []byte
 	}{
 		{
-			name:     "single cert unchanged",
-			input:    rsaCert,
+			name:     "append distinct cert to empty dst",
+			dst:      []byte{},
+			src:      rsaCert,
 			expected: rsaCert,
 		},
 		{
-			name:     "two distinct certs unchanged",
-			input:    append(append([]byte{}, rsaCert...), ecdsaCert...),
+			name:     "append distinct cert to non-empty dst",
+			dst:      rsaCert,
+			src:      ecdsaCert,
 			expected: append(append([]byte{}, rsaCert...), ecdsaCert...),
 		},
 		{
-			name:     "duplicate cert within single bundle is deduplicated",
-			input:    append(append([]byte{}, rsaCert...), rsaCert...),
+			name:     "duplicate src cert already in dst is skipped",
+			dst:      rsaCert,
+			src:      rsaCert,
 			expected: rsaCert,
 		},
 		{
-			name:     "first occurrence kept when cert appears twice in multi-cert bundle",
-			input:    append(append(append([]byte{}, rsaCert...), ecdsaCert...), rsaCert...),
+			name:     "only new cert appended when src contains one known and one new",
+			dst:      rsaCert,
+			src:      append(append([]byte{}, rsaCert...), ecdsaCert...),
 			expected: append(append([]byte{}, rsaCert...), ecdsaCert...),
 		},
 		{
-			name:     "three copies collapsed to one",
-			input:    append(append(append([]byte{}, rsaCert...), rsaCert...), rsaCert...),
+			name:     "duplicate within src itself only appended once",
+			dst:      []byte{},
+			src:      append(append([]byte{}, rsaCert...), rsaCert...),
 			expected: rsaCert,
 		},
 		{
-			name:     "empty input returns empty output",
-			input:    []byte{},
+			name:     "empty src leaves dst unchanged",
+			dst:      rsaCert,
+			src:      []byte{},
+			expected: rsaCert,
+		},
+		{
+			name:     "both empty returns empty",
+			dst:      []byte{},
+			src:      []byte{},
 			expected: []byte{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := deduplicatePEMCerts(tc.input)
+			result := appendDedupPEMCerts(tc.dst, tc.src)
 			require.Equal(t, tc.expected, result)
 		})
 	}
@@ -460,5 +473,5 @@ func TestBuildListenerTLSParametersDedupCACerts(t *testing.T) {
 	}
 	require.Equal(t, 1, pemCount,
 		"expected exactly 1 PEM block after deduplication, got %d — "+
-			"deduplicatePEMCerts call may be missing from buildListenerTLSParameters", pemCount)
+			"appendDedupPEMCerts may not be used in buildListenerTLSParameters", pemCount)
 }
