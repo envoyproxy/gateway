@@ -7,7 +7,6 @@ package net
 
 import (
 	"fmt"
-	"net"
 	"net/url"
 )
 
@@ -21,20 +20,8 @@ func ParseURL(urlStr string) (scheme, hostAndPort string, err error) {
 
 	switch u.Scheme {
 	case "http", "https":
-		host := u.Hostname()
-		port := u.Port()
-		if host == "" {
-			return "", "", fmt.Errorf("URL must contain a host")
-		}
-		// Set default port if not specified
-		if port == "" {
-			if u.Scheme == "http" {
-				port = "80"
-			} else {
-				port = "443"
-			}
-		}
-		return u.Scheme, net.JoinHostPort(host, port), nil
+		// TODO: support http and https scheme
+		return "", "", fmt.Errorf("unsupported URL scheme: %s", u.Scheme)
 	case "unix":
 		// For Unix Domain Socket, return the path as host, empty port
 		if u.Path == "" {
@@ -43,6 +30,6 @@ func ParseURL(urlStr string) (scheme, hostAndPort string, err error) {
 
 		return u.Scheme, u.Path, nil
 	default:
-		return "", "", fmt.Errorf("unsupported URL scheme: %s (supported: http, https, unix)", u.Scheme)
+		return "", "", fmt.Errorf("unsupported URL scheme: %s", u.Scheme)
 	}
 }
