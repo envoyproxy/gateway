@@ -53,6 +53,15 @@ reads the captured value and adds the request header.
 - Downstream infrastructure (NLB on AWS, Internal Load Balancer on Azure) must be configured to
   forward PPv2 headers to the Envoy pods.
 
+These examples target an HTTPS listener (`tcp-443`) which places the HTTP
+connection manager inside `filter_chains`; the `jsonPath: "$.filter_chains[*]"` selector patches
+every chain, which handles gateways with multiple TLS hostnames.
+
+For a plain HTTP listener (`tcp-80`), the HCM is placed under `defaultFilterChain` instead, which is not part of
+`filter_chains`, so the JSONPath selector matches nothing and the policy would be rejected. If your
+Gateway listener is plain HTTP, replace the listener name with `tcp-80`, remove the `jsonPath`
+field, and set `path` to `/defaultFilterChain/filters/0/typed_config/http_filters/0`.
+
 ## AWS — extracting the VPC Endpoint ID
 
 AWS encodes the VPC Endpoint ID (e.g. `vpce-0123456789abcdef0`) in TLV `0xEA`. Like the Azure
@@ -103,7 +112,8 @@ spec:
       name: "tcp-443"
       operation:
         op: add
-        path: "/filter_chains/0/filters/0/typed_config/http_filters/0"
+        jsonPath: "$.filter_chains[*]"
+        path: "/filters/0/typed_config/http_filters/0"
         value:
           name: envoy.filters.http.lua
           typed_config:
@@ -160,7 +170,8 @@ spec:
       name: "tcp-443"
       operation:
         op: add
-        path: "/filter_chains/0/filters/0/typed_config/http_filters/0"
+        jsonPath: "$.filter_chains[*]"
+        path: "/filters/0/typed_config/http_filters/0"
         value:
           name: envoy.filters.http.lua
           typed_config:
@@ -261,7 +272,8 @@ spec:
       name: "tcp-443"
       operation:
         op: add
-        path: "/filter_chains/0/filters/0/typed_config/http_filters/0"
+        jsonPath: "$.filter_chains[*]"
+        path: "/filters/0/typed_config/http_filters/0"
         value:
           name: envoy.filters.http.lua
           typed_config:
@@ -321,7 +333,8 @@ spec:
       name: "tcp-443"
       operation:
         op: add
-        path: "/filter_chains/0/filters/0/typed_config/http_filters/0"
+        jsonPath: "$.filter_chains[*]"
+        path: "/filters/0/typed_config/http_filters/0"
         value:
           name: envoy.filters.http.lua
           typed_config:
