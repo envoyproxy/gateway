@@ -21,62 +21,6 @@ func TestParseURL(t *testing.T) {
 		errContains     string
 	}{
 		{
-			name:            "valid http url with port",
-			url:             "http://example.com:8080",
-			wantScheme:      "http",
-			wantHostAndPort: "example.com:8080",
-			wantErr:         false,
-		},
-		{
-			name:            "valid http url without port",
-			url:             "http://example.com",
-			wantScheme:      "http",
-			wantHostAndPort: "example.com:80",
-			wantErr:         false,
-		},
-		{
-			name:            "valid https url with port",
-			url:             "https://example.com:9443",
-			wantScheme:      "https",
-			wantHostAndPort: "example.com:9443",
-			wantErr:         false,
-		},
-		{
-			name:            "valid https url without port",
-			url:             "https://example.com",
-			wantScheme:      "https",
-			wantHostAndPort: "example.com:443",
-			wantErr:         false,
-		},
-		{
-			name:            "valid http url with path",
-			url:             "http://example.com:8080/path/to/resource",
-			wantScheme:      "http",
-			wantHostAndPort: "example.com:8080",
-			wantErr:         false,
-		},
-		{
-			name:            "valid http url with query",
-			url:             "http://example.com:8080?key=value",
-			wantScheme:      "http",
-			wantHostAndPort: "example.com:8080",
-			wantErr:         false,
-		},
-		{
-			name:            "valid http url with ipv4",
-			url:             "http://192.168.1.1:8080",
-			wantScheme:      "http",
-			wantHostAndPort: "192.168.1.1:8080",
-			wantErr:         false,
-		},
-		{
-			name:            "valid http url with ipv6",
-			url:             "http://[::1]:8080",
-			wantScheme:      "http",
-			wantHostAndPort: "[::1]:8080",
-			wantErr:         false,
-		},
-		{
 			name:            "valid unix domain socket",
 			url:             "unix:///var/run/app.sock",
 			wantScheme:      "unix",
@@ -99,20 +43,20 @@ func TestParseURL(t *testing.T) {
 			errContains:     "invalid URL",
 		},
 		{
-			name:            "http url without host",
-			url:             "http://",
+			name:            "http url not supported",
+			url:             "http://example.com:8080",
 			wantScheme:      "",
 			wantHostAndPort: "",
 			wantErr:         true,
-			errContains:     "must contain a host",
+			errContains:     "unsupported URL scheme",
 		},
 		{
-			name:            "https url without host",
-			url:             "https://",
+			name:            "https url not supported",
+			url:             "https://example.com:9443",
 			wantScheme:      "",
 			wantHostAndPort: "",
 			wantErr:         true,
-			errContains:     "must contain a host",
+			errContains:     "unsupported URL scheme",
 		},
 		{
 			name:            "unix url without path",
@@ -145,13 +89,6 @@ func TestParseURL(t *testing.T) {
 			wantHostAndPort: "",
 			wantErr:         true,
 			errContains:     "unsupported URL scheme",
-		},
-		{
-			name:            "http with localhost",
-			url:             "http://localhost:3000",
-			wantScheme:      "http",
-			wantHostAndPort: "localhost:3000",
-			wantErr:         false,
 		},
 	}
 
