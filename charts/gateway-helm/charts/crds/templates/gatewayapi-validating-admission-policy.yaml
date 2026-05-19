@@ -1,4 +1,19 @@
-{{- if .Values.gatewayAPI.validatingAdmissionPolicy.enabled }}
+{{- $safeUpgradePolicyName := "safe-upgrades.gateway.networking.k8s.io" -}}
+{{- $vap := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicy" "" $safeUpgradePolicyName -}}
+{{- $vapBinding := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicyBinding" "" $safeUpgradePolicyName -}}
+{{- $vapOwned := and $vap
+  (eq (dig "metadata" "labels" "app.kubernetes.io/managed-by" "" $vap) "Helm")
+  (eq (dig "metadata" "annotations" "meta.helm.sh/release-name" "" $vap) .Release.Name)
+  (eq (dig "metadata" "annotations" "meta.helm.sh/release-namespace" "" $vap) .Release.Namespace)
+ -}}
+{{- $vapBindingOwned := and $vapBinding
+  (eq (dig "metadata" "labels" "app.kubernetes.io/managed-by" "" $vapBinding) "Helm")
+  (eq (dig "metadata" "annotations" "meta.helm.sh/release-name" "" $vapBinding) .Release.Name)
+  (eq (dig "metadata" "annotations" "meta.helm.sh/release-namespace" "" $vapBinding) .Release.Namespace)
+ -}}
+{{- $vapOwnedOrAbsent := or (not $vap) $vapOwned -}}
+{{- $vapBindingOwnedOrAbsent := or (not $vapBinding) $vapBindingOwned -}}
+{{- if and .Values.gatewayAPI.validatingAdmissionPolicy.enabled (or (not .Release.IsUpgrade) (and $vapOwnedOrAbsent $vapBindingOwnedOrAbsent)) }}
 ---
 #
 # config/crd/experimental/gateway.networking.k8s.io_vap_safeupgrades.yaml
