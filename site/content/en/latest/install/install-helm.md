@@ -105,6 +105,12 @@ Some Kubernetes providers can manage Gateway API CRDs for the cluster. For examp
 Standard Channel CRDs when Gateway API is enabled for a cluster. Before relying on provider-managed CRDs, compare the
 provider-installed Gateway API version and channel with the [Envoy Gateway compatibility matrix](/news/releases/matrix)
 and the Gateway API resources required by your configuration.
+You can check the installed Gateway API version and channel from the CRD annotations:
+
+```shell
+kubectl get crd gateways.gateway.networking.k8s.io \
+  -o go-template='version={{ index .metadata.annotations "gateway.networking.k8s.io/bundle-version" }} channel={{ index .metadata.annotations "gateway.networking.k8s.io/channel" }}{{ "\n" }}'
+```
 
 If the provider-managed Gateway API CRDs are compatible, leave the provider as the owner of those CRDs and install only
 the Envoy Gateway CRDs:
