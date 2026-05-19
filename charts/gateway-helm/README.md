@@ -60,7 +60,7 @@ You can install the eg chart along without Gateway API CRDs and Envoy Gateway CR
 helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds
 ```
 
-If your Kubernetes provider manages compatible Gateway API CRDs, install only the Envoy Gateway CRDs before running the command above:
+If your Kubernetes provider manages compatible Gateway API CRDs, install only the Envoy Gateway CRDs from the `gateway-crds-helm` chart before running the command above:
 
 ``` shell
 helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm --set 'crds.gatewayAPI.enabled=false' --set 'crds.envoyGateway.enabled=true' \
