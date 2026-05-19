@@ -8,7 +8,7 @@ package net
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseURL(t *testing.T) {
@@ -159,15 +159,15 @@ func TestParseURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotScheme, gotHostAndPort, err := ParseURL(tt.url)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.errContains != "" {
-					assert.Contains(t, err.Error(), tt.errContains)
+					require.Contains(t, err.Error(), tt.errContains)
 				}
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
-			assert.Equal(t, tt.wantScheme, gotScheme)
-			assert.Equal(t, tt.wantHostAndPort, gotHostAndPort)
+			require.Equal(t, tt.wantScheme, gotScheme)
+			require.Equal(t, tt.wantHostAndPort, gotHostAndPort)
 		})
 	}
 }
