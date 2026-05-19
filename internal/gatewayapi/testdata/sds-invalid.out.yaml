@@ -26,12 +26,16 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Multiple SDS reference secrets are not supported.
+        message: 'Invalid SDS reference secret sds-ref-1: invalid URL in SDS reference
+          secret default/sds-ref-1: unsupported URL scheme:  (supported: http, https,
+          unix).'
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: Multiple SDS reference secrets are not supported.
+        message: 'Invalid SDS reference secret sds-ref-1: invalid URL in SDS reference
+          secret default/sds-ref-1: unsupported URL scheme:  (supported: http, https,
+          unix).'
         reason: InvalidCACertificateRef
         status: "False"
         type: ResolvedRefs
@@ -63,12 +67,16 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Cannot mix SDS reference secrets with other CA certificate types.
+        message: 'Invalid SDS reference secret sds-ref-1: invalid URL in SDS reference
+          secret default/sds-ref-1: unsupported URL scheme:  (supported: http, https,
+          unix).'
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: Cannot mix SDS reference secrets with other CA certificate types.
+        message: 'Invalid SDS reference secret sds-ref-1: invalid URL in SDS reference
+          secret default/sds-ref-1: unsupported URL scheme:  (supported: http, https,
+          unix).'
         reason: InvalidCACertificateRef
         status: "False"
         type: ResolvedRefs
@@ -100,12 +108,16 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Cannot mix SDS reference secrets with other CA certificate types.
+        message: 'Invalid SDS reference secret sds-ref-1: invalid URL in SDS reference
+          secret default/sds-ref-1: unsupported URL scheme:  (supported: http, https,
+          unix).'
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: Cannot mix SDS reference secrets with other CA certificate types.
+        message: 'Invalid SDS reference secret sds-ref-1: invalid URL in SDS reference
+          secret default/sds-ref-1: unsupported URL scheme:  (supported: http, https,
+          unix).'
         reason: InvalidCACertificateRef
         status: "False"
         type: ResolvedRefs
@@ -211,9 +223,9 @@ httpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: |-
-          Failed to process route rule 0 backendRef 0: multiple SDS reference secrets are not supported.
-          Failed to process route rule 1 backendRef 0: cannot mix SDS reference secrets with other CA certificate types.
-          Failed to process route rule 2 backendRef 0: cannot mix SDS reference secrets with other CA certificate types.
+          Failed to process route rule 0 backendRef 0: invalid SDS reference secret sds-ref-1: invalid URL in SDS reference secret default/sds-ref-1: unsupported URL scheme:  (supported: http, https, unix).
+          Failed to process route rule 1 backendRef 0: invalid SDS reference secret sds-ref-1: invalid URL in SDS reference secret default/sds-ref-1: unsupported URL scheme:  (supported: http, https, unix).
+          Failed to process route rule 2 backendRef 0: invalid SDS reference secret sds-ref-1: invalid URL in SDS reference secret default/sds-ref-1: unsupported URL scheme:  (supported: http, https, unix).
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
