@@ -21,6 +21,14 @@ If you haven’t set it up yet, you can follow the [official installation guide]
 
 Create a new Argo CD Application that pulls the Envoy Gateway Helm chart as its source.
 
+{{% alert title="Gateway API CRD compatibility" color="warning" %}}
+This Argo CD Application installs the Envoy Gateway Helm chart, which applies Gateway API CRDs by default.
+If your Kubernetes provider already manages compatible Gateway API CRDs for the cluster, use the
+[provider-managed Gateway API CRD guidance](../install-helm/#clusters-with-compatible-provider-managed-gateway-api-crds)
+to confirm compatibility and install only the Envoy Gateway CRDs separately, then configure this Application to skip CRD
+installation by setting `source.helm.skipCrds` to `true`.
+{{% /alert %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: argoproj.io/v1alpha1
