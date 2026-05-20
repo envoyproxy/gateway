@@ -176,7 +176,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, fmt.Errorf("loadBalancerIP can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
 			}
 
-			if _, err := netip.ParseAddr(*serviceLoadBalancerIP); err != nil {
+			if ip, err := netip.ParseAddr(*serviceLoadBalancerIP); err != nil || !ip.Unmap().Is4() {
 				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IP address", *serviceLoadBalancerIP))
 			}
 		}
