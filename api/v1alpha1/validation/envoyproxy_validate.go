@@ -166,7 +166,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 			}
 
 			for _, serviceLoadBalancerSourceRange := range serviceLoadBalancerSourceRanges {
-				if ip, _, err := net.ParseCIDR(serviceLoadBalancerSourceRange); err != nil || ip.To4() == nil {
+				if _, _, err := net.ParseCIDR(serviceLoadBalancerSourceRange); err != nil {
 					errs = append(errs, fmt.Errorf("loadBalancerSourceRange:%s is an invalid IP subnet", serviceLoadBalancerSourceRange))
 				}
 			}
@@ -176,7 +176,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, fmt.Errorf("loadBalancerIP can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
 			}
 
-			if ip, err := netip.ParseAddr(*serviceLoadBalancerIP); err != nil || !ip.Unmap().Is4() {
+			if _, err := netip.ParseAddr(*serviceLoadBalancerIP); err != nil {
 				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IP address", *serviceLoadBalancerIP))
 			}
 		}
