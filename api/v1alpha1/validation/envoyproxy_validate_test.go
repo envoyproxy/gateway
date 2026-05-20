@@ -285,7 +285,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
-								LoadBalancerSourceRanges: []string{"1.1.1.1/32", "2001:db8::/32"},
+								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
 							},
 						},
 					},
