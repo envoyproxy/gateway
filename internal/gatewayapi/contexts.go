@@ -29,8 +29,10 @@ import (
 type GatewayContext struct {
 	*gwapiv1.Gateway
 
-	listeners  []*ListenerContext
-	envoyProxy *egv1a1.EnvoyProxy
+	listeners             []*ListenerContext
+	envoyProxy            *egv1a1.EnvoyProxy
+	envoyProxyFromGateway bool
+
 	backendTLS *egv1a1.BackendTLSConfig
 }
 
@@ -105,6 +107,7 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
+				g.envoyProxyFromGateway = true
 				gatewayProxy = ep
 			}
 		}
