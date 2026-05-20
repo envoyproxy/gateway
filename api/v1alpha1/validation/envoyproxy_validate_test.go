@@ -243,7 +243,28 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"1.1.1.1/32", "2001:db8::/32"},
+								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with ipv6 loadBalancerSourceRanges",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"2001:db8::/32"},
 							},
 						},
 					},
