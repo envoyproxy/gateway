@@ -23,6 +23,15 @@ You can use the `flux` CLI, the [Flux Operator](https://fluxoperator.dev/), or a
 The Envoy Gateway Helm chart is published as an OCI artifact at `oci://docker.io/envoyproxy/gateway-helm`.
 Create an `OCIRepository` source and a `HelmRelease` that installs the chart into the `envoy-gateway-system` namespace.
 
+{{% alert title="Gateway API CRD compatibility" color="warning" %}}
+This Flux `HelmRelease` installs the Envoy Gateway Helm chart, which applies Gateway API CRDs by default.
+If your Kubernetes provider already manages compatible Gateway API CRDs for the cluster, use the
+[provider-managed Gateway API CRD guidance](../install-helm/#clusters-with-compatible-provider-managed-gateway-api-crds)
+to confirm compatibility and install only the Envoy Gateway CRDs separately, then configure this `HelmRelease` to skip
+CRD installation by setting `spec.install.crds` to `Skip`. You can also set `spec.upgrade.crds` to `Skip` to make the
+upgrade behavior explicit.
+{{% /alert %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
