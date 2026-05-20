@@ -893,6 +893,10 @@ func (t *Translator) buildExtProc(
 		extProcIR.FailOpen = extProc.FailOpen
 	}
 
+	if extProc.StatusOnError != nil {
+		extProcIR.StatusOnError = extProc.StatusOnError
+	}
+
 	if extProc.ProcessingMode != nil {
 		if extProc.ProcessingMode.Request != nil {
 			extProcIR.RequestHeaderProcessing = true

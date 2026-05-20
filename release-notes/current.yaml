@@ -13,6 +13,7 @@ security updates: |
 new features: |
   Added support for authorization path match.
   Added a `requestBody` field to the HTTP active health checker in `BackendTrafficPolicy`, allowing a request body payload to be sent during HTTP health checking. The field requires the health check `method` to be `POST` or `PUT`.
+  Added support for configuring statusOnError in EnvoyExtensionPolicy ExtProc settings.
 
 bug fixes: |
   Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
