@@ -1237,42 +1237,6 @@ func getOverriddenTargetsMessageForRoute(
 	return ""
 }
 
-func getOverriddenTargetsMessageForGateway(
-	targetContext *policyGatewayTargetContext,
-	listenerRouteMap map[string]sets.Set[string],
-	sectionName *gwapiv1.SectionName,
-) string {
-	var listeners, routes []string
-	if sectionName == nil {
-		if targetContext != nil {
-			listeners = targetContext.attachedToListeners.UnsortedList()
-		}
-		for _, routeSet := range listenerRouteMap {
-			routes = append(routes, routeSet.UnsortedList()...)
-		}
-	} else if listenerRouteMap != nil {
-		if routeSet, ok := listenerRouteMap[string(*sectionName)]; ok {
-			routes = routeSet.UnsortedList()
-		}
-		if routeSet, ok := listenerRouteMap[""]; ok {
-			routes = append(routes, routeSet.UnsortedList()...)
-		}
-	}
-	if len(listeners) > 0 {
-		sort.Strings(listeners)
-		if len(routes) > 0 {
-			sort.Strings(routes)
-			return fmt.Sprintf("these listeners: %v and these routes: %v", listeners, routes)
-		} else {
-			return fmt.Sprintf("these listeners: %v", listeners)
-		}
-	} else if len(routes) > 0 {
-		sort.Strings(routes)
-		return fmt.Sprintf("these routes: %v", routes)
-	}
-	return ""
-}
-
 // getOverriddenAndMergedTargetsMessageForGateway generates status messages for policies
 // indicating which listeners and routes are being overridden or merged.
 func getOverriddenAndMergedTargetsMessageForGateway(
@@ -1375,4 +1339,27 @@ func getOverriddenAndMergedTargetsMessageForGateway(
 		mergedMessage = fmt.Sprintf("these routes: %v", mergedRoutes)
 	}
 	return overrideMessage, mergedMessage
+}
+
+// policyOwnerOr returns owner if non-nil, otherwise fallback.
+// Used to resolve per-field owners from PolicyOwners: the owner is the policy
+// that contributed the field (route overrides parent), falling back to the active policy
+// when no merge occurred or the field was not set by either side.
+func policyOwnerOr[T any](owner, fallback *T) *T {
+	if owner != nil {
+		return owner
+	}
+	return fallback
+}
+
+// ownerOf returns route if routeOwns(route) is true, otherwise parent.
+// Use this when ownership of a merged field is determined by a single predicate.
+func ownerOf[T any](
+	route, parent *T,
+	routeOwns func(*T) bool,
+) *T {
+	if routeOwns(route) {
+		return route
+	}
+	return parent
 }

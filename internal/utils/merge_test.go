@@ -32,6 +32,8 @@ func TestMergePolicy(t *testing.T) {
 			switch policyType {
 			case "backendtrafficpolicy":
 				runMergePolicyTest[*egv1a1.BackendTrafficPolicy](t, caseFile)
+			case "envoyextensionpolicy":
+				runMergePolicyTest[*egv1a1.EnvoyExtensionPolicy](t, caseFile)
 			case "securitypolicy":
 				runMergePolicyTest[*egv1a1.SecurityPolicy](t, caseFile)
 			default:

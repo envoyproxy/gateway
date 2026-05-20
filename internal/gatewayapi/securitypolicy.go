@@ -2559,17 +2559,6 @@ type securityPolicyOwners struct {
 	jwtProviders             *egv1a1.SecurityPolicy
 }
 
-// policyOwnerOr returns owner if non-nil, otherwise fallback.
-// Used to resolve per-field owners from securityPolicyOwners: the owner is the policy
-// that contributed the field (route overrides parent), falling back to the active policy
-// when no merge occurred or the field was not set by either side.
-func policyOwnerOr(owner, fallback *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if owner != nil {
-		return owner
-	}
-	return fallback
-}
-
 // mergeSecurityPolicy merges a route-level SecurityPolicy with a parent (Gateway/Listener) SecurityPolicy.
 func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, *securityPolicyOwners, error) {
 	if routePolicy.Spec.MergeType == nil || parentPolicy == nil {
@@ -2580,18 +2569,6 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 		return nil, nil, err
 	}
 	return mergedPolicy, buildSecurityPolicyOwners(routePolicy, parentPolicy), nil
-}
-
-// ownerOf returns route if routeOwns(route) is true, otherwise parent.
-// Use this when ownership of a merged field is determined by a single predicate.
-func ownerOf(
-	route, parent *egv1a1.SecurityPolicy,
-	routeOwns func(*egv1a1.SecurityPolicy) bool,
-) *egv1a1.SecurityPolicy {
-	if routeOwns(route) {
-		return route
-	}
-	return parent
 }
 
 // buildSecurityPolicyOwners determines, for each merged field, which policy
