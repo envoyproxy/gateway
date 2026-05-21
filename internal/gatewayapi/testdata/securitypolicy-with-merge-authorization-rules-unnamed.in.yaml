@@ -1,0 +1,182 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-parent-unnamed
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/parent-unnamed"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-child-unnamed
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/child-unnamed"
+      backendRefs:
+      - name: service-2
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-both-unnamed
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/both-unnamed"
+      backendRefs:
+      - name: service-3
+        port: 8080
+securityPolicies:
+# CASE A: parent has UNNAMED rule, child has NAMED rule. Tests whether parent's
+# nameless rule is preserved / dropped / errors when merge key 'name' is missing.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-unnamed-rule
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-parent-unnamed
+    authorization:
+      defaultAction: Allow
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: child-named-rule-A
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-parent-unnamed
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: child-specific
+        action: Allow
+        principal:
+          clientCIDRs:
+          - 1.2.3.4/32
+# CASE B: parent has NAMED rule, child has UNNAMED rule. Tests whether child's
+# nameless rule is appended / dropped / errors with merge key 'name' missing.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-named-rule
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-child-unnamed
+    authorization:
+      defaultAction: Allow
+      rules:
+      - name: parent-internal
+        action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: child-unnamed-rule
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-child-unnamed
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 1.2.3.4/32
+# CASE C: both parent and child have UNNAMED rules. Tests the worst case for
+# regression — pre-fix behavior was full slice-replace; we want to confirm we
+# don't break it.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-unnamed-rule-C
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-both-unnamed
+    authorization:
+      defaultAction: Allow
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: child-unnamed-rule-C
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-both-unnamed
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 1.2.3.4/32
