@@ -20,8 +20,18 @@ type Authorization struct {
 	// For example, if there are two rules: the first rule allows the request
 	// and the second rule denies it, when a request matches both rules, it will be allowed.
 	//
+	// When this `SecurityPolicy` is merged with another `SecurityPolicy` via
+	// `mergeType: StrategicMerge`, rules are merged by their `name` field —
+	// child rules with the same name as parent rules override the parent's
+	// configuration, and child rules with new names are concatenated with the
+	// parent's. Rules without an explicit `name` cannot be merged by name and
+	// fall back to the slice-replace behavior.
+	//
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	//
 	// +optional
-	Rules []AuthorizationRule `json:"rules,omitempty"`
+	Rules []AuthorizationRule `json:"rules,omitempty" patchMergeKey:"name" patchStrategy:"merge"`
 
 	// DefaultAction defines the default action to be taken if no rules match.
 	// If not specified, the default action is Deny.
