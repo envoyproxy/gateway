@@ -1,5 +1,8 @@
 apiVersion: v1
 kind: ServiceAccount
+# This's disabled by default to keep consistent with envoy-ratelimit 
+# and provisioned envoy fleet, if the pod need to access k8s API, 
+# users can enable it by setting on pod.
 automountServiceAccountToken: false
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
