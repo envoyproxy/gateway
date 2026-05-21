@@ -6,6 +6,7 @@
 package egctl
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -14,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,6 +90,22 @@ func (fw *fakePortForwarder) Address() string {
 }
 
 func (fw *fakePortForwarder) WaitForStop() {}
+
+type failingStartPortForwarder struct {
+	err error
+}
+
+func (fw *failingStartPortForwarder) Start() error {
+	return fw.err
+}
+
+func (fw *failingStartPortForwarder) Stop() {}
+
+func (fw *failingStartPortForwarder) Address() string {
+	return "localhost:0"
+}
+
+func (fw *failingStartPortForwarder) WaitForStop() {}
 
 func TestExtractAllConfigDump(t *testing.T) {
 	input, err := readInputConfig("in.all.json")
@@ -251,6 +269,53 @@ func TestLabelSelectorBadInput(t *testing.T) {
 			labelSelectors = tc.labels
 			_, err := retrieveConfigDump(tc.args, false, AllEnvoyConfigType)
 			require.Error(t, err, "error not found")
+		})
+	}
+}
+
+func TestRetrieveConfigDumpFromPodsReturnsPortForwarderErrors(t *testing.T) {
+	pods := []types.NamespacedName{
+		{
+			Namespace: defaultNamespace,
+			Name:      defaultEnvoyGatewayPodName,
+		},
+	}
+
+	cases := []struct {
+		name      string
+		forwarder configDumpPortForwarderFunc
+		wantErr   error
+	}{
+		{
+			name:    "port forwarder creation fails",
+			wantErr: errors.New("create port forwarder"),
+			forwarder: func(kube.CLIClient, types.NamespacedName, int) (kube.PortForwarder, error) {
+				return nil, errors.New("create port forwarder")
+			},
+		},
+		{
+			name:    "port forwarder start fails",
+			wantErr: errors.New("start port forwarder"),
+			forwarder: func(kube.CLIClient, types.NamespacedName, int) (kube.PortForwarder, error) {
+				return &failingStartPortForwarder{err: errors.New("start port forwarder")}, nil
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			errCh := make(chan error, 1)
+			go func() {
+				_, err := retrieveConfigDumpFromPods(&fakeCLIClient{}, pods, false, AllEnvoyConfigType, tc.forwarder)
+				errCh <- err
+			}()
+
+			select {
+			case err := <-errCh:
+				require.ErrorContains(t, err, tc.wantErr.Error())
+			case <-time.After(time.Second):
+				t.Fatal("retrieveConfigDumpFromPods did not return after port forwarder error")
+			}
 		})
 	}
 }

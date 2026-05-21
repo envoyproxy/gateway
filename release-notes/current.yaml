@@ -13,6 +13,7 @@ new features: |
 bug fixes: |
   Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
   Fixed controller panic when processing backend tls settings.
+  Fixed egctl config commands hanging when Envoy pod port-forwarding fails.
 
 # Enhancements that improve performance.
 performance improvements: |
