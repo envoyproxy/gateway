@@ -2,6 +2,7 @@
 # Source: gateway-helm/templates/envoy-gateway-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: envoy-gateway
   namespace: envoy-gateway-system
@@ -441,6 +442,7 @@ spec:
         app.kubernetes.io/name: gateway-helm
         app.kubernetes.io/instance: gateway-helm
     spec:
+      automountServiceAccountToken: true
       containers:
       - args:
         - server
@@ -518,6 +520,7 @@ spec:
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: gateway-helm-certgen
   namespace: envoy-gateway-system
@@ -659,6 +662,7 @@ spec:
       labels:
         app: certgen
     spec:
+      automountServiceAccountToken: true
       containers:
       - command:
         - envoy-gateway
