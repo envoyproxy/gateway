@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package extension
 
 import (
@@ -12,9 +17,6 @@ import (
 	"strings"
 	"time"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/kubernetes"
-	"github.com/envoyproxy/gateway/internal/utils/fraction"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -25,6 +27,10 @@ import (
 	"k8s.io/utils/ptr"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils/fraction"
 )
 
 const grpcServiceConfigTemplate = `{
@@ -57,7 +63,7 @@ func GetExtensionServerAddress(service *egv1a1.ExtensionService) string {
 }
 
 // GenerateGRPCOptions generates the necessary connection descriptors for a GRPC client.
-func GenerateGRPCOptions(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionService, maxMessageSize *resource.Quantity, svcName string, namespace string) ([]grpc.DialOption, error) {
+func GenerateGRPCOptions(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionService, maxMessageSize *resource.Quantity, svcName, namespace string) ([]grpc.DialOption, error) {
 	// These two errors shouldn't happen since we check these conditions when loading the extension
 	if ext == nil {
 		return nil, errors.New("the registered extension's config is nil")

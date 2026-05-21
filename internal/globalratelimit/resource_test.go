@@ -1,13 +1,19 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package globalratelimit
 
 import (
 	"testing"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func TestGetRateLimitUrl(t *testing.T) {
+func TestGetRateLimitURL(t *testing.T) {
 	tests := []struct {
 		name      string
 		eg        *egv1a1.EnvoyGateway
@@ -41,7 +47,7 @@ func TestGetRateLimitUrl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GetRateLimitUrl(tt.eg, tt.namespace, tt.dnsDomain)
+			result := GetRateLimitURL(tt.eg, tt.namespace, tt.dnsDomain)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
