@@ -259,7 +259,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `rules` | _[AuthorizationRule](#authorizationrule) array_ |  false  |  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed. |
+| `rules` | _[AuthorizationRule](#authorizationrule) array_ |  false  |  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed.<br />When this `SecurityPolicy` is merged with another `SecurityPolicy` via<br />`mergeType: StrategicMerge`, rules are merged by their `name` field —<br />child rules with the same name as parent rules override the parent's<br />configuration, and child rules with new names are concatenated with the<br />parent's. Rules without an explicit `name` cannot be merged by name and<br />fall back to the slice-replace behavior. |
 | `defaultAction` | _[AuthorizationAction](#authorizationaction)_ |  false  |  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
 
 
