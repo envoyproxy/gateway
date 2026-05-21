@@ -13,7 +13,6 @@ import (
 	"os"
 	"sort"
 
-	"github.com/envoyproxy/gateway/internal/globalratelimit"
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -29,6 +28,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/globalratelimit"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
@@ -386,7 +386,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		xTranslator := &translator.Translator{
 			// Set some default settings for translation
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
-				ServiceURL: globalratelimit.GetRateLimitUrl(nil, namespace, dnsDomain),
+				ServiceURL: globalratelimit.GetRateLimitURL(nil, namespace, dnsDomain),
 			},
 			Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		}

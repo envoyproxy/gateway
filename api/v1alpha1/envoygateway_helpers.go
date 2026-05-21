@@ -89,8 +89,6 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	}
 }
 
-func (e *EnvoyGateway) handleProviderDefaults() {}
-
 // GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
 func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
 	if e.Admin != nil {

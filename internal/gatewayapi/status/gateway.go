@@ -209,10 +209,10 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 
 	if isInfraRemote {
 		// We won't expect any Envoy replicas, hence we can assume (and document) that the remote provider should
-		// guarantee the Envoy addresses are made available IIF the Envoy data plane is ready to serve traffic.
+		// guarantee the Envoy addresses are made available if the Envoy data plane is ready to serve traffic.
 		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
-				fmt.Sprintf(messageFmtProgrammedRemotely), gw.Generation))
+				fmt.Sprint(messageFmtProgrammedRemotely), gw.Generation))
 		return
 	}
 
