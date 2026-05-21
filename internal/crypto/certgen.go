@@ -114,8 +114,9 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 			// For custom provider (host mode), use localhost for xDS communication
 			egDNSNames = []string{"localhost"}
 			envoyDNSNames = []string{"localhost"}
-		} else {
-			// Kubernetes is the only supported Envoy Gateway provider.
+		}
+
+		if len(egDNSNames) == 0 {
 			return nil, fmt.Errorf("unsupported provider type %v", egProvider)
 		}
 

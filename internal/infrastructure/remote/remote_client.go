@@ -8,13 +8,14 @@ package remote
 import (
 	"context"
 
+	"google.golang.org/grpc"
+	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	grpcExtension "github.com/envoyproxy/gateway/internal/extension"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/proto/remoteinfra"
-	"google.golang.org/grpc"
-	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const grpcServiceName = "envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider"

@@ -365,6 +365,7 @@ type EnvoyGatewayProvider struct {
 	Custom *EnvoyGatewayCustomProvider `json:"custom,omitempty"`
 }
 
+// EnvoyGatewayKubernetesInfrastructureConfiguration defines configuration for the Kubernetes infrastructure provider.
 type EnvoyGatewayKubernetesInfrastructureConfiguration struct {
 	// RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.
 	// If unspecified, default settings for the managed Envoy ratelimit deployment resource
@@ -398,6 +399,7 @@ type EnvoyGatewayKubernetesInfrastructureConfiguration struct {
 	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
 }
 
+// EnvoyGatewayKubernetesConfiguration defines configuration for how Envoy Gateway communicates with the Kubernetes API server.
 type EnvoyGatewayKubernetesConfiguration struct {
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
@@ -509,7 +511,7 @@ type EnvoyGatewayCustomProvider struct {
 
 // ResourceProviderType defines the types of custom resource providers supported by Envoy Gateway.
 //
-// +kubebuilder:validation:Enum=File,Kubernetes
+// +kubebuilder:validation:Enum=File;Kubernetes
 type ResourceProviderType string
 
 const (

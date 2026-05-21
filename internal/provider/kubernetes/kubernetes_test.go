@@ -1247,14 +1247,18 @@ func TestNamespacedProvider(t *testing.T) {
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		Watch: &egv1a1.KubernetesWatchMode{
-			Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
-			Namespaces: []string{"ns1", "ns2"},
+		EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+			Watch: &egv1a1.KubernetesWatchMode{
+				Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
+				Namespaces: []string{"ns1", "ns2"},
+			},
+			LeaderElection: egv1a1.DefaultLeaderElection(),
+			Client:         egv1a1.DefaultKubernetesClient(),
 		},
-		LeaderElection: egv1a1.DefaultLeaderElection(),
-		Client:         egv1a1.DefaultKubernetesClient(),
-		// Disable webhook server for provider test to avoid non-existent cert errors
-		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: new(true)},
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			// Disable webhook server for provider test to avoid non-existent cert errors
+			TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: new(true)},
+		},
 	}
 
 	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)
@@ -1309,14 +1313,18 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		Watch: &egv1a1.KubernetesWatchMode{
-			Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
-			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
+		EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+			Watch: &egv1a1.KubernetesWatchMode{
+				Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
+			},
+			LeaderElection: egv1a1.DefaultLeaderElection(),
+			Client:         egv1a1.DefaultKubernetesClient(),
 		},
-		LeaderElection: egv1a1.DefaultLeaderElection(),
-		Client:         egv1a1.DefaultKubernetesClient(),
-		// Disable webhook server for provider test to avoid non-existent cert errors
-		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: new(true)},
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			// Disable webhook server for provider test to avoid non-existent cert errors
+			TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: new(true)},
+		},
 	}
 
 	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)
