@@ -2,6 +2,17 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  Moved the Gateway API safe-upgrades ValidatingAdmissionPolicy resources out
+  of the CRD bundle and into the gateway-helm chart templates so tools such as
+  Flux no longer treat them as CRDs. When upgrading from v1.8.0 to v1.8.1,
+  existing `safe-upgrades.gateway.networking.k8s.io`
+  ValidatingAdmissionPolicy and ValidatingAdmissionPolicyBinding resources may
+  require manual migration. To let Helm manage them, add Helm ownership
+  metadata to both resources before upgrading:
+  `app.kubernetes.io/managed-by: Helm`, `meta.helm.sh/release-name`, and
+  `meta.helm.sh/release-namespace`. If you manage them outside of this chart,
+  disable chart rendering with
+  `crds.gatewayAPI.validatingAdmissionPolicy.enabled=false`.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
