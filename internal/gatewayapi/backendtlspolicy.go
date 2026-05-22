@@ -447,6 +447,21 @@ func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.Lo
 	return false
 }
 
+// stricter variant: only matches when sectionName is set and equal
+func backendTLSTargetSectionMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
+	for _, currTarget := range policy.Spec.TargetRefs {
+		if target.Group == currTarget.Group &&
+			target.Kind == currTarget.Kind &&
+			backendNamespace == policy.Namespace &&
+			target.Name == currTarget.Name &&
+			currTarget.SectionName != nil &&
+			reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
+			return true
+		}
+	}
+	return false
+}
+
 func (t *Translator) getBackendTLSPolicy(
 	policies []*gwapiv1.BackendTLSPolicy,
 	backendRef gwapiv1.BackendObjectReference,
@@ -454,6 +469,12 @@ func (t *Translator) getBackendTLSPolicy(
 ) *gwapiv1.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
 	target := t.getTargetBackendReference(backendRef, backendNamespace)
+	for _, policy := range policies {
+		if backendTLSTargetSectionMatched(policy, target, backendNamespace) {
+			// prefer policies that target this specific section over wildcard matches
+			return policy
+		}
+	}
 	for _, policy := range policies {
 		if backendTLSTargetMatched(policy, target, backendNamespace) {
 			return policy
