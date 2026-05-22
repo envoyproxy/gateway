@@ -19,6 +19,12 @@ so the `Gateway` resource has an Address associated with it. We recommend using 
 
 Install the Gateway API CRDs and Envoy Gateway:
 
+{{% alert title="Gateway API CRD compatibility" color="warning" %}}
+This command installs Gateway API CRDs. If your Kubernetes provider already manages compatible Gateway API CRDs for the
+cluster, use the [provider-managed Gateway API CRD install steps](../../install/install-helm/#clusters-with-compatible-provider-managed-gateway-api-crds)
+instead.
+{{% /alert %}}
+
 ```shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
 ```

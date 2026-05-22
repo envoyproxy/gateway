@@ -79,7 +79,7 @@
                             typedConfig:
                               '@type': type.googleapis.com/xds.type.matcher.v3.CelMatcher
                               exprMatch:
-                                parsedExpr:
+                                celExprParsed:
                                   expr:
                                     callExpr:
                                       args:

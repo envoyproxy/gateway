@@ -19,6 +19,14 @@ Refer to the [Version Compatibility Matrix](/news/releases/matrix) to learn more
 
 ## Install with YAML
 
+{{% alert title="Gateway API CRD compatibility" color="warning" %}}
+The `install.yaml` manifest includes Gateway API CRDs and Envoy Gateway CRDs. If your Kubernetes provider already
+manages compatible Gateway API CRDs for the cluster, do not use `install.yaml`; follow the
+[provider-managed Gateway API CRD Helm steps](../install-helm/#clusters-with-compatible-provider-managed-gateway-api-crds)
+instead. If the provider-managed Gateway API CRDs are not compatible with your Envoy Gateway release or required
+Gateway API resources, use a compatible Gateway API CRD installation method before installing Envoy Gateway.
+{{% /alert %}}
+
 1. In your terminal, run the following command:
 
     ```shell
