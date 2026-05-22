@@ -13,7 +13,7 @@ new features: |
 bug fixes: |
   Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
   Fixed controller panic when processing backend tls settings.
-  Fixed DNS resolution failure in IPv6-only clusters: bootstrap STRICT_DNS clusters now set dns_lookup_family to V6_ONLY for IPv6 and ALL for DualStack.
+  Fixed DNS resolution failure in IPv6-only clusters: bootstrap STRICT_DNS clusters now set dns_lookup_family to V6_ONLY for IPv6.
 
 # Enhancements that improve performance.
 performance improvements: |
