@@ -297,6 +297,34 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "ipv6-with-otel",
+			opts: &RenderBootstrapConfigOptions{
+				IPFamily: new(egv1a1.IPv6),
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								Host: new("otel-collector.monitoring.svc"),
+								Port: 4317,
+							},
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
+			name: "dualstack",
+			opts: &RenderBootstrapConfigOptions{
+				IPFamily: new(egv1a1.DualStack),
+				SdsConfig: sds,
+			},
+		},
+		{
 			name: "topology-injector-disabled",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{

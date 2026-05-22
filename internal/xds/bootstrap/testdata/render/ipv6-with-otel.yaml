@@ -49,56 +49,34 @@ dynamic_resources:
     ads: {}
     initial_fetch_timeout: 0s
     resource_api_version: V3
+stats_sinks:
+- name: "envoy.stat_sinks.open_telemetry"
+  typed_config:
+    "@type": type.googleapis.com/envoy.extensions.stat_sinks.open_telemetry.v3.SinkConfig
+    grpc_service:
+      envoy_grpc:
+        cluster_name: otel_metric_sink_0
 static_resources:
-  listeners:
-  - name: envoy-gateway-proxy-stats-::-19001
-    address:
-      socket_address:
-        address: '::'
-        port_value: 19001
-        protocol: TCP
-        ipv4_compat: true
-    bypass_overload_manager: true
-    filter_chains:
-    - filters:
-      - name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          stat_prefix: eg-stats-http
-          normalize_path: true
-          route_config:
-            name: local_route
-            virtual_hosts:
-            - name: prometheus_stats
-              domains:
-              - "*"
-              routes:
-              - match:
-                  path: /stats/prometheus
-                  headers:
-                  - name: ":method"
-                    string_match:
-                      exact: GET
-                route:
-                  cluster: prometheus_stats
-          http_filters:
-          - name: envoy.filters.http.router
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
-  - name: prometheus_stats
+  - name: otel_metric_sink_0
     connect_timeout: 0.250s
-    type: STATIC
+    type: STRICT_DNS
+    dns_lookup_family: V6_ONLY
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+        explicit_http_config:
+          http2_protocol_options: {}
     lb_policy: ROUND_ROBIN
     load_assignment:
-      cluster_name: prometheus_stats
+      cluster_name: otel_metric_sink_0
       endpoints:
       - lb_endpoints:
         - endpoint:
             address:
               socket_address:
-                address: ::1
-                port_value: 19000
+                address: otel-collector.monitoring.svc
+                port_value: 4317
   - connect_timeout: 10s
     eds_cluster_config:
       eds_config:

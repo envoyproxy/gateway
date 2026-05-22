@@ -188,6 +188,7 @@ spec:
                         timeout: 5s
               name: xds_cluster
               type: STRICT_DNS
+              dns_lookup_family: V6_ONLY
               transport_socket:
                 name: envoy.transport_sockets.tls
                 typed_config:

@@ -203,6 +203,9 @@ static_resources:
   - name: otel_metric_sink_{{ $idx }}
     connect_timeout: 0.250s
     type: STRICT_DNS
+    {{- if eq $.IPFamily "IPv6" }}
+    dns_lookup_family: V6_ONLY
+    {{- end }}
     typed_extension_protocol_options:
       envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
         "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
@@ -300,6 +303,9 @@ static_resources:
   {{- end }}
     name: xds_cluster
     type: STRICT_DNS
+    {{- if eq .IPFamily "IPv6" }}
+    dns_lookup_family: V6_ONLY
+    {{- end }}
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:

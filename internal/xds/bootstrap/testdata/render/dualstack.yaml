@@ -6,7 +6,7 @@ admin:
       path: /dev/null
   address:
     socket_address:
-      address: ::1
+      address: 127.0.0.1
       port_value: 19000
 cluster_manager:
   local_cluster_name: local_cluster
@@ -97,7 +97,7 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: ::1
+                address: 127.0.0.1
                 port_value: 19000
   - connect_timeout: 10s
     eds_cluster_config:
@@ -138,7 +138,6 @@ static_resources:
               timeout: 5s
     name: xds_cluster
     type: STRICT_DNS
-    dns_lookup_family: V6_ONLY
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:
