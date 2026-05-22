@@ -5,7 +5,7 @@ are non-CRD resources shipped with the Gateway API bundle, such as the
 safe-upgrades ValidatingAdmissionPolicy and binding.
 */ -}}
 {{- if .Values.gatewayAPI.supportingResources.enabled }}
-{{- $renderSafeUpgradePolicy := true -}}
+{{- $renderSupportingResources := true -}}
 {{- /*
 Require existing Gateway API policy resources to be absent or already owned by this Helm release 
 so Helm does not overwrite resources managed by another installation or by the cluster provider.
@@ -25,5 +25,5 @@ so Helm does not overwrite resources managed by another installation or by the c
  -}}
 {{- $vapOwnedOrAbsent := or (not $vap) $vapOwned -}}
 {{- $vapBindingOwnedOrAbsent := or (not $vapBinding) $vapBindingOwned -}}
-{{- $renderSafeUpgradePolicy = and $vapOwnedOrAbsent $vapBindingOwnedOrAbsent -}}
-{{- if $renderSafeUpgradePolicy }}
+{{- $renderSupportingResources = and $vapOwnedOrAbsent $vapBindingOwnedOrAbsent -}}
+{{- if $renderSupportingResources }}
