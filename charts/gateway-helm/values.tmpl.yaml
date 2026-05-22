@@ -65,11 +65,18 @@ deployment:
         drop:
         - ALL
       privileged: false
+      readOnlyRootFilesystem: true
       runAsNonRoot: true
       runAsGroup: 65532
       runAsUser: 65532
       seccompProfile:
         type: RuntimeDefault
+    # -- Volume source for the Wasm module cache mounted at /var/lib/eg/wasm. Defaults to an emptyDir when left empty.
+    # Example: persist the Wasm module cache across controller restarts by backing it with a PersistentVolumeClaim:
+    #   wasmCacheVolume:
+    #     persistentVolumeClaim:
+    #       claimName: envoy-gateway-wasm-cache
+    wasmCacheVolume: {}
   ports:
     - name: grpc
       port: 18000
@@ -155,6 +162,13 @@ certgen:
     pod:
       annotations: {}
       labels: {}
+      securityContext:
+        runAsNonRoot: true
+        runAsGroup: 65532
+        runAsUser: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
     resources: {}
     affinity: {}
     tolerations: []

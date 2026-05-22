@@ -84,7 +84,7 @@ helm uninstall eg -n envoy-gateway-system
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| certgen | object | `{"job":{"affinity":{},"annotations":{},"args":[],"nodeSelector":{},"pod":{"annotations":{},"labels":{}},"resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
+| certgen | object | `{"job":{"affinity":{},"annotations":{},"args":[],"nodeSelector":{},"pod":{"annotations":{},"labels":{},"securityContext":{"fsGroup":65532,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}}},"resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
 | commonLabels | object | `{}` | Labels to apply to all resources |
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | createNamespace | bool | `false` |  |
@@ -100,10 +100,12 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.envoyGateway.securityContext.allowPrivilegeEscalation | bool | `false` |  |
 | deployment.envoyGateway.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | deployment.envoyGateway.securityContext.privileged | bool | `false` |  |
+| deployment.envoyGateway.securityContext.readOnlyRootFilesystem | bool | `true` |  |
 | deployment.envoyGateway.securityContext.runAsGroup | int | `65532` |  |
 | deployment.envoyGateway.securityContext.runAsNonRoot | bool | `true` |  |
 | deployment.envoyGateway.securityContext.runAsUser | int | `65532` |  |
 | deployment.envoyGateway.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
+| deployment.envoyGateway.wasmCacheVolume | object | `{}` | Volume source for the Wasm module cache mounted at /var/lib/eg/wasm. Must be writable since readOnlyRootFilesystem is enabled by default, and defaults to an emptyDir when left empty. Set it to a PersistentVolumeClaim or any other volume source to override. |
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |

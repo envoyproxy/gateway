@@ -102,6 +102,8 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+        - mountPath: /var/lib/eg/wasm
+          name: wasm-cache
         {{- with .Values.deployment.pod.extraVolumeMounts }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -119,6 +121,14 @@ spec:
       - name: certs
         secret:
           secretName: envoy-gateway
+      # Writable cache for Wasm modules; required because the controller's
+      # root filesystem is read-only by default (readOnlyRootFilesystem).
+      - name: wasm-cache
+        {{- with .Values.deployment.envoyGateway.wasmCacheVolume }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
       {{- with .Values.deployment.pod.extraVolumes }}
       {{- toYaml . | nindent 6 }}
       {{- end }}

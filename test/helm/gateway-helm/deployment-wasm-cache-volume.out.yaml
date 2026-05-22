@@ -34,14 +34,12 @@ data:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     logging:
       level:
-        default: debug
+        default: info
     provider:
       kubernetes:
-        leaderElection:
-          enabled: false
         rateLimitDeployment:
           container:
-            image: private-hub/envoyproxy/ratelimit:master
+            image: docker.io/envoyproxy/ratelimit:master
           patch:
             type: StrategicMerge
             value:
@@ -528,7 +526,8 @@ spec:
       # Writable cache for Wasm modules; required because the controller's
       # root filesystem is read-only by default (readOnlyRootFilesystem).
       - name: wasm-cache
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: envoy-gateway-wasm-cache
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: v1

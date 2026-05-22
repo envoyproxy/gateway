@@ -6,6 +6,7 @@ breaking changes: |
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
   Fixed xDS server authentication bypass in GatewayNamespaceMode, adding Unary Interceptor and validating SotW requests.
+  Hardened the gateway-helm chart: the Envoy Gateway controller container now runs with a read-only root filesystem, and the certgen Job runs with a restricted pod-level securityContext by default.
 
 # New features or capabilities added in this release.
 new features: |
