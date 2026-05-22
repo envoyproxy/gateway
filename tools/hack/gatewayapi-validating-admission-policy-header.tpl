@@ -1,3 +1,4 @@
+{{- if .Values.gatewayAPI.validatingAdmissionPolicy.enabled }}
 {{- $safeUpgradePolicyName := "safe-upgrades.gateway.networking.k8s.io" -}}
 {{- $vap := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicy" "" $safeUpgradePolicyName -}}
 {{- $vapBinding := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicyBinding" "" $safeUpgradePolicyName -}}
@@ -15,10 +16,12 @@
 {{- $vapBindingOwnedOrAbsent := or (not $vapBinding) $vapBindingOwned -}}
 {{- /*
 Render the Gateway API safe-upgrade ValidatingAdmissionPolicy only when
-.Values.gatewayAPI.validatingAdmissionPolicy.enabled is true.
+.Values.gatewayAPI.validatingAdmissionPolicy.enabled is true. Keep the
+lookups behind that same guard so disabling the policy does not require RBAC
+for admissionregistration resources.
 
 During upgrades, also require existing cluster-scoped policy resources to be
 absent or already owned by this Helm release so Helm does not adopt or
 overwrite resources managed by another installation.
 */ -}}
-{{- if and .Values.gatewayAPI.validatingAdmissionPolicy.enabled (or (not .Release.IsUpgrade) (and $vapOwnedOrAbsent $vapBindingOwnedOrAbsent)) }}
+{{- if or (not .Release.IsUpgrade) (and $vapOwnedOrAbsent $vapBindingOwnedOrAbsent) }}

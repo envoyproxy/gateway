@@ -16,7 +16,9 @@
 {{- $vapBindingOwnedOrAbsent := or (not $vapBinding) $vapBindingOwned -}}
 {{- /*
 Render the Gateway API safe-upgrade ValidatingAdmissionPolicy only when
-.Values.gatewayAPI.validatingAdmissionPolicy.enabled is true. 
+.Values.gatewayAPI.validatingAdmissionPolicy.enabled is true. Keep the
+lookups behind that same guard so disabling the policy does not require RBAC
+for admissionregistration resources.
 
 During upgrades, also require existing cluster-scoped policy resources to be
 absent or already owned by this Helm release so Helm does not adopt or

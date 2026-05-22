@@ -51,4 +51,5 @@ mv "$tmp_crds" "$crds_output"
   cat "$vap_header"
   cat "$tmp_vap"
   echo '{{- end }}'
+  echo '{{- end }}'
 } > "$vap_output"
