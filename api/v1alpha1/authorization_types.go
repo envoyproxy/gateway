@@ -24,8 +24,9 @@ type Authorization struct {
 	// `mergeType: StrategicMerge`, rules are merged by their `name` field —
 	// child rules with the same name as parent rules override the parent's
 	// configuration, and child rules with new names are concatenated with the
-	// parent's. Rules without an explicit `name` cannot be merged by name and
-	// fall back to the slice-replace behavior.
+	// parent's. If any rule on either side omits `name`, the controller
+	// transparently falls back to `JSONMerge` for this merge operation, which
+	// slice-replaces the rules array (matching the pre-keyed-merge behavior).
 	//
 	// +patchMergeKey=name
 	// +patchStrategy=merge

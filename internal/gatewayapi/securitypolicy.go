@@ -2580,11 +2580,38 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 	if routePolicy.Spec.MergeType == nil || parentPolicy == nil {
 		return routePolicy, nil, nil
 	}
-	mergedPolicy, err := utils.Merge[*egv1a1.SecurityPolicy](parentPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	mergeType := *routePolicy.Spec.MergeType
+	// Strategic merge of authorization.rules is keyed by the rule's `name`. If
+	// any rule on either side omits its name, strategic merge would fail with
+	// `does not contain declared merge key: name`. Fall back to JSONMerge —
+	// which slice-replaces the rules array but still recursively merges other
+	// fields — to preserve the pre-keyed-merge behavior for unnamed rules
+	// instead of rejecting the child policy.
+	if mergeType == egv1a1.StrategicMerge && hasUnnamedAuthorizationRule(parentPolicy, routePolicy) {
+		mergeType = egv1a1.JSONMerge
+	}
+	mergedPolicy, err := utils.Merge[*egv1a1.SecurityPolicy](parentPolicy, routePolicy, mergeType)
 	if err != nil {
 		return nil, nil, err
 	}
 	return mergedPolicy, buildSecurityPolicyOwners(routePolicy, parentPolicy), nil
+}
+
+// hasUnnamedAuthorizationRule reports whether any of the given policies declares
+// an authorization rule whose `name` is empty. Used to skip the keyed strategic
+// merge path on the Authorization.Rules slice.
+func hasUnnamedAuthorizationRule(policies ...*egv1a1.SecurityPolicy) bool {
+	for _, p := range policies {
+		if p == nil || p.Spec.Authorization == nil {
+			continue
+		}
+		for _, r := range p.Spec.Authorization.Rules {
+			if r.Name == nil || *r.Name == "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ownerOf returns route if routeOwns(route) is true, otherwise parent.
