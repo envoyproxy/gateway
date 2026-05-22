@@ -105,6 +105,12 @@ deployment:
     # - name: foo
     #   configMap:
     #     name: myconfigmap
+    securityContext:
+      runAsNonRoot: true
+      runAsGroup: 65532
+      runAsUser: 65532
+      seccompProfile:
+        type: RuntimeDefault
 
 service:
   # If set to PreferClose, the Envoy fleet will prioritize connecting to the Envoy Gateway pods that are topologically closest to them.
