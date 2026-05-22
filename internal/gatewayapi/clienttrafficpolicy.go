@@ -127,7 +127,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Check if another policy targeting the same section exists
 				section := string(*(targetRef.SectionName))
-				if claimedSections[key].Has(section) {
+				sectionKey := section
+				if targetRef.Kind == resource.KindListenerSet {
+					sectionKey = fmt.Sprintf("%s%s", lsPrefix(ls), section)
+				}
+				if claimedSections[key].Has(sectionKey) {
 					message := fmt.Sprintf("Unable to target section of %s, another ClientTrafficPolicy has already attached to it",
 						string(targetRef.Name))
 
@@ -149,7 +153,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				if claimedSections[key] == nil {
 					claimedSections[key] = sets.New[string]()
 				}
-				claimedSections[key].Insert(section)
+				claimedSections[key].Insert(sectionKey)
 
 				// Translate for listener matching section name
 				var (
@@ -241,8 +245,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						continue
 					}
 					gateway, ls := resolved.gateway, resolved.listenerSet
-					key := utils.NamespacedName(gateway)
-					ancestorRef := getAncestorRefForPolicy(key, nil)
+					gatewayKey := utils.NamespacedName(gateway)
+					ancestorRef := getAncestorRefForPolicy(gatewayKey, nil)
 
 					// Set conditions for resolve error, then skip current gateway
 					if resolveErr != nil {
@@ -262,7 +266,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						scopeKey = "listenerset/" + types.NamespacedName{Namespace: ls.Namespace, Name: ls.Name}.String()
 					}
 
-					scope, scopeExists := claimedScopes[key]
+					scope, scopeExists := claimedScopes[gatewayKey]
 					conflictingScope := scopeExists && scope.Has(scopeKey)
 					if conflictingScope {
 						var message string
@@ -289,12 +293,30 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						continue
 					}
 
-					competingPolicy := claimedSections[key] != nil && claimedSections[key].Len() > 0
+					var overridingSections []string
+					if policyTargetsLS {
+						prefix := lsPrefix(ls)
+						for _, claimedSection := range claimedSections[gatewayKey].UnsortedList() {
+							if strings.HasPrefix(claimedSection, prefix) {
+								overridingSections = append(overridingSections, strings.TrimPrefix(claimedSection, prefix))
+							}
+						}
+					} else {
+						// LS-claimed sections have a scoped prefix (ns/name/listenerName);
+						// strip it so the display name is the bare listener name.
+						for _, claimedSection := range claimedSections[gatewayKey].UnsortedList() {
+							claimedSectionName := claimedSection
+							slashIndex := strings.LastIndex(claimedSection, "/")
+							if slashIndex >= 0 {
+								claimedSectionName = claimedSection[slashIndex+1:]
+							}
+							overridingSections = append(overridingSections, claimedSectionName)
+						}
+					}
+					competingPolicy := len(overridingSections) > 0
 					if competingPolicy {
-						// Maintain order here to ensure status/string does not change with same data
-						sections := claimedSections[key].UnsortedList()
-						sort.Strings(sections)
-						message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", sections)
+						sort.Strings(overridingSections)
+						message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", overridingSections)
 
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
@@ -308,9 +330,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					}
 
 					if scope == nil {
-						claimedScopes[key] = sets.New[string]()
+						claimedScopes[gatewayKey] = sets.New[string]()
 					}
-					claimedScopes[key].Insert(scopeKey)
+					claimedScopes[gatewayKey].Insert(scopeKey)
 
 					// Translate sections that have not yet been targeted
 					var (
@@ -321,8 +343,16 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						if policyTargetsLS && !listenersBelongToLS(l, ls) {
 							continue
 						}
-						// Skip if section has already been targeted
-						if claimedSections[key].Has(string(l.Name)) {
+						// Skip if section has already been targeted. Use a scope-qualified key
+						// so that same-named listeners across different ListenerSets (or a
+						// Gateway listener with the same name) do not incorrectly block each other.
+						var lSectionKey string
+						if l.isFromListenerSet() {
+							lSectionKey = fmt.Sprintf("%s%s", lsPrefix(l.listenerSet), string(l.Name))
+						} else {
+							lSectionKey = string(l.Name)
+						}
+						if claimedSections[gatewayKey].Has(lSectionKey) {
 							continue
 						}
 
@@ -340,10 +370,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 								errs = errors.Join(errs, err)
 							}
 							if policyTargetsLS {
-								if claimedSections[key] == nil {
-									claimedSections[key] = sets.New[string]()
+								if claimedSections[gatewayKey] == nil {
+									claimedSections[gatewayKey] = sets.New[string]()
 								}
-								claimedSections[key].Insert(string(l.Name))
+								claimedSections[gatewayKey].Insert(fmt.Sprintf("%s%s", lsPrefix(ls), string(l.Name)))
 							}
 						}
 					}
@@ -390,6 +420,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 type ctpResolvedTarget struct {
 	gateway     *GatewayContext
 	listenerSet *gwapiv1.ListenerSet
+}
+
+func lsPrefix(ls *gwapiv1.ListenerSet) string {
+	return fmt.Sprintf("%s/%s/", ls.Namespace, ls.Name)
 }
 
 func resolveClientTrafficPolicyTargetRef(
