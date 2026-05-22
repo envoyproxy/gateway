@@ -18,6 +18,7 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=eep
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Accepted",type=string,JSONPath=`.status.ancestors[0].conditions[?(@.type=="Accepted")].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EnvoyExtensionPolicy allows the user to configure various envoy extensibility options for the Gateway.
