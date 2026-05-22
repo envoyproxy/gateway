@@ -11,7 +11,7 @@ input=$1
 crds_output=$2
 vap_output=$3
 script_dir=$(dirname "$0")
-vap_header=$script_dir/gatewayapi-validating-admission-policy-header.tpl
+supporting_resources_header=$script_dir/gatewayapi-supporting-resources-header.tpl
 
 tmp_crds=$(mktemp)
 tmp_vap=$(mktemp)
@@ -48,7 +48,7 @@ END {
 mv "$tmp_crds" "$crds_output"
 
 {
-  cat "$vap_header"
+  cat "$supporting_resources_header"
   cat "$tmp_vap"
   echo '{{- end }}'
   echo '{{- end }}'
