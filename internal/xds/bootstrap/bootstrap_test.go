@@ -320,7 +320,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		{
 			name: "dualstack",
 			opts: &RenderBootstrapConfigOptions{
-				IPFamily: new(egv1a1.DualStack),
+				IPFamily:  new(egv1a1.DualStack),
 				SdsConfig: sds,
 			},
 		},
