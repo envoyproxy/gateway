@@ -162,7 +162,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					// It must exist since we've already finished processing the gateways
 					gwXdsIR := xdsIR[irKey]
 
-					if targetRef.Kind == resource.KindListenerSet && listenersDontBelongToLS(l, ls) {
+					if targetRef.Kind == resource.KindListenerSet && !listenersBelongToLS(l, ls) {
 						continue
 					}
 					if string(l.Name) == section {
@@ -317,7 +317,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						http3DisabledListeners []string
 					)
 					for _, l := range gateway.listeners {
-						if policyTargetsLS && listenersDontBelongToLS(l, ls) {
+						if policyTargetsLS && !listenersBelongToLS(l, ls) {
 							continue
 						}
 						// Skip if section has already been targeted
@@ -463,8 +463,8 @@ func resolveClientTrafficPolicyTargetRef(
 	return &ctpResolvedTarget{gateway: gateway.GatewayContext}, nil
 }
 
-func listenersDontBelongToLS(l *ListenerContext, ls *gwapiv1.ListenerSet) bool {
-	return !l.isFromListenerSet() || l.listenerSet.Name != ls.Name || l.listenerSet.Namespace != ls.Namespace
+func listenersBelongToLS(l *ListenerContext, ls *gwapiv1.ListenerSet) bool {
+	return l.isFromListenerSet() && l.listenerSet.Name == ls.Name && l.listenerSet.Namespace == ls.Namespace
 }
 
 func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, attachedToGateway bool) error {
