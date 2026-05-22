@@ -5,11 +5,10 @@ Render the Gateway API safe-upgrade ValidatingAdmissionPolicy only when
 {{- if .Values.gatewayAPI.validatingAdmissionPolicy.enabled }}
 {{- $renderSafeUpgradePolicy := true -}}
 {{- /*
-During upgrades, require existing cluster-scoped policy resources to be
+Require existing cluster-scoped policy resources to be
 absent or already owned by this Helm release so Helm does not adopt or
-overwrite resources managed by another installation. 
+overwrite resources managed by another installation or by the cluster provider.
 */ -}}
-{{- if .Release.IsUpgrade }}
 {{- $safeUpgradePolicyName := "safe-upgrades.gateway.networking.k8s.io" -}}
 {{- $vap := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicy" "" $safeUpgradePolicyName -}}
 {{- $vapBinding := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicyBinding" "" $safeUpgradePolicyName -}}
@@ -26,7 +25,6 @@ overwrite resources managed by another installation.
 {{- $vapOwnedOrAbsent := or (not $vap) $vapOwned -}}
 {{- $vapBindingOwnedOrAbsent := or (not $vapBinding) $vapBindingOwned -}}
 {{- $renderSafeUpgradePolicy = and $vapOwnedOrAbsent $vapBindingOwnedOrAbsent -}}
-{{- end }}
 {{- if $renderSafeUpgradePolicy }}
 ---
 #
