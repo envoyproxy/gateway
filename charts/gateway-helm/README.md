@@ -76,24 +76,6 @@ are managed outside this chart:
 helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds --set crds.gatewayAPI.validatingAdmissionPolicy.enabled=false
 ```
 
-During upgrades, the chart leaves pre-existing safe-upgrades resources unmanaged unless they are already owned by the current Helm release, which avoids Helm ownership conflicts with resources created by older chart versions or external tooling.
-
-To let Helm manage an externally-created safe-upgrades policy on upgrade, first add Helm ownership metadata for the target release to both `ValidatingAdmissionPolicy/safe-upgrades.gateway.networking.k8s.io` and `ValidatingAdmissionPolicyBinding/safe-upgrades.gateway.networking.k8s.io`:
-
-``` shell
-kubectl label validatingadmissionpolicy safe-upgrades.gateway.networking.k8s.io \
-  app.kubernetes.io/managed-by=Helm --overwrite
-kubectl annotate validatingadmissionpolicy safe-upgrades.gateway.networking.k8s.io \
-  meta.helm.sh/release-name=eg \
-  meta.helm.sh/release-namespace=envoy-gateway-system --overwrite
-
-kubectl label validatingadmissionpolicybinding safe-upgrades.gateway.networking.k8s.io \
-  app.kubernetes.io/managed-by=Helm --overwrite
-kubectl annotate validatingadmissionpolicybinding safe-upgrades.gateway.networking.k8s.io \
-  meta.helm.sh/release-name=eg \
-  meta.helm.sh/release-namespace=envoy-gateway-system --overwrite
-```
-
 To uninstall the chart:
 
 ``` shell
