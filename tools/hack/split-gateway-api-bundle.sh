@@ -10,6 +10,8 @@ fi
 input=$1
 crds_output=$2
 vap_output=$3
+script_dir=$(dirname "$0")
+vap_header=$script_dir/gatewayapi-validating-admission-policy-header.tpl
 
 tmp_crds=$(mktemp)
 tmp_vap=$(mktemp)
@@ -46,7 +48,7 @@ END {
 mv "$tmp_crds" "$crds_output"
 
 {
-  echo '{{- if .Values.gatewayAPI.validatingAdmissionPolicy.enabled }}'
+  cat "$vap_header"
   cat "$tmp_vap"
   echo '{{- end }}'
 } > "$vap_output"

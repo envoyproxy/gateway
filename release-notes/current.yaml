@@ -8,10 +8,13 @@ breaking changes: |
   existing `safe-upgrades.gateway.networking.k8s.io`
   ValidatingAdmissionPolicy and ValidatingAdmissionPolicyBinding resources may
   require manual migration. To let Helm manage them, add Helm ownership
-  metadata to both resources before upgrading:
-  `app.kubernetes.io/managed-by: Helm`, `meta.helm.sh/release-name`, and
-  `meta.helm.sh/release-namespace`. If you manage them outside of this chart,
-  disable chart rendering with
+  metadata to both resources before upgrading. The required label is
+  `app.kubernetes.io/managed-by: Helm`; the required annotations are
+  `meta.helm.sh/release-name: <release-name>` and
+  `meta.helm.sh/release-namespace: <release-namespace>`, where
+  `<release-name>` and `<release-namespace>` match the Helm release being
+  upgraded. If you manage them outside of this chart, disable chart rendering
+  with
   `crds.gatewayAPI.validatingAdmissionPolicy.enabled=false`.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
