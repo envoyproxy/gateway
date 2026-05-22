@@ -469,6 +469,12 @@ spec:
       - key: custom.taint
         operator: Equal
         value: custom.value
+      securityContext:
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - args:
         - server
