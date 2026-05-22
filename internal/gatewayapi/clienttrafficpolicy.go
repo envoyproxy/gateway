@@ -305,12 +305,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						// LS-claimed sections have a scoped prefix (ns/name/listenerName);
 						// strip it so the display name is the bare listener name.
 						for _, claimedSection := range claimedSections[gatewayKey].UnsortedList() {
-							claimedSectionName := claimedSection
 							slashIndex := strings.LastIndex(claimedSection, "/")
 							if slashIndex >= 0 {
-								claimedSectionName = claimedSection[slashIndex+1:]
+								claimedSection = claimedSection[slashIndex+1:]
 							}
-							overridingSections = append(overridingSections, claimedSectionName)
+							overridingSections = append(overridingSections, claimedSection)
 						}
 					}
 					competingPolicy := len(overridingSections) > 0
