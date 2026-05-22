@@ -105,7 +105,7 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.envoyGateway.securityContext.runAsNonRoot | bool | `true` |  |
 | deployment.envoyGateway.securityContext.runAsUser | int | `65532` |  |
 | deployment.envoyGateway.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
-| deployment.envoyGateway.wasmCacheVolume | object | `{}` | Volume source for the Wasm module cache mounted at /var/lib/eg/wasm. Must be writable since readOnlyRootFilesystem is enabled by default, and defaults to an emptyDir when left empty. Set it to a PersistentVolumeClaim or any other volume source to override. |
+| deployment.envoyGateway.wasmCacheVolume | object | `{}` | Volume source for the Wasm module cache mounted at /var/lib/eg/wasm. Defaults to an emptyDir when left empty. Example: persist the Wasm module cache across controller restarts by backing it with a PersistentVolumeClaim:   wasmCacheVolume:     persistentVolumeClaim:       claimName: envoy-gateway-wasm-cache |
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
