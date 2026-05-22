@@ -1,8 +1,10 @@
 {{- /*
-Render the Gateway API safe-upgrade ValidatingAdmissionPolicy only when
-.Values.gatewayAPI.validatingAdmissionPolicy.enabled is true.
+Render Gateway API supporting resources only when
+.Values.gatewayAPI.supportingResources.enabled is true. Supporting resources
+are non-CRD resources shipped with the Gateway API bundle, such as the
+safe-upgrades ValidatingAdmissionPolicy and binding.
 */ -}}
-{{- if .Values.gatewayAPI.validatingAdmissionPolicy.enabled }}
+{{- if .Values.gatewayAPI.supportingResources.enabled }}
 {{- $renderSafeUpgradePolicy := true -}}
 {{- /*
 Require existing Gateway API policy resources to be absent or already owned by this Helm release 

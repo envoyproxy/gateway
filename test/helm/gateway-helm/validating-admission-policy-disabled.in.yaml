@@ -6,5 +6,5 @@ global:
 
 crds:
   gatewayAPI:
-    validatingAdmissionPolicy:
+    supportingResources:
       enabled: false

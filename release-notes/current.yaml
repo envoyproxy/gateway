@@ -30,4 +30,4 @@ Other changes: |
   case, add Helm ownership metadata before upgrading. If Gateway API CRDs or
   policies are managed outside this chart, note that `--skip-crds` does not skip
   templated resources, so disable chart rendering with
-  `crds.gatewayAPI.validatingAdmissionPolicy.enabled=false`.
+  `crds.gatewayAPI.supportingResources.enabled=false`.

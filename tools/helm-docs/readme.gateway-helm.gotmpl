@@ -58,12 +58,13 @@ helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm --set 'crds.g
 If the provider-managed Gateway API CRDs are not compatible, use a compatible Gateway API CRD installation method for
 the cluster first, then install this chart with `--skip-crds`.
 
-After the required CRDs are installed, install the eg chart with `--skip-crds`. The Gateway API safe-upgrades
-ValidatingAdmissionPolicy is rendered from the chart templates on install by default, so disable it when Gateway API CRDs
-are managed outside this chart:
+After the required CRDs are installed, install the eg chart with `--skip-crds`. Gateway API supporting resources
+(non-CRD resources shipped with the Gateway API bundle, such as the safe-upgrades ValidatingAdmissionPolicy and binding)
+are rendered from the chart templates on install by default, so disable them when Gateway API CRDs or policies are
+managed outside this chart:
 
 ``` shell
-helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds --set crds.gatewayAPI.validatingAdmissionPolicy.enabled=false
+helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds --set crds.gatewayAPI.supportingResources.enabled=false
 ```
 
 To uninstall the chart:
