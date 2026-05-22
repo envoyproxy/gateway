@@ -455,7 +455,6 @@ rules:
   - list
   - get
   - watch
-
 - apiGroups:
   - ""
   resources:
