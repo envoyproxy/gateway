@@ -17,6 +17,7 @@ bug fixes: |
   Fixed HTTPS listeners with overlapping hostnames but disjoint certificate SANs to preserve HTTP/2 ALPN by default.
   Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
   Fixed controller panic when processing backend tls settings.
+  Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
 
 # Enhancements that improve performance.
 performance improvements: |
