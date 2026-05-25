@@ -304,6 +304,13 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
 			}
+			// Skip backendRefs with no healthy endpoints so the remaining healthy backends
+			// in the same rule absorb 100% of the traffic instead of getting 503s in
+			// proportion to the unavailable backend's weight. Dynamic resolver, custom
+			// backend and invalid destinations are kept to preserve their own handling.
+			if len(ds.Endpoints) == 0 && !ds.IsDynamicResolver && !ds.IsCustomBackend && !ds.Invalid {
+				continue
+			}
 			allDs = append(allDs, ds)
 
 			// check if there is a dynamic resolver in the backendRefs
@@ -1018,12 +1025,20 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
+					ds.Invalid = true
 					processDestinationError = err
 				}
 			}
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight == 0 {
+				continue
+			}
+			// Skip backendRefs with no healthy endpoints so the remaining healthy backends
+			// in the same rule absorb 100% of the traffic instead of getting 503s in
+			// proportion to the unavailable backend's weight. Dynamic resolver, custom
+			// backend and invalid destinations are kept to preserve their own handling.
+			if len(ds.Endpoints) == 0 && !ds.IsDynamicResolver && !ds.IsCustomBackend && !ds.Invalid {
 				continue
 			}
 			allDs = append(allDs, ds)
