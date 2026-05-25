@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strconv"
 
+	expr "cel.dev/expr"
 	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
 	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
 	typev3 "github.com/cncf/xds/go/xds/type/v3"
@@ -20,7 +21,6 @@ import (
 	policyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/custom_response/local_response_policy/v3"
 	redirectpolicyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/custom_response/redirect_policy/v3"
 	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	expr "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -311,43 +311,41 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 	// Build the CEL expression AST: response.code >= codeRange.Start && response.code <= codeRange.End
 	matcher := &matcherv3.CelMatcher{
 		ExprMatch: &typev3.CelExpression{
-			ExprSpecifier: &typev3.CelExpression_ParsedExpr{
-				ParsedExpr: &expr.ParsedExpr{
-					Expr: &expr.Expr{
-						Id: 9,
-						ExprKind: &expr.Expr_CallExpr{
-							CallExpr: &expr.Expr_Call{
-								Function: "_&&_",
-								Args: []*expr.Expr{
-									{
-										Id: 3,
-										ExprKind: &expr.Expr_CallExpr{
-											CallExpr: &expr.Expr_Call{
-												Function: "_>=_",
-												Args: []*expr.Expr{
-													{
-														Id: 2,
-														ExprKind: &expr.Expr_SelectExpr{
-															SelectExpr: &expr.Expr_Select{
-																Operand: &expr.Expr{
-																	Id: 1,
-																	ExprKind: &expr.Expr_IdentExpr{
-																		IdentExpr: &expr.Expr_Ident{
-																			Name: "response",
-																		},
+			CelExprParsed: &expr.ParsedExpr{
+				Expr: &expr.Expr{
+					Id: 9,
+					ExprKind: &expr.Expr_CallExpr{
+						CallExpr: &expr.Expr_Call{
+							Function: "_&&_",
+							Args: []*expr.Expr{
+								{
+									Id: 3,
+									ExprKind: &expr.Expr_CallExpr{
+										CallExpr: &expr.Expr_Call{
+											Function: "_>=_",
+											Args: []*expr.Expr{
+												{
+													Id: 2,
+													ExprKind: &expr.Expr_SelectExpr{
+														SelectExpr: &expr.Expr_Select{
+															Operand: &expr.Expr{
+																Id: 1,
+																ExprKind: &expr.Expr_IdentExpr{
+																	IdentExpr: &expr.Expr_Ident{
+																		Name: "response",
 																	},
 																},
-																Field: "code",
 															},
+															Field: "code",
 														},
 													},
-													{
-														Id: 4,
-														ExprKind: &expr.Expr_ConstExpr{
-															ConstExpr: &expr.Constant{
-																ConstantKind: &expr.Constant_Int64Value{
-																	Int64Value: int64(codeRange.Start),
-																},
+												},
+												{
+													Id: 4,
+													ExprKind: &expr.Expr_ConstExpr{
+														ConstExpr: &expr.Constant{
+															ConstantKind: &expr.Constant_Int64Value{
+																Int64Value: int64(codeRange.Start),
 															},
 														},
 													},
@@ -355,35 +353,35 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 											},
 										},
 									},
-									{
-										Id: 7,
-										ExprKind: &expr.Expr_CallExpr{
-											CallExpr: &expr.Expr_Call{
-												Function: "_<=_",
-												Args: []*expr.Expr{
-													{
-														Id: 6,
-														ExprKind: &expr.Expr_SelectExpr{
-															SelectExpr: &expr.Expr_Select{
-																Operand: &expr.Expr{
-																	Id: 5,
-																	ExprKind: &expr.Expr_IdentExpr{
-																		IdentExpr: &expr.Expr_Ident{
-																			Name: "response",
-																		},
+								},
+								{
+									Id: 7,
+									ExprKind: &expr.Expr_CallExpr{
+										CallExpr: &expr.Expr_Call{
+											Function: "_<=_",
+											Args: []*expr.Expr{
+												{
+													Id: 6,
+													ExprKind: &expr.Expr_SelectExpr{
+														SelectExpr: &expr.Expr_Select{
+															Operand: &expr.Expr{
+																Id: 5,
+																ExprKind: &expr.Expr_IdentExpr{
+																	IdentExpr: &expr.Expr_Ident{
+																		Name: "response",
 																	},
 																},
-																Field: "code",
 															},
+															Field: "code",
 														},
 													},
-													{
-														Id: 8,
-														ExprKind: &expr.Expr_ConstExpr{
-															ConstExpr: &expr.Constant{
-																ConstantKind: &expr.Constant_Int64Value{
-																	Int64Value: int64(codeRange.End),
-																},
+												},
+												{
+													Id: 8,
+													ExprKind: &expr.Expr_ConstExpr{
+														ConstExpr: &expr.Constant{
+															ConstantKind: &expr.Constant_Int64Value{
+																Int64Value: int64(codeRange.End),
 															},
 														},
 													},
