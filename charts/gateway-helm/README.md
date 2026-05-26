@@ -111,6 +111,10 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.pod.extraVolumes | list | `[]` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
+| deployment.pod.securityContext.runAsGroup | int | `65532` |  |
+| deployment.pod.securityContext.runAsNonRoot | bool | `true` |  |
+| deployment.pod.securityContext.runAsUser | int | `65532` |  |
+| deployment.pod.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | deployment.pod.tolerations | list | `[]` |  |
 | deployment.pod.topologySpreadConstraints | list | `[]` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |
