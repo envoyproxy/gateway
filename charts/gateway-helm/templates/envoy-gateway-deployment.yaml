@@ -48,6 +48,10 @@ spec:
       tolerations:
         {{- toYaml . | nindent 6 }}
       {{- end }}
+      {{- with .Values.deployment.pod.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - args:
         - server

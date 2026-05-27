@@ -39,7 +39,7 @@ data:
       kubernetes:
         rateLimitDeployment:
           container:
-            image: private.registry/envoyproxy/ratelimit:master
+            image: docker.io/envoyproxy/ratelimit:master
           patch:
             type: StrategicMerge
             value:
@@ -50,7 +50,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: private.registry/envoy/gateway:abcdef
+          image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -442,6 +442,7 @@ spec:
     spec:
       automountServiceAccountToken: true
       securityContext:
+        fsGroup: 65532
         runAsGroup: 65532
         runAsNonRoot: true
         runAsUser: 65532
@@ -459,7 +460,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private.registry/envoy/gateway:abcdef
+        image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -679,7 +680,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private.registry/envoy/gateway:abcdef
+        image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
         name: envoy-gateway-certgen
         securityContext:

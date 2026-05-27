@@ -612,6 +612,11 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 		)
 	}
+
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
 }
 
 // validateSecurityPolicy validates the SecurityPolicy.
