@@ -45029,6 +45029,7 @@ spec:
                     enum:
                     - Kubernetes
                     - Host
+                    - Remote
                     type: string
                 required:
                 - type

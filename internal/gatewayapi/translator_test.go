@@ -53,7 +53,6 @@ func TestTranslate(t *testing.T) {
 		EnvoyPatchPolicyEnabled         bool
 		BackendEnabled                  bool
 		GatewayNamespaceMode            bool
-		ModifyListenerPort              bool
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
@@ -61,46 +60,38 @@ func TestTranslate(t *testing.T) {
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
-			ModifyListenerPort:      true,
 		},
 		{
 			name:                    "backend-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
-			ModifyListenerPort:      true,
 		},
 		{
 			name:                 "gateway-namespace-mode-infra-httproute",
 			GatewayNamespaceMode: true,
-			ModifyListenerPort:   true,
 		},
 		{
-			name:               "backend-with-localhost-host-infra",
-			BackendEnabled:     true,
-			ModifyListenerPort: false,
-			RunningOnHost:      true,
+			name:           "backend-with-localhost-host-infra",
+			BackendEnabled: true,
+			RunningOnHost:  true,
 		},
 		{
-			name:               "httproute-attaching-to-listener-with-backend-backendref-host-infra",
-			BackendEnabled:     true,
-			ModifyListenerPort: false,
-			RunningOnHost:      true,
+			name:           "httproute-attaching-to-listener-with-backend-backendref-host-infra",
+			BackendEnabled: true,
+			RunningOnHost:  true,
 		},
 		{
 			name:                            "envoyextensionpolicy-lua-feature-disabled",
 			LuaEnvoyExtensionPolicyDisabled: true,
-			ModifyListenerPort:              true,
 		},
 		{
-			name:               "sds",
-			BackendEnabled:     true,
-			SDSEnabled:         true,
-			ModifyListenerPort: true,
+			name:           "sds",
+			BackendEnabled: true,
+			SDSEnabled:     true,
 		},
 		{
-			name:               "sds-invalid",
-			BackendEnabled:     true,
-			SDSEnabled:         true,
-			ModifyListenerPort: true,
+			name:           "sds-invalid",
+			BackendEnabled: true,
+			SDSEnabled:     true,
 		},
 	}
 
@@ -124,7 +115,6 @@ func TestTranslate(t *testing.T) {
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
 			gatewayNamespaceMode := false
-			modifyListenerPort := true
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
@@ -134,7 +124,6 @@ func TestTranslate(t *testing.T) {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
 					gatewayNamespaceMode = config.GatewayNamespaceMode
-					modifyListenerPort = config.ModifyListenerPort
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
@@ -152,7 +141,6 @@ func TestTranslate(t *testing.T) {
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,
 				WasmCache:                       &mockWasmCache{},
-				ModifyListenerPort:              modifyListenerPort,
 				RunningOnHost:                   runningOnHost,
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
@@ -545,9 +533,8 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					{Group: "storage.example.io", Kind: "S3Backend"},
 					{Group: "compute.example.io", Kind: "LambdaBackend"},
 				},
-				MergeGateways:      IsMergeGatewaysEnabled(resources),
-				Logger:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
-				ModifyListenerPort: true,
+				MergeGateways: IsMergeGatewaysEnabled(resources),
+				Logger:        logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
 			// Add common test fixtures
@@ -1062,39 +1049,34 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 
 func TestServicePortToContainerPort(t *testing.T) {
 	testCases := []struct {
-		servicePort           int32
-		containerPort         int32
-		envoyProxy            *egv1a1.EnvoyProxy
-		translateListenerPort bool
+		servicePort   int32
+		containerPort int32
+		envoyProxy    *egv1a1.EnvoyProxy
+		runningOnHost bool
 	}{
 		{
-			servicePort:           99,
-			containerPort:         10099,
-			envoyProxy:            nil,
-			translateListenerPort: true,
+			servicePort:   99,
+			containerPort: 10099,
+			envoyProxy:    nil,
 		},
 		{
-			servicePort:           1023,
-			containerPort:         11023,
-			envoyProxy:            nil,
-			translateListenerPort: true,
+			servicePort:   1023,
+			containerPort: 11023,
+			envoyProxy:    nil,
 		},
 		{
-			servicePort:           1024,
-			containerPort:         1024,
-			envoyProxy:            nil,
-			translateListenerPort: false,
+			servicePort:   1024,
+			containerPort: 1024,
+			envoyProxy:    nil,
 		},
 		{
-			servicePort:           8080,
-			containerPort:         8080,
-			envoyProxy:            nil,
-			translateListenerPort: false,
+			servicePort:   8080,
+			containerPort: 8080,
+			envoyProxy:    nil,
 		},
 		{
-			servicePort:           99,
-			containerPort:         10099,
-			translateListenerPort: true,
+			servicePort:   99,
+			containerPort: 10099,
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
@@ -1104,9 +1086,8 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
-			servicePort:           99,
-			containerPort:         10099,
-			translateListenerPort: true,
+			servicePort:   99,
+			containerPort: 10099,
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
@@ -1121,7 +1102,6 @@ func TestServicePortToContainerPort(t *testing.T) {
 		{
 			servicePort:           99,
 			containerPort:         99,
-			translateListenerPort: true,
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
@@ -1134,9 +1114,8 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
-			servicePort:           99,
-			containerPort:         99,
-			translateListenerPort: true,
+			servicePort:   99,
+			containerPort: 99,
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
@@ -1146,14 +1125,13 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
-			servicePort:           99,
-			containerPort:         99,
-			translateListenerPort: true,
+			servicePort:   99,
+			containerPort: 10099,
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeRemote,
-						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						Remote: &egv1a1.EnvoyProxyRemoteProvider{
 							UseListenerPortAsContainerPort: new(false),
 						},
 					},
@@ -1161,14 +1139,13 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
-			servicePort:           99,
-			containerPort:         99,
-			translateListenerPort: true,
+			servicePort:   99,
+			containerPort: 99,
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeRemote,
-						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						Remote: &egv1a1.EnvoyProxyRemoteProvider{
 							UseListenerPortAsContainerPort: new(true),
 						},
 					},
@@ -1176,15 +1153,17 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
-			servicePort:           99,
-			containerPort:         99,
-			translateListenerPort: false,
+			servicePort:   99,
+			containerPort: 99,
+			runningOnHost: true,
 		},
 	}
-	for _, tc := range testCases {
-		translator := &Translator{ModifyListenerPort: tc.translateListenerPort}
-		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
-		assert.Equal(t, tc.containerPort, got)
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			translator := &Translator{RunningOnHost: tc.runningOnHost}
+			got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
+			assert.Equal(t, tc.containerPort, got)
+		})
 	}
 }
 

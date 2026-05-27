@@ -413,7 +413,7 @@ type ProxyTelemetry struct {
 
 // EnvoyProxyProviderType defines the types of providers supported by Envoy Proxy.
 //
-// +kubebuilder:validation:Enum=Kubernetes;Host
+// +kubebuilder:validation:Enum=Kubernetes;Host;Remote
 type EnvoyProxyProviderType string
 
 const (
@@ -568,8 +568,9 @@ type EnvoyProxyHostProvider struct {
 // EnvoyProxyRemoteProvider defines configuration for the "Remote" resource provider.
 type EnvoyProxyRemoteProvider struct {
 	// UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
-	// When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.
+	// When set to false, if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.
 	// This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability.
+	// The default value is True, which means no port shifting occurs.
 	//
 	// +optional
 	UseListenerPortAsContainerPort *bool `json:"useListenerPortAsContainerPort,omitempty"`
