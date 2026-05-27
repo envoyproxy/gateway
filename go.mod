@@ -3,7 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.26.3
 
 require (
-	cel.dev/expr v0.25.1
+	cel.dev/expr v0.25.2
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/cenkalti/backoff/v4 v4.3.0
