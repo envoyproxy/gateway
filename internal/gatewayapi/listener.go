@@ -419,9 +419,7 @@ func (t *Translator) checkOverlappingTLSConfig(gateways []*GatewayContext) {
 		httpsListeners := []*ListenerContext{}
 		for _, gateway := range gateways {
 			for _, listener := range gateway.listeners {
-				// Skip non-ready listeners so they don't set TLSOverlaps on
-				// ready listeners that no longer share the xDS IR with them.
-				if listener.Protocol == gwapiv1.HTTPSProtocolType && listener.IsReady() {
+				if listener.Protocol == gwapiv1.HTTPSProtocolType {
 					httpsListeners = append(httpsListeners, listener)
 				}
 			}

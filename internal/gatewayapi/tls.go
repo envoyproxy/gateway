@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -168,10 +169,9 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 			continue
 		}
 		normalizedSecret := *secret
-		normalizedSecret.Data = map[string][]byte{
-			corev1.TLSCertKey:       validData,
-			corev1.TLSPrivateKeyKey: pem.EncodeToMemory(keyBlock),
-		}
+		normalizedSecret.Data = maps.Clone(secret.Data)
+		normalizedSecret.Data[corev1.TLSCertKey] = validData
+		normalizedSecret.Data[corev1.TLSPrivateKeyKey] = pem.EncodeToMemory(keyBlock)
 		validSecrets = append(validSecrets, &normalizedSecret)
 
 		certs = append(certs, cert)
