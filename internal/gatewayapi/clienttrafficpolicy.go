@@ -75,11 +75,16 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// and build Overridden status messages.
 	claimedSections := make(map[types.NamespacedName]sets.Set[string])
 
-	// Build a map out of gateways for faster lookup since users might have hundreds of gateway or more.
+	// Build a map out of gateways and listener sets for faster lookup since users might have hundreds or more.
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
 	for _, gw := range gateways {
 		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
+	}
+	listenerSetMap := map[types.NamespacedName]*gwapiv1.ListenerSet{}
+	for _, ls := range resources.ListenerSets {
+		key := utils.NamespacedName(ls)
+		listenerSetMap[key] = ls
 	}
 
 	policyCopies := clientTrafficPolicyCopiesWithStatusDeepCopy(clientTrafficPolicies)
@@ -103,7 +108,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				resolved, resolveErr := resolveClientTrafficPolicyTargetRef(&targetRef, gatewayMap, resources.ListenerSets)
+				resolved, resolveErr := resolveClientTrafficPolicyTargetRef(&targetRef, gatewayMap, listenerSetMap)
 
 				// Negative statuses have already been assigned so its safe to skip
 				if resolved == nil {
@@ -238,7 +243,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						handledPolicies[policyName] = policy
 					}
 
-					resolved, resolveErr := resolveClientTrafficPolicyTargetRef(&currTarget, gatewayMap, resources.ListenerSets)
+					resolved, resolveErr := resolveClientTrafficPolicyTargetRef(&currTarget, gatewayMap, listenerSetMap)
 
 					// Negative statuses have already been assigned so its safe to skip
 					if resolved == nil {
@@ -428,18 +433,12 @@ func lsPrefix(ls *gwapiv1.ListenerSet) string {
 func resolveClientTrafficPolicyTargetRef(
 	targetRef *policyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
-	listenerSets []*gwapiv1.ListenerSet,
+	listenerSets map[types.NamespacedName]*gwapiv1.ListenerSet,
 ) (*ctpResolvedTarget, *status.PolicyResolveError) {
 	if targetRef.Kind == resource.KindListenerSet {
-		var ls *gwapiv1.ListenerSet
 		targetKey := types.NamespacedName{Name: string(targetRef.Name), Namespace: string(targetRef.Namespace)}
-		for _, candidate := range listenerSets {
-			if utils.NamespacedName(candidate) == targetKey {
-				ls = candidate
-				break
-			}
-		}
-		if ls == nil {
+		ls, ok := listenerSets[targetKey]
+		if !ok {
 			return nil, nil
 		}
 
