@@ -303,7 +303,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					WasmCache:                       r.wasmCache,
 					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 					Logger:                          traceLogger,
-					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.DisableLua,
+					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
 				}
 
 				// If extensions are loaded, pass their supported groups/kinds to the translator

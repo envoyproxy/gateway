@@ -13,7 +13,8 @@ clientTrafficPolicies:
       alpnProtocols:
       - h2
       ciphers:
-      - ECDHE-RSA-AES128-GCM-SHA256
+      - ECDHE-ECDSA-AES128-GCM-SHA256
+      - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
       ecdhCurves:
       - curve1
       maxVersion: "1.3"
@@ -375,7 +376,8 @@ xdsIR:
           name: envoy-gateway/tls-secret-1
           privateKey: '[redacted]'
         ciphers:
-        - ECDHE-RSA-AES128-GCM-SHA256
+        - ECDHE-ECDSA-AES128-GCM-SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
         ecdhCurves:
         - curve1
         maxVersion: "1.3"
