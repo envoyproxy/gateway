@@ -430,33 +430,18 @@ func (t *Translator) processClientTLSSettings(
 	return tlsConfig, nil
 }
 
-func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
+func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string, shouldSectionNameMatch bool) bool {
 	for _, currTarget := range policy.Spec.TargetRefs {
 		if target.Group == currTarget.Group &&
 			target.Kind == currTarget.Kind &&
 			backendNamespace == policy.Namespace &&
 			target.Name == currTarget.Name {
 			// if section name is not set, then it targets the entire backend
-			if currTarget.SectionName == nil {
-				return true
+			if currTarget.SectionName == nil && target.SectionName != nil {
+				return !shouldSectionNameMatch
 			} else if reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
 				return true
 			}
-		}
-	}
-	return false
-}
-
-// stricter variant: only matches when sectionName is set and equal
-func backendTLSTargetSectionMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
-	for _, currTarget := range policy.Spec.TargetRefs {
-		if target.Group == currTarget.Group &&
-			target.Kind == currTarget.Kind &&
-			backendNamespace == policy.Namespace &&
-			target.Name == currTarget.Name &&
-			currTarget.SectionName != nil &&
-			reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
-			return true
 		}
 	}
 	return false
@@ -469,14 +454,16 @@ func (t *Translator) getBackendTLSPolicy(
 ) *gwapiv1.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
 	target := t.getTargetBackendReference(backendRef, backendNamespace)
-	for _, policy := range policies {
-		if backendTLSTargetSectionMatched(policy, target, backendNamespace) {
-			// prefer policies that target this specific section over wildcard matches
-			return policy
+	if target.SectionName != nil {
+		for _, policy := range policies {
+			if backendTLSTargetMatched(policy, target, backendNamespace, true) {
+				// prefer policies that target this specific section over wildcard matches
+				return policy
+			}
 		}
 	}
 	for _, policy := range policies {
-		if backendTLSTargetMatched(policy, target, backendNamespace) {
+		if backendTLSTargetMatched(policy, target, backendNamespace, false) {
 			return policy
 		}
 	}
