@@ -62,6 +62,9 @@ func (i *JWTAuthInterceptor) authenticate(ctx context.Context, msg any) error {
 	token := strings.TrimPrefix(authHeader[0], "Bearer ")
 
 	if err := i.validateKubeJWT(ctx, token, nodeID); err != nil {
+		if s, ok := status.FromError(err); ok {
+			return status.Errorf(s.Code(), "failed to validate the token for node %s: %s", nodeID, s.Message())
+		}
 		return status.Errorf(codes.Unauthenticated, "failed to validate the token for node %s: %v", nodeID, err)
 	}
 
