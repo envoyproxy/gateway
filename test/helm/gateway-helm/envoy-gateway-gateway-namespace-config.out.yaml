@@ -544,6 +544,12 @@ spec:
         app.kubernetes.io/instance: gateway-helm
     spec:
       automountServiceAccountToken: true
+      securityContext:
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - args:
         - server

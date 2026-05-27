@@ -383,8 +383,6 @@ kind: Service
 metadata:
   name: envoy-gateway
   namespace: envoy-gateway-system
-  annotations:
-    this: that
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -393,8 +391,7 @@ metadata:
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
 spec:
-  type: LoadBalancer
-  loadBalancerIP: 172.18.0.201
+  type: ClusterIP
   selector:
     control-plane: envoy-gateway
     app.kubernetes.io/name: gateway-helm
@@ -415,7 +412,6 @@ spec:
   - name: webhook
     port: 9443
     targetPort: 9443
-  trafficDistribution: PreferClose
 ---
 # Source: gateway-helm/templates/envoy-gateway-deployment.yaml
 apiVersion: apps/v1
@@ -449,6 +445,7 @@ spec:
     spec:
       automountServiceAccountToken: true
       securityContext:
+        fsGroup: 65532
         runAsGroup: 65532
         runAsNonRoot: true
         runAsUser: 65532
