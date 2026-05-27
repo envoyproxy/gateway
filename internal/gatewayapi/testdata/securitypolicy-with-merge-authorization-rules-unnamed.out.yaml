@@ -315,6 +315,14 @@ securityPolicies:
         status: "True"
         type: Merged
       - lastTransitionTime: null
+        message: authorization.rules were merged with policy envoy-gateway/parent-A
+          using JSONMerge (slice-replace) instead of the requested StrategicMerge
+          because one or more rules omit the `name` field used as the merge key; set
+          a unique name on every authorization rule to enable element-wise merging
+        reason: AuthorizationRulesMergeFallback
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -353,6 +361,14 @@ securityPolicies:
         status: "True"
         type: Merged
       - lastTransitionTime: null
+        message: authorization.rules were merged with policy envoy-gateway/parent-B
+          using JSONMerge (slice-replace) instead of the requested StrategicMerge
+          because one or more rules omit the `name` field used as the merge key; set
+          a unique name on every authorization rule to enable element-wise merging
+        reason: AuthorizationRulesMergeFallback
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -390,6 +406,14 @@ securityPolicies:
         reason: Merged
         status: "True"
         type: Merged
+      - lastTransitionTime: null
+        message: authorization.rules were merged with policy envoy-gateway/parent-C
+          using JSONMerge (slice-replace) instead of the requested StrategicMerge
+          because one or more rules omit the `name` field used as the merge key; set
+          a unique name on every authorization rule to enable element-wise merging
+        reason: AuthorizationRulesMergeFallback
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted

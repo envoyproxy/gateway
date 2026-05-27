@@ -439,7 +439,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Merge with parent policy
-				mergedPolicy, owners, err := mergeSecurityPolicy(policy, parentPolicy)
+				mergedPolicy, owners, authzRulesMergeFellBack, err := mergeSecurityPolicy(policy, parentPolicy)
 				if err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -498,6 +498,22 @@ func (t *Translator) processSecurityPolicyForRoute(
 					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
 					policy.Generation,
 				)
+
+				// Surface a warning when StrategicMerge was downgraded to JSONMerge
+				// for authorization.rules because a rule omits its `name` merge key,
+				// so the slice-replace fallback is not silent.
+				if authzRulesMergeFellBack {
+					status.SetWarningForPolicyAncestor(&policy.Status,
+						&ancestorRef,
+						t.GatewayControllerName,
+						status.PolicyReasonAuthorizationRulesMergeFallback,
+						fmt.Sprintf("authorization.rules were merged with policy %s/%s using JSONMerge (slice-replace) "+
+							"instead of the requested StrategicMerge because one or more rules omit the `name` field "+
+							"used as the merge key; set a unique name on every authorization rule to enable element-wise merging",
+							parentPolicy.Namespace, parentPolicy.Name),
+						policy.Generation,
+					)
+				}
 			}
 		}
 	}
@@ -2576,9 +2592,10 @@ func policyOwnerOr(owner, fallback *egv1a1.SecurityPolicy) *egv1a1.SecurityPolic
 }
 
 // mergeSecurityPolicy merges a route-level SecurityPolicy with a parent (Gateway/Listener) SecurityPolicy.
-func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, *securityPolicyOwners, error) {
+// It also reports whether the requested StrategicMerge fell back to JSONMerge for authorization rules.
+func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, *securityPolicyOwners, bool, error) {
 	if routePolicy.Spec.MergeType == nil || parentPolicy == nil {
-		return routePolicy, nil, nil
+		return routePolicy, nil, false, nil
 	}
 	mergeType := *routePolicy.Spec.MergeType
 	// Strategic merge of authorization.rules is keyed by the rule's `name`. If
@@ -2587,14 +2604,15 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 	// which slice-replaces the rules array but still recursively merges other
 	// fields — to preserve the pre-keyed-merge behavior for unnamed rules
 	// instead of rejecting the child policy.
-	if mergeType == egv1a1.StrategicMerge && hasUnnamedAuthorizationRule(parentPolicy, routePolicy) {
+	authzRulesMergeFellBack := mergeType == egv1a1.StrategicMerge && hasUnnamedAuthorizationRule(parentPolicy, routePolicy)
+	if authzRulesMergeFellBack {
 		mergeType = egv1a1.JSONMerge
 	}
 	mergedPolicy, err := utils.Merge[*egv1a1.SecurityPolicy](parentPolicy, routePolicy, mergeType)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
-	return mergedPolicy, buildSecurityPolicyOwners(routePolicy, parentPolicy), nil
+	return mergedPolicy, buildSecurityPolicyOwners(routePolicy, parentPolicy), authzRulesMergeFellBack, nil
 }
 
 // hasUnnamedAuthorizationRule reports whether any of the given policies declares
