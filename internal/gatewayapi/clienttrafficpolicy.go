@@ -31,6 +31,14 @@ const (
 	entireGatewayScope = "/entireGatewayScope"
 )
 
+type ctpAttachScope int
+
+const (
+	scopeSpecificSection   ctpAttachScope = iota
+	scopeEntireGateway     ctpAttachScope = iota
+	scopeEntireListenerSet ctpAttachScope = iota
+)
+
 func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
 }
@@ -175,7 +183,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						continue
 					}
 					if string(l.Name) == section {
-						err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false)
+						err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, scopeSpecificSection)
 						if err == nil {
 							httpIR := gwXdsIR.GetHTTPListener(irListenerName(l))
 							if shouldDisableHTTP3ForClientValidation(policy, httpIR) {
@@ -364,7 +372,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						irKey := t.getIRKey(l.gateway.Gateway)
 						// It must exist since we've already finished processing the gateways
 						gwXdsIR := xdsIR[irKey]
-						if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, !policyTargetsLS); err != nil {
+						scope := scopeEntireGateway
+						if policyTargetsLS {
+							scope = scopeEntireListenerSet
+						}
+						if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, scope); err != nil {
 							errs = errors.Join(errs, err)
 						} else {
 							if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
@@ -500,7 +512,7 @@ func listenersBelongToLS(l *ListenerContext, ls *gwapiv1.ListenerSet) bool {
 	return l.isFromListenerSet() && l.listenerSet.Name == ls.Name && l.listenerSet.Namespace == ls.Namespace
 }
 
-func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, attachedToGateway bool) error {
+func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, scope ctpAttachScope) error {
 	// Find Listener IR
 	irListenerName := irListenerName(l)
 	var httpIR *ir.HTTPListener
@@ -516,22 +528,27 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 		// Get a list of all other non-TLS listeners on this Gateway that share a port with
 		// the listener in question.
 		if sameListeners := listenersWithSameHTTPPort(xds, httpIR); len(sameListeners) != 0 {
-			if attachedToGateway {
-				// If this policy is attached to an entire gateway and the mergeGateways feature
-				// is turned on, validate that all the listeners affected by this policy originated
-				// from the same Gateway resource. The name of the Gateway from which this listener
-				// originated is part of the listener's name by construction.
-				gatewayName := extractGatewayNameFromListener(irListenerName)
+			switch scope {
+			case scopeEntireGateway, scopeEntireListenerSet:
+				// When mergeGateways is enabled, the XDS IR may contain listeners from multiple
+				// Gateway resources and their ListenerSets. Validate that all same-port listeners
+				// originated from the same target. The origin is encoded in the listener name by construction.
+				var prefix string
+				if scope == scopeEntireGateway {
+					prefix = extractGatewayNameFromListener(irListenerName)
+				} else {
+					prefix = extractListenerSetPrefixFromListener(irListenerName)
+				}
 				conflictingListeners := []string{}
 				for _, currName := range sameListeners {
-					if strings.Index(currName, gatewayName) != 0 {
+					if strings.Index(currName, prefix) != 0 {
 						conflictingListeners = append(conflictingListeners, currName)
 					}
 				}
 				if len(conflictingListeners) != 0 {
 					return fmt.Errorf("ClientTrafficPolicy is being applied to multiple http (non https) listeners (%s) on the same port, which is not allowed", strings.Join(conflictingListeners, ", "))
 				}
-			} else {
+			default:
 				// If this policy is attached to a specific listener, any other listeners in the list
 				// would be affected by this policy but should not be, so this policy can't be accepted.
 				return fmt.Errorf("ClientTrafficPolicy is being applied to multiple http (non https) listeners (%s) on the same port, which is not allowed", strings.Join(sameListeners, ", "))

@@ -465,6 +465,15 @@ func extractGatewayNameFromListener(listenerName string) string {
 	return listenerName
 }
 
+func extractListenerSetPrefixFromListener(listenerName string) string {
+	parts := strings.Split(listenerName, "/")
+	if len(parts) >= 4 {
+		return fmt.Sprintf("%s/%s/%s/%s", parts[0], parts[1], parts[2], parts[3])
+	}
+	// should never happen
+	return listenerName
+}
+
 func irListenerName(listener *ListenerContext) string {
 	if listener.isFromListenerSet() {
 		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.listenerSet.Namespace, listener.listenerSet.Name, listener.Name)
