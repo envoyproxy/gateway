@@ -120,13 +120,6 @@ type Translator struct {
 	// RunningOnHost indicates whether Envoy Gateway is running locally on the host machine.
 	RunningOnHost bool
 
-	// ModifyListenerPort indicates whether Envoy Gateway should modify the listener port for the Gateway.
-	// When running on the local host using the Host infrastructure provider, disable translating the
-	// gateway listener port into a non-privileged port and reuse the specified value.
-	// Also, allow loopback IP addresses in Backend endpoints, as the threat model is different from
-	// the cluster environment and the related security risk is not applicable.
-	ModifyListenerPort bool
-
 	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
 	oidcDiscoveryCache *oidcDiscoveryCache
 
