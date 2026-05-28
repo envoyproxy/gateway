@@ -315,10 +315,12 @@ securityPolicies:
         status: "True"
         type: Merged
       - lastTransitionTime: null
-        message: authorization.rules were merged with policy envoy-gateway/parent-A
-          using JSONMerge (slice-replace) instead of the requested StrategicMerge
-          because one or more rules omit the `name` field used as the merge key; set
-          a unique name on every authorization rule to enable element-wise merging
+        message: policy was merged with envoy-gateway/parent-A using JSONMerge (slice-replace
+          for all fields) instead of the requested StrategicMerge because one or more
+          `authorization.rules` omit the `name` field used as the strategic-merge
+          key; this affects every spec field, not only `authorization.rules`. Set
+          a unique `name` on every authorization rule to keep the requested StrategicMerge
+          semantics
         reason: AuthorizationRulesMergeFallback
         status: "True"
         type: Warning
@@ -361,10 +363,12 @@ securityPolicies:
         status: "True"
         type: Merged
       - lastTransitionTime: null
-        message: authorization.rules were merged with policy envoy-gateway/parent-B
-          using JSONMerge (slice-replace) instead of the requested StrategicMerge
-          because one or more rules omit the `name` field used as the merge key; set
-          a unique name on every authorization rule to enable element-wise merging
+        message: policy was merged with envoy-gateway/parent-B using JSONMerge (slice-replace
+          for all fields) instead of the requested StrategicMerge because one or more
+          `authorization.rules` omit the `name` field used as the strategic-merge
+          key; this affects every spec field, not only `authorization.rules`. Set
+          a unique `name` on every authorization rule to keep the requested StrategicMerge
+          semantics
         reason: AuthorizationRulesMergeFallback
         status: "True"
         type: Warning
@@ -407,10 +411,12 @@ securityPolicies:
         status: "True"
         type: Merged
       - lastTransitionTime: null
-        message: authorization.rules were merged with policy envoy-gateway/parent-C
-          using JSONMerge (slice-replace) instead of the requested StrategicMerge
-          because one or more rules omit the `name` field used as the merge key; set
-          a unique name on every authorization rule to enable element-wise merging
+        message: policy was merged with envoy-gateway/parent-C using JSONMerge (slice-replace
+          for all fields) instead of the requested StrategicMerge because one or more
+          `authorization.rules` omit the `name` field used as the strategic-merge
+          key; this affects every spec field, not only `authorization.rules`. Set
+          a unique `name` on every authorization rule to keep the requested StrategicMerge
+          semantics
         reason: AuthorizationRulesMergeFallback
         status: "True"
         type: Warning

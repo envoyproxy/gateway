@@ -499,17 +499,22 @@ func (t *Translator) processSecurityPolicyForRoute(
 					policy.Generation,
 				)
 
-				// Surface a warning when StrategicMerge was downgraded to JSONMerge
-				// for authorization.rules because a rule omits its `name` merge key,
-				// so the slice-replace fallback is not silent.
+				// Surface a warning when the requested StrategicMerge was downgraded
+				// to JSONMerge because an authorization rule omits its `name` merge
+				// key. The downgrade applies to the entire policy spec — not only
+				// `authorization.rules` — so the user sees that other slices
+				// (e.g. `extAuth.contextExtensions`, `jwt.providers`) are also
+				// slice-replaced instead of strategic-merged.
 				if authzRulesMergeFellBack {
 					status.SetWarningForPolicyAncestor(&policy.Status,
 						&ancestorRef,
 						t.GatewayControllerName,
 						status.PolicyReasonAuthorizationRulesMergeFallback,
-						fmt.Sprintf("authorization.rules were merged with policy %s/%s using JSONMerge (slice-replace) "+
-							"instead of the requested StrategicMerge because one or more rules omit the `name` field "+
-							"used as the merge key; set a unique name on every authorization rule to enable element-wise merging",
+						fmt.Sprintf("policy was merged with %s/%s using JSONMerge (slice-replace for all fields) "+
+							"instead of the requested StrategicMerge because one or more `authorization.rules` "+
+							"omit the `name` field used as the strategic-merge key; this affects every spec field, "+
+							"not only `authorization.rules`. Set a unique `name` on every authorization rule to "+
+							"keep the requested StrategicMerge semantics",
 							parentPolicy.Namespace, parentPolicy.Name),
 						policy.Generation,
 					)
@@ -2592,7 +2597,8 @@ func policyOwnerOr(owner, fallback *egv1a1.SecurityPolicy) *egv1a1.SecurityPolic
 }
 
 // mergeSecurityPolicy merges a route-level SecurityPolicy with a parent (Gateway/Listener) SecurityPolicy.
-// It also reports whether the requested StrategicMerge fell back to JSONMerge for authorization rules.
+// It also reports whether the requested StrategicMerge for the whole policy fell back to JSONMerge
+// because an authorization rule omits the `name` strategic-merge key.
 func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, *securityPolicyOwners, bool, error) {
 	if routePolicy.Spec.MergeType == nil || parentPolicy == nil {
 		return routePolicy, nil, false, nil
@@ -2600,10 +2606,10 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 	mergeType := *routePolicy.Spec.MergeType
 	// Strategic merge of authorization.rules is keyed by the rule's `name`. If
 	// any rule on either side omits its name, strategic merge would fail with
-	// `does not contain declared merge key: name`. Fall back to JSONMerge —
-	// which slice-replaces the rules array but still recursively merges other
-	// fields — to preserve the pre-keyed-merge behavior for unnamed rules
-	// instead of rejecting the child policy.
+	// `does not contain declared merge key: name`. Fall back to JSONMerge for
+	// the entire policy — JSONMerge slice-replaces every array (including
+	// authorization.rules), matching the pre-keyed-merge behavior for unnamed
+	// rules — instead of rejecting the child policy.
 	authzRulesMergeFellBack := mergeType == egv1a1.StrategicMerge && hasUnnamedAuthorizationRule(parentPolicy, routePolicy)
 	if authzRulesMergeFellBack {
 		mergeType = egv1a1.JSONMerge
