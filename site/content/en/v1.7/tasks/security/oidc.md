@@ -620,10 +620,10 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Backend]: ../../../api/extension_types#backend
-[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/
 [backend-routing]: ../traffic/backend
 [backend-tls]: ../backend-tls
 [BackendSettings]: ../../../api/extension_types/#clustersettings

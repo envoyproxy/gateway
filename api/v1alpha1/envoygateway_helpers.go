@@ -123,6 +123,23 @@ func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
 	return false
 }
 
+// LuaDisabled returns true if Lua EnvoyExtensionPolicies should be disabled.
+// EnableLua takes precedence over the deprecated DisableLua field.
+// When neither is set, Lua is disabled by default.
+func (e *ExtensionAPISettings) LuaDisabled() bool {
+	if e == nil {
+		return true
+	}
+	if e.EnableLua {
+		return false
+	}
+	if e.DisableLua != nil {
+		return *e.DisableLua
+	}
+	// Default: Lua is disabled
+	return true
+}
+
 // GetEnvoyProxyDefaultSpec returns the default EnvoyProxySpec if specified,
 // otherwise returns nil.
 func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {

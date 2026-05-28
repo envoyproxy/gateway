@@ -407,7 +407,7 @@ export GITHUB_REMOTE=origin
    # Release Announcement
 
    Check out the [v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}  release announcement]
-   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}.html) to learn more about the release.
+   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}) to learn more about the release.
    ```
 
 18. If this patch release is the latest release, update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.

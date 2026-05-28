@@ -10,6 +10,40 @@ without modifying the Envoy Gateway binary. These comparatively light-weight ext
 Envoy Gateway allows the user to configure Lua extensions using the [EnvoyExtensionPolicy][] CRD.
 This instantiated resource can be linked to a [Gateway][Gateway] or [HTTPRoute][HTTPRoute] resource. If linked to both, the resource linked to the route takes precedence over those linked to Gateway.
 
+{{% alert title="Warning" color="warning" %}}
+Lua scripts execute inside the Envoy proxy process without strong sandboxing. While Envoy Gateway
+sanitizes scripts and restricts the available Lua API surface, the Lua runtime is inherently less
+isolated than a dedicated extension process.
+
+When enabling Lua extensions, admins should take additional measures to reduce risk, including:
+* Using K8s [RBAC][] to restrict who can create or modify `EnvoyExtensionPolicy` resources with Lua scripts.
+* Using [AdmissionControl][] tools (e.g. OPA Gatekeeper, Kyverno) to validate and review Lua scripts before they are admitted.
+* Auditing `EnvoyExtensionPolicy` resources periodically, and enabling [AuditLog][] for API server operations on these resources.
+* Not enabling Lua when it is not needed by omitting the `enableLua` field or setting it to `false` in the [EnvoyGateway][] configuration.
+{{% /alert %}}
+
+## Enable Lua
+
+Lua extensions are disabled by default. To enable Lua, set `enableLua: true` in the [EnvoyGateway][] configuration:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableLua: true
+```
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
@@ -199,5 +233,9 @@ kubectl delete configmap/cm-lua-valueref
 Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
 [EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[EnvoyGateway]: ../../../api/extension_types#envoygateway
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+[AdmissionControl]: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
+[AuditLog]: https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/

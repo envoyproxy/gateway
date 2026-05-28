@@ -25,15 +25,15 @@ deployment.
 An [HTTPRoute][] configures routing of HTTP traffic through one or more Gateways. The following HTTPRoute filters are
 supported by Envoy Gateway:
 
-- `requestHeaderModifier`: [RequestHeaderModifiers](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
+- `requestHeaderModifier`: [RequestHeaderModifiers](https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
   can be used to modify or add request headers before the request is proxied to its destination.
-- `responseHeaderModifier`: [ResponseHeaderModifiers](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
+- `responseHeaderModifier`: [ResponseHeaderModifiers](https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
   can be used to modify or add response headers before the response is sent back to the client.
-- `requestMirror`: [RequestMirrors](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
+- `requestMirror`: [RequestMirrors](https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
   configure destinations where the requests should also be mirrored to. Responses to mirrored requests will be ignored.
-- `requestRedirect`: [RequestRedirects](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
+- `requestRedirect`: [RequestRedirects](https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
   configure policied for how requests that match the HTTPRoute should be modified and then redirected.
-- `urlRewrite`: [UrlRewrites](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
+- `urlRewrite`: [UrlRewrites](https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter)
   allow for modification of the request's hostname and path before it is proxied to its destination.
 - `extensionRef`: [ExtensionRefs][] are used by Envoy Gateway to implement extended filters. Currently, Envoy Gateway
   supports rate limiting and request authentication filters. For more information about these filters, refer to the
@@ -66,11 +66,11 @@ A [GRPCRoute][] configures routing of [gRPC][] requests through one or more Gate
 hostname, gRPC service, gRPC method, or HTTP/2 Header. Envoy Gateway supports the following filters on GRPCRoutes to
 provide additional traffic processing:
 
-- `requestHeaderModifier`: [RequestHeaderModifiers](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter)
+- `requestHeaderModifier`: [RequestHeaderModifiers](https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter)
   can be used to modify or add request headers before the request is proxied to its destination.
-- `responseHeaderModifier`: [ResponseHeaderModifiers](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter)
+- `responseHeaderModifier`: [ResponseHeaderModifiers](https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter)
   can be used to modify or add response headers before the response is sent back to the client.
-- `requestMirror`: [RequestMirrors](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter)
+- `requestMirror`: [RequestMirrors](https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter)
   configure destinations where the requests should also be mirrored to. Responses to mirrored requests will be ignored.
 
 __Notes:__
@@ -96,23 +96,23 @@ these types of cross-namespace references. Envoy Gateway supports the following 
 
 [system design]: ../design/system-design
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[GatewayClass]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.GatewayClass
-[parameters reference]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.ParametersReference
-[Gateway]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
+[GatewayClass]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.GatewayClass
+[parameters reference]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.ParametersReference
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.Gateway
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 [Service]: https://kubernetes.io/docs/concepts/services-networking/service/
-[BackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.BackendRef
-[HTTPBackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPBackendRef
-[TCPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute
-[UDPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
+[BackendRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.BackendRef
+[HTTPBackendRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPBackendRef
+[TCPRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute
+[UDPRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
 [gRPC]: https://grpc.io/
-[TLSRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute
-[ReferenceGrant]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.ReferenceGrant
-[SecretObjectReference]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference
+[TLSRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute
+[ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io%2fv1beta1.ReferenceGrant
+[SecretObjectReference]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference
 [rate limiting]: ./rate-limit
 [request authentication]: ./authn
 [EnvoyProxy]: ../api/config_types#envoyproxy
-[resolving conflicts]: https://gateway-api.sigs.k8s.io/concepts/guidelines/?h=conflict#conflicts
-[ExtensionRefs]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilterType
-[grpc-filter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter
+[resolving conflicts]: https://gateway-api.sigs.k8s.io/guides/api-design/?h=conflict#conflicts
+[ExtensionRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilterType
+[grpc-filter]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter

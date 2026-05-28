@@ -34,6 +34,22 @@ backendTLSPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-btls
+        namespace: envoy-gateway
+        sectionName: http2
+      conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
@@ -56,6 +72,22 @@ backendTLSPolicies:
         name: gateway-btls
         namespace: envoy-gateway
         sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-btls
+        namespace: envoy-gateway
+        sectionName: http2
       conditions:
       - lastTransitionTime: null
         message: Resolved all the Object references.
@@ -208,6 +240,51 @@ httpRoutes:
         name: gateway-btls
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-with-wrong-section-name
+    namespace: envoy-gateway
+  spec:
+    parentRefs:
+    - name: gateway-btls
+      namespace: envoy-gateway
+      sectionName: http2
+    rules:
+    - backendRefs:
+      - name: http-backend
+        namespace: default
+        port: 8080
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-ip-tls-1
+        namespace: default
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-ip-tls-2
+        namespace: default
+      matches:
+      - path:
+          type: Exact
+          value: /exact
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: No listeners match this parent ref
+        reason: NoMatchingParent
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-btls
+        namespace: envoy-gateway
+        sectionName: http2
 infraIR:
   envoy-gateway/gateway-btls:
     proxy:

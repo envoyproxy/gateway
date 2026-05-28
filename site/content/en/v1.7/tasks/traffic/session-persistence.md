@@ -222,4 +222,4 @@ done
 
 ```
 
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
