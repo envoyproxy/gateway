@@ -17,6 +17,7 @@ bug fixes: |
   Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
   Fixed missing deprecated field warning in ClientTrafficPolicy and SecurityPolicy.
   Fixed ClientTrafficPolicy TLS cipher validation rejecting supported IANA/RFC cipher suite names.
+  Fixed API key auth credential ordering to avoid unnecessary xDS updates.
 
 # Enhancements that improve performance.
 performance improvements: |
