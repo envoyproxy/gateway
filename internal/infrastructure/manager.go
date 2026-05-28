@@ -16,11 +16,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
+	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
 	_ Manager = (*kubernetes.Infra)(nil)
 	_ Manager = (*host.Infra)(nil)
+	_ Manager = (*remote.Infra)(nil)
 )
 
 // Manager provides the scaffolding for managing infrastructure.
@@ -65,7 +67,11 @@ func newManagerForCustom(ctx context.Context, cfg *config.Server, logger logging
 	case egv1a1.InfrastructureProviderTypeHost:
 		return host.NewInfra(ctx, cfg, logger, errors)
 	case egv1a1.InfrastructureProviderTypeRemote:
-		return remote.NewInfra(cfg, cfg.KubernetesClient.Get(), errors)
+		var k8sClient k8scli.Client
+		if cfg.EnvoyGateway.Provider.IsRunningOnKubernetes() {
+			k8sClient = cfg.KubernetesClient.Get()
+		}
+		return remote.NewInfra(cfg, remote.DefaultInfraClientFactory(cfg, k8sClient), errors), nil
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", infra.Type)
 	}

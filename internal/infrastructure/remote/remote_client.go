@@ -20,6 +20,8 @@ import (
 
 const grpcServiceName = "envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider"
 
+// InfraClient is the contract used by Infra to talk to a remote
+// infrastructure provider.
 type InfraClient interface {
 	Close() error
 	CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) error
@@ -28,7 +30,16 @@ type InfraClient interface {
 	DeleteRateLimitInfra(ctx context.Context) error
 }
 
-type InfraClientImpl struct {
+// InfraClientFactory builds an InfraClient on demand. Infra invokes the
+// factory lazily on the first method call that needs the client.
+type InfraClientFactory func(ctx context.Context) (InfraClient, error)
+
+// infraClientImpl is the gRPC-backed implementation of InfraClient. It
+// serializes IR payloads to JSON and forwards them to a remote
+// infrastructure provider.
+// (TODO) In the future, the protobuf definition should be able to ingest
+// IR payloads fields directly.
+type infraClientImpl struct {
 	k8sClient          k8scli.Client
 	namespace          string
 	remoteService      *egv1a1.ExtensionService
@@ -36,14 +47,19 @@ type InfraClientImpl struct {
 	client             remoteinfra.EnvoyGatewayRemoteInfrastructureProviderClient
 }
 
-func (i *InfraClientImpl) Close() error {
+// Close releases the underlying gRPC connection. It is a no-op if the
+// connection was never established.
+func (i *infraClientImpl) Close() error {
 	if i.extensionConnCache == nil {
 		return nil
 	}
 	return i.extensionConnCache.Close()
 }
 
-func (i *InfraClientImpl) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) error {
+// CreateOrUpdateProxyInfra serializes the IR to JSON and forwards it to the
+// remote provider. The provider is responsible for reconciling the proxy
+// infrastructure to match.
+func (i *infraClientImpl) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) error {
 	bs := []byte(infra.JSONString())
 
 	req := new(remoteinfra.CreateOrUpdateProxyInfraRequest{IrBytes: bs})
@@ -52,7 +68,9 @@ func (i *InfraClientImpl) CreateOrUpdateProxyInfra(ctx context.Context, infra *i
 	return err
 }
 
-func (i *InfraClientImpl) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
+// DeleteProxyInfra serializes the IR to JSON and asks the remote provider to
+// tear down the corresponding proxy infrastructure.
+func (i *infraClientImpl) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
 	bs := []byte(infra.JSONString())
 
 	req := new(remoteinfra.DeleteProxyInfraRequest{IrBytes: bs})
@@ -61,17 +79,23 @@ func (i *InfraClientImpl) DeleteProxyInfra(ctx context.Context, infra *ir.Infra)
 	return err
 }
 
-func (i *InfraClientImpl) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
+// CreateOrUpdateRateLimitInfra asks the remote provider to create or update
+// the rate limit infrastructure.
+func (i *infraClientImpl) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 	_, err := i.client.CreateOrUpdateRateLimitInfra(ctx, new(remoteinfra.CreateOrUpdateRateLimitInfraRequest{}))
 	return err
 }
 
-func (i *InfraClientImpl) DeleteRateLimitInfra(ctx context.Context) error {
+// DeleteRateLimitInfra asks the remote provider to tear down the rate limit
+// infrastructure.
+func (i *infraClientImpl) DeleteRateLimitInfra(ctx context.Context) error {
 	_, err := i.client.DeleteRateLimitInfra(ctx, new(remoteinfra.DeleteRateLimitInfraRequest{}))
 	return err
 }
 
-func (i *InfraClientImpl) getClientConnCache(ctx context.Context) (*grpc.ClientConn, error) {
+// getClientConnCache returns the cached gRPC connection, dialing the remote
+// service on the first call.
+func (i *infraClientImpl) getClientConnCache(ctx context.Context) (*grpc.ClientConn, error) {
 	if i.extensionConnCache != nil {
 		return i.extensionConnCache, nil
 	}
@@ -83,7 +107,7 @@ func (i *InfraClientImpl) getClientConnCache(ctx context.Context) (*grpc.ClientC
 		return nil, err
 	}
 
-	conn, err := grpc.Dial(serverAddr, opts...)
+	conn, err := grpc.NewClient(serverAddr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -92,24 +116,34 @@ func (i *InfraClientImpl) getClientConnCache(ctx context.Context) (*grpc.ClientC
 	return conn, nil
 }
 
-// newRemoteInfraClient returns a new Manager
-func newRemoteInfraClient(cfg *config.Server, k8sClient k8scli.Client) (InfraClient, error) {
-	extensionCfg := cfg.EnvoyGateway.Provider.Custom.Infrastructure.Remote.Service
-	cfg.Logger.Info("extensionCfg", "config", extensionCfg)
-	c := &InfraClientImpl{
-		k8sClient:     k8sClient,
-		remoteService: extensionCfg,
+// DefaultInfraClientFactory returns an InfraClientFactory that defers
+// construction of the remote gRPC client until the factory is invoked.
+func DefaultInfraClientFactory(cfg *config.Server, k8sClient k8scli.Client) InfraClientFactory {
+	return func(ctx context.Context) (InfraClient, error) {
+		return newRemoteInfraClient(ctx, cfg, k8sClient)
 	}
+}
 
-	err := c.getImplementationClient(context.Background())
-	if err != nil {
+// newRemoteInfraClient returns a new InfraClient that talks to a remote
+// infrastructure provider over gRPC.
+func newRemoteInfraClient(ctx context.Context, cfg *config.Server, k8sClient k8scli.Client) (InfraClient, error) {
+	extensionCfg := cfg.EnvoyGateway.Provider.Custom.Infrastructure.Remote.Service
+	c := new(infraClientImpl{
+		k8sClient:     k8sClient,
+		namespace:     cfg.ControllerNamespace,
+		remoteService: extensionCfg,
+	})
+
+	if err := c.getImplementationClient(ctx); err != nil {
+		// Make sure we don't leak any partially-created connection.
+		_ = c.Close()
 		return nil, err
 	}
 	return c, nil
 }
 
 // getImplementationClient generates the grpc client to communicate with a remote infrastructure server.
-func (i *InfraClientImpl) getImplementationClient(ctx context.Context) error {
+func (i *infraClientImpl) getImplementationClient(ctx context.Context) error {
 	conn, err := i.getClientConnCache(ctx)
 	if err != nil {
 		return err
@@ -118,3 +152,5 @@ func (i *InfraClientImpl) getImplementationClient(ctx context.Context) error {
 	i.client = remoteinfra.NewEnvoyGatewayRemoteInfrastructureProviderClient(conn)
 	return nil
 }
+
+var _ InfraClient = (*infraClientImpl)(nil)
