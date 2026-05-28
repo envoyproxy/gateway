@@ -20814,11 +20814,25 @@ spec:
                       rule: ((has(self.envoyHpa) && !has(self.envoyDaemonSet)) ||
                         (!has(self.envoyHpa) && has(self.envoyDaemonSet))) || (!has(self.envoyHpa)
                         && !has(self.envoyDaemonSet))
+                  remote:
+                    description: |-
+                      Remote defers runtime deployment of the data plane to another process.
+                      If unspecified and type is "Remote", default settings for the custom provider
+                      are applied.
+                    properties:
+                      useListenerPortAsContainerPort:
+                        description: |-
+                          UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
+                          When set to false, if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.
+                          This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability.
+                          The default value is True, which means no port shifting occurs.
+                        type: boolean
+                    type: object
                   type:
                     description: |-
                       Type is the type of resource provider to use. A resource provider provides
                       infrastructure resources for running the data plane, e.g. Envoy proxy, and
-                      optional auxiliary control planes. Supported types are "Kubernetes"and "Host".
+                      optional auxiliary control planes. Supported types are "Kubernetes", "Remote', and "Host".
                     enum:
                     - Kubernetes
                     - Host
