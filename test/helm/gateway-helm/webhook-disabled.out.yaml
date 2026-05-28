@@ -2,6 +2,9 @@
 # Source: gateway-helm/templates/envoy-gateway-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+# Disable token automounting on the ServiceAccount by default to satisfy
+# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
+# enable automountServiceAccountToken in their pod spec.
 automountServiceAccountToken: false
 metadata:
   name: envoy-gateway
@@ -562,6 +565,9 @@ spec:
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
+# Disable token automounting on the ServiceAccount by default to satisfy
+# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
+# enable automountServiceAccountToken in their pod spec.
 automountServiceAccountToken: false
 metadata:
   name: gateway-helm-certgen
