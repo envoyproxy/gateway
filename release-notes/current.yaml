@@ -14,6 +14,7 @@ new features: |
 bug fixes: |
   Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
   Fixed controller panic when processing backend tls settings.
+  Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
   Fixed missing deprecated field warning in ClientTrafficPolicy and SecurityPolicy.
   Fixed ClientTrafficPolicy TLS cipher validation rejecting supported IANA/RFC cipher suite names.
 
