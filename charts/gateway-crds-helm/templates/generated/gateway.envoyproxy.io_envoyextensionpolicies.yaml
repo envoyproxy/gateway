@@ -1659,6 +1659,17 @@ spec:
                       || (self.type == 'ValueRef' && !has(self.inline) && has(self.valueRef))
                 maxItems: 16
                 type: array
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing EnvoyExtensionPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into a parent EnvoyExtensionPolicy (i.e. the one targeting a Gateway or Listener).
+                  This field cannot be set when targeting a parent resource (Gateway).
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
+                x-kubernetes-validations:
+                - message: Replace is not a valid MergeType for EnvoyExtensionPolicy
+                  rule: self != 'Replace'
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.

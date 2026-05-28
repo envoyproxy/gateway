@@ -44,6 +44,16 @@ type EnvoyExtensionPolicy struct {
 type EnvoyExtensionPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 
+	// MergeType determines how this configuration is merged with existing EnvoyExtensionPolicy
+	// configurations targeting a parent resource. When set, this configuration will be merged
+	// into a parent EnvoyExtensionPolicy (i.e. the one targeting a Gateway or Listener).
+	// This field cannot be set when targeting a parent resource (Gateway).
+	// If unset, no merging occurs, and only the most specific configuration takes effect.
+	//
+	// +kubebuilder:validation:XValidation:rule="self != 'Replace'",message="Replace is not a valid MergeType for EnvoyExtensionPolicy"
+	// +optional
+	MergeType *MergeType `json:"mergeType,omitempty"`
+
 	// Wasm is a list of Wasm extensions to be loaded by the Gateway.
 	// Order matters, as the extensions will be loaded in the order they are
 	// defined in this list.

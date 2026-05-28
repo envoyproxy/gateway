@@ -10,6 +10,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for MergeType in EnvoyExtensionPolicy.
 
 bug fixes: |
   Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.

@@ -501,6 +501,29 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
 }
 
+// EnvoyExtensionPolicyMustBeMerged waits for the specified EnvoyExtensionPolicy to have Merged condition.
+func EnvoyExtensionPolicyMustBeMerged(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.EnvoyExtensionPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyExtensionPolicy: %w", err)
+		}
+
+		if policyMergedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "EnvoyExtensionPolicy has Merged condition: %+v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "EnvoyExtensionPolicy does not have Merged condition yet: %+v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to have Merged condition")
+}
+
 // BackendMustBeAccepted waits for the specified Backend to be accepted.
 func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types.NamespacedName) {
 	t.Helper()

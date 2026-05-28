@@ -2300,6 +2300,11 @@ func (in *EnvoyExtensionPolicyList) DeepCopyObject() runtime.Object {
 func (in *EnvoyExtensionPolicySpec) DeepCopyInto(out *EnvoyExtensionPolicySpec) {
 	*out = *in
 	in.PolicyTargetReferences.DeepCopyInto(&out.PolicyTargetReferences)
+	if in.MergeType != nil {
+		in, out := &in.MergeType, &out.MergeType
+		*out = new(MergeType)
+		**out = **in
+	}
 	if in.Wasm != nil {
 		in, out := &in.Wasm, &out.Wasm
 		*out = make([]Wasm, len(*in))
