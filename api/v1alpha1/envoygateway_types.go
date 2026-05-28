@@ -562,7 +562,7 @@ type EnvoyGatewayKubernetesCustomProvider struct {
 
 // InfrastructureProviderType defines the types of custom infrastructure providers supported by Envoy Gateway.
 //
-// +kubebuilder:validation:Enum=Host
+// +kubebuilder:validation:Enum=Host;Remote
 type InfrastructureProviderType string
 
 const (

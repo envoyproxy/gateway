@@ -964,6 +964,10 @@ func IsGatewayNamespaceMode() bool {
 	return DeployProfile == "gateway-namespace-mode"
 }
 
+func IsRemoteInfraMode() bool {
+	return DeployProfile == "remote-infra-mode"
+}
+
 func UseStandardChannel() bool {
 	return os.Getenv("E2E_GATEWAY_API_CHANNEL") == "standard"
 }
