@@ -61,7 +61,7 @@ infraIR:
                     backendSettings:
                       timeout:
                         http:
-                          maxConnectionDuration: 30s
+                          maxStreamDuration: 30s
                     type: HTTP
                   type: ALS
         status: {}
@@ -107,7 +107,7 @@ xdsIR:
         traffic:
           timeout:
             http:
-              maxConnectionDuration: 30s
+              maxStreamDuration: 30s
         type: HTTP
     globalResources:
       proxyServiceCluster:

@@ -85,6 +85,7 @@ type xdsClusterArgs struct {
 	unstructuredRefs  []*unstructured.Unstructured
 	extensionMgr      *extensionTypes.Manager
 	logger            logging.Logger
+	nonRouteCluster   bool
 }
 
 type EndpointType int
@@ -1032,7 +1033,7 @@ func hasTimeoutArgs(args *xdsClusterArgs) bool {
 	timeout := args.timeout.HTTP
 	return timeout.MaxConnectionDuration != nil ||
 		timeout.ConnectionIdleTimeout != nil ||
-		timeout.MaxStreamDuration != nil
+		(args.nonRouteCluster && timeout.MaxStreamDuration != nil)
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {

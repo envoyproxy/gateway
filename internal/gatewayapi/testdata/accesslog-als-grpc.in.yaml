@@ -19,7 +19,7 @@ envoyProxyForGatewayClass:
                   backendSettings:
                     timeout:
                       http:
-                        maxConnectionDuration: 30s
+                        maxStreamDuration: 30s
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
