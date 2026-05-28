@@ -272,6 +272,10 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 
 	if svrCfg.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
+		// Keep the controller namespace visible even when users restrict watched
+		// Gateway API namespaces; infra reconciliation reads EG-owned resources
+		// such as Secrets from this namespace through the shared cached client.
+		mgrOpts.Cache.DefaultNamespaces[svrCfg.ControllerNamespace] = cache.Config{}
 		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}

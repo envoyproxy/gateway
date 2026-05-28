@@ -80,11 +80,12 @@ func TestNamespaceSelectorClient(t *testing.T) {
 	scheme := envoygateway.GetScheme()
 
 	testCases := []struct {
-		name              string
-		namespaceSelector *metav1.LabelSelector
-		objects           []runtime.Object
-		expectCTPCount    int
-		expectGWCount     int
+		name               string
+		namespaceSelector  *metav1.LabelSelector
+		includedNamespaces []string
+		objects            []runtime.Object
+		expectCTPCount     int
+		expectGWCount      int
 	}{
 		{
 			name:              "nil selector returns all resources",
@@ -127,6 +128,22 @@ func TestNamespaceSelectorClient(t *testing.T) {
 			expectCTPCount: 0,
 			expectGWCount:  0,
 		},
+		{
+			name: "included namespace bypasses selector",
+			namespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"env": "development",
+				},
+			},
+			includedNamespaces: []string{"non-matching-ns"},
+			objects: []runtime.Object{
+				nsMatching, nsNonMatching,
+				ctpInMatchingNs, ctpInNonMatchingNs,
+				gwInMatchingNs, gwInNonMatchingNs,
+			},
+			expectCTPCount: 1,
+			expectGWCount:  1,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -138,7 +155,7 @@ func TestNamespaceSelectorClient(t *testing.T) {
 				Build()
 
 			// Wrap with namespace selector client
-			wrappedClient := newNamespaceSelectorClient(fakeClient, tc.namespaceSelector)
+			wrappedClient := newNamespaceSelectorClient(fakeClient, tc.namespaceSelector, tc.includedNamespaces...)
 
 			ctx := context.Background()
 

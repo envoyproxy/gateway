@@ -11,6 +11,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -20,18 +21,20 @@ import (
 // List operations.
 type namespaceSelectorClient struct {
 	client.Client
-	namespaceSelector *metav1.LabelSelector
+	namespaceSelector  *metav1.LabelSelector
+	includedNamespaces sets.Set[string]
 }
 
 // newNamespaceSelectorClient creates a new namespace-filtered client wrapper.
 // If namespaceSelector is nil, the wrapper passes through all operations unchanged.
-func newNamespaceSelectorClient(c client.Client, namespaceSelector *metav1.LabelSelector) client.Client {
+func newNamespaceSelectorClient(c client.Client, namespaceSelector *metav1.LabelSelector, includedNamespaces ...string) client.Client {
 	if namespaceSelector == nil {
 		return c
 	}
 	return &namespaceSelectorClient{
-		Client:            c,
-		namespaceSelector: namespaceSelector,
+		Client:             c,
+		namespaceSelector:  namespaceSelector,
+		includedNamespaces: sets.New(includedNamespaces...),
 	}
 }
 
@@ -86,15 +89,21 @@ func (c *namespaceSelectorClient) filterByNamespaceLabels(ctx context.Context, l
 		}
 
 		ns := obj.GetNamespace()
-		matches, cached := namespaceMatches[ns]
-		if !cached {
-			var err error
-			matches, err = checkObjectNamespaceLabels(ctx, c.Client, c.namespaceSelector, obj)
-			if err != nil {
-				return fmt.Errorf("failed to check namespace labels for object %s/%s: %w",
-					ns, obj.GetName(), err)
+		// includedNamespaces are part of EG's own operating surface, e.g. the
+		// controller namespace. They must bypass user namespace selectors.
+		matches := c.includedNamespaces.Has(ns)
+		if !matches {
+			cachedMatches, cached := namespaceMatches[ns]
+			matches = cachedMatches
+			if !cached {
+				var err error
+				matches, err = checkObjectNamespaceLabels(ctx, c.Client, c.namespaceSelector, obj)
+				if err != nil {
+					return fmt.Errorf("failed to check namespace labels for object %s/%s: %w",
+						ns, obj.GetName(), err)
+				}
+				namespaceMatches[ns] = matches
 			}
-			namespaceMatches[ns] = matches
 		}
 
 		if matches {
