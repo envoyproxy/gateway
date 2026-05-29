@@ -106,6 +106,7 @@ type OIDC struct {
 	// the "Bearer " prefix. For any other header, EG forwards the raw token value.
 	// If not specified, the ID token will not be forwarded.
 	// +optional
+	// +notImplementedHide
 	ForwardIDToken *OIDCTokenForwarding `json:"forwardIDToken,omitempty"`
 
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
