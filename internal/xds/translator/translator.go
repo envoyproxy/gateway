@@ -649,6 +649,7 @@ func (t *Translator) addRouteToRouteConfig(
 						endpointType: buildEndpointType(mrr.Destination.Settings),
 						metrics:      metrics,
 						metadata:     mrr.Destination.Metadata,
+						isRoute:      true,
 					}); err != nil {
 						errs = errors.Join(errs, err)
 					}
