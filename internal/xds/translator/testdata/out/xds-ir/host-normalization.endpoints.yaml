@@ -1,0 +1,36 @@
+- clusterName: first-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.1
+            portValue: 8081
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: first-route-dest/backend/0
+- clusterName: second-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.2.2.2
+            portValue: 8082
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: second-route-dest/backend/0
+- clusterName: third-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.3.3.3
+            portValue: 8083
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: third-route-dest/backend/0

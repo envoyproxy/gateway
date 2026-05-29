@@ -79,6 +79,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Path *PathSettings `json:"path,omitempty"`
+	// Host enables managing how the Host/Authority header set by clients can be normalized.
+	//
+	// +optional
+	Host *HostSettings `json:"host,omitempty"`
 	// HeaderSettings provides configuration for header management.
 	//
 	// +optional
