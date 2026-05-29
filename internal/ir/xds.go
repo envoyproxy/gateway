@@ -3326,6 +3326,11 @@ func (c *HTTPHealthChecker) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
+	if c.Send != nil {
+		if err := c.Send.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 	return errs
 }
 
