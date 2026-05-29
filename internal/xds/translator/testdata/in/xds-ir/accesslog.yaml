@@ -60,7 +60,7 @@ accesslog:
     traffic:
       timeout:
         http:
-          maxStreamDuration: 30s
+          maxConnectionDuration: 30s
     destination:
       name: "accesslog-0"
       settings:
@@ -89,3 +89,8 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "direct-route-dest/backend/0"
+    traffic:
+      timeout:
+        http:
+          maxConnectionDuration: 30s
+          maxStreamDuration: 30s

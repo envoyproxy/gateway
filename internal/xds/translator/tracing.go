@@ -161,13 +161,12 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	}
 
 	args := &xdsClusterArgs{
-		name:            tracing.Destination.Name,
-		settings:        tracing.Destination.Settings,
-		tSocket:         nil,
-		endpointType:    buildEndpointType(tracing.Destination.Settings),
-		metrics:         metrics,
-		metadata:        tracing.Destination.Metadata,
-		nonRouteCluster: true,
+		name:         tracing.Destination.Name,
+		settings:     tracing.Destination.Settings,
+		tSocket:      nil,
+		endpointType: buildEndpointType(tracing.Destination.Settings),
+		metrics:      metrics,
+		metadata:     tracing.Destination.Metadata,
 	}
 
 	applyTraffic(args, tracing.Traffic)

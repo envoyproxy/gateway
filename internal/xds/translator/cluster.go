@@ -85,7 +85,7 @@ type xdsClusterArgs struct {
 	unstructuredRefs  []*unstructured.Unstructured
 	extensionMgr      *extensionTypes.Manager
 	logger            logging.Logger
-	nonRouteCluster   bool
+	isRoute           bool
 }
 
 type EndpointType int
@@ -1033,7 +1033,7 @@ func hasTimeoutArgs(args *xdsClusterArgs) bool {
 	timeout := args.timeout.HTTP
 	return timeout.MaxConnectionDuration != nil ||
 		timeout.ConnectionIdleTimeout != nil ||
-		(args.nonRouteCluster && timeout.MaxStreamDuration != nil)
+		(!args.isRoute && timeout.MaxStreamDuration != nil) // Only set cluster-level maxStreamDuration for non-route clusters
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
@@ -1064,7 +1064,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
 			}
 
-			if args.timeout.HTTP.MaxStreamDuration != nil {
+			if !args.isRoute && args.timeout.HTTP.MaxStreamDuration != nil {
 				protocolOptions.CommonHttpProtocolOptions.MaxStreamDuration = durationpb.New(args.timeout.HTTP.MaxStreamDuration.Duration)
 			}
 		}
@@ -1394,6 +1394,7 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
 		metadata:     metadata,
+		isRoute:      true,
 	}
 }
 
@@ -1421,6 +1422,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		dns:               route.DNS,
 		ipFamily:          extra.ipFamily,
 		metadata:          metadata,
+		isRoute:           true,
 	}
 }
 
@@ -1449,6 +1451,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		extensionMgr:      extra.extensionMgr,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
+		isRoute:           true,
 	}
 
 	// Populate traffic features.

@@ -530,12 +530,11 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	// add clusters for ALS access logs
 	for _, als := range al.ALS {
 		args := &xdsClusterArgs{
-			name:            als.Destination.Name,
-			settings:        als.Destination.Settings,
-			tSocket:         nil,
-			endpointType:    buildEndpointType(als.Destination.Settings),
-			metadata:        als.Destination.Metadata,
-			nonRouteCluster: true,
+			name:         als.Destination.Name,
+			settings:     als.Destination.Settings,
+			tSocket:      nil,
+			endpointType: buildEndpointType(als.Destination.Settings),
+			metadata:     als.Destination.Metadata,
 		}
 		applyTraffic(args, als.Traffic)
 
@@ -547,13 +546,12 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	// add clusters for Open Telemetry access logs
 	for _, otel := range al.OpenTelemetry {
 		args := &xdsClusterArgs{
-			name:            otel.Destination.Name,
-			settings:        otel.Destination.Settings,
-			tSocket:         nil,
-			endpointType:    buildEndpointType(otel.Destination.Settings),
-			metrics:         metrics,
-			metadata:        otel.Destination.Metadata,
-			nonRouteCluster: true,
+			name:         otel.Destination.Name,
+			settings:     otel.Destination.Settings,
+			tSocket:      nil,
+			endpointType: buildEndpointType(otel.Destination.Settings),
+			metrics:      metrics,
+			metadata:     otel.Destination.Metadata,
 		}
 		applyTraffic(args, otel.Traffic)
 		if err := addXdsCluster(tCtx, args); err != nil {
