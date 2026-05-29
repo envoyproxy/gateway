@@ -32,6 +32,7 @@ bug fixes: |
   Fixed a control plane panic caused by concurrent Status mutation racing with the watchable Map coalesce goroutine.
   Fixed status conditions not being updated when a route is rejected due to multiple errors.
   Fixed active HTTP health checks to use Backend endpoint hostnames before falling back to the effective Route hostname.
+  Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
 
 # Enhancements that improve performance.
 performance improvements: |
