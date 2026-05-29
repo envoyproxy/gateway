@@ -700,9 +700,46 @@ spec:
                               minimum: 100
                               type: integer
                             type: array
+                          send:
+                            description: Send defines the HTTP request body payload
+                              sent during health checking.
+                            properties:
+                              binary:
+                                description: Binary payload base64 encoded.
+                                format: byte
+                                type: string
+                              text:
+                                description: Text payload in plain text.
+                                type: string
+                              type:
+                                allOf:
+                                - enum:
+                                  - Text
+                                  - Binary
+                                - enum:
+                                  - Text
+                                  - Binary
+                                description: Type defines the type of the payload.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: If payload type is Text, text field needs to
+                                be set.
+                              rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                            - message: If payload type is Binary, binary field needs
+                                to be set.
+                              rule: 'self.type == ''Binary'' ? has(self.binary) :
+                                !has(self.binary)'
                         required:
                         - path
                         type: object
+                        x-kubernetes-validations:
+                        - message: The send field can only be set when method supports
+                            a request body (e.g. POST, PUT, PATCH).
+                          rule: '!has(self.send) || (has(self.method) && !(self.method
+                            in [''GET'',''HEAD'',''TRACE'',''CONNECT'']))'
                       initialJitter:
                         description: |-
                           InitialJitter defines the maximum time Envoy will wait before the first health check.

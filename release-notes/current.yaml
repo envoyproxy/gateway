@@ -10,6 +10,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added a `send` field to the HTTP active health checker in `BackendTrafficPolicy`, allowing a request body payload to be sent during HTTP health checking (mirroring the existing TCP `send` field).
 
 bug fixes: |
   Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.

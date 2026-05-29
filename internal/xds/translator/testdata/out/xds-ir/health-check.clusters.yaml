@@ -18,9 +18,12 @@
       - end: "301"
         start: "300"
       host: '*'
+      method: POST
       path: /healthz
       receive:
       - text: 6f6b
+      send:
+        text: "70696e67"
     interval: 3s
     timeout: 0.500s
     unhealthyThreshold: 3
@@ -62,6 +65,7 @@
       - end: "202"
         start: "200"
       host: '*'
+      method: POST
       path: /healthz
       receive:
       - binary: cG9uZw==
@@ -70,6 +74,8 @@
         start: "429"
       - end: "504"
         start: "503"
+      send:
+        binary: cGluZw==
     interval: 5s
     timeout: 1s
     unhealthyThreshold: 3

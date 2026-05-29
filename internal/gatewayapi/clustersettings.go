@@ -653,6 +653,7 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 	}
 
 	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
+	irHTTP.Send = translateActiveHealthCheckPayload(h.Send)
 	return irHTTP
 }
 

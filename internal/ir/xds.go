@@ -3283,6 +3283,8 @@ type HTTPHealthChecker struct {
 	RetriableStatuses []HTTPStatus `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
+	// Send defines the HTTP request body payload sent during health checking.
+	Send *HealthCheckPayload `json:"send,omitempty" yaml:"send,omitempty"`
 }
 
 // Validate the fields within the HTTPHealthChecker structure.
