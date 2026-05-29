@@ -19,6 +19,7 @@ bug fixes: |
   Fixed ClientTrafficPolicy TLS cipher validation rejecting supported IANA/RFC cipher suite names.
   Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
   Fixed SecurityPolicy `authorization.rules` not being merged across hierarchy levels when using `mergeType: StrategicMerge` by adding the missing `patchMergeKey` and `patchStrategy` annotations on the Rules slice. If any authorization rule omits `name`, the controller falls back to `JSONMerge` for the entire policy (every spec field is slice-replaced, not only `authorization.rules`) and surfaces a `Warning` condition with reason `AuthorizationRulesMergeFallback` on the SecurityPolicy.
+  Fixed `MaxStreamDuration` not being set on `CommonHttpProtocolOptions` for non-route cluster.
 
 # Enhancements that improve performance.
 performance improvements: |
