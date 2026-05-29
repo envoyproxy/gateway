@@ -275,7 +275,7 @@ backendTrafficPolicies:
         http:
           path: "/healthz"
           method: "POST"
-          send:
+          requestBody:
             type: Text
             text: ping
           expectedResponse:

@@ -1852,7 +1852,7 @@ func TestValidateHealthCheck(t *testing.T) {
 						Path:             "/healthz",
 						Method:           new(http.MethodPost),
 						ExpectedStatuses: []HTTPStatus{200, 300},
-						Send: &HealthCheckPayload{
+						RequestBody: &HealthCheckPayload{
 							Text:   new("foo"),
 							Binary: []byte{'f', 'o', 'o'},
 						},

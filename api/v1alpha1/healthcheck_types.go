@@ -176,7 +176,7 @@ const (
 )
 
 // HTTPActiveHealthChecker defines the settings of http health check.
-// +kubebuilder:validation:XValidation:rule="!has(self.send) || (has(self.method) && self.method.upperAscii() in ['POST','PUT'])",message="The send field can only be set when method is POST or PUT."
+// +kubebuilder:validation:XValidation:rule="!has(self.requestBody) || (has(self.method) && self.method.upperAscii() in ['POST','PUT'])",message="The requestBody field can only be set when method is POST or PUT."
 type HTTPActiveHealthChecker struct {
 	// Hostname defines the HTTP Host header used for active HTTP health checks.
 	// Host selection uses this order: this field, the associated Backend endpoint
@@ -209,9 +209,9 @@ type HTTPActiveHealthChecker struct {
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	// +optional
 	ExpectedResponse *ActiveHealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponse,omitempty"`
-	// Send defines the HTTP request body payload sent during health checking.
+	// RequestBody defines the HTTP request body payload sent during health checking.
 	// +optional
-	Send *ActiveHealthCheckPayload `json:"send,omitempty" yaml:"send,omitempty"`
+	RequestBody *ActiveHealthCheckPayload `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
 }
 
 // TCPActiveHealthChecker defines the settings of tcp health check.

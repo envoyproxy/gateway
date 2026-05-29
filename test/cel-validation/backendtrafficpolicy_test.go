@@ -3538,7 +3538,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{"at least one of request or response must be specified"},
 		},
 		{
-			desc: "valid HTTP healthcheck send with lowercase post method",
+			desc: "valid HTTP healthcheck requestBody with lowercase post method",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -3557,7 +3557,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								HTTP: &egv1a1.HTTPActiveHealthChecker{
 									Path:   "/healthz",
 									Method: new("post"),
-									Send: &egv1a1.ActiveHealthCheckPayload{
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
 										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
 										Text: new("ping"),
 									},
@@ -3570,7 +3570,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "invalid HTTP healthcheck send without a method (defaults to GET)",
+			desc: "invalid HTTP healthcheck requestBody without a method (defaults to GET)",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -3588,7 +3588,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
 								HTTP: &egv1a1.HTTPActiveHealthChecker{
 									Path: "/healthz",
-									Send: &egv1a1.ActiveHealthCheckPayload{
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
 										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
 										Text: new("ping"),
 									},
@@ -3598,10 +3598,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"The send field can only be set when method is POST or PUT"},
+			wantErrors: []string{"The requestBody field can only be set when method is POST or PUT"},
 		},
 		{
-			desc: "invalid HTTP healthcheck send with lowercase get method",
+			desc: "invalid HTTP healthcheck requestBody with lowercase get method",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -3620,7 +3620,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								HTTP: &egv1a1.HTTPActiveHealthChecker{
 									Path:   "/healthz",
 									Method: new("get"),
-									Send: &egv1a1.ActiveHealthCheckPayload{
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
 										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
 										Text: new("ping"),
 									},
@@ -3630,10 +3630,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"The send field can only be set when method is POST or PUT"},
+			wantErrors: []string{"The requestBody field can only be set when method is POST or PUT"},
 		},
 		{
-			desc: "invalid HTTP healthcheck send with empty method",
+			desc: "invalid HTTP healthcheck requestBody with empty method",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -3652,7 +3652,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								HTTP: &egv1a1.HTTPActiveHealthChecker{
 									Path:   "/healthz",
 									Method: new(""),
-									Send: &egv1a1.ActiveHealthCheckPayload{
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
 										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
 										Text: new("ping"),
 									},
@@ -3662,10 +3662,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"The send field can only be set when method is POST or PUT"},
+			wantErrors: []string{"The requestBody field can only be set when method is POST or PUT"},
 		},
 		{
-			desc: "valid HTTP healthcheck without send and default method",
+			desc: "valid HTTP healthcheck without requestBody and default method",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{

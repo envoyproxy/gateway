@@ -4274,8 +4274,8 @@ func (in *HTTPActiveHealthChecker) DeepCopyInto(out *HTTPActiveHealthChecker) {
 		*out = new(ActiveHealthCheckPayload)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Send != nil {
-		in, out := &in.Send, &out.Send
+	if in.RequestBody != nil {
+		in, out := &in.RequestBody, &out.RequestBody
 		*out = new(ActiveHealthCheckPayload)
 		(*in).DeepCopyInto(*out)
 	}

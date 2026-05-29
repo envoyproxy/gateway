@@ -23248,21 +23248,9 @@ spec:
                             maxLength: 1024
                             minLength: 1
                             type: string
-                          retriableStatuses:
-                            description: |-
-                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                              Responses matching these statuses count towards the unhealthy threshold but
-                              do not result in the host being considered immediately unhealthy.
-                              The expected statuses take precedence for any range overlaps with this field.
-                            items:
-                              description: HTTPStatus defines the http status code.
-                              maximum: 599
-                              minimum: 100
-                              type: integer
-                            type: array
-                          send:
-                            description: Send defines the HTTP request body payload
-                              sent during health checking.
+                          requestBody:
+                            description: RequestBody defines the HTTP request body
+                              payload sent during health checking.
                             properties:
                               binary:
                                 description: Binary payload base64 encoded.
@@ -23292,13 +23280,25 @@ spec:
                                 to be set.
                               rule: 'self.type == ''Binary'' ? has(self.binary) :
                                 !has(self.binary)'
+                          retriableStatuses:
+                            description: |-
+                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                              Responses matching these statuses count towards the unhealthy threshold but
+                              do not result in the host being considered immediately unhealthy.
+                              The expected statuses take precedence for any range overlaps with this field.
+                            items:
+                              description: HTTPStatus defines the http status code.
+                              maximum: 599
+                              minimum: 100
+                              type: integer
+                            type: array
                         required:
                         - path
                         type: object
                         x-kubernetes-validations:
-                        - message: The send field can only be set when method is POST
-                            or PUT.
-                          rule: '!has(self.send) || (has(self.method) && self.method.upperAscii()
+                        - message: The requestBody field can only be set when method
+                            is POST or PUT.
+                          rule: '!has(self.requestBody) || (has(self.method) && self.method.upperAscii()
                             in [''POST'',''PUT''])'
                       initialJitter:
                         description: |-
@@ -28959,22 +28959,9 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
-                                    retriableStatuses:
-                                      description: |-
-                                        RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                                        Responses matching these statuses count towards the unhealthy threshold but
-                                        do not result in the host being considered immediately unhealthy.
-                                        The expected statuses take precedence for any range overlaps with this field.
-                                      items:
-                                        description: HTTPStatus defines the http status
-                                          code.
-                                        maximum: 599
-                                        minimum: 100
-                                        type: integer
-                                      type: array
-                                    send:
-                                      description: Send defines the HTTP request body
-                                        payload sent during health checking.
+                                    requestBody:
+                                      description: RequestBody defines the HTTP request
+                                        body payload sent during health checking.
                                       properties:
                                         binary:
                                           description: Binary payload base64 encoded.
@@ -29006,14 +28993,27 @@ spec:
                                           field needs to be set.
                                         rule: 'self.type == ''Binary'' ? has(self.binary)
                                           : !has(self.binary)'
+                                    retriableStatuses:
+                                      description: |-
+                                        RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                        Responses matching these statuses count towards the unhealthy threshold but
+                                        do not result in the host being considered immediately unhealthy.
+                                        The expected statuses take precedence for any range overlaps with this field.
+                                      items:
+                                        description: HTTPStatus defines the http status
+                                          code.
+                                        maximum: 599
+                                        minimum: 100
+                                        type: integer
+                                      type: array
                                   required:
                                   - path
                                   type: object
                                   x-kubernetes-validations:
-                                  - message: The send field can only be set when method
-                                      is POST or PUT.
-                                    rule: '!has(self.send) || (has(self.method) &&
-                                      self.method.upperAscii() in [''POST'',''PUT''])'
+                                  - message: The requestBody field can only be set
+                                      when method is POST or PUT.
+                                    rule: '!has(self.requestBody) || (has(self.method)
+                                      && self.method.upperAscii() in [''POST'',''PUT''])'
                                 initialJitter:
                                   description: |-
                                     InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -43365,22 +43365,8 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
-                                                      retriableStatuses:
-                                                        description: |-
-                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                                                          Responses matching these statuses count towards the unhealthy threshold but
-                                                          do not result in the host being considered immediately unhealthy.
-                                                          The expected statuses take precedence for any range overlaps with this field.
-                                                        items:
-                                                          description: HTTPStatus
-                                                            defines the http status
-                                                            code.
-                                                          maximum: 599
-                                                          minimum: 100
-                                                          type: integer
-                                                        type: array
-                                                      send:
-                                                        description: Send defines
+                                                      requestBody:
+                                                        description: RequestBody defines
                                                           the HTTP request body payload
                                                           sent during health checking.
                                                         properties:
@@ -43418,15 +43404,29 @@ spec:
                                                             needs to be set.
                                                           rule: 'self.type == ''Binary''
                                                             ? has(self.binary) : !has(self.binary)'
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
                                                     x-kubernetes-validations:
-                                                    - message: The send field can
-                                                        only be set when method is
-                                                        POST or PUT.
-                                                      rule: '!has(self.send) || (has(self.method)
-                                                        && self.method.upperAscii()
+                                                    - message: The requestBody field
+                                                        can only be set when method
+                                                        is POST or PUT.
+                                                      rule: '!has(self.requestBody)
+                                                        || (has(self.method) && self.method.upperAscii()
                                                         in [''POST'',''PUT''])'
                                                   initialJitter:
                                                     description: |-
@@ -44944,22 +44944,8 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
-                                                      retriableStatuses:
-                                                        description: |-
-                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                                                          Responses matching these statuses count towards the unhealthy threshold but
-                                                          do not result in the host being considered immediately unhealthy.
-                                                          The expected statuses take precedence for any range overlaps with this field.
-                                                        items:
-                                                          description: HTTPStatus
-                                                            defines the http status
-                                                            code.
-                                                          maximum: 599
-                                                          minimum: 100
-                                                          type: integer
-                                                        type: array
-                                                      send:
-                                                        description: Send defines
+                                                      requestBody:
+                                                        description: RequestBody defines
                                                           the HTTP request body payload
                                                           sent during health checking.
                                                         properties:
@@ -44997,15 +44983,29 @@ spec:
                                                             needs to be set.
                                                           rule: 'self.type == ''Binary''
                                                             ? has(self.binary) : !has(self.binary)'
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
                                                     x-kubernetes-validations:
-                                                    - message: The send field can
-                                                        only be set when method is
-                                                        POST or PUT.
-                                                      rule: '!has(self.send) || (has(self.method)
-                                                        && self.method.upperAscii()
+                                                    - message: The requestBody field
+                                                        can only be set when method
+                                                        is POST or PUT.
+                                                      rule: '!has(self.requestBody)
+                                                        || (has(self.method) && self.method.upperAscii()
                                                         in [''POST'',''PUT''])'
                                                   initialJitter:
                                                     description: |-
@@ -46709,23 +46709,10 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
-                                                retriableStatuses:
-                                                  description: |-
-                                                    RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                                                    Responses matching these statuses count towards the unhealthy threshold but
-                                                    do not result in the host being considered immediately unhealthy.
-                                                    The expected statuses take precedence for any range overlaps with this field.
-                                                  items:
-                                                    description: HTTPStatus defines
-                                                      the http status code.
-                                                    maximum: 599
-                                                    minimum: 100
-                                                    type: integer
-                                                  type: array
-                                                send:
-                                                  description: Send defines the HTTP
-                                                    request body payload sent during
-                                                    health checking.
+                                                requestBody:
+                                                  description: RequestBody defines
+                                                    the HTTP request body payload
+                                                    sent during health checking.
                                                   properties:
                                                     binary:
                                                       description: Binary payload
@@ -46759,13 +46746,27 @@ spec:
                                                       binary field needs to be set.
                                                     rule: 'self.type == ''Binary''
                                                       ? has(self.binary) : !has(self.binary)'
+                                                retriableStatuses:
+                                                  description: |-
+                                                    RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                    Responses matching these statuses count towards the unhealthy threshold but
+                                                    do not result in the host being considered immediately unhealthy.
+                                                    The expected statuses take precedence for any range overlaps with this field.
+                                                  items:
+                                                    description: HTTPStatus defines
+                                                      the http status code.
+                                                    maximum: 599
+                                                    minimum: 100
+                                                    type: integer
+                                                  type: array
                                               required:
                                               - path
                                               type: object
                                               x-kubernetes-validations:
-                                              - message: The send field can only be
-                                                  set when method is POST or PUT.
-                                                rule: '!has(self.send) || (has(self.method)
+                                              - message: The requestBody field can
+                                                  only be set when method is POST
+                                                  or PUT.
+                                                rule: '!has(self.requestBody) || (has(self.method)
                                                   && self.method.upperAscii() in [''POST'',''PUT''])'
                                             initialJitter:
                                               description: |-
@@ -48361,22 +48362,10 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
-                                          retriableStatuses:
-                                            description: |-
-                                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                                              Responses matching these statuses count towards the unhealthy threshold but
-                                              do not result in the host being considered immediately unhealthy.
-                                              The expected statuses take precedence for any range overlaps with this field.
-                                            items:
-                                              description: HTTPStatus defines the
-                                                http status code.
-                                              maximum: 599
-                                              minimum: 100
-                                              type: integer
-                                            type: array
-                                          send:
-                                            description: Send defines the HTTP request
-                                              body payload sent during health checking.
+                                          requestBody:
+                                            description: RequestBody defines the HTTP
+                                              request body payload sent during health
+                                              checking.
                                             properties:
                                               binary:
                                                 description: Binary payload base64
@@ -48410,13 +48399,26 @@ spec:
                                                 binary field needs to be set.
                                               rule: 'self.type == ''Binary'' ? has(self.binary)
                                                 : !has(self.binary)'
+                                          retriableStatuses:
+                                            description: |-
+                                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                              Responses matching these statuses count towards the unhealthy threshold but
+                                              do not result in the host being considered immediately unhealthy.
+                                              The expected statuses take precedence for any range overlaps with this field.
+                                            items:
+                                              description: HTTPStatus defines the
+                                                http status code.
+                                              maximum: 599
+                                              minimum: 100
+                                              type: integer
+                                            type: array
                                         required:
                                         - path
                                         type: object
                                         x-kubernetes-validations:
-                                        - message: The send field can only be set
-                                            when method is POST or PUT.
-                                          rule: '!has(self.send) || (has(self.method)
+                                        - message: The requestBody field can only
+                                            be set when method is POST or PUT.
+                                          rule: '!has(self.requestBody) || (has(self.method)
                                             && self.method.upperAscii() in [''POST'',''PUT''])'
                                       initialJitter:
                                         description: |-
@@ -51475,22 +51477,10 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
-                                      retriableStatuses:
-                                        description: |-
-                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                                          Responses matching these statuses count towards the unhealthy threshold but
-                                          do not result in the host being considered immediately unhealthy.
-                                          The expected statuses take precedence for any range overlaps with this field.
-                                        items:
-                                          description: HTTPStatus defines the http
-                                            status code.
-                                          maximum: 599
-                                          minimum: 100
-                                          type: integer
-                                        type: array
-                                      send:
-                                        description: Send defines the HTTP request
-                                          body payload sent during health checking.
+                                      requestBody:
+                                        description: RequestBody defines the HTTP
+                                          request body payload sent during health
+                                          checking.
                                         properties:
                                           binary:
                                             description: Binary payload base64 encoded.
@@ -51522,13 +51512,26 @@ spec:
                                             field needs to be set.
                                           rule: 'self.type == ''Binary'' ? has(self.binary)
                                             : !has(self.binary)'
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
                                     x-kubernetes-validations:
-                                    - message: The send field can only be set when
-                                        method is POST or PUT.
-                                      rule: '!has(self.send) || (has(self.method)
+                                    - message: The requestBody field can only be set
+                                        when method is POST or PUT.
+                                      rule: '!has(self.requestBody) || (has(self.method)
                                         && self.method.upperAscii() in [''POST'',''PUT''])'
                                   initialJitter:
                                     description: |-
@@ -52919,22 +52922,10 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
-                                      retriableStatuses:
-                                        description: |-
-                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                                          Responses matching these statuses count towards the unhealthy threshold but
-                                          do not result in the host being considered immediately unhealthy.
-                                          The expected statuses take precedence for any range overlaps with this field.
-                                        items:
-                                          description: HTTPStatus defines the http
-                                            status code.
-                                          maximum: 599
-                                          minimum: 100
-                                          type: integer
-                                        type: array
-                                      send:
-                                        description: Send defines the HTTP request
-                                          body payload sent during health checking.
+                                      requestBody:
+                                        description: RequestBody defines the HTTP
+                                          request body payload sent during health
+                                          checking.
                                         properties:
                                           binary:
                                             description: Binary payload base64 encoded.
@@ -52966,13 +52957,26 @@ spec:
                                             field needs to be set.
                                           rule: 'self.type == ''Binary'' ? has(self.binary)
                                             : !has(self.binary)'
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
                                     x-kubernetes-validations:
-                                    - message: The send field can only be set when
-                                        method is POST or PUT.
-                                      rule: '!has(self.send) || (has(self.method)
+                                    - message: The requestBody field can only be set
+                                        when method is POST or PUT.
+                                      rule: '!has(self.requestBody) || (has(self.method)
                                         && self.method.upperAscii() in [''POST'',''PUT''])'
                                   initialJitter:
                                     description: |-
@@ -54643,22 +54647,10 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
-                                            retriableStatuses:
-                                              description: |-
-                                                RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                                                Responses matching these statuses count towards the unhealthy threshold but
-                                                do not result in the host being considered immediately unhealthy.
-                                                The expected statuses take precedence for any range overlaps with this field.
-                                              items:
-                                                description: HTTPStatus defines the
-                                                  http status code.
-                                                maximum: 599
-                                                minimum: 100
-                                                type: integer
-                                              type: array
-                                            send:
-                                              description: Send defines the HTTP request
-                                                body payload sent during health checking.
+                                            requestBody:
+                                              description: RequestBody defines the
+                                                HTTP request body payload sent during
+                                                health checking.
                                               properties:
                                                 binary:
                                                   description: Binary payload base64
@@ -54692,13 +54684,26 @@ spec:
                                                   binary field needs to be set.
                                                 rule: 'self.type == ''Binary'' ? has(self.binary)
                                                   : !has(self.binary)'
+                                            retriableStatuses:
+                                              description: |-
+                                                RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                Responses matching these statuses count towards the unhealthy threshold but
+                                                do not result in the host being considered immediately unhealthy.
+                                                The expected statuses take precedence for any range overlaps with this field.
+                                              items:
+                                                description: HTTPStatus defines the
+                                                  http status code.
+                                                maximum: 599
+                                                minimum: 100
+                                                type: integer
+                                              type: array
                                           required:
                                           - path
                                           type: object
                                           x-kubernetes-validations:
-                                          - message: The send field can only be set
-                                              when method is POST or PUT.
-                                            rule: '!has(self.send) || (has(self.method)
+                                          - message: The requestBody field can only
+                                              be set when method is POST or PUT.
+                                            rule: '!has(self.requestBody) || (has(self.method)
                                               && self.method.upperAscii() in [''POST'',''PUT''])'
                                         initialJitter:
                                           description: |-
@@ -56399,22 +56404,10 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
-                                      retriableStatuses:
-                                        description: |-
-                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
-                                          Responses matching these statuses count towards the unhealthy threshold but
-                                          do not result in the host being considered immediately unhealthy.
-                                          The expected statuses take precedence for any range overlaps with this field.
-                                        items:
-                                          description: HTTPStatus defines the http
-                                            status code.
-                                          maximum: 599
-                                          minimum: 100
-                                          type: integer
-                                        type: array
-                                      send:
-                                        description: Send defines the HTTP request
-                                          body payload sent during health checking.
+                                      requestBody:
+                                        description: RequestBody defines the HTTP
+                                          request body payload sent during health
+                                          checking.
                                         properties:
                                           binary:
                                             description: Binary payload base64 encoded.
@@ -56446,13 +56439,26 @@ spec:
                                             field needs to be set.
                                           rule: 'self.type == ''Binary'' ? has(self.binary)
                                             : !has(self.binary)'
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
                                     x-kubernetes-validations:
-                                    - message: The send field can only be set when
-                                        method is POST or PUT.
-                                      rule: '!has(self.send) || (has(self.method)
+                                    - message: The requestBody field can only be set
+                                        when method is POST or PUT.
+                                      rule: '!has(self.requestBody) || (has(self.method)
                                         && self.method.upperAscii() in [''POST'',''PUT''])'
                                   initialJitter:
                                     description: |-

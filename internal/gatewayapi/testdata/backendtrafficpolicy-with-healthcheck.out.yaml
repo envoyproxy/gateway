@@ -72,7 +72,7 @@ backendTrafficPolicies:
             type: Text
           method: POST
           path: /healthz
-          send:
+          requestBody:
             text: ping
             type: Text
         interval: 5s
@@ -1179,7 +1179,7 @@ xdsIR:
                 host: ""
                 method: POST
                 path: /healthz
-                send:
+                requestBody:
                   text: ping
               interval: 5s
               timeout: 1s

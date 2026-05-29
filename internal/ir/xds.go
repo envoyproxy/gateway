@@ -3283,8 +3283,8 @@ type HTTPHealthChecker struct {
 	RetriableStatuses []HTTPStatus `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
-	// Send defines the HTTP request body payload sent during health checking.
-	Send *HealthCheckPayload `json:"send,omitempty" yaml:"send,omitempty"`
+	// RequestBody defines the HTTP request body payload sent during health checking.
+	RequestBody *HealthCheckPayload `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
 }
 
 // Validate the fields within the HTTPHealthChecker structure.
@@ -3326,8 +3326,8 @@ func (c *HTTPHealthChecker) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-	if c.Send != nil {
-		if err := c.Send.Validate(); err != nil {
+	if c.RequestBody != nil {
+		if err := c.RequestBody.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}

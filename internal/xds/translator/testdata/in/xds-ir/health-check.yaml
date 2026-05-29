@@ -21,7 +21,7 @@ http:
             host: "*"
             path: "/healthz"
             method: "POST"
-            send:
+            requestBody:
               text: "ping"
             expectedResponse:
               text: "ok"
@@ -56,7 +56,7 @@ http:
             host: "*"
             path: "/healthz"
             method: "POST"
-            send:
+            requestBody:
               binary: "cGluZw=="
             expectedResponse:
               binary: "cG9uZw=="
