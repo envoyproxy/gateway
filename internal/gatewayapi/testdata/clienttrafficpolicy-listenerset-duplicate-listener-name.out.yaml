@@ -15,8 +15,8 @@ clientTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
-        name: composite-gateway
+        kind: ListenerSet
+        name: ls-a
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
@@ -41,8 +41,8 @@ clientTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
-        name: composite-gateway
+        kind: ListenerSet
+        name: ls-b
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null

@@ -43,8 +43,8 @@ clientTrafficPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
-        name: composite-gateway
+        kind: ListenerSet
+        name: ext-listeners
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null

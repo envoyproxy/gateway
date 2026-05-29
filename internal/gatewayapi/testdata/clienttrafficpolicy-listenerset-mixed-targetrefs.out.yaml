@@ -2,16 +2,18 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    name: ctp-ls-section
+    name: ctp-mixed
     namespace: envoy-gateway
   spec:
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
       name: ext-listeners
-      sectionName: ext-http-1
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
     tcpKeepalive:
-      probes: 3
+      probes: 5
   status:
     ancestors:
     - ancestorRef:
@@ -19,7 +21,6 @@ clientTrafficPolicies:
         kind: ListenerSet
         name: ext-listeners
         namespace: envoy-gateway
-        sectionName: ext-http-1
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -27,20 +28,6 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
-  metadata:
-    name: ctp-gw-wide
-    namespace: envoy-gateway
-  spec:
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: composite-gateway
-    tcpKeepalive:
-      probes: 7
-  status:
-    ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
@@ -49,7 +36,7 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: There are existing ClientTrafficPolicies that are overriding these
-          sections [ext-http-1]
+          sections [ext-http-1 ext-http-2]
         reason: Overridden
         status: "True"
         type: Overridden
@@ -267,7 +254,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       tcpKeepalive:
-        probes: 7
+        probes: 5
     - address: 0.0.0.0
       externalPort: 8081
       hostnames:
@@ -283,7 +270,7 @@ xdsIR:
         mergeSlashes: true
       port: 8081
       tcpKeepalive:
-        probes: 3
+        probes: 5
     - address: 0.0.0.0
       externalPort: 8082
       hostnames:
@@ -299,7 +286,7 @@ xdsIR:
         mergeSlashes: true
       port: 8082
       tcpKeepalive:
-        probes: 7
+        probes: 5
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -124,7 +124,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 				gateway, ls := resolved.gateway, resolved.listenerSet
 				key := utils.NamespacedName(gateway)
-				ancestorRef := getAncestorRefForPolicy(key, targetRef.SectionName)
+				var ancestorRef gwapiv1.ParentReference
+				if targetRef.Kind == resource.KindListenerSet {
+					ancestorRef = getAncestorRefForListenerSetPolicy(utils.NamespacedName(ls), targetRef.SectionName)
+				} else {
+					ancestorRef = getAncestorRefForPolicy(key, targetRef.SectionName)
+				}
 
 				// Set conditions for resolve error, then skip current gateway
 				if resolveErr != nil {
@@ -259,7 +264,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					}
 					gateway, ls := resolved.gateway, resolved.listenerSet
 					gatewayKey := utils.NamespacedName(gateway)
-					ancestorRef := getAncestorRefForPolicy(gatewayKey, nil)
+					var ancestorRef gwapiv1.ParentReference
+					if currTarget.Kind == resource.KindListenerSet {
+						ancestorRef = getAncestorRefForListenerSetPolicy(utils.NamespacedName(ls), nil)
+					} else {
+						ancestorRef = getAncestorRefForPolicy(gatewayKey, nil)
+					}
 
 					// Set conditions for resolve error, then skip current gateway
 					if resolveErr != nil {

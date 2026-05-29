@@ -653,6 +653,19 @@ func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv
 	}
 }
 
+// getAncestorRefForListenerSetPolicy returns a ListenerSet as an ancestor reference for policy.
+// Used when a policy directly targets a ListenerSet, since the ListenerSet is the relevant
+// ancestor at which acceptance status meaningfully differs.
+func getAncestorRefForListenerSetPolicy(lsNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1.ParentReference {
+	return gwapiv1.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(resource.KindListenerSet),
+		Namespace:   NamespacePtr(lsNN.Namespace),
+		Name:        gwapiv1.ObjectName(lsNN.Name),
+		SectionName: sectionName,
+	}
+}
+
 type policyTargetRouteKey struct {
 	Kind      string
 	Namespace string
