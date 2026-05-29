@@ -270,14 +270,76 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 
 	mgrOpts.Cache.DefaultTransform = cache.TransformStripManagedFields()
 
-	if svrCfg.EnvoyGateway.NamespaceMode() {
-		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
-		// Keep the controller namespace visible even when users restrict watched
-		// Gateway API namespaces; infra reconciliation reads EG-owned resources
-		// such as Secrets from this namespace through the shared cached client.
-		mgrOpts.Cache.DefaultNamespaces[svrCfg.ControllerNamespace] = cache.Config{}
-		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
-			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
+	// When configured with an explicit namespace watch list, scope the default
+	// cache to those namespaces and add type-specific controller namespace
+	// exceptions below.
+	if svrCfg.EnvoyGateway.WatchesNamespaces() {
+		watchedNamespaces := map[string]cache.Config{}
+		if svrCfg.EnvoyGateway.WatchesNamespaces() {
+			for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
+				watchedNamespaces[watchNS] = cache.Config{}
+			}
+		}
+
+		watchedAndControllerNamespaces := make(map[string]cache.Config, len(watchedNamespaces)+1)
+		for ns, cfg := range watchedNamespaces {
+			watchedAndControllerNamespaces[ns] = cfg
+		}
+		watchedAndControllerNamespaces[svrCfg.ControllerNamespace] = cache.Config{}
+
+		// DefaultNamespaces applies to every namespaced informer without a
+		// ByObject namespace override, including Gateway API informers
+		// registered later. Since Gateway API resources do not get controller
+		// namespace overrides below, they only watch these configured namespaces.
+		mgrOpts.Cache.DefaultNamespaces = watchedNamespaces
+
+		// ConfigMaps and Services must cover both scopes: watched namespaces for
+		// user refs such as policy/filter ConfigMaps and Route backend Services,
+		// and the controller namespace for EG-owned proxy/ratelimit infra
+		// ConfigMaps and Services.
+		mgrOpts.Cache.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Transform:             composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData),
+			Namespaces:            watchedAndControllerNamespaces,
+		}
+		mgrOpts.Cache.ByObject[&corev1.Service{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces:            watchedAndControllerNamespaces,
+		}
+		if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
+			// GatewayNamespaceMode still needs controller namespace access for
+			// EG controller resources and the xDS CA Secret.
+			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
+			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
+			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
+		} else {
+			// In normal mode, ServiceAccounts and Deployments are controller
+			// namespace infra, while Secrets are only read from watched namespaces.
+			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedNamespaces,
+			}
 		}
 	}
 	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
