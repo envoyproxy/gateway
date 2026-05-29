@@ -16,7 +16,9 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - name: non-existent-secret
+        - group: null
+          kind: null
+          name: non-existent-secret
         mode: Terminate
     - allowedRoutes:
         namespaces:
@@ -27,7 +29,9 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - name: tls-secret-1
+        - group: null
+          kind: null
+          name: tls-secret-1
         mode: Terminate
   status:
     listeners:
@@ -113,7 +117,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - name: envoy-gateway/gateway-1/valid-https
+      - address: null
+        name: envoy-gateway/gateway-1/valid-https
         ports:
         - containerPort: 10443
           name: https-443
@@ -159,6 +164,7 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*.example.com'
+      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
