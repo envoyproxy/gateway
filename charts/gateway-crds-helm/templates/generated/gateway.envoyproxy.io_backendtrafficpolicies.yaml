@@ -682,6 +682,7 @@ spec:
                             description: |-
                               Method defines the HTTP method used for health checking.
                               Defaults to GET
+                            maxLength: 16
                             type: string
                           path:
                             description: Path defines the HTTP path that will be requested
@@ -737,10 +738,10 @@ spec:
                         - path
                         type: object
                         x-kubernetes-validations:
-                        - message: The send field can only be set when method supports
-                            a request body (e.g. POST, PUT, PATCH).
-                          rule: '!has(self.send) || (has(self.method) && !(self.method
-                            in [''GET'',''HEAD'',''TRACE'',''CONNECT'']))'
+                        - message: The send field can only be set when method is POST
+                            or PUT.
+                          rule: '!has(self.send) || (has(self.method) && self.method.upperAscii()
+                            in [''POST'',''PUT''])'
                       initialJitter:
                         description: |-
                           InitialJitter defines the maximum time Envoy will wait before the first health check.

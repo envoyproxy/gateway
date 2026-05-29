@@ -3538,7 +3538,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{"at least one of request or response must be specified"},
 		},
 		{
-			desc: "valid HTTP healthcheck send with POST method",
+			desc: "valid HTTP healthcheck send with lowercase post method",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -3556,7 +3556,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
 								HTTP: &egv1a1.HTTPActiveHealthChecker{
 									Path:   "/healthz",
-									Method: new("POST"),
+									Method: new("post"),
 									Send: &egv1a1.ActiveHealthCheckPayload{
 										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
 										Text: new("ping"),
@@ -3598,10 +3598,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"The send field can only be set when method supports a request body"},
+			wantErrors: []string{"The send field can only be set when method is POST or PUT"},
 		},
 		{
-			desc: "invalid HTTP healthcheck send with GET method",
+			desc: "invalid HTTP healthcheck send with lowercase get method",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -3619,7 +3619,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
 								HTTP: &egv1a1.HTTPActiveHealthChecker{
 									Path:   "/healthz",
-									Method: new("GET"),
+									Method: new("get"),
 									Send: &egv1a1.ActiveHealthCheckPayload{
 										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
 										Text: new("ping"),
@@ -3630,7 +3630,39 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"The send field can only be set when method supports a request body"},
+			wantErrors: []string{"The send field can only be set when method is POST or PUT"},
+		},
+		{
+			desc: "invalid HTTP healthcheck send with empty method",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path:   "/healthz",
+									Method: new(""),
+									Send: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ping"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"The send field can only be set when method is POST or PUT"},
 		},
 		{
 			desc: "valid HTTP healthcheck without send and default method",
