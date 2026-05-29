@@ -401,6 +401,20 @@ func (t *Translator) addHCMToXDSListener(
 		RequestIdExtension:            buildRequestIDExtension(irListener.RequestID),
 	}
 
+	// Normalize the Host/Authority header if configured.
+	// StripAnyHostPort uses the strip_port_mode oneof, so it must be assigned outside the
+	// struct literal to avoid a typed-nil that silently breaks xDS translation.
+	// StripMatchingHostPort is a standalone bool field (not part of the oneof).
+	if irListener.Host != nil {
+		switch irListener.Host.StripPortMode {
+		case ir.StripPortModeAny:
+			mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{StripAnyHostPort: true}
+		case ir.StripPortModeMatching:
+			mgr.StripMatchingHostPort = true
+		}
+		mgr.StripTrailingHostDot = irListener.Host.StripTrailingHostDot
+	}
+
 	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
 	// This ensures the correct scheme is sent to backends using TLS when enabled.
 	if irListener.MatchBackendScheme {

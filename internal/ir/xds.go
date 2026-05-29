@@ -316,6 +316,8 @@ type HTTPListener struct {
 	GeoIPProvider *GeoIPProvider `json:"geoIPProvider,omitempty" yaml:"geoIPProvider,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
+	// Host contains settings for Host/Authority header normalization
+	Host *HostSettings `json:"host,omitempty" yaml:"host,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
@@ -587,6 +589,27 @@ const (
 type PathSettings struct {
 	MergeSlashes         bool                   `json:"mergeSlashes" yaml:"mergeSlashes"`
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
+}
+
+// StripPortMode determines how the port is stripped from the Host/Authority header.
+type StripPortMode string
+
+const (
+	// StripPortModeAny strips the port from the Host/Authority header unconditionally.
+	StripPortModeAny StripPortMode = "Any"
+	// StripPortModeMatching strips the port from the Host/Authority header only when it
+	// matches the listener's port.
+	StripPortModeMatching StripPortMode = "Matching"
+)
+
+// HostSettings holds configuration for Host/Authority header normalization
+// +k8s:deepcopy-gen=true
+type HostSettings struct {
+	// StripPortMode determines how the port is stripped from the Host/Authority header.
+	// An empty value means no port stripping is performed.
+	StripPortMode StripPortMode `json:"stripPortMode,omitempty" yaml:"stripPortMode,omitempty"`
+	// StripTrailingHostDot strips the trailing dot from the Host/Authority header before processing.
+	StripTrailingHostDot bool `json:"stripTrailingHostDot,omitempty" yaml:"stripTrailingHostDot,omitempty"`
 }
 
 // ProxyProtocolSettings holds configuration for proxy protocol

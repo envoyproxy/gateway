@@ -697,6 +697,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
 
+		// Translate Host Settings
+		translateHostSettings(policy.Spec.Host, httpIR)
+
 		// Translate HTTP1 Settings
 		if err = translateHTTP1Settings(policy.Spec.HTTP1, connection, httpIR); err != nil {
 			err = perr.WithMessage(err, "HTTP1")
@@ -836,6 +839,21 @@ func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPLis
 	}
 	if pathSettings.EscapedSlashesAction != nil {
 		httpIR.Path.EscapedSlashesAction = ir.PathEscapedSlashAction(*pathSettings.EscapedSlashesAction)
+	}
+}
+
+func translateHostSettings(hostSettings *egv1a1.HostSettings, httpIR *ir.HTTPListener) {
+	if hostSettings == nil {
+		return
+	}
+	if hostSettings.StripPortMode == nil && hostSettings.StripTrailingHostDot == nil {
+		return
+	}
+	httpIR.Host = &ir.HostSettings{
+		StripTrailingHostDot: ptr.Deref(hostSettings.StripTrailingHostDot, false),
+	}
+	if hostSettings.StripPortMode != nil {
+		httpIR.Host.StripPortMode = ir.StripPortMode(*hostSettings.StripPortMode)
 	}
 }
 
