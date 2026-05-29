@@ -17,6 +17,7 @@ bug fixes: |
   Fixed ClientTrafficPolicy TLS cipher validation rejecting supported IANA/RFC cipher suite names.
   Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
   Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
+  Fixed `MaxStreamDuration` not being set on `CommonHttpProtocolOptions` for non-route cluster.
 
 # Enhancements that improve performance.
 performance improvements: |
