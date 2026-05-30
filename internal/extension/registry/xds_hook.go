@@ -9,6 +9,7 @@ import (
 	"context"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -90,6 +91,20 @@ func (h *XDSHook) PostClusterModifyHook(cluster *cluster.Cluster, extensionResou
 	}
 
 	return resp.Cluster, nil
+}
+
+func (h *XDSHook) PostEndpointsModifyHook(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+	ctx := context.Background()
+	resp, err := h.grpcClient.PostEndpointsModify(ctx,
+		&extension.PostEndpointsModifyRequest{
+			LoadAssignment:       loadAssignment,
+			PostEndpointsContext: &extension.PostEndpointsExtensionContext{},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.LoadAssignment, nil
 }
 
 func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {

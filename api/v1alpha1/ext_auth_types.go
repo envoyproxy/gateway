@@ -64,6 +64,29 @@ type ExtAuth struct {
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 
+	// IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
+	// external authorization service as context.
+	//
+	// This includes Envoy Gateway's built-in metadata for the selected route in
+	// the "envoy-gateway" metadata namespace.
+	//
+	// The metadata is exposed under the "resources" field as a list of route
+	// resource objects. For example:
+	//
+	// envoy-gateway:
+	//   resources:
+	//   - kind: HTTPRoute
+	//     name: backend
+	//     namespace: default
+	//     annotations:
+	//       foo: bar
+	//
+	// The resource object may include fields such as kind, namespace, name,
+	// sectionName, and supported route annotations.
+	//
+	// +optional
+	IncludeRouteMetadata *bool `json:"includeRouteMetadata,omitempty"`
+
 	// ContextExtensions are analogous to http_request.headers, however these
 	// contents will not be sent to the upstream server. This provides an
 	// extension mechanism for sending additional information to the auth server
@@ -75,7 +98,15 @@ type ExtAuth struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=name
-	ContextExtensions []*ContextExtension `json:"contextExtensions,omitempty"`
+	ContextExtensions []*ContextExtension `json:"contextExtensions,omitempty" patchMergeKey:"name" patchStrategy:"merge"`
+
+	// Sets the HTTP status that is returned when the authorization service returns an error
+	// or cannot be reached. Defaults to 403 Forbidden.
+	// Only 4xx and 5xx status codes are supported.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=400;401;402;403;404;405;406;407;408;409;410;411;412;413;414;415;416;417;421;422;423;424;426;428;429;431;500;501;502;503;504;505;506;507;508;510;511
+	StatusOnError *int32 `json:"statusOnError,omitempty"`
 }
 
 // ContextExtensionValueType defines the types of values for ContextExtension supported by Envoy Gateway.
@@ -140,6 +171,7 @@ type GRPCExtAuthService struct {
 // +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service, ServiceImport, and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'ServiceImport' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'multicluster.x-k8s.io' || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="only one of path or pathOverride can be specified",rule="!(has(self.path) && has(self.pathOverride))"
 type HTTPExtAuthService struct {
 	// Only Service kind is supported for now.
 	BackendCluster `json:",inline"`
@@ -152,8 +184,18 @@ type HTTPExtAuthService struct {
 	// For example, if the original request path is "/hello", and the path specified here is "/auth",
 	// then the path of the authorization request will be "/auth/hello". If the path is not specified,
 	// the path of the authorization request will be "/hello".
+	// Only one of Path or PathOverride can be set.
 	// +optional
 	Path *string `json:"path,omitempty"`
+
+	// PathOverride replaces the original request path in the authorization request.
+	// If set, the path will be overridden to this value during authorization.
+	// For example, if the original request path is "/hello", and PathOverride is set to "/auth",
+	// then the path of the authorization request will be "/auth".
+	// Only one of Path or PathOverride can be set.
+	//
+	// +optional
+	PathOverride *string `json:"pathOverride,omitempty"`
 
 	// HeadersToBackend are the authorization response headers that will be added
 	// to the original client request before sending it to the backend server.

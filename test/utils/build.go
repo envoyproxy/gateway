@@ -22,6 +22,7 @@ func BuildGoBinaryOnDemand(env, binaryName, packagePath string) (string, error) 
 		if !filepath.IsAbs(envPath) {
 			envPath = filepath.Join(FindProjectRoot(), envPath)
 		}
+		// #nosec G703 - Path comes from a trusted environment variable, not user input
 		if _, err := os.Stat(envPath); err != nil {
 			return "", fmt.Errorf("%s path does not exist: %s", env, envPath)
 		}

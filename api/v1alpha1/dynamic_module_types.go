@@ -26,6 +26,7 @@ const (
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'Remote' ? has(self.remote) : !has(self.remote)",message="If type is Remote, remote field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type != 'Local' || has(self.local)",message="If type is Local, local field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Remote' ? !has(self.local) : true",message="If type is Remote, local field must not be set."
 type DynamicModuleSource struct {
 	// Type is the type of the source of the dynamic module code.
 	// Defaults to Local.
@@ -45,7 +46,6 @@ type DynamicModuleSource struct {
 	// The module binary is downloaded and cached by Envoy.
 	//
 	// +optional
-	// +notImplementedHide
 	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
 }
 
@@ -58,10 +58,20 @@ type LocalDynamicModuleSource struct {
 	Path string `json:"path"`
 }
 
-// RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.
-//
-// +notImplementedHide
-type RemoteDynamicModuleSource struct{}
+// RemoteDynamicModuleSource defines a dynamic module fetched from a remote HTTP source.
+type RemoteDynamicModuleSource struct {
+	// URL is the HTTP or HTTPS URL of the dynamic module shared library (.so file).
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=4096
+	// +kubebuilder:validation:Pattern=`^https?://[^/?#]+(?:[/?#].*)?$`
+	URL string `json:"url"`
+
+	// SHA256 checksum that Envoy will use to verify the downloaded module binary.
+	//
+	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+	SHA256 string `json:"sha256"`
+}
 
 // DynamicModuleEntry defines a dynamic module that is registered and allowed
 // for use by EnvoyExtensionPolicy resources.

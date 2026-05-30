@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: auto-sni-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -69,7 +68,6 @@
       resourceApiVersion: V3
     serviceName: auto-sni-san-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -125,7 +123,6 @@
       resourceApiVersion: V3
     serviceName: mixed-sni-route
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

@@ -8,6 +8,10 @@
             portValue: 50000
         hostname: example.com
       loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway.extension:
+            hook: applied
     loadBalancingWeight: 1
     locality:
       region: first-route-dest/backend/0

@@ -11,6 +11,10 @@ This instantiated resource can be linked to a [Gateway][], or [HTTPRoute][].
 
 If the target of the BackendTrafficPolicy is a Gateway, the request buffering will be applied to all xRoutes under that Gateway.
 
+Warning: Request buffering requires Envoy to fully receive the request before forwarding it upstream. This does not work with streaming or
+upgrade-based traffic such as gRPC streaming and WebSocket. Enabling `requestBuffer` for those routes can cause requests to hang indefinitely
+because the request may never be forwarded upstream. Use request buffering only on non-streaming HTTP request flows.
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
@@ -203,5 +207,5 @@ kubectl delete backendtrafficpolicy/request-buffer
 
 [Envoy buffer filter]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/buffer_filter
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/

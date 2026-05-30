@@ -43,7 +43,7 @@ func buildTCPRBACConfig(statPrefix string, authorization *ir.Authorization) (*ne
 
 	matchers := make([]*matcherv3.Matcher_MatcherList_FieldMatcher, 0, len(authorization.Rules))
 	for _, rule := range authorization.Rules {
-		predicate, err := buildTCPPrincipalPredicate(rule.Principal)
+		predicate, err := buildTCPPrincipalPredicate(&rule.Principal)
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +117,7 @@ func buildTCPRBACActions() (*anypb.Any, *anypb.Any, error) {
 	return allowAction, denyAction, nil
 }
 
-func buildTCPPrincipalPredicate(principal ir.Principal) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+func buildTCPPrincipalPredicate(principal *ir.Principal) (*matcherv3.Matcher_MatcherList_Predicate, error) {
 	// only build predicate for CIDR
 	if len(principal.ClientCIDRs) == 0 {
 		return nil, nil

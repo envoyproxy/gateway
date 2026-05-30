@@ -1,0 +1,62 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.geoip
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.geoip.v3.Geoip
+            customHeaderConfig:
+              headerName: x-real-client-ip
+            provider:
+              name: envoy.geoip_providers.maxmind
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.geoip_providers.maxmind.v3.MaxMindConfig
+                anonDbPath: /db/GeoIP2-Anonymous-IP.mmdb
+                cityDbPath: /db/GeoLite2-City.mmdb
+                commonProviderConfig:
+                  geoFieldKeys:
+                    anonHosting: x-eg-internal-geoip-anon-hosting
+                    anonProxy: x-eg-internal-geoip-anon-proxy
+                    anonVpn: x-eg-internal-geoip-anon-vpn
+                    city: x-eg-internal-geoip-city
+                    country: x-eg-internal-geoip-country
+        - name: envoy.filters.http.rbac
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        originalIpDetectionExtensions:
+        - name: envoy.extensions.http.original_ip_detection.custom_header
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.custom_header.v3.CustomHeaderConfig
+            allowExtensionToSetAddressAsTrusted: true
+            headerName: x-real-client-ip
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: false
+    name: envoy-gateway/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

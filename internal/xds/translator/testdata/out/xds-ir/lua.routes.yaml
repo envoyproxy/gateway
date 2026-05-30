@@ -13,7 +13,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/envoyextensionpolicy/default/policy-for-http-route/lua/0:
+        envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           sourceCode:
             inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
@@ -26,12 +26,12 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0:
+        envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           sourceCode:
             inlineString: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
               end
-        envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/1:
+        envoy.filters.http.lua/1:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           sourceCode:
             inlineString: function envoy_on_response(response_handle) response_handle:logError('Hello.')

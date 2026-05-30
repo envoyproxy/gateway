@@ -122,3 +122,7 @@ adopters:
     logo: "/logos/mirakl.png"
     url: "https://www.mirakl.com/"
     description: "Mirakl uses Envoy Gateway to manage and centralize ingress traffic to both self-hosted (kserve) and public (openAI, HF, etc...) models."
+  - name: "Pollinate"
+    logo: "/logos/pollinate.png"
+    url: "https://www.pollinate.global"
+    description: "Pollinate uses Envoy Gateway to manage and route traffic across its platform, providing a scalable and reliable layer for handling API and service communication."

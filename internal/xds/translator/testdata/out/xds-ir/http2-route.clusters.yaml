@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: first-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -27,6 +26,12 @@
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
         http2ProtocolOptions:
+          connectionKeepalive:
+            connectionIdleInterval: 30s
+            interval: 60s
+            intervalJitter:
+              value: 20
+            timeout: 10s
           initialConnectionWindowSize: 524288000
           initialStreamWindowSize: 1048576
           maxConcurrentStreams: 200
@@ -43,7 +48,6 @@
       resourceApiVersion: V3
     serviceName: second-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -74,7 +78,6 @@
       resourceApiVersion: V3
     serviceName: third-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -108,7 +111,6 @@
       resourceApiVersion: V3
     serviceName: fourth-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

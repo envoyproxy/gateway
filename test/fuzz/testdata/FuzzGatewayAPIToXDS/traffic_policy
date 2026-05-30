@@ -45,3 +45,18 @@ spec:
   timeout:
     http:
       requestReceivedTimeout: 50ms
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: backend-utilization-lb-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend-utilization-lb-route
+  loadBalancer:
+    type: BackendUtilization
+    backendUtilization:
+      errorUtilizationPenaltyPercent: 120

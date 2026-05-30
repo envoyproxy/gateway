@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: direct-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -22,6 +21,13 @@
   name: direct-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      commonHttpProtocolOptions:
+        maxConnectionDuration: 30s
+      explicitHttpConfig:
+        httpProtocolOptions: {}
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -34,7 +40,6 @@
       resourceApiVersion: V3
     serviceName: accesslog/monitoring/envoy-als/port/9000
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -49,6 +54,8 @@
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      commonHttpProtocolOptions:
+        maxStreamDuration: 30s
       explicitHttpConfig:
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
@@ -61,7 +68,6 @@
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog-0
     endpoints:
@@ -90,6 +96,8 @@
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      commonHttpProtocolOptions:
+        maxConnectionDuration: 30s
       explicitHttpConfig:
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576

@@ -53,6 +53,7 @@ backendTrafficPolicies:
         maxConnectionDuration: 17s
         maxStreamDuration: 30s
         requestTimeout: 18s
+        streamIdleTimeout: 20s
       tcp:
         connectTimeout: 15s
   status:
@@ -345,6 +346,7 @@ xdsIR:
               maxConnectionDuration: 17s
               maxStreamDuration: 30s
               requestTimeout: 18s
+              streamIdleTimeout: 20s
             tcp:
               connectTimeout: 15s
     readyListener:

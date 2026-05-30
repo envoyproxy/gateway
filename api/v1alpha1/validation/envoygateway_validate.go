@@ -55,7 +55,7 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		return err
 	}
 
-	if err := validateEnvoyGatewayExtensionManager(eg.ExtensionManager); err != nil {
+	if err := validateEnvoyGatewayExtensionManagers(eg); err != nil {
 		return err
 	}
 
@@ -67,7 +67,23 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		return err
 	}
 
+	if eg.ExtensionAPIs != nil && eg.ExtensionAPIs.DisableLua != nil && *eg.ExtensionAPIs.DisableLua == eg.ExtensionAPIs.EnableLua {
+		return fmt.Errorf("disableLua and enableLua must not have the same value")
+	}
+
 	return nil
+}
+
+// WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.
+func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
+	if eg == nil || eg.ExtensionAPIs == nil {
+		return nil
+	}
+	var warnings []string
+	if eg.ExtensionAPIs.DisableLua != nil {
+		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
+	}
+	return warnings
 }
 
 func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKubernetesProvider) error {
@@ -185,6 +201,37 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 	return nil
 }
 
+func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
+	if eg.ExtensionManager != nil && len(eg.ExtensionManagers) > 0 {
+		return fmt.Errorf("extensionManager and extensionManagers are mutually exclusive")
+	}
+
+	// Mirror +kubebuilder:validation:MinItems=1 for EnvoyGatewaySpec.ExtensionManagers:
+	// reject an explicitly-set-but-empty list. A nil slice means the field was omitted.
+	if eg.ExtensionManagers != nil && len(eg.ExtensionManagers) == 0 {
+		return fmt.Errorf("extensionManagers must contain at least one entry when specified")
+	}
+
+	if len(eg.ExtensionManagers) > 0 {
+		names := make(map[string]struct{})
+		for i, em := range eg.ExtensionManagers {
+			if em.Name == "" {
+				return fmt.Errorf("extension manager at index %d: name is required", i)
+			}
+			if _, exists := names[em.Name]; exists {
+				return fmt.Errorf("extension manager at index %d: duplicate name %q", i, em.Name)
+			}
+			names[em.Name] = struct{}{}
+			if err := validateEnvoyGatewayExtensionManager(&eg.ExtensionManagers[i]); err != nil {
+				return fmt.Errorf("extension manager %q: %w", em.Name, err)
+			}
+		}
+		return nil
+	}
+
+	return validateEnvoyGatewayExtensionManager(eg.ExtensionManager)
+}
+
 func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionManager) error {
 	if extensionManager == nil {
 		return nil
@@ -258,6 +305,31 @@ func validateEnvoyGatewayXDSServer(xdsServer *egv1a1.XDSServer) error {
 	return nil
 }
 
+func validateEnvoyGatewayOpenTelemetrySink(sink *egv1a1.EnvoyGatewayOpenTelemetrySink) error {
+	if sink.Protocol != egv1a1.GRPCProtocol && sink.Protocol != egv1a1.HTTPProtocol {
+		return fmt.Errorf("unsupported protocol %s for OpenTelemetry sink, only 'grpc' and 'http' are supported", sink.Protocol)
+	}
+	if sink.ExportInterval != nil {
+		d, err := time.ParseDuration(string(*sink.ExportInterval))
+		if err != nil {
+			return fmt.Errorf("invalid exportInterval: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("exportInterval must be greater than zero")
+		}
+	}
+	if sink.ExportTimeout != nil {
+		d, err := time.ParseDuration(string(*sink.ExportTimeout))
+		if err != nil {
+			return fmt.Errorf("invalid exportTimeout: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("exportTimeout must be greater than zero")
+		}
+	}
+	return nil
+}
+
 func validateEnvoyGatewayTelemetry(telemetry *egv1a1.EnvoyGatewayTelemetry) error {
 	if telemetry == nil {
 		return nil
@@ -269,7 +341,19 @@ func validateEnvoyGatewayTelemetry(telemetry *egv1a1.EnvoyGatewayTelemetry) erro
 				if sink.OpenTelemetry == nil {
 					return fmt.Errorf("OpenTelemetry is required when sink Type is OpenTelemetry")
 				}
+				if err := validateEnvoyGatewayOpenTelemetrySink(sink.OpenTelemetry); err != nil {
+					return err
+				}
 			}
+		}
+	}
+
+	if telemetry.Traces != nil {
+		if telemetry.Traces.Sink.OpenTelemetry == nil {
+			return fmt.Errorf("OpenTelemetry is required when trace sink Type is OpenTelemetry")
+		}
+		if err := validateEnvoyGatewayOpenTelemetrySink(telemetry.Traces.Sink.OpenTelemetry); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -478,9 +478,9 @@ Content-Length: 267
 
 You can see that the traffic routing to `bar` service when sending request to `8089` port.
 
-[TCPRoute]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#gateway.networking.k8s.io/v1alpha2.TCPRoute
+[TCPRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[GatewayClass]: https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [Service]: https://kubernetes.io/docs/concepts/services-networking/service/
 [Services]: https://kubernetes.io/docs/concepts/services-networking/service/

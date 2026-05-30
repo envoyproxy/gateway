@@ -1,0 +1,185 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /plain
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-plain
+              namespace: default
+      name: httproute/default/httproute-plain/rule/0/match/0/www_example_com
+      requestHeadersToRemove:
+      - x-eg-internal-geoip-country
+      - x-eg-internal-geoip-city
+      - x-eg-internal-geoip-anon-vpn
+      - x-eg-internal-geoip-anon-hosting
+      - x-eg-internal-geoip-anon-proxy
+      route:
+        cluster: httproute/default/httproute-plain/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /geo
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-geo
+              namespace: default
+      name: httproute/default/httproute-geo/rule/0/match/0/www_example_com
+      requestHeadersToRemove:
+      - x-eg-internal-geoip-country
+      - x-eg-internal-geoip-city
+      - x-eg-internal-geoip-anon-vpn
+      - x-eg-internal-geoip-anon-hosting
+      - x-eg-internal-geoip-anon-proxy
+      route:
+        cluster: httproute/default/httproute-geo/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.rbac:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: allow-us-seattle-proxy
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-eg-internal-geoip-country
+                          valueMatch:
+                            exact: US
+                            ignoreCase: true
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-eg-internal-geoip-city
+                          valueMatch:
+                            exact: Seattle
+                            ignoreCase: true
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-eg-internal-geoip-anon-proxy
+                          valueMatch:
+                            exact: "true"
+                - onMatch:
+                    action:
+                      name: allow-eu-non-vpn-non-hosting
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
+                    orMatcher:
+                      predicate:
+                      - andMatcher:
+                          predicate:
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-eg-internal-geoip-country
+                              valueMatch:
+                                exact: GB
+                                ignoreCase: true
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-eg-internal-geoip-city
+                              valueMatch:
+                                exact: London
+                                ignoreCase: true
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-eg-internal-geoip-anon-vpn
+                              valueMatch:
+                                exact: "false"
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-eg-internal-geoip-anon-hosting
+                              valueMatch:
+                                exact: "false"
+                      - andMatcher:
+                          predicate:
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-eg-internal-geoip-country
+                              valueMatch:
+                                exact: France
+                                ignoreCase: true
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-eg-internal-geoip-city
+                              valueMatch:
+                                exact: Paris
+                                ignoreCase: true
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-eg-internal-geoip-anon-vpn
+                              valueMatch:
+                                exact: "false"
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-eg-internal-geoip-anon-hosting
+                              valueMatch:
+                                exact: "false"
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    action: DENY
+                    name: DENY

@@ -37,10 +37,11 @@ var ConnectionLimitTest = suite.ConformanceTest{
 	Description: "Deny Requests over connection limit",
 	Manifests:   []string{"testdata/connection-limit.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ctx := context.Background()
-
 		promClient, err := prometheus.NewClient(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
 		require.NoError(t, err)
+
+		// connection limit is 5, we will open 6 connections to verify that at least one connection is closed or limited
+		const openConnections = 6
 
 		t.Run("Close connections over limit", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
@@ -67,21 +68,22 @@ var ConnectionLimitTest = suite.ConformanceTest{
 						tlog.Logf(t, "failed to open connection: %v", err)
 						return false, nil
 					}
-					t.Log("opened connection 1")
+					tlog.Logf(t, "opened connection 1")
 					return true, nil
 				}); err != nil {
-				t.Errorf("failed to open connections: %v", err)
+				tlog.Logf(t, "failed to open connections: %v", err)
 			}
 
 			// Open the remaining 5 connections
-			for i := 1; i < 6; i++ {
+			for i := 1; i < openConnections; i++ {
 				conn, err := net.Dial("tcp", gwAddr)
 				tlog.Logf(t, "opened connection %d", i+1)
 				if err != nil {
-					t.Errorf("failed to open connection: %v", err)
-				} else {
-					defer conn.Close()
+					tlog.Logf(t, "failed to open connection: %v", err)
+					continue
 				}
+
+				defer conn.Close()
 			}
 
 			prefix := "http-10080"
@@ -97,7 +99,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				func(_ time.Duration) bool {
 					// check connection_limit stats from Prometheus
-					v, err := promClient.QuerySum(ctx, promQL)
+					v, err := promClient.QuerySum(t.Context(), promQL)
 					if err != nil {
 						// wait until Prometheus sync stats
 						return false
@@ -107,11 +109,11 @@ var ConnectionLimitTest = suite.ConformanceTest{
 					// connection interruptions or other connection errors may occur
 					// we just need to determine whether there is a connection limit stats
 					if v == 0 {
-						t.Error("connection is not limited as expected")
-					} else {
-						t.Log("connection is limited as expected")
+						tlog.Logf(t, "connection is not limited as expected")
+						return false
 					}
 
+					tlog.Logf(t, "connection is limited as expected")
 					return true
 				},
 			)

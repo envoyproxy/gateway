@@ -27,8 +27,6 @@ import (
 
 const (
 	localRateLimitFilterStatPrefix = "http_local_rate_limiter"
-	descriptorMaskedRemoteAddress  = "masked_remote_address"
-	descriptorRemoteAddress        = "remote_address"
 )
 
 func init() {
@@ -147,12 +145,17 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 			route.Name)
 	}
 
+	enableXRatelimitHeaders := rlv3.XRateLimitHeadersRFCVersion_DRAFT_VERSION_03
+	if ptr.Deref(local.DefaultXRateLimitOption, egv1a1.XRateLimitHeadersOptionDraftVersion03) == egv1a1.XRateLimitHeadersOptionDisabled {
+		enableXRatelimitHeaders = rlv3.XRateLimitHeadersRFCVersion_OFF
+	}
+
 	localRl := &localrlv3.LocalRateLimit{
 		StatPrefix: localRateLimitFilterStatPrefix,
 		TokenBucket: &typev3.TokenBucket{
-			MaxTokens: uint32(local.Default.Requests),
+			MaxTokens: local.Default.Requests,
 			TokensPerFill: &wrapperspb.UInt32Value{
-				Value: uint32(local.Default.Requests),
+				Value: local.Default.Requests,
 			},
 			FillInterval: ratelimit.UnitToDuration(local.Default.Unit),
 		},
@@ -168,7 +171,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 				Denominator: typev3.FractionalPercent_HUNDRED,
 			},
 		},
-		EnableXRatelimitHeaders: rlv3.XRateLimitHeadersRFCVersion_DRAFT_VERSION_03,
+		EnableXRatelimitHeaders: enableXRatelimitHeaders,
 		Descriptors:             descriptors,
 		// By setting AlwaysConsumeDefaultTokenBucket to false, the descriptors
 		// won't consume the default token bucket. This means that a request only
@@ -225,18 +228,21 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			buildHeaderMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.HeaderMatches)
 			buildMethodMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, methodMatch)
 			buildPathMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, rule.PathMatch)
-			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rule.CIDRMatch)
+			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.CIDRMatch)
 			// Pass header match count as offset to continue match index sequence
 			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
 
 			// Create rate limit and descriptor
-			rateLimits = append(rateLimits, &routev3.RateLimit{Actions: rlActions})
+			rateLimit := &routev3.RateLimit{Actions: rlActions}
+			// Set the per-rule XRateLimitOption if specified, overriding the filter-level setting.
+			rateLimit.XRatelimitOption = toEnvoyXRateLimitOption(rule.XRateLimitOption)
+			rateLimits = append(rateLimits, rateLimit)
 			descriptors = append(descriptors, &rlv3.LocalRateLimitDescriptor{
 				Entries: descriptorEntries,
 				TokenBucket: &typev3.TokenBucket{
-					MaxTokens: uint32(rule.Limit.Requests),
+					MaxTokens: rule.Limit.Requests,
 					TokensPerFill: &wrapperspb.UInt32Value{
-						Value: uint32(rule.Limit.Requests),
+						Value: rule.Limit.Requests,
 					},
 					FillInterval: ratelimit.UnitToDuration(rule.Limit.Unit),
 				},
@@ -352,48 +358,26 @@ func buildPathMatchLocalRateLimitAction(
 func buildCIDRMatchLocalRateLimitActions(
 	rlActions *[]*routev3.RateLimit_Action,
 	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	ruleIdx int,
 	cidrMatch *ir.CIDRMatch,
 ) {
 	if cidrMatch == nil {
 		return
 	}
 
-	// For CIDR matches, we first need to check if the source IP matches the CIDR range using
-	// the MaskedRemoteAddress action.
-	mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
-	maskLen := &wrapperspb.UInt32Value{Value: cidrMatch.MaskLen}
-	if cidrMatch.IsIPv6 {
-		mra.V6PrefixMaskLen = maskLen
-	} else {
-		mra.V4PrefixMaskLen = maskLen
-	}
-	action := &routev3.RateLimit_Action{
-		ActionSpecifier: &routev3.RateLimit_Action_MaskedRemoteAddress_{
-			MaskedRemoteAddress: mra,
-		},
-	}
-	entry := &rlv3.RateLimitDescriptor_Entry{
-		Key:   descriptorMaskedRemoteAddress,
-		Value: cidrMatch.CIDR,
-	}
-	*descriptorEntries = append(*descriptorEntries, entry)
-	*rlActions = append(*rlActions, action)
+	maskedKey := getRouteRuleMaskedRemoteAddressDescriptor(ruleIdx)
+	*rlActions = append(*rlActions, buildExactCIDRMatchRateLimitAction(cidrMatch, maskedKey))
+	*descriptorEntries = append(*descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
+		Key:   maskedKey,
+		Value: exactCIDRDescriptorValue(cidrMatch.CIDR, cidrMatch.Invert),
+	})
 
 	if cidrMatch.Distinct {
-		// If the CIDRMatch is distinct, we also need to use the RemoteAddress action to get the client IP.
-		action = &routev3.RateLimit_Action{
-			ActionSpecifier: &routev3.RateLimit_Action_RemoteAddress_{
-				RemoteAddress: &routev3.RateLimit_Action_RemoteAddress{},
-			},
-		}
-
-		// If the CIDRMatch is distinct, we use the built-in remote address descriptor key without a value.
-		// This means that each distinct client IP will be counted separately.
-		entry = &rlv3.RateLimitDescriptor_Entry{
-			Key: descriptorRemoteAddress,
-		}
-		*descriptorEntries = append(*descriptorEntries, entry)
-		*rlActions = append(*rlActions, action)
+		remoteKey := getRouteRuleRemoteAddressDescriptor(ruleIdx)
+		*rlActions = append(*rlActions, buildDistinctCIDRMatchRateLimitAction(cidrMatch, remoteKey))
+		*descriptorEntries = append(*descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
+			Key: remoteKey,
+		})
 	}
 }
 

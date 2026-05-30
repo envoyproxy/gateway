@@ -100,6 +100,7 @@ verbs:
 apiGroups:
 - gateway.envoyproxy.io
 resources:
+- envoyproxies/status
 - envoypatchpolicies/status
 - clienttrafficpolicies/status
 - backendtrafficpolicies/status
@@ -215,6 +216,7 @@ verbs:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -223,14 +225,26 @@ verbs:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - autoscaling
-  - policy
   resources:
   - horizontalpodautoscalers
+  verbs:
+  - create
+  - get
+  - list
+  - delete
+  - deletecollection
+  - patch
+  - watch
+- apiGroups:
+  - policy
+  resources:
   - poddisruptionbudgets
   verbs:
   - create
@@ -239,6 +253,7 @@ verbs:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - certificates.k8s.io
   resources:
@@ -246,6 +261,17 @@ verbs:
   verbs:
   - list
   - get
+  - watch
+{{- end }}
+
+{{- define "eg.rbac.controllernamespace.secrets.read" -}}
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
   - watch
 {{- end }}
 

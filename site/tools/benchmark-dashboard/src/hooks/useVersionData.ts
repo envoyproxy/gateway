@@ -72,12 +72,12 @@ export const useVersionData = (): UseVersionDataReturn => {
       latencyPercentileComparison: results.map(result => ({
         routes: result.routes,
         phase: result.phase,
-        p50: result.latency.percentiles.p50 / 1000, // convert to ms
-        p75: result.latency.percentiles.p75 / 1000,
-        p90: result.latency.percentiles.p90 / 1000,
-        p95: result.latency.percentiles.p95 / 1000,
-        p99: result.latency.percentiles.p99 / 1000,
-        p999: result.latency.percentiles.p999 / 1000
+        p50: result.latency.percentiles.p50,
+        p75: result.latency.percentiles.p75,
+        p90: result.latency.percentiles.p90,
+        p95: result.latency.percentiles.p95,
+        p99: result.latency.percentiles.p99,
+        p999: result.latency.percentiles.p999
       })),
       resourceTrends: results.map(result => ({
         routes: result.routes,
@@ -92,8 +92,8 @@ export const useVersionData = (): UseVersionDataReturn => {
         routes: result.routes,
         phase: result.phase,
         throughput: result.throughput,
-        meanLatency: result.latency.mean / 1000, // convert to ms
-        p95Latency: result.latency.percentiles.p95 / 1000, // convert to ms
+        meanLatency: result.latency.mean,
+        p95Latency: result.latency.percentiles.p95,
         totalMemory: result.resources.envoyGateway.memory.mean + result.resources.envoyProxy.memory.mean,
         totalCpu: result.resources.envoyGateway.cpu.mean + result.resources.envoyProxy.cpu.mean
       })),

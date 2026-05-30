@@ -15,7 +15,6 @@ import (
 	"sync"
 
 	func_e_api "github.com/tetratelabs/func-e/api"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
@@ -89,9 +88,9 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 			Certificate: filepath.Join(i.sdsConfigPath, common.SdsCertFilename),
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
 		},
-		XdsServerHost:   ptr.To("0.0.0.0"),
-		AdminServerPort: ptr.To(int32(0)),
-		StatsServerPort: ptr.To(int32(0)),
+		XdsServerHost:   new("0.0.0.0"),
+		AdminServerPort: new(int32(0)),
+		StatsServerPort: new(int32(0)),
 		// Always disable the topology injector in standalone mode. The topology
 		// injector adds an EDS local_cluster to the bootstrap config for
 		// zone-aware routing, which is both irrelevant outside K8s, but also
@@ -108,6 +107,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 
 // runEnvoy runs the Envoy process with the given arguments and name in a separate goroutine.
 func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []string) {
+	// #nosec G118 - cancel is stored in proxyContextMap and called later to stop the Envoy process
 	pCtx, cancel := context.WithCancel(ctx)
 	exit := make(chan struct{}, 1)
 	i.proxyContextMap.Store(name, &proxyContext{cancel: cancel, exit: exit})

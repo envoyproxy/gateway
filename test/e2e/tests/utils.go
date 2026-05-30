@@ -31,6 +31,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -59,10 +60,6 @@ var (
 	SameNamespaceGatewayRef = k8sutils.NewGatewayRef(SameNamespaceGateway)
 
 	PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-	patchOpts = []client.PatchOption{
-		client.ForceOwnership, client.FieldOwner("e2e-test"),
-	}
 )
 
 const (
@@ -153,6 +150,28 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
+}
+
+// SecurityPolicyMustNotExist waits for the specified SecurityPolicy to be deleted.
+func SecurityPolicyMustNotExist(t *testing.T, client client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			tlog.Logf(t, "SecurityPolicy has been deleted: %s/%s", policyName.Namespace, policyName.Name)
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		default:
+			tlog.Logf(t, "SecurityPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be deleted")
 }
 
 // SecurityPolicyMustFail waits for an SecurityPolicy to fail with the specified reason.
@@ -274,6 +293,57 @@ func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, polic
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for ClientTrafficPolicy to be accepted")
+}
+
+func EnvoyProxyMustBeAccepted(t *testing.T, client client.Client, epName types.NamespacedName, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		ep := &egv1a1.EnvoyProxy{}
+		err := client.Get(ctx, epName, ep)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyProxy: %w", err)
+		}
+
+		if envoyProxyAcceptedByAncestor(&ep.Status, ancestorRef) {
+			return true, nil
+		}
+
+		tlog.Logf(t, "EnvoyProxy not yet accepted: %v", ep)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyProxy to be accepted")
+}
+
+func EnvoyProxyMustNotAccepted(t *testing.T, client client.Client, epName types.NamespacedName, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		ep := &egv1a1.EnvoyProxy{}
+		err := client.Get(ctx, epName, ep)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyProxy: %w", err)
+		}
+		if !envoyProxyAcceptedByAncestor(&ep.Status, ancestorRef) {
+			return true, nil
+		}
+		tlog.Logf(t, "EnvoyProxy is accepted: %v", ep)
+		return false, nil
+	})
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyProxy to be not accepted")
+}
+
+func envoyProxyAcceptedByAncestor(status *egv1a1.EnvoyProxyStatus, ancestorRef gwapiv1.ParentReference) bool {
+	for _, ancestor := range status.Ancestors {
+		if cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(egv1a1.EnvoyProxyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // AlmostEquals We use a solution similar to istio:
@@ -458,14 +528,14 @@ func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types
 // ScrapeMetrics
 // TODO: use QueryPrometheus from test/e2e/tests/promql.go instead
 func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
-	url, err := RetrieveURL(c, nn, port, path)
+	promURL, err := RetrieveURL(c, nn, port, path)
 	if err != nil {
 		return err
 	}
 
-	tlog.Logf(t, "scraping metrics from %s", url)
+	tlog.Logf(t, "scraping metrics from %s", promURL)
 
-	metrics, err := RetrieveMetrics(url, time.Second)
+	metrics, err := RetrieveMetrics(promURL, time.Second)
 	if err != nil {
 		return err
 	}
@@ -518,6 +588,9 @@ func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricF
 	if err != nil {
 		return nil, fmt.Errorf("failed to scrape metrics: %w", err)
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to scrape metrics: %s", res.Status)
 	}
@@ -607,23 +680,7 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 	return total, nil
 }
 
-// QueryLogCountFromLoki queries log count from loki
-func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (int, error) {
-	svc := corev1.Service{}
-	if err := c.Get(context.Background(), types.NamespacedName{
-		Namespace: "monitoring",
-		Name:      "loki",
-	}, &svc); err != nil {
-		return -1, err
-	}
-	lokiHost := ""
-	for _, ing := range svc.Status.LoadBalancer.Ingress {
-		if ing.IP != "" {
-			lokiHost = ing.IP
-			break
-		}
-	}
-
+func buildLokiQuery(keyValues map[string]string, match string) string {
 	qParams := make([]string, 0, len(keyValues))
 	for k, v := range keyValues {
 		qParams = append(qParams, fmt.Sprintf("%s=\"%s\"", k, v))
@@ -633,23 +690,57 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	if match != "" {
 		q = q + "|~\"" + match + "\""
 	}
+
+	return q
+}
+
+func queryLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (*LokiQueryResponse, string, error) {
+	svc := corev1.Service{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "monitoring",
+		Name:      "loki",
+	}, &svc); err != nil {
+		return nil, "", err
+	}
+	lokiHost := ""
+	for _, ing := range svc.Status.LoadBalancer.Ingress {
+		if ing.IP != "" {
+			lokiHost = ing.IP
+			break
+		}
+	}
+
+	q := buildLokiQuery(keyValues, match)
 	params := url.Values{}
 	params.Add("query", q)
 	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
 	lokiQueryURL := fmt.Sprintf("http://%s/loki/api/v1/query_range?%s", net.JoinHostPort(lokiHost, "3100"), params.Encode())
 	res, err := http.DefaultClient.Get(lokiQueryURL)
 	if err != nil {
-		return -1, err
+		return nil, q, err
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	tlog.Logf(t, "get response from loki, query=%s, status=%s", q, res.Status)
 
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		return -1, err
+		return nil, q, err
 	}
 
 	lokiResponse := &LokiQueryResponse{}
 	if err := json.Unmarshal(b, lokiResponse); err != nil {
+		return nil, q, err
+	}
+
+	return lokiResponse, q, nil
+}
+
+// QueryLogCountFromLoki queries log count from loki
+func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (int, error) {
+	lokiResponse, q, err := queryLoki(t, c, keyValues, match)
+	if err != nil {
 		return -1, err
 	}
 
@@ -663,6 +754,32 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	}
 	tlog.Logf(t, "get response from loki, query=%s, total=%d", q, total)
 	return total, nil
+}
+
+// QueryLogLinesFromLoki queries matching log lines from loki.
+func QueryLogLinesFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) ([]string, error) {
+	lokiResponse, _, err := queryLoki(t, c, keyValues, match)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := make([]string, 0)
+	for _, res := range lokiResponse.Data.Result {
+		for _, value := range res.Values {
+			pair, ok := value.([]interface{})
+			if !ok || len(pair) < 2 {
+				continue
+			}
+
+			line, ok := pair[1].(string)
+			if !ok {
+				continue
+			}
+			lines = append(lines, line)
+		}
+	}
+
+	return lines, nil
 }
 
 type LokiQueryResponse struct {
@@ -834,12 +951,12 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 		URL:    &url.URL{Scheme: "http", Host: gwAddr, Path: path, RawQuery: query},
 	}
 
-	client := &http.Client{
+	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 	httputils.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
 		func(elapsed time.Duration) bool {
-			resp, err := client.Do(req)
+			resp, err := httpClient.Do(req)
 			if err != nil {
 				panic(err)
 			}
@@ -851,10 +968,10 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 			// https://github.com/envoyproxy/envoy/blob/56021dbfb10b53c6d08ed6fc811e1ff4c9ac41fd/source/common/http/utility.cc#L1409
 			if exceptedStatusCode == resp.StatusCode {
 				return true
-			} else {
-				tlog.Logf(t, "%s%s response status code: %d after %v", gwAddr, path, resp.StatusCode, elapsed)
-				return false
 			}
+
+			tlog.Logf(t, "%s%s response status code: %d after %v", gwAddr, path, resp.StatusCode, elapsed)
+			return false
 		})
 }
 

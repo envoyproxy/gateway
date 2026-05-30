@@ -15,6 +15,8 @@ cluster_manager:
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
+deferredStatOptions:
+  enableDeferredCreationStats: true
 stats_config:
   use_all_default_tags: true
   stats_tags:

@@ -131,16 +131,20 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 200 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterDynamicModules):
 		order = 250 + mustGetFilterIndex(filter.Name)
+	case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
+		order = 300
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
 		order = 301
 	case isFilterType(filter, egv1a1.EnvoyFilterLocalRateLimit):
 		order = 302
 	case isFilterType(filter, egv1a1.EnvoyFilterRateLimit):
 		order = 303
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
+	case isFilterType(filter, egv1a1.EnvoyFilterBandwidthLimit):
 		order = 304
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
 		order = 305
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
+		order = 306
 	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 307
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
@@ -273,10 +277,7 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 // manager.
 // Important: don't forget to set the order for newly added filters in the
 // newOrderedHTTPFilter method.
-func (t *Translator) patchHCMWithFilters(
-	mgr *hcmv3.HttpConnectionManager,
-	irListener *ir.HTTPListener,
-) error {
+func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
 	// The order of filter patching is not relevant here.
 	// All the filters will be sorted in correct order after the patching is done.
 	//
@@ -302,7 +303,12 @@ func (t *Translator) patchHCMWithFilters(
 	}
 	if !hasRouter {
 		headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
-		routerFilter, err := filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders)
+
+		upstreamAccessLogs, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeUpstream)
+		if err != nil {
+			return err
+		}
+		routerFilter, err := filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders, upstreamAccessLogs)
 		if err != nil {
 			return err
 		}
@@ -325,7 +331,8 @@ func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, h
 
 	// RateLimit filter is handled separately because it relies on the global
 	// rate limit server configuration if costs are not provided.
-	if err := patchRouteWithRateLimit(route, irRoute); err != nil {
+	// TODO: merge this into filter.PatchRoute
+	if err := patchRouteWithRateLimit(httpListener, route, irRoute); err != nil {
 		return nil
 	}
 

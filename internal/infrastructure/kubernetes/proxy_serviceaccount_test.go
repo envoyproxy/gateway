@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -61,7 +60,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "envoy-test-9f86d081",
@@ -110,7 +109,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "envoy-test-9f86d081",
@@ -155,7 +154,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "very-long-name-that-will-be-hashed-and-cut-off-because-its-too-long",
@@ -172,7 +171,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "envoy-very-long-name-that-will-be-hashed-and-cut-off-b-5bacc75e",
@@ -219,7 +218,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns1",
 					Name:      "gateway-1",
@@ -270,7 +269,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 			if tc.gatewayNamespaceMode {
 				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
-					Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+					Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 				}
 			}
 

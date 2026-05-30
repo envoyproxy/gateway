@@ -41,8 +41,39 @@ type TLSSettings struct {
 
 	// Ciphers specifies the set of cipher suites supported when
 	// negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
-	// For the list of supported ciphers, please refer to the Envoy documentation:
+	// For Envoy TLS cipher suite configuration semantics and default cipher
+	// lists, see the Envoy documentation:
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
+	// Supported cipher suite names:
+	// - ECDHE-ECDSA-AES128-GCM-SHA256
+	// - ECDHE-RSA-AES128-GCM-SHA256
+	// - ECDHE-ECDSA-AES256-GCM-SHA384
+	// - ECDHE-RSA-AES256-GCM-SHA384
+	// - ECDHE-ECDSA-CHACHA20-POLY1305
+	// - ECDHE-RSA-CHACHA20-POLY1305
+	// - ECDHE-ECDSA-AES128-SHA
+	// - ECDHE-RSA-AES128-SHA
+	// - AES128-GCM-SHA256
+	// - AES128-SHA
+	// - ECDHE-ECDSA-AES256-SHA
+	// - ECDHE-RSA-AES256-SHA
+	// - AES256-GCM-SHA384
+	// - AES256-SHA
+	// Supported IANA/RFC aliases:
+	// - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+	// - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+	// - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+	// - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+	// - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+	// - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+	// - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+	// - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+	// - TLS_RSA_WITH_AES_128_GCM_SHA256
+	// - TLS_RSA_WITH_AES_128_CBC_SHA
+	// - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+	// - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+	// - TLS_RSA_WITH_AES_256_GCM_SHA384
+	// - TLS_RSA_WITH_AES_256_CBC_SHA
 	// In non-FIPS Envoy Proxy builds the default cipher list is:
 	// - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
 	// - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -157,8 +188,16 @@ const (
 type ClientValidationContext struct {
 	// Optional set to true accepts connections even when a client doesn't present a certificate.
 	// Defaults to false, which rejects connections without a valid client certificate.
+	//
+	// Deprecated: Use Mode instead.
 	// +optional
 	Optional bool `json:"optional,omitempty"`
+
+	// Mode defines how the Gateway or Listener validates client certificates.
+	// If not specified, defaults to RequireAndVerify.
+	//
+	// +optional
+	Mode *ClientValidationModeType `json:"mode,omitempty"`
 
 	// CACertificateRefs contains one or more references to
 	// Kubernetes objects that contain TLS certificates of
@@ -198,6 +237,31 @@ type ClientValidationContext struct {
 	// +optional
 	Crl *CrlContext `json:"crl,omitempty"`
 }
+
+// ClientValidationModeType defines how a Gateway or Listener validates client certificates.
+//
+// +kubebuilder:validation:Enum=Request;RequireAny;VerifyIfGiven;RequireAndVerify
+type ClientValidationModeType string
+
+const (
+	// Request indicates that a client certificate is requested
+	// during the TLS handshake but does not require one.
+	ClientValidationRequest ClientValidationModeType = "Request"
+
+	// RequireAny indicates that a client certificate is required during
+	// the handshake, but the connection is permitted even when the
+	// client certificate verification fails.
+	ClientValidationRequireAny ClientValidationModeType = "RequireAny"
+
+	// VerifyIfGiven indicates that a client certificate is requested
+	// but not required. If presented, the certificate must be valid.
+	ClientValidationVerifyIfGiven ClientValidationModeType = "VerifyIfGiven"
+
+	// RequireAndVerify indicates that a valid client certificate must be
+	// presented during the handshake and validated
+	// using CA certificates defined in CACertificateRefs.
+	ClientValidationRequireAndVerify ClientValidationModeType = "RequireAndVerify"
+)
 
 // CrlContext holds certificate revocation list configuration that can be used to validate the client initiating the TLS connection
 type CrlContext struct {

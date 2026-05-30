@@ -135,3 +135,17 @@
             name: bar
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: sixteenth-route
+      route:
+        cluster: sixteenth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: seventeenth-route
+      route:
+        cluster: seventeenth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
