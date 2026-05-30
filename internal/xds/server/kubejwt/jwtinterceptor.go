@@ -43,37 +43,41 @@ type wrappedStream struct {
 	validated   bool
 }
 
-func (w *wrappedStream) RecvMsg(m any) error {
-	err := w.ServerStream.RecvMsg(m)
+func (i *JWTAuthInterceptor) authenticate(ctx context.Context, msg any) error {
+	nodeID, err := extractNodeID(msg)
 	if err != nil {
 		return err
 	}
 
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return fmt.Errorf("missing metadata")
+	}
+
+	authHeader := md.Get("authorization")
+	if len(authHeader) == 0 {
+		return fmt.Errorf("missing authorization token in metadata: %s", md)
+	}
+	token := strings.TrimPrefix(authHeader[0], "Bearer ")
+
+	if err := i.validateKubeJWT(ctx, token, nodeID); err != nil {
+		i.logger.Error(err, "failed to validate token")
+		return fmt.Errorf("failed to validate token: %w", err)
+	}
+
+	return nil
+}
+
+func (w *wrappedStream) RecvMsg(m any) error {
+	if err := w.ServerStream.RecvMsg(m); err != nil {
+		return err
+	}
+
 	if !w.validated {
-		if req, ok := m.(*discoveryv3.DeltaDiscoveryRequest); ok {
-			if req.Node == nil || req.Node.Id == "" {
-				return fmt.Errorf("missing node ID in request")
-			}
-			nodeID := req.Node.Id
-
-			md, ok := metadata.FromIncomingContext(w.ctx)
-			if !ok {
-				return fmt.Errorf("missing metadata")
-			}
-
-			authHeader := md.Get("authorization")
-			if len(authHeader) == 0 {
-				return fmt.Errorf("missing authorization token in metadata: %s", md)
-			}
-			token := strings.TrimPrefix(authHeader[0], "Bearer ")
-
-			if err := w.interceptor.validateKubeJWT(w.ctx, token, nodeID); err != nil {
-				w.interceptor.logger.Error(err, "failed to validate token")
-				return fmt.Errorf("failed to validate token: %w", err)
-			}
-
-			w.validated = true
+		if err := w.interceptor.authenticate(w.ctx, m); err != nil {
+			return err
 		}
+		w.validated = true
 	}
 
 	return nil
@@ -88,5 +92,32 @@ func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, _ *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		wrapped := newWrappedStream(ss, ss.Context(), i)
 		return handler(srv, wrapped)
+	}
+}
+
+// Unary intercepts unary gRPC calls for authorization.
+func (i *JWTAuthInterceptor) Unary() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		if err := i.authenticate(ctx, req); err != nil {
+			return nil, err
+		}
+		return handler(ctx, req)
+	}
+}
+
+func extractNodeID(m any) (string, error) {
+	switch req := m.(type) {
+	case *discoveryv3.DeltaDiscoveryRequest:
+		if req.Node == nil || req.Node.Id == "" {
+			return "", fmt.Errorf("missing node ID")
+		}
+		return req.Node.Id, nil
+	case *discoveryv3.DiscoveryRequest:
+		if req.Node == nil || req.Node.Id == "" {
+			return "", fmt.Errorf("missing node ID")
+		}
+		return req.Node.Id, nil
+	default:
+		return "", fmt.Errorf("unexpected message type: %T", m)
 	}
 }
