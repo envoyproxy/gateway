@@ -6,7 +6,6 @@
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: one_example_com_443
     endpoints:
@@ -49,7 +48,6 @@
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: two_example_com_80
     endpoints:

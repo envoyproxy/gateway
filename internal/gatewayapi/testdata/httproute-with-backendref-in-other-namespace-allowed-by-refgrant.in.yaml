@@ -63,17 +63,4 @@ endpointSlices:
           - "7.7.7.7"
         conditions:
           ready: true
-referenceGrants:
-  - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: ReferenceGrant
-    metadata:
-      namespace: backends
-      name: referencegrant-1
-    spec:
-      from:
-        - group: gateway.networking.k8s.io
-          kind: HTTPRoute
-          namespace: default
-      to:
-        - group: ""
-          kind: Service
+

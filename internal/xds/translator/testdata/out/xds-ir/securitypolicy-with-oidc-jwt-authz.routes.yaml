@@ -31,9 +31,48 @@
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
           requirementName: httproute/default/httproute-1/rule/0/match/0/www_example_com
-        envoy.filters.http.oauth2/securitypolicy/default/policy-for-http-route:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+        envoy.filters.http.oauth2:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
+          config:
+            authScopes:
+            - openid
+            - email
+            - profile
+            authType: BASIC_AUTH
+            authorizationEndpoint: https://oidc.example.com/authorize
+            credentials:
+              clientId: prometheus
+              cookieNames:
+                bearerToken: AccessToken-5f93c2e4
+                idToken: IdToken
+                oauthExpires: OauthExpires-5f93c2e4
+                oauthHmac: OauthHMAC-5f93c2e4
+                oauthNonce: OauthNonce-5f93c2e4
+                refreshToken: RefreshToken-5f93c2e4
+              hmacSecret:
+                name: oauth2/hmac_secret/securitypolicy/default/policy-for-http-route
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+              tokenSecret:
+                name: oauth2/client_secret/securitypolicy/default/policy-for-http-route
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+            preserveAuthorizationHeader: true
+            redirectPathMatcher:
+              path:
+                exact: /oauth2/callback
+            redirectUri: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback'
+            signoutPath:
+              path:
+                exact: /logout
+            statPrefix: securitypolicy/default/policy-for-http-route
+            tokenEndpoint:
+              cluster: oidc_example_com_443
+              timeout: 10s
+              uri: https://oidc.example.com/oauth/token
+            useRefreshToken: true
         envoy.filters.http.rbac:
           '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
           rbac:

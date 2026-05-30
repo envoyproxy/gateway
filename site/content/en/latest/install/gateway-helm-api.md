@@ -34,6 +34,7 @@ The Helm chart for Envoy Gateway
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | createNamespace | bool | `false` |  |
 | deployment.annotations | object | `{}` |  |
+| deployment.envoyGateway.extraEnv | list | `[]` | Additional environment variables for the envoy-gateway container. |
 | deployment.envoyGateway.image.repository | string | `""` |  |
 | deployment.envoyGateway.image.tag | string | `""` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `""` |  |
@@ -51,8 +52,14 @@ The Helm chart for Envoy Gateway
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
+| deployment.pod.extraVolumeMounts | list | `[]` |  |
+| deployment.pod.extraVolumes | list | `[]` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
+| deployment.pod.securityContext.runAsGroup | int | `65532` |  |
+| deployment.pod.securityContext.runAsNonRoot | bool | `true` |  |
+| deployment.pod.securityContext.runAsUser | int | `65532` |  |
+| deployment.pod.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | deployment.pod.tolerations | list | `[]` |  |
 | deployment.pod.topologySpreadConstraints | list | `[]` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |
@@ -74,6 +81,9 @@ The Helm chart for Envoy Gateway
 | global.images.envoyGateway.image | string | `nil` |  |
 | global.images.envoyGateway.pullPolicy | string | `nil` |  |
 | global.images.envoyGateway.pullSecrets | list | `[]` |  |
+| global.images.envoyProxy.image | string | `""` |  |
+| global.images.envoyProxy.pullPolicy | string | `""` |  |
+| global.images.envoyProxy.pullSecrets | list | `[]` |  |
 | global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |

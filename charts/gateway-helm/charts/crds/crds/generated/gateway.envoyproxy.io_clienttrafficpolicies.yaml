@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: clienttrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -715,6 +715,7 @@ spec:
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       Defaults to false and cannot be combined with RequestID.
+
                       Deprecated: use RequestID=PreserveOrGenerate instead
                     type: boolean
                   requestID:
@@ -841,6 +842,41 @@ spec:
                           ClientTrafficPolicy invalid.
                         type: boolean
                     type: object
+                  ignoredUpgradeTypes:
+                    description: |-
+                      IgnoredUpgradeTypes specifies a list of upgrade types for which
+                      HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being
+                      rejected with a 403 response. When a client sends an HTTP/1.1 request
+                      with Connection: Upgrade and an Upgrade header matching one of these
+                      matchers, Envoy will strip the upgrade headers and process the request
+                      as a normal HTTP/1.1 request.
+
+                      Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/".
+                    items:
+                      description: |-
+                        StringMatch defines how to match any strings.
+                        This is a general purpose match condition that can be used by other EG APIs
+                        that need to match against a string.
+                      properties:
+                        type:
+                          default: Exact
+                          description: Type specifies how to match against a string.
+                          enum:
+                          - Exact
+                          - Prefix
+                          - Suffix
+                          - RegularExpression
+                          type: string
+                        value:
+                          description: Value specifies the string value that the match
+                            must have.
+                          maxLength: 1024
+                          minLength: 1
+                          type: string
+                      required:
+                      - value
+                      type: object
+                    type: array
                   preserveHeaderCase:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
@@ -1134,8 +1170,86 @@ spec:
                       additionalProperties:
                         type: string
                       description: MatchLabels are the set of label selectors for
-                        identifying the targeted resource
+                        identifying the targeted resource.
                       type: object
+                    namespaces:
+                      description: |-
+                        Namespaces determines which namespaces are considered for target selection.
+
+                        If unspecified, only targets in the same namespace as this policy are considered.
+
+                        When specified, the effective set of namespaces is always constrained to the
+                        namespaces watched by Envoy Gateway.
+
+                        Selecting targets across namespaces requires a ReferenceGrant in the target
+                        namespace that allows this policy kind to reference the selected target kind.
+                        Cross-namespace targets without a matching ReferenceGrant are ignored.
+                      properties:
+                        from:
+                          default: Same
+                          description: |-
+                            From indicates how namespaces are selected for this target selector.
+
+                            All means all namespaces watched by Envoy Gateway.
+                            Selector means namespaces watched by Envoy Gateway that match Selector.
+                          enum:
+                          - Same
+                          - All
+                          - Selector
+                          type: string
+                        selector:
+                          description: Selector selects namespaces when From is set
+                            to Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - from
+                      type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object
@@ -1238,8 +1352,39 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
-                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      For Envoy TLS cipher suite configuration semantics and default cipher
+                      lists, see the Envoy documentation:
                       https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
+                      Supported cipher suite names:
+                      - ECDHE-ECDSA-AES128-GCM-SHA256
+                      - ECDHE-RSA-AES128-GCM-SHA256
+                      - ECDHE-ECDSA-AES256-GCM-SHA384
+                      - ECDHE-RSA-AES256-GCM-SHA384
+                      - ECDHE-ECDSA-CHACHA20-POLY1305
+                      - ECDHE-RSA-CHACHA20-POLY1305
+                      - ECDHE-ECDSA-AES128-SHA
+                      - ECDHE-RSA-AES128-SHA
+                      - AES128-GCM-SHA256
+                      - AES128-SHA
+                      - ECDHE-ECDSA-AES256-SHA
+                      - ECDHE-RSA-AES256-SHA
+                      - AES256-GCM-SHA384
+                      - AES256-SHA
+                      Supported IANA/RFC aliases:
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+                      - TLS_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_RSA_WITH_AES_256_CBC_SHA
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]

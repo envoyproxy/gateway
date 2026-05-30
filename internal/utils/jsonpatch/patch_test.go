@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -82,7 +81,7 @@ func TestApplyJSONPatches(t *testing.T) {
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:   "add",
-					Path: ptr.To("/topLevel/newKey"),
+					Path: new("/topLevel/newKey"),
 					Value: &apiextensionsv1.JSON{
 						Raw: []byte("true"),
 					},
@@ -96,14 +95,14 @@ func TestApplyJSONPatches(t *testing.T) {
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:   "add",
-					Path: ptr.To("/topLevel/newKey"),
+					Path: new("/topLevel/newKey"),
 					Value: &apiextensionsv1.JSON{
 						Raw: []byte("true"),
 					},
 				},
 				{
 					Op:   "remove",
-					Path: ptr.To("/topLevel/arrayContainer/1"),
+					Path: new("/topLevel/arrayContainer/1"),
 				},
 			},
 			errorExpected: false,
@@ -114,14 +113,14 @@ func TestApplyJSONPatches(t *testing.T) {
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:   "badbadbad",
-					Path: ptr.To("/topLevel/newKey"),
+					Path: new("/topLevel/newKey"),
 					Value: &apiextensionsv1.JSON{
 						Raw: []byte("true"),
 					},
 				},
 			},
 			errorExpected: true,
-			errorContains: ptr.To("unsupported JSONPatch operation"),
+			errorContains: new("unsupported JSONPatch operation"),
 		},
 		{
 			name: "jsonpath affecting two places",
@@ -129,7 +128,7 @@ func TestApplyJSONPatches(t *testing.T) {
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:       "remove",
-					JSONPath: ptr.To("$.topLevel.mapArray[*].key"),
+					JSONPath: new("$.topLevel.mapArray[*].key"),
 				},
 			},
 			errorExpected: false,
@@ -140,11 +139,11 @@ func TestApplyJSONPatches(t *testing.T) {
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:       "remove",
-					JSONPath: ptr.To("i'm not a json path string"),
+					JSONPath: new("i'm not a json path string"),
 				},
 			},
 			errorExpected: true,
-			errorContains: ptr.To("unable to convert jsonPath"),
+			errorContains: new("unable to convert jsonPath"),
 		},
 		{
 			name: "dot escaped json path",
@@ -152,7 +151,7 @@ func TestApplyJSONPatches(t *testing.T) {
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:       "replace",
-					JSONPath: ptr.To("$.otherLevel['dot.key']"),
+					JSONPath: new("$.otherLevel['dot.key']"),
 					Value: &apiextensionsv1.JSON{
 						Raw: []byte("\"newValue\""),
 					},
@@ -167,8 +166,8 @@ func TestApplyJSONPatches(t *testing.T) {
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:       "replace",
-					Path:     ptr.To("dot.key"),
-					JSONPath: ptr.To("$.otherLevel"),
+					Path:     new("dot.key"),
+					JSONPath: new("$.otherLevel"),
 					Value: &apiextensionsv1.JSON{
 						Raw: []byte("\"newValue\""),
 					},
@@ -183,14 +182,14 @@ func TestApplyJSONPatches(t *testing.T) {
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:       "replace",
-					JSONPath: ptr.To("$.otherLevel['~my']"),
+					JSONPath: new("$.otherLevel['~my']"),
 					Value: &apiextensionsv1.JSON{
 						Raw: []byte("\"folder\""),
 					},
 				},
 				{
 					Op:       "replace",
-					JSONPath: ptr.To("$.otherLevel['/other/']"),
+					JSONPath: new("$.otherLevel['/other/']"),
 					Value: &apiextensionsv1.JSON{
 						Raw: []byte("\"tar\""),
 					},
@@ -205,14 +204,14 @@ func TestApplyJSONPatches(t *testing.T) {
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:       "replace",
-					JSONPath: ptr.To("$.secondLevel.doesNotExist"),
+					JSONPath: new("$.secondLevel.doesNotExist"),
 					Value: &apiextensionsv1.JSON{
 						Raw: []byte("\"folder\""),
 					},
 				},
 			},
 			errorExpected: true,
-			errorContains: ptr.To("no jsonPointers were found"),
+			errorContains: new("no jsonPointers were found"),
 		},
 	}
 

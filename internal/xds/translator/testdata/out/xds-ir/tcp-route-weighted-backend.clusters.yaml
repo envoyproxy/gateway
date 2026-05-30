@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: tcp-route-weighted-backend-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

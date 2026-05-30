@@ -33,8 +33,6 @@ updates:
     ignore:
       # Ignore cel-go, since it should be updated alongside k8s.io/apiserver
       - dependency-name: "github.com/google/cel-go"
-      # Ignore github.com/docker/docker, since it should be updated alongside github.com/google/go-containerregistry
-      - dependency-name: "github.com/docker/docker"
       # Ignore github.com/google/go-containerregistry, since it should be updated alongside github.com/replicatedhq/troubleshoot
       - dependency-name: "github.com/google/go-containerregistry"
       # Ignore k8s.io/apimachinery, since it should be updated alongside k8s.io/api
@@ -61,8 +59,12 @@ updates:
   - package-ecosystem: npm
     directories:
       - /site
+      - /tools
     schedule:
       interval: weekly
+    ignore:
+      # fortawesome/fontawesome-free should be updated with docsy.
+      - dependency-name: "@fortawesome/fontawesome-free"
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell

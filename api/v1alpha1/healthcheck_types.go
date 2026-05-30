@@ -70,6 +70,8 @@ type PassiveHealthCheck struct {
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
 	//
 	// +kubebuilder:default=10
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
 	// +optional
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty"`
 
@@ -182,8 +184,9 @@ const (
 
 // HTTPActiveHealthChecker defines the settings of http health check.
 type HTTPActiveHealthChecker struct {
-	// Hostname defines the HTTP host that will be requested during health checking.
-	// Default: HTTPRoute or GRPCRoute hostname.
+	// Hostname defines the HTTP Host header used for active HTTP health checks.
+	// Host selection uses this order: this field, the associated Backend endpoint
+	// hostname if available, then the effective Route hostname.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253

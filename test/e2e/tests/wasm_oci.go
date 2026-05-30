@@ -19,18 +19,16 @@ import (
 	"testing"
 	"time"
 
-	dockertypes "github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/archive"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	goarchive "github.com/moby/go-archive"
+	"github.com/moby/moby/client"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -240,28 +238,28 @@ func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, regis
 
 	var (
 		cli    *client.Client
-		tar    io.Reader
-		res    dockertypes.ImageBuildResponse
+		res    client.ImageBuildResult
 		digest v1.Hash
 		err    error
 	)
 
 	tag := fmt.Sprintf("%s/testwasm:v1.0.0", registryAddr)
 
-	if cli, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation()); err != nil {
+	if cli, err = client.New(client.FromEnv); err != nil {
 		t.Fatalf("failed to create docker client: %v", err)
 	}
 
-	if tar, err = archive.TarWithOptions("testdata/wasm", &archive.TarOptions{}); err != nil {
+	buildContext, err := goarchive.TarWithOptions("testdata/wasm", &goarchive.TarOptions{})
+	if err != nil {
 		t.Fatalf("failed to create tar: %v", err)
 	}
 
-	opts := dockertypes.ImageBuildOptions{
+	opts := client.ImageBuildOptions{
 		Dockerfile: "Dockerfile",
 		Tags:       []string{tag},
 		Remove:     true,
 	}
-	if res, err = cli.ImageBuild(ctx, tar, opts); err != nil {
+	if res, err = cli.ImageBuild(ctx, buildContext, opts); err != nil {
 		t.Fatalf("failed to build image: %v", err)
 	}
 	defer func() {
@@ -393,8 +391,8 @@ func createEEPForWasmTest(
 
 			Wasm: []egv1a1.Wasm{
 				{
-					Name:   ptr.To("wasm-filter"),
-					RootID: ptr.To("my_root_id"),
+					Name:   new("wasm-filter"),
+					RootID: new("my_root_id"),
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{

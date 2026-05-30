@@ -15,7 +15,10 @@ assignees: ''
 - [ ] push tag
     - [ ] Push tag https://github.com/envoyproxy/gateway/releases/tag/v1.x.x
     - [ ] wait for release CI
+- [ ] update benchmark dashboard
+    - [ ] `make sync-benchmark-dashboard VERSION=v1.x.x`
+    - [ ] open and merge PR with generated `site/tools/benchmark-dashboard/src/data/**` and `site/static/**` changes
 - [ ] verify quickstart
 - [ ] update doc
-- [ ] update release [announcement](https://github.com/envoyproxy/gateway/releases/tag/v1.x.x) 
+- [ ] update release [announcement](https://github.com/envoyproxy/gateway/releases/tag/v1.x.x)
 - [ ] GH Release, Slack announcement, [google group](https://groups.google.com/g/envoy-gateway-announce) announcement

@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: tcp-route-simple-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -34,7 +33,6 @@
       resourceApiVersion: V3
     serviceName: tcp-route-simple-1-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -58,7 +56,6 @@
       resourceApiVersion: V3
     serviceName: tcp-route-simple-2-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -82,7 +79,6 @@
       resourceApiVersion: V3
     serviceName: tcp-route-simple-3-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -106,7 +102,6 @@
       resourceApiVersion: V3
     serviceName: tcp-route-simple-4-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

@@ -150,7 +150,7 @@ and is hosted in the repo.
 [Github Actions]: https://docs.github.com/en/actions
 [workflows]: https://github.com/envoyproxy/gateway/tree/main/.github/workflows
 [Kind]: https://kind.sigs.k8s.io/
-[conformance homepage]: https://gateway-api.sigs.k8s.io/concepts/conformance/
+[conformance homepage]: https://gateway-api.sigs.k8s.io/docs/concepts/conformance/
 [directly exposing]: https://kind.sigs.k8s.io/docs/user/loadbalancer/
 [Kubernetes support]: https://docs.docker.com/desktop/kubernetes/
 [gateway-dev]: https://hub.docker.com/r/envoyproxy/gateway-dev/tags

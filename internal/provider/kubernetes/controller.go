@@ -57,7 +57,7 @@ import (
 )
 
 var skipNameValidation = func() *bool {
-	return ptr.To(false)
+	return new(false)
 }
 
 var tracer = otel.Tracer("envoy-gateway/provider/runner")
@@ -132,6 +132,7 @@ type subscriptions struct {
 	securityPolicyStatuses       <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendStatuses              <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.BackendStatus]
 	extensionPolicyStatuses      <-chan watchable.Snapshot[message.NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
+	envoyProxyStatuses           <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.EnvoyProxyStatus]
 }
 
 // newGatewayAPIController
@@ -142,16 +143,16 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	var extServerPoliciesGVKs []schema.GroupVersionKind
 	var extGVKs []schema.GroupVersionKind
 	var extBackendGVKs []schema.GroupVersionKind
-	if cfg.EnvoyGateway.ExtensionManager != nil {
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.Resources {
+	for _, em := range cfg.EnvoyGateway.GetExtensionManagers() {
+		for _, rsrc := range em.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extGVKs = append(extGVKs, gvk)
 		}
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.PolicyResources {
+		for _, rsrc := range em.PolicyResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extServerPoliciesGVKs = append(extServerPoliciesGVKs, gvk)
 		}
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
+		for _, rsrc := range em.BackendResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extBackendGVKs = append(extBackendGVKs, gvk)
 		}
@@ -207,7 +208,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		// Subscribe to resource updates
 		r.subscribeToResources(ctx)
 		// Update status
-		go r.updateStatusFromSubscriptions(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		go r.updateStatusFromSubscriptions(ctx, len(cfg.EnvoyGateway.GetExtensionManagers()) > 0)
 		r.log.Info("started")
 		// Close resources if the context is done.
 		<-ctx.Done()
@@ -254,6 +255,7 @@ func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
 	r.subscriptions.securityPolicyStatuses = r.resources.SecurityPolicyStatuses.Subscribe(ctx)
 	r.subscriptions.backendStatuses = r.resources.BackendStatuses.Subscribe(ctx)
 	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyProxyStatuses = r.resources.EnvoyProxyStatuses.Subscribe(ctx)
 }
 
 func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
@@ -439,7 +441,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		// Add all Gateways, their associated ListenerSets, Routes, and referenced resources to the resourceTree
-		if err = r.processGateways(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
+		if err = r.processGateways(ctx, managedGC, gwcResource, gwcResourceMapping); err != nil {
 			if isTransientError(err) {
 				gcLogger.Error(err, "transient error processing gateways")
 				return reconcile.Result{}, err
@@ -509,6 +511,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				}
 				gcLogger.Error(err, "failed to process EnvoyExtensionPolicies for GatewayClass")
 			}
+		}
+
+		if err = r.processPolicyTargetReferenceGrants(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing policy target ReferenceGrants")
+				return reconcile.Result{}, err
+			}
+			gcLogger.Error(err, "failed to process policy target ReferenceGrants for GatewayClass")
 		}
 
 		if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
@@ -741,27 +751,19 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 			if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
 				for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
-					var err error
-					caRefNew := gwapiv1.SecretObjectReference{
-						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
-						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+					ref := &gwapiv1.ObjectReference{
+						Group:     caCertRef.Group,
+						Kind:      caCertRef.Kind,
 						Name:      caCertRef.Name,
-						Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+						Namespace: new(gwapiv1.Namespace(backend.Namespace)),
 					}
-					switch string(caCertRef.Kind) {
-					case resource.KindConfigMap:
-						err = r.processConfigMapRef(
-							ctx, resourceMappings, gwcResource,
-							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
-							caRefNew)
-					case resource.KindSecret:
-						err = r.processSecretRef(
-							ctx, resourceMappings, gwcResource,
-							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
-							caRefNew)
-					case resource.KindClusterTrustBundle:
-						err = r.processClusterTrustBundleRef(ctx, resourceMappings, gwcResource, caRefNew)
-					}
+					err := r.processTLSCACertificateRefs(ctx, gwcResource, resourceMappings,
+						ref,
+						&resource.ResourceMetadata{
+							Kind:      resource.KindBackend,
+							Name:      backend.Name,
+							Namespace: backend.Namespace,
+						})
 					if err != nil {
 						// If the error is transient, we return it to allow Reconcile to retry.
 						if isTransientError(err) {
@@ -844,6 +846,35 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		}
 	}
 	return nil
+}
+
+func (r *gatewayAPIReconciler) processTLSCACertificateRefs(ctx context.Context, gwcResource *resource.Resources, resourceMappings *resourceMappings,
+	caCertRef *gwapiv1.ObjectReference, owner *resource.ResourceMetadata,
+) error {
+	var err error
+	ns := ptr.Deref(caCertRef.Namespace, gwapiv1.Namespace(owner.Namespace))
+	caRefNew := gwapiv1.SecretObjectReference{
+		Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
+		Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+		Name:      caCertRef.Name,
+		Namespace: new(ns),
+	}
+	switch string(caCertRef.Kind) {
+	case resource.KindConfigMap:
+		err = r.processConfigMapRef(
+			ctx, resourceMappings, gwcResource,
+			owner.Kind, owner.Namespace, owner.Name,
+			caRefNew)
+	case resource.KindSecret:
+		err = r.processSecretRef(
+			ctx, resourceMappings, gwcResource,
+			owner.Kind, owner.Namespace, owner.Name,
+			caRefNew)
+	case resource.KindClusterTrustBundle:
+		err = r.processClusterTrustBundleRef(ctx, resourceMappings, gwcResource, caRefNew)
+	}
+
+	return err
 }
 
 // processSecurityPolicyObjectRefs adds the referenced resources in SecurityPolicies
@@ -1580,7 +1611,137 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
-func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *resource.Resources) error {
+// processPolicyTargetReferenceGrants finds the ReferenceGrants that allow policies in this GatewayClass to reference resources in other namespaces, and adds them to the resourceTree.
+func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
+	ctx context.Context,
+	resourceTree *resource.Resources,
+	resourceMap *resourceMappings,
+) error {
+	targetNamespaces := sets.New[string]()
+	for _, gateway := range resourceTree.Gateways {
+		targetNamespaces.Insert(gateway.Namespace)
+	}
+	for _, route := range resourceTree.HTTPRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	for _, route := range resourceTree.GRPCRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	for _, route := range resourceTree.TLSRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	for _, route := range resourceTree.TCPRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	for _, route := range resourceTree.UDPRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	if targetNamespaces.Len() == 0 {
+		return nil
+	}
+
+	policyFromNamespaces := map[string]sets.Set[string]{
+		resource.KindClientTrafficPolicy:  sets.New[string](),
+		resource.KindBackendTrafficPolicy: sets.New[string](),
+		resource.KindEnvoyExtensionPolicy: sets.New[string](),
+		resource.KindSecurityPolicy:       sets.New[string](),
+	}
+	for _, policy := range resourceTree.ClientTrafficPolicies {
+		policyFromNamespaces[resource.KindClientTrafficPolicy].Insert(policy.Namespace)
+	}
+	for _, policy := range resourceTree.BackendTrafficPolicies {
+		policyFromNamespaces[resource.KindBackendTrafficPolicy].Insert(policy.Namespace)
+	}
+	for _, policy := range resourceTree.EnvoyExtensionPolicies {
+		policyFromNamespaces[resource.KindEnvoyExtensionPolicy].Insert(policy.Namespace)
+	}
+	for _, policy := range resourceTree.SecurityPolicies {
+		policyFromNamespaces[resource.KindSecurityPolicy].Insert(policy.Namespace)
+	}
+
+	allowedTargetKinds := map[string]sets.Set[string]{
+		resource.KindClientTrafficPolicy: sets.New[string](resource.KindGateway),
+		resource.KindBackendTrafficPolicy: sets.New[string](
+			resource.KindGateway,
+			resource.KindHTTPRoute,
+			resource.KindGRPCRoute,
+			resource.KindTLSRoute,
+			resource.KindTCPRoute,
+			resource.KindUDPRoute,
+		),
+		resource.KindEnvoyExtensionPolicy: sets.New[string](
+			resource.KindGateway,
+			resource.KindHTTPRoute,
+			resource.KindGRPCRoute,
+			resource.KindTLSRoute,
+			resource.KindTCPRoute,
+			resource.KindUDPRoute,
+		),
+		resource.KindSecurityPolicy: sets.New[string](
+			resource.KindGateway,
+			resource.KindHTTPRoute,
+			resource.KindGRPCRoute,
+			resource.KindTCPRoute,
+		),
+	}
+
+	refGrantList := new(gwapiv1b1.ReferenceGrantList)
+	if err := r.client.List(ctx, refGrantList); err != nil {
+		return fmt.Errorf("failed to list ReferenceGrants: %w", err)
+	}
+
+	for i := range refGrantList.Items {
+		refGrant := &refGrantList.Items[i]
+		if !targetNamespaces.Has(refGrant.Namespace) {
+			continue
+		}
+		if !policyTargetReferenceGrantAllowed(refGrant, policyFromNamespaces, allowedTargetKinds) {
+			continue
+		}
+
+		key := utils.NamespacedName(refGrant).String()
+		if resourceMap.allAssociatedReferenceGrants.Has(key) {
+			continue
+		}
+		resourceMap.allAssociatedReferenceGrants.Insert(key)
+		resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+		r.log.Info("added policy target ReferenceGrant to resource map", "namespace", refGrant.Namespace, "name", refGrant.Name)
+	}
+
+	return nil
+}
+
+// policyTargetReferenceGrantAllowed checks if the ReferenceGrant allows any of the policies in this GatewayClass to reference resources in other namespaces.
+// This is a coarse check that looks at the "from" and "to" of the ReferenceGrant to see if it potentially allows any valid reference from policies to gateways/routes.
+// The detailed check is done in the Gateway API IR translation, where we check if the ReferenceGrant allows the specific reference from the specific policy to the specific gateway/route.
+func policyTargetReferenceGrantAllowed(
+	refGrant *gwapiv1b1.ReferenceGrant,
+	policyFromNamespaces map[string]sets.Set[string],
+	allowedTargetKinds map[string]sets.Set[string],
+) bool {
+	for _, refGrantFrom := range refGrant.Spec.From {
+		if string(refGrantFrom.Group) != egv1a1.GroupVersion.Group {
+			continue
+		}
+		fromNamespaces, ok := policyFromNamespaces[string(refGrantFrom.Kind)]
+		if !ok || !fromNamespaces.Has(string(refGrantFrom.Namespace)) {
+			continue
+		}
+
+		for _, refGrantTo := range refGrant.Spec.To {
+			if string(refGrantTo.Group) != gwapiv1.GroupName {
+				continue
+			}
+			if allowedTargetKinds[string(refGrantFrom.Kind)].Has(string(refGrantTo.Kind)) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
 	// Find gateways for the managedGC
 	// Find the Gateways that reference this Class.
 	gatewayList := &gwapiv1.GatewayList{}
@@ -1624,6 +1785,78 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			}
 		}
 
+		if gtw.Spec.TLS != nil {
+			tls := gtw.Spec.TLS
+			if tls.Backend != nil {
+				certRef := tls.Backend.ClientCertificateRef
+				if refsSecret(certRef) {
+					if err := r.processSecretRef(ctx,
+						resourceMap, resourceTree,
+						resource.KindGateway, gtw.Namespace, gtw.Name,
+						*certRef); err != nil {
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err, "failed to process TLS Backend ClientCertificateRef for gateway",
+							"gateway", gtw, "clientCertificateRef", certRef)
+					}
+				}
+			}
+
+			if tls.Frontend != nil {
+				if tls.Frontend.Default.Validation != nil {
+					validation := tls.Frontend.Default.Validation
+					for _, certRef := range validation.CACertificateRefs {
+						err := r.processTLSCACertificateRefs(ctx, resourceTree, resourceMap,
+							&gwapiv1.ObjectReference{
+								Group:     certRef.Group,
+								Kind:      certRef.Kind,
+								Name:      certRef.Name,
+								Namespace: certRef.Namespace,
+							},
+							&resource.ResourceMetadata{
+								Kind:      resource.KindGateway,
+								Name:      gtw.Name,
+								Namespace: gtw.Namespace,
+							})
+						if isTransientError(err) {
+							return err
+						}
+						if err != nil {
+							r.log.Error(err, "failed to process default TLS Frontend CACertificateRefs for gateway",
+								"gateway", gtw, "caCertificateRef", certRef)
+						}
+					}
+				}
+				for _, perPort := range tls.Frontend.PerPort {
+					if perPort.TLS.Validation == nil {
+						continue
+					}
+					for _, certRef := range perPort.TLS.Validation.CACertificateRefs {
+						err := r.processTLSCACertificateRefs(ctx, resourceTree, resourceMap,
+							&gwapiv1.ObjectReference{
+								Group:     certRef.Group,
+								Kind:      certRef.Kind,
+								Name:      certRef.Name,
+								Namespace: certRef.Namespace,
+							},
+							&resource.ResourceMetadata{
+								Kind:      resource.KindGateway,
+								Name:      gtw.Name,
+								Namespace: gtw.Namespace,
+							})
+						if isTransientError(err) {
+							return err
+						}
+
+						if err != nil {
+							r.log.Error(err, "failed to process perPort TLS Frontend CACertificateRefs for gateway",
+								"gateway", gtw, "port", perPort.Port, "caCertificateRef", certRef)
+						}
+					}
+				}
+			}
+		}
 		gtwNamespacedName := utils.NamespacedName(gtw).String()
 
 		// ListenerSet Processing (must be done before route processing)
@@ -1762,7 +1995,7 @@ func (r *gatewayAPIReconciler) insertProxyServiceIfExists(ctx context.Context, n
 		return
 	}
 	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
-		Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
+		Kind:      new(gwapiv1.Kind(resource.KindService)),
 		Namespace: gatewayapi.NamespacePtr(svc.Namespace),
 		Name:      gwapiv1.ObjectName(svc.Name),
 	})
@@ -2692,9 +2925,10 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return fmt.Errorf("failed to find envoyproxy %s/%s for Gateway %s: %w", gtw.Namespace, ref.Name, gtw.Name, err)
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	ep.Status = egv1a1.EnvoyProxyStatus{}
+	r.processEnvoyProxy(ep, resourceMap)
 
 	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
@@ -2730,19 +2964,20 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 		return errors.New("using Merged Gateways with Gateway Namespace Mode is not supported")
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	ep.Status = egv1a1.EnvoyProxyStatus{}
+	r.processEnvoyProxy(ep, resourceMap)
 	resourceTree.EnvoyProxyForGatewayClass = ep
 	return nil
 }
 
-// processEnvoyProxy processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) error {
+// processEnvoyProxy processes the parametersRef of the provided GatewayClass/Gateway.
+func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) {
 	key := utils.NamespacedName(ep).String()
 	if resourceMap.allAssociatedEnvoyProxies.Has(key) {
 		r.log.Info("current EnvoyProxy has been processed already", "namespace", ep.Namespace, "name", ep.Name)
-		return nil
+		return
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
@@ -2790,7 +3025,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	resourceMap.allAssociatedEnvoyProxies.Insert(key)
-	return nil
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it.

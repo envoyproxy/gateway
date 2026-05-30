@@ -154,6 +154,7 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
+      includeRouteMetadata: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -218,6 +219,11 @@ securityPolicies:
         reason: Overridden
         status: "True"
         type: Overridden
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
@@ -318,6 +324,7 @@ xdsIR:
             headersToExtAuth:
             - header1
             - header2
+            includeRouteMetadata: true
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
           metadata:
@@ -376,6 +383,7 @@ xdsIR:
             headersToExtAuth:
             - header1
             - header2
+            includeRouteMetadata: true
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
           metadata:

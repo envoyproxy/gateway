@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +47,31 @@ func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPol
 	return deprecatedFields
 }
 
+func validateDynamicModuleRemoteURL(rawURL string) error {
+	parsedURL, err := url.ParseRequestURI(rawURL)
+	if err != nil {
+		return err
+	}
+
+	switch parsedURL.Scheme {
+	case "http", "https":
+	default:
+		return fmt.Errorf("unsupported URL scheme %q", parsedURL.Scheme)
+	}
+
+	if parsedURL.Hostname() == "" {
+		return errors.New("URL must include a hostname")
+	}
+
+	if port := parsedURL.Port(); port != "" {
+		if _, err := strconv.Atoi(port); err != nil {
+			return fmt.Errorf("invalid URL port %q: %w", port, err)
+		}
+	}
+
+	return nil
+}
+
 func (t *Translator) ProcessEnvoyExtensionPolicies(
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	gateways []*GatewayContext,
@@ -77,6 +103,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// The routes are grouped by sectionNames of their targetRefs.
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
+	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
 
 	// Translate
@@ -86,15 +114,15 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// 4. Finally, the policies targeting Gateways
 
 	// Process the policies targeting RouteRules
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
+		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
-			// If the target is not a gateway, then it's an xRoute. If the section name is defined, then it's a route rule.
-			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
+			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -106,15 +134,21 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting xRoutes
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
+		targetRefs := resolvePolicyTargets(
+			currPolicy.Spec.PolicyTargetReferences,
+			routes,
+			resources.ReferenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindEnvoyExtensionPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace)
 		for _, currTarget := range targetRefs {
-			// If the target is not a gateway, then it's an xRoute. If the section name is not defined, then it's a route.
-			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
+			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -126,15 +160,15 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting Listeners
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
+		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
-			// If the target is a gateway and the section name is defined, then it's a listener.
-			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
+			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -146,15 +180,21 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting Gateways
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
+		targetRefs := resolvePolicyTargets(
+			currPolicy.Spec.PolicyTargetReferences,
+			gateways,
+			resources.ReferenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindEnvoyExtensionPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace)
 		for _, currTarget := range targetRefs {
-			// If the target is a gateway and the section name is not defined, then it's a gateway.
-			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
+			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -180,7 +220,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.EnvoyExtensionPolicy,
-	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	currTarget policyTargetReferenceWithSectionName,
 ) {
 	var (
 		targetedRoute RouteContext
@@ -188,7 +228,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 		resolveErr    *status.PolicyResolveError
 	)
 
-	targetedRoute, resolveErr = resolveEnvoyExtensionPolicyRouteTargetRef(policy, currTarget, routeMap)
+	targetedRoute, resolveErr = resolveEnvoyExtensionPolicyRouteTargetRef(currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -265,7 +305,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	key := policyTargetRouteKey{
 		Kind:      string(currTarget.Kind),
 		Name:      string(currTarget.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(currTarget.Namespace),
 	}
 	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
@@ -287,14 +327,14 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.EnvoyExtensionPolicy,
-	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	currTarget policyTargetReferenceWithSectionName,
 ) {
 	var (
 		targetedGateway *GatewayContext
 		resolveErr      *status.PolicyResolveError
 	)
 
-	targetedGateway, resolveErr = resolveEnvoyExtensionPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+	targetedGateway, resolveErr = resolveEnvoyExtensionPolicyGatewayTargetRef(currTarget, gatewayMap)
 	// Skip if the gateway is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -354,14 +394,13 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 }
 
 func resolveEnvoyExtensionPolicyGatewayTargetRef(
-	policy *egv1a1.EnvoyExtensionPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(target.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(target.Namespace),
 	}
 	gateway, ok := gateways[key]
 
@@ -416,15 +455,14 @@ func resolveEnvoyExtensionPolicyGatewayTargetRef(
 }
 
 func resolveEnvoyExtensionPolicyRouteTargetRef(
-	policy *egv1a1.EnvoyExtensionPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
 ) (RouteContext, *status.PolicyResolveError) {
 	// Check if the route exists
 	key := policyTargetRouteKey{
 		Kind:      string(target.Kind),
 		Name:      string(target.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(target.Namespace),
 	}
 
 	route, ok := routes[key]
@@ -477,7 +515,7 @@ func resolveEnvoyExtensionPolicyRouteTargetRef(
 func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	route RouteContext,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
 ) error {
@@ -516,7 +554,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		}
 
 		var extProcs []ir.ExtProc
-		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); extProcError != nil {
+		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx); extProcError != nil {
 			extProcError = perr.WithMessage(extProcError, "ExtProc")
 			errs = errors.Join(errs, extProcError)
 		}
@@ -562,7 +600,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 						}
 						if failRoute {
 							r.DirectResponse = &ir.CustomResponse{
-								StatusCode: ptr.To(uint32(500)),
+								StatusCode: new(uint32(500)),
 							}
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
@@ -591,7 +629,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	policy *egv1a1.EnvoyExtensionPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	gateway *GatewayContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
@@ -606,7 +644,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		errs                                                  error
 	)
 
-	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway.envoyProxy); extProcError != nil {
+	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway); extProcError != nil {
 		extProcError = perr.WithMessage(extProcError, "ExtProc")
 		errs = errors.Join(errs, extProcError)
 	}
@@ -665,7 +703,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 			}
 			if failRoute {
 				r.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(r.Name)
 			} else {
@@ -767,7 +805,7 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 	}
 }
 
-func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error, bool) {
+func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, gtwCtx *GatewayContext) ([]ir.ExtProc, error, bool) {
 	var (
 		failOpen bool
 		errs     error
@@ -782,7 +820,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
+		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -806,7 +844,7 @@ func (t *Translator) buildExtProc(
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy,
+	gtwCtx *GatewayContext,
 ) (*ir.ExtProc, error) {
 	var (
 		rd        *ir.RouteDestination
@@ -814,7 +852,7 @@ func (t *Translator) buildExtProc(
 		err       error
 	)
 
-	if rd, err = t.translateExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, envoyProxy, "extproc", extProcIdx); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, gtwCtx, "extproc", extProcIdx); err != nil {
 		return nil, err
 	}
 
@@ -859,7 +897,7 @@ func (t *Translator) buildExtProc(
 		if extProc.ProcessingMode.Request != nil {
 			extProcIR.RequestHeaderProcessing = true
 			if extProc.ProcessingMode.Request.Body != nil {
-				extProcIR.RequestBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
+				extProcIR.RequestBodyProcessingMode = new(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
 			}
 
 			if extProc.ProcessingMode.Request.Attributes != nil {
@@ -870,7 +908,7 @@ func (t *Translator) buildExtProc(
 		if extProc.ProcessingMode.Response != nil {
 			extProcIR.ResponseHeaderProcessing = true
 			if extProc.ProcessingMode.Response.Body != nil {
-				extProcIR.ResponseBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
+				extProcIR.ResponseBodyProcessingMode = new(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
 			}
 
 			if extProc.ProcessingMode.Response.Attributes != nil {
@@ -1190,33 +1228,64 @@ func (t *Translator) buildDynamicModules(
 			continue
 		}
 
-		// Resolve module path from source
-		if entry.Source.Type != nil && *entry.Source.Type == egv1a1.RemoteDynamicModuleSourceType {
-			errs = errors.Join(errs, fmt.Errorf("dynamic module %q uses remote source which is not yet implemented", dm.Name))
-			continue
-		}
-		if entry.Source.Local == nil {
-			errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no local source configured", dm.Name))
-			continue
-		}
-		path := entry.Source.Local.Path
-
-		filterName := ""
-		if dm.FilterName != nil {
-			filterName = *dm.FilterName
-		}
+		filterName := ptr.Deref(dm.FilterName, "")
 
 		dmIR := ir.DynamicModule{
 			Name:           name,
-			Path:           path,
 			FilterName:     filterName,
 			Config:         dm.Config,
 			DoNotClose:     ptr.Deref(entry.DoNotClose, false),
 			LoadGlobally:   ptr.Deref(entry.LoadGlobally, false),
 			TerminalFilter: ptr.Deref(dm.TerminalFilter, false),
 		}
+
+		switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalDynamicModuleSourceType); sourceType {
+		case egv1a1.RemoteDynamicModuleSourceType:
+			if entry.Source.Remote == nil {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no remote source configured", dm.Name))
+				continue
+			}
+			if entry.Source.Remote.URL == "" {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no remote source URL configured", dm.Name))
+				continue
+			}
+			if entry.Source.Remote.SHA256 == "" {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no remote source SHA256 configured", dm.Name))
+				continue
+			}
+			if err := validateDynamicModuleRemoteURL(entry.Source.Remote.URL); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has invalid remote source URL %q: %w", dm.Name, entry.Source.Remote.URL, err))
+				continue
+			}
+			dmIR.Remote = &ir.RemoteDynamicModuleSource{
+				URL:    entry.Source.Remote.URL,
+				SHA256: entry.Source.Remote.SHA256,
+			}
+		case egv1a1.LocalDynamicModuleSourceType:
+			if entry.Source.Local == nil {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no local source configured", dm.Name))
+				continue
+			}
+			dmIR.Path = entry.Source.Local.Path
+		default:
+			errs = errors.Join(errs, fmt.Errorf("dynamic module %q has unsupported source type %q", dm.Name, sourceType))
+			continue
+		}
+
 		dmIRList = append(dmIRList, dmIR)
 	}
 
 	return dmIRList, errs
+}
+
+// envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func envoyExtensionPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyExtensionPolicy) []*egv1a1.EnvoyExtensionPolicy {
+	copies := make([]*egv1a1.EnvoyExtensionPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

@@ -284,6 +284,11 @@ securityPolicies:
         reason: Overridden
         status: "True"
         type: Overridden
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
@@ -400,12 +405,12 @@ xdsIR:
                 clientCIDRs:
                 - cidr: 192.168.1.0/24
                   distinct: false
-                  ip: 192.168.1.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
                 - cidr: 192.168.2.0/24
                   distinct: false
-                  ip: 192.168.2.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
             - action: Deny
@@ -414,12 +419,12 @@ xdsIR:
                 clientCIDRs:
                 - cidr: 10.75.1.0/24
                   distinct: false
-                  ip: 10.75.1.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
                 - cidr: 10.75.2.0/24
                   distinct: false
-                  ip: 10.75.2.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
       - destination:
@@ -462,12 +467,12 @@ xdsIR:
                 clientCIDRs:
                 - cidr: 10.0.1.0/24
                   distinct: false
-                  ip: 10.0.1.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
                 - cidr: 10.0.2.0/24
                   distinct: false
-                  ip: 10.0.2.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
     readyListener:

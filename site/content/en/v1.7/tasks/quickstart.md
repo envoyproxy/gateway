@@ -105,7 +105,7 @@ Here is a suggested list of follow-on tasks to guide you in your exploration of 
 - [Global Rate Limit](traffic/global-rate-limit/)
 - [gRPC Routing](traffic/grpc-routing/)
 
-Review the [Tasks](./) section for the scenario matching your use case.  The Envoy Gateway tasks are organized by category: traffic management, security, extensibility, observability, and operations.
+Review the [Tasks](_index.md) section for the scenario matching your use case.  The Envoy Gateway tasks are organized by category: traffic management, security, extensibility, observability, and operations.
 
 ## Clean-Up
 
@@ -123,6 +123,6 @@ Delete the Gateway API CRDs and Envoy Gateway:
 helm uninstall eg -n envoy-gateway-system
 ```
 
-[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[GatewayClass]: https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/

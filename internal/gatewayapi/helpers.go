@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -517,35 +518,71 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 }
 
 // irTLSConfigs produces a defaulted IR TLSConfig
-func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
-	if len(tlsSecrets) == 0 {
+func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
+	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
 
 	tlsListenerConfigs := &ir.TLSConfig{
-		Certificates: make([]ir.TLSCertificate, len(tlsSecrets)),
+		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
-	for i, tlsSecret := range tlsSecrets {
-		cert := ir.TLSCertificate{
-			Name:        irTLSListenerConfigName(tlsSecret),
-			Certificate: tlsSecret.Data[corev1.TLSCertKey],
-			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
-		}
-
-		ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
-		if ok && len(ocspStaple) > 0 {
-			cert.OCSPStaple = ocspStaple
-		}
+	for i, tlsSecret := range config.secrets {
+		cert := getTLSCertificateFromSecret(tlsSecret)
 		tlsListenerConfigs.Certificates[i] = cert
+	}
+
+	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
+		tlsListenerConfigs.CACertificate = config.frontendTLSValidation.TLSCACertificate
+		tlsListenerConfigs.ClientValidationEnabled = true
+		convertClientValidationModeType(config.frontendTLSValidation.Mode, tlsListenerConfigs)
+		// TODO: setTLSClientValidationContext when Gateway API support.
 	}
 
 	return tlsListenerConfigs
 }
 
+func convertClientValidationModeType(mode egv1a1.ClientValidationModeType, irTLSConfig *ir.TLSConfig) {
+	switch mode {
+	case egv1a1.ClientValidationRequest:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationRequireAny:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationVerifyIfGiven:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = false
+	case egv1a1.ClientValidationRequireAndVerify:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	default:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	}
+}
+
+func isValidClientCertificateRef(tlsSecret *corev1.Secret) bool {
+	return tlsSecret.Data[corev1.TLSCertKey] != nil && tlsSecret.Data[corev1.TLSPrivateKeyKey] != nil
+}
+
+func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
+	cert := ir.TLSCertificate{
+		Name:        irTLSListenerConfigName(tlsSecret),
+		Certificate: tlsSecret.Data[corev1.TLSCertKey],
+		PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
+	}
+
+	ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
+	if ok && len(ocspStaple) > 0 {
+		cert.OCSPStaple = ocspStaple
+	}
+	return cert
+}
+
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
 // for TCP/TLS routes, e.g. disabling ALPN
-func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
-	tlsListenerConfigs := irTLSConfigs(tlsSecrets...)
+func irTLSConfigsForTCPListener(config *ListenerTLSConfig) *ir.TLSConfig {
+	tlsListenerConfigs := irTLSConfigs(config)
 
 	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
 	// by setting an empty slice instead of a nil slice
@@ -558,6 +595,21 @@ func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 
 func irTLSListenerConfigName(secret *corev1.Secret) string {
 	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
+}
+
+func irGatewayTLSCACertName(gtw *gwapiv1.Gateway, suffix string) string {
+	return fmt.Sprintf("gateway/%s/%s/%s/%s", gtw.Namespace, gtw.Name, suffix, CACertKey)
+}
+
+func frontendValidationMode(mode gwapiv1.FrontendValidationModeType) egv1a1.ClientValidationModeType {
+	switch mode {
+	case gwapiv1.AllowValidOnly:
+		return egv1a1.ClientValidationRequireAndVerify
+	case gwapiv1.AllowInsecureFallback:
+		return egv1a1.ClientValidationRequest
+	default:
+		return egv1a1.ClientValidationRequireAndVerify
+	}
 }
 
 func irTLSCACertName(namespace, name string) string {
@@ -663,7 +715,6 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 	mask, _ := ipn.Mask.Size()
 	return &ir.CIDRMatch{
 		CIDR:    ipn.String(),
-		IP:      ip.String(),
 		MaskLen: uint32(mask),
 		IsIPv6:  ip.To4() == nil,
 	}, nil
@@ -677,8 +728,62 @@ func irConfigName(policy client.Object) string {
 }
 
 type targetRefWithTimestamp struct {
-	gwapiv1.LocalPolicyTargetReferenceWithSectionName
+	policyTargetReferenceWithSectionName
 	CreationTimestamp metav1.Time
+}
+
+// policyTargetReferenceWithSectionName extends the Gateway API's LocalPolicyTargetReference to include a Namespace field.
+// This is necessary because policies may reference targets in other namespaces.
+type policyTargetReferenceWithSectionName struct {
+	// Group is the group of the target resource.
+	// +required
+	Group gwapiv1.Group `json:"group"`
+
+	// Kind is kind of the target resource.
+	// +required
+	Kind gwapiv1.Kind `json:"kind"`
+
+	// Name is the name of the target resource.
+	// +required
+	Name gwapiv1.ObjectName `json:"name"`
+
+	// Namespace is the namespace of the target resource. When unspecified, it is assumed to be in the same namespace as the policy.
+	Namespace gwapiv1.Namespace `json:"namespace"`
+
+	// SectionName is the name of a section within the target resource. When
+	// unspecified, this targetRef targets the entire resource. In the following
+	// resources, SectionName is interpreted as the following:
+	//
+	// * Gateway: Listener name
+	// * HTTPRoute: HTTPRouteRule name
+	// * Service: Port name
+	//
+	// If a SectionName is specified, but does not exist on the targeted object,
+	// the Policy must fail to attach, and the policy implementation should record
+	// a `ResolvedRefs` or similar Condition in the Policy's status.
+	//
+	// +optional
+	SectionName *gwapiv1.SectionName `json:"sectionName,omitempty"`
+}
+
+func isRouteRule(target policyTargetReferenceWithSectionName) bool {
+	// If the target is not a gateway and the section name is not nil, then it's a route rule.
+	return target.Kind != resource.KindGateway && target.SectionName != nil
+}
+
+func isRoute(target policyTargetReferenceWithSectionName) bool {
+	// If the target is not a gateway and the section name is nil, then it's a route.
+	return target.Kind != resource.KindGateway && target.SectionName == nil
+}
+
+func isGateway(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a gateway and the section name is nil, then it's a gateway.
+	return target.Kind == resource.KindGateway && target.SectionName == nil
+}
+
+func isListener(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a gateway and the section name is not nil, then it's a listener.
+	return target.Kind == resource.KindGateway && target.SectionName != nil
 }
 
 func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector {
@@ -693,6 +798,250 @@ func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector 
 	return l
 }
 
+func targetNamespaceLabelSelector(namespaces *egv1a1.TargetSelectorNamespaces) labels.Selector {
+	if namespaces == nil || namespaces.Selector == nil {
+		return labels.Nothing()
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(namespaces.Selector)
+	if err != nil {
+		return labels.Nothing()
+	}
+
+	return selector
+}
+
+func targetSelectorNamespacesMatch(
+	namespaces *egv1a1.TargetSelectorNamespaces,
+	policyNamespace,
+	targetNamespace string,
+	targetNamespaceLabels map[string]string,
+) bool {
+	if namespaces == nil {
+		return targetNamespace == policyNamespace
+	}
+
+	switch namespaces.From {
+	case "", egv1a1.TargetNamespaceFromSame:
+		return targetNamespace == policyNamespace
+	case egv1a1.TargetNamespaceFromAll:
+		return true
+	case egv1a1.TargetNamespaceFromSelector:
+		if targetNamespaceLabels == nil {
+			return false
+		}
+		return targetNamespaceLabelSelector(namespaces).Matches(labels.Set(targetNamespaceLabels))
+	default:
+		return false
+	}
+}
+
+func targetNamespaceMatches(
+	selector egv1a1.TargetSelector,
+	policyNamespace,
+	targetNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) bool {
+	var targetNamespaceLabels map[string]string
+	if namespaceLookup != nil {
+		if ns := namespaceLookup(targetNamespace); ns != nil {
+			targetNamespaceLabels = ns.GetLabels()
+		}
+	}
+
+	return targetSelectorNamespacesMatch(selector.Namespaces, policyNamespace, targetNamespace, targetNamespaceLabels)
+}
+
+// isCrossNamespaceReferencePermitted checks if a cross-namespace reference from a policy in one namespace to a target
+// in another namespace is allowed by a ReferenceGrant in the target namespace.
+func isCrossNamespaceReferencePermitted(
+	from crossNamespaceFrom,
+	to crossNamespaceTo,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+) bool {
+	if from.namespace == to.namespace {
+		return true
+	}
+
+	for _, referenceGrant := range referenceGrants {
+		if referenceGrant.Namespace != to.namespace {
+			continue
+		}
+
+		var fromAllowed bool
+		for _, refGrantFrom := range referenceGrant.Spec.From {
+			if string(refGrantFrom.Namespace) == from.namespace &&
+				string(refGrantFrom.Group) == from.group &&
+				string(refGrantFrom.Kind) == from.kind {
+				fromAllowed = true
+				break
+			}
+		}
+		if !fromAllowed {
+			continue
+		}
+
+		for _, refGrantTo := range referenceGrant.Spec.To {
+			if string(refGrantTo.Group) == to.group &&
+				string(refGrantTo.Kind) == to.kind &&
+				(refGrantTo.Name == nil || *refGrantTo.Name == "" || string(*refGrantTo.Name) == to.name) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// resolvePolicyTargetsFromSelectors returns policy target refs allowed by the policy's TargetSelectors.
+func resolvePolicyTargetsFromSelectors[T client.Object](
+	targetSelectors []egv1a1.TargetSelector,
+	potentialTargets []T,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyGroup string,
+	policyKind string,
+	policyNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) []targetRefWithTimestamp {
+	allowedDedup := sets.New[targetRefWithTimestamp]()
+	targetRefs := make([]targetRefWithTimestamp, 0)
+	for _, currSelector := range targetSelectors {
+		labelSelector := selectorFromTargetSelector(currSelector)
+		for _, obj := range potentialTargets {
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			if gvk.Kind != string(currSelector.Kind) ||
+				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1.GroupName)) {
+				continue
+			}
+
+			// Check if the target object's namespace matches the selector's namespace criteria.
+			if !targetNamespaceMatches(currSelector, policyNamespace, obj.GetNamespace(), namespaceLookup) {
+				continue
+			}
+
+			ref := policyTargetReferenceWithSectionName{
+				Group:     gwapiv1.Group(gvk.Group),
+				Kind:      gwapiv1.Kind(gvk.Kind),
+				Name:      gwapiv1.ObjectName(obj.GetName()),
+				Namespace: gwapiv1.Namespace(obj.GetNamespace()),
+			}
+
+			// Check if the target object's labels match the selector's label criteria.
+			if !labelSelector.Matches(labels.Set(obj.GetLabels())) {
+				continue
+			}
+
+			// Check if cross-namespace reference is allowed if the policy and target are in different namespaces.
+			if !isCrossNamespaceReferencePermitted(
+				crossNamespaceFrom{
+					group:     policyGroup,
+					kind:      policyKind,
+					namespace: policyNamespace,
+				},
+				crossNamespaceTo{
+					group:     gvk.Group,
+					kind:      gvk.Kind,
+					namespace: obj.GetNamespace(),
+					name:      obj.GetName(),
+				},
+				referenceGrants,
+			) {
+				continue
+			}
+
+			targetRef := targetRefWithTimestamp{
+				CreationTimestamp:                    obj.GetCreationTimestamp(),
+				policyTargetReferenceWithSectionName: ref,
+			}
+			if allowedDedup.Has(targetRef) {
+				continue
+			}
+			allowedDedup.Insert(targetRef)
+			targetRefs = append(targetRefs, targetRef)
+		}
+	}
+
+	return targetRefs
+}
+
+// resolvePolicyTargetsFromReferences returns a list of policy target refs specified in the policy's TargetRefs, with the namespace field populated.
+func resolvePolicyTargetsFromReferences(
+	targetRefs egv1a1.PolicyTargetReferences,
+	policyNamespace string,
+) []policyTargetReferenceWithSectionName {
+	refs := targetRefs.GetTargetRefs()
+	ret := make([]policyTargetReferenceWithSectionName, 0, len(refs))
+	var emptyTargetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName
+	for _, v := range refs {
+		if v == emptyTargetRef {
+			// This can happen when the targetRef structure is read from extension server policies
+			continue
+		}
+		ret = append(ret, policyTargetReferenceWithSectionName{
+			Group:       v.Group,
+			Kind:        v.Kind,
+			Name:        v.Name,
+			Namespace:   gwapiv1.Namespace(policyNamespace),
+			SectionName: v.SectionName,
+		})
+	}
+
+	return ret
+}
+
+// composePolicyTargetRefs combines the allowed target refs derived from the selectors and the plain target refs specified in the policy.
+func composePolicyTargetRefs(
+	selectorTargetRefs []targetRefWithTimestamp,
+	plainTargetRefs []policyTargetReferenceWithSectionName,
+) []policyTargetReferenceWithSectionName {
+	// First add the target refs derived from the selectors, sorted by the creation timestamp of the matched objects.
+	slices.SortFunc(selectorTargetRefs, func(i, j targetRefWithTimestamp) int {
+		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
+	})
+	ret := make([]policyTargetReferenceWithSectionName, len(selectorTargetRefs))
+	for i, v := range selectorTargetRefs {
+		ret[i] = v.policyTargetReferenceWithSectionName
+	}
+
+	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
+	// to targets that were already found via the selectors. Only add them to the returned list if
+	// they are not yet there. Always add them at the end.
+	fastLookup := sets.New(ret...)
+	for _, targetRef := range plainTargetRefs {
+		if !fastLookup.Has(targetRef) {
+			ret = append(ret, targetRef)
+		}
+	}
+
+	return ret
+}
+
+// resolvePolicyTargets returns a list of policy target refs that are allowed by the policy's TargetSelectors.
+// The list includes both target refs derived from the selectors and plain target refs specified in the policy.
+func resolvePolicyTargets[T client.Object](
+	targetRefs egv1a1.PolicyTargetReferences,
+	potentialTargets []T,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyGroup string,
+	policyKind string,
+	policyNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) []policyTargetReferenceWithSectionName {
+	selectorTargetRefs := resolvePolicyTargetsFromSelectors(
+		targetRefs.TargetSelectors,
+		potentialTargets,
+		referenceGrants,
+		policyGroup,
+		policyKind,
+		policyNamespace,
+		namespaceLookup)
+	plainTargetRefs := resolvePolicyTargetsFromReferences(targetRefs, policyNamespace)
+	return composePolicyTargetRefs(selectorTargetRefs, plainTargetRefs)
+}
+
+// legacy function to get policy target refs without considering cross-namespace policy attachment.
+// This is only used for extension server policies.
+// TODO: add cross-namesapce policy attachment to extension server if needed, and remove this function.
 func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T, policyNamespace string) []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
@@ -712,12 +1061,10 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 			if labelSelector.Matches(labels.Set(obj.GetLabels())) {
 				dedup.Insert(targetRefWithTimestamp{
 					CreationTimestamp: obj.GetCreationTimestamp(),
-					LocalPolicyTargetReferenceWithSectionName: gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Group: gwapiv1.Group(gvk.Group),
-							Kind:  gwapiv1.Kind(gvk.Kind),
-							Name:  gwapiv1.ObjectName(obj.GetName()),
-						},
+					policyTargetReferenceWithSectionName: policyTargetReferenceWithSectionName{
+						Group: gwapiv1.Group(gvk.Group),
+						Kind:  gwapiv1.Kind(gvk.Kind),
+						Name:  gwapiv1.ObjectName(obj.GetName()),
 					},
 				})
 			}
@@ -729,7 +1076,14 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	})
 	ret := make([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, len(selectorsList))
 	for i, v := range selectorsList {
-		ret[i] = v.LocalPolicyTargetReferenceWithSectionName
+		ret[i] = gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+				Group: v.Group,
+				Kind:  v.Kind,
+				Name:  v.Name,
+			},
+			SectionName: v.SectionName,
+		}
 	}
 	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
 	// to targets that were already found via the selectors. Only add them to the returned list if
@@ -781,19 +1135,19 @@ func getServiceIPFamily(service *corev1.Service) *egv1a1.IPFamily {
 	// If ipFamilyPolicy is RequireDualStack, return DualStack
 	if service.Spec.IPFamilyPolicy != nil &&
 		*service.Spec.IPFamilyPolicy == corev1.IPFamilyPolicyRequireDualStack {
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	}
 
 	// Check ipFamilies array
 	if len(service.Spec.IPFamilies) > 0 {
 		if len(service.Spec.IPFamilies) > 1 {
-			return ptr.To(egv1a1.DualStack)
+			return new(egv1a1.DualStack)
 		}
 		switch service.Spec.IPFamilies[0] {
 		case corev1.IPv4Protocol:
-			return ptr.To(egv1a1.IPv4)
+			return new(egv1a1.IPv4)
 		case corev1.IPv6Protocol:
-			return ptr.To(egv1a1.IPv6)
+			return new(egv1a1.IPv6)
 		}
 	}
 
@@ -808,11 +1162,11 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 
 	switch *envoyProxy.Spec.IPFamily {
 	case egv1a1.IPv4:
-		return ptr.To(egv1a1.IPv4)
+		return new(egv1a1.IPv4)
 	case egv1a1.IPv6:
-		return ptr.To(egv1a1.IPv6)
+		return new(egv1a1.IPv6)
 	case egv1a1.DualStack:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	default:
 		return nil
 	}

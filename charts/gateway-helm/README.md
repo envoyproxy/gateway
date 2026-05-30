@@ -35,6 +35,11 @@ Once Helm has been set up correctly, install the chart from dockerhub:
 ``` shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
+This command installs both Gateway API CRDs and Envoy Gateway CRDs. If your Kubernetes provider already manages
+Gateway API CRDs for the cluster, confirm that the provider-installed Gateway API version and channel are compatible
+with the Envoy Gateway release and the Gateway API resources you plan to use. If they are compatible, install only the
+Envoy Gateway CRDs separately and use `--skip-crds` when installing this chart.
+
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-helm/tags)
 
 ### Install from Source Code
@@ -49,7 +54,21 @@ make kube-deploy TAG=latest
 
 ### Skip install CRDs
 
-You can install the eg chart along without Gateway API CRDs and Envoy Gateway CRDs, make sure CRDs exist in Cluster first if you want to skip to install them, otherwise EG may fail to start:
+You can install the eg chart without Gateway API CRDs and Envoy Gateway CRDs. Make sure the CRDs exist in the cluster
+before installing the chart with `--skip-crds`, otherwise Envoy Gateway may fail to start.
+
+If your Kubernetes provider manages compatible Gateway API CRDs, install only the Envoy Gateway CRDs from the
+`gateway-crds-helm` chart first:
+
+``` shell
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm --set 'crds.gatewayAPI.enabled=false' --set 'crds.envoyGateway.enabled=true' \
+    --version v0.0.0-latest | kubectl apply --server-side -f -
+```
+
+If the provider-managed Gateway API CRDs are not compatible, use a compatible Gateway API CRD installation method for
+the cluster first, then install this chart with `--skip-crds`.
+
+After the required CRDs are installed, install the eg chart with `--skip-crds`:
 
 ``` shell
 helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds
@@ -70,6 +89,7 @@ helm uninstall eg -n envoy-gateway-system
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | createNamespace | bool | `false` |  |
 | deployment.annotations | object | `{}` |  |
+| deployment.envoyGateway.extraEnv | list | `[]` | Additional environment variables for the envoy-gateway container. |
 | deployment.envoyGateway.image.repository | string | `""` |  |
 | deployment.envoyGateway.image.tag | string | `""` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `""` |  |
@@ -87,8 +107,14 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
+| deployment.pod.extraVolumeMounts | list | `[]` |  |
+| deployment.pod.extraVolumes | list | `[]` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
+| deployment.pod.securityContext.runAsGroup | int | `65532` |  |
+| deployment.pod.securityContext.runAsNonRoot | bool | `true` |  |
+| deployment.pod.securityContext.runAsUser | int | `65532` |  |
+| deployment.pod.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | deployment.pod.tolerations | list | `[]` |  |
 | deployment.pod.topologySpreadConstraints | list | `[]` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |
@@ -110,6 +136,9 @@ helm uninstall eg -n envoy-gateway-system
 | global.images.envoyGateway.image | string | `nil` |  |
 | global.images.envoyGateway.pullPolicy | string | `nil` |  |
 | global.images.envoyGateway.pullSecrets | list | `[]` |  |
+| global.images.envoyProxy.image | string | `""` |  |
+| global.images.envoyProxy.pullPolicy | string | `""` |  |
+| global.images.envoyProxy.pullSecrets | list | `[]` |  |
 | global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |

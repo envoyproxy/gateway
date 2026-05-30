@@ -46,7 +46,7 @@ func NewBackendTrafficPolicyInformer(client versioned.Interface, namespace strin
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredBackendTrafficPolicyInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -71,7 +71,7 @@ func NewFilteredBackendTrafficPolicyInformer(client versioned.Interface, namespa
 				}
 				return client.GatewayV1alpha1().BackendTrafficPolicies(namespace).Watch(ctx, options)
 			},
-		},
+		}, client),
 		&gatewayapiv1alpha1.BackendTrafficPolicy{},
 		resyncPeriod,
 		indexers,

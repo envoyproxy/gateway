@@ -168,7 +168,18 @@ func trafficUpgradeConnect(trafficFeatures *ir.TrafficFeatures) bool {
 }
 
 func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAction_UpgradeConfig {
-	if trafficFeatures == nil || trafficFeatures.HTTPUpgrade == nil {
+	if trafficFeatures == nil {
+		return defaultUpgradeConfig
+	}
+
+	if len(trafficFeatures.HTTPUpgrade) == 0 {
+		// If requestBuffer is configured, return nil to disable HTTP upgrades.
+		// Buffering is not compatible with upgrades because the buffer filter waits
+		// for the entire request body before processing, which can cause the client
+		// to time out.
+		if trafficFeatures.RequestBuffer != nil {
+			return nil
+		}
 		return defaultUpgradeConfig
 	}
 
@@ -376,7 +387,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	// According to the Gateway API:
 	// 500 status code should be returned for invalid HTTPBackendRef
 	// 503 status code should be returned for Services without ready endpoints
-	// Reference: https://gateway-api.sigs.k8s.io/reference/spec/#httprouterule
+	// Reference: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule
 	clusterNotFoundResponseCode := routev3.RouteAction_INTERNAL_SERVER_ERROR
 	// Envoy can't handle mixed 500 and 503 responses, so we use 503 when both invalid and empty
 	if backendWeights.NoEndpoints > 0 {
@@ -567,28 +578,25 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 	}
 
 	if urlRewrite.Host != nil {
-		// For DFP use cases, route-level host literal/header rewrites are not used, and instead DFP per-filter config is used, see here:
-		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/dynamic_forward_proxy/v3/dynamic_forward_proxy.proto#envoy-v3-api-msg-extensions-filters-http-dynamic-forward-proxy-v3-perrouteconfig
-		// Auto Host rewrites are only supported for strict/logical DNS clusters, so not relevant for DFP, see here:
-		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
-		if !route.IsDynamicResolverRoute() {
-			switch {
-			case urlRewrite.Host.Name != nil:
-				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
-					HostRewriteLiteral: *urlRewrite.Host.Name,
-				}
-			case urlRewrite.Host.Header != nil:
-				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
-					HostRewriteHeader: *urlRewrite.Host.Header,
-				}
-			case urlRewrite.Host.Backend != nil:
-				routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
-					AutoHostRewrite: wrapperspb.Bool(true),
-				}
+		switch {
+		case urlRewrite.Host.Name != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
+				HostRewriteLiteral: *urlRewrite.Host.Name,
+			}
+		case urlRewrite.Host.Header != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
+				HostRewriteHeader: *urlRewrite.Host.Header,
+			}
+		case urlRewrite.Host.Backend != nil && !route.IsDynamicResolverRoute():
+			// Auto Host rewrite is only supported for non-dynamic resolver routes.
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
+				AutoHostRewrite: wrapperspb.Bool(true),
 			}
 		}
 
-		routeAction.AppendXForwardedHost = true
+		if urlRewrite.AppendXForwardedHost == nil || *urlRewrite.AppendXForwardedHost {
+			routeAction.AppendXForwardedHost = true
+		}
 	}
 
 	return routeAction

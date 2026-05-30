@@ -16,7 +16,6 @@ xds:
             resourceApiVersion: V3
           serviceName: httproute/default/backend/rule/0
         ignoreHealthOnHostRemoval: true
-        lbPolicy: LEAST_REQUEST
         loadBalancingPolicy:
           policies:
           - typedExtensionConfig:
@@ -49,7 +48,6 @@ xds:
             resourceApiVersion: V3
           serviceName: grpcroute/default/backend/rule/0
         ignoreHealthOnHostRemoval: true
-        lbPolicy: LEAST_REQUEST
         loadBalancingPolicy:
           policies:
           - typedExtensionConfig:
@@ -89,7 +87,6 @@ xds:
             resourceApiVersion: V3
           serviceName: tcproute/default/backend/rule/-1
         ignoreHealthOnHostRemoval: true
-        lbPolicy: LEAST_REQUEST
         loadBalancingPolicy:
           policies:
           - typedExtensionConfig:
@@ -122,7 +119,6 @@ xds:
             resourceApiVersion: V3
           serviceName: tlsroute/default/backend/rule/-1
         ignoreHealthOnHostRemoval: true
-        lbPolicy: LEAST_REQUEST
         loadBalancingPolicy:
           policies:
           - typedExtensionConfig:
@@ -155,7 +151,6 @@ xds:
             resourceApiVersion: V3
           serviceName: udproute/default/backend/rule/-1
         ignoreHealthOnHostRemoval: true
-        lbPolicy: LEAST_REQUEST
         loadBalancingPolicy:
           policies:
           - typedExtensionConfig:

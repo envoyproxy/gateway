@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -42,7 +41,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Addresses: []string{"192.0.2.2"}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 				{
@@ -52,7 +51,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Addresses: []string{"2001:db8::1"}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 			},
@@ -75,7 +74,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Addresses: []string{"192.0.2.1"}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 				{
@@ -85,7 +84,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Addresses: []string{"example.com"}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 			},
@@ -108,7 +107,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Addresses: []string{"192.0.2.2"}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 				{
@@ -119,7 +118,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Addresses: []string{"2001:db8::2"}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 			},
@@ -143,7 +142,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Addresses: []string{"192.0.2.1"}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 				{
@@ -153,7 +152,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Addresses: []string{"2001:db8::1"}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 				{
@@ -163,7 +162,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Addresses: []string{"example.com"}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 			},
@@ -184,17 +183,17 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"192.0.2.1"}, Conditions: discoveryv1.EndpointConditions{
-							Ready: ptr.To(false), Serving: ptr.To(true), Terminating: ptr.To(true),
+							Ready: new(false), Serving: new(true), Terminating: new(true),
 						}},
 						{Addresses: []string{"192.0.2.2"}, Conditions: discoveryv1.EndpointConditions{
-							Ready: ptr.To(false), Serving: ptr.To(false), Terminating: ptr.To(true),
+							Ready: new(false), Serving: new(false), Terminating: new(true),
 						}},
 						{Addresses: []string{"192.0.2.3"}, Conditions: discoveryv1.EndpointConditions{
-							Ready: ptr.To(false),
+							Ready: new(false),
 						}},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: new(int32(80)), Protocol: new(corev1.ProtocolTCP)},
 					},
 				},
 			},
@@ -264,20 +263,20 @@ func TestBuildRouteMatchCombinations(t *testing.T) {
 		{
 			name: "rule matches only",
 			ruleMatches: []gwapiv1.HTTPRouteMatch{
-				{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
-				{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")}},
+				{Path: &gwapiv1.HTTPPathMatch{Value: new("/foo")}},
+				{Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")}},
 			},
 			expected: []routeMatchCombination{
-				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}}},
-				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")}}},
+				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: new("/foo")}}},
+				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")}}},
 			},
 		},
 		{
 			name: "rule and filter matches",
 			ruleMatches: []gwapiv1.HTTPRouteMatch{
-				{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+				{Path: &gwapiv1.HTTPPathMatch{Value: new("/foo")}},
 				{
-					Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")},
+					Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")},
 					Headers: []gwapiv1.HTTPHeaderMatch{
 						{Name: "a", Value: "1"},
 						{Name: "b", Value: "2"},
@@ -291,16 +290,16 @@ func TestBuildRouteMatchCombinations(t *testing.T) {
 			},
 			expected: []routeMatchCombination{
 				{
-					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: new("/foo")}},
 					cookies:        []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
 				},
 				{
-					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: new("/foo")}},
 					cookies:        []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}},
 				},
 				{
 					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{
-						Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")},
+						Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")},
 						Headers: []gwapiv1.HTTPHeaderMatch{
 							{Name: "a", Value: "1"},
 							{Name: "b", Value: "2"},
@@ -311,7 +310,7 @@ func TestBuildRouteMatchCombinations(t *testing.T) {
 				},
 				{
 					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{
-						Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")},
+						Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")},
 						Headers: []gwapiv1.HTTPHeaderMatch{
 							{Name: "a", Value: "1"},
 							{Name: "b", Value: "2"},
@@ -369,7 +368,7 @@ func TestValidateDestinationSettings(t *testing.T) {
 			ds: &ir.DestinationSetting{
 				Name:        "mixed",
 				Endpoints:   []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
-				AddressType: ptr.To(ir.MIXED),
+				AddressType: new(ir.MIXED),
 			},
 			endpointRoutingDisabled: false,
 			kind:                    &svcKind,
