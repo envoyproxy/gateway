@@ -1,0 +1,29 @@
+date: Pending
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Fixed xDS server authentication bypass in GatewayNamespaceMode, adding Unary Interceptor and validating SotW requests.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
+  Fixed controller panic when processing backend tls settings.
+  Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
+  Fixed ClientTrafficPolicy TLS cipher validation rejecting supported IANA/RFC cipher suite names.
+  Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
+  Fixed `MaxStreamDuration` not being set on `CommonHttpProtocolOptions` for non-route cluster.
+  Fixed a typo in the gateway-helm HPA `maxReplicas` validation error message.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
