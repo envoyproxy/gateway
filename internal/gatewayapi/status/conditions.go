@@ -38,10 +38,10 @@ func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition)
 			if conditions[j].Type == updates[i].Type {
 				add = false
 				if conditionChanged(&conditions[j], &update) {
-					conditions[j].Status = updates[i].Status
-					conditions[j].Reason = updates[i].Reason
-					conditions[j].Message = updates[i].Message
-					conditions[j].ObservedGeneration = updates[i].ObservedGeneration
+					conditions[j].Status = update.Status
+					conditions[j].Reason = update.Reason
+					conditions[j].Message = update.Message
+					conditions[j].ObservedGeneration = update.ObservedGeneration
 					break
 				}
 			}

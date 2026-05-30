@@ -1,4 +1,4 @@
-date: Pending
+date: June 1, 2026
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
@@ -6,6 +6,7 @@ breaking changes: |
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
   Fixed xDS server authentication bypass in GatewayNamespaceMode, adding Unary Interceptor and validating SotW requests.
+  Bump Envoy ratelimit image to `b8d893f3`.
 
 # New features or capabilities added in this release.
 new features: |
