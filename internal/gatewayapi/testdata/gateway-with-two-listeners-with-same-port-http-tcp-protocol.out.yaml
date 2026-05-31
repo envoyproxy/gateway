@@ -87,9 +87,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -130,8 +130,8 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
+        message: Multiple routes on the same TCP listener
+        reason: UnsupportedValue
         status: "False"
         type: Accepted
       - lastTransitionTime: null

@@ -2300,19 +2300,6 @@ func (t *Translator) processAllowedListenersForParentRefs(
 		}
 		parentRefCtx.SetListeners(allowedListeners...)
 
-		if !HasReadyListener(allowedListeners) {
-			routeStatus := GetRouteStatus(routeContext)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRefCtx.routeParentStatusIdx,
-				routeContext.GetGeneration(),
-				gwapiv1.RouteConditionAccepted,
-				metav1.ConditionFalse,
-				"NoReadyListeners",
-				"There are no ready listeners for this parent ref",
-			)
-			continue
-		}
-
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRefCtx.routeParentStatusIdx,
