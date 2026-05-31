@@ -21,6 +21,7 @@ is only supported on the [HTTPRoute][] resource.
 When configuring CORS either an origin with a precise hostname can be configured or an hostname containing a wildcard prefix,
 allowing all subdomains of the specified hostname.
 In addition to that the entire origin (with or without specifying a scheme) can be a wildcard to allow all origins.
+Origins may use non-HTTP schemes, such as browser extension origins, when the scheme is followed by a valid hostname or wildcard.
 
 ### Configuring CORS with SecurityPolicy
 

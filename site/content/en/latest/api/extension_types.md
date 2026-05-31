@@ -4426,6 +4426,7 @@ For example, the following are valid origins:
 - http://foo.example.com:8080
 - http://*.example.com:8080
 - https://*
+- moz-extension://d653180d-24ac-49fe-8951-892c9ead1d63
 
 _Appears in:_
 - [CORS](#cors)
