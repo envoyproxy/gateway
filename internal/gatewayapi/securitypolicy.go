@@ -40,6 +40,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 const (
@@ -2453,6 +2454,10 @@ func (t *Translator) buildAuthorization(
 		irPrincipal.Headers = rule.Principal.Headers
 		irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations
 
+		if err := validateAuthorizationOperation(rule.Operation); err != nil {
+			return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+		}
+
 		var name string
 		if rule.Name != nil && *rule.Name != "" {
 			name = *rule.Name
@@ -2468,6 +2473,21 @@ func (t *Translator) buildAuthorization(
 	}
 
 	return irAuth, nil
+}
+
+func validateAuthorizationOperation(operation *egv1a1.Operation) error {
+	if operation == nil || operation.Path == nil {
+		return nil
+	}
+
+	switch ptr.Deref(operation.Path.Type, gwapiv1.PathMatchPathPrefix) {
+	case gwapiv1.PathMatchPathPrefix, gwapiv1.PathMatchExact:
+		return nil
+	case gwapiv1.PathMatchRegularExpression:
+		return regex.Validate(operation.Path.Value)
+	default:
+		return fmt.Errorf("invalid path type")
+	}
 }
 
 func validateAuthorizationGeoIP(
