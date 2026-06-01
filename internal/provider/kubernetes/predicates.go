@@ -52,9 +52,9 @@ func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) b
 // hasMatchingNamespaceLabels returns true if the namespace of provided object has
 // the provided labels or false otherwise.
 func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
-	// Controller-namespace events can affect EG-owned infrastructure and should
-	// not be dropped by the user's Gateway API namespace selector.
-	if obj.GetNamespace() == r.namespace {
+	// Keep EG-owned infrastructure events in the controller namespace visible
+	// even when the controller namespace does not match the user selector.
+	if obj.GetNamespace() == r.namespace && isNamespaceSelectorBypassInfrastructureResource(obj) {
 		return true
 	}
 	ok, err := checkObjectNamespaceLabels(context.Background(), r.client, r.namespaceLabel, obj)
@@ -66,6 +66,20 @@ func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) boo
 		return false
 	}
 	return ok
+}
+
+func isNamespaceSelectorBypassInfrastructureResource(obj any) bool {
+	switch obj.(type) {
+	case *appsv1.Deployment, appsv1.Deployment,
+		*appsv1.DaemonSet, appsv1.DaemonSet,
+		*corev1.ConfigMap, corev1.ConfigMap,
+		*corev1.Secret, corev1.Secret,
+		*corev1.Service, corev1.Service,
+		*corev1.ServiceAccount, corev1.ServiceAccount:
+		return true
+	default:
+		return false
+	}
 }
 
 type NamespaceGetter interface {

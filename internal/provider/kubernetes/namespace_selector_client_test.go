@@ -75,17 +75,30 @@ func TestNamespaceSelectorClient(t *testing.T) {
 			GatewayClassName: "test-gc",
 		},
 	}
+	svcInMatchingNs := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "svc-matching",
+			Namespace: "matching-ns",
+		},
+	}
+	svcInNonMatchingNs := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "svc-non-matching",
+			Namespace: "non-matching-ns",
+		},
+	}
 
 	// Get scheme with all required types
 	scheme := envoygateway.GetScheme()
 
 	testCases := []struct {
-		name               string
-		namespaceSelector  *metav1.LabelSelector
-		includedNamespaces []string
-		objects            []runtime.Object
-		expectCTPCount     int
-		expectGWCount      int
+		name                string
+		namespaceSelector   *metav1.LabelSelector
+		controllerNamespace string
+		objects             []runtime.Object
+		expectCTPCount      int
+		expectGWCount       int
+		expectSvcCount      int
 	}{
 		{
 			name:              "nil selector returns all resources",
@@ -94,9 +107,11 @@ func TestNamespaceSelectorClient(t *testing.T) {
 				nsMatching, nsNonMatching,
 				ctpInMatchingNs, ctpInNonMatchingNs,
 				gwInMatchingNs, gwInNonMatchingNs,
+				svcInMatchingNs, svcInNonMatchingNs,
 			},
 			expectCTPCount: 2,
 			expectGWCount:  2,
+			expectSvcCount: 2,
 		},
 		{
 			name: "selector filters resources by namespace labels",
@@ -109,9 +124,11 @@ func TestNamespaceSelectorClient(t *testing.T) {
 				nsMatching, nsNonMatching,
 				ctpInMatchingNs, ctpInNonMatchingNs,
 				gwInMatchingNs, gwInNonMatchingNs,
+				svcInMatchingNs, svcInNonMatchingNs,
 			},
 			expectCTPCount: 1,
 			expectGWCount:  1,
+			expectSvcCount: 1,
 		},
 		{
 			name: "selector with no matching namespaces returns empty",
@@ -124,25 +141,29 @@ func TestNamespaceSelectorClient(t *testing.T) {
 				nsMatching, nsNonMatching,
 				ctpInMatchingNs, ctpInNonMatchingNs,
 				gwInMatchingNs, gwInNonMatchingNs,
+				svcInMatchingNs, svcInNonMatchingNs,
 			},
 			expectCTPCount: 0,
 			expectGWCount:  0,
+			expectSvcCount: 0,
 		},
 		{
-			name: "included namespace bypasses selector",
+			name: "controller namespace only bypasses selector for infrastructure resources",
 			namespaceSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"env": "development",
 				},
 			},
-			includedNamespaces: []string{"non-matching-ns"},
+			controllerNamespace: "non-matching-ns",
 			objects: []runtime.Object{
 				nsMatching, nsNonMatching,
 				ctpInMatchingNs, ctpInNonMatchingNs,
 				gwInMatchingNs, gwInNonMatchingNs,
+				svcInMatchingNs, svcInNonMatchingNs,
 			},
-			expectCTPCount: 1,
-			expectGWCount:  1,
+			expectCTPCount: 0,
+			expectGWCount:  0,
+			expectSvcCount: 1,
 		},
 	}
 
@@ -155,7 +176,7 @@ func TestNamespaceSelectorClient(t *testing.T) {
 				Build()
 
 			// Wrap with namespace selector client
-			wrappedClient := newNamespaceSelectorClient(fakeClient, tc.namespaceSelector, tc.includedNamespaces...)
+			wrappedClient := newNamespaceSelectorClient(fakeClient, tc.namespaceSelector, tc.controllerNamespace)
 
 			ctx := context.Background()
 
@@ -170,6 +191,12 @@ func TestNamespaceSelectorClient(t *testing.T) {
 			err = wrappedClient.List(ctx, gwList)
 			require.NoError(t, err)
 			require.Len(t, gwList.Items, tc.expectGWCount, "Gateway count mismatch")
+
+			// Test Service list filtering
+			svcList := &corev1.ServiceList{}
+			err = wrappedClient.List(ctx, svcList)
+			require.NoError(t, err)
+			require.Len(t, svcList.Items, tc.expectSvcCount, "Service count mismatch")
 		})
 	}
 }
@@ -199,7 +226,7 @@ func TestNamespaceSelectorClientClusterScopedResources(t *testing.T) {
 			"env": "production",
 		},
 	}
-	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector)
+	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector, "")
 
 	ctx := context.Background()
 
@@ -247,7 +274,7 @@ func TestNamespaceSelectorClientNamespaceGetError(t *testing.T) {
 			"env": "production",
 		},
 	}
-	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector)
+	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector, "")
 
 	ctx := context.Background()
 
@@ -271,7 +298,7 @@ func TestNamespaceSelectorClientEmptyList(t *testing.T) {
 			"env": "production",
 		},
 	}
-	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector)
+	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector, "")
 
 	ctx := context.Background()
 
@@ -302,7 +329,7 @@ func TestNamespaceSelectorClientUnderlyingListError(t *testing.T) {
 			"env": "production",
 		},
 	}
-	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector)
+	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector, "")
 
 	ctx := context.Background()
 

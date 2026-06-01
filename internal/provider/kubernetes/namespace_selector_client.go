@@ -11,7 +11,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -21,20 +20,20 @@ import (
 // List operations.
 type namespaceSelectorClient struct {
 	client.Client
-	namespaceSelector  *metav1.LabelSelector
-	includedNamespaces sets.Set[string]
+	namespaceSelector   *metav1.LabelSelector
+	controllerNamespace string
 }
 
 // newNamespaceSelectorClient creates a new namespace-filtered client wrapper.
 // If namespaceSelector is nil, the wrapper passes through all operations unchanged.
-func newNamespaceSelectorClient(c client.Client, namespaceSelector *metav1.LabelSelector, includedNamespaces ...string) client.Client {
+func newNamespaceSelectorClient(c client.Client, namespaceSelector *metav1.LabelSelector, controllerNamespace string) client.Client {
 	if namespaceSelector == nil {
 		return c
 	}
 	return &namespaceSelectorClient{
-		Client:             c,
-		namespaceSelector:  namespaceSelector,
-		includedNamespaces: sets.New(includedNamespaces...),
+		Client:              c,
+		namespaceSelector:   namespaceSelector,
+		controllerNamespace: controllerNamespace,
 	}
 }
 
@@ -89,9 +88,9 @@ func (c *namespaceSelectorClient) filterByNamespaceLabels(ctx context.Context, l
 		}
 
 		ns := obj.GetNamespace()
-		// includedNamespaces are part of EG's own operating surface, e.g. the
-		// controller namespace. They must bypass user namespace selectors.
-		matches := c.includedNamespaces.Has(ns)
+		// Keep EG-owned infrastructure in the controller namespace visible even
+		// when the controller namespace does not match the user selector.
+		matches := ns == c.controllerNamespace && isNamespaceSelectorBypassInfrastructureResource(item)
 		if !matches {
 			cachedMatches, cached := namespaceMatches[ns]
 			matches = cachedMatches
