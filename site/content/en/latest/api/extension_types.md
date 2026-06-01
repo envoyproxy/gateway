@@ -5211,7 +5211,7 @@ _Appears in:_
 | `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | Timeout specifies the timeout period for the proxy to access the ratelimit server<br />If not set, timeout is 20ms. |
 | `failClosed` | _boolean_ |  true  |  | FailClosed is a switch used to control the flow of traffic<br />when the response from the ratelimit server cannot be obtained.<br />If FailClosed is false, let the traffic pass,<br />otherwise, don't let the traffic pass and return 500.<br />If not set, FailClosed is False. |
 | `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  |  | Telemetry defines telemetry configuration for RateLimit. |
-| `url` | _string_ |  false  |  | URL of the RateLimit Service.<br />The default is the Kubernetes service deployed by the Kubernetes Infrastructure manager. |
+| `url` | _string_ |  false  |  | URL of the RateLimit Service.<br />Must be a grpc:// URL with an explicit host and port, e.g. grpc://example.com:50051.<br />The default is the Kubernetes service deployed by the Kubernetes Infrastructure manager. |
 
 
 #### RateLimitCost

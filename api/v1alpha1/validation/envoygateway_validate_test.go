@@ -435,6 +435,126 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
+			name: "ratelimit url without scheme for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("cool-rate-limiter.com:50051"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "ratelimit url with non-grpc scheme for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("https://cool-rate-limiter.com:50051"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "ratelimit url without port for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("grpc://cool-rate-limiter.com"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "ratelimit url without host for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("grpc://:50051"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
 			name: "happy extension settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{

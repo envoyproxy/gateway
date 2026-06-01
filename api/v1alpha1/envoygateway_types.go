@@ -650,6 +650,7 @@ type RateLimit struct {
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
 
 	// URL of the RateLimit Service.
+	// Must be a grpc:// URL with an explicit host and port, e.g. grpc://example.com:50051.
 	// The default is the Kubernetes service deployed by the Kubernetes Infrastructure manager.
 	// +optional
 	URL *string `json:"url"`
