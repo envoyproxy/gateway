@@ -1,0 +1,16 @@
+- clusterName: auto-host-sni-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: example.com
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: auto-host-sni-route-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: auto-host-sni-route-dest/backend/0

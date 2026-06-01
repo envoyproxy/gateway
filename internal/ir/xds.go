@@ -3523,12 +3523,13 @@ type BackOffPolicy struct {
 // TLSUpstreamConfig contains sni and ca file in []byte format.
 // +k8s:deepcopy-gen=true
 type TLSUpstreamConfig struct {
-	SNI                 *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
-	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
-	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
-	TLSConfig           `json:",inline"`
-	SubjectAltNames     []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
-	InsecureSkipVerify  bool             `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
+	SNI                     *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
+	AutoSNIFromUpstreamHost bool              `json:"autoSNIFromUpstreamHost,omitempty" yaml:"autoSNIFromUpstreamHost,omitempty"`
+	UseSystemTrustStore     bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
+	CACertificate           *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+	TLSConfig               `json:",inline"`
+	SubjectAltNames         []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
+	InsecureSkipVerify      bool             `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
 }
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {

@@ -173,6 +173,7 @@ type BackendSpec struct {
 // BackendTLSSettings holds the TLS settings for the backend.
 // +kubebuilder:validation:XValidation:message="must not contain both CACertificateRefs and WellKnownCACertificates",rule="!(has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")"
 // +kubebuilder:validation:XValidation:message="must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled",rule="!((has(self.insecureSkipVerify) && self.insecureSkipVerify) && ((has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")))"
+// +kubebuilder:validation:XValidation:message="sni and autoSNIFromUpstreamHost are mutually exclusive",rule="!(has(self.sni) && has(self.autoSNIFromUpstreamHost) && self.autoSNIFromUpstreamHost)"
 type BackendTLSSettings struct {
 	// CACertificateRefs contains one or more references to Kubernetes objects that
 	// contain TLS certificates of the Certificate Authorities that can be used
@@ -217,6 +218,17 @@ type BackendTLSSettings struct {
 	//
 	// +optional
 	SNI *gwapiv1.PreciseHostname `json:"sni,omitempty"`
+
+	// AutoSNIFromUpstreamHost indicates whether the upstream endpoint's hostname should be used as the SNI value
+	// when establishing a TLS connection to the backend.
+	// This uses the resolved hostname of the upstream endpoint (e.g., from the Backend Endpoints list),
+	// rather than a static value.
+	//
+	// Mutually exclusive with SNI. When a BackendTLSPolicy is attached, its Hostname value takes
+	// precedence and AutoSNIFromUpstreamHost is ignored.
+	//
+	// +optional
+	AutoSNIFromUpstreamHost *bool `json:"autoSNIFromUpstreamHost,omitempty"`
 
 	// BackendTLSConfig defines the client certificate/key as well as TLS protocol parameters such as ciphers, TLS versions,
 	// and ALPN that the Envoy uses when connecting to the backend.

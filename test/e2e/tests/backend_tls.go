@@ -142,6 +142,34 @@ var BackendTLSTest = suite.ConformanceTest{
 			// SNI is rewritten to example.com and DNS SAN validation is done according to this SNI
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
+
+		t.Run("With Backend.TLS.AutoSNIFromUpstreamHost", func(t *testing.T) {
+			// the upstream used is the eg site which doesn't support IPv6 at this time
+			if IPFamily == "ipv6" {
+				t.Skip("Skipping test as IP_FAMILY is IPv6")
+			}
+			routeNN := types.NamespacedName{Name: "http-with-backend-tls-auto-sni-from-upstream-host", Namespace: ConformanceInfraNamespace}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "gateway.envoyproxy.io",
+					Path: "/backend-auto-sni-from-upstream-host",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+			}
+
+			// The SNI is set to the upstream endpoint's hostname at the transport-socket level.
+			// insecureSkipVerify allows the connection to succeed regardless of SAN matching.
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
 	},
 }
 

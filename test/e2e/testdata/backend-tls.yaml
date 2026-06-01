@@ -248,3 +248,44 @@ spec:
       - name: backend-tls-ca
         group: ""
         kind: ConfigMap
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-backend-tls-auto-sni-from-upstream-host
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames:
+    - gateway.envoyproxy.io
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-auto-sni-from-upstream-host
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: backend-with-auto-sni-from-upstream-host
+          group: gateway.envoyproxy.io
+          kind: Backend
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-with-auto-sni-from-upstream-host
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: gateway.envoyproxy.io
+        port: 443
+  tls:
+    # The SNI value is taken from the upstream endpoint hostname (transport socket level)
+    autoSNIFromUpstreamHost: true
+    wellKnownCACertificates: System

@@ -184,8 +184,9 @@ func mergeServerValidationTLSConfigs(
 	if btpValidationTLSConfig.CACertificate != nil {
 		mergedConfig.CACertificate = btpValidationTLSConfig.CACertificate
 	}
-	if btpValidationTLSConfig.SNI != nil {
+	if btpValidationTLSConfig.SNI != nil { // BTP takes precedence for SNI, if set, it will override Backend resource SNI and disable AutoSNIFromUpstreamHost
 		mergedConfig.SNI = btpValidationTLSConfig.SNI
+		mergedConfig.AutoSNIFromUpstreamHost = false
 	}
 	if btpValidationTLSConfig.UseSystemTrustStore {
 		mergedConfig.UseSystemTrustStore = btpValidationTLSConfig.UseSystemTrustStore
@@ -255,7 +256,8 @@ func (t *Translator) processServerValidationTLSSettings(
 	backend *egv1a1.Backend,
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
-		InsecureSkipVerify: ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
+		InsecureSkipVerify:      ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
+		AutoSNIFromUpstreamHost: ptr.Deref(backend.Spec.TLS.AutoSNIFromUpstreamHost, false),
 	}
 
 	if backend.Spec.TLS.SNI != nil {
