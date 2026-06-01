@@ -733,7 +733,6 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 	return merged
 }
 
-// This has to get updated.
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {
 	// nil check for unit tests.
 	if r.statusUpdater == nil {
