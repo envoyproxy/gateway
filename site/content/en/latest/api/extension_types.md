@@ -4405,7 +4405,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `methods` | _[HTTPMethod](#httpmethod) array_ |  true  |  | Methods are the HTTP methods of the request.<br />If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule. |
+| `methods` | _[HTTPMethod](#httpmethod) array_ |  false  |  | Methods are the HTTP methods of the request.<br />If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule. |
+| `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the HTTP path of the request.<br />Support Exact, PathPrefix and RegularExpression match types. |
 
 
 #### Origin
@@ -4495,6 +4496,7 @@ _Appears in:_
 PathMatch defines the matching criteria for the HTTP path of a request.
 
 _Appears in:_
+- [Operation](#operation)
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
 | Field | Type | Required | Default | Description |
