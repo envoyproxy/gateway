@@ -607,6 +607,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 		if receive := buildHealthCheckPayload(healthcheck.HTTP.ExpectedResponse); receive != nil {
 			httpChecker.Receive = append(httpChecker.Receive, receive)
 		}
+		httpChecker.Send = buildHealthCheckPayload(healthcheck.HTTP.RequestBody)
 		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
 			HttpHealthCheck: httpChecker,
 		}
