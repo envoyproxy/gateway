@@ -106,6 +106,19 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, rou
 				unsupportedFilters = true
 				continue
 			}
+
+			// BackendRef URLRewrite only supports hostname rewrites.
+			// Path rewrites are not supported because Envoy weighted clusters
+			// do not support path rewrite actions.
+			if filter.Type == gwapiv1.HTTPRouteFilterURLRewrite &&
+				filter.URLRewrite != nil &&
+				filter.URLRewrite.Path != nil {
+				return status.NewRouteStatusError(
+					errors.New("URLRewrite path modifier is not supported within BackendRef"),
+					status.RouteReasonUnsupportedRefValue,
+				)
+			}
+
 			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier &&
 				filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier &&
 				filter.Type != gwapiv1.HTTPRouteFilterExtensionRef &&
@@ -113,6 +126,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, rou
 				unsupportedFilters = true
 			}
 		}
+
 	case resource.KindGRPCRoute:
 		for _, filter := range filters.([]gwapiv1.GRPCRouteFilter) {
 			if filter.Type != gwapiv1.GRPCRouteFilterRequestHeaderModifier &&
@@ -120,6 +134,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, rou
 				unsupportedFilters = true
 			}
 		}
+
 	default:
 		return nil
 	}
