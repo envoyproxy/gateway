@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -474,13 +475,26 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 	return resource.ExpectedContainerEnv(rateLimitDeployment.Container, env)
 }
 
-// Validate the ratelimit tls secret validating.
+// Validate validates the ratelimit redis url/tls secret references.
 func Validate(ctx context.Context, client client.Client, gateway *egv1a1.EnvoyGateway, namespace string) error {
-	if gateway.RateLimit.Backend.Redis != nil &&
-		gateway.RateLimit.Backend.Redis.TLS != nil &&
-		gateway.RateLimit.Backend.Redis.TLS.CertificateRef != nil {
-		certificateRef := gateway.RateLimit.Backend.Redis.TLS.CertificateRef
-		_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, certificateRef, namespace)
+	redis := gateway.RateLimit.Backend.Redis
+	if redis == nil {
+		return nil
+	}
+
+	if redis.URLRef != nil && redis.URLRef.SecretKeyRef != nil {
+		ref := redis.URLRef.SecretKeyRef
+		secret := &corev1.Secret{}
+		if err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
+			return fmt.Errorf("cannot find Secret %s in namespace %s: %w", ref.Name, namespace, err)
+		}
+		if _, ok := secret.Data[ref.Key]; !ok {
+			return fmt.Errorf("key %q not found in Secret %s/%s", ref.Key, namespace, ref.Name)
+		}
+	}
+
+	if redis.TLS != nil && redis.TLS.CertificateRef != nil {
+		_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, redis.TLS.CertificateRef, namespace)
 		return err
 	}
 

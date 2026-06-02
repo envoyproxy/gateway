@@ -6,6 +6,7 @@
 package ratelimit
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -21,10 +22,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/utils/test"
 )
@@ -950,4 +953,53 @@ func requireObject[ObjectT any](t *testing.T, got *ObjectT, filename string) {
 func TestGetServiceURL(t *testing.T) {
 	got := GetServiceURL("envoy-gateway-system", "example-cluster.local")
 	require.Equal(t, "grpc://envoy-ratelimit.envoy-gateway-system.svc.example-cluster.local:8081", got)
+}
+
+func TestValidateRedisURLRef(t *testing.T) {
+	const ns = "envoy-gateway-system"
+	existing := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "redis-conn", Namespace: ns},
+		Data:       map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")},
+	}
+
+	urlRefGW := func(name, key string) *egv1a1.EnvoyGateway {
+		return &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				RateLimit: &egv1a1.RateLimit{
+					Backend: egv1a1.RateLimitDatabaseBackend{
+						Type: egv1a1.RedisBackendType,
+						Redis: &egv1a1.RateLimitRedisSettings{
+							URLRef: &egv1a1.RedisURLSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: name},
+									Key:                  key,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	cases := []struct {
+		name      string
+		gw        *egv1a1.EnvoyGateway
+		expectErr bool
+	}{
+		{name: "secret and key present", gw: urlRefGW("redis-conn", "REDIS_ENDPOINT"), expectErr: false},
+		{name: "secret missing", gw: urlRefGW("absent", "REDIS_ENDPOINT"), expectErr: true},
+		{name: "key missing", gw: urlRefGW("redis-conn", "WRONG_KEY"), expectErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+			err := Validate(context.Background(), c, tc.gw, ns)
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
