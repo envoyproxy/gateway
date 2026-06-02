@@ -13,7 +13,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz/bbb535779998b129:
+        envoy.filters.http.ext_authz/296e65b8dfbe9943:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
           checkSettings:
             httpService:
@@ -35,7 +35,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz/bbb535779998b129:
+        envoy.filters.http.ext_authz/296e65b8dfbe9943:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
           checkSettings:
             httpService:
@@ -61,7 +61,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz/8decbbd4aae4a228:
+        envoy.filters.http.ext_authz/dd8dbed096ef9151:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
           checkSettings:
             httpService:

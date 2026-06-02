@@ -28,7 +28,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz/1a33f434c3fc58e1:
+        envoy.filters.http.ext_authz/7aebb0ebbda8197e:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
           checkSettings:
             httpService:
@@ -66,7 +66,7 @@
       route:
         cluster: grpcroute/default/grpcroute-1/rule/0
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz/1a33f434c3fc58e1:
+        envoy.filters.http.ext_authz/7aebb0ebbda8197e:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
           checkSettings:
             httpService:

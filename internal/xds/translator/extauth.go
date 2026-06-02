@@ -57,12 +57,29 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 			continue
 		}
 
-		filterName, config, err := extAuthFilterName(route.Security.ExtAuth)
+		filterName, err := extAuthFilterName(route.Security.ExtAuth)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
 		}
-		buckets[filterName] = config
+		config, err := extAuthFilterConfig(route.Security.ExtAuth)
+		if err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
+		existing, ok := buckets[filterName]
+		if !ok {
+			buckets[filterName] = config
+			continue
+		}
+		replace, err := extAuthConfigLess(config, existing)
+		if err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
+		if replace {
+			buckets[filterName] = config
+		}
 	}
 
 	filterNames := make([]string, 0, len(buckets))
@@ -104,17 +121,83 @@ func buildHCMExtAuthFilter(filterName string, extAuthProto *extauthv3.ExtAuthz) 
 	}, nil
 }
 
-func extAuthFilterName(extAuth *ir.ExtAuth) (string, *extauthv3.ExtAuthz, error) {
-	config := extAuthFilterConfig(extAuth)
+func extAuthFilterName(extAuth *ir.ExtAuth) (string, error) {
+	config := extAuthFilterKeyConfig(extAuth)
 	data, err := proto.MarshalOptions{Deterministic: true}.Marshal(config)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
-	return perRouteFilterName(egv1a1.EnvoyFilterExtAuthz, utils.Digest256(string(data))[:16]), config, nil
+	return perRouteFilterName(egv1a1.EnvoyFilterExtAuthz, utils.Digest256(string(data))[:16]), nil
 }
 
-func extAuthFilterConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
+func extAuthFilterKeyConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
+	config := extAuthFilterLevelConfig(extAuth)
+
+	// Envoy derives some filter-level behavior, including allowed header handling,
+	// from the configured auth service type. Keep only the service type in the
+	// bucket key so HTTP and gRPC policies do not share an HCM filter; backend
+	// details are intentionally supplied by the per-route service override.
+	if extAuth.HTTP != nil {
+		config.Services = &extauthv3.ExtAuthz_HttpService{
+			HttpService: &extauthv3.HttpService{},
+		}
+	} else if extAuth.GRPC != nil {
+		config.Services = &extauthv3.ExtAuthz_GrpcService{
+			GrpcService: &corev3.GrpcService{},
+		}
+	}
+	return config
+}
+
+func extAuthFilterConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
+	config := extAuthFilterLevelConfig(extAuth)
+
+	timeout := durationpb.New(defaultExtServiceRequestTimeout)
+	if extAuth.Timeout != nil {
+		timeout = durationpb.New(extAuth.Timeout.Duration)
+	}
+
+	var rp *corev3.RetryPolicy
+	if extAuth.Traffic != nil && extAuth.Traffic.Retry != nil {
+		var err error
+		rp, err = buildNonRouteRetryPolicy(extAuth.Traffic.Retry)
+		if err != nil {
+			return nil, fmt.Errorf("build retry policy for http service: %w", err)
+		}
+	}
+
+	if extAuth.HTTP != nil {
+		// Keep a placeholder filter-level service so Envoy initializes
+		// service-type-dependent filter state such as allowed header matchers.
+		// Routes provide the effective backend through CheckSettings.
+		hs := httpService(extAuth.HTTP, timeout)
+		hs.RetryPolicy = rp
+
+		config.Services = &extauthv3.ExtAuthz_HttpService{
+			HttpService: hs,
+		}
+	} else if extAuth.GRPC != nil {
+		// Keep a placeholder filter-level service so Envoy initializes
+		// service-type-dependent filter state such as allowed header matchers.
+		// Routes provide the effective backend through CheckSettings.
+		service := &corev3.GrpcService{
+			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
+				EnvoyGrpc: grpcService(extAuth.GRPC),
+			},
+			Timeout: timeout,
+		}
+		service.RetryPolicy = rp
+
+		config.Services = &extauthv3.ExtAuthz_GrpcService{
+			GrpcService: service,
+		}
+	}
+
+	return config, nil
+}
+
+func extAuthFilterLevelConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 	config := &extauthv3.ExtAuthz{
 		TransportApiVersion: corev3.ApiVersion_V3,
 	}
@@ -153,6 +236,18 @@ func extAuthFilterConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		}
 	}
 	return config
+}
+
+func extAuthConfigLess(a, b *extauthv3.ExtAuthz) (bool, error) {
+	aData, err := proto.MarshalOptions{Deterministic: true}.Marshal(a)
+	if err != nil {
+		return false, err
+	}
+	bData, err := proto.MarshalOptions{Deterministic: true}.Marshal(b)
+	if err != nil {
+		return false, err
+	}
+	return string(aData) < string(bData), nil
 }
 
 func extAuthCheckSettings(extAuth *ir.ExtAuth) (*extauthv3.CheckSettings, error) {
@@ -324,7 +419,7 @@ func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 	if irRoute.Security == nil || irRoute.Security.ExtAuth == nil {
 		return nil
 	}
-	filterName, _, err := extAuthFilterName(irRoute.Security.ExtAuth)
+	filterName, err := extAuthFilterName(irRoute.Security.ExtAuth)
 	if err != nil {
 		return err
 	}

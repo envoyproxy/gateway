@@ -117,24 +117,23 @@ func TestExtAuthFilterName(t *testing.T) {
 		BodyToExtAuth: &ir.BodyToExtAuth{MaxRequestBytes: 1024},
 	}
 
-	baseName, _, err := extAuthFilterName(base)
+	baseName, err := extAuthFilterName(base)
 	require.NoError(t, err)
 
 	sameBucket := &ir.ExtAuth{
 		Name:             "policy-b",
 		FailOpen:         &failOpenFalse,
 		HeadersToExtAuth: []string{"authorization"},
-		HTTP: &ir.HTTPExtAuthService{
+		GRPC: &ir.GRPCExtAuthService{
 			Destination: ir.RouteDestination{Name: "cluster-b"},
 			Authority:   "authority-b",
-			Path:        "/auth",
 		},
 		ContextExtensions: []*ir.ContextExtention{
 			{Name: "tenant", Value: []byte("b")},
 		},
 		BodyToExtAuth: &ir.BodyToExtAuth{MaxRequestBytes: 2048},
 	}
-	sameBucketName, _, err := extAuthFilterName(sameBucket)
+	sameBucketName, err := extAuthFilterName(sameBucket)
 	require.NoError(t, err)
 	require.Equal(t, baseName, sameBucketName)
 
@@ -180,14 +179,55 @@ func TestExtAuthFilterName(t *testing.T) {
 				StatusOnError:    &statusOnError,
 			},
 		},
+		{
+			name: "different service type",
+			extAuth: &ir.ExtAuth{
+				FailOpen:         &failOpenFalse,
+				HeadersToExtAuth: []string{"authorization"},
+				HTTP: &ir.HTTPExtAuthService{
+					Destination: ir.RouteDestination{Name: "cluster-b"},
+					Authority:   "authority-b",
+					Path:        "/auth",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			filterName, _, err := extAuthFilterName(tt.extAuth)
+			filterName, err := extAuthFilterName(tt.extAuth)
 			require.NoError(t, err)
 			require.NotEqual(t, baseName, filterName)
 		})
 	}
+}
+
+func TestExtAuthFilterConfigPreservesServiceType(t *testing.T) {
+	grpcExtAuth := &ir.ExtAuth{
+		HeadersToExtAuth: []string{"authorization"},
+		GRPC: &ir.GRPCExtAuthService{
+			Destination: ir.RouteDestination{Name: "grpc-cluster"},
+			Authority:   "grpc-authority",
+		},
+	}
+	grpcConfig, err := extAuthFilterConfig(grpcExtAuth)
+	require.NoError(t, err)
+	require.NotNil(t, grpcConfig.GetGrpcService())
+	require.Nil(t, grpcConfig.GetHttpService())
+	require.NotNil(t, grpcConfig.GetAllowedHeaders())
+
+	httpExtAuth := &ir.ExtAuth{
+		HeadersToExtAuth: []string{"authorization"},
+		HTTP: &ir.HTTPExtAuthService{
+			Destination: ir.RouteDestination{Name: "http-cluster"},
+			Authority:   "http-authority",
+			Path:        "/auth",
+		},
+	}
+	httpConfig, err := extAuthFilterConfig(httpExtAuth)
+	require.NoError(t, err)
+	require.NotNil(t, httpConfig.GetHttpService())
+	require.Nil(t, httpConfig.GetGrpcService())
+	require.NotNil(t, httpConfig.GetAllowedHeaders())
 }
 
 func TestExtAuthPatchHCMDeterministicOrder(t *testing.T) {
@@ -216,7 +256,7 @@ func TestExtAuthPatchHCMDeterministicOrder(t *testing.T) {
 
 	expectedNames := []string{}
 	for _, route := range []*ir.HTTPRoute{routeA, routeB} {
-		filterName, _, err := extAuthFilterName(route.Security.ExtAuth)
+		filterName, err := extAuthFilterName(route.Security.ExtAuth)
 		require.NoError(t, err)
 		expectedNames = append(expectedNames, filterName)
 	}
