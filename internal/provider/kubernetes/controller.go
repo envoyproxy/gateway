@@ -178,7 +178,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
 		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
 		// Always allow controller-namespace infrastructure resources to bypass
- 		// user namespace selectors.
+		// user namespace selectors.
 		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
 	}
 
