@@ -1100,8 +1100,8 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
-			servicePort:           99,
-			containerPort:         99,
+			servicePort:   99,
+			containerPort: 99,
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
