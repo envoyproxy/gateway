@@ -120,6 +120,9 @@ type Translator struct {
 	// RunningOnHost indicates whether Envoy Gateway is running locally on the host machine.
 	RunningOnHost bool
 
+	// InfraRemotelyManaged indicates whether the Envoy fleet is managed in the Remote infrastructure provider.
+	InfraRemotelyManaged bool
+
 	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
 	oidcDiscoveryCache *oidcDiscoveryCache
 
