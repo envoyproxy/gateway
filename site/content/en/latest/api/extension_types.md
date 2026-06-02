@@ -5191,7 +5191,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `url` | _string_ |  true  |  | URL of the Redis Database.<br />This can reference a single Redis host or a comma delimited list for Sentinel and Cluster deployments of Redis. |
+| `url` | _string_ |  false  |  | URL of the Redis Database.<br />This can reference a single Redis host or a comma delimited list for Sentinel and Cluster deployments of Redis.<br />Mutually exclusive with URLRef. |
+| `urlRef` | _[RedisURLSource](#redisurlsource)_ |  false  |  | URLRef sources the Redis URL from a Kubernetes Secret key. Use this for GitOps<br />flows where the Redis endpoint is provisioned by an external controller.<br />The referenced Secret must exist in the namespace of the Envoy Gateway rate limit<br />deployment. Mutually exclusive with URL. |
 | `tls` | _[RedisTLSSettings](#redistlssettings)_ |  false  |  | TLS defines TLS configuration for connecting to redis database. |
 
 
@@ -5371,6 +5372,20 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
+
+
+#### RedisURLSource
+
+
+
+RedisURLSource specifies where to source the Redis URL from.
+
+_Appears in:_
+- [RateLimitRedisSettings](#ratelimitredissettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `secretKeyRef` | _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretkeyselector-v1-core)_ |  true  |  | SecretKeyRef references the Secret and key that hold the Redis URL.<br />The Secret must be in the same namespace as the Envoy Gateway rate limit deployment. |
 
 
 #### RemoteDynamicModuleSource
