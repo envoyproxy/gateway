@@ -1,0 +1,207 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-ws
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/ws"
+          backendRefs:
+            - name: service-ws
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-wss
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/wss"
+          backendRefs:
+            - name: service-wss
+              port: 8443
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-serviceimport-ws
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/serviceimport/ws"
+          backendRefs:
+            - group: multicluster.x-k8s.io
+              kind: ServiceImport
+              name: serviceimport-ws
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-serviceimport-wss
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/serviceimport/wss"
+          backendRefs:
+            - group: multicluster.x-k8s.io
+              kind: ServiceImport
+              name: serviceimport-wss
+              port: 8443
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: default
+      name: service-ws
+    spec:
+      clusterIP: 10.0.0.1
+      ports:
+        - name: ws
+          port: 8080
+          targetPort: 8080
+          protocol: TCP
+          appProtocol: kubernetes.io/ws
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: default
+      name: service-wss
+    spec:
+      clusterIP: 10.0.0.2
+      ports:
+        - name: wss
+          port: 8443
+          targetPort: 8443
+          protocol: TCP
+          appProtocol: kubernetes.io/wss
+serviceImports:
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
+    metadata:
+      namespace: default
+      name: serviceimport-ws
+    spec:
+      ips:
+        - 10.0.1.1
+      ports:
+        - name: ws
+          port: 8080
+          protocol: TCP
+          appProtocol: kubernetes.io/ws
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
+    metadata:
+      namespace: default
+      name: serviceimport-wss
+    spec:
+      ips:
+        - 10.0.1.2
+      ports:
+        - name: wss
+          port: 8443
+          protocol: TCP
+          appProtocol: kubernetes.io/wss
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: default
+      name: endpointslice-service-ws
+      labels:
+        kubernetes.io/service-name: service-ws
+    addressType: IPv4
+    ports:
+      - name: ws
+        port: 8080
+        protocol: TCP
+    endpoints:
+      - addresses:
+          - "10.244.0.21"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: default
+      name: endpointslice-service-wss
+      labels:
+        kubernetes.io/service-name: service-wss
+    addressType: IPv4
+    ports:
+      - name: wss
+        port: 8443
+        protocol: TCP
+    endpoints:
+      - addresses:
+          - "10.244.0.22"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: default
+      name: endpointslice-serviceimport-ws
+      labels:
+        multicluster.kubernetes.io/service-name: serviceimport-ws
+    addressType: IPv4
+    ports:
+      - name: ws
+        port: 8080
+        protocol: TCP
+    endpoints:
+      - addresses:
+          - "10.244.1.21"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: default
+      name: endpointslice-serviceimport-wss
+      labels:
+        multicluster.kubernetes.io/service-name: serviceimport-wss
+    addressType: IPv4
+    ports:
+      - name: wss
+        port: 8443
+        protocol: TCP
+    endpoints:
+      - addresses:
+          - "10.244.1.22"
+        conditions:
+          ready: true
