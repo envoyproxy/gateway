@@ -1293,6 +1293,13 @@ func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *e
 		return servicePort
 	}
 
+	// By default, remote infrastructure shouldn't need port shifting.
+	if t.InfraRemotelyManaged {
+		if envoyProxy == nil || envoyProxy.Spec.Provider == nil || envoyProxy.Spec.Provider.Remote == nil {
+			return servicePort
+		}
+	}
+
 	if envoyProxy != nil && !envoyProxy.NeedToSwitchPorts() {
 		return servicePort
 	}

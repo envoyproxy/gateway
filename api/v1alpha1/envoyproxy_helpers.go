@@ -68,9 +68,6 @@ func (e *EnvoyProxy) NeedToSwitchPorts() bool {
 	case EnvoyProxyProviderTypeRemote:
 		if e.Spec.Provider.Remote != nil {
 			useListenerPortAsContainerPort = e.Spec.Provider.Remote.UseListenerPortAsContainerPort
-		} else {
-			// By default, the remote provider doesn't require port shifting.
-			useListenerPortAsContainerPort = new(true)
 		}
 	case EnvoyProxyProviderTypeKubernetes:
 		if e.Spec.Provider.Kubernetes != nil {
