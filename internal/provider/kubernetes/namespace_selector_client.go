@@ -88,8 +88,8 @@ func (c *namespaceSelectorClient) filterByNamespaceLabels(ctx context.Context, l
 		}
 
 		ns := obj.GetNamespace()
-		// Keep EG-owned infrastructure in the controller namespace visible even
-		// when the controller namespace does not match the user selector.
+		// Keep controller-namespace infrastructure resources visible even when
+ 		// the controller namespace does not match the user selector.
 		matches := ns == c.controllerNamespace && isNamespaceSelectorBypassInfrastructureResource(item)
 		if !matches {
 			cachedMatches, cached := namespaceMatches[ns]
