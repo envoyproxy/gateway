@@ -52,8 +52,8 @@ func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) b
 // hasMatchingNamespaceLabels returns true if the namespace of provided object has
 // the provided labels or false otherwise.
 func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
-	// Keep EG-owned infrastructure events in the controller namespace visible
-	// even when the controller namespace does not match the user selector.
+	// Keep controller-namespace infrastructure events visible even when the
+	// controller namespace does not match the user selector.
 	if obj.GetNamespace() == r.namespace && isNamespaceSelectorBypassInfrastructureResource(obj) {
 		return true
 	}
