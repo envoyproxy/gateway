@@ -22216,6 +22216,16 @@ spec:
                         using ALPN
                       type: string
                     type: array
+                  autoSNIFromUpstreamHost:
+                    description: |-
+                      AutoSNIFromUpstreamHost indicates whether the upstream endpoint's hostname should be used as the SNI value
+                      when establishing a TLS connection to the backend.
+                      This uses the resolved hostname of the upstream endpoint (e.g., from the Backend Endpoints list),
+                      rather than a static value.
+
+                      Mutually exclusive with SNI. When a BackendTLSPolicy is attached, its Hostname value takes
+                      precedence and AutoSNIFromUpstreamHost is ignored.
+                    type: boolean
                   caCertificateRefs:
                     description: |-
                       CACertificateRefs contains one or more references to Kubernetes objects that
@@ -22464,6 +22474,8 @@ spec:
                     && ((has(self.caCertificateRefs) && size(self.caCertificateRefs)
                     > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates
                     != "")))'
+                - message: sni and autoSNIFromUpstreamHost are mutually exclusive
+                  rule: '!(has(self.sni) && has(self.autoSNIFromUpstreamHost) && self.autoSNIFromUpstreamHost)'
                 - message: setting ciphers has no effect if the minimum possible TLS
                     version is 1.3
                   rule: 'has(self.minVersion) && self.minVersion == ''1.3'' ? !has(self.ciphers)
