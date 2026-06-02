@@ -52,5 +52,3 @@
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
         httpProtocolOptions: {}
-      upstreamHttpProtocolOptions:
-        autoSni: true

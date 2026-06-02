@@ -253,6 +253,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	requiresHTTP2Options := false
 	forceHTTP1UpstreamProtocol := false
 	hasLiteralSNI := false
+	hasAutoSNIFromUpstreamHost := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
 			ds.Protocol == ir.HTTP2 {
@@ -274,11 +275,13 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#connect-to-an-endpoint-with-sni
 			if ds.TLS.SNI != nil {
 				hasLiteralSNI = true
+			} else if ds.TLS.AutoSNIFromUpstreamHost {
+				hasAutoSNIFromUpstreamHost = true
 			}
 		}
 	}
 	// only enable auto sni if TLS is configured
-	requiresAutoSNI := !hasLiteralSNI && requiresAutoHTTPConfig
+	requiresAutoSNI := !hasLiteralSNI && requiresAutoHTTPConfig && !hasAutoSNIFromUpstreamHost
 
 	// Set Proxy Protocol
 	proxyProtocolEnabled := args.proxyProtocol != nil
