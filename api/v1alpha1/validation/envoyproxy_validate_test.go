@@ -90,6 +90,37 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "valid remote provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type:   egv1a1.EnvoyProxyProviderTypeRemote,
+						Remote: &egv1a1.EnvoyProxyRemoteProvider{},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid remote provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeRemote,
+					},
+				},
+			},
+			expected: false,
+		},
+		{
 			name: "nil envoy service",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
