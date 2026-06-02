@@ -275,10 +275,8 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	// exceptions below.
 	if svrCfg.EnvoyGateway.WatchesNamespaces() {
 		watchedNamespaces := map[string]cache.Config{}
-		if svrCfg.EnvoyGateway.WatchesNamespaces() {
-			for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
-				watchedNamespaces[watchNS] = cache.Config{}
-			}
+		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
+			watchedNamespaces[watchNS] = cache.Config{}
 		}
 
 		watchedAndControllerNamespaces := make(map[string]cache.Config, len(watchedNamespaces)+1)
@@ -323,7 +321,10 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			}
 		} else {
 			// In normal mode, ServiceAccounts and Deployments are controller
-			// namespace infra, while Secrets are only read from watched namespaces.
+			// namespace infra, while Secrets cover watched namespaces for user
+			// refs and the controller namespace for EG-managed infra Secrets,
+			// including the OIDC HMAC Secret and Envoy's TLS Secret for
+			// connections to EG-managed control-plane services.
 			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces: map[string]cache.Config{
@@ -338,7 +339,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			}
 			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
-				Namespaces:            watchedNamespaces,
+				Namespaces:            watchedAndControllerNamespaces,
 			}
 		}
 	}
