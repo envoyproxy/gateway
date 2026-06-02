@@ -578,6 +578,7 @@ spec:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
                                         Defaults to GET
+                                      maxLength: 16
                                       type: string
                                     path:
                                       description: Path defines the HTTP path that
@@ -585,6 +586,40 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    requestBody:
+                                      description: RequestBody defines the HTTP request
+                                        body payload sent during health checking.
+                                      properties:
+                                        binary:
+                                          description: Binary payload base64 encoded.
+                                          format: byte
+                                          type: string
+                                        text:
+                                          description: Text payload in plain text.
+                                          type: string
+                                        type:
+                                          allOf:
+                                          - enum:
+                                            - Text
+                                            - Binary
+                                          - enum:
+                                            - Text
+                                            - Binary
+                                          description: Type defines the type of the
+                                            payload.
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: If payload type is Text, text field
+                                          needs to be set.
+                                        rule: 'self.type == ''Text'' ? has(self.text)
+                                          : !has(self.text)'
+                                      - message: If payload type is Binary, binary
+                                          field needs to be set.
+                                        rule: 'self.type == ''Binary'' ? has(self.binary)
+                                          : !has(self.binary)'
                                     retriableStatuses:
                                       description: |-
                                         RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -601,6 +636,11 @@ spec:
                                   required:
                                   - path
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: The requestBody field can only be set
+                                      when method is POST or PUT.
+                                    rule: '!has(self.requestBody) || (has(self.method)
+                                      && self.method.upperAscii() in [''POST'',''PUT''])'
                                 initialJitter:
                                   description: |-
                                     InitialJitter defines the maximum time Envoy will wait before the first health check.
