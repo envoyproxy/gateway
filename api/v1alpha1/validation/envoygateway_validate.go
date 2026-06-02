@@ -189,10 +189,26 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 	if rateLimit.Backend.Type != egv1a1.RedisBackendType {
 		return fmt.Errorf("unsupported ratelimit backend %v", rateLimit.Backend.Type)
 	}
-	if rateLimit.Backend.Redis == nil || rateLimit.Backend.Redis.URL == "" {
+	redis := rateLimit.Backend.Redis
+	if redis == nil {
 		return fmt.Errorf("empty ratelimit redis settings")
 	}
-	redisHosts := strings.Split(rateLimit.Backend.Redis.URL, ",")
+
+	hasURL := redis.URL != ""
+	hasURLRef := redis.URLRef != nil
+	if hasURL == hasURLRef {
+		return fmt.Errorf("exactly one of ratelimit redis url or urlRef must be set")
+	}
+
+	if hasURLRef {
+		ref := redis.URLRef.SecretKeyRef
+		if ref == nil || ref.Name == "" || ref.Key == "" {
+			return fmt.Errorf("ratelimit redis urlRef.secretKeyRef must set both name and key")
+		}
+		return nil
+	}
+
+	redisHosts := strings.Split(redis.URL, ",")
 	for _, host := range redisHosts {
 		if _, err := url.Parse(host); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
