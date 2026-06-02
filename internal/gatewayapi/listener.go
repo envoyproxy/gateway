@@ -1293,7 +1293,7 @@ func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *e
 		return servicePort
 	}
 
-	if envoyProxy != nil && !envoyProxy.NeedToSwitchPorts(){
+	if envoyProxy != nil && !envoyProxy.NeedToSwitchPorts() {
 		return servicePort
 	}
 
