@@ -530,6 +530,23 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
+			caseName: "redis-url-secret-ref",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URLRef: &egv1a1.RedisURLSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "ratelimit-redis-redisstd"},
+								Key:                  "REDIS_ENDPOINT",
+							},
+						},
+					},
+				},
+			},
+			deploy: cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+		},
+		{
 			caseName: "tolerations",
 			rateLimit: &egv1a1.RateLimit{
 				Backend: egv1a1.RateLimitDatabaseBackend{
