@@ -208,8 +208,16 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return nil
 	}
 
-	redisHosts := strings.Split(redis.URL, ",")
-	for _, host := range redisHosts {
+	return ValidateRedisURL(redis.URL)
+}
+
+// ValidateRedisURL validates a ratelimit Redis URL string, which may be a single
+// host or a comma-delimited list of hosts for Sentinel and Cluster deployments.
+func ValidateRedisURL(redisURL string) error {
+	if redisURL == "" {
+		return fmt.Errorf("ratelimit redis url is empty")
+	}
+	for _, host := range strings.Split(redisURL, ",") {
 		if _, err := url.Parse(host); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}

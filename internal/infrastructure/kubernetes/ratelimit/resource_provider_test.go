@@ -957,10 +957,6 @@ func TestGetServiceURL(t *testing.T) {
 
 func TestValidateRedisURLRef(t *testing.T) {
 	const ns = "envoy-gateway-system"
-	existing := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "redis-conn", Namespace: ns},
-		Data:       map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")},
-	}
 
 	urlRefGW := func(name, key string) *egv1a1.EnvoyGateway {
 		return &egv1a1.EnvoyGateway{
@@ -983,18 +979,27 @@ func TestValidateRedisURLRef(t *testing.T) {
 	}
 
 	cases := []struct {
-		name      string
-		gw        *egv1a1.EnvoyGateway
-		expectErr bool
+		name       string
+		secretData map[string][]byte
+		refName    string
+		refKey     string
+		expectErr  bool
 	}{
-		{name: "secret and key present", gw: urlRefGW("redis-conn", "REDIS_ENDPOINT"), expectErr: false},
-		{name: "secret missing", gw: urlRefGW("absent", "REDIS_ENDPOINT"), expectErr: true},
-		{name: "key missing", gw: urlRefGW("redis-conn", "WRONG_KEY"), expectErr: true},
+		{name: "secret and key present", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")}, refName: "redis-conn", refKey: "REDIS_ENDPOINT", expectErr: false},
+		{name: "comma-delimited value", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("a.redis.svc:6379,b.redis.svc:6379")}, refName: "redis-conn", refKey: "REDIS_ENDPOINT", expectErr: false},
+		{name: "secret missing", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")}, refName: "absent", refKey: "REDIS_ENDPOINT", expectErr: true},
+		{name: "key missing", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")}, refName: "redis-conn", refKey: "WRONG_KEY", expectErr: true},
+		{name: "empty value", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("")}, refName: "redis-conn", refKey: "REDIS_ENDPOINT", expectErr: true},
+		{name: "malformed value", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte(":foo")}, refName: "redis-conn", refKey: "REDIS_ENDPOINT", expectErr: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			existing := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "redis-conn", Namespace: ns},
+				Data:       tc.secretData,
+			}
 			c := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
-			err := Validate(context.Background(), c, tc.gw, ns)
+			err := Validate(context.Background(), c, urlRefGW(tc.refName, tc.refKey), ns)
 			if tc.expectErr {
 				require.Error(t, err)
 			} else {

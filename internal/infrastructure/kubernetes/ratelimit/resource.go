@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 )
@@ -488,8 +489,12 @@ func Validate(ctx context.Context, client client.Client, gateway *egv1a1.EnvoyGa
 		if err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
 			return fmt.Errorf("cannot find Secret %s in namespace %s: %w", ref.Name, namespace, err)
 		}
-		if _, ok := secret.Data[ref.Key]; !ok {
+		value, ok := secret.Data[ref.Key]
+		if !ok {
 			return fmt.Errorf("key %q not found in Secret %s/%s", ref.Key, namespace, ref.Name)
+		}
+		if err := validation.ValidateRedisURL(string(value)); err != nil {
+			return fmt.Errorf("invalid Redis URL in Secret %s/%s key %q: %w", namespace, ref.Name, ref.Key, err)
 		}
 	}
 
