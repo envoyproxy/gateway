@@ -15,23 +15,10 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-2
+          name: envoy.filters.http.ext_authz/8decbbd4aae4a228
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
             failureModeAllow: true
-            httpService:
-              authorizationResponse:
-                allowedUpstreamHeaders:
-                  patterns:
-                  - exact: header1
-                    ignoreCase: true
-                  - exact: header2
-                    ignoreCase: true
-              pathPrefix: /auth
-              serverUri:
-                cluster: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
-                timeout: 10s
-                uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
         - disabled: true
           name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1

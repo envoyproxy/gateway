@@ -127,17 +127,10 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.ext_authz/securitypolicy/envoy-gateway/policy-for-gateway-1
+          name: envoy.filters.http.ext_authz/1a33f434c3fc58e1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-            httpService:
-              serverUri:
-                cluster: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
-                timeout: 10s
-                uri: http://backend-v3.gateway-conformance-infra.svc.cluster.local:8080
             transportApiVersion: V3
-            withRequestBody:
-              maxRequestBytes: 8192
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-httproute/extproc/0
           typedConfig:

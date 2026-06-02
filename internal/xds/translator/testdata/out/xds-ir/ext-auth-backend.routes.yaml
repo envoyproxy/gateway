@@ -13,9 +13,14 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-1:
+        envoy.filters.http.ext_authz/bbb535779998b129:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-          checkSettings: {}
+          checkSettings:
+            grpcService:
+              envoyGrpc:
+                authority: primary.foo.com
+                clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+              timeout: 10s
     - match:
         pathSeparatedPrefix: /foo2
       name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
@@ -24,9 +29,14 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-1:
+        envoy.filters.http.ext_authz/bbb535779998b129:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-          checkSettings: {}
+          checkSettings:
+            grpcService:
+              envoyGrpc:
+                authority: primary.foo.com
+                clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+              timeout: 10s
   - domains:
     - www.bar.com
     name: default/gateway-1/http/www_bar_com
@@ -39,6 +49,19 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_authz/securitypolicy/default/policy-for-gateway-1:
+        envoy.filters.http.ext_authz/8decbbd4aae4a228:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-          checkSettings: {}
+          checkSettings:
+            httpService:
+              authorizationResponse:
+                allowedUpstreamHeaders:
+                  patterns:
+                  - exact: header1
+                    ignoreCase: true
+                  - exact: header2
+                    ignoreCase: true
+              pathPrefix: /auth
+              serverUri:
+                cluster: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+                timeout: 10s
+                uri: http://primary.foo.com/auth
