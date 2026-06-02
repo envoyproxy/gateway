@@ -1081,14 +1081,6 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
 	// Default to http1 otherwise
 	switch {
-	// If useClientProtocol is set, force Envoy to use the same protocol upstream as downstream, regardless of other settings.
-	case args.useClientProtocol:
-		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
-			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
-				HttpProtocolOptions:  http1Opts,
-				Http2ProtocolOptions: http2Opts,
-			},
-		}
 	// If forceHTTP1UpstreamProtocol is set, force Envoy to use HTTP1 upstream regardless of other settings.
 	case forceHTTP1UpstreamProtocol:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
@@ -1096,6 +1088,14 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
 					HttpProtocolOptions: http1Opts,
 				},
+			},
+		}
+	// If useClientProtocol is set, force Envoy to use the same protocol upstream as downstream.
+	case args.useClientProtocol:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
+			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
+				HttpProtocolOptions:  http1Opts,
+				Http2ProtocolOptions: http2Opts,
 			},
 		}
 	case requiresHTTP2Options:
