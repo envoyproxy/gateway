@@ -176,6 +176,7 @@ const (
 )
 
 // HTTPActiveHealthChecker defines the settings of http health check.
+// +kubebuilder:validation:XValidation:rule="!has(self.requestBody) || (has(self.method) && self.method.upperAscii() in ['POST','PUT'])",message="The requestBody field can only be set when method is POST or PUT."
 type HTTPActiveHealthChecker struct {
 	// Hostname defines the HTTP Host header used for active HTTP health checks.
 	// Host selection uses this order: this field, the associated Backend endpoint
@@ -192,6 +193,7 @@ type HTTPActiveHealthChecker struct {
 	Path string `json:"path" yaml:"path"`
 	// Method defines the HTTP method used for health checking.
 	// Defaults to GET
+	// +kubebuilder:validation:MaxLength=16
 	// +optional
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
@@ -207,6 +209,9 @@ type HTTPActiveHealthChecker struct {
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	// +optional
 	ExpectedResponse *ActiveHealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponse,omitempty"`
+	// RequestBody defines the HTTP request body payload sent during health checking.
+	// +optional
+	RequestBody *ActiveHealthCheckPayload `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
 }
 
 // TCPActiveHealthChecker defines the settings of tcp health check.

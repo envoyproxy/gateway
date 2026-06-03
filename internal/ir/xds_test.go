@@ -1840,6 +1840,30 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckPayloadInvalid,
 		},
 		{
+			name: "http-health-check: invalid send payload",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           new(http.MethodPost),
+						ExpectedStatuses: []HTTPStatus{200, 300},
+						RequestBody: &HealthCheckPayload{
+							Text:   new("foo"),
+							Binary: []byte{'f', 'o', 'o'},
+						},
+					},
+				},
+				&OutlierDetection{},
+				new(uint32(10)),
+			},
+			want: ErrHealthCheckPayloadInvalid,
+		},
+		{
 			name: "tcp-health-check: invalid send payload",
 			input: HealthCheck{
 				&ActiveHealthCheck{
