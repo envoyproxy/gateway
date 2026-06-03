@@ -95,10 +95,13 @@ Envoy Gateway also supports configuration to watch resources only in specific na
 - `EnvoyGateway.provider.kubernetes.watch.namespaces` - An explicit list of namespace names
 - `EnvoyGateway.provider.kubernetes.watch.namespaceSelector` - A label selector for dynamic namespace selection
 
+The namespace where Envoy Gateway runs is always included in addition to the configured watched namespaces. Envoy Gateway uses this namespace for its own managed infrastructure resources, such as Envoy data plane Services and Deployments.
+
 #### Using Explicit Namespace List
 
 When you specify an explicit namespace list with Gateway Namespace Mode, Envoy Gateway will:
-- Only watch for Gateway API resources in the specified namespaces
+- Watch for Gateway API resources in the specified namespaces
+- Also include the Envoy Gateway controller namespace for managed infrastructure resources
 - Create namespace-scoped Roles for infrastructure management in each specified namespace
 
 Example configuration:
@@ -120,6 +123,7 @@ envoyGateway:
 
 When you use a namespace selector with Gateway Namespace Mode, Envoy Gateway will:
 - Watch for Gateway API resources in all namespaces matching the label selector
+- Also include the Envoy Gateway controller namespace for managed infrastructure resources
 - Use a ClusterRole for infrastructure management (since target namespaces are determined dynamically at runtime)
 
 Example configuration:

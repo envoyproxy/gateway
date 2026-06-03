@@ -10,13 +10,18 @@ spec:
     group: gateway.envoyproxy.io
     kind: EnvoyProxy
     name: upgrade-config
-    namespace: envoy-gateway-system
+    namespace: gateway-upgrade-infra
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-upgrade-infra
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: upgrade-config
-  namespace: envoy-gateway-system
+  namespace: gateway-upgrade-infra
 spec:
   ipFamily: IPv4
   provider:
@@ -41,11 +46,6 @@ metadata:
   name: gateway-conformance-infra
   labels:
     gateway-conformance: infra
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: gateway-upgrade-infra
 ---
 apiVersion: v1
 kind: Namespace
