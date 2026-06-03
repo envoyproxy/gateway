@@ -56,13 +56,14 @@ func (o *ServerOptions) setDefault() {
 // HTTPServer wraps a local file cache and serves the Wasm modules over HTTP.
 type HTTPServer struct {
 	ServerOptions
-	sync.Mutex
+	failedAttemptsMux sync.Mutex
 	// map from the mapping path to the wasm file path in the local cache.
 	// The mapping path is a generated unguessable path to prevent unauthorized users
 	// from accessing the Wasm module using EnvoyPatchPolicy. Unless the user is
 	// an admin who can dump the configuration of the Envoy proxy, the mapping path
 	// is not exposed to the user.
 	mappingPath2Cache map[string]wasmModuleEntry
+	mappingPathMux    sync.RWMutex
 	// map from the original URL to the number of failed attempts to download the Wasm module.
 	// If the number of failed attempts exceeds the maximum number of attempts, we will not
 	// try to download the Wasm module again for attemptResetDelay. This is used
@@ -150,7 +151,11 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Sugar().Debugw("Received wasm request", "path", r.URL.Path)
 
 	path := strings.TrimPrefix(r.URL.Path, "/")
-	if entry, ok := s.mappingPath2Cache[path]; ok {
+
+	s.mappingPathMux.RLock()
+	entry, ok := s.mappingPath2Cache[path]
+	s.mappingPathMux.RUnlock()
+	if ok {
 		http.ServeFile(w, r, entry.localFile)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
@@ -167,8 +172,8 @@ func (s *HTTPServer) Get(originalURL string, opts *GetOptions) (servingURL, chec
 		localFile   string
 	)
 
-	s.Lock()
-	defer s.Unlock()
+	s.failedAttemptsMux.Lock()
+	defer s.failedAttemptsMux.Unlock()
 	attempt, attempted := s.failedAttempts[originalURL]
 
 	if attempted && attempt.fails > s.MaxFailedAttempts {
@@ -198,6 +203,8 @@ func (s *HTTPServer) Get(originalURL string, opts *GetOptions) (servingURL, chec
 	// The unguessable path is used to prevent unauthorized users from accessing
 	// an unauthorized private Wasm module.
 	mappingPath = generateUnguessablePath(originalURL, s.Salt)
+	s.mappingPathMux.Lock()
+	defer s.mappingPathMux.Unlock()
 	s.mappingPath2Cache[mappingPath] = wasmModuleEntry{
 		name:        opts.ResourceName,
 		originalURL: originalURL,
@@ -244,14 +251,14 @@ func (s *HTTPServer) resetFailedAttempts(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			s.Lock()
+			s.failedAttemptsMux.Lock()
 			for k, m := range s.failedAttempts {
 				if m.expired() {
 					s.logger.Info("Reset failed attempts", "URL", k)
 					delete(s.failedAttempts, k)
 				}
 			}
-			s.Unlock()
+			s.failedAttemptsMux.Unlock()
 		case <-ctx.Done():
 			return
 		}
