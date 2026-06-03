@@ -19,6 +19,7 @@ bug fixes: |
   Fixed Gateway getting stuck at `Programmed=False` after its LoadBalancer Service IP was restored, by ignoring `LastTransitionTime` when comparing status conditions.
   Fixed HPA maxReplicas required message typo in gateway-helm chart.
   Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
+  Fixed invalid listeners blocking valid ones during conflict detection by validating each listener's spec independently before running conflict resolution.
   Fixed missing read lock when accessing the wasm HTTP server cache map.
   Fixed an issue that caused a nil-dereference when SecurityPolicy targets TCPRoute without `spec.authorization`.
   Fixed an issue that OCI layer extraction allocates memory from untrusted tar header.
