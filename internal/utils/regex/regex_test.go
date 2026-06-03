@@ -36,6 +36,90 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+func TestPathExactRegex(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		testPath string
+		want     bool
+	}{
+		// Should match
+		{
+			name:     "exact match",
+			path:     "/admin",
+			testPath: "/admin",
+			want:     true,
+		},
+		{
+			name:     "with query string",
+			path:     "/admin",
+			testPath: "/admin?x=1",
+			want:     true,
+		},
+		{
+			name:     "with complex query string",
+			path:     "/admin",
+			testPath: "/admin?foo=bar&baz=qux",
+			want:     true,
+		},
+		{
+			name:     "with fragment",
+			path:     "/admin",
+			testPath: "/admin#section",
+			want:     true,
+		},
+		{
+			name:     "with semicolon parameter",
+			path:     "/admin",
+			testPath: "/admin;sessionid=123",
+			want:     true,
+		},
+
+		// Should NOT match
+		{
+			name:     "sub-path",
+			path:     "/admin",
+			testPath: "/admin/users",
+			want:     false,
+		},
+		{
+			name:     "alphanumeric continuation",
+			path:     "/admin",
+			testPath: "/adminx",
+			want:     false,
+		},
+		{
+			name:     "different path",
+			path:     "/admin",
+			testPath: "/other",
+			want:     false,
+		},
+		{
+			name:     "prefix only",
+			path:     "/admin",
+			testPath: "/adm",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pattern := PathExactRegex(tt.path)
+
+			regex, err := regexp.Compile(pattern)
+			if err != nil {
+				t.Fatalf("Failed to compile regex pattern %q: %v", pattern, err)
+			}
+
+			got := regex.MatchString(tt.testPath)
+			if got != tt.want {
+				t.Errorf("PathExactRegex(%q).MatchString(%q) = %v, want %v (pattern: %q)",
+					tt.path, tt.testPath, got, tt.want, pattern)
+			}
+		})
+	}
+}
+
 func TestPathSeparatedPrefixRegex(t *testing.T) {
 	tests := []struct {
 		name     string

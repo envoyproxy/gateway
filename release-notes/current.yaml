@@ -2,6 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  Lua EnvoyExtensionPolicies are now disabled by default. Use the new `enableLua` field in `extensionApis` to explicitly enable them. The `disableLua` field is deprecated and will be removed in a future release.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -9,14 +10,25 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for authorization path match.
+  Added a `requestBody` field to the HTTP active health checker in `BackendTrafficPolicy`, allowing a request body payload to be sent during HTTP health checking. The field requires the health check `method` to be `POST` or `PUT`.
 
 bug fixes: |
-
+  Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
+  Fixed controller panic when processing backend tls settings.
+  Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
+  Fixed missing deprecated field warning in ClientTrafficPolicy and SecurityPolicy.
+  Fixed ClientTrafficPolicy TLS cipher validation rejecting supported IANA/RFC cipher suite names.
+  Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
+  Fixed `MaxStreamDuration` not being set on `CommonHttpProtocolOptions` for non-route cluster.
+  Fixed `egctl x status all`/`xroute`/`xpolicy` failing when a Gateway API CRD (e.g. TCPRoute) is not installed in the cluster; missing CRDs are now skipped silently, or reported on stderr with `-v`.
+  Fixed Kubernetes Service and ServiceImport `appProtocol` values `kubernetes.io/ws` and `kubernetes.io/wss` to force HTTP/1.1 upstream connections instead of negotiating HTTP/2, avoiding compatibility issues with WebSocket backends that do not support RFC 8441 extended CONNECT.
 # Enhancements that improve performance.
 performance improvements: |
 
 # Deprecated features or APIs.
 deprecations: |
+  The `disableLua` field in `extensionApis` is deprecated in favor of `enableLua`.
 
 # Other notable changes not covered by the above sections.
 Other changes: |

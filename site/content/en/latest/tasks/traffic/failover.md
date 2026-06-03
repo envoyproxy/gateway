@@ -567,6 +567,6 @@ The first error can be avoided by configuring [retries](./../../tasks/traffic/re
 
 [Backend]: ../../../api/extension_types#backend
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Service]: https://kubernetes.io/docs/concepts/services-networking/service/
 [Deployment]: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/

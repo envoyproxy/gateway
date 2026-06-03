@@ -2,6 +2,10 @@
 # Source: gateway-helm/templates/envoy-gateway-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+# Disable token automounting on the ServiceAccount by default to satisfy
+# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
+# enable automountServiceAccountToken in their pod spec.
+automountServiceAccountToken: false
 metadata:
   name: envoy-gateway
   namespace: envoy-gateway-system
@@ -145,6 +149,7 @@ rules:
 - apiGroups:
   - gateway.envoyproxy.io
   resources:
+  - envoyproxies/status
   - envoypatchpolicies/status
   - clienttrafficpolicies/status
   - backendtrafficpolicies/status
@@ -245,9 +250,19 @@ rules:
   - watch
 - apiGroups:
   - autoscaling
-  - policy
   resources:
   - horizontalpodautoscalers
+  verbs:
+  - create
+  - get
+  - list
+  - delete
+  - deletecollection
+  - patch
+  - watch
+- apiGroups:
+  - policy
+  resources:
   - poddisruptionbudgets
   verbs:
   - create
@@ -416,6 +431,13 @@ spec:
         app.kubernetes.io/name: gateway-helm
         app.kubernetes.io/instance: gateway-helm
     spec:
+      automountServiceAccountToken: true
+      securityContext:
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - args:
         - server
@@ -491,6 +513,10 @@ spec:
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
+# Disable token automounting on the ServiceAccount by default to satisfy
+# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
+# enable automountServiceAccountToken in their pod spec.
+automountServiceAccountToken: false
 metadata:
   name: gateway-helm-certgen
   namespace: envoy-gateway-system
@@ -576,6 +602,7 @@ spec:
       labels:
         app: certgen
     spec:
+      automountServiceAccountToken: true
       containers:
       - args:
         - --disable-topology-injector

@@ -15,6 +15,7 @@ data:
       enableEnvoyPatchPolicy: true
       enableBackend: true
       enableSDSSecretRef: true
+      enableLua: true
     gatewayAPI:
       enabled: [XListenerSet]
     rateLimit:

@@ -306,7 +306,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass
+	//   https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gatewayclass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -326,7 +326,19 @@ type ExtensionAPISettings struct {
 	EnableBackend bool `json:"enableBackend"`
 	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
 	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
-	DisableLua bool `json:"disableLua"`
+	// This field is mutually exclusive with EnableLua.
+	//
+	// Deprecated: Use EnableLua instead. This field will be removed in a future release.
+	//
+	// +optional
+	DisableLua *bool `json:"disableLua,omitempty"`
+	// EnableLua enables the Lua EnvoyExtensionPolicy feature.
+	// If set to true, the Lua EnvoyExtensionPolicy feature will be enabled.
+	// By default, Lua policies are disabled.
+	// This field is mutually exclusive with DisableLua.
+	//
+	// +optional
+	EnableLua bool `json:"enableLua,omitempty"`
 	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds).
 	EnableSDSSecretRef bool `json:"enableSDSSecretRef"`
 }

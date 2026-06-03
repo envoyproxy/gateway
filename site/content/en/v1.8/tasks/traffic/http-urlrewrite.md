@@ -742,6 +742,6 @@ When `appendXForwardedHost` is set to `false`, the `X-Forwarded-Host` header wil
 request even though the host is being rewritten. This is useful when the upstream service does not need or should
 not receive the original host information.
 
-[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpurlrewritefilter
+[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpurlrewritefilter
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
 [RE2]: https://github.com/google/re2/wiki/Syntax

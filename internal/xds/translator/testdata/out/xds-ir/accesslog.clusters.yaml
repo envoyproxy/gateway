@@ -21,6 +21,13 @@
   name: direct-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      commonHttpProtocolOptions:
+        maxConnectionDuration: 30s
+      explicitHttpConfig:
+        httpProtocolOptions: {}
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -47,6 +54,8 @@
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      commonHttpProtocolOptions:
+        maxStreamDuration: 30s
       explicitHttpConfig:
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
@@ -87,6 +96,8 @@
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      commonHttpProtocolOptions:
+        maxConnectionDuration: 30s
       explicitHttpConfig:
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576

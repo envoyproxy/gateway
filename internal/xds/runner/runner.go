@@ -195,14 +195,15 @@ func (r *Runner) Start(ctx context.Context) error {
 			saAudience,
 		)
 
-		creds, err := credentials.NewServerTLSFromFile(xdsTLSCertFilepath, xdsTLSKeyFilepath)
+		// Re-read the cert from disk on every handshake, mirroring the default mode above.
+		serverTLSConfig, err := r.loadServerTLSConfig()
 		if err != nil {
-			return fmt.Errorf("failed to create TLS credentials: %w", err)
+			return fmt.Errorf("failed to load server TLS config: %w", err)
 		}
 
 		grpcOpts = append([]grpc.ServerOption{}, baseKeepaliveOptions...)
 		grpcOpts = append(grpcOpts,
-			grpc.Creds(creds),
+			grpc.Creds(credentials.NewTLS(serverTLSConfig)),
 			grpc.StreamInterceptor(jwtInterceptor.Stream()),
 			grpc.UnaryInterceptor(jwtInterceptor.Unary()),
 		)
@@ -433,4 +434,22 @@ func (r *Runner) loadTLSConfig() (*tls.Config, error) {
 		return nil, fmt.Errorf("failed to create tls config: %w", err)
 	}
 	return tlsConfig, err
+}
+
+// loadServerTLSConfig returns a server-only TLS config used by the
+// GatewayNamespaceMode xDS server, where peers are authenticated via JWT.
+func (r *Runner) loadServerTLSConfig() (*tls.Config, error) {
+	certPath := xdsTLSCertFilepath
+	keyPath := xdsTLSKeyFilepath
+
+	if r.TLSCertPath != "" && r.TLSKeyPath != "" {
+		certPath = r.TLSCertPath
+		keyPath = r.TLSKeyPath
+	}
+
+	tlsConfig, err := crypto.LoadServerTLSConfig(certPath, keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create server tls config: %w", err)
+	}
+	return tlsConfig, nil
 }

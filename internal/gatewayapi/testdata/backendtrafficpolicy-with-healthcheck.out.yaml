@@ -70,8 +70,11 @@ backendTrafficPolicies:
           expectedResponse:
             text: pong
             type: Text
-          method: GET
+          method: POST
           path: /healthz
+          requestBody:
+            text: ping
+            type: Text
         interval: 5s
         timeout: 1s
         type: HTTP
@@ -1174,8 +1177,10 @@ xdsIR:
                 expectedStatuses:
                 - 200
                 host: ""
-                method: GET
+                method: POST
                 path: /healthz
+                requestBody:
+                  text: ping
               interval: 5s
               timeout: 1s
               unhealthyThreshold: 3

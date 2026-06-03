@@ -16,7 +16,18 @@ envoyProxyForGatewayClass:
           externalTrafficPolicy: Local
           type: LoadBalancer
       type: Kubernetes
-  status: {}
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: eg
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass

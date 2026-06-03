@@ -162,14 +162,17 @@ func TestTLSConfig(t *testing.T) {
 }
 
 // tryConnect tries to establish TLS connection to the server.
-// If successful, return the server certificate.
+// If successful, return the server certificate. A nil clientCert means the
+// client does not present a certificate.
 func tryConnect(address string, clientCert *tls.Certificate, caCertPool *x509.CertPool) (*x509.Certificate, error) {
 	clientConfig := &tls.Config{
-		ServerName:   "localhost",
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{*clientCert},
-		NextProtos:   []string{"h2"},
-		RootCAs:      caCertPool,
+		ServerName: "localhost",
+		MinVersion: tls.VersionTLS13,
+		NextProtos: []string{"h2"},
+		RootCAs:    caCertPool,
+	}
+	if clientCert != nil {
+		clientConfig.Certificates = []tls.Certificate{*clientCert}
 	}
 	conn, err := tls.Dial("tcp", address, clientConfig)
 	if err != nil {
@@ -564,6 +567,97 @@ func TestGetRandomMaxConnectionAge(t *testing.T) {
 
 	// Verify we got different values (randomness check)
 	assert.Len(t, counts, len(maxConnectionAgeValues), "Should see all possible values")
+}
+
+func TestLoadServerTLSConfig_GatewayNamespaceMode(t *testing.T) {
+	trustedCA := certyaml.Certificate{Subject: "cn=trusted-ca"}
+	serverCertBefore := certyaml.Certificate{
+		Subject:         "cn=eg-before-rotation",
+		SubjectAltNames: []string{"DNS:localhost"},
+		Issuer:          &trustedCA,
+	}
+	serverCertAfter := certyaml.Certificate{
+		Subject:         "cn=eg-after-rotation",
+		SubjectAltNames: []string{"DNS:localhost"},
+		Issuer:          &trustedCA,
+	}
+
+	untrustedCA := certyaml.Certificate{Subject: "cn=untrusted-ca"}
+	untrustedClientCert := certyaml.Certificate{
+		Subject: "cn=untrusted-client",
+		Issuer:  &untrustedCA,
+	}
+
+	caCertPool := x509.NewCertPool()
+	ca, err := trustedCA.X509Certificate()
+	require.NoError(t, err)
+	caCertPool.AddCert(&ca)
+
+	configDir := t.TempDir()
+	certFile := filepath.Join(configDir, "tls.crt")
+	keyFile := filepath.Join(configDir, "tls.key")
+	require.NoError(t, serverCertBefore.WritePEM(certFile, keyFile))
+
+	// Exercise the helper used by Start() in the GNM branch.
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	r := New(&Config{
+		Server:      *cfg,
+		TLSCertPath: certFile,
+		TLSKeyPath:  keyFile,
+	})
+
+	tlsCfg, err := r.loadServerTLSConfig()
+	require.NoError(t, err)
+	require.NotNil(t, tlsCfg)
+
+	// Server-only TLS: no mTLS, TLS 1.3, per-handshake reload.
+	require.NotNil(t, tlsCfg.GetConfigForClient)
+	require.Equal(t, tls.NoClientCert, tlsCfg.ClientAuth)
+	require.Equal(t, uint16(tls.VersionTLS13), tlsCfg.MinVersion)
+	require.Empty(t, tlsCfg.Certificates,
+		"top-level Certificates should be empty so per-handshake reload is used")
+
+	g := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsCfg)))
+	t.Cleanup(g.GracefulStop)
+
+	l, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+	go func() { _ = g.Serve(l) }()
+	address := l.Addr().String()
+
+	// Client without any cert succeeds (no mTLS).
+	got, err := tryConnect(address, nil, caCertPool)
+	require.NoError(t, err)
+	expected, err := serverCertBefore.X509Certificate()
+	require.NoError(t, err)
+	assert.Equal(t, expected.Subject.CommonName, got.Subject.CommonName)
+
+	// Client with an untrusted cert also succeeds; JWT authenticates peers.
+	untrustedTLS, err := untrustedClientCert.TLSCertificate()
+	require.NoError(t, err)
+	got, err = tryConnect(address, &untrustedTLS, caCertPool)
+	require.NoError(t, err)
+	assert.Equal(t, expected.Subject.CommonName, got.Subject.CommonName)
+
+	// Rotate the cert on disk; the next handshake serves the new identity.
+	require.NoError(t, serverCertAfter.WritePEM(certFile, keyFile))
+
+	got, err = tryConnect(address, nil, caCertPool)
+	require.NoError(t, err)
+	expectedAfter, err := serverCertAfter.X509Certificate()
+	require.NoError(t, err)
+	assert.Equal(t, expectedAfter.Subject.CommonName, got.Subject.CommonName)
+	assert.NotEqual(t, expected.Subject.CommonName, got.Subject.CommonName)
+}
+
+func TestLoadServerTLSConfig_DefaultsToKubernetesPaths(t *testing.T) {
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	r := New(&Config{Server: *cfg})
+
+	_, err = r.loadServerTLSConfig()
+	require.Error(t, err)
 }
 
 func TestLoadTLSConfig_HostMode(t *testing.T) {

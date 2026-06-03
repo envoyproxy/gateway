@@ -120,4 +120,4 @@ spec:
 [admin endpoint]: https://www.envoyproxy.io/docs/envoy/latest/operations/admin
 [Open Telemetry sink]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[support levels]: https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels
+[support levels]: https://gateway-api.sigs.k8s.io/docs/concepts/conformance/?h=extended#2-support-levels

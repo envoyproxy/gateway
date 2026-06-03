@@ -1,5 +1,9 @@
 apiVersion: v1
 kind: ServiceAccount
+# Disable token automounting on the ServiceAccount by default to satisfy
+# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
+# enable automountServiceAccountToken in their pod spec.
+automountServiceAccountToken: false
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
   namespace: {{ include "eg.namespace" . }}
