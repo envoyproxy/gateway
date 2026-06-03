@@ -1,4 +1,4 @@
-date: June 1, 2026
+date: June 4, 2026
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
@@ -6,6 +6,8 @@ breaking changes: |
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
   Fixed xDS server authentication bypass in GatewayNamespaceMode, adding Unary Interceptor and validating SotW requests.
+  Fixed a path normalization bypass in the Lua validator sandbox that allowed submitted Lua to read sensitive controller files during validation.
+  Improved validation when processing remote Wasm extension artifacts.
   Bump Envoy ratelimit image to `b8d893f3`.
 
 # New features or capabilities added in this release.
@@ -17,7 +19,9 @@ bug fixes: |
   Fixed Gateway getting stuck at `Programmed=False` after its LoadBalancer Service IP was restored, by ignoring `LastTransitionTime` when comparing status conditions.
   Fixed HPA maxReplicas required message typo in gateway-helm chart.
   Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
-  Fixed invalid listeners blocking valid ones during conflict detection by validating each listener's spec independently before running conflict resolution.
+  Fixed missing read lock when accessing the wasm HTTP server cache map.
+  Fixed an issue that caused a nil-dereference when SecurityPolicy targets TCPRoute without `spec.authorization`.
+  Fixed an issue that OCI layer extraction allocates memory from untrusted tar header.
 
 # Enhancements that improve performance.
 performance improvements: |
