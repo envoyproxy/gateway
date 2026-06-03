@@ -116,7 +116,7 @@ func (f *HTTPFetcher) Fetch(ctx context.Context, url string, allowInsecure bool)
 		}
 		if resp.StatusCode == http.StatusOK {
 			// Limit wasm module to 256mb; in reality, it must be much smaller
-			body, err := io.ReadAll(io.LimitReader(resp.Body, maxWasmSize))
+			body, err := io.ReadAll(io.LimitReader(resp.Body, maxWasmSize+1))
 			if err != nil {
 				return nil, err
 			}
@@ -124,7 +124,10 @@ func (f *HTTPFetcher) Fetch(ctx context.Context, url string, allowInsecure bool)
 			if err != nil {
 				f.logger.Info("wasm server connection is not closed", "error", err)
 			}
-			return unboxIfPossible(body), err
+			if int64(len(body)) > maxWasmSize {
+				return nil, fmt.Errorf("wasm module size exceeds maximum size %d", maxWasmSize)
+			}
+			return unboxIfPossible(body)
 		}
 		lastError = fmt.Errorf("wasm module download request failed: status code %v", resp.StatusCode)
 		if retryable(resp.StatusCode) {
@@ -162,7 +165,7 @@ func isPosixTar(b []byte) bool {
 }
 
 // wasm plugin should be the only file in the tarball.
-func getFirstFileFromTar(b []byte) []byte {
+func getFirstFileFromTar(b []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(b)
 
 	// Limit wasm module to 256mb; in reality it must be much smaller
@@ -170,55 +173,68 @@ func getFirstFileFromTar(b []byte) []byte {
 
 	h, err := tr.Next()
 	if err != nil {
-		return nil
+		return nil, err
+	}
+
+	if h.Size > maxWasmSize {
+		return nil, fmt.Errorf("wasm module size %d exceeds maximum size %d", h.Size, maxWasmSize)
 	}
 
 	ret := make([]byte, h.Size)
 	_, err = io.ReadFull(tr, ret)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return ret
+	return ret, nil
 }
 
 func isGZ(b []byte) bool {
 	return len(b) > 2 && bytes.Equal(b[:2], gzMagicNumber)
 }
 
-func getFileFromGZ(b []byte) []byte {
+func getFileFromGZ(b []byte) ([]byte, error) {
+	return getFileFromGZWithLimit(b, maxWasmSize)
+}
+
+func getFileFromGZWithLimit(b []byte, maxSize int64) ([]byte, error) {
 	buf := bytes.NewBuffer(b)
 
 	zr, err := gzip.NewReader(buf)
 	if err != nil {
-		return nil
+		return nil, err
 	}
+	defer zr.Close()
 
-	ret, err := io.ReadAll(zr)
+	ret, err := io.ReadAll(io.LimitReader(zr, maxSize+1))
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return ret
+	if int64(len(ret)) > maxSize {
+		return nil, fmt.Errorf("decompressed wasm module size exceeds maximum size %d", maxSize)
+	}
+	return ret, nil
 }
 
-// Just do the best effort.
-// If an error is encountered, just return the original bytes.
-// Errors will be handled upper layers.
-func unboxIfPossible(origin []byte) []byte {
+// Just do the best effort for unrecognized payloads, but return errors for
+// payloads that advertise a supported compressed format and fail to unpack.
+func unboxIfPossible(origin []byte) ([]byte, error) {
 	b := origin
 	for {
 		switch {
 		case isValidWasmBinary(b):
-			return b
+			return b, nil
 		case isGZ(b):
-			if b = getFileFromGZ(b); b == nil {
-				return origin
+			var err error
+			if b, err = getFileFromGZ(b); err != nil {
+				return nil, err
 			}
 		case isPosixTar(b):
-			if b = getFirstFileFromTar(b); b == nil {
-				return origin
+			var err error
+			if b, err = getFirstFileFromTar(b); err != nil {
+				return nil, err
 			}
 		default:
-			return origin
+			return origin, nil
 		}
 	}
 }

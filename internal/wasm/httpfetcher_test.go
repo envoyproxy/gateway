@@ -25,6 +25,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -212,6 +213,36 @@ func createGZ(t *testing.T, b []byte) []byte {
 	}
 
 	return buf.Bytes()
+}
+
+func TestGetFirstFileFromTarRejectsOversizedEntry(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	if err := tw.WriteHeader(&tar.Header{
+		Name: "plugin.wasm",
+		Size: math.MaxInt64,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_ = tw.Close()
+
+	got, err := getFirstFileFromTar(buf.Bytes())
+	if err == nil || !strings.Contains(err.Error(), "exceeds maximum size") {
+		t.Fatalf("getFirstFileFromTar got error %v, want exceeds maximum size", err)
+	}
+	if got != nil {
+		t.Fatalf("getFirstFileFromTar got %d bytes, want nil", len(got))
+	}
+}
+
+func TestGetFileFromGZRejectsOversizedContent(t *testing.T) {
+	got, err := getFileFromGZWithLimit(createGZ(t, []byte("hello")), 4)
+	if err == nil || !strings.Contains(err.Error(), "exceeds maximum size") {
+		t.Fatalf("getFileFromGZ got error %v, want exceeds maximum size", err)
+	}
+	if got != nil {
+		t.Fatalf("getFileFromGZ got %d bytes, want nil", len(got))
+	}
 }
 
 func TestWasmHTTPFetchCompressedOrTarFile(t *testing.T) {
