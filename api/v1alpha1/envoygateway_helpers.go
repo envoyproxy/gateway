@@ -96,8 +96,8 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 	return ""
 }
 
-// NamespaceMode returns if uses namespace mode.
-func (e *EnvoyGateway) NamespaceMode() bool {
+// WatchesNamespaces returns true when Envoy Gateway is configured to watch specific Kubernetes namespaces.
+func (e *EnvoyGateway) WatchesNamespaces() bool {
 	return e.Provider != nil &&
 		e.Provider.Kubernetes != nil &&
 		e.Provider.Kubernetes.Watch != nil &&
