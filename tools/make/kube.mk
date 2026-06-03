@@ -107,7 +107,11 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 	@curl -sLo $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml ${EXPERIMENTAL_GATEWAY_API_RELEASE_URL}
 	@curl -sLo $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml ${STANDARD_GATEWAY_API_RELEASE_URL}
 	@mkdir -p charts/gateway-helm/charts/crds/crds
-	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml
+	@mkdir -p charts/gateway-helm/charts/crds/templates
+	@sh tools/hack/split-gateway-api-bundle.sh \
+		$(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml \
+		charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml \
+		charts/gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
 	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \

@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.26.3
+go 1.26.4
 
 require (
 	cel.dev/expr v0.25.2
