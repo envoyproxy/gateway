@@ -44,3 +44,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  DNS-based clusters now use Envoy's `envoy.cluster.dns` cluster extension (`envoy.extensions.clusters.dns.v3.DnsCluster`) instead of the deprecated `dns_refresh_rate` and `respect_dns_ttl` fields on the Envoy `Cluster`. Resolution behavior is unchanged, but any `EnvoyPatchPolicy`/JSONPatch that targets `type`, `dns_refresh_rate`, or `respect_dns_ttl` on these clusters must be updated to patch the `cluster_type` (`envoy.cluster.dns`) typed config instead.
