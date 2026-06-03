@@ -66,6 +66,38 @@ func TestBuildXdsCluster(t *testing.T) {
 	requireCmpNoDiff(t, bootstrapXdsCluster.ConnectTimeout, dynamicXdsCluster.ConnectTimeout)
 }
 
+func TestBuildXdsClusterDNSRefreshRateValidation(t *testing.T) {
+	// A DNS refresh rate of 1ms or less is rejected by the envoy.cluster.dns extension
+	// (DnsCluster.dns_refresh_rate must be greater than 1ms), so buildXdsCluster must surface the error.
+	args := &xdsClusterArgs{
+		name:         "dns-cluster",
+		endpointType: EndpointTypeDNS,
+		dns:          &ir.DNS{DNSRefreshRate: ir.MetaV1DurationPtr(500 * time.Microsecond)},
+	}
+	_, err := buildXdsCluster(args)
+	require.ErrorContains(t, err, "DnsRefreshRate")
+}
+
+func TestToCommonDNSLookupFamily(t *testing.T) {
+	tests := []struct {
+		name     string
+		in       clusterv3.Cluster_DnsLookupFamily
+		expected commondnsv3.DnsLookupFamily
+	}{
+		{"auto", clusterv3.Cluster_AUTO, commondnsv3.DnsLookupFamily_AUTO},
+		{"v4 only", clusterv3.Cluster_V4_ONLY, commondnsv3.DnsLookupFamily_V4_ONLY},
+		{"v6 only", clusterv3.Cluster_V6_ONLY, commondnsv3.DnsLookupFamily_V6_ONLY},
+		{"v4 preferred", clusterv3.Cluster_V4_PREFERRED, commondnsv3.DnsLookupFamily_V4_PREFERRED},
+		{"all", clusterv3.Cluster_ALL, commondnsv3.DnsLookupFamily_ALL},
+		{"unknown defaults to auto", clusterv3.Cluster_DnsLookupFamily(99), commondnsv3.DnsLookupFamily_AUTO},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, toCommonDNSLookupFamily(tc.in))
+		})
+	}
+}
+
 func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 	bootstrapXdsCluster := getXdsClusterObjFromBootstrap(t)
 	require.NotNil(t, bootstrapXdsCluster)
