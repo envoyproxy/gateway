@@ -136,6 +136,39 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 	}
 }
 
+func TestHasMatchingNamespaceLabelsControllerNamespaceBypass(t *testing.T) {
+	controllerNamespace := "envoy-gateway-system"
+	namespaceSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{"gateway": "enabled"},
+	}
+
+	r := gatewayAPIReconciler{
+		namespace:      controllerNamespace,
+		namespaceLabel: namespaceSelector,
+		log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace},
+			}).
+			Build(),
+	}
+
+	gateway := test.GetGateway(types.NamespacedName{
+		Namespace: controllerNamespace,
+		Name:      "gateway",
+	}, "gatewayclass", 80)
+	require.False(t, r.hasMatchingNamespaceLabels(gateway))
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: controllerNamespace,
+			Name:      "envoy-default-gateway",
+		},
+	}
+	require.True(t, r.hasMatchingNamespaceLabels(svc))
+}
+
 // TestValidateGatewayForReconcile tests the validateGatewayForReconcile
 // predicate function.
 func TestValidateGatewayForReconcile(t *testing.T) {
@@ -258,6 +291,60 @@ func TestFindOwningGateway(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEnvoyServiceForGatewayIncludesControllerNamespace(t *testing.T) {
+	ctx := context.Background()
+	gatewayNamespace := "watched"
+	controllerNamespace := "envoy-gateway-system"
+	gatewayClassName := "gc-name"
+	namespaceSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{"gateway": "enabled"},
+	}
+	gtw := test.GetGateway(types.NamespacedName{
+		Namespace: gatewayNamespace,
+		Name:      "gateway",
+	}, gatewayClassName, 80)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: controllerNamespace,
+			Name:      "envoy-default-gateway",
+			Labels:    gatewayapi.OwnerLabels(gtw, false),
+		},
+	}
+
+	baseClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   gatewayNamespace,
+					Labels: namespaceSelector.MatchLabels,
+				},
+			},
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace},
+			},
+			svc,
+		).
+		Build()
+	r := &gatewayAPIReconciler{
+		namespace:       controllerNamespace,
+		classController: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
+		mergeGateways:   sets.New[string](),
+	}
+
+	r.client = newNamespaceSelectorClient(baseClient, namespaceSelector, "")
+	got, err := r.envoyServiceForGateway(ctx, gtw)
+	require.NoError(t, err)
+	require.Nil(t, got)
+
+	r.client = newNamespaceSelectorClient(baseClient, namespaceSelector, controllerNamespace)
+	got, err = r.envoyServiceForGateway(ctx, gtw)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	require.Equal(t, svc.Name, got.Name)
+	require.Equal(t, controllerNamespace, got.Namespace)
 }
 
 // TestValidateConfigMapForReconcile tests the validateConfigMapForReconcile
