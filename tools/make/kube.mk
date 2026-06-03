@@ -315,7 +315,7 @@ ifeq ($(E2E_RUN_TEST),)
 	cd test/ && go test $(E2E_TEST_ARGS) ./e2e/multiple_gc $(E2E_TEST_SUITE_ARGS)  --cleanup-base-resources=true
 	cd test/ && LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
 else
-	cd test/ && go test $(E2E_TEST_ARGS) ./e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --cleanup-base-resources=$(E2E_CLEANUP) \
+	cd test/ && go test $(E2E_TEST_ARGS) ./e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --cleanup-base-resources=$(E2E_CLEANUP) --cleanup-test-resources=$(E2E_CLEANUP)\
 		--run-test $(E2E_RUN_TEST) $(E2E_REDIRECT)
 endif
 

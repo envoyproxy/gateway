@@ -34,8 +34,8 @@ require (
 	k8s.io/client-go v0.36.1
 	k8s.io/kubectl v0.36.1
 	sigs.k8s.io/controller-runtime v0.24.1
-	sigs.k8s.io/gateway-api v1.5.1
-	sigs.k8s.io/gateway-api/conformance v1.5.1
+	sigs.k8s.io/gateway-api monthly-2026.05
+	sigs.k8s.io/gateway-api/conformance monthly-2026.05
 	sigs.k8s.io/yaml v1.6.0
 )
 
