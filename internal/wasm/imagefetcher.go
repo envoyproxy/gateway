@@ -284,8 +284,11 @@ func extractWasmPluginBinary(r io.Reader) ([]byte, error) {
 			return nil, err
 		}
 
-		ret := make([]byte, h.Size)
 		if filepath.Base(h.Name) == wasmPluginFileName {
+			if h.Size < 0 || h.Size > maxWasmSize {
+				return nil, fmt.Errorf("%s is too large: %d bytes", wasmPluginFileName, h.Size)
+			}
+			ret := make([]byte, h.Size)
 			_, err := io.ReadFull(tr, ret)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read %s: %w", wasmPluginFileName, err)

@@ -193,6 +193,9 @@ func getFirstFileFromTar(b []byte) []byte {
 		return nil
 	}
 
+	if h.Size < 0 || h.Size > maxWasmSize {
+		return nil
+	}
 	ret := make([]byte, h.Size)
 	_, err = io.ReadFull(tr, ret)
 	if err != nil {
