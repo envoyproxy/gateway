@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -486,15 +487,22 @@ func Validate(ctx context.Context, client client.Client, gateway *egv1a1.EnvoyGa
 	if redis.URLRef != nil && redis.URLRef.SecretKeyRef != nil {
 		ref := redis.URLRef.SecretKeyRef
 		secret := &corev1.Secret{}
-		if err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
-			return fmt.Errorf("cannot find Secret %s in namespace %s: %w", ref.Name, namespace, err)
-		}
-		value, ok := secret.Data[ref.Key]
-		if !ok {
-			return fmt.Errorf("key %q not found in Secret %s/%s", ref.Key, namespace, ref.Name)
-		}
-		if err := validation.ValidateRedisURL(string(value)); err != nil {
-			return fmt.Errorf("invalid Redis URL in Secret %s/%s key %q: %w", namespace, ref.Name, ref.Key, err)
+		err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret)
+		switch {
+		case apierrors.IsNotFound(err):
+			// The Secret may be provisioned after the EnvoyGateway config (e.g. by an
+			// external controller such as Crossplane). The ratelimit Deployment consumes
+			// the URL via valueFrom.secretKeyRef, so the kubelet starts the container once
+			// the Secret and key exist. Don't block infra creation on a not-yet-present Secret.
+		case err != nil:
+			return fmt.Errorf("failed to get Secret %s in namespace %s: %w", ref.Name, namespace, err)
+		default:
+			// Validate the value only when present; a missing key is resolved later by the kubelet.
+			if value, ok := secret.Data[ref.Key]; ok {
+				if verr := validation.ValidateRedisURL(string(value)); verr != nil {
+					return fmt.Errorf("invalid Redis URL in Secret %s/%s key %q: %w", namespace, ref.Name, ref.Key, verr)
+				}
+			}
 		}
 	}
 

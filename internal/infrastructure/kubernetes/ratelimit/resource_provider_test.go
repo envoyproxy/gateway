@@ -987,8 +987,10 @@ func TestValidateRedisURLRef(t *testing.T) {
 	}{
 		{name: "secret and key present", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")}, refName: "redis-conn", refKey: "REDIS_ENDPOINT", expectErr: false},
 		{name: "comma-delimited value", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("a.redis.svc:6379,b.redis.svc:6379")}, refName: "redis-conn", refKey: "REDIS_ENDPOINT", expectErr: false},
-		{name: "secret missing", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")}, refName: "absent", refKey: "REDIS_ENDPOINT", expectErr: true},
-		{name: "key missing", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")}, refName: "redis-conn", refKey: "WRONG_KEY", expectErr: true},
+		// Non-blocking: the Secret/key may be provisioned after the config; the kubelet resolves it.
+		{name: "secret not yet created", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")}, refName: "absent", refKey: "REDIS_ENDPOINT", expectErr: false},
+		{name: "key not yet present", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("redis.redis.svc:6379")}, refName: "redis-conn", refKey: "WRONG_KEY", expectErr: false},
+		// Blocking: a present-but-invalid value is a misconfiguration, caught before rollout.
 		{name: "empty value", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte("")}, refName: "redis-conn", refKey: "REDIS_ENDPOINT", expectErr: true},
 		{name: "malformed value", secretData: map[string][]byte{"REDIS_ENDPOINT": []byte(":foo")}, refName: "redis-conn", refKey: "REDIS_ENDPOINT", expectErr: true},
 	}
