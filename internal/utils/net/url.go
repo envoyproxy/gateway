@@ -24,6 +24,9 @@ func ParseURL(urlStr string) (scheme, hostAndPort string, err error) {
 		return "", "", fmt.Errorf("unsupported URL scheme: %s", u.Scheme)
 	case "unix":
 		// For Unix Domain Socket, return the path as host, empty port
+		if u.Host != "" {
+			return "", "", fmt.Errorf("unix URL must not contain a host, use unix:///absolute/path")
+		}
 		if u.Path == "" {
 			return "", "", fmt.Errorf("unix URL must contain a path")
 		}
