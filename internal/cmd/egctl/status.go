@@ -15,6 +15,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -93,6 +94,12 @@ func newStatusCommand() *cobra.Command {
 			case "all":
 				for _, rt := range supportedAllTypes {
 					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+						if meta.IsNoMatchError(err) {
+							if verbose {
+								fmt.Fprintf(cmd.ErrOrStderr(), "skipping %s: CRD not installed in cluster\n", rt)
+							}
+							continue
+						}
 						return err
 					}
 				}
@@ -100,6 +107,12 @@ func newStatusCommand() *cobra.Command {
 			case "xroute":
 				for _, rt := range supportedXRouteTypes {
 					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+						if meta.IsNoMatchError(err) {
+							if verbose {
+								fmt.Fprintf(cmd.ErrOrStderr(), "skipping %s: CRD not installed in cluster\n", rt)
+							}
+							continue
+						}
 						return err
 					}
 				}
@@ -107,6 +120,12 @@ func newStatusCommand() *cobra.Command {
 			case "xpolicy":
 				for _, rt := range supportedXPolicyTypes {
 					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+						if meta.IsNoMatchError(err) {
+							if verbose {
+								fmt.Fprintf(cmd.ErrOrStderr(), "skipping %s: CRD not installed in cluster\n", rt)
+							}
+							continue
+						}
 						return err
 					}
 				}
