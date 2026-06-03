@@ -75,7 +75,8 @@ func isNamespaceSelectorBypassInfrastructureResource(obj any) bool {
 		*corev1.ConfigMap, corev1.ConfigMap,
 		*corev1.Secret, corev1.Secret,
 		*corev1.Service, corev1.Service,
-		*corev1.ServiceAccount, corev1.ServiceAccount:
+		*corev1.ServiceAccount, corev1.ServiceAccount,
+		*discoveryv1.EndpointSlice, discoveryv1.EndpointSlice:
 		return true
 	default:
 		return false

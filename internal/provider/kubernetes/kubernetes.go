@@ -304,6 +304,10 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			UnsafeDisableDeepCopy: new(true),
 			Namespaces:            watchedAndControllerNamespaces,
 		}
+		mgrOpts.Cache.ByObject[&discoveryv1.EndpointSlice{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces:            watchedAndControllerNamespaces,
+		}
 		if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
 			// GatewayNamespaceMode still needs controller namespace access for
 			// EG controller resources and the xDS CA Secret.
