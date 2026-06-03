@@ -933,7 +933,7 @@ spec:
         secret:
           secretName: envoy-gateway
 ---
-# Source: gateway-helm/charts/crds/templates/gatewayapi-supporting-resources.yaml
+# Source: gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_vap_safeupgrades.yaml
 #
@@ -967,7 +967,7 @@ spec:
       message: "Installing CRDs with version before v1.5.0 is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install older versions."
       reason: Invalid
 ---
-# Source: gateway-helm/charts/crds/templates/gatewayapi-supporting-resources.yaml
+# Source: gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:

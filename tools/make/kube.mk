@@ -111,7 +111,7 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 	@sh tools/hack/split-gateway-api-bundle.sh \
 		$(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml \
 		charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml \
-		charts/gateway-helm/charts/crds/templates/gatewayapi-supporting-resources.yaml
+		charts/gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
 	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \

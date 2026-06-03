@@ -68,12 +68,12 @@ helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm --set 'crds.g
 If the provider-managed Gateway API CRDs are not compatible, use a compatible Gateway API CRD installation method for
 the cluster first, then install this chart with `--skip-crds`.
 
-After the required CRDs are installed, install the eg chart with `--skip-crds`. Gateway API supporting resources
-(non-CRD resources shipped with the Gateway API bundle, such as the safe-upgrades ValidatingAdmissionPolicy and binding)
-are rendered from the chart templates on install by default, so disable them when these resources are managed outside this chart:
+After the required CRDs are installed, install the eg chart with `--skip-crds`. Gateway API safe upgrade policy
+resources (the safe-upgrades ValidatingAdmissionPolicy and binding shipped with the Gateway API bundle) are rendered
+from the chart templates on install by default, so disable them when these resources are managed outside this chart:
 
 ``` shell
-helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds --set crds.gatewayAPI.supportingResources.enabled=false
+helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds --set crds.gatewayAPI.safeUpgradePolicy.enabled=false
 ```
 
 To uninstall the chart:
@@ -157,4 +157,3 @@ helm uninstall eg -n envoy-gateway-system
 | service.type | string | `"ClusterIP"` | Service type. Can be set to LoadBalancer with specific IP, e.g.: type: LoadBalancer loadBalancerIP: 10.236.90.20 |
 | topologyInjector.annotations | object | `{}` |  |
 | topologyInjector.enabled | bool | `true` |  |
-

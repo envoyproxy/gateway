@@ -6,5 +6,5 @@ global:
 
 crds:
   gatewayAPI:
-    supportingResources:
+    safeUpgradePolicy:
       enabled: false

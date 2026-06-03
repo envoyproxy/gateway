@@ -11,7 +11,7 @@ input=$1
 crds_output=$2
 vap_output=$3
 script_dir=$(dirname "$0")
-supporting_resources_header=$script_dir/gatewayapi-supporting-resources-header.tpl
+safe_upgrade_policy_header=$script_dir/gatewayapi-safe-upgrade-policy-header.tpl
 
 tmp_crds=$(mktemp)
 tmp_vap=$(mktemp)
@@ -48,7 +48,7 @@ END {
 mv "$tmp_crds" "$crds_output"
 
 {
-  cat "$supporting_resources_header"
+  cat "$safe_upgrade_policy_header"
   cat "$tmp_vap"
   echo '{{- end }}'
   echo '{{- end }}'
