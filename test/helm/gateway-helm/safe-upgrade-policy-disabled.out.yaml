@@ -8,7 +8,7 @@ kind: ServiceAccount
 automountServiceAccountToken: false
 metadata:
   name: envoy-gateway
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -21,7 +21,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: envoy-gateway-config
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -215,14 +215,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
 ---
 # Source: gateway-helm/templates/infra-manager-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gateway-helm-infra-manager
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -295,7 +295,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gateway-helm-leader-election-role
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -340,7 +340,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gateway-helm-infra-manager
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -354,14 +354,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
 ---
 # Source: gateway-helm/templates/leader-election-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gateway-helm-leader-election-rolebinding
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -375,14 +375,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
 ---
 # Source: gateway-helm/templates/envoy-gateway-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: envoy-gateway
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -418,7 +418,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: envoy-gateway
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -524,58 +524,6 @@ spec:
         secret:
           secretName: envoy-gateway
 ---
-# Source: gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
-#
-# config/crd/experimental/gateway.networking.k8s.io_vap_safeupgrades.yaml
-#
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingAdmissionPolicy
-metadata:
-  annotations:
-    gateway.networking.k8s.io/bundle-version: v1.5.0-dev
-    gateway.networking.k8s.io/channel: standard
-  name: "safe-upgrades.gateway.networking.k8s.io"
-spec:
-  failurePolicy: Fail
-  matchConstraints:
-    resourceRules:
-    - apiGroups:   ["apiextensions.k8s.io"]
-      apiVersions: ["v1"]
-      operations:  ["CREATE", "UPDATE"]
-      resources:   ["*"]
-  validations:
-    - expression: "object.spec.group != 'gateway.networking.k8s.io' || oldObject == null || (
-        has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/channel') && 
-        object.metadata.annotations['gateway.networking.k8s.io/channel'] == 'standard' ) || (
-        oldObject != null && has(oldObject.metadata.annotations) && oldObject.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/channel') && 
-        oldObject.metadata.annotations['gateway.networking.k8s.io/channel'] == 'experimental' )"
-      message: "Installing experimental CRDs on top of standard channel CRDs is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install experimental CRDs on top of standard channel CRDs."
-      reason: Invalid
-    - expression: "object.spec.group != 'gateway.networking.k8s.io' ||
-        (has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/bundle-version') &&
-        !matches(object.metadata.annotations['gateway.networking.k8s.io/bundle-version'], 'v1.[0-4].\\\\d+') &&
-        !matches(object.metadata.annotations['gateway.networking.k8s.io/bundle-version'], 'v0'))" #TODO Kubernetes 1.37: Migrate to kubernetes semver library
-      message: "Installing CRDs with version before v1.5.0 is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install older versions."
-      reason: Invalid
----
-# Source: gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingAdmissionPolicyBinding
-metadata:
-  annotations:
-    gateway.networking.k8s.io/bundle-version: v1.5.0-dev
-    gateway.networking.k8s.io/channel: standard
-  name: safe-upgrades.gateway.networking.k8s.io
-spec:
-  policyName: safe-upgrades.gateway.networking.k8s.io
-  validationActions: [Deny]
-  matchResources:
-    resourceRules:
-    - apiGroups:   ["apiextensions.k8s.io"]
-      apiVersions: ["v1"]
-      resources:   ["customresourcedefinitions"]
-      operations:  ["CREATE", "UPDATE"]
----
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -585,7 +533,7 @@ kind: ServiceAccount
 automountServiceAccountToken: false
 metadata:
   name: gateway-helm-certgen
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -600,7 +548,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: 'gateway-helm-certgen:custom-namespace'
+  name: 'gateway-helm-certgen:envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -624,7 +572,7 @@ rules:
     resources:
       - mutatingwebhookconfigurations
     resourceNames:
-      - 'envoy-gateway-topology-injector.custom-namespace'
+      - 'envoy-gateway-topology-injector.envoy-gateway-system'
     verbs:
       - update
       - patch
@@ -633,7 +581,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: 'gateway-helm-certgen:custom-namespace'
+  name: 'gateway-helm-certgen:envoy-gateway-system'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -646,18 +594,18 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: 'gateway-helm-certgen:custom-namespace'
+  name: 'gateway-helm-certgen:envoy-gateway-system'
 subjects:
   - kind: ServiceAccount
     name: 'gateway-helm-certgen'
-    namespace: custom-namespace
+    namespace: envoy-gateway-system
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gateway-helm-certgen
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -682,7 +630,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gateway-helm-certgen
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -699,14 +647,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'gateway-helm-certgen'
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
 ---
 # Source: gateway-helm/templates/certgen.yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: gateway-helm-certgen
-  namespace: custom-namespace
+  namespace: envoy-gateway-system
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -761,7 +709,7 @@ spec:
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: 'envoy-gateway-topology-injector.custom-namespace'
+  name: 'envoy-gateway-topology-injector.envoy-gateway-system'
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
     "helm.sh/hook-weight": "-1"
@@ -779,7 +727,7 @@ webhooks:
     clientConfig:
       service:
         name: envoy-gateway
-        namespace: custom-namespace
+        namespace: envoy-gateway-system
         path: "/inject-pod-topology"
         port: 9443
     failurePolicy: Ignore
@@ -793,4 +741,4 @@ webhooks:
         - key: kubernetes.io/metadata.name
           operator: In
           values:
-            - custom-namespace
+            - envoy-gateway-system
