@@ -55,7 +55,6 @@ export GITHUB_REMOTE=origin
    ```shell
    git checkout -b release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
-f
 8. Push the branch to the Envoy Gateway repo.
 
     ```shell
