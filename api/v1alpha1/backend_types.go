@@ -132,6 +132,7 @@ type UnixSocket struct {
 
 // BackendSpec describes the desired state of BackendSpec.
 // +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints)",message="DynamicResolver type cannot have endpoints specified"
+// +kubebuilder:validation:XValidation:rule="!has(self.tls) || !(has(self.tls.autoSNIFromUpstreamHost) && self.tls.autoSNIFromUpstreamHost) || self.endpoints.all(e, (!has(e.ip) && !has(e.unix)) || has(e.hostname))",message="when autoSNIFromUpstreamHost is enabled, IP and Unix endpoints must define a hostname"
 type BackendSpec struct {
 	// Type defines the type of the backend. Defaults to "Endpoints"
 	//
@@ -207,14 +208,17 @@ type BackendTLSSettings struct {
 	// +optional
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 
-	// SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
+	// SNI specifies the fixed SNI value used when establishing an upstream TLS connection to the backend.
 	//
 	// Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:
 	// 1. Backend resources that do not set SNI, or
 	// 2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them
 	//
-	// When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence
-	// over this value.
+	// If a BackendTLSPolicy is attached to the Backend resource, the BackendTLSPolicy's validation.hostname
+	// value takes precedence over this field.
+	//
+	// If no BackendTLSPolicy validation.hostname applies and both this field and AutoSNIFromUpstreamHost
+	// are unset, Envoy Gateway configures Envoy to set the upstream SNI from the downstream HTTP host/authority header.
 	//
 	// +optional
 	SNI *gwapiv1.PreciseHostname `json:"sni,omitempty"`
