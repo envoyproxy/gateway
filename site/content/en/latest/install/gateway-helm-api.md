@@ -86,7 +86,7 @@ The Helm chart for Envoy Gateway
 | global.images.envoyGateway.image | string | `nil` | Full image for the Envoy Gateway control plane Deployment installed by this chart. |
 | global.images.envoyGateway.pullPolicy | string | `nil` | Image pull policy for the Envoy Gateway control plane Deployment. Default behavior: latest images will be Always else IfNotPresent. |
 | global.images.envoyGateway.pullSecrets | list | `[]` | Pull secrets for the Envoy Gateway control plane Deployment. |
-| global.images.envoyProxy.image | string | `""` | Full image for the managed Envoy Proxy data plane. This updates the generated `envoyProxy` config and does not change the `envoy-gateway` control plane Deployment image. If not specified, the default image built into `envoy-gateway` is used. |
+| global.images.envoyProxy.image | string | `"docker.io/envoyproxy/envoy:distroless-dev"` | Full image for the managed Envoy Proxy data plane. This updates the generated `envoyProxy` config and does not change the `envoy-gateway` control plane Deployment image. If not specified, the default image built into `envoy-gateway` is used. |
 | global.images.envoyProxy.pullPolicy | string | `""` | Image pull policy for the managed Envoy Proxy data plane. Default behavior: IfNotPresent. |
 | global.images.envoyProxy.pullSecrets | list | `[]` | Pull secrets for the managed Envoy Proxy data plane. |
 | global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
