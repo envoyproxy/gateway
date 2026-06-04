@@ -373,7 +373,7 @@ func (t *Translator) processClientTLSSettings(
 	if clientTLS.MaxVersion != nil {
 		tlsConfig.MaxVersion = new(ir.TLSVersion(*clientTLS.MaxVersion))
 	}
-	// An empty list of ALPNProtocols means APLN is disabled, while a nil value means it is not set.
+	// An empty list of ALPNProtocols means ALPN is disabled, while a nil value means it is not set.
 	if clientTLS.ALPNProtocols != nil {
 		tlsConfig.ALPNProtocols = make([]string, len(clientTLS.ALPNProtocols))
 		for i := range clientTLS.ALPNProtocols {
