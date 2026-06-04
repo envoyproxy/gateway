@@ -234,7 +234,7 @@ httpRoutes:
     kind: HTTPRoute
     metadata:
       namespace: envoy-gateway
-      name: httproute-9-override-client-tls-settings-disable-apln
+      name: httproute-9-override-client-tls-settings-disable-alpn
     spec:
       parentRefs:
         - namespace: envoy-gateway

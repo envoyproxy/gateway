@@ -791,7 +791,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-9-override-client-tls-settings-disable-apln
+    name: httproute-9-override-client-tls-settings-disable-alpn
     namespace: envoy-gateway
   spec:
     parentRefs:
@@ -1321,9 +1321,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-9-override-client-tls-settings-disable-apln
+            name: httproute-9-override-client-tls-settings-disable-alpn
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-9-override-client-tls-settings-disable-apln/rule/0
+          name: httproute/envoy-gateway/httproute-9-override-client-tls-settings-disable-alpn/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -1333,7 +1333,7 @@ xdsIR:
               kind: Backend
               name: backend-9
               namespace: envoy-gateway
-            name: httproute/envoy-gateway/httproute-9-override-client-tls-settings-disable-apln/rule/0/backend/0
+            name: httproute/envoy-gateway/httproute-9-override-client-tls-settings-disable-alpn/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols: []
@@ -1360,9 +1360,9 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-9-override-client-tls-settings-disable-apln
+          name: httproute-9-override-client-tls-settings-disable-alpn
           namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-9-override-client-tls-settings-disable-apln/rule/0/match/0/*
+        name: httproute/envoy-gateway/httproute-9-override-client-tls-settings-disable-alpn/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
