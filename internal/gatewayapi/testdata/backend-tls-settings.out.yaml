@@ -332,6 +332,46 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-10
+    namespace: envoy-gateway
+  spec:
+    endpoints:
+    - ip:
+        address: 3.3.3.3
+        port: 3001
+    tls:
+      wellKnownCACertificates: System
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: no-backend-tls
+    namespace: envoy-gateway
+  spec:
+    logging: {}
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-3-without-backend-tls
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -399,6 +439,50 @@ gateways:
       reason: ResolvedRefs
       status: "True"
       type: ResolvedRefs
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-3-without-backend-tls
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: no-backend-tls
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
     listeners:
     - attachedRoutes: 1
       conditions:
@@ -739,6 +823,41 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-10-no-client-tls-settings
+    namespace: envoy-gateway
+  spec:
+    parentRefs:
+    - name: gateway-3-without-backend-tls
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-10
+        port: 3001
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-3-without-backend-tls
+        namespace: envoy-gateway
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -831,6 +950,45 @@ infraIR:
           kind: GatewayClass
           name: envoy-gateway-class
       name: envoy-gateway/gateway-2-with-backend-tls
+      namespace: envoy-gateway-system
+  envoy-gateway/gateway-3-without-backend-tls:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: no-backend-tls
+          namespace: envoy-gateway
+        spec:
+          logging: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-3-without-backend-tls
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+      listeners:
+      - name: envoy-gateway/gateway-3-without-backend-tls/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-3-without-backend-tls
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-3-without-backend-tls
       namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
@@ -1293,6 +1451,86 @@ xdsIR:
           name: httproute-8-gateway-backend-tls-precedence
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-8-gateway-backend-tls-precedence/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+  envoy-gateway/gateway-3-without-backend-tls:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-3-without-backend-tls-ff391217
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-3-without-backend-tls
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-3-without-backend-tls-ff391217
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3-without-backend-tls
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-3-without-backend-tls
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-3-without-backend-tls/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-10-no-client-tls-settings
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-10-no-client-tls-settings/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 3.3.3.3
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-10
+              namespace: envoy-gateway
+            name: httproute/envoy-gateway/httproute-10-no-client-tls-settings/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                name: backend-10/envoy-gateway-ca
+              useSystemTrustStore: true
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-10-no-client-tls-settings
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-10-no-client-tls-settings/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
