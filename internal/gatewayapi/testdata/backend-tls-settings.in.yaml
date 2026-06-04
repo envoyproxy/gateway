@@ -203,6 +203,24 @@ httpRoutes:
               kind: Backend
               name: backend-8
               port: 3001
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: envoy-gateway
+      name: httproute-9-override-client-tls-settings-disable-apln
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-9
+              port: 3001
 configMaps:
   - apiVersion: v1
     kind: ConfigMap
@@ -444,3 +462,20 @@ backends:
         - ip:
             address: 3.3.3.3
             port: 3001
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-9      # this backend should be accepted and alpn should be disabled
+      namespace: envoy-gateway
+    spec:
+      tls:
+        wellKnownCACertificates: System
+        clientCertificateRef:
+          group: ""
+          kind: Secret
+          name: client-auth-override
+        alpnProtocols: []
+      endpoints:
+        - ip:
+            address: 3.3.3.3
+            port: 3001           
