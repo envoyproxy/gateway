@@ -40,7 +40,8 @@ infraIR:
   envoy-gateway/gateway-tcp:
     proxy:
       listeners:
-      - name: envoy-gateway/gateway-tcp/tcp
+      - address: null
+        name: envoy-gateway/gateway-tcp/tcp
         ports:
         - containerPort: 8088
           name: tcp-8088
