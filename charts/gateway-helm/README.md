@@ -113,10 +113,6 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.pod.extraVolumes | list | `[]` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
-| deployment.pod.securityContext.runAsGroup | int | `65532` |  |
-| deployment.pod.securityContext.runAsNonRoot | bool | `true` |  |
-| deployment.pod.securityContext.runAsUser | int | `65532` |  |
-| deployment.pod.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | deployment.pod.tolerations | list | `[]` |  |
 | deployment.pod.topologySpreadConstraints | list | `[]` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |
@@ -141,7 +137,7 @@ helm uninstall eg -n envoy-gateway-system
 | global.images.envoyProxy.image | string | `""` |  |
 | global.images.envoyProxy.pullPolicy | string | `""` |  |
 | global.images.envoyProxy.pullSecrets | list | `[]` |  |
-| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
+| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:ff287602"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | hpa.behavior | object | `{}` |  |
