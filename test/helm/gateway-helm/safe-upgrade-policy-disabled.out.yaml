@@ -2,10 +2,6 @@
 # Source: gateway-helm/templates/envoy-gateway-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
-# Disable token automounting on the ServiceAccount by default to satisfy
-# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
-# enable automountServiceAccountToken in their pod spec.
-automountServiceAccountToken: false
 metadata:
   name: envoy-gateway
   namespace: envoy-gateway-system
@@ -42,7 +38,7 @@ data:
       kubernetes:
         rateLimitDeployment:
           container:
-            image: docker.io/envoyproxy/ratelimit:master
+            image: docker.io/envoyproxy/ratelimit:ff287602
           patch:
             type: StrategicMerge
             value:
@@ -147,7 +143,6 @@ rules:
 - apiGroups:
   - gateway.envoyproxy.io
   resources:
-  - envoyproxies/status
   - envoypatchpolicies/status
   - clienttrafficpolicies/status
   - backendtrafficpolicies/status
@@ -259,19 +254,9 @@ rules:
   - watch
 - apiGroups:
   - autoscaling
-  resources:
-  - horizontalpodautoscalers
-  verbs:
-  - create
-  - get
-  - list
-  - delete
-  - deletecollection
-  - patch
-  - watch
-- apiGroups:
   - policy
   resources:
+  - horizontalpodautoscalers
   - poddisruptionbudgets
   verbs:
   - create
@@ -443,13 +428,6 @@ spec:
         app.kubernetes.io/name: gateway-helm
         app.kubernetes.io/instance: gateway-helm
     spec:
-      automountServiceAccountToken: true
-      securityContext:
-        runAsGroup: 65532
-        runAsNonRoot: true
-        runAsUser: 65532
-        seccompProfile:
-          type: RuntimeDefault
       containers:
       - args:
         - server
@@ -527,10 +505,6 @@ spec:
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
-# Disable token automounting on the ServiceAccount by default to satisfy
-# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
-# enable automountServiceAccountToken in their pod spec.
-automountServiceAccountToken: false
 metadata:
   name: gateway-helm-certgen
   namespace: envoy-gateway-system
@@ -542,7 +516,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -557,7 +531,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
 rules:
   - apiGroups:
     - admissionregistration.k8s.io
@@ -590,7 +564,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -614,7 +588,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
 rules:
 - apiGroups:
   - ""
@@ -639,7 +613,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -672,7 +646,6 @@ spec:
       labels:
         app: certgen
     spec:
-      automountServiceAccountToken: true
       containers:
       - command:
         - envoy-gateway
