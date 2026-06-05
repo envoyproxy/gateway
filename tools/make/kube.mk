@@ -434,7 +434,7 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 		--set crds.gatewayAPI.enabled=true \
 		--set crds.envoyGateway.enabled=true \
 		> $(OUTPUT_DIR)/install.yaml
-	$(GO_TOOL) helm template --set createNamespace=true eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
+	$(GO_TOOL) helm template --set createNamespace=true --set crds.gatewayAPI.safeUpgradePolicy.enabled=false eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
