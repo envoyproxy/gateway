@@ -1,0 +1,33 @@
+date: June 4, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  Moved the Gateway API safe-upgrades ValidatingAdmissionPolicy resources out of the CRD bundle and into the gateway-helm chart templates so tools such as Flux no longer treat them as CRDs. During upgrades, two upgrade cases require action: (1) if you install Gateway API CRDs separately (e.g. with the gateway-crds-helm chart and `helm install --skip-crds`), the safe-upgrades ValidatingAdmissionPolicy and its binding are now rendered by the gateway-helm chart, so add Helm ownership metadata (the `meta.helm.sh/release-name`, `meta.helm.sh/release-namespace` annotations and the `app.kubernetes.io/managed-by=Helm` label) to the `ValidatingAdmissionPolicy/safe-upgrades.gateway.networking.k8s.io` and `ValidatingAdmissionPolicyBinding/safe-upgrades.gateway.networking.k8s.io` resources before upgrading so Helm can manage them (see https://gateway.envoyproxy.io/v1.8/install/install-helm/#installing-crds-separately); (2) if Gateway API CRDs and safe upgrade policy resources are managed by your cloud provider (or any other mechanism outside this chart), note that `--skip-crds` does not skip chart-templated resources, so disable rendering of the safe-upgrades ValidatingAdmissionPolicy by setting `crds.gatewayAPI.safeUpgradePolicy.enabled=false` (see https://gateway.envoyproxy.io/v1.8/install/install-helm/#clusters-with-compatible-provider-managed-gateway-api-crds).
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Fixed xDS server authentication bypass in GatewayNamespaceMode, adding Unary Interceptor and validating SotW requests.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
+  Fixed controller panic when processing backend tls settings.
+  Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
+  Fixed ClientTrafficPolicy TLS cipher validation rejecting supported IANA/RFC cipher suite names.
+  Fixed Kubernetes provider namespace-scoped watches to always include the controller namespace so Envoy Gateway can read its own infrastructure resources.
+  Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
+  Fixed `MaxStreamDuration` not being set on `CommonHttpProtocolOptions` for non-route cluster.
+  Fixed `egctl x status all`/`xroute`/`xpolicy` failing when a Gateway API CRD (e.g. TCPRoute) is not installed in the cluster; missing CRDs are now skipped silently, or reported on stderr with `-v`.
+  Fixed Kubernetes Service and ServiceImport `appProtocol` values `kubernetes.io/ws` and `kubernetes.io/wss` to force HTTP/1.1 upstream connections instead of negotiating HTTP/2, avoiding compatibility issues with WebSocket backends that do not support RFC 8441 extended CONNECT.
+  Fixed Gateway getting stuck at `Programmed=False` after its LoadBalancer Service IP was restored, by ignoring `LastTransitionTime` when comparing status conditions.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
