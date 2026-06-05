@@ -46,7 +46,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: name, Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			baseURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
-			epNN := types.NamespacedName{Name: "upgrade-config", Namespace: "envoy-gateway-system"}
+			epNN := types.NamespacedName{Name: "upgrade-config", Namespace: ns}
 			dp, err := getDeploymentForGateway(ns, name, suite.Client)
 			if err != nil {
 				t.Errorf("Failed to get proxy deployment")
