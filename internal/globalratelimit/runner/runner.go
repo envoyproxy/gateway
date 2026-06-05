@@ -145,6 +145,8 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 		r.Logger,
 		message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, c,
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
+			message.PublishRunnerEventMetric(r.Name(), update.Delete)
+
 			parentCtx := ctx
 			if update.Value != nil && update.Value.Context != nil {
 				parentCtx = update.Value.Context

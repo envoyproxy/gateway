@@ -306,7 +306,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass
+	//   https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gatewayclass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -326,7 +326,19 @@ type ExtensionAPISettings struct {
 	EnableBackend bool `json:"enableBackend"`
 	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
 	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
-	DisableLua bool `json:"disableLua"`
+	// This field is mutually exclusive with EnableLua.
+	//
+	// Deprecated: Use EnableLua instead. This field will be removed in a future release.
+	//
+	// +optional
+	DisableLua *bool `json:"disableLua,omitempty"`
+	// EnableLua enables the Lua EnvoyExtensionPolicy feature.
+	// If set to true, the Lua EnvoyExtensionPolicy feature will be enabled.
+	// By default, Lua policies are disabled.
+	// This field is mutually exclusive with DisableLua.
+	//
+	// +optional
+	EnableLua bool `json:"enableLua,omitempty"`
 	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds).
 	EnableSDSSecretRef bool `json:"enableSDSSecretRef"`
 }
@@ -427,12 +439,16 @@ type KubernetesWatchMode struct {
 
 	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
 	// resources such as Gateway, HTTPRoute and Service.
+	// The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its
+	// own managed infrastructure resources.
 	// Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as
 	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set.
 	Namespaces []string `json:"namespaces,omitempty"`
 
 	// NamespaceSelector holds the label selector used to dynamically select namespaces.
 	// Envoy Gateway will watch for namespaces matching the specified label selector.
+	// The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its
+	// own managed infrastructure resources.
 	// Precisely one of Namespaces and NamespaceSelector must be set.
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
@@ -687,7 +703,8 @@ type ExtensionManager struct {
 	Resources []GroupVersionKind `json:"resources,omitempty"`
 
 	// PolicyResources defines the set of K8S resources the extension server will handle
-	// as directly attached GatewayAPI policies
+	// as directly attached Gateway API policies. Only policies in the same namespace as
+	// the target Gateway resources are supported. Cross-namespace attachments are not supported.
 	//
 	// +optional
 	PolicyResources []GroupVersionKind `json:"policyResources,omitempty"`

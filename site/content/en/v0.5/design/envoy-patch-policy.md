@@ -162,7 +162,7 @@ patches will work.
 
 
 
-[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment 
+[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/reference/policy-attachment/#direct-policy-attachment 
 [RFC 6902]: https://datatracker.ietf.org/doc/html/rfc6902
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Kubernetes]: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
