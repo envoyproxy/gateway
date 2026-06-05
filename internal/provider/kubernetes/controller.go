@@ -176,7 +176,9 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
 		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
-		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel)
+		// Always allow controller-namespace infrastructure resources to bypass
+		// user namespace selectors.
+		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
 	}
 
 	// controller-runtime doesn't allow run controller with same name for more than once

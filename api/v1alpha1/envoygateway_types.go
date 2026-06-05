@@ -427,12 +427,16 @@ type KubernetesWatchMode struct {
 
 	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
 	// resources such as Gateway, HTTPRoute and Service.
+	// The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its
+	// own managed infrastructure resources.
 	// Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as
 	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set.
 	Namespaces []string `json:"namespaces,omitempty"`
 
 	// NamespaceSelector holds the label selector used to dynamically select namespaces.
 	// Envoy Gateway will watch for namespaces matching the specified label selector.
+	// The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its
+	// own managed infrastructure resources.
 	// Precisely one of Namespaces and NamespaceSelector must be set.
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
