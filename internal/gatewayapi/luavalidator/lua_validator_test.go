@@ -330,6 +330,102 @@ func Test_block_or_sanitize_io(t *testing.T) {
                    end`,
 			expectedErrSubstring: "critical path",
 		},
+		{
+			name: "io.open double-slash //etc/passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//etc/passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open double-slash //var/run/secrets/token",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//var/run/secrets/kubernetes.io/serviceaccount/token", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open run secrets alias /run/secrets/token",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("/run/secrets/kubernetes.io/serviceaccount/token", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open run secrets alias double-slash //run/secrets/token",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//run/secrets/kubernetes.io/serviceaccount/token", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open multiple-slash ///etc/passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("///etc/passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open embedded double-slash /etc//passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("/etc//passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open double-slash //proc/self/environ",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//proc/self/environ", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open double-slash //certs/tls.crt",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//certs/tls.crt", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open dot segment /etc/./passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("/etc/./passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name: "io.open leading dot ./etc/passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("./etc/passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name: "io.open trailing dot /etc/.",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("/etc/.", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name: "io.open dot with backslash etc\\.\\passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("etc\\.\\passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "path traversals",
+		},
 		// io.input tests
 		{
 			name: "io.input critical path /certs",

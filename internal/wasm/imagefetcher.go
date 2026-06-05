@@ -254,6 +254,7 @@ func extractWasmPluginBinary(r io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse layer as tar.gz: %w", err)
 	}
+	defer gr.Close()
 
 	// The target file name for Wasm binary.
 	// https://github.com/solo-io/wasm/blob/master/spec/spec-compat.md#specification
@@ -271,8 +272,11 @@ func extractWasmPluginBinary(r io.Reader) ([]byte, error) {
 			return nil, err
 		}
 
-		ret := make([]byte, h.Size)
 		if filepath.Base(h.Name) == wasmPluginFileName {
+			if h.Size > maxWasmSize {
+				return nil, fmt.Errorf("%s size %d exceeds maximum size %d", wasmPluginFileName, h.Size, maxWasmSize)
+			}
+			ret := make([]byte, h.Size)
 			_, err := io.ReadFull(tr, ret)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read %s: %w", wasmPluginFileName, err)
@@ -286,6 +290,10 @@ func extractWasmPluginBinary(r io.Reader) ([]byte, error) {
 // extractOCIArtifactImage extracts the Wasm binary from the
 // *oci* variant Wasm image: https://github.com/solo-io/wasm/blob/master/spec/spec.md#format
 func extractOCIArtifactImage(img v1.Image) ([]byte, error) {
+	return extractOCIArtifactImageWithLimit(img, maxWasmSize)
+}
+
+func extractOCIArtifactImageWithLimit(img v1.Image, maxSize int64) ([]byte, error) {
 	layers, err := img.Layers()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch layers: %w", err)
@@ -327,9 +335,12 @@ func extractOCIArtifactImage(img v1.Image) ([]byte, error) {
 	defer r.Close()
 
 	// Just read it since the content is already a raw Wasm binary as mentioned above.
-	ret, err := io.ReadAll(r)
+	ret, err := io.ReadAll(io.LimitReader(r, maxSize+1))
 	if err != nil {
 		return nil, fmt.Errorf("could not extract wasm binary: %w", err)
+	}
+	if int64(len(ret)) > maxSize {
+		return nil, fmt.Errorf("wasm layer size exceeds maximum size %d", maxSize)
 	}
 	return ret, nil
 }

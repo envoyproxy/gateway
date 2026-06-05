@@ -1850,6 +1850,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 				return emptyDS, nil, err
 			}
 		}
+	} else {
+		// Custom backend resources still require ReferenceGrant for cross-namespace references.
+		if err = t.validateBackendNamespace(backendRef, route, resources, routeType); err != nil {
+			return emptyDS, nil, err
+		}
 	}
 
 	// Skip processing backends with 0 weight
