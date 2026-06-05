@@ -168,7 +168,7 @@ Resolve the Envoy Proxy image.
 {{-   $repositoryTag := $imageParts._1 -}}
 {{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
 {{-   $repositoryName := $repositoryParts._0 -}}
-{{-   $imageTag := default "distroless-v1.38.0" $repositoryParts._1 -}}
+{{-   $imageTag := default "distroless-v1.38.1" $repositoryParts._1 -}}
 {{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
 {{- end -}}
 
