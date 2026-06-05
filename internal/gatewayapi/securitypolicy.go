@@ -1003,8 +1003,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						continue
 					}
 					// Only authorization for TCP
-					authCopy := *authorization
-					r.Authorization = &authCopy
+					if authorization != nil {
+						authCopy := *authorization
+						r.Authorization = &authCopy
+					}
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:

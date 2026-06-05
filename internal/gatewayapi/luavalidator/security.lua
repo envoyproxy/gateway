@@ -11,6 +11,8 @@ local critical_paths = {
     "/sys",
     "/certs",
     "/var/run/secrets",
+    -- "/var/run" is a symlink to "/run" on Debian-derived (distroless) images.
+    "/run/secrets",
 }
 
 -- ============================================================================
@@ -31,14 +33,16 @@ local function to_absolute_normalized_path(path)
     end
     
     local normalized_separators = path:gsub("\\", "/")
-    
+
+    local collapsed_separators = normalized_separators:gsub("/+", "/")
+
     local absolute_path
-    if normalized_separators:match("^/") then
-        absolute_path = normalized_separators
+    if collapsed_separators:match("^/") then
+        absolute_path = collapsed_separators
     else
-        absolute_path = "/" .. normalized_separators
+        absolute_path = "/" .. collapsed_separators
     end
-    
+
     return absolute_path:match("^(.-)/*$")
 end
 
@@ -46,12 +50,16 @@ local function contains_traversal(path)
     if not path or type(path) ~= "string" then
         return false
     end
-    
-    if path:match("/%.%./") or path:match("^%.%./") or path:match("/%.%.$") or path:match("^%.%.$") or
-       path:match("\\%.%.\\") or path:match("^%.%.\\") or path:match("\\%.%.$") or path:match("^%.%.$") then
-        return true
+
+    -- Reject any "." or ".." segment regardless of position or separator style.
+    -- Trailing "/" ensures the last segment is matched by the "([^/]*)/" pattern.
+    local normalized = path:gsub("\\", "/")
+    for segment in (normalized .. "/"):gmatch("([^/]*)/") do
+        if segment == "." or segment == ".." then
+            return true
+        end
     end
-    
+
     return false
 end
 
