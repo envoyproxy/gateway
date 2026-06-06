@@ -2409,6 +2409,12 @@ type TCPRoute struct {
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
+// IsDynamicResolverRoute returns true if the TCPRoute routes to a dynamic resolver backend.
+func (t *TCPRoute) IsDynamicResolverRoute() bool {
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation.
+	return t.Destination != nil && len(t.Destination.Settings) == 1 && t.Destination.Settings[0].IsDynamicResolver
+}
+
 // TLS holds information for configuring TLS on a listener
 // +k8s:deepcopy-gen=true
 type TLS struct {

@@ -713,6 +713,14 @@ func (t *Translator) addXdsTCPFilterChain(
 		return err
 	}
 
+	// The SNI dynamic forward proxy relies on the SNI extracted by the tls_inspector listener
+	// filter, so ensure it is present even when no explicit SNI hostnames are configured for matching.
+	if irRoute.IsDynamicResolverRoute() {
+		if err := addXdsTLSInspectorFilter(xdsListener, nil); err != nil {
+			return err
+		}
+	}
+
 	if isTLSTerminate {
 		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)
 		if err != nil {
@@ -755,6 +763,22 @@ func buildTCPFilterChain(
 		} else {
 			return nil, err
 		}
+	}
+
+	// SNI based dynamic forward proxy: deny loopback SNIs, then resolve the upstream host from the
+	// SNI extracted by the tls_inspector listener filter. Both filters run before the tcp_proxy.
+	if irRoute.IsDynamicResolverRoute() {
+		loopbackRBAC, err := buildDFPLoopbackNetworkRBAC(statPrefix)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, loopbackRBAC)
+
+		sniDFP, err := buildSNIDynamicForwardProxyFilter(irRoute)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, sniDFP)
 	}
 
 	// TCP proxy last

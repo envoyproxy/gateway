@@ -1419,6 +1419,25 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			//	- etc.
 		}
 
+		// A route can only have a single destination if that destination is a dynamic resolver,
+		// because combining a dynamic resolver with other backends doesn't make sense.
+		hasDynamicResolver := false
+		for _, ds := range destSettings {
+			if ds.IsDynamicResolver {
+				hasDynamicResolver = true
+				break
+			}
+		}
+		if hasDynamicResolver && len(destSettings) > 1 {
+			resolveErrs.Add(status.NewRouteStatusError(
+				errors.New("dynamic resolver is not supported for multiple backendRefs"),
+				status.RouteReasonInvalidBackendRef,
+			))
+			// Drop the destinations so neither a dynamic forward proxy cluster nor a regular
+			// cluster is produced from an invalid combination of backends.
+			destSettings = nil
+		}
+
 		routeStatus := GetRouteStatus(tlsRoute)
 		if !resolveErrs.Empty() {
 			status.SetRouteStatusCondition(routeStatus,
