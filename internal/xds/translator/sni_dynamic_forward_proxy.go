@@ -30,6 +30,17 @@ const (
 	dfpLoopbackSNIRegex = `(?i)^(localhost|localhost\.localdomain|ip6-localhost|ip6-loopback|127\.0\.0\.1|::1|\[::1\])\.?$`
 )
 
+// isSNIDynamicForwardProxyRoute reports whether the TCP route should use the SNI dynamic forward
+// proxy: a dynamic resolver destination on a TLS passthrough route (the SNI is inspected and the
+// TLS connection is not terminated by Envoy Gateway). It is intentionally restricted to passthrough
+// because terminating TLS would forward a decrypted stream to the SNI host instead of the raw bytes.
+func isSNIDynamicForwardProxyRoute(irRoute *ir.TCPRoute) bool {
+	return irRoute.IsDynamicResolverRoute() &&
+		irRoute.TLS != nil &&
+		irRoute.TLS.TLSInspectorConfig != nil &&
+		irRoute.TLS.Terminate == nil
+}
+
 // buildSNIDynamicForwardProxyFilter builds the sni_dynamic_forward_proxy network filter for a
 // dynamic resolver TCPRoute. It resolves the upstream host from the SNI extracted by the
 // tls_inspector listener filter and shares the same DNS cache as the dynamic forward proxy cluster.

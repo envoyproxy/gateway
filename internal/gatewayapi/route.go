@@ -1477,7 +1477,21 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			if irListener != nil {
 				var tlsConfig *ir.TLS
 				if irListener.TLS != nil {
-					// Listener is in terminate mode.
+					// Listener is in terminate mode. A dynamic resolver backend forwards the connection
+					// based on the SNI and requires TLS passthrough, so it cannot be used with a listener
+					// that terminates TLS (Envoy would forward the decrypted stream instead).
+					if hasDynamicResolver {
+						routeStatus := GetRouteStatus(tlsRoute)
+						status.SetRouteStatusCondition(routeStatus,
+							parentRef.routeParentStatusIdx,
+							tlsRoute.GetGeneration(),
+							gwapiv1.RouteConditionResolvedRefs,
+							metav1.ConditionFalse,
+							gwapiv1.RouteReasonUnsupportedValue,
+							"Dynamic resolver backend is only supported with TLS passthrough listeners",
+						)
+						continue
+					}
 					tlsConfig = &ir.TLS{
 						Terminate: irListener.TLS,
 					}
