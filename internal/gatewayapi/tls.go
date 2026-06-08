@@ -303,10 +303,8 @@ func validateCipherSuites(ciphers []string) error {
 	return nil
 }
 
-// appendDedupPEMCerts appends PEM certificate blocks from src to dst, skipping
-// any CERTIFICATE block whose DER bytes are already present in dst.
-func appendDedupPEMCerts(dst, src []byte) []byte {
-	seen := make(map[[sha256.Size]byte]struct{})
+func appendDedupPEMCertsWithSeen(dst, src []byte, seen map[[sha256.Size]byte]struct{}) []byte {
+	// seed seen from dst so that certs already present are recognised as duplicates.
 	rest := dst
 	for len(rest) > 0 {
 		block, remaining := pem.Decode(rest)
@@ -335,6 +333,5 @@ func appendDedupPEMCerts(dst, src []byte) []byte {
 		}
 		dst = append(dst, pem.EncodeToMemory(block)...)
 	}
-
 	return dst
 }

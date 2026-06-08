@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
 	"encoding/pem"
 	"os"
 	"path/filepath"
@@ -409,7 +410,7 @@ func TestFilterValidCertificates(t *testing.T) {
 	}
 }
 
-func TestAppendDedupPEMCerts(t *testing.T) {
+func TestAppendDedupPEMCertsWithSeen(t *testing.T) {
 	rsaCert, err := os.ReadFile(filepath.Join("testdata", "tls", "rsa-cert.pem"))
 	require.NoError(t, err)
 
@@ -468,7 +469,7 @@ func TestAppendDedupPEMCerts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := appendDedupPEMCerts(tc.dst, tc.src)
+			result := appendDedupPEMCertsWithSeen(tc.dst, tc.src, make(map[[sha256.Size]byte]struct{}))
 			require.Equal(t, tc.expected, result)
 		})
 	}
@@ -541,5 +542,5 @@ func TestBuildListenerTLSParametersDedupCACerts(t *testing.T) {
 	}
 	require.Equal(t, 1, pemCount,
 		"expected exactly 1 PEM block after deduplication, got %d — "+
-			"appendDedupPEMCerts may not be used in buildListenerTLSParameters", pemCount)
+			"appendDedupPEMCertsWithSeen may not be used in buildListenerTLSParameters", pemCount)
 }
