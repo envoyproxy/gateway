@@ -1,0 +1,19 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+
+monitoring:
+  podMonitor:
+    enabled: true
+    annotations:
+      team: observability
+    labels:
+      release: prometheus
+    namespace: monitoring
+    interval: 30s
+    telemetryPath: /stats/prometheus
+    timeout: 10s
+    podTargetLabels:
+    - app.kubernetes.io/name

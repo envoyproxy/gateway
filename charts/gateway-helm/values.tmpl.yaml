@@ -202,3 +202,28 @@ certgen:
 topologyInjector:
   enabled: true
   annotations: {}
+
+monitoring:
+  podMonitor:
+    # -- Enable podMonitor for Envoy Gateway
+    enabled: false
+    # -- Labels to add to the PodMonitor
+    labels: {}
+    # -- Annotations to add to the PodMonitor
+    annotations: {}
+    # -- Namespace for the PodMonitor. Defaults to the release namespace.
+    namespace: ""
+    # -- Interval at which metrics should be scraped. Defaults to Prometheus default.
+    interval: ""
+    # -- Path to scrape metrics from.
+    telemetryPath: /metrics
+    # -- Timeout for scrape requests.
+    timeout: ""
+    # -- Authorization configuration for the scrape endpoint.
+    authorization: {}
+    # -- MetricRelabelConfigs to apply to samples before storing.
+    metricRelabelings: []
+    # -- RelabelConfigs to apply to samples before scraping.
+    relabelings: []
+    # -- Additional labels from pod metadata to include as metric labels.
+    podTargetLabels: []
