@@ -64,12 +64,12 @@ var HTTPRouteRewriteHostHeader = suite.ConformanceTest{
 			},
 			{
 				Request: http.Request{
-					Path: "/path-regex/infra-backend-v1",
+					Path: "/path-regex/custom-host",
 				},
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
-						Path: "/path-regex/infra-backend-v1",
-						Host: "infra-backend-v1.gateway-conformance-infra.svc.cluster.local",
+						Path: "/path-regex/custom-host",
+						Host: "custom-host.example.internal",
 					},
 				},
 				Backend:   "infra-backend-v1",

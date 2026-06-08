@@ -80,7 +80,7 @@ spec:
       type: PathRegex
       pathRegex:
         pattern: "^/path-regex/([^/]+).*"
-        substitution: "\\1.gateway-conformance-infra.svc.cluster.local"
+        substitution: "\\1.example.internal"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
