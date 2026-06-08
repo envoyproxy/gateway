@@ -205,6 +205,13 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		if ref == nil || ref.Name == "" || ref.Key == "" {
 			return fmt.Errorf("ratelimit redis urlRef.secretKeyRef must set both name and key")
 		}
+		// The Secret is required: the rate limit pod must wait for an
+		// externally provisioned Secret rather than start with an unset
+		// REDIS_URL. An optional reference would let the container boot
+		// nonfunctional, so reject optional=true.
+		if ref.Optional != nil && *ref.Optional {
+			return fmt.Errorf("ratelimit redis urlRef.secretKeyRef.optional must not be true; the Secret is required")
+		}
 		return nil
 	}
 

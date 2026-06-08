@@ -701,9 +701,13 @@ type RateLimitRedisSettings struct {
 }
 
 // RedisURLSource specifies where to source the Redis URL from.
+// +kubebuilder:validation:XValidation:rule="!has(self.secretKeyRef.optional) || !self.secretKeyRef.optional",message="urlRef.secretKeyRef.optional must not be true; the Secret is required"
 type RedisURLSource struct {
 	// SecretKeyRef references the Secret and key that hold the Redis URL.
 	// The Secret must be in the same namespace as the Envoy Gateway rate limit deployment.
+	// The reference is always required: optional must not be set to true, otherwise
+	// the rate limit pod could start with an unset REDIS_URL instead of waiting for
+	// the externally provisioned Secret.
 	//
 	// +kubebuilder:validation:Required
 	SecretKeyRef *corev1.SecretKeySelector `json:"secretKeyRef"`
