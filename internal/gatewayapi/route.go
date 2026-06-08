@@ -1869,6 +1869,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 				return emptyDS, nil, err
 			}
 		}
+	} else {
+		// Custom backend resources still require ReferenceGrant for cross-namespace references.
+		if err = t.validateBackendNamespace(backendRef, route, resources, routeType); err != nil {
+			return emptyDS, nil, err
+		}
 	}
 
 	// Skip processing backends with 0 weight
@@ -2028,6 +2033,9 @@ func (t *Translator) processServiceImportDestinationSetting(
 	if servicePort.AppProtocol != nil {
 		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, false)
 	}
+	// For WebSocket services, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+	forceHTTP1Upstream := servicePort.AppProtocol != nil && isWebSocketServiceAppProtocol(*servicePort.AppProtocol)
 
 	backendIps := serviceImport.Spec.IPs
 	isHeadless := len(backendIps) == 0
@@ -2052,11 +2060,12 @@ func (t *Translator) processServiceImportDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:        name,
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
-		Metadata:    buildResourceMetadata(serviceImport, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:               name,
+		Protocol:           protocol,
+		ForceHTTP1Upstream: forceHTTP1Upstream,
+		Endpoints:          endpoints,
+		AddressType:        addrType,
+		Metadata:           buildResourceMetadata(serviceImport, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
 }
 
@@ -2086,6 +2095,9 @@ func (t *Translator) processServiceDestinationSetting(
 	if servicePort.AppProtocol != nil {
 		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, true)
 	}
+	// For WebSocket services, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+	forceHTTP1Upstream := servicePort.AppProtocol != nil && isWebSocketServiceAppProtocol(*servicePort.AppProtocol)
 
 	isHeadless := isServiceHeadless(service)
 
@@ -2107,12 +2119,13 @@ func (t *Translator) processServiceDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:        name,
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
-		PreferLocal: processPreferLocalZone(service),
-		Metadata:    buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:               name,
+		Protocol:           protocol,
+		ForceHTTP1Upstream: forceHTTP1Upstream,
+		Endpoints:          endpoints,
+		AddressType:        addrType,
+		PreferLocal:        processPreferLocalZone(service),
+		Metadata:           buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
 }
 
@@ -2559,11 +2572,17 @@ func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol
 	switch {
 	case ap == "kubernetes.io/h2c":
 		return ir.HTTP2
+	case ap == "kubernetes.io/ws" || ap == "kubernetes.io/wss":
+		return ir.HTTP
 	case ap == "grpc" && grpcCompatibility:
 		return ir.GRPC
 	default:
 		return defaultProtocol
 	}
+}
+
+func isWebSocketServiceAppProtocol(ap string) bool {
+	return ap == "kubernetes.io/ws" || ap == "kubernetes.io/wss"
 }
 
 func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtocol ir.AppProtocol) ir.AppProtocol {
