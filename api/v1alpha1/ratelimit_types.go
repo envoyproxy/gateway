@@ -437,6 +437,7 @@ type RateLimitValue struct {
 	//
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:validation:Format=uint32
 	Requests uint32        `json:"requests"`
 	Unit     RateLimitUnit `json:"unit"`
 }

@@ -2,7 +2,15 @@
 title: "TLS Termination for TCP"
 ---
 
-This task will walk through the steps required to configure TLS Terminate mode for TCP traffic via Envoy Gateway.
+This task walks through configuring TLS Terminate mode for TCP traffic via Envoy Gateway. For HTTPS termination on an HTTP listener (TLS + HTTPRoute), see the [Secure Gateways][secure-gateways] task instead.
+
+In both patterns below, Envoy terminates the client TLS connection on a `TLS` listener and forwards the decrypted bytes to a backend Service over plain TCP. The difference is how the listener selects a backend:
+
+- **Single backend with [TCPRoute][]** — every connection accepted on the listener goes to one backend Service. TCPRoute does not inspect SNI, so each backend needs its own listener.
+- **SNI-based routing with [TLSRoute][]** — one listener fans out to multiple backends, dispatched by the client's SNI. Many TLSRoutes can attach to the same listener, so you avoid the listener-per-backend explosion.
+
+TLSRoute itself works with both listener TLS modes: this task covers `Terminate` (Envoy decrypts and forwards plain TCP); for `Passthrough` (Envoy SNI-routes the still-encrypted bytes, leaving termination to the backend) see the [TLS Passthrough][tls-passthrough] task.
+
 This task uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
 ## Prerequisites
@@ -13,7 +21,11 @@ This task uses a self-signed CA, so it should be used for testing and demonstrat
 
 {{< boilerplate prerequisites >}}
 
-## TLS Certificates
+## Single Backend with TCPRoute
+
+This section configures a `TLS` listener that terminates TLS for `www.example.com` and forwards the decrypted bytes to a single backend Service via a [TCPRoute][]. Because TCPRoute does not match on SNI, this listener can only serve one backend — additional backends would each need their own listener.
+
+### TLS Certificates
 
 Generate the certificates and keys used by the Gateway to terminate client TLS connections.
 
@@ -48,7 +60,7 @@ Verify the Gateway status:
 kubectl get gateway/eg -o yaml
 ```
 
-## Testing
+### Testing
 
 {{< tabpane text=true >}}
 {{% tab header="With External LoadBalancer Support" %}}
@@ -90,3 +102,156 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 
 {{% /tab %}}
 {{< /tabpane >}}
+
+## SNI-Based Routing with TLSRoute
+
+This section configures a single `TLS` listener that terminates TLS for `*.example.com` and dispatches each connection to a different backend Service based on the client's SNI, using [TLSRoute][]. Because the routes all attach to the same listener, this pattern is not bounded by the per-Gateway listener limit.
+
+### TLS Certificates
+
+Create a wildcard certificate that covers every hostname the routes will serve:
+
+```shell
+openssl req -out wildcard.example.com.csr -newkey rsa:2048 -nodes -keyout wildcard.example.com.key -subj "/CN=*.example.com/O=example organization"
+openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 1 -in wildcard.example.com.csr -out wildcard.example.com.crt
+```
+
+Store the cert/key in a Secret:
+
+```shell
+kubectl create secret tls wildcard-example-cert --key=wildcard.example.com.key --cert=wildcard.example.com.crt
+```
+
+### Additional Backend Service
+
+The quickstart already deployed a `backend` Service. Add a second instance of the same echo application so the two TLSRoutes resolve to distinct pods and the SNI routing can be observed end-to-end:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend-2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-2
+  labels:
+    app: backend-2
+    service: backend-2
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: backend-2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-2
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: backend-2
+        version: v1
+    spec:
+      serviceAccountName: backend-2
+      containers:
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          imagePullPolicy: IfNotPresent
+          name: backend-2
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+```
+
+### Gateway and TLSRoutes
+
+The Gateway exposes one `TLS` listener in `Terminate` mode. Two TLSRoutes attach to it via `sectionName: tls` and select traffic by hostname:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: tls
+      protocol: TLS
+      port: 443
+      hostname: "*.example.com"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: wildcard-example-cert
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: backend
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: tls
+  hostnames: ["backend.example.com"]
+  rules:
+    - backendRefs:
+        - name: backend
+          port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: backend-2
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: tls
+  hostnames: ["backend-2.example.com"]
+  rules:
+    - backendRefs:
+        - name: backend-2
+          port: 3000
+```
+
+The listener certificate must cover every hostname the attached routes serve — either as a wildcard (as above) or via the cert's SAN list. Route hostnames must also match the listener's hostname pattern, otherwise the route will be rejected with a status condition.
+
+### Testing
+
+Get the Gateway address using either the LoadBalancer or port-forward variant shown in the [TCPRoute Testing](#testing) section above, then probe each backend by SNI:
+
+```shell
+curl -v -HHost:backend.example.com --resolve "backend.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://backend.example.com/
+
+curl -v -HHost:backend-2.example.com --resolve "backend-2.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://backend-2.example.com/
+```
+
+The echo response includes the serving pod's name (`POD_NAME`), so each request lands on a different backend Service even though they share one listener.
+
+[TCPRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#tcproute
+[TLSRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#tlsroute
+[tls-passthrough]: ../tls-passthrough/
+[secure-gateways]: ../secure-gateways/

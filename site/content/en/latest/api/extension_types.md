@@ -2949,6 +2949,7 @@ _Appears in:_
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
 | `retriableStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | RetriableStatuses defines a list of HTTP response statuses considered retriable.<br />Responses matching these statuses count towards the unhealthy threshold but<br />do not result in the host being considered immediately unhealthy.<br />The expected statuses take precedence for any range overlaps with this field. |
 | `expectedResponse` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  |  | ExpectedResponse defines a list of HTTP expected responses to match. |
+| `requestBody` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  |  | RequestBody defines the HTTP request body payload sent during health checking. |
 
 
 #### HTTPClientTimeout
@@ -3883,8 +3884,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ |  true  |  | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and<br />KubernetesWatchModeTypeNamespaceSelector are currently supported<br />By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources<br />from all namespaces. |
-| `namespaces` | _string array_ |  true  |  | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped<br />resources such as Gateway, HTTPRoute and Service.<br />Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as<br />GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set. |
-| `namespaceSelector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  true  |  | NamespaceSelector holds the label selector used to dynamically select namespaces.<br />Envoy Gateway will watch for namespaces matching the specified label selector.<br />Precisely one of Namespaces and NamespaceSelector must be set. |
+| `namespaces` | _string array_ |  true  |  | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped<br />resources such as Gateway, HTTPRoute and Service.<br />The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its<br />own managed infrastructure resources.<br />Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as<br />GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set. |
+| `namespaceSelector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  true  |  | NamespaceSelector holds the label selector used to dynamically select namespaces.<br />Envoy Gateway will watch for namespaces matching the specified label selector.<br />The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its<br />own managed infrastructure resources.<br />Precisely one of Namespaces and NamespaceSelector must be set. |
 
 
 #### KubernetesWatchModeType
@@ -4405,7 +4406,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `methods` | _[HTTPMethod](#httpmethod) array_ |  true  |  | Methods are the HTTP methods of the request.<br />If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule. |
+| `methods` | _[HTTPMethod](#httpmethod) array_ |  false  |  | Methods are the HTTP methods of the request.<br />If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule. |
+| `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the HTTP path of the request.<br />Support Exact, PathPrefix and RegularExpression match types. |
 
 
 #### Origin
@@ -4495,6 +4497,7 @@ _Appears in:_
 PathMatch defines the matching criteria for the HTTP path of a request.
 
 _Appears in:_
+- [Operation](#operation)
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
 | Field | Type | Required | Default | Description |
