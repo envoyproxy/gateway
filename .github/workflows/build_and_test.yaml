@@ -367,11 +367,6 @@ jobs:
     - name: Give Privileges To EG Binaries
       run: chmod +x bin/linux/*/envoy-gateway
 
-    # The xDS runner loads control-plane TLS from ~/.config/envoy-gateway/certs/envoy-gateway
-    # in host mode; generate it before running the suite.
-    - name: Generate Local Certificates
-      run: bin/linux/amd64/envoy-gateway certgen --local
-
     - name: Run Standalone Tests
       env:
         ENVOY_GATEWAY_BIN: ${{ github.workspace }}/bin/linux/amd64/envoy-gateway
