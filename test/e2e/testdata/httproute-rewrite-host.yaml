@@ -34,6 +34,19 @@ spec:
     - group: gateway.envoyproxy.io
       kind: Backend
       name: backend-fqdn
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /path-regex
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: path-regex-host-rewrite
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
@@ -55,6 +68,19 @@ spec:
   urlRewrite:
     hostname:
       type: Backend
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: path-regex-host-rewrite
+  namespace: gateway-conformance-infra
+spec:
+  urlRewrite:
+    hostname:
+      type: PathRegex
+      pathRegex:
+        pattern: "^/path-regex/([^/]+).*"
+        substitution: "\\1.gateway-conformance-infra.svc.cluster.local"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
