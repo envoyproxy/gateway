@@ -1610,7 +1610,7 @@ spec:
                       type: object
                     statusOnError:
                       description: |-
-                        Sets the HTTP status that is returned when the external processor returns an error
+                        Sets the HTTP status that is returned to the client when the external processor returns an error
                         or cannot be reached. Defaults to 500 Internal Server Error.
                         Only 4xx and 5xx status codes are supported.
                       enum:

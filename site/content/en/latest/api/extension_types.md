@@ -2302,7 +2302,7 @@ _Appears in:_
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when failing to call the external processor.<br />If FailOpen is set to true, the system bypasses the ExtProc extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the ExtProc extension will also be bypassed if the configuration is invalid. |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  |  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 | `metadata` | _[ExtProcMetadata](#extprocmetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `statusOnError` | _integer_ |  false  |  | Sets the HTTP status that is returned when the external processor returns an error<br />or cannot be reached. Defaults to 500 Internal Server Error.<br />Only 4xx and 5xx status codes are supported. |
+| `statusOnError` | _integer_ |  false  |  | Sets the HTTP status that is returned to the client when the external processor returns an error<br />or cannot be reached. Defaults to 500 Internal Server Error.<br />Only 4xx and 5xx status codes are supported. |
 
 
 #### ExtProcBodyProcessingMode
