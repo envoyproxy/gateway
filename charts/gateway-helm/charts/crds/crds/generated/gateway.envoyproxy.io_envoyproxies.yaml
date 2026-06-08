@@ -73,8 +73,39 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
-                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      For Envoy TLS cipher suite configuration semantics and default cipher
+                      lists, see the Envoy documentation:
                       https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
+                      Supported cipher suite names:
+                      - ECDHE-ECDSA-AES128-GCM-SHA256
+                      - ECDHE-RSA-AES128-GCM-SHA256
+                      - ECDHE-ECDSA-AES256-GCM-SHA384
+                      - ECDHE-RSA-AES256-GCM-SHA384
+                      - ECDHE-ECDSA-CHACHA20-POLY1305
+                      - ECDHE-RSA-CHACHA20-POLY1305
+                      - ECDHE-ECDSA-AES128-SHA
+                      - ECDHE-RSA-AES128-SHA
+                      - AES128-GCM-SHA256
+                      - AES128-SHA
+                      - ECDHE-ECDSA-AES256-SHA
+                      - ECDHE-RSA-AES256-SHA
+                      - AES256-GCM-SHA384
+                      - AES256-SHA
+                      Supported IANA/RFC aliases:
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+                      - TLS_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_RSA_WITH_AES_256_CBC_SHA
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -11842,6 +11873,7 @@ spec:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
                                                           Defaults to GET
+                                                        maxLength: 16
                                                         type: string
                                                       path:
                                                         description: Path defines
@@ -11851,6 +11883,45 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      requestBody:
+                                                        description: RequestBody defines
+                                                          the HTTP request body payload
+                                                          sent during health checking.
+                                                        properties:
+                                                          binary:
+                                                            description: Binary payload
+                                                              base64 encoded.
+                                                            format: byte
+                                                            type: string
+                                                          text:
+                                                            description: Text payload
+                                                              in plain text.
+                                                            type: string
+                                                          type:
+                                                            allOf:
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            description: Type defines
+                                                              the type of the payload.
+                                                            type: string
+                                                        required:
+                                                        - type
+                                                        type: object
+                                                        x-kubernetes-validations:
+                                                        - message: If payload type
+                                                            is Text, text field needs
+                                                            to be set.
+                                                          rule: 'self.type == ''Text''
+                                                            ? has(self.text) : !has(self.text)'
+                                                        - message: If payload type
+                                                            is Binary, binary field
+                                                            needs to be set.
+                                                          rule: 'self.type == ''Binary''
+                                                            ? has(self.binary) : !has(self.binary)'
                                                       retriableStatuses:
                                                         description: |-
                                                           RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -11868,6 +11939,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                    x-kubernetes-validations:
+                                                    - message: The requestBody field
+                                                        can only be set when method
+                                                        is POST or PUT.
+                                                      rule: '!has(self.requestBody)
+                                                        || (has(self.method) && self.method.upperAscii()
+                                                        in [''POST'',''PUT''])'
                                                   initialJitter:
                                                     description: |-
                                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -13374,6 +13452,7 @@ spec:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
                                                           Defaults to GET
+                                                        maxLength: 16
                                                         type: string
                                                       path:
                                                         description: Path defines
@@ -13383,6 +13462,45 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      requestBody:
+                                                        description: RequestBody defines
+                                                          the HTTP request body payload
+                                                          sent during health checking.
+                                                        properties:
+                                                          binary:
+                                                            description: Binary payload
+                                                              base64 encoded.
+                                                            format: byte
+                                                            type: string
+                                                          text:
+                                                            description: Text payload
+                                                              in plain text.
+                                                            type: string
+                                                          type:
+                                                            allOf:
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            description: Type defines
+                                                              the type of the payload.
+                                                            type: string
+                                                        required:
+                                                        - type
+                                                        type: object
+                                                        x-kubernetes-validations:
+                                                        - message: If payload type
+                                                            is Text, text field needs
+                                                            to be set.
+                                                          rule: 'self.type == ''Text''
+                                                            ? has(self.text) : !has(self.text)'
+                                                        - message: If payload type
+                                                            is Binary, binary field
+                                                            needs to be set.
+                                                          rule: 'self.type == ''Binary''
+                                                            ? has(self.binary) : !has(self.binary)'
                                                       retriableStatuses:
                                                         description: |-
                                                           RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -13400,6 +13518,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                    x-kubernetes-validations:
+                                                    - message: The requestBody field
+                                                        can only be set when method
+                                                        is POST or PUT.
+                                                      rule: '!has(self.requestBody)
+                                                        || (has(self.method) && self.method.upperAscii()
+                                                        in [''POST'',''PUT''])'
                                                   initialJitter:
                                                     description: |-
                                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -15093,6 +15218,7 @@ spec:
                                                   description: |-
                                                     Method defines the HTTP method used for health checking.
                                                     Defaults to GET
+                                                  maxLength: 16
                                                   type: string
                                                 path:
                                                   description: Path defines the HTTP
@@ -15101,6 +15227,43 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
+                                                requestBody:
+                                                  description: RequestBody defines
+                                                    the HTTP request body payload
+                                                    sent during health checking.
+                                                  properties:
+                                                    binary:
+                                                      description: Binary payload
+                                                        base64 encoded.
+                                                      format: byte
+                                                      type: string
+                                                    text:
+                                                      description: Text payload in
+                                                        plain text.
+                                                      type: string
+                                                    type:
+                                                      allOf:
+                                                      - enum:
+                                                        - Text
+                                                        - Binary
+                                                      - enum:
+                                                        - Text
+                                                        - Binary
+                                                      description: Type defines the
+                                                        type of the payload.
+                                                      type: string
+                                                  required:
+                                                  - type
+                                                  type: object
+                                                  x-kubernetes-validations:
+                                                  - message: If payload type is Text,
+                                                      text field needs to be set.
+                                                    rule: 'self.type == ''Text'' ?
+                                                      has(self.text) : !has(self.text)'
+                                                  - message: If payload type is Binary,
+                                                      binary field needs to be set.
+                                                    rule: 'self.type == ''Binary''
+                                                      ? has(self.binary) : !has(self.binary)'
                                                 retriableStatuses:
                                                   description: |-
                                                     RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -15117,6 +15280,12 @@ spec:
                                               required:
                                               - path
                                               type: object
+                                              x-kubernetes-validations:
+                                              - message: The requestBody field can
+                                                  only be set when method is POST
+                                                  or PUT.
+                                                rule: '!has(self.requestBody) || (has(self.method)
+                                                  && self.method.upperAscii() in [''POST'',''PUT''])'
                                             initialJitter:
                                               description: |-
                                                 InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -16702,6 +16871,7 @@ spec:
                                             description: |-
                                               Method defines the HTTP method used for health checking.
                                               Defaults to GET
+                                            maxLength: 16
                                             type: string
                                           path:
                                             description: Path defines the HTTP path
@@ -16710,6 +16880,43 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
+                                          requestBody:
+                                            description: RequestBody defines the HTTP
+                                              request body payload sent during health
+                                              checking.
+                                            properties:
+                                              binary:
+                                                description: Binary payload base64
+                                                  encoded.
+                                                format: byte
+                                                type: string
+                                              text:
+                                                description: Text payload in plain
+                                                  text.
+                                                type: string
+                                              type:
+                                                allOf:
+                                                - enum:
+                                                  - Text
+                                                  - Binary
+                                                - enum:
+                                                  - Text
+                                                  - Binary
+                                                description: Type defines the type
+                                                  of the payload.
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                            x-kubernetes-validations:
+                                            - message: If payload type is Text, text
+                                                field needs to be set.
+                                              rule: 'self.type == ''Text'' ? has(self.text)
+                                                : !has(self.text)'
+                                            - message: If payload type is Binary,
+                                                binary field needs to be set.
+                                              rule: 'self.type == ''Binary'' ? has(self.binary)
+                                                : !has(self.binary)'
                                           retriableStatuses:
                                             description: |-
                                               RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -16726,6 +16933,11 @@ spec:
                                         required:
                                         - path
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: The requestBody field can only
+                                            be set when method is POST or PUT.
+                                          rule: '!has(self.requestBody) || (has(self.method)
+                                            && self.method.upperAscii() in [''POST'',''PUT''])'
                                       initialJitter:
                                         description: |-
                                           InitialJitter defines the maximum time Envoy will wait before the first health check.

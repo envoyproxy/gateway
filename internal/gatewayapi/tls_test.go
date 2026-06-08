@@ -27,6 +27,74 @@ const (
 	secretNamespace = "test"
 )
 
+func TestValidateCipherSuites(t *testing.T) {
+	testCases := []struct {
+		name    string
+		ciphers []string
+		wantErr string
+	}{
+		{
+			name: "openssl style names",
+			ciphers: []string{
+				"ECDHE-ECDSA-AES128-GCM-SHA256",
+				"ECDHE-RSA-AES128-GCM-SHA256",
+				"ECDHE-ECDSA-AES256-GCM-SHA384",
+				"ECDHE-RSA-AES256-GCM-SHA384",
+				"ECDHE-ECDSA-CHACHA20-POLY1305",
+				"ECDHE-RSA-CHACHA20-POLY1305",
+				"ECDHE-ECDSA-AES128-SHA",
+				"ECDHE-RSA-AES128-SHA",
+				"AES128-GCM-SHA256",
+				"AES128-SHA",
+				"ECDHE-ECDSA-AES256-SHA",
+				"ECDHE-RSA-AES256-SHA",
+				"AES256-GCM-SHA384",
+				"AES256-SHA",
+			},
+		},
+		{
+			name: "iana aliases",
+			ciphers: []string{
+				"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+				"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+				"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+				"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+				"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+				"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+				"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+				"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+				"TLS_RSA_WITH_AES_128_GCM_SHA256",
+				"TLS_RSA_WITH_AES_128_CBC_SHA",
+				"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+				"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+				"TLS_RSA_WITH_AES_256_GCM_SHA384",
+				"TLS_RSA_WITH_AES_256_CBC_SHA",
+			},
+		},
+		{
+			name:    "invalid name",
+			ciphers: []string{"INVALID-CIPHER"},
+			wantErr: "unsupported cipher suite: INVALID-CIPHER",
+		},
+		{
+			name:    "unsupported iana name",
+			ciphers: []string{"TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"},
+			wantErr: "unsupported cipher suite: TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateCipherSuites(tc.ciphers)
+			if tc.wantErr != "" {
+				require.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
 // createTestSecret creates a K8s tls secret using testdata
 // see for more info <https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets>
 func createTestSecrets(t *testing.T, certFiles, keyFiles []string) []*corev1.Secret {

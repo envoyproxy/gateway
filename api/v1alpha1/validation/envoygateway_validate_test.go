@@ -1363,3 +1363,102 @@ func TestGetExtensionManagers(t *testing.T) {
 		assert.Equal(t, "plural2", result[1].Name)
 	})
 }
+
+func TestWarnEnvoyGateway(t *testing.T) {
+	eg := egv1a1.DefaultEnvoyGateway()
+
+	testCases := []struct {
+		name     string
+		eg       *egv1a1.EnvoyGateway
+		expected []string
+	}{
+		{
+			name:     "nil EnvoyGateway",
+			eg:       nil,
+			expected: nil,
+		},
+		{
+			name:     "nil ExtensionAPIs",
+			eg:       eg,
+			expected: nil,
+		},
+		{
+			name: "disableLua is set",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+						DisableLua: new(true),
+					},
+				},
+			},
+			expected: []string{"disableLua is deprecated, use enableLua instead"},
+		},
+		{
+			name: "enableLua is set",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+						EnableLua: true,
+					},
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			warnings := WarnEnvoyGateway(tc.eg)
+			assert.Equal(t, tc.expected, warnings)
+		})
+	}
+}
+
+func TestLuaDisabled(t *testing.T) {
+	testCases := []struct {
+		name     string
+		ext      *egv1a1.ExtensionAPISettings
+		expected bool
+	}{
+		{
+			name:     "nil ExtensionAPISettings",
+			ext:      nil,
+			expected: true,
+		},
+		{
+			name:     "neither set - defaults to disabled",
+			ext:      &egv1a1.ExtensionAPISettings{},
+			expected: true,
+		},
+		{
+			name:     "enableLua true",
+			ext:      &egv1a1.ExtensionAPISettings{EnableLua: true},
+			expected: false,
+		},
+		{
+			name:     "disableLua true",
+			ext:      &egv1a1.ExtensionAPISettings{DisableLua: new(true)},
+			expected: true,
+		},
+		{
+			name:     "disableLua false (explicit enable via deprecated field)",
+			ext:      &egv1a1.ExtensionAPISettings{DisableLua: new(false)},
+			expected: false,
+		},
+		{
+			name:     "enableLua takes precedence over disableLua",
+			ext:      &egv1a1.ExtensionAPISettings{EnableLua: true, DisableLua: new(true)},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, tc.ext.LuaDisabled())
+		})
+	}
+}
