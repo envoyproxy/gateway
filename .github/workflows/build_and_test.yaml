@@ -79,13 +79,14 @@ jobs:
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6.0.1
+      uses: codecov/codecov-action@e53489f4d376d79066609109e7a95a29eb3740b1  # v7.0.0
       with:
         fail_ci_if_error: true
         files: ./coverage.xml
         name: codecov-envoy-gateway
         verbose: true
         use_oidc: true
+        version: v11.2.8
 
   go-benchmark-test:
     runs-on: ubuntu-latest
