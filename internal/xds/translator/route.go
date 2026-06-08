@@ -592,6 +592,15 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
 				AutoHostRewrite: wrapperspb.Bool(true),
 			}
+		case urlRewrite.Host.PathRegex != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewritePathRegex{
+				HostRewritePathRegex: &matcherv3.RegexMatchAndSubstitute{
+					Pattern: &matcherv3.RegexMatcher{
+						Regex: urlRewrite.Host.PathRegex.Pattern,
+					},
+					Substitution: urlRewrite.Host.PathRegex.Substitution,
+				},
+			}
 		}
 
 		if urlRewrite.AppendXForwardedHost == nil || *urlRewrite.AppendXForwardedHost {

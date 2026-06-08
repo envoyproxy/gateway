@@ -161,6 +161,31 @@ httpRoutes:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
           name: not-found-filter
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-6
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/node"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-path-regex
 httpFilters:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: HTTPRouteFilter
@@ -181,3 +206,15 @@ httpFilters:
     urlRewrite:
       hostname:
         type: Backend
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: valid-path-regex
+    namespace: default
+  spec:
+    urlRewrite:
+      hostname:
+        type: PathRegex
+        pathRegex:
+          pattern: "^/node/([0-9]+)/api.*"
+          substitution: "backend-\\1.service.namespace.svc.cluster.local"

@@ -886,6 +886,28 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							hm = &ir.HTTPHostModifier{
 								Backend: new(true),
 							}
+						case egv1a1.PathRegexHTTPHostnameModifier:
+							if hrf.Spec.URLRewrite.Hostname.PathRegex == nil ||
+								hrf.Spec.URLRewrite.Hostname.PathRegex.Pattern == "" ||
+								hrf.Spec.URLRewrite.Hostname.PathRegex.Substitution == "" {
+								return status.NewRouteStatusError(
+									errors.New("PathRegex Pattern and Substitution must be set when rewrite hostname type is \"PathRegex\""),
+									gwapiv1.RouteReasonUnsupportedValue,
+								).WithType(gwapiv1.RouteConditionAccepted)
+							} else if _, err := regexp.Compile(hrf.Spec.URLRewrite.Hostname.PathRegex.Pattern); err != nil {
+								// Avoid envoy NACKs due to invalid regex.
+								// Golang's regexp is almost identical to RE2: https://pkg.go.dev/regexp/syntax
+								return status.NewRouteStatusError(
+									errors.New("PathRegex must be a valid RE2 regular expression"),
+									gwapiv1.RouteReasonUnsupportedValue,
+								).WithType(gwapiv1.RouteConditionAccepted)
+							}
+							hm = &ir.HTTPHostModifier{
+								PathRegex: &ir.RegexMatchReplace{
+									Pattern:      hrf.Spec.URLRewrite.Hostname.PathRegex.Pattern,
+									Substitution: hrf.Spec.URLRewrite.Hostname.PathRegex.Substitution,
+								},
+							}
 						}
 
 						if filterContext.URLRewrite != nil {
