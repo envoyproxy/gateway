@@ -28,6 +28,13 @@ func TestParseURL(t *testing.T) {
 			wantErr:         false,
 		},
 		{
+			name:            "spiffe workload api uds url with dot host",
+			url:             "unix://./var/run/secrets/workload-spiffe-uds/socket",
+			wantScheme:      "unix",
+			wantHostAndPort: "./var/run/secrets/workload-spiffe-uds/socket",
+			wantErr:         false,
+		},
+		{
 			name:            "unix url with host silently dropped",
 			url:             "unix://var/run/app.sock",
 			wantScheme:      "",
@@ -36,12 +43,11 @@ func TestParseURL(t *testing.T) {
 			errContains:     "must not contain a host",
 		},
 		{
-			name:            "unix url with dot host rejected",
+			name:            "unix url with dot host as relative path",
 			url:             "unix://./app.sock",
-			wantScheme:      "",
-			wantHostAndPort: "",
-			wantErr:         true,
-			errContains:     "must not contain a host",
+			wantScheme:      "unix",
+			wantHostAndPort: "./app.sock",
+			wantErr:         false,
 		},
 		{
 			name:            "invalid url",
