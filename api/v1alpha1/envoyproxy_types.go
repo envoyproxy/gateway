@@ -126,6 +126,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.header_mutation
 	//
+	// - envoy.filters.http.geoip
+	//
 	// - envoy.filters.http.ext_authz
 	//
 	// - envoy.filters.http.api_key_auth
@@ -147,8 +149,6 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.wasm
 	//
 	// - envoy.filters.http.dynamic_modules
-	//
-	// - envoy.filters.http.geoip
 	//
 	// - envoy.filters.http.rbac
 	//
