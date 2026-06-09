@@ -216,6 +216,56 @@ httpRoutes:
                 group: gateway.envoyproxy.io
                 kind: HTTPRouteFilter
                 name: valid-path-regex
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-invalid-path-regex
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/invalid-path-regex"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: invalid-path-regex
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-missing-path-regex
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/missing-path-regex"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: missing-path-regex        
   # PathRegex host rewrite is invalid on a dynamic resolver backend: the upstream host would be
   # derived from request-controlled path text, bypassing the dynamic forward proxy loopback protection.
   - apiVersion: gateway.networking.k8s.io/v1
@@ -312,3 +362,25 @@ httpFilters:
           pathRegex:
             pattern: "^/[^/]+/([^/]+).*"
             substitution: "\\1"
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: invalid-path-regex
+      namespace: default
+    spec:
+      urlRewrite:
+        hostname:
+          type: PathRegex
+          pathRegex:
+            pattern: '"([a-z]+)"*+?'
+            substitution: "backend-\\1.service.namespace.svc.cluster.local"
+          header: my-host
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: missing-path-regex
+      namespace: default
+    spec:
+      urlRewrite:
+        hostname:
+          type: PathRegex
