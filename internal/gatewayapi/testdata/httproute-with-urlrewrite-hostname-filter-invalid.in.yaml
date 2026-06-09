@@ -186,6 +186,36 @@ httpRoutes:
                 group: gateway.envoyproxy.io
                 kind: HTTPRouteFilter
                 name: valid-header
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-header-and-pathregex-host-rewrites
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/header-and-pathregex"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: valid-header
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: valid-path-regex
   # PathRegex host rewrite is invalid on a dynamic resolver backend: the upstream host would be
   # derived from request-controlled path text, bypassing the dynamic forward proxy loopback protection.
   - apiVersion: gateway.networking.k8s.io/v1
@@ -273,13 +303,12 @@ httpFilters:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: HTTPRouteFilter
     metadata:
-      name: invalid-path-regex
+      name: valid-path-regex
       namespace: default
     spec:
       urlRewrite:
         hostname:
           type: PathRegex
           pathRegex:
-            pattern: '"([a-z]+)"*+?'
-            substitution: "backend-\\1.service.namespace.svc.cluster.local"
-          header: my-host
+            pattern: "^/[^/]+/([^/]+).*"
+            substitution: "\\1"
