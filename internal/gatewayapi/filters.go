@@ -234,7 +234,8 @@ func hasMultipleCoreRewrites(rewrite *gwapiv1.HTTPURLRewriteFilter, contextRewri
 // Checks if the context and the rewrite both contain a envoy-gateway extended HTTP URL rewrite
 func hasMultipleExtensionRewrites(rewrite *egv1a1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
 	contextHasExtensionRewrites := (contextRewrite.Path != nil && contextRewrite.Path.RegexMatchReplace != nil) ||
-		(contextRewrite.Host != nil && (contextRewrite.Host.Header != nil || contextRewrite.Host.Backend != nil))
+		(contextRewrite.Host != nil && (contextRewrite.Host.Header != nil || contextRewrite.Host.Backend != nil ||
+			contextRewrite.Host.PathRegex != nil))
 
 	return contextHasExtensionRewrites && (rewrite.Hostname != nil || rewrite.Path != nil)
 }
@@ -243,7 +244,7 @@ func hasMultipleExtensionRewrites(rewrite *egv1a1.HTTPURLRewriteFilter, contextR
 func hasConflictingCoreAndExtensionRewrites(rewrite *gwapiv1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
 	contextHasExtensionPathRewrites := contextRewrite.Path != nil && contextRewrite.Path.RegexMatchReplace != nil
 	contextHasExtensionHostRewrites := contextRewrite.Host != nil && (contextRewrite.Host.Header != nil ||
-		contextRewrite.Host.Backend != nil)
+		contextRewrite.Host.Backend != nil || contextRewrite.Host.PathRegex != nil)
 	return (rewrite.Hostname != nil && contextHasExtensionHostRewrites) || (rewrite.Path != nil && contextHasExtensionPathRewrites)
 }
 

@@ -236,6 +236,66 @@ httpRoutes:
                 group: gateway.envoyproxy.io
                 kind: HTTPRouteFilter
                 name: invalid-path-regex
+  # A PathRegex host rewrite conflicting with a second extension PathRegex host rewrite must be rejected.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-multiple-path-regex-host-rewrites
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/two-path-regex"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: valid-path-regex
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: valid-path-regex
+  # A PathRegex host rewrite conflicting with a core URLRewrite hostname rewrite must be rejected.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-path-regex-and-core-host-rewrite
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/path-regex-and-core"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: valid-path-regex
+            - type: URLRewrite
+              urlRewrite:
+                hostname: "rewrite.com"
   # PathRegex host rewrite is invalid on a dynamic resolver backend: the upstream host would be
   # derived from request-controlled path text, bypassing the dynamic forward proxy loopback protection.
   - apiVersion: gateway.networking.k8s.io/v1

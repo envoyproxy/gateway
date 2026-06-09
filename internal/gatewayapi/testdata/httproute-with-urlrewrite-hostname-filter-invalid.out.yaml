@@ -31,7 +31,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 9
+    - attachedRoutes: 11
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -426,6 +426,100 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
+    name: httproute-multiple-path-regex-host-rewrites
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-path-regex
+        type: ExtensionRef
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-path-regex
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /two-path-regex
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-path-regex-and-core-host-rewrite
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-path-regex
+        type: ExtensionRef
+      - type: URLRewrite
+        urlRewrite:
+          hostname: rewrite.com
+      matches:
+      - path:
+          value: /path-regex-and-core
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
     name: httproute-dynamic-resolver-path-regex
     namespace: default
   spec:
@@ -553,6 +647,24 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
+          name: httproute-path-regex-and-core-host-rewrite
+          namespace: default
+        name: httproute/default/httproute-path-regex-and-core-host-rewrite/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /path-regex-and-core
+        urlRewrite:
+          host:
+            pathRegex:
+              pattern: ^/[^/]+/([^/]+).*
+              substitution: \1
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
           name: httproute-header-and-backend-host-rewrites
           namespace: default
         name: httproute/default/httproute-header-and-backend-host-rewrites/rule/0/match/0/gateway_envoyproxy_io
@@ -599,6 +711,24 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /invalid-header
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-multiple-path-regex-host-rewrites
+          namespace: default
+        name: httproute/default/httproute-multiple-path-regex-host-rewrites/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /two-path-regex
+        urlRewrite:
+          host:
+            pathRegex:
+              pattern: ^/[^/]+/([^/]+).*
+              substitution: \1
       - directResponse:
           statusCode: 500
         hostname: gateway.envoyproxy.io
