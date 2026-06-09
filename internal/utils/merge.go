@@ -51,6 +51,8 @@ func mergeInternal[T any](original T, patchJSON []byte, mergeType egv1a1.MergeTy
 		if err != nil {
 			return empty, fmt.Errorf("error during JSON merge: %w", err)
 		}
+	case egv1a1.Replace:
+		patchedJSON = patchJSON
 	default:
 		return empty, fmt.Errorf("unsupported merge type: %v", mergeType)
 	}

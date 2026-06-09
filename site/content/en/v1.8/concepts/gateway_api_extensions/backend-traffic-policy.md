@@ -159,6 +159,7 @@ When merging occurs, route-level policies will merge with either a gateway-level
 
 - **StrategicMerge**: Uses Kubernetes strategic merge patch semantics, providing intelligent merging for complex data structures including arrays
 - **JSONMerge**: Uses RFC 7396 JSON Merge Patch semantics, with simple replacement strategy where arrays are completely replaced
+- **Replace**: Discards the parent policy configuration completely and replaces it with the child policy configuration
 
 ### Example Usage
 

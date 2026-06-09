@@ -884,7 +884,9 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 			// Replace the rate limit in the merged features if successful
 			tf.RateLimit = mergedRL
 		}
-	} else if policy.Spec.RateLimit == nil && parentPolicy.Spec.RateLimit != nil {
+	} else if policy.Spec.RateLimit == nil &&
+		parentPolicy.Spec.RateLimit != nil &&
+		*policy.Spec.MergeType != egv1a1.Replace {
 		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
 		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
 		if tfGW != nil && tfGW.RateLimit != nil {
