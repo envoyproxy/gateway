@@ -42,8 +42,23 @@ type rbac struct{}
 
 var _ httpFilter = &rbac{}
 
+// rbacPreAuthFilterName is the name of the RBAC filter that enforces
+// authentication-independent authorization rules (such as clientCIDRs and
+// clientIPGeoLocations) before the authentication filters (OAuth2, ext_authz,
+// etc.) run. It is an internal filter that is not exposed in the EnvoyFilter
+// API, similar to the dynamic forward proxy loopback RBAC filter.
+const rbacPreAuthFilterName = "envoy.filters.http.pre_auth_rbac"
+
 // patchHCM builds and appends the RBAC Filter to the HTTP Connection Manager if
 // applicable.
+//
+// Up to two RBAC filters may be added:
+//   - A pre-auth RBAC filter that is ordered before the authentication filters
+//     and enforces the leading run of authentication-independent rules. This
+//     ensures that, for example, a geo/IP deny rule returns 403 before OAuth2
+//     redirects an otherwise-denied client to the IdP (see issue #8913).
+//   - The main RBAC filter that is ordered after the authentication filters and
+//     enforces the full authorization policy (including the default action).
 func (*rbac) patchHCM(
 	mgr *hcmv3.HttpConnectionManager,
 	irListener *ir.HTTPListener,
@@ -60,25 +75,38 @@ func (*rbac) patchHCM(
 		return nil
 	}
 
-	// Return early if filter already exists.
-	for _, f := range mgr.HttpFilters {
-		if f.Name == egv1a1.EnvoyFilterRBAC.String() {
-			return nil
+	// Add the pre-auth RBAC filter if any route needs early, pre-authentication
+	// enforcement of authentication-independent rules.
+	if listenerContainsPreAuthRBAC(irListener) && !hcmContainsFilter(mgr, rbacPreAuthFilterName) {
+		preAuthFilter, err := buildHCMRBACFilterWithName(rbacPreAuthFilterName)
+		if err != nil {
+			return err
 		}
+		mgr.HttpFilters = append([]*hcmv3.HttpFilter{preAuthFilter}, mgr.HttpFilters...)
 	}
 
-	rbacFilter, err := buildHCMRBACFilter()
-	if err != nil {
-		return err
+	// Add the main RBAC filter unless it already exists.
+	if !hcmContainsFilter(mgr, egv1a1.EnvoyFilterRBAC.String()) {
+		rbacFilter, err := buildHCMRBACFilter()
+		if err != nil {
+			return err
+		}
+		mgr.HttpFilters = append([]*hcmv3.HttpFilter{rbacFilter}, mgr.HttpFilters...)
 	}
-
-	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rbacFilter}, mgr.HttpFilters...)
 
 	return nil
 }
 
-// buildHCMRBACFilter returns a RBAC filter from the provided IR listener.
+// buildHCMRBACFilter returns the main RBAC filter. The actual policy is supplied
+// per-route via typed_per_filter_config.
 func buildHCMRBACFilter() (*hcmv3.HttpFilter, error) {
+	return buildHCMRBACFilterWithName(egv1a1.EnvoyFilterRBAC.String())
+}
+
+// buildHCMRBACFilterWithName returns an empty RBAC filter with the provided
+// name. An empty RBAC config is a no-op placeholder; the actual policy is
+// supplied per-route via typed_per_filter_config.
+func buildHCMRBACFilterWithName(name string) (*hcmv3.HttpFilter, error) {
 	rbacProto := &rbacv3.RBAC{}
 	rbacAny, err := proto.ToAnyWithValidation(rbacProto)
 	if err != nil {
@@ -86,7 +114,7 @@ func buildHCMRBACFilter() (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: egv1a1.EnvoyFilterRBAC.String(),
+		Name: name,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: rbacAny,
 		},
@@ -107,6 +135,84 @@ func listenerContainsRBAC(irListener *ir.HTTPListener) bool {
 	}
 
 	return false
+}
+
+// listenerContainsPreAuthRBAC returns true if any route on the listener needs
+// the pre-auth RBAC filter.
+func listenerContainsPreAuthRBAC(irListener *ir.HTTPListener) bool {
+	if irListener == nil {
+		return false
+	}
+
+	for _, route := range irListener.Routes {
+		if routeNeedsPreAuthRBAC(route) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// routeNeedsPreAuthRBAC returns true if the route has both an authentication
+// mechanism that runs before the main RBAC filter and a non-empty leading run
+// of authentication-independent authorization rules. Only in that case does
+// splitting the enforcement change the observable behavior.
+func routeNeedsPreAuthRBAC(route *ir.HTTPRoute) bool {
+	if route == nil || route.Security == nil || route.Security.Authorization == nil {
+		return false
+	}
+	if !hasPreRBACAuthentication(route.Security) {
+		return false
+	}
+	return len(authIndependentPrefix(route.Security.Authorization)) > 0
+}
+
+// hasPreRBACAuthentication returns true if the route configures an
+// authentication mechanism that is enforced before the main RBAC filter and may
+// therefore short-circuit (e.g. redirect or challenge) a request that the
+// authorization policy would otherwise deny.
+func hasPreRBACAuthentication(sf *ir.SecurityFeatures) bool {
+	if sf == nil {
+		return false
+	}
+	return sf.OIDC != nil ||
+		sf.ExtAuth != nil ||
+		sf.BasicAuth != nil ||
+		sf.APIKeyAuth != nil ||
+		sf.JWT != nil
+}
+
+// authIndependentPrefix returns the leading run of authorization rules whose
+// principals can be evaluated without any authentication state, i.e. they only
+// match on clientCIDRs and/or clientIPGeoLocations (operation/method matching is
+// also authentication-independent). Evaluation stops at the first rule that
+// depends on authentication (a JWT or header principal).
+//
+// Returning only the leading prefix preserves the original first-match-wins
+// semantics: every rule in the prefix is evaluated in the same relative order
+// and before any authentication-dependent rule, so enforcing a Deny in the
+// prefix early is safe, and an Allow in the prefix is non-terminal (the request
+// continues to the main RBAC filter, which re-evaluates the full policy).
+func authIndependentPrefix(authorization *ir.Authorization) []*ir.AuthorizationRule {
+	if authorization == nil {
+		return nil
+	}
+
+	prefix := make([]*ir.AuthorizationRule, 0, len(authorization.Rules))
+	for _, rule := range authorization.Rules {
+		if rule == nil || !isAuthIndependentRule(rule) {
+			break
+		}
+		prefix = append(prefix, rule)
+	}
+
+	return prefix
+}
+
+// isAuthIndependentRule returns true if the rule's principal can be fully
+// evaluated before authentication runs.
+func isAuthIndependentRule(rule *ir.AuthorizationRule) bool {
+	return rule.Principal.JWT == nil && len(rule.Principal.Headers) == 0
 }
 
 // patchRoute patches the provided route with the RBAC config if applicable.
@@ -134,6 +240,8 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 		err          error
 	)
 
+	// The main RBAC filter enforces the full authorization policy, including the
+	// default action.
 	if rbacPerRoute, err = buildRBACPerRoute(irRoute.Security.Authorization); err != nil {
 		return err
 	}
@@ -148,17 +256,45 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 
 	route.TypedPerFilterConfig[egv1a1.EnvoyFilterRBAC.String()] = cfgAny
 
+	// The pre-auth RBAC filter enforces the leading run of
+	// authentication-independent rules before the authentication filters run.
+	// Its default action is Allow so that requests that do not match any of the
+	// prefix rules continue to the authentication and main RBAC filters, where
+	// the full policy (including the real default action) is enforced.
+	if routeNeedsPreAuthRBAC(irRoute) {
+		prefixRules := authIndependentPrefix(irRoute.Security.Authorization)
+		preAuthPerRoute, err := buildRBACPerRouteForRules(prefixRules, egv1a1.AuthorizationActionAllow)
+		if err != nil {
+			return err
+		}
+		preAuthAny, err := proto.ToAnyWithValidation(preAuthPerRoute)
+		if err != nil {
+			return err
+		}
+		route.TypedPerFilterConfig[rbacPreAuthFilterName] = preAuthAny
+	}
+
 	return nil
 }
 
+// buildRBACPerRoute builds the per-route RBAC config for the full authorization
+// policy.
 func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, error) {
+	return buildRBACPerRouteForRules(authorization.Rules, authorization.DefaultAction)
+}
+
+// buildRBACPerRouteForRules builds a per-route RBAC config from the provided
+// rules and default action. It is shared by the main RBAC filter (full rule set
+// and the policy's default action) and the pre-auth RBAC filter (the
+// authentication-independent prefix and an Allow default action).
+func buildRBACPerRouteForRules(rules []*ir.AuthorizationRule, defaultActionType egv1a1.AuthorizationAction) (*rbacv3.RBACPerRoute, error) {
 	var (
 		rbac        *rbacv3.RBACPerRoute
 		allowAction *anypb.Any
 		denyAction  *anypb.Any
 		err         error
 	)
-	matcherList := make([]*matcherv3.Matcher_MatcherList_FieldMatcher, 0, len(authorization.Rules))
+	matcherList := make([]*matcherv3.Matcher_MatcherList_FieldMatcher, 0, len(rules))
 
 	allow := &rbacconfigv3.Action{
 		Name:   "ALLOW",
@@ -181,7 +317,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 	// will be used to determine the action, the rest of the matchers will be
 	// skipped.
 	// If no matcher matches, the default action will be used.
-	for _, rule := range authorization.Rules {
+	for _, rule := range rules {
 		var (
 			// Predicates for HTTP methods.
 			methodPredicate *matcherv3.Matcher_MatcherList_Predicate
@@ -312,7 +448,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 
 	// Set the default action.
 	defaultAction := denyAction
-	if authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
+	if defaultActionType == egv1a1.AuthorizationActionAllow {
 		defaultAction = allowAction
 	}
 
