@@ -44,20 +44,25 @@ func TestMergePolicy(t *testing.T) {
 func runMergePolicyTest[T client.Object](t *testing.T, caseFile string) {
 	t.Helper()
 
-	for _, mergeType := range []egv1a1.MergeType{egv1a1.StrategicMerge, egv1a1.JSONMerge} {
+	for _, mergeType := range []egv1a1.MergeType{egv1a1.StrategicMerge, egv1a1.JSONMerge, egv1a1.Replace} {
 		patchedInput := strings.Replace(caseFile, ".in.yaml", ".patch.yaml", 1)
+		original := readObject[T](t, caseFile)
+		patch := readObject[T](t, patchedInput)
+
+		got, err := Merge(original, patch, mergeType)
+		require.NoError(t, err)
+
+		if mergeType == egv1a1.Replace {
+			require.Equal(t, patch, got)
+			continue
+		}
+
 		var output string
 		if mergeType == egv1a1.StrategicMerge {
 			output = strings.Replace(caseFile, ".in.yaml", ".strategicmerge.out.yaml", 1)
 		} else {
 			output = strings.Replace(caseFile, ".in.yaml", ".jsonmerge.out.yaml", 1)
 		}
-
-		original := readObject[T](t, caseFile)
-		patch := readObject[T](t, patchedInput)
-
-		got, err := Merge(original, patch, mergeType)
-		require.NoError(t, err)
 
 		if test.OverrideTestData() {
 			b, err := yaml.Marshal(got)
