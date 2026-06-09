@@ -25,6 +25,14 @@ envoyProxyForGatewayClass:
         - HTTP/1.1
         - HTTP/2
 
+envoyProxiesForGateways:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyProxy
+    metadata:
+      namespace: envoy-gateway
+      name: no-backend-tls
+    spec: {}
+
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -33,6 +41,25 @@ gateways:
       name: gateway-1
     spec:
       gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-3-without-backend-tls
+    spec:
+      gatewayClassName: envoy-gateway-class
+      infrastructure:
+        parametersRef:
+          group: gateway.envoyproxy.io
+          kind: EnvoyProxy
+          name: no-backend-tls
       listeners:
         - name: http
           protocol: HTTP
@@ -162,6 +189,42 @@ httpRoutes:
             - group: gateway.envoyproxy.io
               kind: Backend
               name: backend-7
+              port: 3001
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: envoy-gateway
+      name: httproute-9-override-client-tls-settings-disable-alpn
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-9
+              port: 3001
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: envoy-gateway
+      name: httproute-10-no-client-tls-settings
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-3-without-backend-tls
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-10
               port: 3001
 configMaps:
   - apiVersion: v1
@@ -363,6 +426,35 @@ backends:
           name: client-auth-override
         alpnProtocols:
           - HTTP/2
+      endpoints:
+        - ip:
+            address: 3.3.3.3
+            port: 3001
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-9      # this backend should be accepted and alpn should be disabled
+      namespace: envoy-gateway
+    spec:
+      tls:
+        wellKnownCACertificates: System
+        clientCertificateRef:
+          group: ""
+          kind: Secret
+          name: client-auth-override
+        alpnProtocols: []
+      endpoints:
+        - ip:
+            address: 3.3.3.3
+            port: 3001
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-10     # this backend should keep ALPN unset when neither Backend nor EnvoyProxy configures it
+      namespace: envoy-gateway
+    spec:
+      tls:
+        wellKnownCACertificates: System
       endpoints:
         - ip:
             address: 3.3.3.3

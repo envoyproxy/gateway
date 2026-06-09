@@ -237,7 +237,7 @@ func mergeClientTLSConfigs(
 		mergedConfig.SignatureAlgorithms = backendClientTLSConfig.SignatureAlgorithms
 	}
 
-	if len(backendClientTLSConfig.ALPNProtocols) > 0 {
+	if backendClientTLSConfig.ALPNProtocols != nil {
 		mergedConfig.ALPNProtocols = backendClientTLSConfig.ALPNProtocols
 	}
 
@@ -360,7 +360,8 @@ func (t *Translator) processClientTLSSettings(
 	if clientTLS.MaxVersion != nil {
 		tlsConfig.MaxVersion = ptr.To(ir.TLSVersion(*clientTLS.MaxVersion))
 	}
-	if len(clientTLS.ALPNProtocols) > 0 {
+	// An empty list of ALPNProtocols means ALPN is disabled, while a nil value means it is not set.
+	if clientTLS.ALPNProtocols != nil {
 		tlsConfig.ALPNProtocols = make([]string, len(clientTLS.ALPNProtocols))
 		for i := range clientTLS.ALPNProtocols {
 			tlsConfig.ALPNProtocols[i] = string(clientTLS.ALPNProtocols[i])
