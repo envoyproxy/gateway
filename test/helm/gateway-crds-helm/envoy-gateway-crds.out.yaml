@@ -28162,10 +28162,12 @@ spec:
                         description: |-
                           PathRegex defines a regex match and substitution applied to the request path to compute
                           the rewritten Host header.
-                          For example:
+                          For example, with:
                           pathRegex:
                             pattern: "^/tenant/([a-z0-9-]+)/.*"
                             substitution: "\\1.example.internal"
+                          a request to "http://foo.bar.com/tenant/tenant1/api/v1" has its upstream Host header rewritten
+                          to "tenant1.example.internal" (the request path "/tenant/tenant1/api/v1" is preserved).
                         properties:
                           pattern:
                             description: |-

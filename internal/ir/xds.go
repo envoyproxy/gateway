@@ -59,7 +59,7 @@ var (
 	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrHTTPPathRegexModifierNoSetting           = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrHTTPHostModifierDoubleReplace            = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header, Backend and PathRegex")
-	ErrHTTPHostModifierNoReplace                = errors.New("redirect filter cannot have a host modifier that does not supply either Hostname, Header, Backend or PathRegex")
+	ErrHTTPHostModifierEmptyPathRegex           = errors.New("host modifier with a PathRegex must supply both a Pattern and a Substitution")
 	ErrAddHeaderEmptyName                       = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate                       = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate                    = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
@@ -2301,7 +2301,7 @@ func (r HTTPHostModifier) Validate() error {
 	}
 
 	if r.PathRegex != nil && (r.PathRegex.Pattern == "" || r.PathRegex.Substitution == "") {
-		errs = errors.Join(errs, ErrHTTPHostModifierNoReplace)
+		errs = errors.Join(errs, ErrHTTPHostModifierEmptyPathRegex)
 	}
 
 	return errs

@@ -3075,7 +3075,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[HTTPHostnameModifierType](#httphostnamemodifiertype)_ |  true  |  |  |
 | `header` | _string_ |  false  |  | Header is the name of the header whose value would be used to rewrite the Host header |
-| `pathRegex` | _[HostnamePathRegexRewrite](#hostnamepathregexrewrite)_ |  false  |  | PathRegex defines a regex match and substitution applied to the request path to compute<br />the rewritten Host header.<br />For example:<br />pathRegex:<br />  pattern: "^/tenant/([a-z0-9-]+)/.*"<br />  substitution: "\\1.example.internal" |
+| `pathRegex` | _[HostnamePathRegexRewrite](#hostnamepathregexrewrite)_ |  false  |  | PathRegex defines a regex match and substitution applied to the request path to compute<br />the rewritten Host header.<br />For example, with:<br />pathRegex:<br />  pattern: "^/tenant/([a-z0-9-]+)/.*"<br />  substitution: "\\1.example.internal"<br />a request to "http://foo.bar.com/tenant/tenant1/api/v1" has its upstream Host header rewritten<br />to "tenant1.example.internal" (the request path "/tenant/tenant1/api/v1" is preserved). |
 
 
 #### HTTPHostnameModifierType
