@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +24,8 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -45,7 +46,6 @@ var RemoteInfraTCPRouteTest = suite.ConformanceTest{
 	Description: "Verify TCP traffic routes through proxies managed by the remote infrastructure provider",
 	Manifests:   []string{"testdata/tcproute.yaml"},
 	Test: func(t *testing.T, s *suite.ConformanceTestSuite) {
-
 		ns := ConformanceInfraNamespace
 		routeNN := types.NamespacedName{Name: "tcp-app-1", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "my-tcp-gateway", Namespace: ns}

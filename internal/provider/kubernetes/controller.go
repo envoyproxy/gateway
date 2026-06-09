@@ -275,8 +275,13 @@ func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
-
+	if eg.Provider == nil {
+		return false
+	}
 	watch := eg.Provider.GetKubernetesConfiguration().Watch
+	if watch == nil {
+		return false
+	}
 	switch watch.Type {
 	case egv1a1.KubernetesWatchModeTypeNamespaceSelector:
 		// Make sure that the namespace selector has at least one label or expression is set.
