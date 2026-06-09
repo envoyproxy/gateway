@@ -1,0 +1,206 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /protected
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-protected
+              namespace: default
+      name: httproute/default/httproute-protected/rule/0/match/0/www_example_com
+      requestHeadersToRemove:
+      - x-eg-internal-geoip-country
+      route:
+        cluster: httproute/default/httproute-protected/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: httproute/default/httproute-protected/rule/0/match/0/www_example_com
+        envoy.filters.http.oauth2:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
+          config:
+            authScopes:
+            - openid
+            - email
+            - profile
+            authType: BASIC_AUTH
+            authorizationEndpoint: https://oauth.example.com/oauth2/v2/auth
+            credentials:
+              clientId: client.oauth.example.com
+              cookieNames:
+                bearerToken: AccessToken-5F93C2E4
+                idToken: IdToken-5F93C2E4
+                oauthExpires: OauthExpires-5F93C2E4
+                oauthHmac: OauthHMAC-5F93C2E4
+                oauthNonce: OauthNonce-5F93C2E4
+                refreshToken: RefreshToken-5F93C2E4
+              hmacSecret:
+                name: oauth2/hmac_secret/securitypolicy/default/policy-for-protected-route
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+              tokenSecret:
+                name: oauth2/client_secret/securitypolicy/default/policy-for-protected-route
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+            csrfTokenExpiresIn: 2100s
+            defaultExpiresIn: 3600s
+            defaultRefreshTokenExpiresIn: 172800s
+            forwardBearerToken: true
+            redirectPathMatcher:
+              path:
+                exact: /protected/oauth2/callback
+            redirectUri: https://www.example.com/protected/oauth2/callback
+            signoutPath:
+              path:
+                exact: /protected/logout
+            statPrefix: securitypolicy/default/policy-for-protected-route
+            tokenEndpoint:
+              cluster: oauth_example_com_443
+              timeout: 10s
+              uri: https://oauth.example.com/token
+            useRefreshToken: true
+        envoy.filters.http.pre_auth_rbac:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: deny-sanctioned-country
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    singlePredicate:
+                      input:
+                        name: http_header
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                          headerName: x-eg-internal-geoip-country
+                      valueMatch:
+                        exact: IR
+                        ignoreCase: true
+                - onMatch:
+                    action:
+                      name: deny-internal-cidr
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    singlePredicate:
+                      customMatch:
+                        name: ip_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                          cidrRanges:
+                          - addressPrefix: 10.0.0.0
+                            prefixLen: 0
+                          statPrefix: client_ip
+                      input:
+                        name: client_ip
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW
+        envoy.filters.http.rbac:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: deny-sanctioned-country
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    singlePredicate:
+                      input:
+                        name: http_header
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                          headerName: x-eg-internal-geoip-country
+                      valueMatch:
+                        exact: IR
+                        ignoreCase: true
+                - onMatch:
+                    action:
+                      name: deny-internal-cidr
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    singlePredicate:
+                      customMatch:
+                        name: ip_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                          cidrRanges:
+                          - addressPrefix: 10.0.0.0
+                            prefixLen: 0
+                          statPrefix: client_ip
+                      input:
+                        name: client_ip
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+                - onMatch:
+                    action:
+                      name: allow-admins
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
+                    singlePredicate:
+                      customMatch:
+                        name: claim_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                          value:
+                            listMatch:
+                              oneOf:
+                                stringMatch:
+                                  exact: admin
+                      input:
+                        name: claim
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                          filter: envoy.filters.http.jwt_authn
+                          path:
+                          - key: exjwt
+                          - key: groups
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    action: DENY
+                    name: DENY
