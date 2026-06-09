@@ -29,6 +29,7 @@ bug fixes: |
   Fixed `egctl x status all`/`xroute`/`xpolicy` failing when a Gateway API CRD (e.g. TCPRoute) is not installed in the cluster; missing CRDs are now skipped silently, or reported on stderr with `-v`.
   Fixed Kubernetes Service and ServiceImport `appProtocol` values `kubernetes.io/ws` and `kubernetes.io/wss` to force HTTP/1.1 upstream connections instead of negotiating HTTP/2, avoiding compatibility issues with WebSocket backends that do not support RFC 8441 extended CONNECT.
   Fixed API key auth credential ordering to avoid unnecessary xDS updates.
+  Fixed ListenerSet hostname conflict resolution to apply listener precedence: Gateway-owned listeners win over ListenerSet listeners, and among ListenerSet listeners the first in processing order wins. Conflicted ListenerSet listeners now correctly report Accepted=False with the conflict reason. The Gateway's AttachedListenerSets count now only reflects ListenerSets with at least one accepted listener.
 
 # Enhancements that improve performance.
 performance improvements: |
