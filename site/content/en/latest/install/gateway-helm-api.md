@@ -98,6 +98,17 @@ The Helm chart for Envoy Gateway
 | hpa.metrics | list | `[]` |  |
 | hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
+| monitoring.podMonitor.annotations | object | `{}` | Annotations to add to the PodMonitor |
+| monitoring.podMonitor.authorization | object | `{}` | Authorization configuration for the scrape endpoint. |
+| monitoring.podMonitor.enabled | bool | `false` | Enable podMonitor for Envoy Gateway |
+| monitoring.podMonitor.interval | string | `""` | Interval at which metrics should be scraped. Defaults to Prometheus default. |
+| monitoring.podMonitor.labels | object | `{}` | Labels to add to the PodMonitor |
+| monitoring.podMonitor.metricRelabelings | list | `[]` | MetricRelabelConfigs to apply to samples before storing. |
+| monitoring.podMonitor.namespace | string | `""` | Namespace for the PodMonitor. Defaults to the release namespace. |
+| monitoring.podMonitor.podTargetLabels | list | `[]` | Additional labels from pod metadata to include as metric labels. |
+| monitoring.podMonitor.relabelings | list | `[]` | RelabelConfigs to apply to samples before scraping. |
+| monitoring.podMonitor.telemetryPath | string | `"/metrics"` | Path to scrape metrics from. |
+| monitoring.podMonitor.timeout | string | `""` | Timeout for scrape requests. |
 | namespaceOverride | string | `""` | Override the namespace for resources deployed by the chart. Defaults to the release namespace. |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
