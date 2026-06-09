@@ -196,7 +196,6 @@ type HTTPHostnameModifier struct {
 	//   substitution: "\\1.example.internal"
 	//
 	// +optional
-	// +notImplementedHide
 	PathRegex *HostnamePathRegexRewrite `json:"pathRegex,omitempty"`
 }
 
