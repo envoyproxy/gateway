@@ -900,6 +900,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 								// Go's regexp syntax is RE2: https://pkg.go.dev/regexp/syntax
 								return status.NewRouteStatusError(
 									errors.New("PathRegex must be a valid RE2 regular expression"),
+									gwapiv1.RouteReasonUnsupportedValue,
 								).WithType(gwapiv1.RouteConditionAccepted)
 							}
 							hm = &ir.HTTPHostModifier{

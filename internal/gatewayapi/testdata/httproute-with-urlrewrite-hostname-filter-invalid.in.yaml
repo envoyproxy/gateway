@@ -301,7 +301,7 @@ backends:
       name: backend-dynamic-resolver
       namespace: default
     spec:
-      type: DynamicResolver                             
+      type: DynamicResolver
 httpFilters:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: HTTPRouteFilter
