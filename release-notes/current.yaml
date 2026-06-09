@@ -28,6 +28,8 @@ bug fixes: |
   Fixed `MaxStreamDuration` not being set on `CommonHttpProtocolOptions` for non-route cluster.
   Fixed `egctl x status all`/`xroute`/`xpolicy` failing when a Gateway API CRD (e.g. TCPRoute) is not installed in the cluster; missing CRDs are now skipped silently, or reported on stderr with `-v`.
   Fixed Kubernetes Service and ServiceImport `appProtocol` values `kubernetes.io/ws` and `kubernetes.io/wss` to force HTTP/1.1 upstream connections instead of negotiating HTTP/2, avoiding compatibility issues with WebSocket backends that do not support RFC 8441 extended CONNECT.
+  Fixed API key auth credential ordering to avoid unnecessary xDS updates.
+
 # Enhancements that improve performance.
 performance improvements: |
 
