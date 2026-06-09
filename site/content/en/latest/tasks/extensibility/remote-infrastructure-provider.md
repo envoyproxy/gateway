@@ -5,7 +5,7 @@ title: 'Remote Infrastructure Provider'
 This task explains how to configure Envoy Gateway to defer Envoy proxy and rate
 limit infrastructure management to a remote service of your own. With the Remote
 infrastructure provider, Envoy Gateway translates Gateway API resources into its
-[Infrastructure IR](/community/design/infrastructure-ir) and forwards it over
+into an infrastructure IR format and forwards it over
 gRPC to a provider you operate. The provider is then responsible for reconciling
 the data plane.
 
