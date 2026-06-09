@@ -58,7 +58,7 @@ var (
 	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrHTTPPathRegexModifierNoSetting           = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
-	ErrHTTPHostModifierDoubleReplace            = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header, Backend and PathRegex")
+	ErrHTTPHostModifierDoubleReplace            = errors.New("url rewrite filter cannot have a host modifier that supplies more than one of Name, Header, Backend and PathRegex")
 	ErrHTTPHostModifierEmptyPathRegex           = errors.New("host modifier with a PathRegex must supply both a Pattern and a Substitution")
 	ErrAddHeaderEmptyName                       = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate                       = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
