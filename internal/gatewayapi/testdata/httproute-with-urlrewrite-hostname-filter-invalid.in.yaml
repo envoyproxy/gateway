@@ -236,6 +236,42 @@ httpRoutes:
                 group: gateway.envoyproxy.io
                 kind: HTTPRouteFilter
                 name: invalid-path-regex
+  # PathRegex host rewrite is invalid on a dynamic resolver backend: the upstream host would be
+  # derived from request-controlled path text, bypassing the dynamic forward proxy loopback protection.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-dynamic-resolver-path-regex
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/dynamic-resolver-path-regex"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-dynamic-resolver
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: valid-path-regex
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-dynamic-resolver
+      namespace: default
+    spec:
+      type: DynamicResolver
 httpFilters:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: HTTPRouteFilter
@@ -305,3 +341,15 @@ httpFilters:
       urlRewrite:
         hostname:
           type: Header
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: valid-path-regex
+      namespace: default
+    spec:
+      urlRewrite:
+        hostname:
+          type: PathRegex
+          pathRegex:
+            pattern: "^/[^/]+/([^/]+).*"
+            substitution: "\\1"
