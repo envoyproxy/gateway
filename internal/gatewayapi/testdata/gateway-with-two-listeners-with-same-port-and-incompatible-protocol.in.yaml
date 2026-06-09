@@ -25,6 +25,26 @@ gateways:
             mode: Terminate
             certificateRefs:
               - name: tls-secret-1
+        - allowedRoutes:
+            namespaces:
+              from: All
+          name: udp-8162
+          port: 8162
+          protocol: UDP
+        # This listener(http-8162) is valid because HTTP + UDP are compatible protocols.
+        - allowedRoutes:
+            namespaces:
+              from: All
+          name: http-8162
+          port: 8162
+          protocol: HTTP
+        # This listener(tcp-8162) is invalid because TCP is not compatible with HTTP.
+        - allowedRoutes:
+            namespaces:
+              from: All
+          name: tcp-8162
+          port: 8162
+          protocol: TCP
 secrets:
   - apiVersion: v1
     kind: Secret

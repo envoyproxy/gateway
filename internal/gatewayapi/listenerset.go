@@ -93,7 +93,6 @@ func (t *Translator) processListenerSet(ls *gwapiv1.ListenerSet, gatewayMap map[
 		}
 		gatewayCtx.listeners = append(gatewayCtx.listeners, listenerCtx)
 	}
-	gatewayCtx.IncreaseAttachedListenerSets()
 }
 
 // ProcessListenerSetStatus computes the status of ListenerSets after their listeners have been processed.
@@ -177,6 +176,43 @@ func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSe
 		status.UpdateListenerSetStatusAccepted(ls, lsAccepted, lsAcceptedReason, lsAcceptedMsg)
 		status.UpdateListenerSetStatusProgrammed(ls, lsProgrammed, lsProgrammedReason, lsProgrammedMsg)
 	}
+}
+
+// UpdateGatewayAttachedListenerSetCount sets Gateway.status.attachedListenerSets based on
+// ListenerSet Accepted=True status.
+func (t *Translator) UpdateGatewayAttachedListenerSetCount(listenerSets []*gwapiv1.ListenerSet, gateways []*GatewayContext) {
+	gatewayMap := make(map[types.NamespacedName]*GatewayContext, len(gateways))
+	for _, gw := range gateways {
+		gatewayMap[types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}] = gw
+		// reset for current reconciliation cycle
+		gw.SetAttachedListenerSets(0)
+	}
+
+	counts := make(map[types.NamespacedName]int32)
+	for _, ls := range listenerSets {
+		if !listenerSetAccepted(ls) {
+			continue
+		}
+		parentNamespace := NamespaceDerefOr(ls.Spec.ParentRef.Namespace, ls.Namespace)
+		key := types.NamespacedName{Namespace: parentNamespace, Name: string(ls.Spec.ParentRef.Name)}
+		if _, ok := gatewayMap[key]; !ok {
+			continue
+		}
+		counts[key]++
+	}
+
+	for key, count := range counts {
+		gatewayMap[key].SetAttachedListenerSets(count)
+	}
+}
+
+func listenerSetAccepted(ls *gwapiv1.ListenerSet) bool {
+	for _, cond := range ls.Status.Conditions {
+		if cond.Type == string(gwapiv1.ListenerSetConditionAccepted) {
+			return cond.Status == metav1.ConditionTrue
+		}
+	}
+	return false
 }
 
 func (t *Translator) isListenerSetAllowed(gateway *gwapiv1.Gateway, ls *gwapiv1.ListenerSet) bool {

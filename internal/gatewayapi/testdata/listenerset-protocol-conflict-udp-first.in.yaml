@@ -1,0 +1,64 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-with-listenerset-udp-first
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      allowedListeners:
+        namespaces:
+          from: Same
+      listeners:
+        - name: gateway-listener
+          port: 8080
+          protocol: HTTP
+          hostname: "gateway-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+listenerSets:
+  # A UDP listener can share the same port with HTTP or TCP listeners.
+  # (Only duplicate listeners of the same Layer 4 protocol on one port conflict.)
+  # This test verifies that:
+  # - a first UDP listener and following HTTP listener on port 80 can both be accepted,
+  # - a later TCP listener still conflicts with the existing HTTP listener on port 80,
+  # - and another HTTP listener after that remains valid.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      name: listenerset-udp-first
+      namespace: envoy-gateway
+    spec:
+      parentRef:
+        kind: Gateway
+        group: gateway.networking.k8s.io
+        name: gateway-with-listenerset-udp-first
+        namespace: envoy-gateway
+      listeners:
+        - name: udp-first
+          port: 80
+          protocol: UDP
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: http-after-udp
+          port: 80
+          protocol: HTTP
+          hostname: "http-after-udp.example.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: tcp-after-http
+          port: 80
+          protocol: TCP
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: http-second-after-tcp
+          port: 80
+          protocol: HTTP
+          hostname: "http-second-after-tcp.example.com"
+          allowedRoutes:
+            namespaces:
+              from: All

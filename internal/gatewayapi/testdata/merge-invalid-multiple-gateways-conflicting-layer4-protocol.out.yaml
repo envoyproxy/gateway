@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1
+- apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
     name: gateway-1
@@ -9,37 +9,27 @@ gateways:
     listeners:
     - allowedRoutes:
         namespaces:
-          from: All
-      hostname: foo.com
-      name: http-1
+          from: Same
+      name: http
       port: 80
       protocol: HTTP
-    - allowedRoutes:
-        namespaces:
-          from: All
-      hostname: foo.com
-      name: tls-1
-      port: 80
-      protocol: TLS
-      tls:
-        mode: Passthrough
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -47,27 +37,43 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http-1
+      name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-    - attachedRoutes: 1
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: gateway-2
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp
+      port: 80
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -75,10 +81,10 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: tls-1
+      name: tcp
       supportedKinds:
       - group: gateway.networking.k8s.io
-        kind: TLSRoute
+        kind: TCPRoute
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -100,8 +106,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
+        message: No listeners included by this parent ref allowed this attachment.
+        reason: NotAllowedByListeners
         status: "False"
         type: Accepted
       - lastTransitionTime: null
@@ -114,37 +120,46 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
 infraIR:
-  envoy-gateway/gateway-1:
+  envoy-gateway-class:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          mergeGateways: true
+        status: {}
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
         ownerReference:
           kind: GatewayClass
           name: envoy-gateway-class
-      name: envoy-gateway/gateway-1
+      name: envoy-gateway-class
       namespace: envoy-gateway-system
-tlsRoutes:
+tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: TLSRoute
+  kind: TCPRoute
   metadata:
-    name: tlsroute-1
+    name: tcproute-1
     namespace: default
   spec:
     parentRefs:
-    - name: gateway-1
+    - name: gateway-2
       namespace: envoy-gateway
     rules:
     - backendRefs:
       - name: service-1
-        port: 8080
+        port: 8163
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
+        message: No listeners included by this parent ref allowed this attachment.
+        reason: NotAllowedByListeners
         status: "False"
         type: Accepted
       - lastTransitionTime: null
@@ -154,10 +169,10 @@ tlsRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: gateway-1
+        name: gateway-2
         namespace: envoy-gateway
 xdsIR:
-  envoy-gateway/gateway-1:
+  envoy-gateway-class:
     accessLog:
       json:
       - path: /dev/stdout
@@ -165,10 +180,10 @@ xdsIR:
       proxyServiceCluster:
         metadata:
           kind: Service
-          name: envoy-envoy-gateway-gateway-1-196ae069
+          name: envoy-envoy-gateway-class-3b1df594
           namespace: envoy-gateway-system
           sectionName: "8080"
-        name: envoy-gateway/gateway-1
+        name: envoy-gateway-class
         settings:
         - addressType: IP
           endpoints:
@@ -177,10 +192,10 @@ xdsIR:
             zone: zone1
           metadata:
             kind: Service
-            name: envoy-envoy-gateway-gateway-1-196ae069
+            name: envoy-envoy-gateway-class-3b1df594
             namespace: envoy-gateway-system
             sectionName: "8080"
-          name: envoy-gateway/gateway-1
+          name: envoy-gateway-class
           protocol: TCP
     readyListener:
       address: 0.0.0.0

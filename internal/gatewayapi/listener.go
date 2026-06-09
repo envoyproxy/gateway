@@ -242,10 +242,11 @@ func allowedRouteKindsForProtocol(protocol gwapiv1.ProtocolType, tlsMode *gwapiv
 func (t *Translator) validateListenerSpec(listener *ListenerContext, resources *resource.Resources) bool {
 	// Validate listener spec directly without relying on conditions.
 	// Start with valid assumption and invalidate on failures.
-	// Phase 1: Validate fundamental rules
+
+	// Phase 1: Validate allowed namespaces
 	specValid := t.validateAllowedNamespaces(listener)
 
-	// Phase 2: Validate allowed routes based on protocol
+	// Phase 2: Validate protocol support and allowed route kinds
 	if isSupportedListenerProtocol(listener.Protocol) {
 		var tlsMode *gwapiv1.TLSModeType
 		if listener.TLS != nil {
@@ -313,7 +314,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		}
 		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
-
 		for _, listener := range gateway.listeners {
 			// Finalize listener conditions and check readiness.
 			t.validateListenerConditions(listener)
@@ -419,7 +419,7 @@ func (t *Translator) checkOverlappingTLSConfig(gateways []*GatewayContext) {
 		httpsListeners := []*ListenerContext{}
 		for _, gateway := range gateways {
 			for _, listener := range gateway.listeners {
-				if listener.Protocol == gwapiv1.HTTPSProtocolType {
+				if listener.Protocol == gwapiv1.HTTPSProtocolType && listener.IsReady() {
 					httpsListeners = append(httpsListeners, listener)
 				}
 			}
@@ -434,7 +434,7 @@ func (t *Translator) checkOverlappingTLSConfig(gateways []*GatewayContext) {
 		for _, gateway := range gateways {
 			httpsListeners := []*ListenerContext{}
 			for _, listener := range gateway.listeners {
-				if listener.Protocol == gwapiv1.HTTPSProtocolType {
+				if listener.Protocol == gwapiv1.HTTPSProtocolType && listener.IsReady() {
 					httpsListeners = append(httpsListeners, listener)
 				}
 			}

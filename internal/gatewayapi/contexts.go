@@ -124,12 +124,12 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 	return err
 }
 
-func (g *GatewayContext) IncreaseAttachedListenerSets() {
-	if g.Status.AttachedListenerSets == nil {
-		g.Status.AttachedListenerSets = new(int32(1))
-	} else {
-		*g.Status.AttachedListenerSets++
+func (g *GatewayContext) SetAttachedListenerSets(count int32) {
+	if count <= 0 {
+		g.Status.AttachedListenerSets = nil
+		return
 	}
+	g.Status.AttachedListenerSets = &count
 }
 
 // ListenerContext wraps a Listener and provides helper methods for
@@ -277,13 +277,17 @@ func (l *ListenerContext) IsReady() bool {
 		conditions = l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 	}
 
+	// Check if Accepted=False or Programmed=False exists.
 	for _, cond := range conditions {
-		if cond.Type == string(gwapiv1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionTrue {
-			return true
+		if cond.Type == string(gwapiv1.ListenerConditionAccepted) && cond.Status == metav1.ConditionFalse {
+			return false
+		}
+		if cond.Type == string(gwapiv1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionFalse {
+			return false
 		}
 	}
 
-	return false
+	return true
 }
 
 func (l *ListenerContext) GetNamespace() string {
