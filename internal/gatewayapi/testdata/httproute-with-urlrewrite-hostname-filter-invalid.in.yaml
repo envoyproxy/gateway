@@ -265,7 +265,7 @@ httpRoutes:
               extensionRef:
                 group: gateway.envoyproxy.io
                 kind: HTTPRouteFilter
-                name: missing-path-regex        
+                name: missing-path-regex
   # PathRegex host rewrite is invalid on a dynamic resolver backend: the upstream host would be
   # derived from request-controlled path text, bypassing the dynamic forward proxy loopback protection.
   - apiVersion: gateway.networking.k8s.io/v1
