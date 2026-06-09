@@ -1,0 +1,1 @@
+Added support for `Replace` `mergeType` in `BackendTrafficPolicy` and `SecurityPolicy` resources, allowing a child policy to fully replace the parent policy's configuration instead of merging with it.
