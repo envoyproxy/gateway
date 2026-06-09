@@ -36,7 +36,6 @@ spec:
     relabelings:
 {{ toYaml .Values.monitoring.podMonitor.relabelings | indent 4 }}
 {{- end }}
-  jobLabel: {{ include "eg.fullname" . }}
   namespaceSelector:
     matchNames:
     - {{ include "eg.namespace" . }}

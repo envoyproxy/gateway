@@ -540,7 +540,6 @@ spec:
     interval: 30s
     path: /stats/prometheus
     scrapeTimeout: 10s
-  jobLabel: gateway-helm
   namespaceSelector:
     matchNames:
     - envoy-gateway-system
