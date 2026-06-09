@@ -12,6 +12,8 @@ import (
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	commondnsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/common/dns/v3"
+	dnsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
 	wrr_localityv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/wrr_locality/v3"
@@ -48,7 +50,12 @@ func TestBuildXdsCluster(t *testing.T) {
 	require.NoError(t, err)
 	dynamicXdsCluster := result.cluster
 	require.Equal(t, bootstrapXdsCluster.Name, dynamicXdsCluster.Name)
-	require.Equal(t, bootstrapXdsCluster.ClusterDiscoveryType, dynamicXdsCluster.ClusterDiscoveryType)
+	require.Equal(t, dnsClusterTypeName, dynamicXdsCluster.GetClusterType().GetName())
+	dnsCluster := &dnsv3.DnsCluster{}
+	require.NoError(t, dynamicXdsCluster.GetClusterType().GetTypedConfig().UnmarshalTo(dnsCluster))
+	require.Equal(t, durationpb.New(30*time.Second), dnsCluster.DnsRefreshRate)
+	require.True(t, dnsCluster.RespectDnsTtl)
+	require.Equal(t, commondnsv3.DnsLookupFamily_V4_PREFERRED, dnsCluster.DnsLookupFamily)
 	require.Equal(t, bootstrapXdsCluster.TransportSocket, dynamicXdsCluster.TransportSocket)
 	requireCmpNoDiff(t, bootstrapXdsCluster.TransportSocket, dynamicXdsCluster.TransportSocket)
 	requireCmpNoDiff(t, bootstrapXdsCluster.ConnectTimeout, dynamicXdsCluster.ConnectTimeout)

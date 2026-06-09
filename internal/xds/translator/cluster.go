@@ -15,6 +15,8 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	commondnsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/common/dns/v3"
+	dnsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
 	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
@@ -57,6 +59,7 @@ const (
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 	tcpClusterPerConnectTimeout             = 10 * time.Second
 	dfpClusterTypeName                      = "envoy.clusters.dynamic_forward_proxy"
+	dnsClusterTypeName                      = "envoy.cluster.dns"
 	dfpDNSCacheName                         = "envoy-gateway-dfp-cache"
 )
 
@@ -167,6 +170,25 @@ func computeDNSLookupFamily(ipFamily *egv1a1.IPFamily, dns *ir.DNS) clusterv3.Cl
 	}
 
 	return dnsLookupFamily
+}
+
+// toCommonDNSLookupFamily maps the cluster-level DNS lookup family to the equivalent value in
+// the DnsCluster extension, which uses a distinct enum type with a different set of values.
+func toCommonDNSLookupFamily(family clusterv3.Cluster_DnsLookupFamily) commondnsv3.DnsLookupFamily {
+	switch family {
+	case clusterv3.Cluster_AUTO:
+		return commondnsv3.DnsLookupFamily_AUTO
+	case clusterv3.Cluster_V4_ONLY:
+		return commondnsv3.DnsLookupFamily_V4_ONLY
+	case clusterv3.Cluster_V6_ONLY:
+		return commondnsv3.DnsLookupFamily_V6_ONLY
+	case clusterv3.Cluster_V4_PREFERRED:
+		return commondnsv3.DnsLookupFamily_V4_PREFERRED
+	case clusterv3.Cluster_ALL:
+		return commondnsv3.DnsLookupFamily_ALL
+	default:
+		return commondnsv3.DnsLookupFamily_AUTO
+	}
 }
 
 func dfpCacheName(ipFamily *egv1a1.IPFamily, dns *ir.DNS) string {
@@ -513,17 +535,31 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			},
 		}
 	default:
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
-		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
-		cluster.RespectDnsTtl = true
+		// STRICT_DNS discovery configured through the DnsCluster extension. The inline
+		// cluster.DnsRefreshRate and cluster.RespectDnsTtl fields are deprecated, so the
+		// equivalent settings are carried on the DnsCluster typed config instead. Leaving
+		// all_addresses_in_single_endpoint unset keeps strict (per-address) DNS semantics.
+		dnsCluster := &dnsv3.DnsCluster{
+			DnsRefreshRate:  durationpb.New(30 * time.Second),
+			RespectDnsTtl:   true,
+			DnsLookupFamily: toCommonDNSLookupFamily(dnsLookupFamily),
+		}
 		if args.dns != nil {
 			if args.dns.DNSRefreshRate != nil {
-				cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
+				dnsCluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
 			}
 			if args.dns.RespectDNSTTL != nil {
-				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
+				dnsCluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
 			}
 		}
+		dnsClusterAny, err := proto.ToAnyWithValidation(dnsCluster)
+		if err != nil {
+			return nil, err
+		}
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_ClusterType{ClusterType: &clusterv3.Cluster_CustomClusterType{
+			Name:        dnsClusterTypeName,
+			TypedConfig: dnsClusterAny,
+		}}
 	}
 
 	return &buildClusterResult{
