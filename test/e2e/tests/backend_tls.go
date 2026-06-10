@@ -143,7 +143,7 @@ var BackendTLSTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
-		t.Run("With Backend.TLS.AutoSNIFromUpstreamHost", func(t *testing.T) {
+		t.Run("With Backend.TLS.AutoSNIFromEndpointHostname", func(t *testing.T) {
 			// the upstream used is the eg site which doesn't support IPv6 at this time
 			if IPFamily == "ipv6" {
 				t.Skip("Skipping test as IP_FAMILY is IPv6")

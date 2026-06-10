@@ -1912,7 +1912,8 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
 		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
-		r.HasMixedUpstreamProtocolRequirements()
+		r.HasMixedUpstreamProtocolRequirements() ||
+		r.HasMixedAutoSNISettings()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -1966,6 +1967,25 @@ func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
 	}
 
 	return hasForceHTTP1Upstream && hasHTTP2Upstream
+}
+
+// HasMixedAutoSNISettings returns true if some settings use AutoSNIFromEndpointHostname while
+// others rely on cluster-level auto SNI (TLS configured, no explicit SNI of either kind).
+// These two modes compute requiresAutoSNI in conflicting ways and cannot share a cluster.
+func (r *RouteDestination) HasMixedAutoSNISettings() bool {
+	hasAutoSNIFromHost := 0
+	totalSettings := len(r.Settings)
+
+	for _, s := range r.Settings {
+		if s.TLS == nil {
+			continue
+		}
+		if s.TLS.AutoSNIFromEndpointHostname {
+			hasAutoSNIFromHost++
+		}
+	}
+
+	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
@@ -3523,13 +3543,13 @@ type BackOffPolicy struct {
 // TLSUpstreamConfig contains sni and ca file in []byte format.
 // +k8s:deepcopy-gen=true
 type TLSUpstreamConfig struct {
-	SNI                     *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
-	AutoSNIFromUpstreamHost bool              `json:"autoSNIFromUpstreamHost,omitempty" yaml:"autoSNIFromUpstreamHost,omitempty"`
-	UseSystemTrustStore     bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
-	CACertificate           *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
-	TLSConfig               `json:",inline"`
-	SubjectAltNames         []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
-	InsecureSkipVerify      bool             `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
+	SNI                         *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
+	AutoSNIFromEndpointHostname bool              `json:"autoSNIFromEndpointHostname,omitempty" yaml:"autoSNIFromEndpointHostname,omitempty"`
+	UseSystemTrustStore         bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
+	CACertificate               *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+	TLSConfig                   `json:",inline"`
+	SubjectAltNames             []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
+	InsecureSkipVerify          bool             `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
 }
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {

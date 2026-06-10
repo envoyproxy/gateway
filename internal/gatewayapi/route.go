@@ -2528,8 +2528,9 @@ func (t *Translator) processBackendDestinationSetting(
 		case bep.Unix != nil:
 			addrTypeMap[ir.UDS]++
 			irde = &ir.DestinationEndpoint{
-				Path: new(bep.Unix.Path),
-				Zone: bep.Zone,
+				Hostname: bep.Hostname,
+				Path:     new(bep.Unix.Path),
+				Zone:     bep.Zone,
 			}
 		}
 

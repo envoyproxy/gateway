@@ -287,5 +287,5 @@ spec:
         port: 443
   tls:
     # The SNI value is taken from the upstream endpoint hostname (transport socket level)
-    autoSNIFromUpstreamHost: true
+    autoSNIFromEndpointHostname: true
     wellKnownCACertificates: System

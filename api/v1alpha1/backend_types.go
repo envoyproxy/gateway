@@ -132,7 +132,7 @@ type UnixSocket struct {
 
 // BackendSpec describes the desired state of BackendSpec.
 // +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints)",message="DynamicResolver type cannot have endpoints specified"
-// +kubebuilder:validation:XValidation:rule="!has(self.tls) || !(has(self.tls.autoSNIFromUpstreamHost) && self.tls.autoSNIFromUpstreamHost) || self.endpoints.all(e, (!has(e.ip) && !has(e.unix)) || has(e.hostname))",message="when autoSNIFromUpstreamHost is enabled, IP and Unix endpoints must define a hostname"
+// +kubebuilder:validation:XValidation:rule="!has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname) && self.tls.autoSNIFromEndpointHostname) || self.endpoints.all(e, (!has(e.ip) && !has(e.unix)) || has(e.hostname))",message="when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints must define a hostname"
 type BackendSpec struct {
 	// Type defines the type of the backend. Defaults to "Endpoints"
 	//
@@ -174,7 +174,7 @@ type BackendSpec struct {
 // BackendTLSSettings holds the TLS settings for the backend.
 // +kubebuilder:validation:XValidation:message="must not contain both CACertificateRefs and WellKnownCACertificates",rule="!(has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")"
 // +kubebuilder:validation:XValidation:message="must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled",rule="!((has(self.insecureSkipVerify) && self.insecureSkipVerify) && ((has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")))"
-// +kubebuilder:validation:XValidation:message="sni and autoSNIFromUpstreamHost are mutually exclusive",rule="!(has(self.sni) && has(self.autoSNIFromUpstreamHost) && self.autoSNIFromUpstreamHost)"
+// +kubebuilder:validation:XValidation:message="sni and autoSNIFromEndpointHostname are mutually exclusive",rule="!(has(self.sni) && has(self.autoSNIFromEndpointHostname) && self.autoSNIFromEndpointHostname)"
 type BackendTLSSettings struct {
 	// CACertificateRefs contains one or more references to Kubernetes objects that
 	// contain TLS certificates of the Certificate Authorities that can be used
@@ -217,22 +217,22 @@ type BackendTLSSettings struct {
 	// If a BackendTLSPolicy is attached to the Backend resource, the BackendTLSPolicy's validation.hostname
 	// value takes precedence over this field.
 	//
-	// If no BackendTLSPolicy validation.hostname applies and both this field and AutoSNIFromUpstreamHost
+	// If no BackendTLSPolicy validation.hostname applies and both this field and AutoSNIFromEndpointHostname
 	// are unset, Envoy Gateway configures Envoy to set the upstream SNI from the downstream HTTP host/authority header.
 	//
 	// +optional
 	SNI *gwapiv1.PreciseHostname `json:"sni,omitempty"`
 
-	// AutoSNIFromUpstreamHost indicates whether the upstream endpoint's hostname should be used as the SNI value
+	// AutoSNIFromEndpointHostname indicates whether the upstream endpoint's hostname should be used as the SNI value
 	// when establishing a TLS connection to the backend.
 	// This uses the resolved hostname of the upstream endpoint (e.g., from the Backend Endpoints list),
 	// rather than a static value.
 	//
 	// Mutually exclusive with SNI. When a BackendTLSPolicy is attached, its Hostname value takes
-	// precedence and AutoSNIFromUpstreamHost is ignored.
+	// precedence and AutoSNIFromEndpointHostname is ignored.
 	//
 	// +optional
-	AutoSNIFromUpstreamHost *bool `json:"autoSNIFromUpstreamHost,omitempty"`
+	AutoSNIFromEndpointHostname *bool `json:"autoSNIFromEndpointHostname,omitempty"`
 
 	// BackendTLSConfig defines the client certificate/key as well as TLS protocol parameters such as ciphers, TLS versions,
 	// and ALPN that the Envoy uses when connecting to the backend.

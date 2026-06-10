@@ -326,12 +326,13 @@ func TestBackend(t *testing.T) {
 			wantErrors: []string{`must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled`},
 		},
 		{
-			desc: "autoSNIFromUpstreamHost enabled with IP endpoint without hostname",
+			desc: "autoSNIFromEndpointHostname and SNI are mutually exclusive",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					Type: new(egv1a1.BackendTypeEndpoints),
 					TLS: &egv1a1.BackendTLSSettings{
-						AutoSNIFromUpstreamHost: new(true),
+						AutoSNIFromEndpointHostname: new(true),
+						SNI:                         new(gwapiv1.PreciseHostname("example.com")),
 					},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -343,15 +344,35 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"when autoSNIFromUpstreamHost is enabled, IP and Unix endpoints must define a hostname"},
+			wantErrors: []string{"sni and autoSNIFromEndpointHostname are mutually exclusive"},
 		},
 		{
-			desc: "autoSNIFromUpstreamHost enabled with Unix endpoint without hostname",
+			desc: "autoSNIFromEndpointHostname enabled with IP endpoint without hostname",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					Type: new(egv1a1.BackendTypeEndpoints),
 					TLS: &egv1a1.BackendTLSSettings{
-						AutoSNIFromUpstreamHost: new(true),
+						AutoSNIFromEndpointHostname: new(true),
+					},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							IP: &egv1a1.IPEndpoint{
+								Address: "192.168.1.1",
+								Port:    443,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints must define a hostname"},
+		},
+		{
+			desc: "autoSNIFromEndpointHostname enabled with Unix endpoint without hostname",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeEndpoints),
+					TLS: &egv1a1.BackendTLSSettings{
+						AutoSNIFromEndpointHostname: new(true),
 					},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -362,15 +383,15 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"when autoSNIFromUpstreamHost is enabled, IP and Unix endpoints must define a hostname"},
+			wantErrors: []string{"when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints must define a hostname"},
 		},
 		{
-			desc: "autoSNIFromUpstreamHost enabled with IP and Unix endpoint with hostname",
+			desc: "autoSNIFromEndpointHostname enabled with IP and Unix endpoint with hostname",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					Type: new(egv1a1.BackendTypeEndpoints),
 					TLS: &egv1a1.BackendTLSSettings{
-						AutoSNIFromUpstreamHost: new(true),
+						AutoSNIFromEndpointHostname: new(true),
 					},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -392,12 +413,12 @@ func TestBackend(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "autoSNIFromUpstreamHost enabled with FQDN endpoint do not require hostname",
+			desc: "autoSNIFromEndpointHostname enabled with FQDN endpoint do not require hostname",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					Type: new(egv1a1.BackendTypeEndpoints),
 					TLS: &egv1a1.BackendTLSSettings{
-						AutoSNIFromUpstreamHost: new(true),
+						AutoSNIFromEndpointHostname: new(true),
 					},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
