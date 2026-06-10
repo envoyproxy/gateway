@@ -258,6 +258,7 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		// TODO(youngnick): Handle NACK properly
 		errorCode = status.Code
 		errorMessage = status.Message
+		xdsNACKTotal.With(nodeIDLabel.Value(nodeID), typeURLLabel.Value(req.GetTypeUrl())).Increment()
 	}
 
 	s.log.Debugf("handling v3 xDS resource request, version_info %s, response_nonce %s, nodeID %s, node_version %s, resource_names %v, type_url %s, errorCode %d, errorMessage %s",
@@ -266,7 +267,8 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		errorCode, errorMessage)
 
 	if errorCode != 0 {
-		s.log.Errorf("Envoy rejected the last update with code %d and message %s", errorCode, errorMessage)
+		s.log.Errorf("Envoy rejected the last update for type %s on node %s with code %d and message %s; the proxy is still serving its last known good config and a restarting proxy will fail to load this config",
+			req.GetTypeUrl(), nodeID, errorCode, errorMessage)
 	}
 
 	return nil
@@ -373,10 +375,13 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 	s.log.Debugf("Got a new request, response_nonce %s, nodeID %s, node_version %s",
 		req.ResponseNonce, nodeID, nodeVersion)
 	if status := req.ErrorDetail; status != nil {
-		// if Envoy rejected the last update log the details here.
-		// TODO(youngnick): Handle NACK properly
+		// Envoy rejected (NACKed) the last update. It keeps serving its last known
+		// good config, so this is silent from the user's point of view, but any
+		// proxy that (re)starts will fail to load the rejected config. Surface it
+		// as a metric so it can be alerted on, in addition to logging the details.
 		errorCode = status.Code
 		errorMessage = status.Message
+		xdsNACKTotal.With(nodeIDLabel.Value(nodeID), typeURLLabel.Value(req.GetTypeUrl())).Increment()
 	}
 	s.log.Debugf("handling v3 xDS resource request, response_nonce %s, nodeID %s, node_version %s, resource_names_subscribe %v, resource_names_unsubscribe %v, type_url %s, errorCode %d, errorMessage %s",
 		req.ResponseNonce,
@@ -386,7 +391,8 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		errorCode, errorMessage)
 
 	if errorCode != 0 {
-		s.log.Errorf("Envoy rejected the last update with code %d and message %s", errorCode, errorMessage)
+		s.log.Errorf("Envoy rejected the last update for type %s on node %s with code %d and message %s; the proxy is still serving its last known good config and a restarting proxy will fail to load this config",
+			req.GetTypeUrl(), nodeID, errorCode, errorMessage)
 	}
 
 	return nil
