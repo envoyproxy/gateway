@@ -26,7 +26,7 @@ func TestBuildLoadBalancer_BackendUtilization(t *testing.T) {
 	}
 
 	policy := &egv1a1.ClusterSettings{
-		BackendClusterSettings: egv1a1.BackendClusterSettings{
+		BackendSettings: egv1a1.BackendSettings{
 			LoadBalancer: &egv1a1.LoadBalancer{
 				Type:               egv1a1.BackendUtilizationLoadBalancerType,
 				BackendUtilization: backendUtilization,
