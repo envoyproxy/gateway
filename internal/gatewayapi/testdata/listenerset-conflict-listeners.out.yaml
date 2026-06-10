@@ -26,7 +26,7 @@ gateways:
       port: 8888
       protocol: HTTP
   status:
-    attachedListenerSets: 3
+    attachedListenerSets: 2
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -90,12 +90,6 @@ infraIR:
           name: http-8888
           protocol: HTTP
           servicePort: 8888
-      - name: gateway-xls/composite-gateway/gateway-xls/conflict-listener-from-same-xls/conflict-listener-1
-        ports:
-        - containerPort: 8089
-          name: http-8089
-          protocol: HTTP
-          servicePort: 8089
       - name: gateway-xls/composite-gateway/gateway-xls/conflict-listener-from-two-xlss/good-listener
         ports:
         - containerPort: 8090
@@ -142,38 +136,38 @@ listenerSets:
   status:
     conditions:
     - lastTransitionTime: null
-      message: Some listeners are invalid
+      message: No listeners are accepted
       reason: ListenersNotValid
-      status: "True"
+      status: "False"
       type: Accepted
     - lastTransitionTime: null
-      message: Some listeners are not programmed
-      reason: Programmed
-      status: "True"
+      message: No listeners are programmed
+      reason: ListenersNotValid
+      status: "False"
       type: Programmed
     listeners:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
         status: "True"
-        type: Programmed
+        type: Conflicted
       - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Programmed
       - lastTransitionTime: null
         message: Listener references have been resolved
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: No conflicts detected
-        reason: NoConflicts
-        status: "False"
-        type: Conflicted
       name: conflict-listener-1
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -443,20 +437,6 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8888
-    - address: 0.0.0.0
-      externalPort: 8089
-      hostnames:
-      - '*'
-      metadata:
-        kind: Gateway
-        name: composite-gateway
-        namespace: gateway-xls
-        sectionName: conflict-listener-1
-      name: gateway-xls/composite-gateway/gateway-xls/conflict-listener-from-same-xls/conflict-listener-1
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 8089
     - address: 0.0.0.0
       externalPort: 8090
       hostnames:

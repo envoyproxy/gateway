@@ -988,16 +988,29 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 			// - Exactly one Gateway listener conflicts with ListenerSet listeners: Gateway wins.
 			// - Only ListenerSet listeners conflict: first in the slice wins.
 
-			// Count Gateway (non-ListenerSet) listeners per conflicting hostname.
+			// Count Gateway (non-ListenerSet) listeners per conflicting hostname, and detect
+			// hostnames with >1 listener from the same ListenerSet (no winner for either case).
 			gatewayListenerCountPerHostname := map[string]int{}
+			sameListenerSetHostnameConflicts := sets.Set[string]{}
+			listenerSetHostnameCount := map[string]map[string]int{}
 			for _, listener := range info.listeners {
+				var hostname string
+				if listener.Hostname != nil {
+					hostname = string(*listener.Hostname)
+				}
+				if info.hostnames[hostname] <= 1 {
+					continue
+				}
 				if !listener.isFromListenerSet() {
-					var hostname string
-					if listener.Hostname != nil {
-						hostname = string(*listener.Hostname)
+					gatewayListenerCountPerHostname[hostname]++
+				} else {
+					lsKey := listener.listenerSet.Namespace + "/" + listener.listenerSet.Name
+					if listenerSetHostnameCount[lsKey] == nil {
+						listenerSetHostnameCount[lsKey] = map[string]int{}
 					}
-					if info.hostnames[hostname] > 1 {
-						gatewayListenerCountPerHostname[hostname]++
+					listenerSetHostnameCount[lsKey][hostname]++
+					if listenerSetHostnameCount[lsKey][hostname] > 1 {
+						sameListenerSetHostnameConflicts.Insert(hostname)
 					}
 				}
 			}
@@ -1013,6 +1026,10 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 				}
 				// When multiple Gateway listeners conflict, no winner is selected.
 				if gatewayListenerCountPerHostname[hostname] > 1 {
+					continue
+				}
+				// When multiple listeners from the same ListenerSet conflict, no winner is selected.
+				if sameListenerSetHostnameConflicts.Has(hostname) {
 					continue
 				}
 				existing, exists := hostnameWinners[hostname]
