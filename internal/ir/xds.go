@@ -1970,8 +1970,7 @@ func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
 }
 
 // HasMixedAutoSNISettings returns true if some settings use AutoSNIFromEndpointHostname while
-// others rely on cluster-level auto SNI (TLS configured, no explicit SNI of either kind).
-// These two modes compute requiresAutoSNI in conflicting ways and cannot share a cluster.
+// others don't. These two modes compute requiresAutoSNI in conflicting ways and cannot share a cluster.
 func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	hasAutoSNIFromHost := 0
 	totalSettings := len(r.Settings)
