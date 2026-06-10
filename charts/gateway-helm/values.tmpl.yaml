@@ -37,6 +37,7 @@ global:
 
 # Values for CRDs dependency
 crds:
+  # -- Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately.
   enabled: true
 
 # -- Labels to apply to all resources
