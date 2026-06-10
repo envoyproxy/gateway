@@ -52,7 +52,7 @@ func TestTranslate(t *testing.T) {
 		name                            string
 		EnvoyPatchPolicyEnabled         bool
 		BackendEnabled                  bool
-		MergeBackends      bool
+		MergeBackends                   bool
 		GatewayNamespaceMode            bool
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
@@ -95,75 +95,75 @@ func TestTranslate(t *testing.T) {
 			SDSEnabled:     true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-basic",
+			name:          "backendtrafficpolicy-backend-target-basic",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-feature-disabled",
+			name:          "backendtrafficpolicy-backend-target-feature-disabled",
 			MergeBackends: false,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-with-gateway-no-merge",
+			name:          "backendtrafficpolicy-backend-target-with-gateway-no-merge",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-with-gateway-merge",
+			name:          "backendtrafficpolicy-backend-target-with-gateway-merge",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-with-route-no-merge",
+			name:          "backendtrafficpolicy-backend-target-with-route-no-merge",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-with-route-merge-no-gateway",
+			name:          "backendtrafficpolicy-backend-target-with-route-merge-no-gateway",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-with-route-merge-backend-no-merge",
+			name:          "backendtrafficpolicy-backend-target-with-route-merge-backend-no-merge",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-with-route-merge-backend-merge",
+			name:          "backendtrafficpolicy-backend-target-with-route-merge-backend-merge",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-multi-backend-different-btps",
+			name:          "backendtrafficpolicy-backend-target-multi-backend-different-btps",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-multi-backend-partial-coverage",
+			name:          "backendtrafficpolicy-backend-target-multi-backend-partial-coverage",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-multi-backend-same-btp",
+			name:          "backendtrafficpolicy-backend-target-multi-backend-same-btp",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-tcp-basic",
+			name:          "backendtrafficpolicy-backend-target-tcp-basic",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-udp-basic",
+			name:          "backendtrafficpolicy-backend-target-udp-basic",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-tcp-with-route-merge-backend-merge",
+			name:          "backendtrafficpolicy-backend-target-tcp-with-route-merge-backend-merge",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-tcp-multi-backend-partial-coverage",
+			name:          "backendtrafficpolicy-backend-target-tcp-multi-backend-partial-coverage",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-udp-with-route-merge-backend-merge",
+			name:          "backendtrafficpolicy-backend-target-udp-with-route-merge-backend-merge",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-udp-multi-backend-partial-coverage",
+			name:          "backendtrafficpolicy-backend-target-udp-multi-backend-partial-coverage",
 			MergeBackends: true,
 		},
 		{
-			name:                       "backendtrafficpolicy-backend-target-multi-rule-route",
+			name:          "backendtrafficpolicy-backend-target-multi-rule-route",
 			MergeBackends: true,
 		},
 	}
@@ -211,7 +211,7 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:          true,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
-				MergeBackends:      backendTargetsInBTPEnabled,
+				MergeBackends:                   backendTargetsInBTPEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),

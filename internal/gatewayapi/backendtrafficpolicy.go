@@ -50,7 +50,6 @@ func isBackendTargetKind(kind gwapiv1.Kind) bool {
 		kind == resource.KindBackend
 }
 
-
 // BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies
 // This avoids an O(BTPs) lookup for every iteration of processDestination.
 type BTPRoutingTypeIndex struct {
@@ -1852,7 +1851,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 			}
 			routeStatus := GetRouteStatus(routeCtx.RouteContext)
 			for idx := range routeStatus.Parents {
-				status.SetRouteStatusCondition(routeStatus, idx, routeCtx.RouteContext.GetGeneration(),
+				status.SetRouteStatusCondition(routeStatus, idx, routeCtx.GetGeneration(),
 					gwapiv1.RouteConditionAccepted, metav1.ConditionFalse,
 					status.RouteReasonUnsupportedBackendTrafficPolicy,
 					msg,
