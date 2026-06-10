@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1541,7 +1540,7 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
 						Key:                  "REDIS_ENDPOINT",
-						Optional:             ptr.To(true),
+						Optional:             new(true),
 					},
 				},
 			}),
@@ -1554,7 +1553,7 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
 						Key:                  "REDIS_ENDPOINT",
-						Optional:             ptr.To(false),
+						Optional:             new(false),
 					},
 				},
 			}),
