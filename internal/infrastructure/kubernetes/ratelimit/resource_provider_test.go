@@ -7,6 +7,7 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -22,7 +23,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
@@ -1009,4 +1012,61 @@ func TestValidateRedisURLRef(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateRedisSettings(t *testing.T) {
+	const ns = "envoy-gateway-system"
+
+	redisGW := func(redis *egv1a1.RateLimitRedisSettings) *egv1a1.EnvoyGateway {
+		return &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				RateLimit: &egv1a1.RateLimit{
+					Backend: egv1a1.RateLimitDatabaseBackend{
+						Type:  egv1a1.RedisBackendType,
+						Redis: redis,
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("nil redis settings", func(t *testing.T) {
+		c := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+		require.NoError(t, Validate(context.Background(), c, redisGW(nil), ns))
+	})
+
+	t.Run("urlRef secret get error", func(t *testing.T) {
+		c := fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+					return errors.New("api server unavailable")
+				},
+			}).
+			Build()
+		err := Validate(context.Background(), c, redisGW(&egv1a1.RateLimitRedisSettings{
+			URLRef: &egv1a1.RedisURLSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+					Key:                  "REDIS_ENDPOINT",
+				},
+			},
+		}), ns)
+		require.ErrorContains(t, err, "failed to get Secret")
+	})
+
+	t.Run("tls certificateRef", func(t *testing.T) {
+		certSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "redis-cert", Namespace: ns},
+			Type:       corev1.SecretTypeTLS,
+			Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
+		}
+		c := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(certSecret).Build()
+		require.NoError(t, Validate(context.Background(), c, redisGW(&egv1a1.RateLimitRedisSettings{
+			URL: "redis.redis.svc:6379",
+			TLS: &egv1a1.RedisTLSSettings{
+				CertificateRef: &gwapiv1.SecretObjectReference{Name: "redis-cert"},
+			},
+		}), ns))
+	})
 }

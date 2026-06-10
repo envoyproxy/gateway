@@ -1479,6 +1479,11 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 		expectErr bool
 	}{
 		{
+			name:      "nil redis settings",
+			rateLimit: redisBackend(nil),
+			expectErr: true,
+		},
+		{
 			name:      "url only",
 			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{URL: "redis.redis.svc:6379"}),
 			expectErr: false,
@@ -1570,4 +1575,11 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateRedisURL(t *testing.T) {
+	require.NoError(t, ValidateRedisURL("redis.redis.svc:6379"))
+	require.NoError(t, ValidateRedisURL("a.redis.svc:6379,b.redis.svc:6379"))
+	require.ErrorContains(t, ValidateRedisURL(""), "ratelimit redis url is empty")
+	require.ErrorContains(t, ValidateRedisURL(":foo"), "unknown ratelimit redis url format")
 }
