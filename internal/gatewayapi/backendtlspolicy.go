@@ -256,7 +256,7 @@ func (t *Translator) processServerValidationTLSSettings(
 	backend *egv1a1.Backend,
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
-		InsecureSkipVerify:      ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
+		InsecureSkipVerify:          ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
 		AutoSNIFromEndpointHostname: ptr.Deref(backend.Spec.TLS.AutoSNIFromEndpointHostname, false),
 	}
 
