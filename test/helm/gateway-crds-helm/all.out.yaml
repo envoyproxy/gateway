@@ -22269,8 +22269,39 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
-                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      For Envoy TLS cipher suite configuration semantics and default cipher
+                      lists, see the Envoy documentation:
                       https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
+                      Supported cipher suite names:
+                      - ECDHE-ECDSA-AES128-GCM-SHA256
+                      - ECDHE-RSA-AES128-GCM-SHA256
+                      - ECDHE-ECDSA-AES256-GCM-SHA384
+                      - ECDHE-RSA-AES256-GCM-SHA384
+                      - ECDHE-ECDSA-CHACHA20-POLY1305
+                      - ECDHE-RSA-CHACHA20-POLY1305
+                      - ECDHE-ECDSA-AES128-SHA
+                      - ECDHE-RSA-AES128-SHA
+                      - AES128-GCM-SHA256
+                      - AES128-SHA
+                      - ECDHE-ECDSA-AES256-SHA
+                      - ECDHE-RSA-AES256-SHA
+                      - AES256-GCM-SHA384
+                      - AES256-SHA
+                      Supported IANA/RFC aliases:
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+                      - TLS_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_RSA_WITH_AES_256_CBC_SHA
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -22577,6 +22608,115 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              admissionControl:
+                description: |-
+                  AdmissionControl defines the admission control policy to be applied. This configuration
+                  probabilistically rejects requests based on the success rate of previous requests in a
+                  configurable sliding time window.
+                properties:
+                  maxRejectionPercent:
+                    description: |-
+                      MaxRejectionPercent represents the upper limit of the rejection probability,
+                      expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified.
+                    format: int32
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                  minRequestRate:
+                    description: |-
+                      MinRequestRate defines the minimum requests per second below which requests will
+                      pass through the filter without rejection. Defaults to 0 if not specified.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  minSuccessRate:
+                    description: |-
+                      MinSuccessRate is the lowest request success rate, as a percentage in the
+                      range [1, 100], at which the filter will not reject requests. Defaults to 95 if
+                      not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed.
+                    format: int32
+                    maximum: 100
+                    minimum: 1
+                    type: integer
+                  rejectionAggression:
+                    description: |-
+                      RejectionAggression controls how steeply the rejection probability rises
+                      as the observed success rate falls below MinSuccessRate. A value of 1
+                      produces a linear curve; higher values reject more aggressively for a
+                      given drop in success rate. Must be greater than 0; values below 1 are
+                      clamped to 1. Defaults to 1.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  samplingWindow:
+                    description: |-
+                      SamplingWindow defines the time window over which request success rates are calculated.
+                      Must be at least 1s; Envoy truncates the window to whole seconds and uses it as the
+                      denominator in RPS calculations, so sub-second values would produce a zero denominator.
+                      Defaults to 30s if not specified.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                  successCriteria:
+                    description: SuccessCriteria defines what constitutes a successful
+                      request for both HTTP and gRPC.
+                    properties:
+                      grpc:
+                        description: GRPC defines success criteria for gRPC requests.
+                        properties:
+                          statusCodes:
+                            description: |-
+                              StatusCodes defines gRPC status codes that are considered successful.
+                              Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+                            items:
+                              description: |-
+                                GRPCSuccessCode defines gRPC status codes as defined in
+                                https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+                              enum:
+                              - Ok
+                              - Cancelled
+                              - Unknown
+                              - InvalidArgument
+                              - DeadlineExceeded
+                              - NotFound
+                              - AlreadyExists
+                              - PermissionDenied
+                              - ResourceExhausted
+                              - FailedPrecondition
+                              - Aborted
+                              - OutOfRange
+                              - Unimplemented
+                              - Internal
+                              - Unavailable
+                              - DataLoss
+                              - Unauthenticated
+                              type: string
+                            type: array
+                        type: object
+                      http:
+                        description: HTTP defines success criteria for HTTP requests.
+                        properties:
+                          statusCodes:
+                            description: StatusCodes defines HTTP status codes that
+                              are considered successful.
+                            items:
+                              description: HTTPStatus defines the http status code.
+                              maximum: 599
+                              minimum: 100
+                              type: integer
+                            type: array
+                        type: object
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: minSuccessRate must be between 1 and 100
+                  rule: '!has(self.minSuccessRate) || (self.minSuccessRate >= 1 &&
+                    self.minSuccessRate <= 100)'
+                - message: maxRejectionPercent must be between 0 and 100
+                  rule: '!has(self.maxRejectionPercent) || (self.maxRejectionPercent
+                    >= 0 && self.maxRejectionPercent <= 100)'
+                - message: samplingWindow must be at least 1s
+                  rule: '!has(self.samplingWindow) || duration(self.samplingWindow)
+                    >= duration(''1s'')'
               bandwidthLimit:
                 description: |-
                   BandwidthLimit allows the user to limit the bandwidth of traffic
@@ -22662,6 +22802,7 @@ spec:
                               including response body transfer time and the time added by the filter.
                               "bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.
                               "bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter.
+                            pattern: ^[^\r\n\x00]*$
                             type: string
                         type: object
                     required:
@@ -23088,8 +23229,9 @@ spec:
                             type: array
                           hostname:
                             description: |-
-                              Hostname defines the HTTP host that will be requested during health checking.
-                              Default: HTTPRoute or GRPCRoute hostname.
+                              Hostname defines the HTTP Host header used for active HTTP health checks.
+                              Host selection uses this order: this field, the associated Backend endpoint
+                              hostname if available, then the effective Route hostname.
                             maxLength: 253
                             minLength: 1
                             pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -23098,6 +23240,7 @@ spec:
                             description: |-
                               Method defines the HTTP method used for health checking.
                               Defaults to GET
+                            maxLength: 16
                             type: string
                           path:
                             description: Path defines the HTTP path that will be requested
@@ -23105,6 +23248,38 @@ spec:
                             maxLength: 1024
                             minLength: 1
                             type: string
+                          requestBody:
+                            description: RequestBody defines the HTTP request body
+                              payload sent during health checking.
+                            properties:
+                              binary:
+                                description: Binary payload base64 encoded.
+                                format: byte
+                                type: string
+                              text:
+                                description: Text payload in plain text.
+                                type: string
+                              type:
+                                allOf:
+                                - enum:
+                                  - Text
+                                  - Binary
+                                - enum:
+                                  - Text
+                                  - Binary
+                                description: Type defines the type of the payload.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: If payload type is Text, text field needs to
+                                be set.
+                              rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                            - message: If payload type is Binary, binary field needs
+                                to be set.
+                              rule: 'self.type == ''Binary'' ? has(self.binary) :
+                                !has(self.binary)'
                           retriableStatuses:
                             description: |-
                               RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -23120,6 +23295,11 @@ spec:
                         required:
                         - path
                         type: object
+                        x-kubernetes-validations:
+                        - message: The requestBody field can only be set when method
+                            is POST or PUT.
+                          rule: '!has(self.requestBody) || (has(self.method) && self.method.upperAscii()
+                            in [''POST'',''PUT''])'
                       initialJitter:
                         description: |-
                           InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -23923,7 +24103,7 @@ spec:
                                       required:
                                       - name
                                       type: object
-                                    maxItems: 16
+                                    maxItems: 64
                                     type: array
                                   methods:
                                     description: |-
@@ -24178,7 +24358,7 @@ spec:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
                                     cost-based rate limiting) allowed per Unit.
-                                  format: int32
+                                  format: uint32
                                   maximum: 4294967295
                                   minimum: 1
                                   type: integer
@@ -24307,7 +24487,7 @@ spec:
                                       required:
                                       - name
                                       type: object
-                                    maxItems: 16
+                                    maxItems: 64
                                     type: array
                                   methods:
                                     description: |-
@@ -24562,7 +24742,7 @@ spec:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
                                     cost-based rate limiting) allowed per Unit.
-                                  format: int32
+                                  format: uint32
                                   maximum: 4294967295
                                   minimum: 1
                                   type: integer
@@ -25064,6 +25244,17 @@ spec:
                             If unset, does not override the status of response.
                           type: integer
                       type: object
+                    source:
+                      description: |-
+                        Source specifies which responses this rule applies to.
+                        Local overrides only Envoy-generated responses (e.g. auth failures).
+                        Backend overrides only upstream responses.
+                        All (default) overrides both.
+                      enum:
+                      - All
+                      - Local
+                      - Backend
+                      type: string
                   required:
                   - match
                   type: object
@@ -25320,8 +25511,86 @@ spec:
                       additionalProperties:
                         type: string
                       description: MatchLabels are the set of label selectors for
-                        identifying the targeted resource
+                        identifying the targeted resource.
                       type: object
+                    namespaces:
+                      description: |-
+                        Namespaces determines which namespaces are considered for target selection.
+
+                        If unspecified, only targets in the same namespace as this policy are considered.
+
+                        When specified, the effective set of namespaces is always constrained to the
+                        namespaces watched by Envoy Gateway.
+
+                        Selecting targets across namespaces requires a ReferenceGrant in the target
+                        namespace that allows this policy kind to reference the selected target kind.
+                        Cross-namespace targets without a matching ReferenceGrant are ignored.
+                      properties:
+                        from:
+                          default: Same
+                          description: |-
+                            From indicates how namespaces are selected for this target selector.
+
+                            All means all namespaces watched by Envoy Gateway.
+                            Selector means namespaces watched by Envoy Gateway that match Selector.
+                          enum:
+                          - Same
+                          - All
+                          - Selector
+                          type: string
+                        selector:
+                          description: Selector selects namespaces when From is set
+                            to Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - from
+                      type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object
@@ -25582,6 +25851,13 @@ spec:
             - message: requestBuffer cannot be used together with httpUpgrade
               rule: '!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size()
                 == 0'
+            - message: admissionControl can only be used with HTTPRoute, GRPCRoute,
+                or Gateway targets
+              rule: '!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''Gateway'', ''HTTPRoute'', ''GRPCRoute'']) && (!has(self.targetRefs)
+                || self.targetRefs.all(ref, ref.kind in [''Gateway'', ''HTTPRoute'',
+                ''GRPCRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
+                sel.kind in [''Gateway'', ''HTTPRoute'', ''GRPCRoute''])))'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&
@@ -27096,8 +27372,86 @@ spec:
                       additionalProperties:
                         type: string
                       description: MatchLabels are the set of label selectors for
-                        identifying the targeted resource
+                        identifying the targeted resource.
                       type: object
+                    namespaces:
+                      description: |-
+                        Namespaces determines which namespaces are considered for target selection.
+
+                        If unspecified, only targets in the same namespace as this policy are considered.
+
+                        When specified, the effective set of namespaces is always constrained to the
+                        namespaces watched by Envoy Gateway.
+
+                        Selecting targets across namespaces requires a ReferenceGrant in the target
+                        namespace that allows this policy kind to reference the selected target kind.
+                        Cross-namespace targets without a matching ReferenceGrant are ignored.
+                      properties:
+                        from:
+                          default: Same
+                          description: |-
+                            From indicates how namespaces are selected for this target selector.
+
+                            All means all namespaces watched by Envoy Gateway.
+                            Selector means namespaces watched by Envoy Gateway that match Selector.
+                          enum:
+                          - Same
+                          - All
+                          - Selector
+                          type: string
+                        selector:
+                          description: Selector selects namespaces when From is set
+                            to Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - from
+                      type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object
@@ -27200,8 +27554,39 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
-                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      For Envoy TLS cipher suite configuration semantics and default cipher
+                      lists, see the Envoy documentation:
                       https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
+                      Supported cipher suite names:
+                      - ECDHE-ECDSA-AES128-GCM-SHA256
+                      - ECDHE-RSA-AES128-GCM-SHA256
+                      - ECDHE-ECDSA-AES256-GCM-SHA384
+                      - ECDHE-RSA-AES256-GCM-SHA384
+                      - ECDHE-ECDSA-CHACHA20-POLY1305
+                      - ECDHE-RSA-CHACHA20-POLY1305
+                      - ECDHE-ECDSA-AES128-SHA
+                      - ECDHE-RSA-AES128-SHA
+                      - AES128-GCM-SHA256
+                      - AES128-SHA
+                      - ECDHE-ECDSA-AES256-SHA
+                      - ECDHE-RSA-AES256-SHA
+                      - AES256-GCM-SHA384
+                      - AES256-SHA
+                      Supported IANA/RFC aliases:
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+                      - TLS_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_RSA_WITH_AES_256_CBC_SHA
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -28555,8 +28940,9 @@ spec:
                                       type: array
                                     hostname:
                                       description: |-
-                                        Hostname defines the HTTP host that will be requested during health checking.
-                                        Default: HTTPRoute or GRPCRoute hostname.
+                                        Hostname defines the HTTP Host header used for active HTTP health checks.
+                                        Host selection uses this order: this field, the associated Backend endpoint
+                                        hostname if available, then the effective Route hostname.
                                       maxLength: 253
                                       minLength: 1
                                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -28565,6 +28951,7 @@ spec:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
                                         Defaults to GET
+                                      maxLength: 16
                                       type: string
                                     path:
                                       description: Path defines the HTTP path that
@@ -28572,6 +28959,40 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    requestBody:
+                                      description: RequestBody defines the HTTP request
+                                        body payload sent during health checking.
+                                      properties:
+                                        binary:
+                                          description: Binary payload base64 encoded.
+                                          format: byte
+                                          type: string
+                                        text:
+                                          description: Text payload in plain text.
+                                          type: string
+                                        type:
+                                          allOf:
+                                          - enum:
+                                            - Text
+                                            - Binary
+                                          - enum:
+                                            - Text
+                                            - Binary
+                                          description: Type defines the type of the
+                                            payload.
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: If payload type is Text, text field
+                                          needs to be set.
+                                        rule: 'self.type == ''Text'' ? has(self.text)
+                                          : !has(self.text)'
+                                      - message: If payload type is Binary, binary
+                                          field needs to be set.
+                                        rule: 'self.type == ''Binary'' ? has(self.binary)
+                                          : !has(self.binary)'
                                     retriableStatuses:
                                       description: |-
                                         RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -28588,6 +29009,11 @@ spec:
                                   required:
                                   - path
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: The requestBody field can only be set
+                                      when method is POST or PUT.
+                                    rule: '!has(self.requestBody) || (has(self.method)
+                                      && self.method.upperAscii() in [''POST'',''PUT''])'
                                 initialJitter:
                                   description: |-
                                     InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -29802,8 +30228,86 @@ spec:
                       additionalProperties:
                         type: string
                       description: MatchLabels are the set of label selectors for
-                        identifying the targeted resource
+                        identifying the targeted resource.
                       type: object
+                    namespaces:
+                      description: |-
+                        Namespaces determines which namespaces are considered for target selection.
+
+                        If unspecified, only targets in the same namespace as this policy are considered.
+
+                        When specified, the effective set of namespaces is always constrained to the
+                        namespaces watched by Envoy Gateway.
+
+                        Selecting targets across namespaces requires a ReferenceGrant in the target
+                        namespace that allows this policy kind to reference the selected target kind.
+                        Cross-namespace targets without a matching ReferenceGrant are ignored.
+                      properties:
+                        from:
+                          default: Same
+                          description: |-
+                            From indicates how namespaces are selected for this target selector.
+
+                            All means all namespaces watched by Envoy Gateway.
+                            Selector means namespaces watched by Envoy Gateway that match Selector.
+                          enum:
+                          - Same
+                          - All
+                          - Selector
+                          type: string
+                        selector:
+                          description: Selector selects namespaces when From is set
+                            to Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - from
+                      type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object
@@ -31051,8 +31555,39 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
-                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      For Envoy TLS cipher suite configuration semantics and default cipher
+                      lists, see the Envoy documentation:
                       https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
+                      Supported cipher suite names:
+                      - ECDHE-ECDSA-AES128-GCM-SHA256
+                      - ECDHE-RSA-AES128-GCM-SHA256
+                      - ECDHE-ECDSA-AES256-GCM-SHA384
+                      - ECDHE-RSA-AES256-GCM-SHA384
+                      - ECDHE-ECDSA-CHACHA20-POLY1305
+                      - ECDHE-RSA-CHACHA20-POLY1305
+                      - ECDHE-ECDSA-AES128-SHA
+                      - ECDHE-RSA-AES128-SHA
+                      - AES128-GCM-SHA256
+                      - AES128-SHA
+                      - ECDHE-ECDSA-AES256-SHA
+                      - ECDHE-RSA-AES256-SHA
+                      - AES256-GCM-SHA384
+                      - AES256-SHA
+                      Supported IANA/RFC aliases:
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                      - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_RSA_WITH_AES_128_GCM_SHA256
+                      - TLS_RSA_WITH_AES_128_CBC_SHA
+                      - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+                      - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+                      - TLS_RSA_WITH_AES_256_GCM_SHA384
+                      - TLS_RSA_WITH_AES_256_CBC_SHA
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -31428,6 +31963,8 @@ spec:
 
                   - envoy.filters.http.ratelimit
 
+                  - envoy.filters.http.bandwidth_limit
+
                   - envoy.filters.http.grpc_web
 
                   - envoy.filters.http.grpc_stats
@@ -31470,6 +32007,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
@@ -31501,6 +32039,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
@@ -31530,6 +32069,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
@@ -31738,7 +32278,7 @@ spec:
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
-                  specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)
+                  specification (https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule)
                   or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.
                   Default: False
                 type: boolean
@@ -32096,7 +32636,6 @@ spec:
                                       procMount denotes the type of proc mount to use for the containers.
                                       The default value is Default which uses the container runtime defaults for
                                       readonly paths and masked paths.
-                                      This requires the ProcMountType feature flag to be enabled.
                                       Note that this field cannot be set when spec.os.name is windows.
                                     type: string
                                   readOnlyRootFilesystem:
@@ -34697,7 +35236,7 @@ spec:
                                         A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
                                         The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                                         The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-                                        The volume will be mounted read-only (ro) and non-executable files (noexec).
+                                        The volume will be mounted read-only (ro).
                                         Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                                         The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                                       properties:
@@ -34871,8 +35410,7 @@ spec:
                                       description: |-
                                         portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
                                         Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-                                        are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-                                        is on.
+                                        are redirected to the pxd.portworx.com CSI driver.
                                       properties:
                                         fsType:
                                           description: |-
@@ -36105,7 +36643,6 @@ spec:
                                       procMount denotes the type of proc mount to use for the containers.
                                       The default value is Default which uses the container runtime defaults for
                                       readonly paths and masked paths.
-                                      This requires the ProcMountType feature flag to be enabled.
                                       Note that this field cannot be set when spec.os.name is windows.
                                     type: string
                                   readOnlyRootFilesystem:
@@ -37418,7 +37955,6 @@ spec:
                                         procMount denotes the type of proc mount to use for the containers.
                                         The default value is Default which uses the container runtime defaults for
                                         readonly paths and masked paths.
-                                        This requires the ProcMountType feature flag to be enabled.
                                         Note that this field cannot be set when spec.os.name is windows.
                                       type: string
                                     readOnlyRootFilesystem:
@@ -40257,7 +40793,7 @@ spec:
                                         A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
                                         The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                                         The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-                                        The volume will be mounted read-only (ro) and non-executable files (noexec).
+                                        The volume will be mounted read-only (ro).
                                         Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                                         The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                                       properties:
@@ -40431,8 +40967,7 @@ spec:
                                       description: |-
                                         portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
                                         Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-                                        are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-                                        is on.
+                                        are redirected to the pxd.portworx.com CSI driver.
                                       properties:
                                         fsType:
                                           description: |-
@@ -42809,8 +43344,9 @@ spec:
                                                         type: array
                                                       hostname:
                                                         description: |-
-                                                          Hostname defines the HTTP host that will be requested during health checking.
-                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                          Host selection uses this order: this field, the associated Backend endpoint
+                                                          hostname if available, then the effective Route hostname.
                                                         maxLength: 253
                                                         minLength: 1
                                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -42819,6 +43355,7 @@ spec:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
                                                           Defaults to GET
+                                                        maxLength: 16
                                                         type: string
                                                       path:
                                                         description: Path defines
@@ -42828,6 +43365,45 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      requestBody:
+                                                        description: RequestBody defines
+                                                          the HTTP request body payload
+                                                          sent during health checking.
+                                                        properties:
+                                                          binary:
+                                                            description: Binary payload
+                                                              base64 encoded.
+                                                            format: byte
+                                                            type: string
+                                                          text:
+                                                            description: Text payload
+                                                              in plain text.
+                                                            type: string
+                                                          type:
+                                                            allOf:
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            description: Type defines
+                                                              the type of the payload.
+                                                            type: string
+                                                        required:
+                                                        - type
+                                                        type: object
+                                                        x-kubernetes-validations:
+                                                        - message: If payload type
+                                                            is Text, text field needs
+                                                            to be set.
+                                                          rule: 'self.type == ''Text''
+                                                            ? has(self.text) : !has(self.text)'
+                                                        - message: If payload type
+                                                            is Binary, binary field
+                                                            needs to be set.
+                                                          rule: 'self.type == ''Binary''
+                                                            ? has(self.binary) : !has(self.binary)'
                                                       retriableStatuses:
                                                         description: |-
                                                           RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -42845,6 +43421,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                    x-kubernetes-validations:
+                                                    - message: The requestBody field
+                                                        can only be set when method
+                                                        is POST or PUT.
+                                                      rule: '!has(self.requestBody)
+                                                        || (has(self.method) && self.method.upperAscii()
+                                                        in [''POST'',''PUT''])'
                                                   initialJitter:
                                                     description: |-
                                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -44340,8 +44923,9 @@ spec:
                                                         type: array
                                                       hostname:
                                                         description: |-
-                                                          Hostname defines the HTTP host that will be requested during health checking.
-                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                          Host selection uses this order: this field, the associated Backend endpoint
+                                                          hostname if available, then the effective Route hostname.
                                                         maxLength: 253
                                                         minLength: 1
                                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -44350,6 +44934,7 @@ spec:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
                                                           Defaults to GET
+                                                        maxLength: 16
                                                         type: string
                                                       path:
                                                         description: Path defines
@@ -44359,6 +44944,45 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      requestBody:
+                                                        description: RequestBody defines
+                                                          the HTTP request body payload
+                                                          sent during health checking.
+                                                        properties:
+                                                          binary:
+                                                            description: Binary payload
+                                                              base64 encoded.
+                                                            format: byte
+                                                            type: string
+                                                          text:
+                                                            description: Text payload
+                                                              in plain text.
+                                                            type: string
+                                                          type:
+                                                            allOf:
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            description: Type defines
+                                                              the type of the payload.
+                                                            type: string
+                                                        required:
+                                                        - type
+                                                        type: object
+                                                        x-kubernetes-validations:
+                                                        - message: If payload type
+                                                            is Text, text field needs
+                                                            to be set.
+                                                          rule: 'self.type == ''Text''
+                                                            ? has(self.text) : !has(self.text)'
+                                                        - message: If payload type
+                                                            is Binary, binary field
+                                                            needs to be set.
+                                                          rule: 'self.type == ''Binary''
+                                                            ? has(self.binary) : !has(self.binary)'
                                                       retriableStatuses:
                                                         description: |-
                                                           RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -44376,6 +45000,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                    x-kubernetes-validations:
+                                                    - message: The requestBody field
+                                                        can only be set when method
+                                                        is POST or PUT.
+                                                      rule: '!has(self.requestBody)
+                                                        || (has(self.method) && self.method.upperAscii()
+                                                        in [''POST'',''PUT''])'
                                                   initialJitter:
                                                     description: |-
                                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -46128,8 +46759,9 @@ spec:
                                                   type: array
                                                 hostname:
                                                   description: |-
-                                                    Hostname defines the HTTP host that will be requested during health checking.
-                                                    Default: HTTPRoute or GRPCRoute hostname.
+                                                    Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                    Host selection uses this order: this field, the associated Backend endpoint
+                                                    hostname if available, then the effective Route hostname.
                                                   maxLength: 253
                                                   minLength: 1
                                                   pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -46138,6 +46770,7 @@ spec:
                                                   description: |-
                                                     Method defines the HTTP method used for health checking.
                                                     Defaults to GET
+                                                  maxLength: 16
                                                   type: string
                                                 path:
                                                   description: Path defines the HTTP
@@ -46146,6 +46779,43 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
+                                                requestBody:
+                                                  description: RequestBody defines
+                                                    the HTTP request body payload
+                                                    sent during health checking.
+                                                  properties:
+                                                    binary:
+                                                      description: Binary payload
+                                                        base64 encoded.
+                                                      format: byte
+                                                      type: string
+                                                    text:
+                                                      description: Text payload in
+                                                        plain text.
+                                                      type: string
+                                                    type:
+                                                      allOf:
+                                                      - enum:
+                                                        - Text
+                                                        - Binary
+                                                      - enum:
+                                                        - Text
+                                                        - Binary
+                                                      description: Type defines the
+                                                        type of the payload.
+                                                      type: string
+                                                  required:
+                                                  - type
+                                                  type: object
+                                                  x-kubernetes-validations:
+                                                  - message: If payload type is Text,
+                                                      text field needs to be set.
+                                                    rule: 'self.type == ''Text'' ?
+                                                      has(self.text) : !has(self.text)'
+                                                  - message: If payload type is Binary,
+                                                      binary field needs to be set.
+                                                    rule: 'self.type == ''Binary''
+                                                      ? has(self.binary) : !has(self.binary)'
                                                 retriableStatuses:
                                                   description: |-
                                                     RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -46162,6 +46832,12 @@ spec:
                                               required:
                                               - path
                                               type: object
+                                              x-kubernetes-validations:
+                                              - message: The requestBody field can
+                                                  only be set when method is POST
+                                                  or PUT.
+                                                rule: '!has(self.requestBody) || (has(self.method)
+                                                  && self.method.upperAscii() in [''POST'',''PUT''])'
                                             initialJitter:
                                               description: |-
                                                 InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -47736,8 +48412,9 @@ spec:
                                             type: array
                                           hostname:
                                             description: |-
-                                              Hostname defines the HTTP host that will be requested during health checking.
-                                              Default: HTTPRoute or GRPCRoute hostname.
+                                              Hostname defines the HTTP Host header used for active HTTP health checks.
+                                              Host selection uses this order: this field, the associated Backend endpoint
+                                              hostname if available, then the effective Route hostname.
                                             maxLength: 253
                                             minLength: 1
                                             pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -47746,6 +48423,7 @@ spec:
                                             description: |-
                                               Method defines the HTTP method used for health checking.
                                               Defaults to GET
+                                            maxLength: 16
                                             type: string
                                           path:
                                             description: Path defines the HTTP path
@@ -47754,6 +48432,43 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
+                                          requestBody:
+                                            description: RequestBody defines the HTTP
+                                              request body payload sent during health
+                                              checking.
+                                            properties:
+                                              binary:
+                                                description: Binary payload base64
+                                                  encoded.
+                                                format: byte
+                                                type: string
+                                              text:
+                                                description: Text payload in plain
+                                                  text.
+                                                type: string
+                                              type:
+                                                allOf:
+                                                - enum:
+                                                  - Text
+                                                  - Binary
+                                                - enum:
+                                                  - Text
+                                                  - Binary
+                                                description: Type defines the type
+                                                  of the payload.
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                            x-kubernetes-validations:
+                                            - message: If payload type is Text, text
+                                                field needs to be set.
+                                              rule: 'self.type == ''Text'' ? has(self.text)
+                                                : !has(self.text)'
+                                            - message: If payload type is Binary,
+                                                binary field needs to be set.
+                                              rule: 'self.type == ''Binary'' ? has(self.binary)
+                                                : !has(self.binary)'
                                           retriableStatuses:
                                             description: |-
                                               RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -47770,6 +48485,11 @@ spec:
                                         required:
                                         - path
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: The requestBody field can only
+                                            be set when method is POST or PUT.
+                                          rule: '!has(self.requestBody) || (has(self.method)
+                                            && self.method.upperAscii() in [''POST'',''PUT''])'
                                       initialJitter:
                                         description: |-
                                           InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -49847,9 +50567,37 @@ spec:
                               maxItems: 16
                               minItems: 1
                               type: array
-                          required:
-                          - methods
+                            path:
+                              description: |-
+                                Path is the HTTP path of the request.
+                                Support Exact, PathPrefix and RegularExpression match types.
+                              properties:
+                                invert:
+                                  default: false
+                                  description: Invert specifies whether the value
+                                    match result will be inverted.
+                                  type: boolean
+                                type:
+                                  default: PathPrefix
+                                  description: Type specifies how to match against
+                                    the value of the path.
+                                  enum:
+                                  - Exact
+                                  - PathPrefix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  default: /
+                                  description: Value specifies the HTTP path.
+                                  maxLength: 1024
+                                  type: string
+                              required:
+                              - value
+                              type: object
                           type: object
+                          x-kubernetes-validations:
+                          - message: at least one of methods or path must be specified
+                            rule: has(self.methods) || has(self.path)
                         principal:
                           description: |-
                             Principal specifies the client identity of a request.
@@ -50808,8 +51556,9 @@ spec:
                                         type: array
                                       hostname:
                                         description: |-
-                                          Hostname defines the HTTP host that will be requested during health checking.
-                                          Default: HTTPRoute or GRPCRoute hostname.
+                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                          Host selection uses this order: this field, the associated Backend endpoint
+                                          hostname if available, then the effective Route hostname.
                                         maxLength: 253
                                         minLength: 1
                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -50818,6 +51567,7 @@ spec:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
                                           Defaults to GET
+                                        maxLength: 16
                                         type: string
                                       path:
                                         description: Path defines the HTTP path that
@@ -50825,6 +51575,41 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      requestBody:
+                                        description: RequestBody defines the HTTP
+                                          request body payload sent during health
+                                          checking.
+                                        properties:
+                                          binary:
+                                            description: Binary payload base64 encoded.
+                                            format: byte
+                                            type: string
+                                          text:
+                                            description: Text payload in plain text.
+                                            type: string
+                                          type:
+                                            allOf:
+                                            - enum:
+                                              - Text
+                                              - Binary
+                                            - enum:
+                                              - Text
+                                              - Binary
+                                            description: Type defines the type of
+                                              the payload.
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: If payload type is Text, text field
+                                            needs to be set.
+                                          rule: 'self.type == ''Text'' ? has(self.text)
+                                            : !has(self.text)'
+                                        - message: If payload type is Binary, binary
+                                            field needs to be set.
+                                          rule: 'self.type == ''Binary'' ? has(self.binary)
+                                            : !has(self.binary)'
                                       retriableStatuses:
                                         description: |-
                                           RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -50841,6 +51626,11 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                    x-kubernetes-validations:
+                                    - message: The requestBody field can only be set
+                                        when method is POST or PUT.
+                                      rule: '!has(self.requestBody) || (has(self.method)
+                                        && self.method.upperAscii() in [''POST'',''PUT''])'
                                   initialJitter:
                                     description: |-
                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -52211,8 +53001,9 @@ spec:
                                         type: array
                                       hostname:
                                         description: |-
-                                          Hostname defines the HTTP host that will be requested during health checking.
-                                          Default: HTTPRoute or GRPCRoute hostname.
+                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                          Host selection uses this order: this field, the associated Backend endpoint
+                                          hostname if available, then the effective Route hostname.
                                         maxLength: 253
                                         minLength: 1
                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -52221,6 +53012,7 @@ spec:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
                                           Defaults to GET
+                                        maxLength: 16
                                         type: string
                                       path:
                                         description: Path defines the HTTP path that
@@ -52228,6 +53020,41 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      requestBody:
+                                        description: RequestBody defines the HTTP
+                                          request body payload sent during health
+                                          checking.
+                                        properties:
+                                          binary:
+                                            description: Binary payload base64 encoded.
+                                            format: byte
+                                            type: string
+                                          text:
+                                            description: Text payload in plain text.
+                                            type: string
+                                          type:
+                                            allOf:
+                                            - enum:
+                                              - Text
+                                              - Binary
+                                            - enum:
+                                              - Text
+                                              - Binary
+                                            description: Type defines the type of
+                                              the payload.
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: If payload type is Text, text field
+                                            needs to be set.
+                                          rule: 'self.type == ''Text'' ? has(self.text)
+                                            : !has(self.text)'
+                                        - message: If payload type is Binary, binary
+                                            field needs to be set.
+                                          rule: 'self.type == ''Binary'' ? has(self.binary)
+                                            : !has(self.binary)'
                                       retriableStatuses:
                                         description: |-
                                           RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -52244,6 +53071,11 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                    x-kubernetes-validations:
+                                    - message: The requestBody field can only be set
+                                        when method is POST or PUT.
+                                      rule: '!has(self.requestBody) || (has(self.method)
+                                        && self.method.upperAscii() in [''POST'',''PUT''])'
                                   initialJitter:
                                     description: |-
                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -53893,8 +54725,9 @@ spec:
                                               type: array
                                             hostname:
                                               description: |-
-                                                Hostname defines the HTTP host that will be requested during health checking.
-                                                Default: HTTPRoute or GRPCRoute hostname.
+                                                Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                Host selection uses this order: this field, the associated Backend endpoint
+                                                hostname if available, then the effective Route hostname.
                                               maxLength: 253
                                               minLength: 1
                                               pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -53903,6 +54736,7 @@ spec:
                                               description: |-
                                                 Method defines the HTTP method used for health checking.
                                                 Defaults to GET
+                                              maxLength: 16
                                               type: string
                                             path:
                                               description: Path defines the HTTP path
@@ -53911,6 +54745,43 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            requestBody:
+                                              description: RequestBody defines the
+                                                HTTP request body payload sent during
+                                                health checking.
+                                              properties:
+                                                binary:
+                                                  description: Binary payload base64
+                                                    encoded.
+                                                  format: byte
+                                                  type: string
+                                                text:
+                                                  description: Text payload in plain
+                                                    text.
+                                                  type: string
+                                                type:
+                                                  allOf:
+                                                  - enum:
+                                                    - Text
+                                                    - Binary
+                                                  - enum:
+                                                    - Text
+                                                    - Binary
+                                                  description: Type defines the type
+                                                    of the payload.
+                                                  type: string
+                                              required:
+                                              - type
+                                              type: object
+                                              x-kubernetes-validations:
+                                              - message: If payload type is Text,
+                                                  text field needs to be set.
+                                                rule: 'self.type == ''Text'' ? has(self.text)
+                                                  : !has(self.text)'
+                                              - message: If payload type is Binary,
+                                                  binary field needs to be set.
+                                                rule: 'self.type == ''Binary'' ? has(self.binary)
+                                                  : !has(self.binary)'
                                             retriableStatuses:
                                               description: |-
                                                 RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -53927,6 +54798,11 @@ spec:
                                           required:
                                           - path
                                           type: object
+                                          x-kubernetes-validations:
+                                          - message: The requestBody field can only
+                                              be set when method is POST or PUT.
+                                            rule: '!has(self.requestBody) || (has(self.method)
+                                              && self.method.upperAscii() in [''POST'',''PUT''])'
                                         initialJitter:
                                           description: |-
                                             InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -55607,8 +56483,9 @@ spec:
                                         type: array
                                       hostname:
                                         description: |-
-                                          Hostname defines the HTTP host that will be requested during health checking.
-                                          Default: HTTPRoute or GRPCRoute hostname.
+                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                          Host selection uses this order: this field, the associated Backend endpoint
+                                          hostname if available, then the effective Route hostname.
                                         maxLength: 253
                                         minLength: 1
                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -55617,6 +56494,7 @@ spec:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
                                           Defaults to GET
+                                        maxLength: 16
                                         type: string
                                       path:
                                         description: Path defines the HTTP path that
@@ -55624,6 +56502,41 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      requestBody:
+                                        description: RequestBody defines the HTTP
+                                          request body payload sent during health
+                                          checking.
+                                        properties:
+                                          binary:
+                                            description: Binary payload base64 encoded.
+                                            format: byte
+                                            type: string
+                                          text:
+                                            description: Text payload in plain text.
+                                            type: string
+                                          type:
+                                            allOf:
+                                            - enum:
+                                              - Text
+                                              - Binary
+                                            - enum:
+                                              - Text
+                                              - Binary
+                                            description: Type defines the type of
+                                              the payload.
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: If payload type is Text, text field
+                                            needs to be set.
+                                          rule: 'self.type == ''Text'' ? has(self.text)
+                                            : !has(self.text)'
+                                        - message: If payload type is Binary, binary
+                                            field needs to be set.
+                                          rule: 'self.type == ''Binary'' ? has(self.binary)
+                                            : !has(self.binary)'
                                       retriableStatuses:
                                         description: |-
                                           RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -55640,6 +56553,11 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                    x-kubernetes-validations:
+                                    - message: The requestBody field can only be set
+                                        when method is POST or PUT.
+                                      rule: '!has(self.requestBody) || (has(self.method)
+                                        && self.method.upperAscii() in [''POST'',''PUT''])'
                                   initialJitter:
                                     description: |-
                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -56746,8 +57664,86 @@ spec:
                       additionalProperties:
                         type: string
                       description: MatchLabels are the set of label selectors for
-                        identifying the targeted resource
+                        identifying the targeted resource.
                       type: object
+                    namespaces:
+                      description: |-
+                        Namespaces determines which namespaces are considered for target selection.
+
+                        If unspecified, only targets in the same namespace as this policy are considered.
+
+                        When specified, the effective set of namespaces is always constrained to the
+                        namespaces watched by Envoy Gateway.
+
+                        Selecting targets across namespaces requires a ReferenceGrant in the target
+                        namespace that allows this policy kind to reference the selected target kind.
+                        Cross-namespace targets without a matching ReferenceGrant are ignored.
+                      properties:
+                        from:
+                          default: Same
+                          description: |-
+                            From indicates how namespaces are selected for this target selector.
+
+                            All means all namespaces watched by Envoy Gateway.
+                            Selector means namespaces watched by Envoy Gateway that match Selector.
+                          enum:
+                          - Same
+                          - All
+                          - Selector
+                          type: string
+                        selector:
+                          description: Selector selects namespaces when From is set
+                            to Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - from
+                      type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object

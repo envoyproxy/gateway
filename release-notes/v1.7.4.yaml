@@ -1,0 +1,36 @@
+date: June 4, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Fixed xDS server authentication bypass in GatewayNamespaceMode, adding Unary Interceptor and validating SotW requests, refer to https://github.com/envoyproxy/gateway/security/advisories/GHSA-22xc-xg2r-9j7v.
+  Fixed a path normalization bypass in the Lua validator sandbox that allowed submitted Lua to read sensitive controller files during validation, refer to https://github.com/envoyproxy/gateway/security/advisories/GHSA-wcrf-9vrr-854f.
+  Bump Envoy ratelimit image to `b8d893f3`.
+  Bump Envoy to `1.37.3` for [CVE-2026-47774](https://github.com/envoyproxy/envoy/security/advisories/GHSA-22m2-hvr2-xqc8).
+  Fixed missing read lock when accessing the wasm HTTP server cache map, refer to https://github.com/envoyproxy/gateway/security/advisories/GHSA-8fv2-88gg-hm7q.
+  Fixed an issue that caused a nil-dereference when SecurityPolicy targets TCPRoute without `spec.authorization`, refer to https://github.com/envoyproxy/gateway/security/advisories/GHSA-m2v6-2jmh-4c68.
+  Fixed an issue that OCI layer extraction allocates memory from untrusted tar header, refer to https://github.com/envoyproxy/gateway/security/advisories/GHSA-h7pq-86h8-rp5x.
+  Fixed an issue that custom backendRef cross-namespace ReferenceGrant bypass, refer to https://github.com/envoyproxy/gateway/security/advisories/GHSA-fcrp-7gc2-93g7.
+  Fixed an issue that Wasm HTTP fetch decompresses gzip without output-size limit, refer to https://github.com/envoyproxy/gateway/security/advisories/GHSA-cxpq-8v7q-cg56.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
+  Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
+  Fixed Gateway getting stuck at `Programmed=False` after its LoadBalancer Service IP was restored, by ignoring `LastTransitionTime` when comparing status conditions.
+  Fixed HPA maxReplicas required message typo in gateway-helm chart.
+  Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
+  Fixed invalid listeners blocking valid ones during conflict detection by validating each listener's spec independently before running conflict resolution.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |

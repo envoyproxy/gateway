@@ -142,10 +142,12 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the client certificate and common TLS settings from EnvoyProxy resource.
-	if gtwBackendTLSConfig, owner := gtwCtx.GetBackendTLSConfig(); gtwBackendTLSConfig != nil {
-		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(
-			gtwBackendTLSConfig, owner); err != nil {
-			return nil, err
+	if gtwCtx != nil {
+		if gtwBackendTLSConfig, owner := gtwCtx.GetBackendTLSConfig(); gtwBackendTLSConfig != nil {
+			if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(
+				gtwBackendTLSConfig, owner); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -242,7 +244,7 @@ func mergeClientTLSConfigs(
 		mergedConfig.SignatureAlgorithms = backendClientTLSConfig.SignatureAlgorithms
 	}
 
-	if len(backendClientTLSConfig.ALPNProtocols) > 0 {
+	if backendClientTLSConfig.ALPNProtocols != nil {
 		mergedConfig.ALPNProtocols = backendClientTLSConfig.ALPNProtocols
 	}
 
@@ -371,7 +373,8 @@ func (t *Translator) processClientTLSSettings(
 	if clientTLS.MaxVersion != nil {
 		tlsConfig.MaxVersion = new(ir.TLSVersion(*clientTLS.MaxVersion))
 	}
-	if len(clientTLS.ALPNProtocols) > 0 {
+	// An empty list of ALPNProtocols means ALPN is disabled, while a nil value means it is not set.
+	if clientTLS.ALPNProtocols != nil {
 		tlsConfig.ALPNProtocols = make([]string, len(clientTLS.ALPNProtocols))
 		for i := range clientTLS.ALPNProtocols {
 			tlsConfig.ALPNProtocols[i] = string(clientTLS.ALPNProtocols[i])
@@ -428,15 +431,15 @@ func (t *Translator) processClientTLSSettings(
 	return tlsConfig, nil
 }
 
-func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
+func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string, shouldSectionNameMatch bool) bool {
 	for _, currTarget := range policy.Spec.TargetRefs {
 		if target.Group == currTarget.Group &&
 			target.Kind == currTarget.Kind &&
 			backendNamespace == policy.Namespace &&
 			target.Name == currTarget.Name {
 			// if section name is not set, then it targets the entire backend
-			if currTarget.SectionName == nil {
-				return true
+			if currTarget.SectionName == nil && target.SectionName != nil {
+				return !shouldSectionNameMatch
 			} else if reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
 				return true
 			}
@@ -452,8 +455,16 @@ func (t *Translator) getBackendTLSPolicy(
 ) *gwapiv1.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
 	target := t.getTargetBackendReference(backendRef, backendNamespace)
+	if target.SectionName != nil {
+		for _, policy := range policies {
+			if backendTLSTargetMatched(policy, target, backendNamespace, true) {
+				// prefer policies that target this specific section over wildcard matches
+				return policy
+			}
+		}
+	}
 	for _, policy := range policies {
-		if backendTLSTargetMatched(policy, target, backendNamespace) {
+		if backendTLSTargetMatched(policy, target, backendNamespace, false) {
 			return policy
 		}
 	}
@@ -541,7 +552,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 		}
 		if caRefNs != meta.Namespace && resources != nil {
 			// check reference grant
-			if !t.validateCrossNamespaceRef(
+			if !isCrossNamespaceReferencePermitted(
 				crossNamespaceFrom{
 					group:     meta.Group,
 					kind:      meta.Kind,

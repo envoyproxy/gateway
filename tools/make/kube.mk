@@ -107,7 +107,11 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 	@curl -sLo $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml ${EXPERIMENTAL_GATEWAY_API_RELEASE_URL}
 	@curl -sLo $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml ${STANDARD_GATEWAY_API_RELEASE_URL}
 	@mkdir -p charts/gateway-helm/charts/crds/crds
-	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml
+	@mkdir -p charts/gateway-helm/charts/crds/templates
+	@sh tools/hack/split-gateway-api-bundle.sh \
+		$(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml \
+		charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml \
+		charts/gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
 	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
@@ -261,7 +265,7 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: resilience
-resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
+resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server enable-multiple-extension-managers run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
 
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
@@ -282,6 +286,15 @@ enable-simple-extension-server:
 	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-simple-extension-server" "envoy-gateway-system"
 	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+
+.PHONY: enable-multiple-extension-managers
+enable-multiple-extension-managers:
+	@$(LOG_TARGET)
+	kubectl apply -f examples/simple-extension-server/multiple-extension-managers.yaml
+	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-ext-server-a" "envoy-gateway-system"
+	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-ext-server-b" "envoy-gateway-system"
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/gateway-ext-server-a --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/gateway-ext-server-b --for=condition=Available
 
 .PHONY: e2e-prepare
 e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests

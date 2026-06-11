@@ -152,9 +152,15 @@ func getConfigByPath(stdout, stderr io.Writer, cfgPath string) (*config.Server, 
 		cfg.Logger = logging.NewLogger(stdout, eg.Logging)
 	}
 
-	if err := cfg.Validate(); err != nil {
+	warnings, err := cfg.Validate()
+	if err != nil {
 		return nil, err
 	}
+
+	for _, w := range warnings {
+		cfg.Logger.Sugar().Warn(w)
+	}
+
 	return cfg, nil
 }
 
@@ -297,10 +303,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	}
 
 	if extMgr != nil {
-		// Close connections to extension services
-		if mgr, ok := extMgr.(*extensionregistry.Manager); ok {
-			mgr.CleanupHookConns()
-		}
+		extMgr.CleanupHookConns()
 	}
 
 	return nil

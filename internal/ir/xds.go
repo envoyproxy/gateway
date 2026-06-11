@@ -69,7 +69,6 @@ var (
 	ErrHealthCheckUnhealthyThresholdInvalid     = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
 	ErrHealthCheckHealthyThresholdInvalid       = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
 	ErrHealthCheckerInvalid                     = errors.New("health checker setting is invalid, only one health checker can be set")
-	ErrHCHTTPHostInvalid                        = errors.New("field HTTPHealthChecker.Host should be specified")
 	ErrHCHTTPPathInvalid                        = errors.New("field HTTPHealthChecker.Path should be specified")
 	ErrHCHTTPMethodInvalid                      = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
 	ErrHCHTTPExpectedStatusesInvalid            = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
@@ -301,8 +300,8 @@ type HTTPListener struct {
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
 	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
-	// TLSOverlaps indicates if the listener has TLS configuration that overlaps with other listeners.
-	// HTTP2 should be disabled if this is true to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
+	// TLSOverlaps indicates if the listener's certificate SANs overlap with another listener's certificate SANs.
+	// HTTP/2 should be disabled if this is true to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
 	// We use a standalone field to avoid messing with the ClientTrafficPolicy ALPN config.
 	TLSOverlaps bool `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
 	// Routes associated with HTTP traffic to the service.
@@ -719,6 +718,8 @@ type ResponseOverrideRule struct {
 	Response *CustomResponse `json:"response,omitempty"`
 	// Redirect configuration
 	Redirect *Redirect `json:"redirect,omitempty"`
+	// Source specifies the origin of the response this rule applies to.
+	Source egv1a1.ResponseOverrideSource `json:"source,omitempty" yaml:"source,omitempty"`
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
@@ -1034,6 +1035,8 @@ type TrafficFeatures struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
+	// BandwidthLimit defines bandwidth limiting for the backend.
+	BandwidthLimit *BandwidthLimit `json:"bandwidthLimit,omitempty" yaml:"bandwidthLimit,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// Proxy Protocol Settings
@@ -1042,6 +1045,8 @@ type TrafficFeatures struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
+	// AdmissionControl defines the schema for admission control based on success rate.
+	AdmissionControl *AdmissionControl `json:"admissionControl,omitempty" yaml:"admissionControl,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 	// Request and connection timeout settings
@@ -1697,6 +1702,53 @@ type FaultInjectionAbort struct {
 	GrpcStatus *uint32 `json:"grpcStatus,omitempty" yaml:"grpcStatus,omitempty"`
 	// Percentage defines the percentage of requests to be aborted.
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+}
+
+// AdmissionControl defines the schema for admission control based on success rate.
+//
+// +k8s:deepcopy-gen=true
+type AdmissionControl struct {
+	// SamplingWindow defines the time window over which request success rates are calculated.
+	SamplingWindow *metav1.Duration `json:"samplingWindow,omitempty" yaml:"samplingWindow,omitempty"`
+	// MinSuccessRate is the lowest request success rate, as a percentage in the
+	// range [1, 100], at which the filter will not reject requests.
+	MinSuccessRate *uint32 `json:"minSuccessRate,omitempty" yaml:"minSuccessRate,omitempty"`
+	// RejectionAggression controls the rejection probability curve.
+	RejectionAggression *uint32 `json:"rejectionAggression,omitempty" yaml:"rejectionAggression,omitempty"`
+	// MinRequestRate defines the minimum requests per second below which requests will
+	// pass through the filter without rejection.
+	MinRequestRate *uint32 `json:"minRequestRate,omitempty" yaml:"minRequestRate,omitempty"`
+	// MaxRejectionPercent represents the upper limit of the rejection probability,
+	// as a percentage in the range [0, 100].
+	MaxRejectionPercent *uint32 `json:"maxRejectionPercent,omitempty" yaml:"maxRejectionPercent,omitempty"`
+	// SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC.
+	SuccessCriteria *AdmissionControlSuccessCriteria `json:"successCriteria,omitempty" yaml:"successCriteria,omitempty"`
+}
+
+// AdmissionControlSuccessCriteria defines the criteria for determining successful requests.
+//
+// +k8s:deepcopy-gen=true
+type AdmissionControlSuccessCriteria struct {
+	// HTTP defines success criteria for HTTP requests.
+	HTTP *HTTPSuccessCriteria `json:"http,omitempty" yaml:"http,omitempty"`
+	// GRPC defines success criteria for gRPC requests.
+	GRPC *GRPCSuccessCriteria `json:"grpc,omitempty" yaml:"grpc,omitempty"`
+}
+
+// HTTPSuccessCriteria defines success criteria for HTTP requests.
+//
+// +k8s:deepcopy-gen=true
+type HTTPSuccessCriteria struct {
+	// StatusCodes defines HTTP status codes that are considered successful.
+	StatusCodes []int32 `json:"statusCodes,omitempty" yaml:"statusCodes,omitempty"`
+}
+
+// GRPCSuccessCriteria defines success criteria for gRPC requests.
+//
+// +k8s:deepcopy-gen=true
+type GRPCSuccessCriteria struct {
+	// StatusCodes defines gRPC status codes that are considered successful (string enum names).
+	StatusCodes []string `json:"statusCodes,omitempty" yaml:"statusCodes,omitempty"`
 }
 
 // MirrorPolicy specifies a destination to mirror traffic in addition
@@ -2670,6 +2722,33 @@ type RateLimitValue struct {
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
 }
 
+// BandwidthLimit holds bandwidth limiting configuration for request and/or response directions.
+// At least one of Request or Response must be non-nil.
+// +k8s:deepcopy-gen=true
+type BandwidthLimit struct {
+	// Request configures bandwidth limiting for the request direction.
+	Request *BandwidthLimitConfig `json:"request,omitempty" yaml:"request,omitempty"`
+	// Response configures bandwidth limiting for the response direction.
+	Response *BandwidthLimitConfig `json:"response,omitempty" yaml:"response,omitempty"`
+}
+
+// BandwidthLimitConfig holds the bandwidth limit configuration for one direction.
+// +k8s:deepcopy-gen=true
+type BandwidthLimitConfig struct {
+	// LimitKibps specifies the bandwidth in kibibytes per second (KiB/s).
+	LimitKibps uint64 `json:"limitKibps" yaml:"limitKibps"`
+	// ResponseTrailers configures trailer headers appended when bandwidth limiting introduces delays.
+	// Only applicable to the response direction.
+	ResponseTrailers *BandwidthLimitResponseTrailers `json:"responseTrailers,omitempty" yaml:"responseTrailers,omitempty"`
+}
+
+// BandwidthLimitResponseTrailers holds trailer prefix configuration for bandwidth limiting.
+// +k8s:deepcopy-gen=true
+type BandwidthLimitResponseTrailers struct {
+	// Prefix is prepended to each trailer header name.
+	Prefix *string `json:"prefix,omitempty" yaml:"prefix,omitempty"`
+}
+
 type ProxyAccessLogType egv1a1.ProxyAccessLogType
 
 const (
@@ -3137,12 +3216,6 @@ type ActiveHealthCheck struct {
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
 }
 
-func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
-	if h != nil && h.Active != nil && h.Active.HTTP != nil && h.Active.HTTP.Host == "" {
-		h.Active.HTTP.Host = host
-	}
-}
-
 // Validate the fields within the HealthCheck structure.
 func (h *HealthCheck) Validate() error {
 	var errs error
@@ -3231,14 +3304,13 @@ type HTTPHealthChecker struct {
 	RetriableStatuses []HTTPStatus `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
+	// RequestBody defines the HTTP request body payload sent during health checking.
+	RequestBody *HealthCheckPayload `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
 }
 
 // Validate the fields within the HTTPHealthChecker structure.
 func (c *HTTPHealthChecker) Validate() error {
 	var errs error
-	if c.Host == "" {
-		errs = errors.Join(errs, ErrHCHTTPHostInvalid)
-	}
 	if c.Path == "" {
 		errs = errors.Join(errs, ErrHCHTTPPathInvalid)
 	}
@@ -3272,6 +3344,11 @@ func (c *HTTPHealthChecker) Validate() error {
 	}
 	if c.ExpectedResponse != nil {
 		if err := c.ExpectedResponse.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if c.RequestBody != nil {
+		if err := c.RequestBody.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}

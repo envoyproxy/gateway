@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strconv"
 
+	expr "cel.dev/expr"
 	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
 	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
 	typev3 "github.com/cncf/xds/go/xds/type/v3"
@@ -20,7 +21,6 @@ import (
 	policyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/custom_response/local_response_policy/v3"
 	redirectpolicyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/custom_response/redirect_policy/v3"
 	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	expr "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -123,15 +123,6 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 			if predicate, err = c.buildSinglePredicate(r.Match.StatusCodes[0]); err != nil {
 				return nil, err
 			}
-
-			matcher := &matcherv3.Matcher_MatcherList_FieldMatcher{
-				Predicate: predicate,
-				OnMatch: &matcherv3.Matcher_OnMatch{
-					OnMatch: action,
-				},
-			}
-
-			matchers = append(matchers, matcher)
 		case len(r.Match.StatusCodes) > 1:
 			var predicates []*matcherv3.Matcher_MatcherList_Predicate
 
@@ -143,24 +134,38 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 				predicates = append(predicates, predicate)
 			}
 
-			// Create a single matcher that ORs all the predicates together.
-			// The rule will match if any of the codes match.
-			matcher := &matcherv3.Matcher_MatcherList_FieldMatcher{
-				Predicate: &matcherv3.Matcher_MatcherList_Predicate{
-					MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
-						OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
-							Predicate: predicates,
-						},
+			// Create a single predicate that ORs all the status code predicates together.
+			predicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+					OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: predicates,
 					},
 				},
-				OnMatch: &matcherv3.Matcher_OnMatch{
-					OnMatch: action,
-				},
 			}
-
-			matchers = append(matchers, matcher)
 		}
 
+		// For Local or Backend sources, AND the status code predicate with a
+		// local_reply predicate so the rule only fires for the correct response origin.
+		if r.Source == egv1a1.ResponseOverrideSourceLocal || r.Source == egv1a1.ResponseOverrideSourceBackend {
+			localReplyPredicate, err := c.buildLocalReplyPredicate(r.Source == egv1a1.ResponseOverrideSourceLocal)
+			if err != nil {
+				return nil, err
+			}
+			predicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+					AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: []*matcherv3.Matcher_MatcherList_Predicate{predicate, localReplyPredicate},
+					},
+				},
+			}
+		}
+
+		matchers = append(matchers, &matcherv3.Matcher_MatcherList_FieldMatcher{
+			Predicate: predicate,
+			OnMatch: &matcherv3.Matcher_OnMatch{
+				OnMatch: action,
+			},
+		})
 	}
 
 	// Create a MatcherList.
@@ -261,6 +266,42 @@ func (c *customResponse) buildStatusCodeInput() (*cncfv3.TypedExtensionConfig, e
 	}, nil
 }
 
+func (c *customResponse) buildLocalReplyInput() (*cncfv3.TypedExtensionConfig, error) {
+	pb, err := proto.ToAnyWithValidation(&envoymatcherv3.HttpResponseLocalReplyMatchInput{})
+	if err != nil {
+		return nil, err
+	}
+	return &cncfv3.TypedExtensionConfig{
+		Name:        "http-response-local-reply-match-input",
+		TypedConfig: pb,
+	}, nil
+}
+
+func (c *customResponse) buildLocalReplyPredicate(isLocal bool) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	input, err := c.buildLocalReplyInput()
+	if err != nil {
+		return nil, err
+	}
+	value := "false"
+	if isLocal {
+		value = "true"
+	}
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: input,
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+					ValueMatch: &matcherv3.StringMatcher{
+						MatchPattern: &matcherv3.StringMatcher_Exact{
+							Exact: value,
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
+
 func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange) (*cncfv3.TypedExtensionConfig, error) {
 	var (
 		pb  *anypb.Any
@@ -270,43 +311,41 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 	// Build the CEL expression AST: response.code >= codeRange.Start && response.code <= codeRange.End
 	matcher := &matcherv3.CelMatcher{
 		ExprMatch: &typev3.CelExpression{
-			ExprSpecifier: &typev3.CelExpression_ParsedExpr{
-				ParsedExpr: &expr.ParsedExpr{
-					Expr: &expr.Expr{
-						Id: 9,
-						ExprKind: &expr.Expr_CallExpr{
-							CallExpr: &expr.Expr_Call{
-								Function: "_&&_",
-								Args: []*expr.Expr{
-									{
-										Id: 3,
-										ExprKind: &expr.Expr_CallExpr{
-											CallExpr: &expr.Expr_Call{
-												Function: "_>=_",
-												Args: []*expr.Expr{
-													{
-														Id: 2,
-														ExprKind: &expr.Expr_SelectExpr{
-															SelectExpr: &expr.Expr_Select{
-																Operand: &expr.Expr{
-																	Id: 1,
-																	ExprKind: &expr.Expr_IdentExpr{
-																		IdentExpr: &expr.Expr_Ident{
-																			Name: "response",
-																		},
+			CelExprParsed: &expr.ParsedExpr{
+				Expr: &expr.Expr{
+					Id: 9,
+					ExprKind: &expr.Expr_CallExpr{
+						CallExpr: &expr.Expr_Call{
+							Function: "_&&_",
+							Args: []*expr.Expr{
+								{
+									Id: 3,
+									ExprKind: &expr.Expr_CallExpr{
+										CallExpr: &expr.Expr_Call{
+											Function: "_>=_",
+											Args: []*expr.Expr{
+												{
+													Id: 2,
+													ExprKind: &expr.Expr_SelectExpr{
+														SelectExpr: &expr.Expr_Select{
+															Operand: &expr.Expr{
+																Id: 1,
+																ExprKind: &expr.Expr_IdentExpr{
+																	IdentExpr: &expr.Expr_Ident{
+																		Name: "response",
 																	},
 																},
-																Field: "code",
 															},
+															Field: "code",
 														},
 													},
-													{
-														Id: 4,
-														ExprKind: &expr.Expr_ConstExpr{
-															ConstExpr: &expr.Constant{
-																ConstantKind: &expr.Constant_Int64Value{
-																	Int64Value: int64(codeRange.Start),
-																},
+												},
+												{
+													Id: 4,
+													ExprKind: &expr.Expr_ConstExpr{
+														ConstExpr: &expr.Constant{
+															ConstantKind: &expr.Constant_Int64Value{
+																Int64Value: int64(codeRange.Start),
 															},
 														},
 													},
@@ -314,35 +353,35 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 											},
 										},
 									},
-									{
-										Id: 7,
-										ExprKind: &expr.Expr_CallExpr{
-											CallExpr: &expr.Expr_Call{
-												Function: "_<=_",
-												Args: []*expr.Expr{
-													{
-														Id: 6,
-														ExprKind: &expr.Expr_SelectExpr{
-															SelectExpr: &expr.Expr_Select{
-																Operand: &expr.Expr{
-																	Id: 5,
-																	ExprKind: &expr.Expr_IdentExpr{
-																		IdentExpr: &expr.Expr_Ident{
-																			Name: "response",
-																		},
+								},
+								{
+									Id: 7,
+									ExprKind: &expr.Expr_CallExpr{
+										CallExpr: &expr.Expr_Call{
+											Function: "_<=_",
+											Args: []*expr.Expr{
+												{
+													Id: 6,
+													ExprKind: &expr.Expr_SelectExpr{
+														SelectExpr: &expr.Expr_Select{
+															Operand: &expr.Expr{
+																Id: 5,
+																ExprKind: &expr.Expr_IdentExpr{
+																	IdentExpr: &expr.Expr_Ident{
+																		Name: "response",
 																	},
 																},
-																Field: "code",
 															},
+															Field: "code",
 														},
 													},
-													{
-														Id: 8,
-														ExprKind: &expr.Expr_ConstExpr{
-															ConstExpr: &expr.Constant{
-																ConstantKind: &expr.Constant_Int64Value{
-																	Int64Value: int64(codeRange.End),
-																},
+												},
+												{
+													Id: 8,
+													ExprKind: &expr.Expr_ConstExpr{
+														ConstExpr: &expr.Constant{
+															ConstantKind: &expr.Constant_Int64Value{
+																Int64Value: int64(codeRange.End),
 															},
 														},
 													},

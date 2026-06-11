@@ -228,7 +228,7 @@ type RateLimitSelectCondition struct {
 	// meaning, a request MUST match all the specified headers.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:MaxItems=64
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
 	// Methods is a list of request methods to match. Multiple method values are ORed together,
@@ -437,6 +437,7 @@ type RateLimitValue struct {
 	//
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:validation:Format=uint32
 	Requests uint32        `json:"requests"`
 	Unit     RateLimitUnit `json:"unit"`
 }

@@ -96,8 +96,8 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 	return ""
 }
 
-// NamespaceMode returns if uses namespace mode.
-func (e *EnvoyGateway) NamespaceMode() bool {
+// WatchesNamespaces returns true when Envoy Gateway is configured to watch specific Kubernetes namespaces.
+func (e *EnvoyGateway) WatchesNamespaces() bool {
 	return e.Provider != nil &&
 		e.Provider.Kubernetes != nil &&
 		e.Provider.Kubernetes.Watch != nil &&
@@ -121,6 +121,23 @@ func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
 		return ptr.Deref(e.Provider.Kubernetes.TopologyInjector.Disable, false)
 	}
 	return false
+}
+
+// LuaDisabled returns true if Lua EnvoyExtensionPolicies should be disabled.
+// EnableLua takes precedence over the deprecated DisableLua field.
+// When neither is set, Lua is disabled by default.
+func (e *ExtensionAPISettings) LuaDisabled() bool {
+	if e == nil {
+		return true
+	}
+	if e.EnableLua {
+		return false
+	}
+	if e.DisableLua != nil {
+		return *e.DisableLua
+	}
+	// Default: Lua is disabled
+	return true
 }
 
 // GetEnvoyProxyDefaultSpec returns the default EnvoyProxySpec if specified,
@@ -379,6 +396,19 @@ func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
 	qps := ptr.Deref(kcr.QPS, DefaultKubernetesClientQPS)
 	burst := ptr.Deref(kcr.Burst, DefaultKubernetesClientBurst)
 	return float32(qps), int(burst)
+}
+
+// GetExtensionManagers normalizes the singular ExtensionManager and plural ExtensionManagers
+// fields into a single list. The plural field takes precedence. If only the singular field
+// is set, it is returned as a single-element list. Returns nil if neither is set.
+func (e *EnvoyGatewaySpec) GetExtensionManagers() []ExtensionManager {
+	if len(e.ExtensionManagers) > 0 {
+		return e.ExtensionManagers
+	}
+	if e.ExtensionManager != nil {
+		return []ExtensionManager{*e.ExtensionManager}
+	}
+	return nil
 }
 
 // ShouldIncludeClusters returns true if clusters should be included in the translation hook.

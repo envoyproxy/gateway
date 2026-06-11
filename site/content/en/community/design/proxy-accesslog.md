@@ -241,7 +241,7 @@ spec:
 ```
 
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[support levels]: https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels
+[support levels]: https://gateway-api.sigs.k8s.io/docs/concepts/conformance/?h=extended#2-support-levels
 [CEL]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/filters/cel/v3/cel.proto#extension-envoy-access-loggers-extension-filters-cel
 [HttpGrpcAccessLogConfig]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto#extensions-access-loggers-grpc-v3-httpgrpcaccesslogconfig
 [TcpGrpcAccessLogConfig]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto#extensions-access-loggers-grpc-v3-tcpgrpcaccesslogconfig

@@ -100,6 +100,7 @@ verbs:
 apiGroups:
 - gateway.envoyproxy.io
 resources:
+- envoyproxies/status
 - envoypatchpolicies/status
 - clienttrafficpolicies/status
 - backendtrafficpolicies/status
@@ -231,9 +232,19 @@ verbs:
   - watch
 - apiGroups:
   - autoscaling
-  - policy
   resources:
   - horizontalpodautoscalers
+  verbs:
+  - create
+  - get
+  - list
+  - delete
+  - deletecollection
+  - patch
+  - watch
+- apiGroups:
+  - policy
+  resources:
   - poddisruptionbudgets
   verbs:
   - create

@@ -505,11 +505,11 @@ The AuthenticationFilter API should support additional authentication types in t
 
 [Issue 336]: https://github.com/envoyproxy/gateway/issues/336
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[support levels]: https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels
+[support levels]: https://gateway-api.sigs.k8s.io/docs/concepts/conformance/?h=extended#2-support-levels
 [JWT]: https://jwt.io/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[extension points]: https://gateway-api.sigs.k8s.io/concepts/api-overview/?h=extension#extension-points
-[HTTPRouteFilter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[extension points]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/?h=extension#extension-points
+[HTTPRouteFilter]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter
 [JWKS]: https://www.rfc-editor.org/rfc/rfc7517
 [JWT authentication filter]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter#config-http-filters-jwt-authn
 [PR 773]: https://github.com/envoyproxy/gateway/pull/733
