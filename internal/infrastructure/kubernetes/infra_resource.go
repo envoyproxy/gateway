@@ -66,6 +66,9 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		return err
 	}
 
+	if err = i.checkOwnership(ctx, sa); err != nil {
+		return err
+	}
 	return i.Client.ServerSideApply(ctx, sa)
 }
 
@@ -105,6 +108,9 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 		}
 	}()
 
+	if err = i.checkOwnership(ctx, cm); err != nil {
+		return err
+	}
 	return i.Client.ServerSideApply(ctx, cm)
 }
 
@@ -720,4 +726,30 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 		return ""
 	}
 	return string(secret.Data[proxy.XdsTLSCaFileName])
+}
+
+// checkOwnership fetches obj from the API server and returns an error if it already
+// exists but is not managed by envoy-gateway. A not-found result is treated as safe.
+func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
+	existing := obj.DeepCopyObject().(client.Object)
+	err := i.Client.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	labelsContainEnvoyGatewayOwnership := func(lbls map[string]string) bool {
+		return lbls["app.kubernetes.io/managed-by"] == "envoy-gateway"
+	}
+	
+	if !labelsContainEnvoyGatewayOwnership(existing.GetLabels()) {
+		i.logger.Error(nil, "resource already exists and is not managed by envoy-gateway, skipping",
+			"kind", obj.GetObjectKind().GroupVersionKind().Kind,
+			"name", obj.GetName(), "namespace", obj.GetNamespace())
+		return fmt.Errorf("%s %s/%s already exists and is not managed by envoy-gateway",
+			obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
+	}
+	return nil
 }
