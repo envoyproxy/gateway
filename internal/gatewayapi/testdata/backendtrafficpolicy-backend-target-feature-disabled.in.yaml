@@ -46,3 +46,16 @@ backendTrafficPolicies:
       name: service-1
     circuitBreaker:
       maxConnections: 1024
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-1
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    loadBalancer:
+      type: RoundRobin

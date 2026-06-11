@@ -460,6 +460,9 @@ func (t *Translator) buildBackendPolicyMap(
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	backendPolicyMap map[backendPolicyKey]*egv1a1.BackendTrafficPolicy,
 ) {
+	if !t.MergeBackends {
+		return
+	}
 	for _, currPolicy := range backendTrafficPolicies {
 		for _, currTarget := range currPolicy.Spec.GetTargetRefs() {
 			if isBackendTargetKind(currTarget.Kind) {
@@ -1837,7 +1840,6 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 			setIfNil(&r.Traffic.HTTP2, tf.HTTP2)
 			setIfNil(&r.Traffic.DNS, tf.DNS)
 
-			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
