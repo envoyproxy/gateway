@@ -84,7 +84,7 @@ func BuildProxyArgs(
 	}
 
 	// Default drain timeout.
-	drainTimeout := 60.0
+	drainTimeout := egv1a1.DefaultDrainTimeout.Seconds()
 	if shutdownConfig != nil && shutdownConfig.DrainTimeout != nil {
 		d, err := time.ParseDuration(string(*shutdownConfig.DrainTimeout))
 		if err != nil {

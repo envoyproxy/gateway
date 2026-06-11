@@ -266,15 +266,32 @@ func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) strin
 }
 
 func expectedShutdownManagerArgs(cfg *egv1a1.ShutdownConfig) []string {
-	args := []string{"envoy", "shutdown-manager"}
-	if cfg != nil && cfg.DrainTimeout != nil {
+	args := make([]string, 0, 3)
+	args = append(args, "envoy", "shutdown-manager")
+
+	// Use default --ready-timeout when neither drain field is configured.
+	if cfg == nil || (cfg.DrainTimeout == nil && cfg.DrainDelay == nil) {
+		return args
+	}
+
+	readyTimeout := egv1a1.DefaultDrainTimeout
+	if cfg.DrainTimeout != nil {
 		d, err := time.ParseDuration(string(*cfg.DrainTimeout))
 		if err != nil {
 			return nil
 		}
-		args = append(args, fmt.Sprintf("--ready-timeout=%.0fs", d.Seconds()+10))
+		readyTimeout = d
 	}
-	return args
+
+	if cfg.DrainDelay != nil {
+		delay, err := time.ParseDuration(string(*cfg.DrainDelay))
+		if err != nil {
+			return nil
+		}
+		readyTimeout += delay
+	}
+
+	return append(args, fmt.Sprintf("--ready-timeout=%.0fs", readyTimeout.Seconds()+10))
 }
 
 func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
@@ -282,6 +299,14 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 
 	if cfg == nil {
 		return command
+	}
+
+	if cfg.DrainDelay != nil {
+		d, err := time.ParseDuration(string(*cfg.DrainDelay))
+		if err != nil {
+			return nil
+		}
+		command = append(command, fmt.Sprintf("--drain-delay=%.0fs", d.Seconds()))
 	}
 
 	if cfg.DrainTimeout != nil {

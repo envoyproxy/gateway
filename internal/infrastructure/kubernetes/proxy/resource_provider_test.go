@@ -292,6 +292,7 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 			shutdown: &egv1a1.ShutdownConfig{
+				DrainDelay:       new(gwapiv1.Duration("15s")),
 				DrainTimeout:     new(gwapiv1.Duration("30s")),
 				MinDrainDuration: new(gwapiv1.Duration("15s")),
 			},
@@ -2119,4 +2120,53 @@ func writeTestDataToFile(filename string, resources []any) error {
 	}
 
 	return os.WriteFile(filename, combinedYAML, 0o600)
+}
+
+func TestExpectedTerminationGracePeriodSeconds(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      *egv1a1.ShutdownConfig
+		expected int64
+	}{
+		{
+			name:     "nil config",
+			cfg:      nil,
+			expected: 360,
+		},
+		{
+			name:     "empty config",
+			cfg:      &egv1a1.ShutdownConfig{},
+			expected: 360,
+		},
+		{
+			name: "only drainTimeout",
+			cfg: &egv1a1.ShutdownConfig{
+				DrainTimeout: new(gwapiv1.Duration("30s")),
+			},
+			expected: 330,
+		},
+		{
+			name: "only drainDelay",
+			cfg: &egv1a1.ShutdownConfig{
+				DrainDelay: new(gwapiv1.Duration("15s")),
+			},
+			expected: 375,
+		},
+		{
+			name: "drainDelay and drainTimeout",
+			cfg: &egv1a1.ShutdownConfig{
+				DrainDelay:   new(gwapiv1.Duration("15s")),
+				DrainTimeout: new(gwapiv1.Duration("30s")),
+			},
+			expected: 345,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := expectedTerminationGracePeriodSeconds(tt.cfg)
+			require.NotNil(t, got)
+			require.Equal(t, tt.expected, *got)
+		})
+	}
 }

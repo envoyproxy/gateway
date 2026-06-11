@@ -9,11 +9,16 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+// DefaultDrainTimeout is the default drain timeout for the graceful drain
+// sequence, used when ShutdownConfig.DrainTimeout is not specified.
+const DefaultDrainTimeout = 60 * time.Second
 
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.
 func DefaultEnvoyProxyProvider() *EnvoyProxyProvider {

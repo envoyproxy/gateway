@@ -118,14 +118,20 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 // Shutdown is called from a preStop hook on the shutdown-manager container where
 // it will initiate a drain sequence on the Envoy proxy and block until
 // connections are drained or a timeout is exceeded.
-func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections int) error {
-	startTime := time.Now()
+func Shutdown(drainDelay, drainTimeout, minDrainDuration time.Duration, exitAtConnections int) error {
 	allowedToExit := false
 
 	// Reconfigure logger to write to stdout of main process if running in Kubernetes
 	if _, k8s := os.LookupEnv("KUBERNETES_SERVICE_HOST"); k8s && os.Getpid() != 1 {
 		logger = logging.FileLogger("/proc/1/fd/1", "shutdown-manager", egv1a1.LogLevelInfo)
 	}
+
+	if drainDelay > 0 {
+		logger.Info(fmt.Sprintf("waiting %.0f seconds before starting drain", drainDelay.Seconds()))
+		time.Sleep(drainDelay)
+	}
+
+	startTime := time.Now()
 
 	logger.Info(fmt.Sprintf("initiating drain with %.0f second minimum drain period and %.0f second timeout",
 		minDrainDuration.Seconds(), drainTimeout.Seconds()))
