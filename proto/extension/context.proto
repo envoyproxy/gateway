@@ -18,14 +18,18 @@ message PostRouteExtensionContext {
 
     // hostnames are the fully qualified domain names attached to the HTTPRoute
     repeated string hostnames = 2;
+
+    // Policies introduced by the extension that are targeting this route
+    // (via HTTPRoute or HTTPRouteRule targetRef).
+    repeated ExtensionResource extension_policies = 3;
 }
 
 
-// Empty for now but we can add fields to the context as use-cases are discovered without
-// breaking any clients that use the API
+// PostVirtualHostExtensionContext provides extension server policies for the virtual host hook.
 // additional context information can be added to this message as more use-cases are discovered
 message PostVirtualHostExtensionContext {
-
+    // Policies introduced by the extension that are targeting routes within this virtual host.
+    repeated ExtensionResource extension_resources = 1;
 }
 
 

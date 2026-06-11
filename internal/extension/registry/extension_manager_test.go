@@ -791,7 +791,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 			_, err = hook.PostRouteModifyHook(
 				&routev3.Route{
 					Name: "test-route",
-				}, nil, nil)
+				}, nil, nil, nil)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PostRouteModifyHook() error = %v, wantErr %v", err, tt.wantErr)

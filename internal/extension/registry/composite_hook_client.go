@@ -33,7 +33,7 @@ type hookClientEntry struct {
 	client            types.XDSHookClient
 	failOpen          bool
 	resourceGKSet     sets.Set[schema.GroupKind] // used for per-extension resource filtering in PostRouteModifyHook, PostClusterModifyHook
-	policyGKSet       sets.Set[schema.GroupKind] // used for per-extension policy filtering in PostHTTPListenerModifyHook, PostTranslateModifyHook
+	policyGKSet       sets.Set[schema.GroupKind] // used for per-extension policy filtering in PostRouteModifyHook, PostVirtualHostModifyHook, PostHTTPListenerModifyHook, PostTranslateModifyHook
 	translationConfig *egv1a1.TranslationConfig  // used for per-extension resource-type gating in PostTranslateModifyHook
 }
 
@@ -43,11 +43,12 @@ type compositeXDSHookClient struct {
 	entries []hookClientEntry
 }
 
-func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, error) {
+func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured, extensionPolicies []*unstructured.Unstructured) (*route.Route, error) {
 	current := r
 	for _, entry := range c.entries {
-		filtered := filterResourcesByGK(extensionResources, entry.resourceGKSet)
-		result, err := entry.client.PostRouteModifyHook(current, routeHostnames, filtered)
+		filteredRefs := filterResourcesByGK(extensionResources, entry.resourceGKSet)
+		filteredPolicies := filterResourcesByGK(extensionPolicies, entry.policyGKSet)
+		result, err := entry.client.PostRouteModifyHook(current, routeHostnames, filteredRefs, filteredPolicies)
 		if err != nil {
 			if entry.failOpen {
 				continue
@@ -59,10 +60,11 @@ func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostna
 	return current, nil
 }
 
-func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {
+func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost, extensionPolicies []*unstructured.Unstructured) (*route.VirtualHost, error) {
 	current := vh
 	for _, entry := range c.entries {
-		result, err := entry.client.PostVirtualHostModifyHook(current)
+		filteredPolicies := filterResourcesByGK(extensionPolicies, entry.policyGKSet)
+		result, err := entry.client.PostVirtualHostModifyHook(current, filteredPolicies)
 		if err != nil {
 			if entry.failOpen {
 				continue
