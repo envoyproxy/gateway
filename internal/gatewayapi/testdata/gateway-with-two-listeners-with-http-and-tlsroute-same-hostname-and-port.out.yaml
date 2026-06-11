@@ -28,7 +28,8 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
+        message: 'All listeners for a given port must use a unique hostname, conflicting
+          listeners: http-1, tls-1'
         reason: HostnameConflict
         status: "True"
         type: Conflicted
@@ -51,7 +52,8 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
+        message: 'All listeners for a given port must use a unique hostname, conflicting
+          listeners: http-1, tls-1'
         reason: HostnameConflict
         status: "True"
         type: Conflicted

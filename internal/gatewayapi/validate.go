@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -940,6 +941,13 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 	}
 }
 
+func listenerDisplayName(l *ListenerContext) string {
+	if l.isFromListenerSet() {
+		return l.listenerSet.Namespace + "/" + l.listenerSet.Name + "/" + string(l.Name)
+	}
+	return string(l.Name)
+}
+
 func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContext) {
 	// Iterate through all layer-7 (HTTP, HTTPS, TLS) listeners and collect info about protocols
 	// and hostnames per port.
@@ -1028,8 +1036,9 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 				if gatewayListenerCountPerHostname[hostname] > 1 {
 					continue
 				}
-				// When multiple listeners from the same ListenerSet conflict, no winner is selected.
-				if sameListenerSetHostnameConflicts.Has(hostname) {
+				// When multiple listeners from the same ListenerSet conflict, no winner is selected
+				// for ListenerSet listeners. A parent Gateway listener can still win.
+				if sameListenerSetHostnameConflicts.Has(hostname) && listener.isFromListenerSet() {
 					continue
 				}
 				existing, exists := hostnameWinners[hostname]
@@ -1039,6 +1048,22 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 					// Gateway listener takes precedence over ListenerSet listener.
 					hostnameWinners[hostname] = listener
 				}
+			}
+
+			// Build a sorted list of display names per hostname to include in conflict messages.
+			hostnameConflictingNames := map[string][]string{}
+			for _, listener := range info.listeners {
+				var hostname string
+				if listener.Hostname != nil {
+					hostname = string(*listener.Hostname)
+				}
+				if info.hostnames[hostname] <= 1 {
+					continue
+				}
+				hostnameConflictingNames[hostname] = append(hostnameConflictingNames[hostname], listenerDisplayName(listener))
+			}
+			for hostname := range hostnameConflictingNames {
+				slices.Sort(hostnameConflictingNames[hostname])
 			}
 
 			for _, listener := range info.listeners {
@@ -1052,16 +1077,16 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 					hostname = string(*listener.Hostname)
 				}
 
+				conflictMsg := fmt.Sprintf("All listeners for a given port must use a unique hostname, conflicting listeners: %s",
+					strings.Join(hostnameConflictingNames[hostname], ", "))
 				if winner, hasWinner := hostnameWinners[hostname]; hasWinner {
 					// A winner exists: only the non-winner listeners are conflicted.
 					if listener != winner {
-						setConflictedConditions(listener, gwapiv1.ListenerReasonHostnameConflict,
-							"All listeners for a given port must use a unique hostname")
+						setConflictedConditions(listener, gwapiv1.ListenerReasonHostnameConflict, conflictMsg)
 					}
 				} else if info.hostnames[hostname] > 1 {
 					// No winner (multiple Gateway listeners conflict): all are conflicted.
-					setConflictedConditions(listener, gwapiv1.ListenerReasonHostnameConflict,
-						"All listeners for a given port must use a unique hostname")
+					setConflictedConditions(listener, gwapiv1.ListenerReasonHostnameConflict, conflictMsg)
 				}
 			}
 		}
