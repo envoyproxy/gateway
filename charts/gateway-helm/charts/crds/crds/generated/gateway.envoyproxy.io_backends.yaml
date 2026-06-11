@@ -472,6 +472,9 @@ spec:
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
+            - message: DynamicResolver type cannot use autoSNIFromEndpointHostname
+              rule: self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
+                && self.tls.autoSNIFromEndpointHostname)
             - message: when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints
                 must define a hostname
               rule: '!has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)

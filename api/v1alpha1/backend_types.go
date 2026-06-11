@@ -132,6 +132,7 @@ type UnixSocket struct {
 
 // BackendSpec describes the desired state of BackendSpec.
 // +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints)",message="DynamicResolver type cannot have endpoints specified"
+// +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname) && self.tls.autoSNIFromEndpointHostname)",message="DynamicResolver type cannot use autoSNIFromEndpointHostname"
 // +kubebuilder:validation:XValidation:rule="!has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname) && self.tls.autoSNIFromEndpointHostname) || self.endpoints.all(e, (!has(e.ip) && !has(e.unix)) || has(e.hostname))",message="when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints must define a hostname"
 type BackendSpec struct {
 	// Type defines the type of the backend. Defaults to "Endpoints"
