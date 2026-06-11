@@ -254,8 +254,10 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 	s.log.Debugf("Got a new request, version_info %s, response_nonce %s, nodeID %s, node_version %s", req.VersionInfo, req.ResponseNonce, nodeID, nodeVersion)
 
 	if status := req.ErrorDetail; status != nil {
-		// if Envoy rejected the last update log the details here.
-		// TODO(youngnick): Handle NACK properly
+		// Envoy rejected (NACKed) the last update. It keeps serving its last known
+		// good config, so this is silent from the user's point of view, but any
+		// proxy that (re)starts will fail to load the rejected config. Surface it
+		// as a metric so it can be alerted on, in addition to logging the details.
 		errorCode = status.Code
 		errorMessage = status.Message
 		xdsNACKTotal.With(nodeIDLabel.Value(nodeID), typeURLLabel.Value(req.GetTypeUrl())).Increment()
