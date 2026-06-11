@@ -18,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -1009,10 +1008,6 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: tcpRoute}
 
-	gatewayRouteMap := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
@@ -1020,11 +1015,9 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 
 	// Process the policy - this should set error status
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
-	gatewayPolicyMerged := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
+	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1094,10 +1087,6 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: httpRoute}
 
-	gatewayRouteMap := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
@@ -1105,11 +1094,9 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 
 	// Process the policy - this should set error status
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
-	gatewayPolicyMerged := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
+	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
