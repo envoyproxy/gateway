@@ -42788,6 +42788,12 @@ spec:
                 description: Shutdown defines configuration for graceful envoy shutdown
                   process.
                 properties:
+                  drainDelay:
+                    description: |-
+                      DrainDelay defines the delay before starting the drain process.
+                      If unspecified, defaults to 0 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   drainTimeout:
                     description: |-
                       DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
