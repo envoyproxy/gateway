@@ -1407,16 +1407,16 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:         name,
-		settings:     settings,
-		loadBalancer: route.LoadBalancer,
-		endpointType: buildEndpointType(settings),
-		metrics:      extra.metrics,
-    healthCheckLog: extra.healthCheckLog,
-		dns:          route.DNS,
-		ipFamily:     extra.ipFamily,
-		metadata:     metadata,
-		isRoute:      true,
+		name:           name,
+		settings:       settings,
+		loadBalancer:   route.LoadBalancer,
+		endpointType:   buildEndpointType(settings),
+		metrics:        extra.metrics,
+		healthCheckLog: extra.healthCheckLog,
+		dns:            route.DNS,
+		ipFamily:       extra.ipFamily,
+		metadata:       metadata,
+		isRoute:        true,
 	}
 }
 
