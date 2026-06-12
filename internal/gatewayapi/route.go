@@ -427,10 +427,16 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
 					continue
 				}
-				destination := &ir.RouteDestination{
+				bc := &ir.BackendCluster{
 					Name:     destName,
 					Settings: allDs,
 					Metadata: routeRuleMetadata,
+				}
+				destination := &ir.RouteDestination{
+					Name:               destName,
+					Settings:           allDs,
+					BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+					Metadata:           routeRuleMetadata,
 				}
 				irRoute.Destination = destination
 			}
@@ -1122,10 +1128,16 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
 					continue
 				}
-				destination := &ir.RouteDestination{
+				bc := &ir.BackendCluster{
 					Name:     destName,
 					Settings: allDs,
 					Metadata: buildResourceMetadata(grpcRoute, rule.Name),
+				}
+				destination := &ir.RouteDestination{
+					Name:               destName,
+					Settings:           allDs,
+					BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+					Metadata:           buildResourceMetadata(grpcRoute, rule.Name),
 				}
 				irRoute.Destination = destination
 			}
@@ -1477,13 +1489,19 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					}
 				}
 
+				bc := &ir.BackendCluster{
+					Name:     destName,
+					Settings: destSettings,
+					Metadata: buildResourceMetadata(tlsRoute, nil),
+				}
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
 					TLS:  tlsConfig,
 					Destination: &ir.RouteDestination{
-						Name:     destName,
-						Settings: destSettings,
-						Metadata: buildResourceMetadata(tlsRoute, nil),
+						Name:               destName,
+						Settings:           destSettings,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+						Metadata:           buildResourceMetadata(tlsRoute, nil),
 					},
 					Metadata: buildResourceMetadata(tlsRoute, nil),
 				}
@@ -1636,11 +1654,17 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
 			if irListener != nil {
+				bc := &ir.BackendCluster{
+					Name:     destName,
+					Settings: destSettings,
+					Metadata: buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name),
+				}
 				irRoute := &ir.UDPRoute{
 					Name: irUDPRouteName(udpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     destName,
-						Settings: destSettings,
+						Name:               destName,
+						Settings:           destSettings,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
 						// udpRoute Must have a single rule, so can use index 0.
 						Metadata: buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name),
 					},
@@ -1787,12 +1811,18 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
 			if irListener != nil {
+				bc := &ir.BackendCluster{
+					Name:     destName,
+					Settings: destSettings,
+					Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
+				}
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tcpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     destName,
-						Settings: destSettings,
-						Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
+						Name:               destName,
+						Settings:           destSettings,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+						Metadata:           buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
 					},
 					Metadata: buildResourceMetadata(tcpRoute, nil),
 				}
