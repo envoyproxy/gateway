@@ -9,6 +9,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added `startupProbe` to the envoy-gateway Deployment with configurable liveness and readiness probes via Helm values.
 
 bug fixes: |
   Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
