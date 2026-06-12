@@ -1195,6 +1195,70 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "cluster per setting mixed auto sni",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS: &TLSUpstreamConfig{
+							AutoSNIFromEndpointHostname: true,
+						},
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "other.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS:         &TLSUpstreamConfig{},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "single cluster all auto sni from upstream host",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS: &TLSUpstreamConfig{
+							AutoSNIFromEndpointHostname: true,
+						},
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "other.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS: &TLSUpstreamConfig{
+							AutoSNIFromEndpointHostname: true,
+						},
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for _, test := range tests {
