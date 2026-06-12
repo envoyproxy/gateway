@@ -174,7 +174,7 @@ func (r *Runner) initializeRateLimitInfra(ctx context.Context) {
 }
 
 func (r *Runner) waitForProviderReady(ctx context.Context) bool {
-	if r.EnvoyGateway.Provider.Type != egv1a1.ProviderTypeKubernetes {
+	if !r.EnvoyGateway.Provider.IsRunningOnKubernetes() {
 		return true
 	}
 
