@@ -1625,11 +1625,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
+			accepted = true
 			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
-			accepted = true
 
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
@@ -1777,12 +1777,11 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
+			accepted = true
+			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
-			listener.IncrementAttachedRoutes()
-
-			accepted = true
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
@@ -2299,19 +2298,6 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			continue
 		}
 		parentRefCtx.SetListeners(allowedListeners...)
-
-		if !HasReadyListener(allowedListeners) {
-			routeStatus := GetRouteStatus(routeContext)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRefCtx.routeParentStatusIdx,
-				routeContext.GetGeneration(),
-				gwapiv1.RouteConditionAccepted,
-				metav1.ConditionFalse,
-				"NoReadyListeners",
-				"There are no ready listeners for this parent ref",
-			)
-			continue
-		}
 
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,
