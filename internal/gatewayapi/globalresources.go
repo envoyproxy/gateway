@@ -90,10 +90,16 @@ func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, re
 		return "", nil
 	}
 
-	return irKey, &ir.RouteDestination{
+	bc := &ir.BackendCluster{
 		Name:     dst.Name,
 		Settings: []*ir.DestinationSetting{dst},
 		Metadata: dst.Metadata,
+	}
+	return irKey, &ir.RouteDestination{
+		Name:               dst.Name,
+		Settings:           []*ir.DestinationSetting{dst},
+		BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+		Metadata:           dst.Metadata,
 	}
 }
 

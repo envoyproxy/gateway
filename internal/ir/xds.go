@@ -1911,6 +1911,9 @@ type RouteDestination struct {
 	Name     string                `json:"name" yaml:"name"`
 	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// BackendClusterRefs holds references to backend clusters for this route rule.
+	// TODO: remove json/yaml skip tags once Settings is removed and consumers read from BackendClusterRefs.
+	BackendClusterRefs []*BackendClusterRef `json:"-" yaml:"-"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
 	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.

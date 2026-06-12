@@ -74,10 +74,16 @@ func (t *Translator) translateExtServiceBackendRefs(
 		ds = append(ds, extServiceDest)
 	}
 
-	rs = &ir.RouteDestination{
+	bc := &ir.BackendCluster{
 		Name:     destName,
 		Settings: ds,
 		Metadata: buildResourceMetadata(policy, nil),
+	}
+	rs = &ir.RouteDestination{
+		Name:               destName,
+		Settings:           ds,
+		BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+		Metadata:           buildResourceMetadata(policy, nil),
 	}
 
 	if validationErr := rs.Validate(); validationErr != nil {

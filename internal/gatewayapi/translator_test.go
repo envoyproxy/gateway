@@ -502,6 +502,7 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"), // TODO: remove once Settings is dropped and BackendClusterRefs is serialized
 				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
 				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
@@ -813,6 +814,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"), // TODO: remove once Settings is dropped and BackendClusterRefs is serialized
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
@@ -1161,6 +1163,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		HTTP                    []*ir.HTTPListener
 		TCP                     []*ir.TCPListener
 		UDP                     []*ir.UDPListener
+		Backends                []*ir.BackendCluster
 		EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
@@ -1173,6 +1176,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		HTTP:                    a.HTTP,
 		TCP:                     a.TCP,
 		UDP:                     a.UDP,
+		Backends:                a.Backends,
 		EnvoyPatchPolicies:      a.EnvoyPatchPolicies,
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,

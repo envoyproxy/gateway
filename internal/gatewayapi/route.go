@@ -424,10 +424,16 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
 					continue
 				}
-				destination := &ir.RouteDestination{
+				bc := &ir.BackendCluster{
 					Name:     destName,
 					Settings: allDs,
 					Metadata: routeRuleMetadata,
+				}
+				destination := &ir.RouteDestination{
+					Name:               destName,
+					Settings:           allDs,
+					BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+					Metadata:           routeRuleMetadata,
 				}
 				irRoute.Destination = destination
 			}
@@ -1125,10 +1131,16 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
 					continue
 				}
-				destination := &ir.RouteDestination{
+				bc := &ir.BackendCluster{
 					Name:     destName,
 					Settings: allDs,
 					Metadata: buildResourceMetadata(grpcRoute, rule.Name),
+				}
+				destination := &ir.RouteDestination{
+					Name:               destName,
+					Settings:           allDs,
+					BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+					Metadata:           buildResourceMetadata(grpcRoute, rule.Name),
 				}
 				irRoute.Destination = destination
 			}
@@ -1543,13 +1555,19 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					}
 				}
 
+				bc := &ir.BackendCluster{
+					Name:     destName,
+					Settings: destSettings,
+					Metadata: buildResourceMetadata(tlsRoute, nil),
+				}
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
 					TLS:  tlsConfig,
 					Destination: &ir.RouteDestination{
-						Name:     destName,
-						Settings: destSettings,
-						Metadata: buildResourceMetadata(tlsRoute, nil),
+						Name:               destName,
+						Settings:           destSettings,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+						Metadata:           buildResourceMetadata(tlsRoute, nil),
 					},
 					Metadata: buildResourceMetadata(tlsRoute, nil),
 				}
@@ -1700,11 +1718,17 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			// Only the oldest route is attached to the listener, and the listener's AttachedRoutes count must reflect this.
 			// https://github.com/kubernetes-sigs/gateway-api/blob/cf34ac933d068c6008598cce945819ce9cee16be/conformance/tests/udproute-multiple-routes-attachment.go#L107
 			if irListener != nil && irListener.Route == nil {
+				bc := &ir.BackendCluster{
+					Name:     destName,
+					Settings: destSettings,
+					Metadata: buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name),
+				}
 				irRoute := &ir.UDPRoute{
 					Name: irUDPRouteName(udpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     destName,
-						Settings: destSettings,
+						Name:               destName,
+						Settings:           destSettings,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
 						// udpRoute Must have a single rule, so can use index 0.
 						Metadata: buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name),
 					},
@@ -1849,12 +1873,18 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			// Only the oldest route is attached to the listener, and the listener's AttachedRoutes count must reflect this.
 			// https://github.com/kubernetes-sigs/gateway-api/blob/cf34ac933d068c6008598cce945819ce9cee16be/conformance/tests/tcproute-multiple-routes-attachment.go#L104
 			if irListener != nil && len(irListener.Routes) == 0 {
+				bc := &ir.BackendCluster{
+					Name:     destName,
+					Settings: destSettings,
+					Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
+				}
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tcpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     destName,
-						Settings: destSettings,
-						Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
+						Name:               destName,
+						Settings:           destSettings,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+						Metadata:           buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
 					},
 					Metadata: buildResourceMetadata(tcpRoute, nil),
 				}
