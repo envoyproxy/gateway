@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/metrics"
 	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
@@ -728,8 +729,6 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 	return string(secret.Data[proxy.XdsTLSCaFileName])
 }
 
-// checkOwnership fetches obj from the API server and returns an error if it already
-// exists but is not managed by envoy-gateway. A not-found result is treated as safe.
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
 	existing := obj.DeepCopyObject().(client.Object)
 	err := i.Client.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
@@ -740,16 +739,20 @@ func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
 		return err
 	}
 
-	labelsContainEnvoyGatewayOwnership := func(lbls map[string]string) bool {
-		return lbls["app.kubernetes.io/managed-by"] == "envoy-gateway"
-	}
-	
-	if !labelsContainEnvoyGatewayOwnership(existing.GetLabels()) {
-		i.logger.Error(nil, "resource already exists and is not managed by envoy-gateway, skipping",
+	if !ownedByGateway(existing.GetLabels(), obj.GetLabels()) {
+		i.logger.Error(nil, "resource already exists and is not owned by this Gateway, skipping",
 			"kind", obj.GetObjectKind().GroupVersionKind().Kind,
 			"name", obj.GetName(), "namespace", obj.GetNamespace())
-		return fmt.Errorf("%s %s/%s already exists and is not managed by envoy-gateway",
+		return fmt.Errorf("%s %s/%s already exists and is not owned by this Gateway",
 			obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
 	}
 	return nil
+}
+
+func ownedByGateway(existingLabels, desiredLabels map[string]string) bool {
+	if existingLabels["app.kubernetes.io/managed-by"] != "envoy-gateway" {
+		return false
+	}
+	return existingLabels[gatewayapi.OwningGatewayNameLabel] == desiredLabels[gatewayapi.OwningGatewayNameLabel] &&
+		existingLabels[gatewayapi.OwningGatewayNamespaceLabel] == desiredLabels[gatewayapi.OwningGatewayNamespaceLabel]
 }
