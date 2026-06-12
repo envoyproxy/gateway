@@ -13,6 +13,7 @@ security updates: |
 new features: |
   Added support for authorization path match.
   Added a `requestBody` field to the HTTP active health checker in `BackendTrafficPolicy`, allowing a request body payload to be sent during HTTP health checking. The field requires the health check `method` to be `POST` or `PUT`.
+  Added support for health check logging in `EnvoyProxy`, allowing logging all active health check results or specific events such as success, failure or transition.
 
 bug fixes: |
   Fixed HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, and UDPRoute Accepted condition being set to False when an attached listener is not programmed due to a missing TLS certificate ref; listener programmed state is now correctly separated from route acceptance.
