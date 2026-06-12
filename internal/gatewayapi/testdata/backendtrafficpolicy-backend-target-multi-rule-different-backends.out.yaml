@@ -2,40 +2,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-rule-single-backend
-    namespace: default
-  spec:
-    loadBalancer:
-      type: RoundRobin
-    mergeType: StrategicMerge
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-      sectionName: single-backend
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with policy default/policy-for-service-1
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
     name: policy-for-service-1
     namespace: default
   spec:
@@ -45,6 +11,39 @@ backendTrafficPolicies:
     - group: ""
       kind: Service
       name: service-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-for-service-2
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: null
+        http:
+          path: /healthz
+        interval: null
+        timeout: null
+        type: HTTP
+        unhealthyThreshold: null
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: service-2
   status:
     ancestors:
     - ancestorRef:
@@ -82,7 +81,7 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Merged with policy default/policy-for-service-1
+        message: Merged with 2 policies
         reason: Merged
         status: "True"
         type: Merged
@@ -91,12 +90,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other backendTrafficPolicy for
-          these route rules: [single-backend]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -157,34 +150,22 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /
-      name: single-backend
+          value: /svc1
+      name: rule-svc1
     - backendRefs:
-      - name: service-1
-        port: 8080
-      matches:
-      - path:
-          value: /v2
-      name: no-rule-btp
-    - backendRefs:
-      - name: service-1
-        port: 8080
-        weight: 50
       - name: service-2
         port: 8080
-        weight: 50
       matches:
       - path:
-          value: /split
-      name: multi-backend
+          value: /svc2
+      name: rule-svc2
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Backend-targeted BackendTrafficPolicy is not supported for route
-          rules with multiple backendRefs: [multi-backend]'
-        reason: UnsupportedBackendTrafficPolicy
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -262,94 +243,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            sectionName: multi-backend
-          name: httproute/default/httproute-1/rule/2
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/2/backend/0
-            protocol: HTTP
-            weight: 50
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/2/backend/1
-            protocol: HTTP
-            weight: 50
-        directResponse:
-          statusCode: 500
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-          sectionName: multi-backend
-        name: httproute/default/httproute-1/rule/2/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /split
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-1
-            namespace: default
-            sectionName: no-rule-btp
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/1/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: policy-for-route
-            namespace: default
-          sectionName: no-rule-btp
-        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /v2
-        traffic:
-          circuitBreaker:
-            maxConnections: 100
-          tcpKeepalive:
-            probes: 5
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-1
-            namespace: default
-            sectionName: single-backend
+            sectionName: rule-svc1
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -372,19 +266,69 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: policy-for-rule-single-backend
+            name: policy-for-route
             namespace: default
-          sectionName: single-backend
+          sectionName: rule-svc1
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /
+          prefix: /svc1
         traffic:
           circuitBreaker:
             maxConnections: 100
-          loadBalancer:
-            roundRobin: {}
+          tcpKeepalive:
+            probes: 5
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: rule-svc2
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
+          sectionName: rule-svc2
+        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /svc2
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: null
+              http:
+                expectedStatuses:
+                - 200
+                host: ""
+                path: /healthz
+              interval: null
+              timeout: null
+              unhealthyThreshold: null
+          tcpKeepalive:
+            probes: 5
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -681,10 +681,6 @@ type policyGatewayTargetContext struct {
 	attachedToListeners sets.Set[string]
 }
 
-type policyBackendTargetContext struct {
-	attached bool
-}
-
 // GatewayPolicyRouteMap tracks routes attached to Gateway Listener with an index for efficient lookups
 type GatewayPolicyRouteMap struct {
 	// Routes maps Gateway Listener to attached route names

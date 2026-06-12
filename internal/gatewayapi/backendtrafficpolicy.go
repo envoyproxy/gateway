@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -250,8 +251,6 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
-	backendMap := make(map[backendPolicyKey]*policyBackendTargetContext)
-
 	// Map of Gateway to the routes attached to it.
 	gatewayRouteMap := &GatewayPolicyRouteMap{
 		Routes:       make(map[NamespacedNameWithSection]sets.Set[string], gatewayMapSize),
@@ -346,7 +345,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBackendTrafficPolicyForBackend(xdsIR, gateways, gatewayPolicyMap, routeMap, policy, currTarget, backendMap, routeRuleBackendPolicyMap)
+				t.processBackendTrafficPolicyForBackend(xdsIR, gateways, gatewayPolicyMap, routeMap, policy, currTarget, backendPolicyMap, routeRuleBackendPolicyMap)
 			}
 		}
 	}
@@ -578,65 +577,16 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				}
 				gwPolicy := gatewayPolicyMap[gwMapKey]
 
-				// Resolve the effective parent for the route BTP merge.
-				// Priority: backend BTP > gateway/listener BTP.
-				// If a backend BTP exists for the route's backend, it becomes the
-				// parent. If the backend BTP also has mergeType, it merges with the
-				// gateway BTP first, and the merged result becomes the parent.
-				backendPolicy := findRouteBackendPolicy(targetedRoute, currTarget, routeRuleBackendPolicyMap)
-				var parentPolicy *egv1a1.BackendTrafficPolicy
-				if backendPolicy != nil {
-					if backendPolicy.Spec.MergeType != nil {
-						gwParent := gwPolicy
-						if listenerPolicy != nil {
-							gwParent = listenerPolicy
-						}
-						if gwParent != nil {
-							merged, err := t.mergeBackendTrafficPolicy(backendPolicy, gwParent)
-							if err != nil {
-								status.SetConditionForPolicyAncestor(&policy.Status,
-									&ancestorRef,
-									t.GatewayControllerName,
-									gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-									egv1a1.PolicyReasonInvalid,
-									status.Error2ConditionMsg(err),
-									policy.Generation,
-								)
-								continue
-							}
-							parentPolicy = merged
-						} else {
-							parentPolicy = backendPolicy
-						}
-					} else {
-						parentPolicy = backendPolicy
-					}
-				} else {
-					if gwPolicy == nil && listenerPolicy == nil {
-						// no parent at any level, fall back to the current policy
-						if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, &listener.Name); err != nil {
-							status.SetConditionForPolicyAncestor(&policy.Status,
-								&ancestorRef,
-								t.GatewayControllerName,
-								gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-								egv1a1.PolicyReasonInvalid,
-								status.Error2ConditionMsg(err),
-								policy.Generation,
-							)
-						}
-						continue
-					}
-					parentPolicy = gwPolicy
-					if listenerPolicy != nil {
-						parentPolicy = listenerPolicy
-					}
+				gwParent := gwPolicy
+				if listenerPolicy != nil {
+					gwParent = listenerPolicy
 				}
 
-				// merge with parent policy
-				if err := t.translateBackendTrafficPolicyForRouteWithMerge(
-					policy, parentPolicy, currTarget, gwNN, &listener.Name,
-					targetedRoute, xdsIR,
-				); err != nil {
+				mergedBackendBTPs, err := t.translateBackendTrafficPolicyForRouteWithMerge(
+					policy, gwParent, currTarget, gwNN, &listener.Name,
+					targetedRoute, xdsIR, routeRuleBackendPolicyMap,
+				)
+				if err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
 						t.GatewayControllerName,
@@ -660,15 +610,17 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				}
 				gatewayPolicyMergedMap.SectionIndex[listenerMapKey.NamespacedName].Insert(string(listenerMapKey.SectionName))
 
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionMerged,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
-					policy.Generation,
-				)
+				if mergedMsg := status.MergedConditionMessage(mergedBackendBTPs, gwParent); mergedMsg != "" {
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						&ancestorRef,
+						t.GatewayControllerName,
+						egv1a1.PolicyConditionMerged,
+						metav1.ConditionTrue,
+						egv1a1.PolicyReasonMerged,
+						mergedMsg,
+						policy.Generation,
+					)
+				}
 			}
 		}
 	}
@@ -933,63 +885,288 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	return errs
 }
 
+// translateBackendTrafficPolicyForRouteWithMerge resolves per-rule backend BTPs,
+// merges them with the gateway parent and route policy, and applies the result.
+// Returns the effective parent policy used for status reporting (backend BTP if present, else gwParent).
 func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
-	policy, parentPolicy *egv1a1.BackendTrafficPolicy,
+	policy *egv1a1.BackendTrafficPolicy,
+	gwParent *egv1a1.BackendTrafficPolicy,
 	target policyTargetReferenceWithSectionName,
 	policyTargetGatewayNN types.NamespacedName, policyTargetListener *gwapiv1.SectionName, route RouteContext,
 	xdsIR resource.XdsIRMap,
-) error {
-	mergedPolicy, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
-	if err != nil {
-		return fmt.Errorf("error merging policies: %w", err)
-	}
-
-	// Build traffic features from the merged policy
-	tf, errs := t.buildTrafficFeatures(mergedPolicy)
-	if tf == nil {
-		// should not happen
-		return nil
-	}
-
-	// Since GlobalRateLimit merge relies on IR auto-generated key: (<policy-ns>/<policy-name>/rule/<rule-index>)
-	// We can't simply merge the BTP's using utils.Merge() we need to specifically merge the GlobalRateLimit.Rules using IR fields.
-	// Since ir.TrafficFeatures is not a built-in Kubernetes API object with defined merging strategies and it does not support a deep merge (for lists/maps).
-
-	// Handle rate limit merging cases:
-	// 1. Both policies have rate limits - merge them
-	// 2. Only gateway policy has rate limits - preserve gateway policy's rule names
-	// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
-	if policy.Spec.RateLimit != nil && parentPolicy.Spec.RateLimit != nil {
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
-		tfRoute, _ := t.buildTrafficFeatures(policy)
-
-		if tfGW != nil && tfRoute != nil &&
-			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
-
-			mergedRL, err := utils.Merge(tfGW.RateLimit, tfRoute.RateLimit, *policy.Spec.MergeType)
-			if err != nil {
-				return fmt.Errorf("error merging rate limits: %w", err)
-			}
-			// Replace the rate limit in the merged features if successful
-			tf.RateLimit = mergedRL
-		}
-	} else if policy.Spec.RateLimit == nil && parentPolicy.Spec.RateLimit != nil {
-		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
-		if tfGW != nil && tfGW.RateLimit != nil {
-			// Use the gateway policy's rate limit with its original rule names
-			tf.RateLimit = tfGW.RateLimit
-		}
-	}
-	// Case 3: Only route policy has rate limits or neither has rate limits - use default behavior (tf already built from merged policy)
-
+	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
+) ([]*egv1a1.BackendTrafficPolicy, error) {
 	x, ok := xdsIR[t.IRKey(policyTargetGatewayNN)]
 	if !ok {
-		// should not happen.
-		return nil
+		return nil, nil
 	}
-	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, policyTargetListener)
 
+	// resolveForRule computes the merged TrafficFeatures for a single route rule.
+	// Each rule may point to a different backend, each with its own backend BTP.
+	// The merge hierarchy per rule is:
+	//   policy (route/rule BTP) ← backendBTP (if any) ← gwParent (if any)
+	// where policy and gwParent are constant across all rules (captured from the
+	// outer function), and only backendBTP varies per rule.
+	//
+	// cache avoids redundant merges: keyed by backendBTP pointer, so rules sharing
+	// the same backend reuse the result. The cache is scoped to this single call
+	// (one route BTP × one gateway/listener), so gwParent is always the same.
+	cache := make(map[*egv1a1.BackendTrafficPolicy]*perRuleMergeResult)
+
+	resolveForRule := func(md *ir.ResourceMetadata) (*perRuleMergeResult, error) {
+		backendBTP, exists := routeRuleBackendPolicyMap[routeRuleKeyFromMetadata(md)]
+
+		// nil value with key present = unsupported (multi-backend rule).
+		if exists && backendBTP == nil {
+			return nil, nil
+		}
+
+		if result, ok := cache[backendBTP]; ok {
+			return result, nil
+		}
+
+		// Build the effective parent by merging backendBTP into gwParent (if both exist),
+		// then merge policy (route BTP) into that parent.
+		var parent *egv1a1.BackendTrafficPolicy
+		if backendBTP != nil {
+			if backendBTP.Spec.MergeType != nil && gwParent != nil {
+				merged, err := t.mergeBackendTrafficPolicy(backendBTP, gwParent)
+				if err != nil {
+					return nil, err
+				}
+				parent = merged
+			} else {
+				parent = backendBTP
+			}
+		} else {
+			parent = gwParent
+		}
+
+		var (
+			mergedPolicy *egv1a1.BackendTrafficPolicy
+			tf           *ir.TrafficFeatures
+			errs         error
+		)
+		if parent != nil {
+			var err error
+			mergedPolicy, err = t.mergeBackendTrafficPolicy(policy, parent)
+			if err != nil {
+				return nil, fmt.Errorf("error merging policies: %w", err)
+			}
+		} else {
+			mergedPolicy = policy
+		}
+
+		tf, errs = t.buildTrafficFeatures(mergedPolicy)
+		if tf == nil {
+			// should not happen
+			return nil, nil
+		}
+
+		// Since GlobalRateLimit merge relies on IR auto-generated key: (<policy-ns>/<policy-name>/rule/<rule-index>)
+		// We can't simply merge the BTP's using utils.Merge() we need to specifically merge the GlobalRateLimit.Rules using IR fields.
+		// Since ir.TrafficFeatures is not a built-in Kubernetes API object with defined merging strategies and it does not support a deep merge (for lists/maps).
+
+		// Handle rate limit merging cases:
+		// 1. Both policies have rate limits - merge them
+		// 2. Only parent policy has rate limits - preserve parent policy's rule names
+		// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
+		if parent != nil {
+			if policy.Spec.RateLimit != nil && parent.Spec.RateLimit != nil {
+				tfParent, _ := t.buildTrafficFeatures(parent)
+				tfRoute, _ := t.buildTrafficFeatures(policy)
+				if tfParent != nil && tfRoute != nil &&
+					tfParent.RateLimit != nil && tfRoute.RateLimit != nil {
+					mergedRL, err := utils.Merge(tfParent.RateLimit, tfRoute.RateLimit, *policy.Spec.MergeType)
+					if err != nil {
+						return nil, fmt.Errorf("error merging rate limits: %w", err)
+					}
+					// Replace the rate limit in the merged features if successful
+					tf.RateLimit = mergedRL
+				}
+			} else if policy.Spec.RateLimit == nil && parent.Spec.RateLimit != nil {
+				// Case 2: Only parent policy has rate limits - preserve parent policy's rule names
+				tfParent, _ := t.buildTrafficFeatures(parent)
+				if tfParent != nil && tfParent.RateLimit != nil {
+					// Use the parent policy's rate limit with its original rule names
+					tf.RateLimit = tfParent.RateLimit
+				}
+			}
+			// Case 3: Only route policy has rate limits or neither has rate limits - use default behavior (tf already built from merged policy)
+		}
+
+		result := &perRuleMergeResult{tf: tf, errs: errs, policy: mergedPolicy}
+		cache[backendBTP] = result
+		return result, nil
+	}
+
+	// Apply per-rule: iterate IR routes, resolve per-rule merge, and apply.
+	prefix := irRoutePrefix(route)
+	if err := t.applyMergedTrafficFeatureToRoute(policy, prefix, target, x, policyTargetListener, resolveForRule); err != nil {
+		return nil, err
+	}
+
+	// Collect distinct backend BTPs used in merges for status reporting.
+	var backendBTPs []*egv1a1.BackendTrafficPolicy
+	for backendBTP := range cache {
+		if backendBTP != nil {
+			backendBTPs = append(backendBTPs, backendBTP)
+		}
+	}
+	return backendBTPs, nil
+}
+
+type perRuleMergeResult struct {
+	tf     *ir.TrafficFeatures
+	errs   error
+	policy *egv1a1.BackendTrafficPolicy
+}
+
+// applyMergedTrafficFeatureToRoute iterates IR routes, resolves per-rule merge results
+// via resolveForRule, and applies the TrafficFeatures to each matching rule.
+func (t *Translator) applyMergedTrafficFeatureToRoute(
+	policy *egv1a1.BackendTrafficPolicy,
+	prefix string,
+	target policyTargetReferenceWithSectionName,
+	x *ir.Xds,
+	policyTargetListener *gwapiv1.SectionName,
+	resolveForRule func(md *ir.ResourceMetadata) (*perRuleMergeResult, error),
+) error {
+	for _, tcp := range x.TCP {
+		if policyTargetListener != nil && string(*policyTargetListener) != tcp.Metadata.SectionName {
+			continue
+		}
+		for _, r := range tcp.Routes {
+			if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+				continue
+			}
+			if strings.HasPrefix(r.Destination.Name, prefix) {
+				result, err := resolveForRule(r.Destination.Metadata)
+				if err != nil {
+					return err
+				}
+				if result == nil {
+					continue
+				}
+				tf := result.tf
+				routeStatName := ""
+				if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
+					routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
+				}
+				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
+				setIfNil(&r.ProxyProtocol, tf.ProxyProtocol)
+				setIfNil(&r.HealthCheck, tf.HealthCheck)
+				setIfNil(&r.CircuitBreaker, tf.CircuitBreaker)
+				setIfNil(&r.TCPKeepalive, tf.TCPKeepalive)
+				setIfNil(&r.Timeout, tf.Timeout)
+				setIfNil(&r.BackendConnection, tf.BackendConnection)
+				setIfNil(&r.DNS, tf.DNS)
+				setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
+				appendTrafficPolicyMetadata(r.Metadata, result.policy)
+			}
+		}
+	}
+
+	for _, udp := range x.UDP {
+		if policyTargetListener != nil && string(*policyTargetListener) != udp.Metadata.SectionName {
+			continue
+		}
+		if udp.Route != nil {
+			r := udp.Route
+			if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+				continue
+			}
+			if strings.HasPrefix(r.Destination.Name, prefix) {
+				result, err := resolveForRule(r.Destination.Metadata)
+				if err != nil {
+					return err
+				}
+				if result == nil {
+					continue
+				}
+				setIfNil(&r.LoadBalancer, result.tf.LoadBalancer)
+				setIfNil(&r.DNS, result.tf.DNS)
+			}
+		}
+	}
+
+	routesWithDirectResponse := sets.New[string]()
+	routesWithDirectResponseErrors := make(map[string]struct{})
+	for _, http := range x.HTTP {
+		if policyTargetListener != nil && string(*policyTargetListener) != http.Metadata.SectionName {
+			continue
+		}
+		for _, r := range http.Routes {
+			if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
+				continue
+			}
+			if strings.HasPrefix(r.Name, prefix) {
+				if r.Traffic != nil || r.UseClientProtocol != nil {
+					continue
+				}
+
+				result, err := resolveForRule(r.Metadata)
+				if err != nil {
+					return err
+				}
+				if result == nil {
+					continue
+				}
+				tf := result.tf
+
+				routeStatName := ""
+				if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
+					routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
+				}
+
+				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
+				if result.errs != nil {
+					r.DirectResponse = &ir.CustomResponse{
+						StatusCode: new(uint32(500)),
+					}
+					routesWithDirectResponse.Insert(r.Name)
+					routesWithDirectResponseErrors[result.errs.Error()] = struct{}{}
+					continue
+				}
+
+				r.Traffic = tf.DeepCopy()
+
+				if r.Traffic != nil && r.Traffic.LoadBalancer != nil &&
+					r.Traffic.LoadBalancer.BackendUtilization != nil &&
+					!ptr.Deref(r.Traffic.LoadBalancer.BackendUtilization.KeepResponseHeaders, false) {
+					headersToRemove := []string{"endpoint-load-metrics", "endpoint-load-metrics-bin"}
+					for _, h := range headersToRemove {
+						found := false
+						for _, existing := range r.RemoveResponseHeaders {
+							if existing == h {
+								found = true
+								break
+							}
+						}
+						if !found {
+							r.RemoveResponseHeaders = append(r.RemoveResponseHeaders, h)
+						}
+					}
+				}
+
+				if localTo, err := buildClusterSettingsTimeout(&result.policy.Spec.ClusterSettings); err == nil {
+					r.Traffic.Timeout = localTo
+				}
+
+				if result.policy.Spec.UseClientProtocol != nil {
+					r.UseClientProtocol = result.policy.Spec.UseClientProtocol
+				}
+				appendTrafficPolicyMetadata(r.Metadata, result.policy)
+			}
+		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to errors in BackendTrafficPolicy",
+			"policy", utils.NamespacedName(policy),
+			"routes", sets.List(routesWithDirectResponse),
+			"errors", maps.Keys(routesWithDirectResponseErrors),
+		)
+	}
 	return nil
 }
 
@@ -1444,30 +1621,6 @@ func routeRuleKeyFromMetadata(md *ir.ResourceMetadata) policyTargetRouteRuleKey 
 	}
 }
 
-// findRouteBackendPolicy finds the backend policy for the route targeted by the given policy target.
-// When the target has a sectionName (route rule), looks up the specific rule.
-// When targeting the whole route, looks up the route-level entry (empty SectionName).
-func findRouteBackendPolicy(
-	route RouteContext,
-	target policyTargetReferenceWithSectionName,
-	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
-) *egv1a1.BackendTrafficPolicy {
-	routeKey := policyTargetRouteKey{
-		Kind:      string(route.GetRouteType()),
-		Name:      route.GetName(),
-		Namespace: route.GetNamespace(),
-	}
-	var sectionName string
-	if target.SectionName != nil {
-		sectionName = string(*target.SectionName)
-	}
-	key := policyTargetRouteRuleKey{
-		policyTargetRouteKey: routeKey,
-		SectionName:          sectionName,
-	}
-	return routeRuleBackendPolicyMap[key]
-}
-
 // backendPolicyKeyFromTarget creates a backendPolicyKey from a policy target reference and namespace.
 type backendPolicyKey struct {
 	Kind, Namespace, Name string
@@ -1509,7 +1662,7 @@ func (t *Translator) buildRouteRuleBackendPolicyMap(
 			return
 		}
 
-		// Multi-backend routes are not supported with backend-targeted BTP.
+		// Multi-backend rules are not supported with backend-targeted BTP.
 		if len(dest.Settings) > 1 {
 			routeRuleBackendPolicyMap[key] = nil
 			return
@@ -1520,11 +1673,6 @@ func (t *Translator) buildRouteRuleBackendPolicyMap(
 		if ds.Metadata != nil {
 			if btp, ok := backendPolicyMap[backendPolicyKeyFromMetadata(ds.Metadata)]; ok {
 				routeRuleBackendPolicyMap[key] = btp
-				// Also store under route-level key (empty SectionName) for whole-route BTP lookups.
-				routeKey := policyTargetRouteRuleKey{policyTargetRouteKey: key.policyTargetRouteKey}
-				if _, exists := routeRuleBackendPolicyMap[routeKey]; !exists {
-					routeRuleBackendPolicyMap[routeKey] = btp
-				}
 			}
 		}
 	}
@@ -1555,7 +1703,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	policy *egv1a1.BackendTrafficPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
-	backendMap map[backendPolicyKey]*policyBackendTargetContext,
+	backendPolicyMap map[backendPolicyKey]*egv1a1.BackendTrafficPolicy,
 	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
 ) {
 	if !t.MergeBackends {
@@ -1576,17 +1724,8 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 		return
 	}
 
-	// Resolve backend target ref — check for conflicts using .attached pattern.
 	bpKey := backendPolicyKeyFromTarget(target, policy.Namespace)
-	backend, ok := backendMap[bpKey]
-	if !ok {
-		backend = &policyBackendTargetContext{}
-		backendMap[bpKey] = backend
-	}
-	if backend.attached {
-		// Another policy already targets this backend — set Conflicted status.
-		// Use all gateways as ancestors since we can't know which are relevant
-		// without walking the IR (which the winning policy will do).
+	if winner := backendPolicyMap[bpKey]; winner == nil || utils.NamespacedName(winner) != utils.NamespacedName(policy) {
 		ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(gateways))
 		for _, gw := range gateways {
 			ref := getAncestorRefForPolicy(utils.NamespacedName(gw), nil)
@@ -1603,7 +1742,6 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 		)
 		return
 	}
-	backend.attached = true
 
 	// Build reverse map: irKey → gateway NamespacedNames.
 	irKeyToGateways := make(map[string][]types.NamespacedName, len(gateways))
@@ -1648,7 +1786,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					egv1a1.PolicyConditionMerged,
 					metav1.ConditionTrue,
 					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", gwPolicy.Namespace, gwPolicy.Name),
+					status.MergedConditionMessage(nil, gwPolicy),
 					policy.Generation,
 				)
 			}

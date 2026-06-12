@@ -497,7 +497,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 					egv1a1.PolicyConditionMerged,
 					metav1.ConditionTrue,
 					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
+					status.MergedConditionMessage(nil, parentPolicy),
 					policy.Generation,
 				)
 			}
