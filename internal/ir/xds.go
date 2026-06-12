@@ -167,6 +167,8 @@ type Xds struct {
 	TCP []*TCPListener `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 	// UDP Listeners exposed by the gateway.
 	UDP []*UDPListener `json:"udp,omitempty" yaml:"udp,omitempty"`
+	// Backends holds backend clusters referenced by route rules.
+	Backends []*BackendCluster `json:"backends,omitempty" yaml:"backends,omitempty"`
 	// EnvoyPatchPolicies is the intermediate representation of the EnvoyPatchPolicy resource
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	// FilterOrder holds the custom order of the HTTP filters
@@ -2072,6 +2074,43 @@ func (d *DestinationSetting) Validate() error {
 	}
 
 	return errs
+}
+
+// BackendCluster represents a single backend (Service, ServiceImport, or Backend resource)
+// and its endpoint configuration. In Step 2 (MergeBackends=true), multiple routes sharing the
+// same backend will reference a shared BackendCluster, enabling cluster deduplication.
+// +kubebuilder:object:generate=true
+type BackendCluster struct {
+	// Name uniquely identifies this backend cluster.
+	Name string `json:"name" yaml:"name"`
+	// Settings holds the endpoint localities for this backend.
+	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// Metadata describes the backend resource (Service, Backend, etc.)
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+}
+
+func (b *BackendCluster) Validate() error {
+	var errs error
+	if len(b.Name) == 0 {
+		errs = errors.Join(errs, ErrDestinationNameEmpty)
+	}
+	for _, s := range b.Settings {
+		if err := s.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
+}
+
+// BackendClusterRef is a reference from a route rule to a BackendCluster.
+// +kubebuilder:object:generate=true
+type BackendClusterRef struct {
+	// Backend points to the shared BackendCluster.
+	Backend *BackendCluster `json:"backend" yaml:"backend"`
+	// Weight for weighted routing across multiple BackendRefs.
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	// Filters are per-backendRef filters (header modification, credential injection, etc.)
+	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // DestinationAddressType describes the address type state for a group of DestinationEndpoint
