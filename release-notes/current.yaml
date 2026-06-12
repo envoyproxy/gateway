@@ -15,17 +15,26 @@ new features: |
   Added a `requestBody` field to the HTTP active health checker in `BackendTrafficPolicy`, allowing a request body payload to be sent during HTTP health checking. The field requires the health check `method` to be `POST` or `PUT`.
 
 bug fixes: |
+  Fixed HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, and UDPRoute Accepted condition being set to False when an attached listener is not programmed due to a missing TLS certificate ref; listener programmed state is now correctly separated from route acceptance.
+  Fixed Backend TLS `alpnProtocols: []` to disable upstream ALPN instead of inheriting EnvoyProxy BackendTLS defaults.
   Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
   Fixed controller panic when processing backend tls settings.
+  Fixed egctl config commands hanging when Envoy pod port-forwarding fails.
   Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
   Fixed missing deprecated field warning in ClientTrafficPolicy and SecurityPolicy.
   Fixed ClientTrafficPolicy TLS cipher validation rejecting supported IANA/RFC cipher suite names.
+  Fixed the EnvoyProxy resource not allowing IPv6 ranges in loadBalancerSourceRanges when configuring the envoy service.
   Fixed Kubernetes provider namespace-scoped watches to always include the controller namespace so Envoy Gateway can read its own infrastructure resources.
   Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
   Fixed `MaxStreamDuration` not being set on `CommonHttpProtocolOptions` for non-route cluster.
   Fixed `egctl x status all`/`xroute`/`xpolicy` failing when a Gateway API CRD (e.g. TCPRoute) is not installed in the cluster; missing CRDs are now skipped silently, or reported on stderr with `-v`.
   Fixed Kubernetes Service and ServiceImport `appProtocol` values `kubernetes.io/ws` and `kubernetes.io/wss` to force HTTP/1.1 upstream connections instead of negotiating HTTP/2, avoiding compatibility issues with WebSocket backends that do not support RFC 8441 extended CONNECT.
+<<<<<<< dup-ca-refs
   Fixed deduplicate CA certificates in ClientTrafficPolicy mTLS.
+=======
+  Fixed API key auth credential ordering to avoid unnecessary xDS updates.
+
+>>>>>>> main
 # Enhancements that improve performance.
 performance improvements: |
 
