@@ -68,6 +68,7 @@ type LocalRateLimit struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.limit.fromMetadata))", message="limit fromMetadata is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -440,6 +441,30 @@ type RateLimitValue struct {
 	// +kubebuilder:validation:Format=uint32
 	Requests uint32        `json:"requests"`
 	Unit     RateLimitUnit `json:"unit"`
+	// FromMetadata sources the limit value from per-request dynamic metadata.
+	// When the referenced metadata value is present, it overrides Requests/Unit for that
+	// request; otherwise Requests/Unit are used as the default.
+	//
+	// The referenced metadata value must be a struct containing an integer "requests_per_unit"
+	// property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+	// filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+	//
+	// Only supported for Global Rate Limits.
+	//
+	// +optional
+	FromMetadata *RateLimitValueMetadata `json:"fromMetadata,omitempty"`
+}
+
+// RateLimitValueMetadata specifies the dynamic metadata to retrieve the limit value from.
+type RateLimitValueMetadata struct {
+	// Namespace is the namespace of the dynamic metadata.
+	//
+	// +kubebuilder:validation:Required
+	Namespace string `json:"namespace"`
+	// Key is the key to retrieve the limit value from within the namespaced filter metadata.
+	//
+	// +kubebuilder:validation:Required
+	Key string `json:"key"`
 }
 
 // RateLimitUnit specifies the intervals for setting rate limits.

@@ -1795,6 +1795,31 @@ spec:
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
+                                fromMetadata:
+                                  description: |-
+                                    FromMetadata sources the limit value from per-request dynamic metadata.
+                                    When the referenced metadata value is present, it overrides Requests/Unit for that
+                                    request; otherwise Requests/Unit are used as the default.
+
+                                    The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                    property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                    filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                    Only supported for Global Rate Limits.
+                                  properties:
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        limit value from within the namespaced filter
+                                        metadata.
+                                      type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
+                                  required:
+                                  - key
+                                  - namespace
+                                  type: object
                                 requests:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
@@ -2179,6 +2204,31 @@ spec:
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
+                                fromMetadata:
+                                  description: |-
+                                    FromMetadata sources the limit value from per-request dynamic metadata.
+                                    When the referenced metadata value is present, it overrides Requests/Unit for that
+                                    request; otherwise Requests/Unit are used as the default.
+
+                                    The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                    property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                    filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                    Only supported for Global Rate Limits.
+                                  properties:
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        limit value from within the namespaced filter
+                                        metadata.
+                                      type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
+                                  required:
+                                  - key
+                                  - namespace
+                                  type: object
                                 requests:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
@@ -2235,6 +2285,9 @@ spec:
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(r, !has(r.cost) || !has(r.cost.response))
+                        - message: limit fromMetadata is not supported for Local Rate
+                            Limits
+                          rule: self.all(r, !has(r.limit.fromMetadata))
                     type: object
                   type:
                     description: |-
