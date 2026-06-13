@@ -773,11 +773,77 @@ spec:
                 description: |-
                   LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
                   Default: Strict
+
+                  Deprecated: Use LuaValidationConfig.Type instead. This field will be removed in a future release.
                 enum:
                 - Strict
                 - InsecureSyntax
                 - Disabled
                 type: string
+              luaValidationConfig:
+                description: |-
+                  LuaValidationConfig configures how Lua scripts from EnvoyExtensionPolicy resources are
+                  validated in the gateway controller. It selects the validation mode and, for the Strict
+                  mode, defines the filesystem paths and environment variables the scripts are permitted to
+                  access during validation.
+                properties:
+                  strict:
+                    description: |-
+                      Strict configures the security sandbox that the Strict validation mode executes Lua scripts
+                      in, defining the filesystem paths and environment variables the scripts are permitted to
+                      access during validation.
+
+                      It has no effect for the InsecureSyntax or Disabled modes, which do not execute the security
+                      sandbox.
+                    properties:
+                      allowedEnvVars:
+                        description: |-
+                          AllowedEnvVars is the list of environment variable names that Lua scripts are permitted to
+                          access during validation (via os.getenv, os.setenv). Matching is exact and case-sensitive.
+                          When empty, access to all environment variables is denied. Blank or whitespace-only entries
+                          are rejected.
+                        items:
+                          maxLength: 256
+                          minLength: 1
+                          type: string
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-validations:
+                        - message: allowedEnvVars entries must not be blank or whitespace-only
+                          rule: self.all(e, e.trim() != '')
+                      allowedPaths:
+                        description: |-
+                          AllowedPaths is the list of filesystem path prefixes that Lua scripts are permitted to
+                          access during validation (via io.open, io.input, io.output, io.lines, os.remove, os.rename).
+                          A path is allowed when it equals an entry or is contained within an entry's subtree
+                          (e.g. "/tmp" allows "/tmp/file.txt"). Paths are normalized (separators collapsed, made
+                          absolute) before matching, and any "." or ".." traversal segment is always rejected.
+                          When empty, all filesystem access is denied. Blank or whitespace-only entries are rejected,
+                          as they would otherwise match every path and disable the sandbox.
+                        items:
+                          maxLength: 4096
+                          minLength: 1
+                          type: string
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-validations:
+                        - message: allowedPaths entries must not be blank or whitespace-only
+                          rule: self.all(p, p.trim() != '')
+                    type: object
+                  type:
+                    default: Strict
+                    description: |-
+                      Type determines the strictness of the Lua script validation.
+                      Default: Strict
+                    enum:
+                    - Strict
+                    - InsecureSyntax
+                    - Disabled
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: strict can only be set when type is Strict
+                  rule: '!has(self.strict) || !has(self.type) || self.type == ''Strict'''
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
@@ -18235,6 +18301,9 @@ spec:
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
             type: object
+            x-kubernetes-validations:
+            - message: only one of luaValidation or luaValidationConfig may be set
+              rule: '!has(self.luaValidation) || !has(self.luaValidationConfig)'
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
             properties:
