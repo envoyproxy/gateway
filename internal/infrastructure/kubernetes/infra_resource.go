@@ -67,8 +67,11 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		return err
 	}
 
-	if err = i.checkOwnership(ctx, sa); err != nil {
-		return err
+	// only check auto-generated names.
+	if sa.Name == r.Name() {
+		if err = i.checkOwnership(ctx, sa); err != nil {
+			return err
+		}
 	}
 	return i.Client.ServerSideApply(ctx, sa)
 }
