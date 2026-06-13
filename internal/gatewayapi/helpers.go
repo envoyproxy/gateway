@@ -203,17 +203,6 @@ func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
 	return false
 }
 
-// HasReadyListener returns true if at least one Listener in the
-// provided list has a condition of "Ready: true", and false otherwise.
-func HasReadyListener(listeners []*ListenerContext) bool {
-	for _, listener := range listeners {
-		if listener.IsReady() {
-			return true
-		}
-	}
-	return false
-}
-
 // ValidateHTTPRouteFilter validates the provided filter within HTTPRoute.
 func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
