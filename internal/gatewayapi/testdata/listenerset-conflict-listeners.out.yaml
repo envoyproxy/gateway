@@ -383,22 +383,22 @@ listenerSets:
       conditions:
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2,
-          parent-wins-over-dup-child'
+          listeners: gateway-xls/composite-gateway/parent-wins-over-dup-child, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1,
+          gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2'
         reason: HostnameConflict
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2,
-          parent-wins-over-dup-child'
+          listeners: gateway-xls/composite-gateway/parent-wins-over-dup-child, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1,
+          gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2'
         reason: HostnameConflict
         status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2,
-          parent-wins-over-dup-child'
+          listeners: gateway-xls/composite-gateway/parent-wins-over-dup-child, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1,
+          gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2'
         reason: HostnameConflict
         status: "False"
         type: Programmed
@@ -417,22 +417,22 @@ listenerSets:
       conditions:
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2,
-          parent-wins-over-dup-child'
+          listeners: gateway-xls/composite-gateway/parent-wins-over-dup-child, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1,
+          gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2'
         reason: HostnameConflict
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2,
-          parent-wins-over-dup-child'
+          listeners: gateway-xls/composite-gateway/parent-wins-over-dup-child, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1,
+          gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2'
         reason: HostnameConflict
         status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2,
-          parent-wins-over-dup-child'
+          listeners: gateway-xls/composite-gateway/parent-wins-over-dup-child, gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-1,
+          gateway-xls/same-xls-dup-conflict-with-gateway/dup-child-2'
         reason: HostnameConflict
         status: "False"
         type: Programmed
@@ -485,19 +485,19 @@ listenerSets:
       conditions:
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: conflict-listener, gateway-xls/listener-conflict-with-gateway/conflict-listener'
+          listeners: gateway-xls/composite-gateway/conflict-listener, gateway-xls/listener-conflict-with-gateway/conflict-listener'
         reason: HostnameConflict
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: conflict-listener, gateway-xls/listener-conflict-with-gateway/conflict-listener'
+          listeners: gateway-xls/composite-gateway/conflict-listener, gateway-xls/listener-conflict-with-gateway/conflict-listener'
         reason: HostnameConflict
         status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: conflict-listener, gateway-xls/listener-conflict-with-gateway/conflict-listener'
+          listeners: gateway-xls/composite-gateway/conflict-listener, gateway-xls/listener-conflict-with-gateway/conflict-listener'
         reason: HostnameConflict
         status: "False"
         type: Programmed

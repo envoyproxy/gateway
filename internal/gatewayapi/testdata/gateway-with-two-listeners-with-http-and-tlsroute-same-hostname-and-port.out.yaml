@@ -29,7 +29,7 @@ gateways:
       conditions:
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: http-1, tls-1'
+          listeners: envoy-gateway/gateway-1/http-1, envoy-gateway/gateway-1/tls-1'
         reason: HostnameConflict
         status: "True"
         type: Conflicted
@@ -53,7 +53,7 @@ gateways:
       conditions:
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: http-1, tls-1'
+          listeners: envoy-gateway/gateway-1/http-1, envoy-gateway/gateway-1/tls-1'
         reason: HostnameConflict
         status: "True"
         type: Conflicted

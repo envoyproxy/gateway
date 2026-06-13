@@ -171,25 +171,25 @@ listenerSets:
       conditions:
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
-          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener,
-          hostname-conflict-with-gateway-listener'
+          listeners: envoy-gateway/gateway-with-listenerset-hostname-conflict/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener'
         reason: HostnameConflict
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
-          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener,
-          hostname-conflict-with-gateway-listener'
+          listeners: envoy-gateway/gateway-with-listenerset-hostname-conflict/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener'
         reason: HostnameConflict
         status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
-          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener,
-          hostname-conflict-with-gateway-listener'
+          listeners: envoy-gateway/gateway-with-listenerset-hostname-conflict/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener'
         reason: HostnameConflict
         status: "False"
         type: Programmed
@@ -268,25 +268,25 @@ listenerSets:
       conditions:
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
-          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener,
-          hostname-conflict-with-gateway-listener'
+          listeners: envoy-gateway/gateway-with-listenerset-hostname-conflict/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener'
         reason: HostnameConflict
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
-          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener,
-          hostname-conflict-with-gateway-listener'
+          listeners: envoy-gateway/gateway-with-listenerset-hostname-conflict/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener'
         reason: HostnameConflict
         status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: 'All listeners for a given port must use a unique hostname, conflicting
-          listeners: envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
-          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener,
-          hostname-conflict-with-gateway-listener'
+          listeners: envoy-gateway/gateway-with-listenerset-hostname-conflict/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener,
+          envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener'
         reason: HostnameConflict
         status: "False"
         type: Programmed

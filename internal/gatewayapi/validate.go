@@ -945,7 +945,7 @@ func listenerDisplayName(l *ListenerContext) string {
 	if l.isFromListenerSet() {
 		return l.listenerSet.Namespace + "/" + l.listenerSet.Name + "/" + string(l.Name)
 	}
-	return string(l.Name)
+	return l.gateway.Namespace + "/" + l.gateway.Name + "/" + string(l.Name)
 }
 
 func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContext) {
