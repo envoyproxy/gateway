@@ -22216,6 +22216,16 @@ spec:
                         using ALPN
                       type: string
                     type: array
+                  autoSNIFromEndpointHostname:
+                    description: |-
+                      AutoSNIFromEndpointHostname indicates whether the upstream endpoint's hostname should be used as the SNI value
+                      when establishing a TLS connection to the backend.
+                      This uses the resolved hostname of the upstream endpoint (e.g., from the Backend Endpoints list),
+                      rather than a static value.
+
+                      Mutually exclusive with SNI. When a BackendTLSPolicy is attached, its Hostname value takes
+                      precedence and AutoSNIFromEndpointHostname is ignored.
+                    type: boolean
                   caCertificateRefs:
                     description: |-
                       CACertificateRefs contains one or more references to Kubernetes objects that
@@ -22428,14 +22438,17 @@ spec:
                     type: array
                   sni:
                     description: |-
-                      SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
+                      SNI specifies the fixed SNI value used when establishing an upstream TLS connection to the backend.
 
                       Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:
                       1. Backend resources that do not set SNI, or
                       2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them
 
-                      When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence
-                      over this value.
+                      If a BackendTLSPolicy is attached to the Backend resource, the BackendTLSPolicy's validation.hostname
+                      value takes precedence over this field.
+
+                      If no BackendTLSPolicy validation.hostname applies and both this field and AutoSNIFromEndpointHostname
+                      are unset, Envoy Gateway configures Envoy to set the upstream SNI from the downstream HTTP host/authority header.
                     maxLength: 253
                     minLength: 1
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -22464,6 +22477,9 @@ spec:
                     && ((has(self.caCertificateRefs) && size(self.caCertificateRefs)
                     > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates
                     != "")))'
+                - message: sni and autoSNIFromEndpointHostname are mutually exclusive
+                  rule: '!(has(self.sni) && has(self.autoSNIFromEndpointHostname)
+                    && self.autoSNIFromEndpointHostname)'
                 - message: setting ciphers has no effect if the minimum possible TLS
                     version is 1.3
                   rule: 'has(self.minVersion) && self.minVersion == ''1.3'' ? !has(self.ciphers)
@@ -22484,6 +22500,14 @@ spec:
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
+            - message: DynamicResolver type cannot use autoSNIFromEndpointHostname
+              rule: self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
+                && self.tls.autoSNIFromEndpointHostname)
+            - message: when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints
+                must define a hostname
+              rule: '!has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
+                && self.tls.autoSNIFromEndpointHostname) || self.endpoints.all(e,
+                (!has(e.ip) && !has(e.unix)) || has(e.hostname))'
           status:
             description: Status defines the current status of Backend.
             properties:
