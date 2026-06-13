@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"slices"
 
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -170,6 +171,8 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind) cli
 		WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 		WithIndex(&gwapiv1.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc).
 		WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+		WithIndex(&discoveryv1.EndpointSlice{}, serviceEndpointSliceIndex, serviceEndpointSliceIndexFunc).
+		WithIndex(&discoveryv1.EndpointSlice{}, serviceImportEndpointSliceIndex, serviceImportEndpointSliceIndexFunc).
 		WithIndex(&egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
 		WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 		WithIndex(&egv1a1.BackendTrafficPolicy{}, configMapBtpIndex, configMapBtpIndexFunc).

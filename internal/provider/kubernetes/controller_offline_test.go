@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
@@ -175,6 +176,13 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		err := cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{gatewayTLSRouteIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{backendTLSRouteIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("EndpointSlice indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &discoveryv1.EndpointSliceList{}, client.MatchingFields{serviceEndpointSliceIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &discoveryv1.EndpointSliceList{}, client.MatchingFields{serviceImportEndpointSliceIndex: "any"})
 		require.NoError(t, err)
 	})
 
