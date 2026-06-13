@@ -2255,6 +2255,7 @@ _Appears in:_
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
+| `luaStrictValidation` | _[LuaStrictValidation](#luastrictvalidation)_ |  false  |  | LuaStrictValidation defines the filesystem paths and environment variables that Lua<br />scripts from EnvoyExtensionPolicy resources are permitted to access during Strict<br />validation in the gateway controller.<br />The allowlist is fail-closed: when unset or empty, Lua scripts are denied access to ALL<br />filesystem paths and environment variables during validation. Only entries that match the<br />allowlist are permitted.<br />This field only takes effect when LuaValidation is Strict (the default). It has no effect<br />for the InsecureSyntax or Disabled validation modes, which do not execute the security sandbox. |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
@@ -4157,6 +4158,24 @@ _Appears in:_
 | `inline` | _string_ |  false  |  | Inline contains the source code as an inline string. |
 | `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  |  | ValueRef has the source code specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br />The value of key `lua` in the ConfigMap will be used.<br />If the key is not found, the first value in the ConfigMap will be used. |
 | `filterContext` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | FilterContext is the filter context configuration for the Lua script.<br />This must be a JSON object (key/value pairs). The values are made available<br />to the Lua script via request_handle:filterContext(). This allows a shared<br />script to be parameterized differently per EnvoyExtensionPolicy/route. |
+
+
+#### LuaStrictValidation
+
+
+
+LuaStrictValidation defines the configuration that Strict Lua validation runs with.
+
+This configuration only applies to the Strict validation mode; it has no effect on the
+InsecureSyntax and Disabled modes.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `allowedPaths` | _string array_ |  false  |  | AllowedPaths is the list of filesystem path prefixes that Lua scripts are permitted to<br />access during validation (via io.open, io.input, io.output, io.lines, os.remove, os.rename).<br />A path is allowed when it equals an entry or is contained within an entry's subtree<br />(e.g. "/tmp" allows "/tmp/file.txt"). Paths are normalized (separators collapsed, made<br />absolute) before matching, and any "." or ".." traversal segment is always rejected.<br />When empty, all filesystem access is denied. Blank or whitespace-only entries are rejected,<br />as they would otherwise match every path and disable the sandbox. |
+| `allowedEnvVars` | _string array_ |  false  |  | AllowedEnvVars is the list of environment variable names that Lua scripts are permitted to<br />access during validation (via os.getenv, os.setenv). Matching is exact and case-sensitive.<br />When empty, access to all environment variables is denied. Blank or whitespace-only entries<br />are rejected. |
 
 
 #### LuaValidation

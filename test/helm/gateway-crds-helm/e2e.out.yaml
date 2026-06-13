@@ -10449,6 +10449,53 @@ spec:
                       and the log level is the value. If unspecified, defaults to "default: warn".
                     type: object
                 type: object
+              luaStrictValidation:
+                description: |-
+                  LuaStrictValidation defines the filesystem paths and environment variables that Lua
+                  scripts from EnvoyExtensionPolicy resources are permitted to access during Strict
+                  validation in the gateway controller.
+
+                  The allowlist is fail-closed: when unset or empty, Lua scripts are denied access to ALL
+                  filesystem paths and environment variables during validation. Only entries that match the
+                  allowlist are permitted.
+
+                  This field only takes effect when LuaValidation is Strict (the default). It has no effect
+                  for the InsecureSyntax or Disabled validation modes, which do not execute the security sandbox.
+                properties:
+                  allowedEnvVars:
+                    description: |-
+                      AllowedEnvVars is the list of environment variable names that Lua scripts are permitted to
+                      access during validation (via os.getenv, os.setenv). Matching is exact and case-sensitive.
+                      When empty, access to all environment variables is denied. Blank or whitespace-only entries
+                      are rejected.
+                    items:
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                    maxItems: 64
+                    type: array
+                    x-kubernetes-validations:
+                    - message: allowedEnvVars entries must not be blank or whitespace-only
+                      rule: self.all(e, e.trim() != '')
+                  allowedPaths:
+                    description: |-
+                      AllowedPaths is the list of filesystem path prefixes that Lua scripts are permitted to
+                      access during validation (via io.open, io.input, io.output, io.lines, os.remove, os.rename).
+                      A path is allowed when it equals an entry or is contained within an entry's subtree
+                      (e.g. "/tmp" allows "/tmp/file.txt"). Paths are normalized (separators collapsed, made
+                      absolute) before matching, and any "." or ".." traversal segment is always rejected.
+                      When empty, all filesystem access is denied. Blank or whitespace-only entries are rejected,
+                      as they would otherwise match every path and disable the sandbox.
+                    items:
+                      maxLength: 4096
+                      minLength: 1
+                      type: string
+                    maxItems: 64
+                    type: array
+                    x-kubernetes-validations:
+                    - message: allowedPaths entries must not be blank or whitespace-only
+                      rule: self.all(p, p.trim() != '')
+                type: object
               luaValidation:
                 description: |-
                   LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
@@ -27792,6 +27839,10 @@ spec:
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
             type: object
+            x-kubernetes-validations:
+            - message: luaStrictValidation can only be set when luaValidation is Strict
+              rule: '!has(self.luaStrictValidation) || !has(self.luaValidation) ||
+                self.luaValidation == ''Strict'''
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
             properties:
