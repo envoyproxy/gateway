@@ -442,6 +442,24 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 		--set crds.envoyGateway.enabled=true \
 		> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/envoy-gateway-crds.yaml")
+	$(MAKE) verify-install-manifests
+
+# Generated release manifests are concatenations/renders of multiple Helm templates,
+# so a resource can end up duplicated across them. kustomize rejects duplicate resource
+# ids, which breaks users referencing these files as kustomize resources. Build each one
+# with kustomize to catch a duplicate or invalid resource before it ships again.
+# See https://github.com/envoyproxy/gateway/issues/9191.
+VERIFY_MANIFESTS := install.yaml envoy-gateway-crds.yaml
+
+.PHONY: verify-install-manifests
+verify-install-manifests: ## Verify generated release manifests have no duplicate or invalid resources (run after generate-manifests).
+	@$(LOG_TARGET)
+	@for manifest in $(VERIFY_MANIFESTS); do \
+		$(call log, Verifying $(OUTPUT_DIR)/$$manifest is consumable by kustomize); \
+		printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n- %s\n' "$$manifest" > $(OUTPUT_DIR)/kustomization.yaml; \
+		$(GO_TOOL) kustomize build $(OUTPUT_DIR) > /dev/null || { rm -f $(OUTPUT_DIR)/kustomization.yaml; $(call errorlog, $(OUTPUT_DIR)/$$manifest has duplicate or invalid resources - kustomize build failed); exit 1; }; \
+		rm -f $(OUTPUT_DIR)/kustomization.yaml; \
+	done
 
 .PHONY: generate-artifacts
 generate-artifacts: generate-manifests ## Generate release artifacts.
