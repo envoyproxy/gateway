@@ -90,6 +90,59 @@ func (l *LuaValidator) getLuaValidation() egv1a1.LuaValidation {
 	return egv1a1.LuaValidationStrict
 }
 
+// allowlistData generates the Lua source consumed by security.lua: the path allowlist as a list and
+// the env var allowlist as a map (name -> true). The allowlist is fail-closed; an unconfigured
+// EnvoyProxy yields empty tables, denying all access.
+func (l *LuaValidator) allowlistData() string {
+	var paths, envVars []string
+	if l.envoyProxy != nil && l.envoyProxy.Spec.LuaStrictValidation != nil {
+		paths = l.envoyProxy.Spec.LuaStrictValidation.AllowedPaths
+		envVars = l.envoyProxy.Spec.LuaStrictValidation.AllowedEnvVars
+	}
+
+	var b strings.Builder
+
+	b.WriteString("__lua_allowed_paths = {")
+	for i, p := range paths {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(luaStringLiteral(p))
+	}
+	b.WriteString("}\n")
+
+	b.WriteString("__lua_allowed_env_vars = {")
+	for i, e := range envVars {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		// Spaces around the key are required: "[[[..." would lex as a long-string opener.
+		b.WriteString("[ ")
+		b.WriteString(luaStringLiteral(e))
+		b.WriteString(" ] = true")
+	}
+	b.WriteString("}\n")
+
+	return b.String()
+}
+
+// luaStringLiteral encodes s as a Lua long-bracket literal ([==[...]==]) with an equals level that
+// avoids any closing delimiter in s. Long brackets don't interpret escapes, so spec values are
+// passed verbatim as data and cannot inject Lua.
+func luaStringLiteral(s string) string {
+	level := 0
+	for strings.Contains(s, "]"+strings.Repeat("=", level)+"]") {
+		level++
+	}
+	eq := strings.Repeat("=", level)
+	// Lua strips a leading newline after the opening bracket; re-add it to preserve such values.
+	prefix := ""
+	if strings.HasPrefix(s, "\n") {
+		prefix = "\n"
+	}
+	return "[" + eq + "[" + prefix + s + "]" + eq + "]"
+}
+
 // newLuaState creates a new Lua state with global settings and resource limits applied
 // Returns the Lua state and a cancel function that must be called when done
 func (l *LuaValidator) newLuaState() (*lua.LState, context.CancelFunc) {
@@ -123,6 +176,8 @@ func (l *LuaValidator) runLua(code string) error {
 
 	// Execute mocks first (trusted code, needs setmetatable, defines StreamHandle, etc.)
 	_ = L.DoString(mockData)
+	// Inject the allowlists before security.lua, which reads and then clears them.
+	_ = L.DoString(l.allowlistData())
 	// Execute Lua security wrappers (trusted code) to protect the gateway controller
 	// See security advisory: https://github.com/envoyproxy/gateway/security/advisories/GHSA-xrwg-mqj6-6m22
 	_ = L.DoString(securityData)
