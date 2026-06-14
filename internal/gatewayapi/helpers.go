@@ -1050,6 +1050,42 @@ func resolvePolicyTargets[T client.Object](
 	return composePolicyTargetRefs(selectorTargetRefs, plainTargetRefs)
 }
 
+// resolvePolicyTargetsForGatewayAndListenerSet is like resolvePolicyTargets but runs selector
+// resolution against both Gateways and ListenerSets, merging the results before combining with
+// plain targetRefs. Use this for policy types that support both kinds as targets.
+func resolvePolicyTargetsForGatewayAndListenerSet(
+	targetRefs egv1a1.PolicyTargetReferences,
+	gateways []*GatewayContext,
+	listenerSets []*gwapiv1.ListenerSet,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyGroup string,
+	policyKind string,
+	policyNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) []policyTargetReferenceWithSectionName {
+	selectorTargetRefsGateways := resolvePolicyTargetsFromSelectors(
+		targetRefs.TargetSelectors,
+		gateways,
+		referenceGrants,
+		policyGroup,
+		policyKind,
+		policyNamespace,
+		namespaceLookup,
+	)
+	selectorTargetRefsLS := resolvePolicyTargetsFromSelectors(
+		targetRefs.TargetSelectors,
+		listenerSets,
+		referenceGrants,
+		policyGroup,
+		policyKind,
+		policyNamespace,
+		namespaceLookup,
+	)
+	plainTargetRefs := resolvePolicyTargetsFromReferences(targetRefs, policyNamespace)
+	allSelectorRefs := append(selectorTargetRefsGateways, selectorTargetRefsLS...)
+	return composePolicyTargetRefs(allSelectorRefs, plainTargetRefs)
+}
+
 // legacy function to get policy target refs without considering cross-namespace policy attachment.
 // This is only used for extension server policies.
 // TODO: add cross-namesapce policy attachment to extension server if needed, and remove this function.

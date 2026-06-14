@@ -233,9 +233,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	for _, passKind := range []gwapiv1.Kind{resource.KindListenerSet, resource.KindGateway} {
 		for i, currPolicy := range clientTrafficPolicies {
 			policyName := utils.NamespacedName(currPolicy)
-			targetRefs := resolvePolicyTargets(
+			targetRefs := resolvePolicyTargetsForGatewayAndListenerSet(
 				currPolicy.Spec.PolicyTargetReferences,
 				gateways,
+				resources.ListenerSets,
 				resources.ReferenceGrants,
 				egv1a1.GroupName,
 				egv1a1.KindClientTrafficPolicy,
