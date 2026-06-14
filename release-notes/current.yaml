@@ -21,6 +21,7 @@ bug fixes: |
   Fixed Backend TLS `alpnProtocols: []` to disable upstream ALPN instead of inheriting EnvoyProxy BackendTLS defaults.
   Fixed the xDS server in GatewayNamespaceMode serving a stale certificate after cert-manager rotation by re-reading the cert from disk on every TLS handshake.
   Fixed controller panic when processing backend tls settings.
+  Fixed Gateway status reporting `Programmed: False` with reason `AddressNotAssigned` when the Envoy LoadBalancer service has no load balancer ingress (e.g. bare-metal clusters without a load balancer controller) but has addresses configured in `spec.externalIPs`, such as via an EnvoyProxy service patch. The external IPs are now used as a fallback for the Gateway status addresses.
   Fixed egctl config commands hanging when Envoy pod port-forwarding fails.
   Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
   Fixed missing deprecated field warning in ClientTrafficPolicy and SecurityPolicy.
