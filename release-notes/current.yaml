@@ -33,6 +33,7 @@ bug fixes: |
   Fixed Kubernetes Service and ServiceImport `appProtocol` values `kubernetes.io/ws` and `kubernetes.io/wss` to force HTTP/1.1 upstream connections instead of negotiating HTTP/2, avoiding compatibility issues with WebSocket backends that do not support RFC 8441 extended CONNECT.
   Fixed an `ExternalName` Service referenced as a route backend producing an invalid xDS cluster (with an empty address) that failed IR validation and stalled config delivery for the whole snapshot. `ExternalName` Services are now explicitly rejected as backends with a `ResolvedRefs: False` route condition; use an Envoy Gateway `Backend` resource with an FQDN endpoint instead.
   Fixed API key auth credential ordering to avoid unnecessary xDS updates.
+  Fixed the generated `install.yaml` creating a duplicate ValidatingAdmissionPolicy and its binding which caused `kustomize build` to fail with a duplicate resource error.
 
 # Enhancements that improve performance.
 performance improvements: |
