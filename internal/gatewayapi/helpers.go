@@ -1082,8 +1082,8 @@ func resolvePolicyTargetsForGatewayAndListenerSet(
 		namespaceLookup,
 	)
 	plainTargetRefs := resolvePolicyTargetsFromReferences(targetRefs, policyNamespace)
-	allSelectorRefs := append(selectorTargetRefsGateways, selectorTargetRefsLS...)
-	return composePolicyTargetRefs(allSelectorRefs, plainTargetRefs)
+	selectorTargetRefsGateways = append(selectorTargetRefsGateways, selectorTargetRefsLS...)
+	return composePolicyTargetRefs(selectorTargetRefsGateways, plainTargetRefs)
 }
 
 // legacy function to get policy target refs without considering cross-namespace policy attachment.
