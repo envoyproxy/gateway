@@ -327,7 +327,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
 	backendWeights := route.Destination.ToBackendWeights()
 	if route.NeedsClusterPerSetting() {
-		return buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
+		return buildXdsWeightedRouteAction(backendWeights, route.Destination.GetBackendClusters())
 	}
 
 	return &routev3.RouteAction{
@@ -337,8 +337,8 @@ func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
 	}
 }
 
-func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
-	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0, len(settings))
+func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, backends []*ir.BackendCluster) *routev3.RouteAction {
+	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0)
 	if backendWeights.UnavailableWeight() > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
@@ -347,40 +347,42 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 		weightedClusters = append(weightedClusters, invalidCluster)
 	}
 
-	for _, destinationSetting := range settings {
-		if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
-			validCluster := &routev3.WeightedCluster_ClusterWeight{
-				Name:   destinationSetting.Name,
-				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
-			}
-
-			if destinationSetting.Filters != nil {
-				if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
-					validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
+	for _, bc := range backends {
+		for _, destinationSetting := range bc.Settings {
+			if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
+				validCluster := &routev3.WeightedCluster_ClusterWeight{
+					Name:   destinationSetting.Name,
+					Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 				}
 
-				if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
-					validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
-				}
+				if destinationSetting.Filters != nil {
+					if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
+						validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
+					}
 
-				if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
-					validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
-				}
+					if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
+						validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
+					}
 
-				if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
-					validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
-				}
+					if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
+						validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
+					}
 
-				if destinationSetting.Filters.URLRewrite != nil &&
-					destinationSetting.Filters.URLRewrite.Host != nil &&
-					destinationSetting.Filters.URLRewrite.Host.Name != nil {
-					validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
-						HostRewriteLiteral: *destinationSetting.Filters.URLRewrite.Host.Name,
+					if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
+						validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
+					}
+
+					if destinationSetting.Filters.URLRewrite != nil &&
+						destinationSetting.Filters.URLRewrite.Host != nil &&
+						destinationSetting.Filters.URLRewrite.Host.Name != nil {
+						validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
+							HostRewriteLiteral: *destinationSetting.Filters.URLRewrite.Host.Name,
+						}
 					}
 				}
-			}
 
-			weightedClusters = append(weightedClusters, validCluster)
+				weightedClusters = append(weightedClusters, validCluster)
+			}
 		}
 	}
 
@@ -536,7 +538,7 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 	// only use weighted cluster when there are invalid weights
 	var routeAction *routev3.RouteAction
 	if route.NeedsClusterPerSetting() {
-		routeAction = buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
+		routeAction = buildXdsWeightedRouteAction(backendWeights, route.Destination.GetBackendClusters())
 	} else {
 		routeAction = &routev3.RouteAction{
 			ClusterSpecifier: &routev3.RouteAction_Cluster{
