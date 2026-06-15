@@ -1811,10 +1811,12 @@ spec:
                                       description: Key is the key to retrieve the
                                         limit value from within the namespaced filter
                                         metadata.
+                                      minLength: 1
                                       type: string
                                     namespace:
                                       description: Namespace is the namespace of the
                                         dynamic metadata.
+                                      minLength: 1
                                       type: string
                                   required:
                                   - key
@@ -2220,10 +2222,12 @@ spec:
                                       description: Key is the key to retrieve the
                                         limit value from within the namespaced filter
                                         metadata.
+                                      minLength: 1
                                       type: string
                                     namespace:
                                       description: Namespace is the namespace of the
                                         dynamic metadata.
+                                      minLength: 1
                                       type: string
                                   required:
                                   - key

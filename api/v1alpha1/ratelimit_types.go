@@ -460,10 +460,12 @@ type RateLimitValueMetadata struct {
 	// Namespace is the namespace of the dynamic metadata.
 	//
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
 	Namespace string `json:"namespace"`
 	// Key is the key to retrieve the limit value from within the namespaced filter metadata.
 	//
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
 	Key string `json:"key"`
 }
 
