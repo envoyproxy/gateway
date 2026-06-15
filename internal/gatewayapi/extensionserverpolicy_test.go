@@ -11,19 +11,21 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestExtractTargetRefs(t *testing.T) {
 	tests := []struct {
 		desc          string
 		specInput     map[string]any
-		output        []gwapiv1.LocalPolicyTargetReferenceWithSectionName
+		output        egv1a1.PolicyTargetReferences
 		expectedError string
 	}{
 		{
 			desc:          "no spec",
 			specInput:     nil,
-			output:        nil,
+			output:        egv1a1.PolicyTargetReferences{},
 			expectedError: "no targets found for the policy",
 		},
 		{
@@ -31,7 +33,7 @@ func TestExtractTargetRefs(t *testing.T) {
 			specInput: map[string]any{
 				"someAttr": "someValue",
 			},
-			output:        nil,
+			output:        egv1a1.PolicyTargetReferences{},
 			expectedError: "no targets found for the policy",
 		},
 		{
@@ -39,7 +41,7 @@ func TestExtractTargetRefs(t *testing.T) {
 			specInput: map[string]any{
 				"targetRefs": "someValue",
 			},
-			output:        nil,
+			output:        egv1a1.PolicyTargetReferences{},
 			expectedError: "no targets found for the policy",
 		},
 		{
@@ -49,7 +51,7 @@ func TestExtractTargetRefs(t *testing.T) {
 					"someKey": "someValue",
 				},
 			},
-			output:        nil,
+			output:        egv1a1.PolicyTargetReferences{},
 			expectedError: "no targets found for the policy",
 		},
 		{
@@ -61,8 +63,8 @@ func TestExtractTargetRefs(t *testing.T) {
 					"name":  "name",
 				},
 			},
-			output: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-				{
+			output:        egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind",
@@ -87,19 +89,21 @@ func TestExtractTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			output: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind2",
-						Name:  "othername",
+			output: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: "some.group",
+							Kind:  "SomeKind2",
+							Name:  "othername",
+						},
 					},
-				},
-				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind",
-						Name:  "name",
+					gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: "some.group",
+							Kind:  "SomeKind",
+							Name:  "name",
+						},
 					},
 				},
 			},
