@@ -953,6 +953,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
 					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
+					al.Destination.BackendClusterRefs = []*ir.BackendClusterRef{{Backend: &ir.BackendCluster{Name: destName, Settings: al.Destination.Settings}}}
 					al.Authority = host
 				}
 
