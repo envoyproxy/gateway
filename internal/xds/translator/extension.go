@@ -30,7 +30,7 @@ import (
 
 func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager) error {
 	// Do nothing unless there is an extension manager and the ir.HTTPRoute has extension filters
-	if em == nil || len(irRoute.ExtensionRefs) == 0 {
+	if em == nil || (len(irRoute.ExtensionRefs) == 0 && len(irRoute.ExtensionServerPolicies) == 0) {
 		return nil
 	}
 
@@ -47,10 +47,16 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 	for refIdx, ref := range irRoute.ExtensionRefs {
 		unstructuredResources[refIdx] = ref.Object
 	}
+	unstructuredPolicies := make([]*unstructured.Unstructured, len(irRoute.ExtensionServerPolicies))
+	for refIdx, ref := range irRoute.ExtensionServerPolicies {
+		unstructuredPolicies[refIdx] = ref.Object
+	}
+
 	modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
 		route,
 		vHost.Domains,
 		unstructuredResources,
+		unstructuredPolicies,
 	)
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
@@ -132,13 +138,12 @@ func processExtensionPostEndpointsHook(loadAssignment *endpointv3.ClusterLoadAss
 	return nil
 }
 
-func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager) error {
+func processExtensionPostVHostHook(vHost *routev3.VirtualHost, irListener *ir.HTTPListener, em *extensionTypes.Manager) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
 	}
 
-	// Check if an extension want to modify the route that was just configured/created
 	extManager := *em
 	extVHHookClient, err := extManager.GetPostXDSHookClient(egv1a1.XDSVirtualHost)
 	if err != nil {
@@ -147,20 +152,22 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	if extVHHookClient == nil {
 		return nil
 	}
-	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
+
+	unstructuredPolicies := make([]*unstructured.Unstructured, len(irListener.ExtensionServerPolicies))
+	for refIdx, ref := range irListener.ExtensionServerPolicies {
+		unstructuredPolicies[refIdx] = ref.Object
+	}
+
+	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost, unstructuredPolicies)
 	if err != nil {
-		// Maybe logging the error is better here, but this only happens when an extension is in-use
-		// so if modification fails then we should probably treat that as a serious problem.
 		return err
 	}
 
-	// If the extension returned a modified Virtual Host, then copy its to the one that was passed in as a reference
 	if modifiedVH != nil {
 		if err = deepCopyPtr(modifiedVH, vHost); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 

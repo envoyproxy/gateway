@@ -341,6 +341,8 @@ type HTTPListener struct {
 	MatchBackendScheme bool `json:"matchBackendScheme,omitempty" yaml:"matchBackendScheme,omitempty"`
 	// RequestID defines configuration for the UUID request ID extension.
 	RequestID *RequestIDExtensionAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
+	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and target a HTTPRoute
+	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -923,7 +925,7 @@ type HTTPRoute struct {
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
-	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and target a HTTPRoute or HTTPRouteRule
+	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and target a HTTPRouteRule
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`

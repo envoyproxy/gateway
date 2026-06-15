@@ -661,7 +661,7 @@ func (t *Translator) addRouteToRouteConfig(
 	for _, vHost := range vHostList {
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
+		if err = processExtensionPostVHostHook(vHost, httpListener, t.ExtensionManager); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
