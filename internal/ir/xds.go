@@ -978,11 +978,6 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
 		return true
 	}
-	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
-	// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
-	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().NoEndpoints > 0 {
-		return true
-	}
 	return h.Destination.NeedsClusterPerSetting()
 }
 
@@ -1939,6 +1934,19 @@ func (r *RouteDestination) Validate() error {
 	return errs
 }
 
+// GetBackendClusters returns the BackendClusters for this destination.
+// TODO: remove Settings fallback once BackendClusterRefs is always populated.
+func (r *RouteDestination) GetBackendClusters() []*BackendCluster {
+	if len(r.BackendClusterRefs) > 0 {
+		bcs := make([]*BackendCluster, len(r.BackendClusterRefs))
+		for i, ref := range r.BackendClusterRefs {
+			bcs[i] = ref.Backend
+		}
+		return bcs
+	}
+	return []*BackendCluster{{Name: r.Name, Settings: r.Settings, Metadata: r.Metadata}}
+}
+
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	if len(r.BackendClusterRefs) > 1 {
 		return true
@@ -1951,12 +1959,58 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return bc.NeedsClusterPerSetting()
 }
 
+func (r *RouteDestination) ToBackendWeights() *BackendWeights {
+	if len(r.BackendClusterRefs) > 0 {
+		w := &BackendWeights{Name: r.Name}
+		for _, ref := range r.BackendClusterRefs {
+			bw := ref.Backend.ToBackendWeights()
+			w.Valid += bw.Valid
+			w.Invalid += bw.Invalid
+			w.NoEndpoints += bw.NoEndpoints
+		}
+		return w
+	}
+	// TODO: remove Settings fallback once BackendClusterRefs is always populated.
+	bc := &BackendCluster{Name: r.Name, Settings: r.Settings}
+	return bc.ToBackendWeights()
+}
+
+// BackendCluster represents a single backend (Service, ServiceImport, or Backend resource)
+// and its endpoint configuration. In Step 2 (MergeBackends=true), multiple routes sharing the
+// same backend will reference a shared BackendCluster, enabling cluster deduplication.
+// +kubebuilder:object:generate=true
+type BackendCluster struct {
+	// Name uniquely identifies this backend cluster.
+	Name string `json:"name" yaml:"name"`
+	// Settings holds the endpoint localities for this backend.
+	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// Metadata describes the backend resource (Service, Backend, etc.)
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+}
+
+func (b *BackendCluster) Validate() error {
+	var errs error
+	if len(b.Name) == 0 {
+		errs = errors.Join(errs, ErrDestinationNameEmpty)
+	}
+	for _, s := range b.Settings {
+		if err := s.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
+}
+
 func (b *BackendCluster) NeedsClusterPerSetting() bool {
+	w := b.ToBackendWeights()
 	return b.HasMixedEndpoints() ||
 		b.HasFiltersInSettings() ||
 		(len(b.Settings) > 1 && b.HasPreferLocalZone()) ||
 		b.HasMixedUpstreamProtocolRequirements() ||
-		b.HasMixedAutoSNISettings()
+		b.HasMixedAutoSNISettings() ||
+		// When the cluster has both valid and invalid backend weights, we use weighted clusters to distribute between
+		// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
+		w.Invalid > 0 || w.NoEndpoints > 0
 }
 
 // HasMixedEndpoints returns true if the BackendCluster has endpoints of multiple types
@@ -2029,12 +2083,12 @@ func (b *BackendCluster) HasMixedAutoSNISettings() bool {
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
 }
 
-func (r *RouteDestination) ToBackendWeights() *BackendWeights {
+func (b *BackendCluster) ToBackendWeights() *BackendWeights {
 	w := &BackendWeights{
-		Name: r.Name,
+		Name: b.Name,
 	}
 
-	for _, s := range r.Settings {
+	for _, s := range b.Settings {
 		if s.Weight == nil {
 			continue
 		}
@@ -2054,6 +2108,17 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	}
 
 	return w
+}
+
+// BackendClusterRef is a reference from a route rule to a BackendCluster.
+// +kubebuilder:object:generate=true
+type BackendClusterRef struct {
+	// Backend points to the shared BackendCluster.
+	Backend *BackendCluster `json:"backend" yaml:"backend"`
+	// Weight for weighted routing across multiple BackendRefs.
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	// Filters are per-backendRef filters (header modification, credential injection, etc.)
+	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // DestinationSetting holds the settings associated with the destination
@@ -2114,43 +2179,6 @@ func (d *DestinationSetting) Validate() error {
 	}
 
 	return errs
-}
-
-// BackendCluster represents a single backend (Service, ServiceImport, or Backend resource)
-// and its endpoint configuration. In Step 2 (MergeBackends=true), multiple routes sharing the
-// same backend will reference a shared BackendCluster, enabling cluster deduplication.
-// +kubebuilder:object:generate=true
-type BackendCluster struct {
-	// Name uniquely identifies this backend cluster.
-	Name string `json:"name" yaml:"name"`
-	// Settings holds the endpoint localities for this backend.
-	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
-	// Metadata describes the backend resource (Service, Backend, etc.)
-	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-}
-
-func (b *BackendCluster) Validate() error {
-	var errs error
-	if len(b.Name) == 0 {
-		errs = errors.Join(errs, ErrDestinationNameEmpty)
-	}
-	for _, s := range b.Settings {
-		if err := s.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	return errs
-}
-
-// BackendClusterRef is a reference from a route rule to a BackendCluster.
-// +kubebuilder:object:generate=true
-type BackendClusterRef struct {
-	// Backend points to the shared BackendCluster.
-	Backend *BackendCluster `json:"backend" yaml:"backend"`
-	// Weight for weighted routing across multiple BackendRefs.
-	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
-	// Filters are per-backendRef filters (header modification, credential injection, etc.)
-	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // DestinationAddressType describes the address type state for a group of DestinationEndpoint
