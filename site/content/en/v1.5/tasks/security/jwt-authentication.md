@@ -416,11 +416,11 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [SecurityPolicy]: /community/design/security-policy
 [jwt]: https://tools.ietf.org/html/rfc7519
 [jwks]: https://tools.ietf.org/html/rfc7517
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
 [Backend]: ../../../api/extension_types#backend
-[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/
 [backend-routing]: ../traffic/backend
 [backend-tls]: ../backend-tls
 [BackendSettings]: ../../../api/extension_types/#clustersettings

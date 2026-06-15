@@ -1,0 +1,59 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: test-envoyproxy
+  namespace: gateway-conformance-infra
+spec:
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: test-gc1
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: test-envoyproxy
+    namespace: gateway-conformance-infra
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: test-gtw1
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: test-gc1
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: test-gc2
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: test-envoyproxy
+    namespace: gateway-conformance-infra
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: test-gtw2
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: test-gc2
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+

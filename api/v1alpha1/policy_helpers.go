@@ -58,6 +58,10 @@ type TargetSelector struct {
 	// When specified, the effective set of namespaces is always constrained to the
 	// namespaces watched by Envoy Gateway.
 	//
+	// Selecting targets across namespaces requires a ReferenceGrant in the target
+	// namespace that allows this policy kind to reference the selected target kind.
+	// Cross-namespace targets without a matching ReferenceGrant are ignored.
+	//
 	// +optional
 	Namespaces *TargetSelectorNamespaces `json:"namespaces,omitempty"`
 

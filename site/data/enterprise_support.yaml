@@ -11,4 +11,7 @@ adopters:
     logo: "/logos/procedure.svg"
     url: "https://procedure.tech"
     description: "Cloud-native consulting and enterprise support for Envoy Gateway, API gateway, and Kubernetes ingress deployments."
-
+  - name: "DepKeep – Enterprise Open Source Support"
+    logo: "/logos/depkeep.png"
+    url: "https://depkeep.com"
+    description: "Enterprise open source support platform providing maintenance, security fixes, and production reliability for critical open source dependencies."

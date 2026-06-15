@@ -57,12 +57,6 @@ var BackendTrafficPolicyCrossNamespaceTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(grantedGatewayNN.Namespace),
 				Name:      gwapiv1.ObjectName(grantedGatewayNN.Name),
 			}
-			deniedAncestorRef := gwapiv1.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(deniedGatewayNN.Namespace),
-				Name:      gwapiv1.ObjectName(deniedGatewayNN.Name),
-			}
 
 			BackendTrafficPolicyMustBeAccepted(
 				t,
@@ -70,15 +64,6 @@ var BackendTrafficPolicyCrossNamespaceTest = suite.ConformanceTest{
 				types.NamespacedName{Name: "cross-namespace-btp-granted", Namespace: policyNS},
 				suite.ControllerName,
 				grantedAncestorRef,
-			)
-
-			BackendTrafficPolicyMustFail(
-				t,
-				suite.Client,
-				types.NamespacedName{Name: "cross-namespace-btp-denied", Namespace: policyNS},
-				suite.ControllerName,
-				deniedAncestorRef,
-				"is not permitted by any ReferenceGrant",
 			)
 
 			grantedResponse := http.ExpectedResponse{

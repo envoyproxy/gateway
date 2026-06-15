@@ -1195,6 +1195,70 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "cluster per setting mixed auto sni",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS: &TLSUpstreamConfig{
+							AutoSNIFromEndpointHostname: true,
+						},
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "other.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS:         &TLSUpstreamConfig{},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "single cluster all auto sni from upstream host",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS: &TLSUpstreamConfig{
+							AutoSNIFromEndpointHostname: true,
+						},
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "other.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS: &TLSUpstreamConfig{
+							AutoSNIFromEndpointHostname: true,
+						},
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for _, test := range tests {
@@ -1676,7 +1740,7 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckHealthyThresholdInvalid,
 		},
 		{
-			name: "http-health-check: invalid host",
+			name: "http-health-check: empty host",
 			input: HealthCheck{
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
@@ -1692,7 +1756,6 @@ func TestValidateHealthCheck(t *testing.T) {
 				&OutlierDetection{},
 				new(uint32(10)),
 			},
-			want: ErrHCHTTPHostInvalid,
 		},
 		{
 			name: "http-health-check: invalid path",
@@ -1830,6 +1893,30 @@ func TestValidateHealthCheck(t *testing.T) {
 						Method:           new(http.MethodOptions),
 						ExpectedStatuses: []HTTPStatus{200, 300},
 						ExpectedResponse: &HealthCheckPayload{
+							Text:   new("foo"),
+							Binary: []byte{'f', 'o', 'o'},
+						},
+					},
+				},
+				&OutlierDetection{},
+				new(uint32(10)),
+			},
+			want: ErrHealthCheckPayloadInvalid,
+		},
+		{
+			name: "http-health-check: invalid send payload",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           new(http.MethodPost),
+						ExpectedStatuses: []HTTPStatus{200, 300},
+						RequestBody: &HealthCheckPayload{
 							Text:   new("foo"),
 							Binary: []byte{'f', 'o', 'o'},
 						},

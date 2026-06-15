@@ -82,13 +82,6 @@ func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRe
 		gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, message, generation)
 }
 
-func IsPolicyAncestorAccepted(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string) bool {
-	return meta.IsStatusConditionTrue(
-		policyAncestorConditions(policyStatus, ancestorRef, controllerName),
-		string(gwapiv1.PolicyConditionAccepted),
-	)
-}
-
 // SetDeprecatedFieldsWarningForPolicyAncestors sets deprecated fields warning conditions for each ancestor reference.
 func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
 	for _, ancestorRef := range ancestorRefs {
@@ -321,16 +314,6 @@ func getPolicyAncestorCondition(policyStatus *gwapiv1.PolicyStatus, ancestorRef 
 			if cond.Type == string(conditionType) {
 				return &policyStatus.Ancestors[i].Conditions[j]
 			}
-		}
-	}
-
-	return nil
-}
-
-func policyAncestorConditions(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string) []metav1.Condition {
-	for _, ancestor := range policyStatus.Ancestors {
-		if string(ancestor.ControllerName) == controllerName && ancestorRefsEqual(&ancestor.AncestorRef, ancestorRef) {
-			return ancestor.Conditions
 		}
 	}
 
