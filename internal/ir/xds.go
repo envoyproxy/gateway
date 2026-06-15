@@ -197,6 +197,11 @@ func (x *Xds) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
+	for _, bc := range x.Backends {
+		if err := bc.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 	return errs
 }
 
@@ -1929,6 +1934,13 @@ func (r *RouteDestination) Validate() error {
 	for _, ref := range r.BackendClusterRefs {
 		if err := ref.Backend.Validate(); err != nil {
 			errs = errors.Join(errs, err)
+		}
+	}
+	if len(r.BackendClusterRefs) > 1 {
+		for _, ref := range r.BackendClusterRefs {
+			if len(ref.Backend.Settings) != 1 {
+				errs = errors.Join(errs, fmt.Errorf("BackendCluster %s must have exactly one setting when multiple BackendClusterRefs exist", ref.Backend.Name))
+			}
 		}
 	}
 	return errs
