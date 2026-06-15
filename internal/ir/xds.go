@@ -1909,22 +1909,38 @@ func (r *RouteDestination) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-
+	for _, ref := range r.BackendClusterRefs {
+		if err := ref.Backend.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 	return errs
 }
 
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
-	return r.HasMixedEndpoints() ||
-		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
-		r.HasMixedUpstreamProtocolRequirements() ||
-		r.HasMixedAutoSNISettings()
+	if len(r.BackendClusterRefs) > 1 {
+		return true
+	}
+	if len(r.BackendClusterRefs) == 1 {
+		return r.BackendClusterRefs[0].Backend.NeedsClusterPerSetting()
+	}
+	// TODO: remove Settings fallback once BackendClusterRefs is always populated.
+	bc := &BackendCluster{Settings: r.Settings}
+	return bc.NeedsClusterPerSetting()
 }
 
-// HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
-func (r *RouteDestination) HasMixedEndpoints() bool {
+func (b *BackendCluster) NeedsClusterPerSetting() bool {
+	return b.HasMixedEndpoints() ||
+		b.HasFiltersInSettings() ||
+		(len(b.Settings) > 1 && b.HasPreferLocalZone()) ||
+		b.HasMixedUpstreamProtocolRequirements() ||
+		b.HasMixedAutoSNISettings()
+}
+
+// HasMixedEndpoints returns true if the BackendCluster has endpoints of multiple types
+func (b *BackendCluster) HasMixedEndpoints() bool {
 	destinationAddressTypes := sets.Set[DestinationAddressType]{}
-	for _, s := range r.Settings {
+	for _, s := range b.Settings {
 		if s.AddressType != nil {
 			destinationAddressTypes.Insert(*s.AddressType)
 		}
@@ -1932,20 +1948,19 @@ func (r *RouteDestination) HasMixedEndpoints() bool {
 	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
 }
 
-// HasFiltersInSettings returns true if any setting in the destination has a filter
-func (r *RouteDestination) HasFiltersInSettings() bool {
-	for _, setting := range r.Settings {
-		filters := setting.Filters
-		if filters != nil {
+// HasFiltersInSettings returns true if any setting in the cluster has a filter
+func (b *BackendCluster) HasFiltersInSettings() bool {
+	for _, setting := range b.Settings {
+		if setting.Filters != nil {
 			return true
 		}
 	}
 	return false
 }
 
-// HasPreferLocalZone returns true if any setting in the destination has PreferLocalZone set
-func (r *RouteDestination) HasPreferLocalZone() bool {
-	for _, setting := range r.Settings {
+// HasPreferLocalZone returns true if any setting in the cluster has PreferLocalZone set
+func (b *BackendCluster) HasPreferLocalZone() bool {
+	for _, setting := range b.Settings {
 		if setting.PreferLocal != nil {
 			return true
 		}
@@ -1955,11 +1970,11 @@ func (r *RouteDestination) HasPreferLocalZone() bool {
 
 // HasMixedUpstreamProtocolRequirements returns true if destination settings require
 // mutually exclusive cluster-level upstream protocol configuration.
-func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
+func (b *BackendCluster) HasMixedUpstreamProtocolRequirements() bool {
 	hasForceHTTP1Upstream := false
 	hasHTTP2Upstream := false
 
-	for _, setting := range r.Settings {
+	for _, setting := range b.Settings {
 		if setting == nil {
 			continue
 		}
@@ -1976,11 +1991,11 @@ func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
 
 // HasMixedAutoSNISettings returns true if some settings use AutoSNIFromEndpointHostname while
 // others don't. These two modes compute requiresAutoSNI in conflicting ways and cannot share a cluster.
-func (r *RouteDestination) HasMixedAutoSNISettings() bool {
+func (b *BackendCluster) HasMixedAutoSNISettings() bool {
 	hasAutoSNIFromHost := 0
-	totalSettings := len(r.Settings)
+	totalSettings := len(b.Settings)
 
-	for _, s := range r.Settings {
+	for _, s := range b.Settings {
 		if s.TLS == nil {
 			continue
 		}
