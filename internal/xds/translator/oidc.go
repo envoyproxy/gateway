@@ -88,7 +88,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 
 	oidc := securityFeatures.OIDC
 
-	if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
+	if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.GetBackendClusters()) > 0 {
 		tokenEndpointCluster = oidc.Provider.Destination.Name
 	} else {
 		var cluster *urlCluster
@@ -418,12 +418,12 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 		oidc := route.Security.OIDC
 
 		// If the OIDC provider has a destination, use it.
-		if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
+		if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.GetBackendClusters()) > 0 {
 			if err := createExtServiceXDSCluster(
 				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if err := processClientCertificates(tCtx, oidc.Provider.Destination.Settings); err != nil {
+			if err := processClientCertificates(tCtx, oidc.Provider.Destination.GetBackendClusters()); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {

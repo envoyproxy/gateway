@@ -433,7 +433,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// add http route client certs
 		for _, route := range httpListener.Routes {
 			if route.Destination != nil {
-				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+				if err = processClientCertificates(tCtx, route.Destination.GetBackendClusters()); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -591,7 +591,7 @@ func (t *Translator) addRouteToRouteConfig(
 			ea := &ExtraArgs{
 				metrics:          metrics,
 				http1Settings:    httpListener.HTTP1,
-				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
+				ipFamily:         determineIPFamily(httpRoute.Destination.GetBackendClusters()),
 				statName:         httpRoute.Destination.StatName,
 				unstructuredRefs: extensionResources,
 				extensionMgr:     t.ExtensionManager,
@@ -830,7 +830,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			} else if route.Destination != nil {
 				// TCPRoute with BackendTLSPolicy
 				// add tcp route client certs
-				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+				if err = processClientCertificates(tCtx, route.Destination.GetBackendClusters()); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -1338,15 +1338,17 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 	}, nil
 }
 
-func processClientCertificates(tCtx *types.ResourceVersionTable, settings []*ir.DestinationSetting) error {
+func processClientCertificates(tCtx *types.ResourceVersionTable, backends []*ir.BackendCluster) error {
 	var errs error
-	for _, st := range settings {
-		if st.TLS != nil {
-			for _, c := range st.TLS.ClientCertificates {
-				secret := buildXdsTLSCertSecret(&c)
-				if secret != nil {
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-						errs = errors.Join(errs, err)
+	for _, bc := range backends {
+		for _, st := range bc.Settings {
+			if st.TLS != nil {
+				for _, c := range st.TLS.ClientCertificates {
+					secret := buildXdsTLSCertSecret(&c)
+					if secret != nil {
+						if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+							errs = errors.Join(errs, err)
+						}
 					}
 				}
 			}
