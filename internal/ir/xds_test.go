@@ -7,6 +7,7 @@ package ir
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -586,6 +587,27 @@ func TestValidateXds(t *testing.T) {
 				HTTP: []*HTTPListener{&happyHTTPListener, &weightedInvalidBackendsHTTPListener},
 			},
 			want: nil,
+		},
+		{
+			name: "valid backends",
+			input: Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener},
+				Backends: []*BackendCluster{{
+					Name:     "bc-1",
+					Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
+				}},
+			},
+			want: nil,
+		},
+		{
+			name: "invalid backend cluster missing name",
+			input: Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener},
+				Backends: []*BackendCluster{{
+					Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
+				}},
+			},
+			want: []error{ErrDestinationNameEmpty},
 		},
 	}
 	for _, test := range tests {
@@ -1377,6 +1399,56 @@ func TestValidateRouteDestination(t *testing.T) {
 				},
 			},
 			want: ErrDestinationNameEmpty,
+		},
+		{
+			name: "valid single backend cluster ref",
+			input: RouteDestination{
+				Name: "single-bc",
+				BackendClusterRefs: []*BackendClusterRef{{
+					Backend: &BackendCluster{
+						Name:     "bc-1",
+						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
+					},
+				}},
+			},
+			want: nil,
+		},
+		{
+			name: "valid multiple backend cluster refs with one setting each",
+			input: RouteDestination{
+				Name: "multi-bc",
+				BackendClusterRefs: []*BackendClusterRef{
+					{Backend: &BackendCluster{
+						Name:     "bc-1",
+						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
+					}},
+					{Backend: &BackendCluster{
+						Name:     "bc-2",
+						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}}},
+					}},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "invalid multiple backend cluster refs with multiple settings",
+			input: RouteDestination{
+				Name: "multi-bc-multi-settings",
+				BackendClusterRefs: []*BackendClusterRef{
+					{Backend: &BackendCluster{
+						Name: "bc-1",
+						Settings: []*DestinationSetting{
+							{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}},
+							{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}},
+						},
+					}},
+					{Backend: &BackendCluster{
+						Name:     "bc-2",
+						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.3", Port: 8080}}}},
+					}},
+				},
+			},
+			want: fmt.Errorf("BackendCluster bc-1 must have exactly one setting when multiple BackendClusterRefs exist"),
 		},
 	}
 	for _, test := range tests {
