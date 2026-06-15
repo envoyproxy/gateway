@@ -128,6 +128,59 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 		},
 		{
+			name: "LoadBalancer svc with no ingress falls back to spec externalIPs",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						ClusterIPs:  []string{"127.0.0.1"},
+						Type:        corev1.ServiceTypeLoadBalancer,
+						ExternalIPs: []string{"10.19.0.11"},
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  new(gwapiv1.IPAddressType),
+					Value: "10.19.0.11",
+				},
+			},
+		},
+		{
+			name: "LoadBalancer svc with ingress ip ignores spec externalIPs",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						ClusterIPs:  []string{"127.0.0.1"},
+						Type:        corev1.ServiceTypeLoadBalancer,
+						ExternalIPs: []string{"10.19.0.11"},
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "127.0.0.1",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  new(gwapiv1.IPAddressType),
+					Value: "127.0.0.1",
+				},
+			},
+		},
+		{
 			name: "ClusterIP svc",
 			args: args{
 				gw: &gwapiv1.Gateway{},
