@@ -144,26 +144,31 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 	if traffic == nil {
 		traffic = &ir.TrafficFeatures{}
 	}
-	// Get the address type from the first setting.
-	// This is safe because no mixed address types in the settings.
-	addrTypeState := rd.Settings[0].AddressType
-	if addrTypeState != nil && *addrTypeState == ir.FQDN {
-		endpointType = EndpointTypeDNS
-	} else {
-		endpointType = EndpointTypeStatic
+
+	for _, bc := range rd.GetBackendClusters() {
+		// Get the address type from the first setting.
+		// This is safe because no mixed address types in the settings.
+		addrTypeState := bc.Settings[0].AddressType
+		if addrTypeState != nil && *addrTypeState == ir.FQDN {
+			endpointType = EndpointTypeDNS
+		} else {
+			endpointType = EndpointTypeStatic
+		}
+
+		args := &xdsClusterArgs{
+			backendCluster: bc,
+			tSocket:        tSocket,
+			endpointType:   endpointType,
+		}
+
+		applyTraffic(args, traffic)
+
+		if err := addXdsCluster(tCtx, args); err != nil {
+			return err
+		}
 	}
 
-	args := &xdsClusterArgs{
-		name:         rd.Name,
-		settings:     rd.Settings,
-		tSocket:      tSocket,
-		endpointType: endpointType,
-		metadata:     rd.Metadata,
-	}
-
-	applyTraffic(args, traffic)
-
-	return addXdsCluster(tCtx, args)
+	return nil
 }
 
 // addClusterFromURL adds a cluster to the resource version table from the provided URL.
@@ -188,10 +193,12 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 	}
 
 	clusterArgs := &xdsClusterArgs{
-		name:         uc.name,
-		settings:     []*ir.DestinationSetting{ds},
+		backendCluster: &ir.BackendCluster{
+			Name:     uc.name,
+			Settings: []*ir.DestinationSetting{ds},
+			Metadata: ds.Metadata,
+		},
 		endpointType: uc.endpointType,
-		metadata:     ds.Metadata,
 	}
 
 	if uc.tls {

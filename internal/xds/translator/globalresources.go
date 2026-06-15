@@ -94,12 +94,14 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	}
 
 	return addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         clusterName,
-		settings:     []*ir.DestinationSetting{ds},
+		backendCluster: &ir.BackendCluster{
+			Name:     clusterName,
+			Settings: []*ir.DestinationSetting{ds},
+			Metadata: ds.Metadata,
+		},
 		tSocket:      tSocket,
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,
-		metadata:     ds.Metadata,
 	})
 }
 
@@ -167,12 +169,14 @@ func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTab
 	}
 
 	return addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         wasmHTTPServiceClusterName,
-		settings:     []*ir.DestinationSetting{ds},
+		backendCluster: &ir.BackendCluster{
+			Name:     wasmHTTPServiceClusterName,
+			Settings: []*ir.DestinationSetting{ds},
+			Metadata: ds.Metadata,
+		},
 		tSocket:      tSocket,
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,
-		metadata:     ds.Metadata,
 	})
 }
 

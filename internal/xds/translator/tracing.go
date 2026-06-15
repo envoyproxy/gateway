@@ -160,18 +160,19 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		return nil
 	}
 
-	args := &xdsClusterArgs{
-		name:         tracing.Destination.Name,
-		settings:     tracing.Destination.Settings,
-		tSocket:      nil,
-		endpointType: buildEndpointType(tracing.Destination.Settings),
-		metrics:      metrics,
-		metadata:     tracing.Destination.Metadata,
+	for _, bc := range tracing.Destination.GetBackendClusters() {
+		args := &xdsClusterArgs{
+			backendCluster: bc,
+			tSocket:        nil,
+			endpointType:   buildEndpointType(bc.Settings),
+			metrics:        metrics,
+		}
+		applyTraffic(args, tracing.Traffic)
+		if err := addXdsCluster(tCtx, args); err != nil {
+			return err
+		}
 	}
-
-	applyTraffic(args, tracing.Traffic)
-
-	return addXdsCluster(tCtx, args)
+	return nil
 }
 
 func buildTracingTags(customTags []ir.CustomTagMapEntry, tags []ir.MapEntry) ([]*tracingtype.CustomTag, error) {
