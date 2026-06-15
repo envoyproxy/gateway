@@ -468,7 +468,10 @@ func extractGatewayNameFromListener(listenerName string) string {
 func extractListenerSetPrefixFromListener(listenerName string) string {
 	parts := strings.Split(listenerName, "/")
 	if len(parts) >= 4 {
-		return fmt.Sprintf("%s/%s/%s/%s", parts[0], parts[1], parts[2], parts[3])
+		// Trailing slash is intentional: prevents a ListenerSet name from falsely
+		// matching another whose name shares the same string prefix (e.g. "ext" matching "ext-b")
+		// when used as a prefix in strings.Index comparisons.
+		return fmt.Sprintf("%s/%s/%s/%s/", parts[0], parts[1], parts[2], parts[3])
 	}
 	// should never happen
 	return listenerName
