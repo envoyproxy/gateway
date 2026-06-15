@@ -43,6 +43,8 @@ var ListenerSetClientTrafficPolicyTest = suite.ConformanceTest{
 		policyNN := types.NamespacedName{Name: "listenerset-ctp", Namespace: ns}
 		lsNN := types.NamespacedName{Name: "listener-set-http", Namespace: ns}
 
+		routeNN := types.NamespacedName{Name: "listenerset-ctp-httpsroute", Namespace: ns}
+
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		if err != nil {
 			t.Fatalf("failed to get gateway address: %v", err)
@@ -55,6 +57,12 @@ var ListenerSetClientTrafficPolicyTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(lsNN.Name),
 		}
 		ClientTrafficPolicyMustBeAccepted(t, suite.Client, policyNN, suite.ControllerName, ancestorRef)
+
+		// Wait for the route to be accepted by the ListenerSet listener before attempting TLS connections.
+		routeParents := []gwapiv1.RouteParentStatus{
+			createListenerSetParent(suite.ControllerName, lsNN.Name, "extra-https"),
+		}
+		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, routeParents, false, &gwapiv1.HTTPRoute{})
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18443")
 
