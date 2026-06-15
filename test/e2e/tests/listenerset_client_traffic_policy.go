@@ -13,7 +13,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -82,6 +84,17 @@ var ListenerSetClientTrafficPolicyTest = suite.ConformanceTest{
 			ServerName: "www.example.com",
 			RootCAs:    certPool,
 		}
+
+		// There can be a brief gap between route parents being set and Envoy finishing
+		// listener programming. Poll until the listener is accepting TLS connections.
+		require.Eventually(t, func() bool {
+			conn, err := tls.Dial("tcp", listenerAddr, baseTLSConfig)
+			if err != nil {
+				return false
+			}
+			_ = conn.Close()
+			return true
+		}, suite.TimeoutConfig.DefaultTestTimeout, time.Second)
 
 		t.Run("tls 1.3 succeeds", func(t *testing.T) {
 			dialWithTLSVersion(t, listenerAddr, baseTLSConfig, tls.VersionTLS13, false)
