@@ -975,7 +975,11 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
 	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
-	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
+	if h.Destination == nil {
+		return false
+	}
+	bcs := h.Destination.GetBackendClusters()
+	return len(bcs) == 1 && len(bcs[0].Settings) == 1 && bcs[0].Settings[0].IsDynamicResolver
 }
 
 // DNS contains configuration options for DNS resolution.
