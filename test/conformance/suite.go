@@ -18,11 +18,12 @@ import (
 	egtests "github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
-func conformanceOpts(t *testing.T) suite.ConformanceOptions {
+func conformanceOpts(t *testing.T, options *suite.ConfigurableOptions) suite.ConformanceOptions {
 	gatewayNamespaceMode := egtests.IsGatewayNamespaceMode()
 	internalSuite := EnvoyGatewaySuite(gatewayNamespaceMode, egtests.UseStandardChannel())
 
 	opts := conformance.DefaultOptions(t)
+	opts.ConfigurableOptions = *options
 	opts.SkipTests = internalSuite.SkipTests
 	opts.SupportedFeatures = internalSuite.SupportedFeatures
 	opts.ExemptFeatures = internalSuite.ExemptFeatures
@@ -85,13 +86,15 @@ func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
 // EnvoyGatewaySuite is the conformance suite configuration for the Gateway API.
 func EnvoyGatewaySuite(gatewayNamespaceMode, standardChannel bool) suite.ConformanceOptions {
 	return suite.ConformanceOptions{
-		SupportedFeatures: allFeatures(gatewayNamespaceMode, standardChannel),
-		ExemptFeatures:    meshFeatures(),
-		SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
+		ConfigurableOptions: suite.ConfigurableOptions{
+			SupportedFeatures: allFeatures(gatewayNamespaceMode, standardChannel),
+			ExemptFeatures:    meshFeatures(),
+			SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
+		},
 	}
 }
 
-func allFeatures(gatewayNamespaceMode, standardChannel bool) sets.Set[features.FeatureName] {
+func allFeatures(gatewayNamespaceMode, standardChannel bool) []features.FeatureName {
 	result := sets.New[features.FeatureName]()
 	skipped := SkipFeatures(gatewayNamespaceMode)
 	for _, feature := range features.AllFeatures.UnsortedList() {
@@ -114,10 +117,10 @@ func allFeatures(gatewayNamespaceMode, standardChannel bool) sets.Set[features.F
 
 	// this's used to skip TLSRouteListenerMixedTerminationNotSupported
 	result.Insert(features.TLSRouteModeMixedFeature.Name)
-	return result
+	return result.UnsortedList()
 }
 
-func meshFeatures() sets.Set[features.FeatureName] {
+func meshFeatures() []features.FeatureName {
 	result := sets.New[features.FeatureName]()
 	for _, feature := range features.MeshCoreFeatures.UnsortedList() {
 		result.Insert(feature.Name)
@@ -125,5 +128,5 @@ func meshFeatures() sets.Set[features.FeatureName] {
 	for _, feature := range features.MeshExtendedFeatures.UnsortedList() {
 		result.Insert(feature.Name)
 	}
-	return result
+	return result.UnsortedList()
 }

@@ -12,7 +12,6 @@ import (
 	"io/fs"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -32,31 +31,30 @@ func TestMultipleGC(t *testing.T) {
 		recorder.Report(t)
 	})
 
-	if flags.RunTest != nil && *flags.RunTest != "" {
+	suiteOpts := suite.ConfigurableOptions{}
+	flags.ApplyAll(&suiteOpts)
+	if suiteOpts.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
-			*flags.RunTest, *flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+			suiteOpts.RunTest, suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
 	} else {
 		tlog.Logf(t, "Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
-			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+			suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
 	}
-
+	suiteOpts.TimeoutConfig = tests.TimeoutConfig()
+	// SupportedFeatures cannot be empty, so we set it to SupportGateway
+	// All e2e tests should leave Features empty.
+	suiteOpts.SupportedFeatures = []features.FeatureName{features.SupportGateway}
+	suiteOpts.SkipTests = []string{}
+	suiteOpts.FailFast = true
 	t.Run("Internet GC Test", func(t *testing.T) {
 		t.Parallel()
 		internetGatewaySuiteGatewayClassName := "internet"
+		suiteOpts.GatewayClassName = internetGatewaySuiteGatewayClassName
 		internetGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
-			Client:               c,
-			RestConfig:           cfg,
-			GatewayClassName:     internetGatewaySuiteGatewayClassName,
-			Debug:                *flags.ShowDebug,
-			CleanupBaseResources: *flags.CleanupBaseResources,
-			RunTest:              *flags.RunTest,
-			TimeoutConfig:        tests.TimeoutConfig(),
-			// SupportedFeatures cannot be empty, so we set it to SupportGateway
-			// All e2e tests should leave Features empty.
-			SupportedFeatures: sets.New(features.SupportGateway),
-			SkipTests:         []string{},
-			Hook:              e2e.Hook,
-			FailFast:          true,
+			Client:              c,
+			RestConfig:          cfg,
+			Hook:                e2e.Hook,
+			ConfigurableOptions: suiteOpts,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
@@ -80,19 +78,12 @@ func TestMultipleGC(t *testing.T) {
 	t.Run("Private GC Test", func(t *testing.T) {
 		t.Parallel()
 		privateGatewaySuiteGatewayClassName := "private"
+		suiteOpts.GatewayClassName = privateGatewaySuiteGatewayClassName
 		privateGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
-			Client:               c,
-			RestConfig:           cfg,
-			GatewayClassName:     privateGatewaySuiteGatewayClassName,
-			Debug:                *flags.ShowDebug,
-			CleanupBaseResources: *flags.CleanupBaseResources,
-			RunTest:              *flags.RunTest,
-			TimeoutConfig:        tests.TimeoutConfig(),
-			// SupportedFeatures cannot be empty, so we set it to SupportGateway
-			// All e2e tests should leave Features empty.
-			SupportedFeatures: sets.New(features.SupportGateway),
-			SkipTests:         []string{},
-			Hook:              e2e.Hook,
+			Client:              c,
+			RestConfig:          cfg,
+			ConfigurableOptions: suiteOpts,
+			Hook:                e2e.Hook,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create ConformanceTestSuite: %v", err)

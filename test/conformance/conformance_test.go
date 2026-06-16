@@ -24,16 +24,18 @@ func TestGatewayAPIConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
-	if flags.RunTest != nil && *flags.RunTest != "" {
+	suiteOpts := suite.ConfigurableOptions{}
+	flags.ApplyAll(&suiteOpts)
+	if suiteOpts.RunTest != "" {
 		tlog.Logf(t, "Running Conformance test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
-			*flags.RunTest, *flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+			suiteOpts.RunTest, suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
 	} else {
 		tlog.Logf(t, "Running Conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t",
-			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+			suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
 	}
 
-	opts := conformanceOpts(t)
-	opts.RunTest = *flags.RunTest
+	opts := conformanceOpts(t, &suiteOpts)
+	opts.RunTest = suiteOpts.RunTest
 
 	// If focusing on a single test, clear the skip list to ensure it runs.
 	if opts.RunTest != "" {

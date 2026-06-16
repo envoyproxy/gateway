@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
@@ -27,13 +26,16 @@ func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
-	opts := conformanceOpts(t)
+	suiteOpts := &suite.ConfigurableOptions{}
+	flags.ApplyAll(suiteOpts)
 
-	opts.ConformanceProfiles = sets.New(
+	opts := conformanceOpts(t, suiteOpts)
+
+	opts.ConformanceProfiles = []suite.ConformanceProfileName{
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
-	)
+	}
 
 	// If focusing on a single test, clear the skip list to ensure it runs.
 	if opts.RunTest != "" {
@@ -41,7 +43,7 @@ func TestExperimentalConformance(t *testing.T) {
 	}
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
-		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, opts.ConformanceProfiles)
+		suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug, suiteOpts.EnableAllSupportedFeatures, opts.ConformanceProfiles)
 
 	cSuite, err := suite.NewConformanceTestSuite(opts)
 	if err != nil {
@@ -59,7 +61,7 @@ func TestExperimentalConformance(t *testing.T) {
 	}
 
 	// use to trigger the experimental conformance report
-	err = experimentalConformanceReport(t.Logf, report, *flags.ReportOutput)
+	err = experimentalConformanceReport(t.Logf, report, suiteOpts.ReportOutputPath)
 	require.NoError(t, err)
 }
 

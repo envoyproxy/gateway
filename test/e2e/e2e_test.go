@@ -31,12 +31,15 @@ func TestE2E(t *testing.T) {
 
 	c, cfg := kubetest.NewClient(t)
 
-	if flags.RunTest != nil && *flags.RunTest != "" {
+	suiteOpts := suite.ConfigurableOptions{}
+	flags.ApplyAll(&suiteOpts)
+
+	if suiteOpts.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
-			*flags.RunTest, *flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+			suiteOpts.RunTest, suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
 	} else {
 		tlog.Logf(t, "Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
-			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+			suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
 	}
 
 	var skipTests []string
@@ -78,26 +81,21 @@ func TestE2E(t *testing.T) {
 		enabledFeatures.Insert(tests.ClusterTrustBundleFeature)
 	}
 	// If focusing on a single test, clear the skip list to ensure it runs.
-	if *flags.RunTest != "" {
+	if suiteOpts.RunTest != "" {
 		skipTests = nil
 	}
-
+	suiteOpts.TimeoutConfig = tests.TimeoutConfig()
+	// SupportedFeatures cannot be empty, so we set it to SupportGateway
+	// All e2e tests should leave Features empty.
+	suiteOpts.SupportedFeatures = enabledFeatures.UnsortedList()
+	suiteOpts.SkipTests = skipTests
+	suiteOpts.FailFast = true
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
-		Client:               c,
-		RestConfig:           cfg,
-		GatewayClassName:     *flags.GatewayClassName,
-		Debug:                *flags.ShowDebug,
-		CleanupBaseResources: *flags.CleanupBaseResources,
-		ManifestFS:           []fs.FS{Manifests},
-		RunTest:              *flags.RunTest,
-		TimeoutConfig:        tests.TimeoutConfig(),
-		// SupportedFeatures cannot be empty, so we set it to SupportGateway
-		// All e2e tests should leave Features empty.
-		SupportedFeatures: enabledFeatures,
-		SkipTests:         skipTests,
-		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
-		Hook:              Hook,
-		FailFast:          true,
+		Client:              c,
+		RestConfig:          cfg,
+		ConfigurableOptions: suiteOpts,
+		ManifestFS:          []fs.FS{Manifests},
+		Hook:                Hook,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
