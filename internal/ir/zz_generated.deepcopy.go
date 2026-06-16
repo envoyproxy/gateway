@@ -5527,17 +5527,6 @@ func (in *Xds) DeepCopyInto(out *Xds) {
 			}
 		}
 	}
-	if in.Backends != nil {
-		in, out := &in.Backends, &out.Backends
-		*out = make([]*BackendCluster, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(BackendCluster)
-				(*in).DeepCopyInto(*out)
-			}
-		}
-	}
 	if in.EnvoyPatchPolicies != nil {
 		in, out := &in.EnvoyPatchPolicies, &out.EnvoyPatchPolicies
 		*out = make([]*EnvoyPatchPolicy, len(*in))

@@ -167,8 +167,6 @@ type Xds struct {
 	TCP []*TCPListener `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 	// UDP Listeners exposed by the gateway.
 	UDP []*UDPListener `json:"udp,omitempty" yaml:"udp,omitempty"`
-	// Backends holds backend clusters referenced by route rules.
-	Backends []*BackendCluster `json:"backends,omitempty" yaml:"backends,omitempty"`
 	// EnvoyPatchPolicies is the intermediate representation of the EnvoyPatchPolicy resource
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	// FilterOrder holds the custom order of the HTTP filters
@@ -194,11 +192,6 @@ func (x *Xds) Validate() error {
 	}
 	for _, udp := range x.UDP {
 		if err := udp.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	for _, bc := range x.Backends {
-		if err := bc.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
