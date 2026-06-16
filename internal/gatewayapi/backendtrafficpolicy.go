@@ -1874,6 +1874,12 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
 ) bool {
 	matched := false
+
+	gwNNsByKey := make(map[string]types.NamespacedName, len(gwNNs))
+	for _, nn := range gwNNs {
+		gwNNsByKey[nn.String()] = nn
+	}
+
 	// Collect rejected rule names per route for status reporting.
 	rejectedRules := make(map[policyTargetRouteKey][]string)
 	trackRejectedRule := func(md *ir.ResourceMetadata) {
@@ -1889,6 +1895,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 	}
 
 	for _, tcp := range x.TCP {
+		gwNN := gwNNsByKey[extractGatewayNameFromListener(tcp.Name)]
 		for _, r := range tcp.Routes {
 			ok, conflict := matchRouteRuleBackendPolicy(r.Metadata, policy, routeRuleBackendPolicyMap)
 			if conflict {
@@ -1900,7 +1907,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 				continue
 			}
 			matched = true
-			tf, errs := t.resolveEffectivePolicy(policy, gwNNs[0], tcp.Metadata.SectionName, gatewayPolicyMap, mergedPolicyCache)
+			tf, errs := t.resolveEffectivePolicy(policy, gwNN, tcp.Metadata.SectionName, gatewayPolicyMap, mergedPolicyCache)
 			if tf == nil || errs != nil {
 				continue
 			}
@@ -1920,6 +1927,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 		if udp.Route == nil {
 			continue
 		}
+		gwNN := gwNNsByKey[extractGatewayNameFromListener(udp.Name)]
 		r := udp.Route
 		ok, conflict := matchRouteRuleBackendPolicy(r.Destination.Metadata, policy, routeRuleBackendPolicyMap)
 		if conflict {
@@ -1931,7 +1939,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 			continue
 		}
 		matched = true
-		tf, errs := t.resolveEffectivePolicy(policy, gwNNs[0], udp.Metadata.SectionName, gatewayPolicyMap, mergedPolicyCache)
+		tf, errs := t.resolveEffectivePolicy(policy, gwNN, udp.Metadata.SectionName, gatewayPolicyMap, mergedPolicyCache)
 		if tf != nil && errs == nil {
 			setIfNil(&r.LoadBalancer, tf.LoadBalancer)
 			setIfNil(&r.DNS, tf.DNS)
@@ -1939,6 +1947,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 	}
 
 	for _, http := range x.HTTP {
+		gwNN := gwNNsByKey[extractGatewayNameFromListener(http.Name)]
 		for _, r := range http.Routes {
 			ok, conflict := matchRouteRuleBackendPolicy(r.Metadata, policy, routeRuleBackendPolicyMap)
 			if conflict {
@@ -1959,7 +1968,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 				continue
 			}
 
-			tf, errs := t.resolveEffectivePolicy(policy, gwNNs[0], http.Metadata.SectionName, gatewayPolicyMap, mergedPolicyCache)
+			tf, errs := t.resolveEffectivePolicy(policy, gwNN, http.Metadata.SectionName, gatewayPolicyMap, mergedPolicyCache)
 			if tf == nil || errs != nil {
 				continue
 			}
