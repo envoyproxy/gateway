@@ -5442,6 +5442,22 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `requests` | _integer_ |  true  |  | Requests is the number of requests (or cost units, when used with<br />cost-based rate limiting) allowed per Unit. |
 | `unit` | _[RateLimitUnit](#ratelimitunit)_ |  true  |  |  |
+| `fromMetadata` | _[RateLimitValueMetadata](#ratelimitvaluemetadata)_ |  false  |  | FromMetadata sources the limit value from per-request dynamic metadata.<br />When the referenced metadata value is present, it overrides Requests/Unit for that<br />request; otherwise Requests/Unit are used as the default.<br />The referenced metadata value must be a struct containing an integer "requests_per_unit"<br />property and a "unit" property with a value parseable to a RateLimitUnit. An upstream<br />filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.<br />Only supported for Global Rate Limits. |
+
+
+#### RateLimitValueMetadata
+
+
+
+RateLimitValueMetadata specifies the dynamic metadata to retrieve the limit value from.
+
+_Appears in:_
+- [RateLimitValue](#ratelimitvalue)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `namespace` | _string_ |  true  |  | Namespace is the namespace of the dynamic metadata. |
+| `key` | _string_ |  true  |  | Key is the key to retrieve the limit value from within the namespaced filter metadata. |
 
 
 #### RedisTLSSettings
