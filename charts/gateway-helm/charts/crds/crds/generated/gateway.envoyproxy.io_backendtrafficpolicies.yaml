@@ -3390,6 +3390,10 @@ spec:
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.retry)'
+            - message: bandwidthLimit is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.bandwidthLimit)'
             - message: sectionName is not supported when targeting a backend
               rule: '!has(self.targetRef) || !(self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || !has(self.targetRef.sectionName)'

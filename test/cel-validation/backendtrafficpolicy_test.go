@@ -3902,7 +3902,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					HTTPUpgrade:   []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
 					RequestBuffer: &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
 					Telemetry:     &egv1a1.BackendTelemetry{},
-					RoutingType:   &rt,
+					RoutingType:    &rt,
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
 				}
 			},
 			wantErrors: []string{
@@ -3916,6 +3917,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
+				"bandwidthLimit is not allowed when targeting a backend",
 			},
 		},
 		{
@@ -3950,7 +3952,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					HTTPUpgrade:   []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
 					RequestBuffer: &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
 					Telemetry:     &egv1a1.BackendTelemetry{},
-					RoutingType:   &rt,
+					RoutingType:    &rt,
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
 				}
 			},
 			wantErrors: []string{
@@ -3964,6 +3967,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
+				"bandwidthLimit is not allowed when targeting a backend",
 			},
 		},
 		{
@@ -4000,7 +4004,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					HTTPUpgrade:   []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
 					RequestBuffer: &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
 					Telemetry:     &egv1a1.BackendTelemetry{},
-					RoutingType:   &rt,
+					RoutingType:    &rt,
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
 				}
 			},
 			wantErrors: []string{
@@ -4014,6 +4019,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
+				"bandwidthLimit is not allowed when targeting a backend",
 			},
 		},
 		{
