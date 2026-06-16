@@ -104,7 +104,7 @@ func allFeatures(gatewayNamespaceMode, standardChannel bool) sets.Set[features.F
 			result.Insert(feature.Name)
 		}
 	}
-	for _, feature := range features.UDPRouteFeatures {
+	for feature := range features.UDPRouteFeatures {
 		if standardChannel && feature.Channel != features.FeatureChannelStandard {
 			continue
 		}
