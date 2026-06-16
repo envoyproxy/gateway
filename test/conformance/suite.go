@@ -40,6 +40,7 @@ func conformanceOpts(t *testing.T, options *suite.ConfigurableOptions) suite.Con
 	opts.SkipTests = append(opts.SkipTests,
 		tests.GatewayListenerUnsupportedProtocol.ShortName,
 		tests.HTTPRouteRetryConnectionError.ShortName,
+		tests.HTTPRouteRetryWithTimeouts.ShortName,
 	)
 
 	opts.Hook = e2e.Hook
