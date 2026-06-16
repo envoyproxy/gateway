@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/conformance"
 	"sigs.k8s.io/gateway-api/conformance/tests"
+	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -22,7 +23,9 @@ import (
 )
 
 func conformanceOpts(t *testing.T) suite.ConformanceOptions {
-	suiteOpts := suite.ConfigurableOptions{}
+	suiteOpts := suite.ConfigurableOptions{
+		TimeoutConfig: config.DefaultTimeoutConfig(),
+	}
 	flags.ApplyAll(&suiteOpts)
 	data, _ := json.MarshalIndent(suiteOpts, "", "  ")
 	tlog.Logf(t, "Running Conformance tests with options: %s\n", string(data))
@@ -46,11 +49,12 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 	}
 
 	opts.SkipTests = append(opts.SkipTests,
+		// TODO: retry after https://github.com/envoyproxy/gateway/pull/9196 merged
 		tests.GatewayListenerUnsupportedProtocol.ShortName,
+		// https://github.com/envoyproxy/gateway/pull/9238
 		tests.HTTPRouteRetryConnectionError.ShortName,
+		// https://github.com/kubernetes-sigs/gateway-api/issues/4977
 		tests.HTTPRouteRetryWithTimeouts.ShortName,
-		tests.ListenerSetAllowedNamespaceNone.ShortName,
-		tests.ListenerSetAllowedNamespaceSame.ShortName,
 	)
 
 	opts.Hook = e2e.Hook
