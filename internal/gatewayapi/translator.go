@@ -128,6 +128,12 @@ type Translator struct {
 	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
 	oidcDiscoveryCache *oidcDiscoveryCache
 
+	// oidcDiscoverySuccessCache stores the last successfully discovered OIDC configuration per issuer.
+	// It persists across translation rounds so that a temporary discovery failure does not break
+	// every route protected by the OIDC policy. Only successful results are stored; errors are not
+	// cached here, so a failed discovery does not prevent future retries.
+	oidcDiscoverySuccessCache map[string]*OpenIDConfig
+
 	// Logger is the logger used by the translator.
 	Logger logging.Logger
 }
