@@ -478,8 +478,8 @@ github.com/onsi/ginkgo v1.16.5/go.mod h1:+E8gABHa3K6zRBolWtd+ROzc/U5bkGt0FwiG042
 github.com/onsi/ginkgo/v2 v2.28.1 h1:S4hj+HbZp40fNKuLUQOYLDgZLwNUVn19N3Atb98NCyI=
 github.com/onsi/ginkgo/v2 v2.28.1/go.mod h1:CLtbVInNckU3/+gC8LzkGUb9oF+e8W8TdUsxPwvdOgE=
 github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
-github.com/onsi/gomega v1.39.1 h1:1IJLAad4zjPn2PsnhH70V4DKRFlrCzGBNrNaru+Vf28=
-github.com/onsi/gomega v1.39.1/go.mod h1:hL6yVALoTOxeWudERyfppUcZXjMwIMLnuSfruD2lcfg=
+github.com/onsi/gomega v1.40.0 h1:Vtol0e1MghCD2ZVIilPDIg44XSL9l2QAn8ZNaljWcJc=
+github.com/onsi/gomega v1.40.0/go.mod h1:M/Uqpu/8qTjtzCLUA2zJHX9Iilrau25x1PdoSRbWh5A=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
@@ -858,8 +858,8 @@ sigs.k8s.io/controller-runtime v0.24.1 h1:miPEwrmirImAvgME1L9qebGHrOnGJoVmVdtOU9
 sigs.k8s.io/controller-runtime v0.24.1/go.mod h1:vFkfY5fGt5xAC/sKb8IBFKgWPNKG9OUG29dR8Y2wImw=
 sigs.k8s.io/gateway-api v1.6.0-rc.1 h1:P0WmBguVrYPnkiFiW/rmxVq3adEGufbPEnOs1kjfBEQ=
 sigs.k8s.io/gateway-api v1.6.0-rc.1/go.mod h1:FVfx3t389ybeXOqvDghLbdvJdSCfI/PReqCUI3lu3mY=
-sigs.k8s.io/gateway-api/conformance v1.5.1 h1:5eruSMKcwKnkX42PFek8oO6BgPNBD5FbWbTcRV76KIw=
-sigs.k8s.io/gateway-api/conformance v1.5.1/go.mod h1:mcvYR0Zll1i5hmcKn+jNbWdZTBls6s5GU+FPUFIceXw=
+sigs.k8s.io/gateway-api/conformance v1.6.0-rc.1 h1:pULw1PTazpxoubhu9GdYOhXe5tLbDB116J8yi5hDmAk=
+sigs.k8s.io/gateway-api/conformance v1.6.0-rc.1/go.mod h1:JD6CHFrpzVyvgivIzhu0My27sOk3I3IphxJe4CIjGb4=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 h1:IpInykpT6ceI+QxKBbEflcR5EXP7sU1kvOlxwZh5txg=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730/go.mod h1:mdzfpAEoE6DHQEN0uh9ZbOCuHbLK5wOm7dK4ctXE9Tg=
 sigs.k8s.io/kubectl-validate v0.0.5-0.20250915070809-d2f2d68fba09 h1:JQbPOwLjSztom+aSDQIi6UZq8V0Gbv7BjAlYQSgycCI=
