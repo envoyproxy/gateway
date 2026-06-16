@@ -25,6 +25,9 @@ backendTrafficPolicies:
                 key: some_cost_set_by_foo
                 namespace: something.com
           limit:
+            fromMetadata:
+              key: some_limit_set_by_foo
+              namespace: something.com
             requests: 20
             unit: Hour
       type: Global
@@ -852,6 +855,9 @@ xdsIR:
                   maskLen: 16
                 headerMatches: []
                 limit:
+                  fromMetadata:
+                    key: some_limit_set_by_foo
+                    namespace: something.com
                   requests: 20
                   unit: Hour
                 name: default/policy-for-route/rule/0
@@ -924,6 +930,9 @@ xdsIR:
                   maskLen: 16
                 headerMatches: []
                 limit:
+                  fromMetadata:
+                    key: some_limit_set_by_foo
+                    namespace: something.com
                   requests: 20
                   unit: Hour
                 name: default/policy-for-route/rule/0

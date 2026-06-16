@@ -93,11 +93,15 @@ func (t *Translator) processListenerSet(ls *gwapiv1.ListenerSet, gatewayMap map[
 		}
 		gatewayCtx.listeners = append(gatewayCtx.listeners, listenerCtx)
 	}
-	gatewayCtx.IncreaseAttachedListenerSets()
 }
 
 // ProcessListenerSetStatus computes the status of ListenerSets after their listeners have been processed.
-func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSet) {
+func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSet, gateways []*GatewayContext) {
+	gatewayMap := make(map[types.NamespacedName]*GatewayContext, len(gateways))
+	for _, gw := range gateways {
+		gatewayMap[types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}] = gw
+	}
+
 	for _, ls := range listenerSets {
 		// If Accepted condition is already set to False, it means it failed during attachment (parent not found/accepted or not allowed).
 		// We skip re-processing.
@@ -176,6 +180,15 @@ func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSe
 
 		status.UpdateListenerSetStatusAccepted(ls, lsAccepted, lsAcceptedReason, lsAcceptedMsg)
 		status.UpdateListenerSetStatusProgrammed(ls, lsProgrammed, lsProgrammedReason, lsProgrammedMsg)
+
+		// Only count the ListenerSet as attached if it is accepted (has at least one valid listener).
+		if lsAccepted {
+			parentNamespace := NamespaceDerefOr(ls.Spec.ParentRef.Namespace, ls.Namespace)
+			gatewayKey := types.NamespacedName{Namespace: parentNamespace, Name: string(ls.Spec.ParentRef.Name)}
+			if gw, ok := gatewayMap[gatewayKey]; ok {
+				gw.IncreaseAttachedListenerSets()
+			}
+		}
 	}
 }
 

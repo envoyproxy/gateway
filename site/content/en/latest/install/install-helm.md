@@ -123,14 +123,17 @@ helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
   | kubectl apply --server-side -f -
 ```
 
-Then install the main Envoy Gateway Helm chart without re-applying CRDs:
+Then install the main Envoy Gateway Helm chart without re-applying CRDs. Gateway API safe upgrade policy resources
+(the safe-upgrades ValidatingAdmissionPolicy and binding shipped with the Gateway API bundle) are rendered from the
+chart templates on install by default, so disable them when these resources are managed outside this chart:
 
 ```shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm \
   --version {{< helm-version >}} \
   -n envoy-gateway-system \
   --create-namespace \
-  --skip-crds
+  --skip-crds \
+  --set crds.gatewayAPI.safeUpgradePolicy.enabled=false
 ```
 
 If the provider-managed Gateway API CRDs are not compatible with your Envoy Gateway release or required Gateway API

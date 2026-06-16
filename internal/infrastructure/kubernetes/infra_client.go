@@ -46,12 +46,6 @@ func (cli *InfraClient) DeleteAllExcept(ctx context.Context, objList client.Obje
 	v := reflect.ValueOf(objList).Elem()
 	items := v.FieldByName("Items")
 
-	// If there is only one item, we don't need to delete it,
-	// because it normally means custom resource name is not enabled.
-	if items.Len() <= 1 {
-		return nil
-	}
-
 	for i := range items.Len() {
 		item := items.Index(i)
 		name := item.FieldByName("Name")
