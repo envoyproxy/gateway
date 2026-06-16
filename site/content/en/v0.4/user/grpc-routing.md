@@ -140,10 +140,10 @@ Test GRPC routing to the `yages` backend using the [grpcurl][] command.
 grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
 ```
 
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[GatewayClass]: https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
 [grpcurl]: https://github.com/fullstorydev/grpcurl
 [gRPC-Web]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2

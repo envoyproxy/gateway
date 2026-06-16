@@ -127,6 +127,11 @@ gateways:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
         reason: Invalid
         status: "False"
@@ -194,9 +199,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route

@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -139,6 +140,7 @@ type TranslateResult struct {
 
 func newTranslateResult(
 	gc *gwapiv1.GatewayClass,
+	envoyProxyForGC *egv1a1.EnvoyProxy,
 	gateways []*GatewayContext,
 	httpRoutes []*HTTPRouteContext,
 	grpcRoutes []*GRPCRouteContext,
@@ -162,11 +164,24 @@ func newTranslateResult(
 	}
 
 	translateResult.GatewayClass = gc
-
+	if gc != nil {
+		// this won't happen in real world, just a safety check to make sure the testdata won't be a mess.
+		translateResult.EnvoyProxyForGatewayClass = envoyProxyForGC
+	}
+	epProxiesSet := sets.New[types.NamespacedName]()
 	if n := len(gateways); n > 0 {
 		translateResult.Gateways = make([]*gwapiv1.Gateway, n)
 		for i, gateway := range gateways {
 			translateResult.Gateways[i] = gateway.Gateway
+			// If the EnvoyProxy is from the Gateway itself, add it to the result so that the status can be updated in the provider layer.
+			// If it's inherited from GatewayClass, it should be handled in EnvoyProxyForGatewayClass(L164).
+			if gateway.envoyProxyFromGateway && gateway.envoyProxy != nil {
+				epKey := utils.NamespacedName(gateway.envoyProxy)
+				if !epProxiesSet.Has(epKey) {
+					translateResult.EnvoyProxiesForGateways = append(translateResult.EnvoyProxiesForGateways, gateway.envoyProxy)
+					epProxiesSet.Insert(epKey)
+				}
+			}
 		}
 	}
 
@@ -376,6 +391,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	allGateways = append(allGateways, failedGateways...)
 
 	return newTranslateResult(resources.GatewayClass,
+		resources.EnvoyProxyForGatewayClass,
 		allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
@@ -402,6 +418,16 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	// if EnvoyProxy found but invalid, set GC status to not accepted,
 	// otherwise set GC status to accepted.
 	if ep := resources.EnvoyProxyForGatewayClass; ep != nil {
+		var ancestor *gwapiv1.ParentReference
+		// TODO: remove this nil check after we update all the testdata.
+		if resources.GatewayClass != nil {
+			ancestor = &gwapiv1.ParentReference{
+				Group: GroupPtr(gwapiv1.GroupName),
+				Kind:  KindPtr(resource.KindGatewayClass),
+				Name:  gwapiv1.ObjectName(resources.GatewayClass.Name),
+			}
+		}
+
 		err := validateEnvoyProxy(ep)
 		if err != nil {
 			envoyproxyValidationErrorMap[utils.NamespacedName(ep)] = err
@@ -411,6 +437,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			status.SetGatewayClassAccepted(resources.GatewayClass,
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
+
+			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+				egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
 		} else {
 			// TODO: remove this nil check after we update all the testdata.
 			if resources.GatewayClass != nil {
@@ -424,6 +453,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			key := utils.NamespacedName(ep)
 			envoyproxyMap[key] = ep
 			// we didn't append to envoyproxyValidatioErrorMap because it's valid.
+
+			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 		}
 	}
 
@@ -462,6 +494,18 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			continue
 		}
 
+		var ancestor *gwapiv1.ParentReference
+		if gCtx.envoyProxyFromGateway {
+			// didn't need to update EnvoyProxy status if it's inherited
+			//  from GatewayClass/EnvoyGateway.
+			ancestor = &gwapiv1.ParentReference{
+				Group:     GroupPtr(gwapiv1.GroupName),
+				Kind:      KindPtr(resource.KindGateway),
+				Name:      gwapiv1.ObjectName(gateway.Name),
+				Namespace: NamespacePtr(gateway.Namespace),
+			}
+		}
+
 		if ep := gCtx.envoyProxy; ep != nil {
 			key := utils.NamespacedName(ep)
 			if err, exits := envoyproxyValidationErrorMap[key]; exits {
@@ -469,7 +513,17 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				t.Logger.Info("EnvoyProxy for Gateway invalid", logKeysAndValues...)
 				status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 					fmt.Sprintf("%s: %v", "Invalid parametersRef:", err.Error()))
+
+				if gCtx.envoyProxyFromGateway {
+					status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+						egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
+				}
 				continue
+			}
+
+			if gCtx.envoyProxyFromGateway {
+				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 			}
 		}
 

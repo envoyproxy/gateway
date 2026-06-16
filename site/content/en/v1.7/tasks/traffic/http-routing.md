@@ -391,9 +391,9 @@ curl -vvv --header "Host: foo.example.com" "http://${GATEWAY_HOST}/"
 
 The HTTP traffic will not be routed and a `404` should be returned.
 
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[GatewayClass]: https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
-[spec]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httproutespec
+[spec]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httproutespec

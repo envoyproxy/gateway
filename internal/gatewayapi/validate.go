@@ -104,6 +104,19 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, rou
 				unsupportedFilters = true
 				continue
 			}
+
+			// BackendRef URLRewrite only supports hostname rewrites.
+			// Path rewrites are not supported because Envoy weighted clusters
+			// do not support path rewrite actions.
+			if filter.Type == gwapiv1.HTTPRouteFilterURLRewrite &&
+				filter.URLRewrite != nil &&
+				filter.URLRewrite.Path != nil {
+				return status.NewRouteStatusError(
+					errors.New("URLRewrite path modifier is not supported within BackendRef"),
+					status.RouteReasonUnsupportedRefValue,
+				)
+			}
+
 			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier &&
 				filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier &&
 				filter.Type != gwapiv1.HTTPRouteFilterExtensionRef &&
@@ -111,6 +124,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, rou
 				unsupportedFilters = true
 			}
 		}
+
 	case resource.KindGRPCRoute:
 		for _, filter := range filters.([]gwapiv1.GRPCRouteFilter) {
 			if filter.Type != gwapiv1.GRPCRouteFilterRequestHeaderModifier &&
@@ -118,6 +132,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, rou
 				unsupportedFilters = true
 			}
 		}
+
 	default:
 		return nil
 	}
@@ -189,6 +204,16 @@ func (t *Translator) validateBackendRefService(backendRef gwapiv1.BackendObjectR
 		return status.NewRouteStatusError(
 			fmt.Errorf("service %s/%s not found", serviceNamespace, string(backendRef.Name)),
 			gwapiv1.RouteReasonBackendNotFound)
+	}
+	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
+	// translated into a valid backend.
+	// Backend with FQDN endpoint should be used instead of ExternalName Service to route to external services.
+	if isServiceExternalName(service) {
+		return status.NewRouteStatusError(
+			fmt.Errorf("Service %s/%s is of type ExternalName, which is not supported as a backend; "+
+				"use an Envoy Gateway Backend resource with an FQDN endpoint instead",
+				serviceNamespace, string(backendRef.Name)),
+			gwapiv1.RouteReasonUnsupportedValue)
 	}
 	var portFound bool
 	for _, port := range service.Spec.Ports {
@@ -289,15 +314,24 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 		return
 	}
 
-	// Edge case: only one condition which is ResolvedRefs=False, Reason=PartiallyInvalidCertificateRef
-	// In this case, we can still consider the listener as ready because we only program the listener using only the valid certificates.
-	if len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
-		lConditions[0].Reason == string(status.ListenerReasonPartiallyInvalidCertificateRef) {
-		listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
-			"Listener has been successfully translated")
-		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
-			"Sending translated listener configuration to the data plane")
-		return
+	onlyResolvedRefFailure := len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs)
+	if onlyResolvedRefFailure {
+		switch lConditions[0].Reason {
+		case string(status.ListenerReasonPartiallyInvalidCertificateRef):
+			// The listener is ready because we program it using only the valid certificates.
+			listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+				"Listener has been successfully translated")
+			listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+				"Sending translated listener configuration to the data plane")
+			return
+		case string(gwapiv1.ListenerReasonInvalidCertificateRef):
+			// The listener configuration is semantically valid, but the listener cannot serve traffic with an invalid certificate.
+			listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+				"Listener has been successfully translated")
+			listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse, gwapiv1.ListenerReasonInvalid,
+				"Listener is invalid, see other Conditions for details.")
+			return
+		}
 	}
 
 	// Any condition on the listener apart from Programmed=true indicates an error.

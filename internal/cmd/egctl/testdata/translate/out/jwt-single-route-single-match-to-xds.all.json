@@ -25,6 +25,9 @@
             "clusterManager": {
               "localClusterName": "local_cluster"
             },
+            "deferredStatOptions": {
+              "enableDeferredCreationStats": true
+            },
             "dynamicResources": {
               "adsConfig": {
                 "apiType": "DELTA_GRPC",

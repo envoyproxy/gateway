@@ -107,7 +107,11 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 	@curl -sLo $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml ${EXPERIMENTAL_GATEWAY_API_RELEASE_URL}
 	@curl -sLo $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml ${STANDARD_GATEWAY_API_RELEASE_URL}
 	@mkdir -p charts/gateway-helm/charts/crds/crds
-	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml
+	@mkdir -p charts/gateway-helm/charts/crds/templates
+	@sh tools/hack/split-gateway-api-bundle.sh \
+		$(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml \
+		charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml \
+		charts/gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
 	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
@@ -430,7 +434,7 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 		--set crds.gatewayAPI.enabled=true \
 		--set crds.envoyGateway.enabled=true \
 		> $(OUTPUT_DIR)/install.yaml
-	$(GO_TOOL) helm template --set createNamespace=true eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
+	$(GO_TOOL) helm template --set createNamespace=true --set crds.gatewayAPI.safeUpgradePolicy.enabled=false eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
@@ -438,6 +442,24 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 		--set crds.envoyGateway.enabled=true \
 		> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/envoy-gateway-crds.yaml")
+	$(MAKE) verify-install-manifests
+
+# Generated release manifests are concatenations/renders of multiple Helm templates,
+# so a resource can end up duplicated across them. kustomize rejects duplicate resource
+# ids, which breaks users referencing these files as kustomize resources. Build each one
+# with kustomize to catch a duplicate or invalid resource before it ships again.
+# See https://github.com/envoyproxy/gateway/issues/9191.
+VERIFY_MANIFESTS := install.yaml envoy-gateway-crds.yaml
+
+.PHONY: verify-install-manifests
+verify-install-manifests: ## Verify generated release manifests have no duplicate or invalid resources (run after generate-manifests).
+	@$(LOG_TARGET)
+	@for manifest in $(VERIFY_MANIFESTS); do \
+		$(call log, Verifying $(OUTPUT_DIR)/$$manifest is consumable by kustomize); \
+		printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n- %s\n' "$$manifest" > $(OUTPUT_DIR)/kustomization.yaml; \
+		$(GO_TOOL) kustomize build $(OUTPUT_DIR) > /dev/null || { rm -f $(OUTPUT_DIR)/kustomization.yaml; $(call errorlog, $(OUTPUT_DIR)/$$manifest has duplicate or invalid resources - kustomize build failed); exit 1; }; \
+		rm -f $(OUTPUT_DIR)/kustomization.yaml; \
+	done
 
 .PHONY: generate-artifacts
 generate-artifacts: generate-manifests ## Generate release artifacts.

@@ -10,6 +10,8 @@ admin:
       port_value: 19000
 cluster_manager:
   local_cluster_name: local_cluster
+deferred_stat_options:
+  enable_deferred_creation_stats: true
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC
