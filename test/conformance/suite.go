@@ -50,6 +50,7 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 		tests.HTTPRouteRetryConnectionError.ShortName,
 		tests.HTTPRouteRetryWithTimeouts.ShortName,
 		tests.ListenerSetAllowedNamespaceNone.ShortName,
+		tests.ListenerSetAllowedNamespaceSame.ShortName,
 	)
 
 	opts.Hook = e2e.Hook
