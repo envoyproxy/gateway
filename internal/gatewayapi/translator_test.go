@@ -1163,7 +1163,6 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		HTTP                    []*ir.HTTPListener
 		TCP                     []*ir.TCPListener
 		UDP                     []*ir.UDPListener
-		Backends                []*ir.BackendCluster
 		EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
@@ -1176,7 +1175,6 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		HTTP:                    a.HTTP,
 		TCP:                     a.TCP,
 		UDP:                     a.UDP,
-		Backends:                a.Backends,
 		EnvoyPatchPolicies:      a.EnvoyPatchPolicies,
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,

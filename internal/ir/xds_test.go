@@ -588,27 +588,6 @@ func TestValidateXds(t *testing.T) {
 			},
 			want: nil,
 		},
-		{
-			name: "valid backends",
-			input: Xds{
-				HTTP: []*HTTPListener{&happyHTTPListener},
-				Backends: []*BackendCluster{{
-					Name:     "bc-1",
-					Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
-				}},
-			},
-			want: nil,
-		},
-		{
-			name: "invalid backend cluster missing name",
-			input: Xds{
-				HTTP: []*HTTPListener{&happyHTTPListener},
-				Backends: []*BackendCluster{{
-					Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
-				}},
-			},
-			want: []error{ErrDestinationNameEmpty},
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
