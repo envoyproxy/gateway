@@ -188,6 +188,19 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	}
 
 	// 4. Gateway level (least specific)
+	return idx.LookupGatewayBTRoutingType(gatewayNN)
+}
+
+// LookupGatewayBTRoutingType resolves the RoutingType from a gateway-level BTP only, ignoring any
+// listener/route/route-rule level override. Unlike listener/route/route-rule overrides (which
+// apply narrowly), a gateway-level BTP applies uniformly to every listener under that gateway, so
+// it's safe to treat as the gateway's baseline routing type.
+// Returns nil if no matching BTP RoutingType is found, or if the index is nil.
+func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.NamespacedName) *egv1a1.RoutingType {
+	if idx == nil {
+		return nil
+	}
+
 	gwKey := btpRoutingKey{
 		Kind:      resource.KindGateway,
 		Namespace: gatewayNN.Namespace,

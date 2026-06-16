@@ -88,6 +88,10 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// MergeBackends controls cluster deduplication for backends that share the same
+	// destination (routes referencing the same backend reuse a single BackendCluster).
+	MergeBackends MergeBackendsConfig
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 
@@ -129,6 +133,39 @@ type Translator struct {
 
 	// Logger is the logger used by the translator.
 	Logger logging.Logger
+}
+
+// MergeBackendsConfig controls backend cluster deduplication for routes sharing the same backend.
+// TODO: extend with a selector to opt individual backends in/out, and a Strict mode that rejects
+// (rather than forks around) a listener/route/route-rule BTP that would diverge from a shared
+// backend's cluster-level config.
+type MergeBackendsConfig struct {
+	// Enabled toggles whether cluster deduplication is considered at all.
+	Enabled bool
+}
+
+// shouldMergeBackend decides whether a specific backend participates in cluster deduplication.
+//
+// Today this reflects the global Enabled flag, refined by a loose-mode routing-type check: a
+// gateway-level BTP RoutingType (or EnvoyProxy default) applies uniformly to every listener under
+// that gateway, so it's safe to treat as the shared baseline. A listener, route, or route-rule
+// level RoutingType override only applies narrowly, so if this rule's effective RoutingType
+// diverges from that baseline, merging is skipped for this backendRef and it falls back to a
+// route-rule-scoped cluster instead — otherwise the divergent override would silently leak into (or
+// be silently overridden by) a cluster shared with other rules/routes.
+// TODO: once a selector is added, this also becomes a per-backend identity match.
+func (t *Translator) shouldMergeBackend(
+	gwNN types.NamespacedName,
+	envoyProxy *egv1a1.EnvoyProxy,
+	btpRoutingType *egv1a1.RoutingType,
+) bool {
+	if !t.MergeBackends.Enabled {
+		return false
+	}
+
+	baseline := t.IsServiceRouting(envoyProxy, t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN))
+	effective := t.IsServiceRouting(envoyProxy, btpRoutingType)
+	return baseline == effective
 }
 
 type TranslateResult struct {
@@ -270,6 +307,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	translatorContext.SetConfigMaps(resources.ConfigMaps)
 	translatorContext.SetClusterTrustBundles(resources.ClusterTrustBundles)
 	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
+	translatorContext.BackendClusterMap = make(map[BackendClusterKey]*ir.BackendCluster)
 
 	t.TranslatorContext = translatorContext
 

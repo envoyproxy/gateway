@@ -517,6 +517,13 @@ func irDestinationSettingName(destName string, backendIdx int) string {
 	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
 }
 
+// irBackendClusterName names a BackendCluster shared across routes that reference the same
+// backend. Kind is included to avoid collisions between differently-kinded backends that share the
+// same namespace/name/port (e.g. a Service and a Backend both named "foo" on the same port).
+func irBackendClusterName(kind, namespace, name string, port int32) string {
+	return fmt.Sprintf("backend/%s/%s/%s/%d", strings.ToLower(kind), namespace, name, port)
+}
+
 func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 	return fmt.Sprintf("%s/%s/rule/%d", policyNamespace, policyName, ruleIndex)
 }
