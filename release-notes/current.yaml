@@ -36,6 +36,7 @@ bug fixes: |
   Fixed Kubernetes provider namespace-scoped watches to always include the controller namespace so Envoy Gateway can read its own infrastructure resources.
   Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
   Fixed `MaxStreamDuration` not being set on `CommonHttpProtocolOptions` for non-route cluster.
+  Fixed `ConsistentHash` load balancer settings on non-route service clusters, such as SecurityPolicy extAuth backends, by emitting cluster-level HTTP hash policies.
   Fixed `egctl x status all`/`xroute`/`xpolicy` failing when a Gateway API CRD (e.g. TCPRoute) is not installed in the cluster; missing CRDs are now skipped silently, or reported on stderr with `-v`.
   Fixed Kubernetes Service and ServiceImport `appProtocol` values `kubernetes.io/ws` and `kubernetes.io/wss` to force HTTP/1.1 upstream connections instead of negotiating HTTP/2, avoiding compatibility issues with WebSocket backends that do not support RFC 8441 extended CONNECT.
   Fixed an `ExternalName` Service referenced as a route backend producing an invalid xDS cluster (with an empty address) that failed IR validation and stalled config delivery for the whole snapshot. `ExternalName` Services are now explicitly rejected as backends with a `ResolvedRefs: False` route condition; use an Envoy Gateway `Backend` resource with an FQDN endpoint instead.
