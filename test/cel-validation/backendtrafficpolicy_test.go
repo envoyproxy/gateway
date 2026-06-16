@@ -2859,6 +2859,37 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{`response cost is not supported for Local Rate Limits`},
 		},
 		{
+			desc: "invalid local rate limit rule sourcing limit from metadata",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{
+										Requests: 10,
+										Unit:     "Minute",
+										// This is not supported for LocalRateLimit.
+										FromMetadata: &egv1a1.RateLimitValueMetadata{Namespace: "something.com", Key: "some_limit"},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{`limit fromMetadata is not supported for Local Rate Limits`},
+		},
+		{
 			desc: "invalid RateLimitSelectCondition with no selectors",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
