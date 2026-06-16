@@ -206,6 +206,16 @@ func (t *Translator) validateBackendRefService(backendRef gwapiv1.BackendObjectR
 			fmt.Errorf("service %s/%s not found", serviceNamespace, string(backendRef.Name)),
 			gwapiv1.RouteReasonBackendNotFound)
 	}
+	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
+	// translated into a valid backend.
+	// Backend with FQDN endpoint should be used instead of ExternalName Service to route to external services.
+	if isServiceExternalName(service) {
+		return status.NewRouteStatusError(
+			fmt.Errorf("Service %s/%s is of type ExternalName, which is not supported as a backend; "+
+				"use an Envoy Gateway Backend resource with an FQDN endpoint instead",
+				serviceNamespace, string(backendRef.Name)),
+			gwapiv1.RouteReasonUnsupportedValue)
+	}
 	var portFound bool
 	for _, port := range service.Spec.Ports {
 		portProtocol := getServicePortProtocol(port.Protocol)
