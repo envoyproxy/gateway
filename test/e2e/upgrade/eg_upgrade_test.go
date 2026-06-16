@@ -43,6 +43,7 @@ func TestEGUpgrade(t *testing.T) {
 	suiteOpts.TimeoutConfig = tests.TimeoutConfig()
 	suiteOpts.SupportedFeatures = []features.FeatureName{features.SupportGateway}
 	suiteOpts.FailFast = true
+	suiteOpts.CleanupTestResources = true
 
 	var skipTests []string
 	// previous did not support ipv6, so skip upgrade tests for ipv6

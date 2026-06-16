@@ -35,11 +35,11 @@ func TestE2E(t *testing.T) {
 	flags.ApplyAll(&suiteOpts)
 
 	if suiteOpts.RunTest != "" {
-		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
-			suiteOpts.RunTest, suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
+		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t \n cleanupTestResources: %t\n",
+			suiteOpts.RunTest, suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug, suiteOpts.CleanupTestResources)
 	} else {
-		tlog.Logf(t, "Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
-			suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
+		tlog.Logf(t, "Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t\n cleanupTestResources: %t\n",
+			suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug, suiteOpts.CleanupTestResources)
 	}
 
 	var skipTests []string
@@ -90,6 +90,7 @@ func TestE2E(t *testing.T) {
 	suiteOpts.SupportedFeatures = enabledFeatures.UnsortedList()
 	suiteOpts.SkipTests = skipTests
 	suiteOpts.FailFast = true
+	suiteOpts.CleanupTestResources = true
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:              c,
 		RestConfig:          cfg,

@@ -46,6 +46,7 @@ func TestMultipleGC(t *testing.T) {
 	suiteOpts.SupportedFeatures = []features.FeatureName{features.SupportGateway}
 	suiteOpts.SkipTests = []string{}
 	suiteOpts.FailFast = true
+	suiteOpts.CleanupTestResources = true
 	t.Run("Internet GC Test", func(t *testing.T) {
 		t.Parallel()
 		internetGatewaySuiteGatewayClassName := "internet"

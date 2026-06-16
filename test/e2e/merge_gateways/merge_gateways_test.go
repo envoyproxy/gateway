@@ -46,6 +46,7 @@ func TestMergeGateways(t *testing.T) {
 	suiteOpts.SupportedFeatures = []features.FeatureName{features.SupportGateway}
 	suiteOpts.SkipTests = []string{}
 	suiteOpts.FailFast = true
+	suiteOpts.CleanupTestResources = true
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:              c,
 		RestConfig:          cfg,
