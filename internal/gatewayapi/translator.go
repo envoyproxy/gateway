@@ -297,7 +297,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 
 	// Compute ListenerSet status based on listener processing results
 	// This should be done after ProcessListeners because ListenerSet status depends on listener processing results
-	t.ProcessListenerSetStatus(resources.ListenerSets)
+	t.ProcessListenerSetStatus(resources.ListenerSets, acceptedGateways)
 
 	// Process EnvoyPatchPolicies
 	envoyPatchPolicies := t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
