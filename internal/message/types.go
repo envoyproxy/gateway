@@ -177,6 +177,29 @@ func (x *XdsIRWithContext) Equal(other *XdsIRWithContext) bool {
 	return reflect.DeepEqual(x.XdsIR, other.XdsIR)
 }
 
+// XdsNACK is the data-plane rejection state for a single irKey (Gateway in
+// per-gateway mode, GatewayClass in merge-gateways mode). It is the latest
+// known NACK for that proxy group; an empty/absent entry means "no active NACK".
+type XdsNACK struct {
+	// NodeID is the proxy (pod) that rejected the update.
+	NodeID string
+	// TypeURL is the xDS resource type that was rejected (e.g. Listener).
+	TypeURL string
+	// Code / Message come from the gRPC status in DiscoveryRequest.ErrorDetail.
+	Code    int32
+	Message string
+}
+
+// DeepCopy returns a deep copy of the XdsNACK. Required by watchable.Map,
+// whose values must be deep-copiable.
+func (n *XdsNACK) DeepCopy() *XdsNACK {
+	if n == nil {
+		return nil
+	}
+	out := *n
+	return &out
+}
+
 // XdsIR message
 type XdsIR struct {
 	watchable.Map[string, *XdsIRWithContext]
@@ -187,11 +210,18 @@ type InfraIR struct {
 	watchable.Map[string, *ir.Infra]
 }
 
+// XdsNACKs is keyed by irKey, matching XdsIR / the snapshot cache.
+type XdsNACKs struct {
+	watchable.Map[string, *XdsNACK]
+}
+
 type MessageName string
 
 const (
 	// XDSIRMessageName is a message containing xds-ir translated from provider-resources
 	XDSIRMessageName MessageName = "xds-ir"
+	// XdsNACKMessageName is a message containing xds-nack translated from provider-resources
+	XdsNACKMessageName MessageName = "xds-nack"
 	// InfraIRMessageName is a message containing infra-ir translated from provider-resources
 	InfraIRMessageName MessageName = "infra-ir"
 	// ProviderResourcesMessageName is a message containing gw-api and envoy gateway resources from the provider

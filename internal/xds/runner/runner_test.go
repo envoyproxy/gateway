@@ -35,6 +35,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
+	"github.com/envoyproxy/gateway/internal/xds/cache"
 )
 
 func newTestTraceContext() context.Context {
@@ -719,4 +720,33 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.NotNil(t, tlsConfig.GetConfigForClient)
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
+}
+
+// TestHandleNACK verifies that the NACK handler folds cache rejections into the
+// XdsNACKs message map and clears them on a clean ACK.
+func TestHandleNACK(t *testing.T) {
+	nacks := new(message.XdsNACKs)
+	r := &Runner{Config: Config{XdsNACKs: nacks}}
+
+	// A rejection stores a NACK keyed by irKey.
+	r.handleNACK(cache.NACKEvent{
+		IRKey:   "default/eg",
+		NodeID:  "pod-1",
+		TypeURL: "type.googleapis.com/envoy.config.listener.v3.Listener",
+		Code:    13,
+		Message: "invalid access log format",
+	})
+	got, ok := nacks.Load("default/eg")
+	require.True(t, ok)
+	require.Equal(t, &message.XdsNACK{
+		NodeID:  "pod-1",
+		TypeURL: "type.googleapis.com/envoy.config.listener.v3.Listener",
+		Code:    13,
+		Message: "invalid access log format",
+	}, got)
+
+	// A clean ACK (Code 0) clears the stored NACK for that irKey.
+	r.handleNACK(cache.NACKEvent{IRKey: "default/eg", NodeID: "pod-1", Code: 0})
+	_, ok = nacks.Load("default/eg")
+	require.False(t, ok)
 }

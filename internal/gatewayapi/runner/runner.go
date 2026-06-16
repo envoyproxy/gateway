@@ -57,6 +57,7 @@ type Config struct {
 	ProviderResources *message.ProviderResources
 	RunnerErrors      *message.RunnerErrors
 	XdsIR             *message.XdsIR
+	XdsNACKs          *message.XdsNACKs
 	InfraIR           *message.InfraIR
 	ExtensionManager  extension.Manager
 }

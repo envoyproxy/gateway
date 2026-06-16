@@ -79,6 +79,7 @@ type Config struct {
 	grpc              *grpc.Server
 	cache             cache.SnapshotCacheWithCallbacks
 	XdsIR             *message.XdsIR
+	XdsNACKs          *message.XdsNACKs
 	ExtensionManager  extension.Manager
 	ProviderResources *message.ProviderResources
 	RunnerErrors      *message.RunnerErrors
@@ -147,10 +148,30 @@ func getRandomMaxConnectionAge() time.Duration {
 // Close implements Runner interface.
 func (r *Runner) Close() error { return nil }
 
+// handleNACK folds a data-plane rejection (or its clearing ACK) observed by the
+// snapshot cache into the XdsNACKs message map, keyed by irKey. A zero Code means
+// the proxy ACKed cleanly, so any prior NACK for that irKey is dropped.
+func (r *Runner) handleNACK(e cache.NACKEvent) {
+	if r.XdsNACKs == nil {
+		return
+	}
+	if e.Code == 0 {
+		r.XdsNACKs.Delete(e.IRKey)
+		return
+	}
+	r.XdsNACKs.Store(e.IRKey, &message.XdsNACK{
+		NodeID:  e.NodeID,
+		TypeURL: e.TypeURL,
+		Code:    e.Code,
+		Message: e.Message,
+	})
+}
+
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	r.cache = cache.NewSnapshotCache(true, r.Logger)
+	r.cache.SetNACKHandler(r.handleNACK)
 
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,

@@ -54,6 +54,7 @@ type SnapshotCacheWithCallbacks interface {
 	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
 	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
+	SetNACKHandler(func(NACKEvent))
 }
 
 type snapshotMap map[string]*cachev3.Snapshot
@@ -63,6 +64,15 @@ type nodeInfoMap map[int64]*corev3.Node
 type nodeFrequencyMap map[string]int
 
 type streamDurationMap map[int64]time.Time
+
+// NACKEvent is the minimal, message-free fact the cache emits.
+type NACKEvent struct {
+	IRKey   string
+	NodeID  string
+	TypeURL string
+	Code    int32
+	Message string
+}
 
 type snapshotCache struct {
 	cachev3.SnapshotCache
@@ -74,6 +84,7 @@ type snapshotCache struct {
 	lastSnapshot        snapshotMap
 	log                 *zap.SugaredLogger
 	mu                  sync.Mutex
+	onNACK              func(NACKEvent)
 }
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
@@ -152,6 +163,16 @@ func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallback
 		streamDuration:      make(streamDurationMap),
 		deltaStreamDuration: make(streamDurationMap),
 	}
+}
+
+// SetNACKHandler installs the callback the cache invokes (with a NACKEvent) when
+// Envoy NACKs an update or clears a prior NACK with a clean ACK. It is the seam
+// that lets the cache report rejections without importing the message package.
+func (s *snapshotCache) SetNACKHandler(handler func(NACKEvent)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.onNACK = handler
 }
 
 // getNodeIDs retrieves the node ids from the node info map whose
@@ -261,6 +282,16 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		errorCode = status.Code
 		errorMessage = status.Message
 		xdsNACKTotal.With(nodeIDLabel.Value(nodeID), typeURLLabel.Value(req.GetTypeUrl())).Increment()
+
+		if s.onNACK != nil {
+			s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: status.Code, Message: status.Message})
+		}
+	} else if s.onNACK != nil && req.GetResponseNonce() != "" {
+		// ACK with no error on a request that carries a response_nonce → clear any prior NACK.
+		// This ensures the very first request on a stream (which has no nonce and
+		// is not an ACK of any pushed config) doesn't emit a spurious clear that could wipe a
+		// legitimate NACK recorded for this irKey by another proxy.
+		s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, Code: 0})
 	}
 
 	s.log.Debugf("handling v3 xDS resource request, version_info %s, response_nonce %s, nodeID %s, node_version %s, resource_names %v, type_url %s, errorCode %d, errorMessage %s",
@@ -384,6 +415,16 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		errorCode = status.Code
 		errorMessage = status.Message
 		xdsNACKTotal.With(nodeIDLabel.Value(nodeID), typeURLLabel.Value(req.GetTypeUrl())).Increment()
+
+		if s.onNACK != nil {
+			s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: status.Code, Message: status.Message})
+		}
+	} else if s.onNACK != nil && req.GetResponseNonce() != "" {
+		// ACK with no error on a request that carries a response_nonce → clear any prior NACK.
+		// This ensures the very first request on a stream (which has no nonce and
+		// is not an ACK of any pushed config) doesn't emit a spurious clear that could wipe a
+		// legitimate NACK recorded for this irKey by another proxy.
+		s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, Code: 0})
 	}
 	s.log.Debugf("handling v3 xDS resource request, response_nonce %s, nodeID %s, node_version %s, resource_names_subscribe %v, resource_names_unsubscribe %v, type_url %s, errorCode %d, errorMessage %s",
 		req.ResponseNonce,
