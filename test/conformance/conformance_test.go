@@ -15,28 +15,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/tests"
-	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func TestGatewayAPIConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
-	suiteOpts := suite.ConfigurableOptions{}
-	flags.ApplyAll(&suiteOpts)
-	if suiteOpts.RunTest != "" {
-		tlog.Logf(t, "Running Conformance test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
-			suiteOpts.RunTest, suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
-	} else {
-		tlog.Logf(t, "Running Conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t",
-			suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
-	}
-
-	opts := conformanceOpts(t, &suiteOpts)
-	opts.RunTest = suiteOpts.RunTest
-
+	opts := conformanceOpts(t)
 	// If focusing on a single test, clear the skip list to ensure it runs.
 	if opts.RunTest != "" {
 		opts.SkipTests = nil

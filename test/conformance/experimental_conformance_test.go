@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
-	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
 )
@@ -26,10 +25,7 @@ func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
-	suiteOpts := &suite.ConfigurableOptions{}
-	flags.ApplyAll(suiteOpts)
-
-	opts := conformanceOpts(t, suiteOpts)
+	opts := conformanceOpts(t)
 
 	opts.ConformanceProfiles = []suite.ConformanceProfileName{
 		suite.GatewayHTTPConformanceProfileName,
@@ -41,10 +37,6 @@ func TestExperimentalConformance(t *testing.T) {
 	if opts.RunTest != "" {
 		opts.SkipTests = nil
 	}
-
-	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
-		suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug, suiteOpts.EnableAllSupportedFeatures, opts.ConformanceProfiles)
-
 	cSuite, err := suite.NewConformanceTestSuite(opts)
 	if err != nil {
 		t.Fatalf("error creating experimental conformance test suite: %v", err)
@@ -61,7 +53,7 @@ func TestExperimentalConformance(t *testing.T) {
 	}
 
 	// use to trigger the experimental conformance report
-	err = experimentalConformanceReport(t.Logf, report, suiteOpts.ReportOutputPath)
+	err = experimentalConformanceReport(t.Logf, report, opts.ReportOutputPath)
 	require.NoError(t, err)
 }
 

@@ -8,6 +8,7 @@
 package multiplegc
 
 import (
+	"encoding/json"
 	"flag"
 	"io/fs"
 	"testing"
@@ -33,13 +34,8 @@ func TestMultipleGC(t *testing.T) {
 
 	suiteOpts := suite.ConfigurableOptions{}
 	flags.ApplyAll(&suiteOpts)
-	if suiteOpts.RunTest != "" {
-		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
-			suiteOpts.RunTest, suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
-	} else {
-		tlog.Logf(t, "Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
-			suiteOpts.GatewayClassName, suiteOpts.CleanupBaseResources, suiteOpts.Debug)
-	}
+	data, _ := json.MarshalIndent(suiteOpts, "", "  ")
+	tlog.Logf(t, "Running MultipleGC tests with options: %s\n", string(data))
 	suiteOpts.TimeoutConfig = tests.TimeoutConfig()
 	// SupportedFeatures cannot be empty, so we set it to SupportGateway
 	// All e2e tests should leave Features empty.

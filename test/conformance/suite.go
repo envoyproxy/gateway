@@ -6,24 +6,32 @@
 package conformance
 
 import (
+	"encoding/json"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/conformance"
 	"sigs.k8s.io/gateway-api/conformance/tests"
+	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
 	"github.com/envoyproxy/gateway/test/e2e"
 	egtests "github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
-func conformanceOpts(t *testing.T, options *suite.ConfigurableOptions) suite.ConformanceOptions {
+func conformanceOpts(t *testing.T) suite.ConformanceOptions {
+	suiteOpts := suite.ConfigurableOptions{}
+	flags.ApplyAll(&suiteOpts)
+	data, _ := json.MarshalIndent(suiteOpts, "", "  ")
+	tlog.Logf(t, "Running Conformance tests with options: %s\n", string(data))
+
 	gatewayNamespaceMode := egtests.IsGatewayNamespaceMode()
 	internalSuite := EnvoyGatewaySuite(gatewayNamespaceMode, egtests.UseStandardChannel())
 
 	opts := conformance.DefaultOptions(t)
-	opts.ConfigurableOptions = *options
+	opts.ConfigurableOptions = suiteOpts
 	opts.SkipTests = internalSuite.SkipTests
 	opts.SupportedFeatures = internalSuite.SupportedFeatures
 	opts.ExemptFeatures = internalSuite.ExemptFeatures
@@ -41,11 +49,11 @@ func conformanceOpts(t *testing.T, options *suite.ConfigurableOptions) suite.Con
 		tests.GatewayListenerUnsupportedProtocol.ShortName,
 		tests.HTTPRouteRetryConnectionError.ShortName,
 		tests.HTTPRouteRetryWithTimeouts.ShortName,
+		tests.ListenerSetAllowedNamespaceNone.ShortName,
 	)
 
 	opts.Hook = e2e.Hook
 	opts.FailFast = true
-	opts.CleanupTestResources = true
 
 	return opts
 }
