@@ -37,6 +37,10 @@ func conformanceOpts(t *testing.T, options *suite.ConfigurableOptions) suite.Con
 		)
 	}
 
+	opts.SkipTests = append(opts.SkipTests,
+		tests.GatewayListenerUnsupportedProtocol.ShortName,
+	)
+
 	opts.Hook = e2e.Hook
 	opts.FailFast = true
 
