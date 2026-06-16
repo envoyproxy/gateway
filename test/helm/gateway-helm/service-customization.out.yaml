@@ -536,7 +536,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.5.0-dev
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc0
     gateway.networking.k8s.io/channel: standard
   name: "safe-upgrades.gateway.networking.k8s.io"
 spec:
@@ -555,11 +555,13 @@ spec:
         oldObject.metadata.annotations['gateway.networking.k8s.io/channel'] == 'experimental' )"
       message: "Installing experimental CRDs on top of standard channel CRDs is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install experimental CRDs on top of standard channel CRDs."
       reason: Invalid
-    - expression: "object.spec.group != 'gateway.networking.k8s.io' ||
+    - expression: |
+        object.spec.group != 'gateway.networking.k8s.io' ||
         (has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/bundle-version') &&
-        !matches(object.metadata.annotations['gateway.networking.k8s.io/bundle-version'], 'v1.[0-4].\\\\d+') &&
-        !matches(object.metadata.annotations['gateway.networking.k8s.io/bundle-version'], 'v0'))" #TODO Kubernetes 1.37: Migrate to kubernetes semver library
-      message: "Installing CRDs with version before v1.5.0 is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install older versions."
+        (object.metadata.annotations['gateway.networking.k8s.io/bundle-version'] == 'v0.0.0-dev' ||
+        (object.metadata.annotations['gateway.networking.k8s.io/bundle-version'].startsWith('v1.') &&
+         !matches(object.metadata.annotations['gateway.networking.k8s.io/bundle-version'], '^v1\\.[0-4](\\.|$)'))))
+      message: "Installing CRDs with version other than v0.0.0-dev or v1.5+ is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install other versions."
       reason: Invalid
 ---
 # Source: gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
@@ -567,7 +569,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.5.0-dev
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc0
     gateway.networking.k8s.io/channel: standard
   name: safe-upgrades.gateway.networking.k8s.io
 spec:

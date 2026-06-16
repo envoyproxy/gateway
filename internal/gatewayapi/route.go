@@ -577,13 +577,6 @@ func (t *Translator) processHTTPRouteRule(
 ) ([]*ir.HTTPRoute, status.Error) {
 	var sessionPersistence *ir.SessionPersistence
 	if rule.SessionPersistence != nil {
-		if rule.SessionPersistence.IdleTimeout != nil {
-			return nil, status.NewRouteStatusError(
-				fmt.Errorf("idle timeout is not supported in envoy gateway"),
-				status.RouteReasonUnsupportedSetting,
-			)
-		}
-
 		var sessionName string
 		if rule.SessionPersistence.SessionName == nil {
 			// SessionName is optional on the gateway-api, but envoy requires it
