@@ -19,6 +19,7 @@ import (
 	"net/mail"
 	"net/netip"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1003,8 +1004,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						continue
 					}
 					// Only authorization for TCP
-					authCopy := *authorization
-					r.Authorization = &authCopy
+					if authorization != nil {
+						authCopy := *authorization
+						r.Authorization = &authCopy
+					}
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
@@ -2061,7 +2064,13 @@ func (t *Translator) buildAPIKeyAuth(
 		if err != nil {
 			return nil, err
 		}
-		for clientid, key := range credentialsSecret.Data {
+		clientIDs := make([]string, 0, len(credentialsSecret.Data))
+		for clientID := range credentialsSecret.Data {
+			clientIDs = append(clientIDs, clientID)
+		}
+		sort.Strings(clientIDs)
+		for _, clientid := range clientIDs {
+			key := credentialsSecret.Data[clientid]
 			if seenClients.Has(clientid) {
 				continue
 			}

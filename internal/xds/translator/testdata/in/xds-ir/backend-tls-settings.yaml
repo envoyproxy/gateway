@@ -184,9 +184,7 @@ http:
         name: httproute/default/httproute-4/rule/0/backend/0
         protocol: HTTP
         tls:
-          alpnProtocols:
-          - HTTP/1.1
-          - HTTP/2
+          alpnProtocols: []
           caCertificate:
             name: policy-btls-for-backend-4/default-ca
           ciphers:

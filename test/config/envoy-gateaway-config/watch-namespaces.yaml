@@ -11,17 +11,20 @@ data:
       type: Kubernetes
       kubernetes:
         watch:
-          type: Namespaces
-          namespaces:
-          - envoy-gateway-system
-          - btp-cross-ns-denied
-          - btp-cross-ns-granted
-          - gateway-conformance-infra
-          - gateway-preserve-case-backend
-          - gateway-upgrade-infra
-          - listenerset-tls-termination-secret
-          - monitoring
-          - multireferencegrants-ns
+          type: NamespaceSelector
+          namespaceSelector:
+            matchExpressions:
+            - key: kubernetes.io/metadata.name
+              operator: In
+              values:
+              - btp-cross-ns-denied
+              - btp-cross-ns-granted
+              - gateway-conformance-infra
+              - gateway-preserve-case-backend
+              - gateway-upgrade-infra
+              - listenerset-tls-termination-secret
+              - monitoring
+              - multireferencegrants-ns
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
