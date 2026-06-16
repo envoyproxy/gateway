@@ -107,6 +107,9 @@ http:
             limit:
               requests: 5
               unit: second
+              fromMetadata:
+                namespace: "envoy.lb"
+                key: "tenant_rate_limit"
             requestCost:
               number: 12345
             responseCost:
@@ -164,3 +167,27 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "fourth-route-dest/backend/0"
+  - name: "limit-from-metadata"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-tenant-id"
+              exact: "one"
+            limit:
+              requests: 5
+              unit: second
+              fromMetadata:
+                namespace: "envoy.lb"
+                key: "tenant_rate_limit"
+    pathMatch:
+      exact: "foo/bar/limit-from-metadata"
+    destination:
+      name: "fifth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fifth-route-dest/backend/0"
