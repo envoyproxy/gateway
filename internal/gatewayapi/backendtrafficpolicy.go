@@ -1509,6 +1509,13 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		XRateLimitOption: rule.XRateLimitHeaders,
 	}
 
+	if md := rule.Limit.FromMetadata; md != nil {
+		irRule.Limit.FromMetadata = &ir.RateLimitValueMetadata{
+			Namespace: md.Namespace,
+			Key:       md.Key,
+		}
+	}
+
 	for _, match := range rule.ClientSelectors {
 		if len(match.Headers) == 0 && len(match.Methods) == 0 &&
 			match.Path == nil && match.SourceCIDR == nil && len(match.QueryParams) == 0 {
