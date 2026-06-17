@@ -2743,6 +2743,18 @@ type RateLimitValue struct {
 	Requests uint32 `json:"requests" yaml:"requests"`
 	// Unit of rate limiting.
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
+	// FromMetadata sources the limit value from per-request dynamic metadata,
+	// overriding Requests/Unit when the metadata value is present.
+	FromMetadata *RateLimitValueMetadata `json:"fromMetadata,omitempty" yaml:"fromMetadata,omitempty"`
+}
+
+// RateLimitValueMetadata specifies the dynamic metadata to source the limit value from.
+// +k8s:deepcopy-gen=true
+type RateLimitValueMetadata struct {
+	// Namespace is the namespace of the dynamic metadata.
+	Namespace string `json:"namespace" yaml:"namespace"`
+	// Key is the key to retrieve the limit value from within the namespaced filter metadata.
+	Key string `json:"key" yaml:"key"`
 }
 
 // BandwidthLimit holds bandwidth limiting configuration for request and/or response directions.
