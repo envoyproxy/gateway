@@ -25,7 +25,8 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a compatible protocol
+        message: 'All listeners for a given port must use a compatible protocol, conflicting
+          listeners: envoy-gateway/gateway-1/http, envoy-gateway/gateway-1/tcp'
         reason: ProtocolConflict
         status: "True"
         type: Conflicted
@@ -48,7 +49,8 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a compatible protocol
+        message: 'All listeners for a given port must use a compatible protocol, conflicting
+          listeners: envoy-gateway/gateway-1/http, envoy-gateway/gateway-1/tcp'
         reason: ProtocolConflict
         status: "True"
         type: Conflicted

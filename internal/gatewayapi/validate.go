@@ -809,7 +809,6 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 
 type portListeners struct {
 	listeners []*ListenerContext
-	protocols sets.Set[string]
 	hostnames map[string]int
 }
 
@@ -865,7 +864,14 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 
 		for _, listenersOnPort := range portListenerInfo {
 			nonUDPProtocols := sets.New[string]()
-			nonListenerSetCount := 0
+			// Track distinct protocols used by Gateway-owned (non-ListenerSet) listeners.
+			// Multiple distinct protocols from gateway listeners means no winner can be determined.
+			// Multiple gateway listeners sharing the same protocol is fine — they all contribute
+			// to that protocol being the "gateway winner".
+			nonListenerSetProtocols := sets.New[string]()
+			// Track which ListenerSets have multiple protocols on this port (no winner for those).
+			sameListenerSetProtocolConflicts := sets.New[string]()
+			listenerSetProtocolsOnPort := map[string]sets.Set[string]{}
 			for _, listener := range listenersOnPort {
 				protocol := getProtocolForListener(listener)
 				if protocol == string(gwapiv1.UDPProtocolType) {
@@ -873,7 +879,16 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 				}
 				nonUDPProtocols.Insert(protocol)
 				if !listener.isFromListenerSet() {
-					nonListenerSetCount++
+					nonListenerSetProtocols.Insert(protocol)
+				} else {
+					lsKey := listener.listenerSet.Namespace + "/" + listener.listenerSet.Name
+					if listenerSetProtocolsOnPort[lsKey] == nil {
+						listenerSetProtocolsOnPort[lsKey] = sets.New[string]()
+					}
+					listenerSetProtocolsOnPort[lsKey].Insert(protocol)
+					if listenerSetProtocolsOnPort[lsKey].Len() > 1 {
+						sameListenerSetProtocolConflicts.Insert(lsKey)
+					}
 				}
 			}
 
@@ -882,34 +897,35 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 				continue
 			}
 
-			// If there are more than 1 non-UDP protocols and more than 1 listener not from ListenerSet,
-			// we cannot determine a clear winner and all listeners on this port are in conflict.
-			if nonListenerSetCount > 1 {
+			// Build a sorted list of conflicting listener display names for inclusion in messages.
+			conflictingNames := make([]string, 0, len(listenersOnPort))
+			for _, listener := range listenersOnPort {
+				if getProtocolForListener(listener) != string(gwapiv1.UDPProtocolType) {
+					conflictingNames = append(conflictingNames, listenerDisplayName(listener))
+				}
+			}
+			slices.Sort(conflictingNames)
+			conflictMsg := fmt.Sprintf("All listeners for a given port must use a compatible protocol, conflicting listeners: %s",
+				strings.Join(conflictingNames, ", "))
+
+			// If Gateway-owned listeners themselves disagree on protocol, no winner can be selected
+			// and all listeners on this port are marked conflicted.
+			if nonListenerSetProtocols.Len() > 1 {
 				// If any conflicted listener is not from ListenerSet, do not pick a winner.
 				for _, listener := range listenersOnPort {
 					if getProtocolForListener(listener) == string(gwapiv1.UDPProtocolType) {
 						continue
 					}
-					setConflictedConditions(listener, gwapiv1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a compatible protocol")
+					setConflictedConditions(listener, gwapiv1.ListenerReasonProtocolConflict, conflictMsg)
 				}
 				continue
 			}
 
-			// When nonListenerSetCount == 1, explicitly pick the Gateway-owned listener as winner.
-			// When nonListenerSetCount == 0, pick the first ListenerSet listener as winner.
-			// Note: UDP conflicts are handled by validateConflictedLayer4Listeners, so we skip
-			// UDP listeners here (this branch is only reached when len(nonUDPProtocols) > 1).
+			// When Gateway-owned listeners share exactly one protocol, that protocol wins.
+			// When there are no Gateway-owned listeners, the first ListenerSet listener wins.
 			var winnerProtocol string
-			if nonListenerSetCount == 1 {
-				// Find and use the non-ListenerSet listener's protocol as the winner
-				for _, listener := range listenersOnPort {
-					protocol := getProtocolForListener(listener)
-					if !listener.isFromListenerSet() && protocol != string(gwapiv1.UDPProtocolType) {
-						winnerProtocol = protocol
-						break
-					}
-				}
+			if nonListenerSetProtocols.Len() == 1 {
+				winnerProtocol = nonListenerSetProtocols.UnsortedList()[0]
 			}
 
 			for _, listener := range listenersOnPort {
@@ -919,19 +935,27 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 					continue
 				}
 
+				// When no Gateway listener establishes a winner protocol, a ListenerSet with
+				// internal protocol conflicts has no winner: all its listeners are marked.
+				if listener.isFromListenerSet() && nonListenerSetProtocols.Len() == 0 {
+					lsKey := listener.listenerSet.Namespace + "/" + listener.listenerSet.Name
+					if sameListenerSetProtocolConflicts.Has(lsKey) {
+						setConflictedConditions(listener, gwapiv1.ListenerReasonProtocolConflict, conflictMsg)
+						continue
+					}
+				}
+
 				// If we have an explicit winner protocol, use it; otherwise first one wins
 				if winnerProtocol != "" {
 					if protocol != winnerProtocol {
-						setConflictedConditions(listener, gwapiv1.ListenerReasonProtocolConflict,
-							"All listeners for a given port must use a compatible protocol")
+						setConflictedConditions(listener, gwapiv1.ListenerReasonProtocolConflict, conflictMsg)
 					}
 				} else {
 					// All conflicted listeners are from ListenerSet, first one wins
 					if winnerProtocol == "" {
 						winnerProtocol = protocol
 					} else if protocol != winnerProtocol {
-						setConflictedConditions(listener, gwapiv1.ListenerReasonProtocolConflict,
-							"All listeners for a given port must use a compatible protocol")
+						setConflictedConditions(listener, gwapiv1.ListenerReasonProtocolConflict, conflictMsg)
 					}
 				}
 			}
@@ -974,22 +998,11 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 			}
 			if portListenerInfo[listener.Port] == nil {
 				portListenerInfo[listener.Port] = &portListeners{
-					protocols: sets.Set[string]{},
 					hostnames: map[string]int{},
 				}
 			}
 
 			portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
-
-			var protocol string
-			switch listener.Protocol {
-			// HTTPS and TLS can co-exist on the same port
-			case gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType:
-				protocol = "https/tls"
-			default:
-				protocol = string(listener.Protocol)
-			}
-			portListenerInfo[listener.Port].protocols.Insert(protocol)
 
 			var hostname string
 			if listener.Hostname != nil {
@@ -1077,11 +1090,6 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 			}
 
 			for _, listener := range info.listeners {
-				if len(info.protocols) > 1 {
-					setConflictedConditions(listener, gwapiv1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a compatible protocol")
-				}
-
 				var hostname string
 				if listener.Hostname != nil {
 					hostname = string(*listener.Hostname)
