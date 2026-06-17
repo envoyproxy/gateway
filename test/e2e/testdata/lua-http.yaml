@@ -89,12 +89,20 @@ metadata:
   namespace: gateway-conformance-infra
 data:
   lua: |
+    function envoy_on_request(request_handle)
+      local ctx = request_handle:filterContext()
+      if ctx ~= nil and ctx["custom_value"] ~= nil then
+        request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "filterContext", ctx)
+      end
+    end
+
     function envoy_on_response(response_handle)
-      local ctx = response_handle:filterContext()
-      if ctx ~= nil then
-        local val = ctx["custom_value"]
-        if val ~= nil then
-          response_handle:headers():add("X-Lua-Filter-Context", tostring(val))
+      local stream_info = response_handle:streamInfo()
+      local metadata = stream_info:dynamicMetadata():get("envoy.filters.http.lua")
+      if metadata ~= nil then
+        local ctx = metadata["filterContext"]
+        if ctx ~= nil and ctx["custom_value"] ~= nil then
+          response_handle:headers():add("X-Lua-Filter-Context", tostring(ctx["custom_value"]))
         end
       end
     end
