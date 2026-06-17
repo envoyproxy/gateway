@@ -92,10 +92,12 @@ func TestXdsNACKsRoundTrip(t *testing.T) {
 	sub := nacks.Subscribe(ctx)
 
 	nack := &message.XdsNACK{
-		NodeID:  "pod-1",
-		TypeURL: "type.googleapis.com/envoy.config.listener.v3.Listener",
-		Code:    13,
-		Message: "invalid access log format",
+		Rejections: map[message.XdsNACKKey]message.XdsNACKError{
+			{NodeID: "pod-1", TypeURL: "type.googleapis.com/envoy.config.listener.v3.Listener"}: {
+				Code:    13,
+				Message: "invalid access log format",
+			},
+		},
 	}
 	nacks.Store("default/eg", nack)
 

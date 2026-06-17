@@ -72,6 +72,9 @@ type NACKEvent struct {
 	TypeURL string
 	Code    int32
 	Message string
+	// Version is the snapshot version this event refers to: the rejected version
+	// on a NACK, and the (latest) accepted version on a clearing ACK.
+	Version string
 }
 
 type snapshotCache struct {
@@ -284,14 +287,28 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		xdsNACKTotal.With(nodeIDLabel.Value(nodeID), typeURLLabel.Value(req.GetTypeUrl())).Increment()
 
 		if s.onNACK != nil {
-			s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: status.Code, Message: status.Message})
+			s.onNACK(NACKEvent{
+				IRKey:   cluster,
+				NodeID:  nodeID,
+				TypeURL: req.GetTypeUrl(),
+				Code:    status.Code,
+				Message: status.Message,
+				Version: s.lastSnapshot[cluster].GetVersion(req.GetTypeUrl()),
+			})
 		}
-	} else if s.onNACK != nil && req.GetResponseNonce() != "" {
-		// ACK with no error on a request that carries a response_nonce → clear any prior NACK.
-		// This ensures the very first request on a stream (which has no nonce and
-		// is not an ACK of any pushed config) doesn't emit a spurious clear that could wipe a
-		// legitimate NACK recorded for this irKey by another proxy.
-		s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, Code: 0})
+	} else if s.onNACK != nil && req.GetResponseNonce() != "" &&
+		req.GetVersionInfo() == s.lastSnapshot[cluster].GetVersion(req.GetTypeUrl()) {
+		// Clean ACK (no error, carries a response_nonce) of the *latest* config we pushed
+		// for this cluster → clear the prior NACK for this proxy and resource type.
+		//
+		//   - TypeURL scopes the clear so an ACK of one resource type doesn't wipe a
+		//     still-active rejection of another.
+		//   - The nonce guard ensures the very first request on a stream (which has no
+		//     nonce and is not an ACK of any pushed config) doesn't emit a spurious clear.
+		//   - The version_info guard ensures we only clear once the proxy has accepted the
+		//     newest version we pushed, so a stale ACK of an intermediate version (while the
+		//     proxy is still catching up) doesn't prematurely clear an active rejection.
+		s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: 0, Version: req.GetVersionInfo()})
 	}
 
 	s.log.Debugf("handling v3 xDS resource request, version_info %s, response_nonce %s, nodeID %s, node_version %s, resource_names %v, type_url %s, errorCode %d, errorMessage %s",
@@ -417,14 +434,26 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		xdsNACKTotal.With(nodeIDLabel.Value(nodeID), typeURLLabel.Value(req.GetTypeUrl())).Increment()
 
 		if s.onNACK != nil {
-			s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: status.Code, Message: status.Message})
+			s.onNACK(NACKEvent{
+				IRKey:   cluster,
+				NodeID:  nodeID,
+				TypeURL: req.GetTypeUrl(),
+				Code:    status.Code,
+				Message: status.Message,
+				Version: s.lastSnapshot[cluster].GetVersion(req.GetTypeUrl()),
+			})
 		}
 	} else if s.onNACK != nil && req.GetResponseNonce() != "" {
-		// ACK with no error on a request that carries a response_nonce → clear any prior NACK.
-		// This ensures the very first request on a stream (which has no nonce and
-		// is not an ACK of any pushed config) doesn't emit a spurious clear that could wipe a
-		// legitimate NACK recorded for this irKey by another proxy.
-		s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, Code: 0})
+		// Clean ACK (no error, carries a response_nonce) → clear the prior NACK for this
+		// proxy and resource type. The TypeURL scopes the clear so an ACK of one resource
+		// type doesn't wipe a still-active rejection of another, and the nonce guard avoids
+		// a spurious clear on the very first (nonce-less) request of a stream.
+		//
+		// Unlike the SotW path, DeltaDiscoveryRequest carries no version_info, so the
+		// "only clear at the latest pushed version" guard cannot be applied here; delta
+		// tracks per-resource versions instead. EG serves SotW ADS by default, so this
+		// path is best-effort.
+		s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: 0})
 	}
 	s.log.Debugf("handling v3 xDS resource request, response_nonce %s, nodeID %s, node_version %s, resource_names_subscribe %v, resource_names_unsubscribe %v, type_url %s, errorCode %d, errorMessage %s",
 		req.ResponseNonce,

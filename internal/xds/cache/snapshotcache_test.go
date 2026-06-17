@@ -12,7 +12,9 @@ import (
 	"testing"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/require"
@@ -68,8 +70,12 @@ func TestOnStreamRequestNACK(t *testing.T) {
 		t.Helper()
 		sc := newTestSnapshotCache(t)
 		// A non-nil last snapshot for the node's cluster is required, otherwise the
-		// request handlers return early before reaching the NACK handling.
-		snap, err := cachev3.NewSnapshot("1", nil)
+		// request handlers return early before reaching the NACK handling. It carries a
+		// Listener so GetVersion(ListenerType) returns the snapshot version ("1"), which
+		// the clear path matches against the proxy's reported version_info.
+		snap, err := cachev3.NewSnapshot("1", map[resourcev3.Type][]types.Resource{
+			resourcev3.ListenerType: {&listenerv3.Listener{Name: "test-listener"}},
+		})
 		require.NoError(t, err)
 		sc.lastSnapshot[cluster] = snap
 
@@ -102,17 +108,30 @@ func TestOnStreamRequestNACK(t *testing.T) {
 			TypeURL: resourcev3.ListenerType,
 			Code:    13,
 			Message: "invalid access log format",
+			Version: "1",
 		}, (*events)[0])
 
-		// A subsequent clean ACK (carrying a nonce, no error) should clear the NACK.
+		// A clean ACK of a *stale* version (not the latest pushed) must NOT clear: the
+		// proxy is still catching up and may yet reject the newest config.
 		err = sc.OnStreamRequest(1, &discoveryv3.DiscoveryRequest{
 			Node:          node,
 			TypeUrl:       resourcev3.ListenerType,
 			ResponseNonce: "2",
+			VersionInfo:   "0",
+		})
+		require.NoError(t, err)
+		require.Len(t, *events, 1)
+
+		// A clean ACK of the latest pushed version (carrying a nonce, no error) clears it.
+		err = sc.OnStreamRequest(1, &discoveryv3.DiscoveryRequest{
+			Node:          node,
+			TypeUrl:       resourcev3.ListenerType,
+			ResponseNonce: "2",
+			VersionInfo:   "1",
 		})
 		require.NoError(t, err)
 		require.Len(t, *events, 2)
-		require.Equal(t, NACKEvent{IRKey: cluster, NodeID: nodeID, Code: 0}, (*events)[1])
+		require.Equal(t, NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: resourcev3.ListenerType, Code: 0, Version: "1"}, (*events)[1])
 	})
 
 	t.Run("delta", func(t *testing.T) {
@@ -133,8 +152,11 @@ func TestOnStreamRequestNACK(t *testing.T) {
 			TypeURL: resourcev3.ListenerType,
 			Code:    13,
 			Message: "invalid access log format",
+			Version: "1",
 		}, (*events)[0])
 
+		// Delta requests carry no version_info, so the clear is scoped by node+type+nonce
+		// only (no version gate).
 		err = sc.OnStreamDeltaRequest(1, &discoveryv3.DeltaDiscoveryRequest{
 			Node:          node,
 			TypeUrl:       resourcev3.ListenerType,
@@ -142,7 +164,7 @@ func TestOnStreamRequestNACK(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Len(t, *events, 2)
-		require.Equal(t, NACKEvent{IRKey: cluster, NodeID: nodeID, Code: 0}, (*events)[1])
+		require.Equal(t, NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: resourcev3.ListenerType, Code: 0}, (*events)[1])
 	})
 
 	// The first request on a stream has no response nonce: it is not an ACK of any
