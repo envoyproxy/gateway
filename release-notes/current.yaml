@@ -27,6 +27,7 @@ bug fixes: |
   Fixed API key auth credential ordering to avoid unnecessary xDS updates.
   Fixed the generated `install.yaml` creating a duplicate ValidatingAdmissionPolicy and its binding which caused `kustomize build` to fail with a duplicate resource error.
   Fixed ListenerSet hostname conflict resolution to apply listener precedence: Gateway-owned listeners win over ListenerSet listeners, and among ListenerSet listeners the first in processing order wins. Conflicted ListenerSet listeners now correctly report Accepted=False with the conflict reason. The Gateway's AttachedListenerSets count now only reflects ListenerSets with at least one accepted listener.
+  Fixed EnvoyGateway config hot-reload to apply defaults before validation, so validators always run against a fully-defaulted struct on both the startup and reload paths.
 
 # Enhancements that improve performance.
 performance improvements: |
