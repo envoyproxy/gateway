@@ -156,7 +156,7 @@ func (r *Runner) Close() error { return nil }
 // type's rejection on the same irKey intact. The irKey entry is removed only once
 // no rejections remain. The snapshot cache serializes all callback invocations
 // under its own lock, so the load-modify-store below is not racy.
-func (r *Runner) handleNACK(e cache.NACKEvent) {
+func (r *Runner) handleNACK(e *cache.NACKEvent) {
 	if r.XdsNACKs == nil {
 		return
 	}

@@ -80,8 +80,8 @@ func TestOnStreamRequestNACK(t *testing.T) {
 		sc.lastSnapshot[cluster] = snap
 
 		var events []NACKEvent
-		sc.SetNACKHandler(func(e NACKEvent) {
-			events = append(events, e)
+		sc.SetNACKHandler(func(e *NACKEvent) {
+			events = append(events, *e)
 		})
 		return sc, &events
 	}

@@ -54,7 +54,7 @@ type SnapshotCacheWithCallbacks interface {
 	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
 	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
-	SetNACKHandler(func(NACKEvent))
+	SetNACKHandler(func(*NACKEvent))
 }
 
 type snapshotMap map[string]*cachev3.Snapshot
@@ -87,7 +87,7 @@ type snapshotCache struct {
 	lastSnapshot        snapshotMap
 	log                 *zap.SugaredLogger
 	mu                  sync.Mutex
-	onNACK              func(NACKEvent)
+	onNACK              func(*NACKEvent)
 }
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
@@ -171,7 +171,7 @@ func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallback
 // SetNACKHandler installs the callback the cache invokes (with a NACKEvent) when
 // Envoy NACKs an update or clears a prior NACK with a clean ACK. It is the seam
 // that lets the cache report rejections without importing the message package.
-func (s *snapshotCache) SetNACKHandler(handler func(NACKEvent)) {
+func (s *snapshotCache) SetNACKHandler(handler func(*NACKEvent)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -287,7 +287,7 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		xdsNACKTotal.With(nodeIDLabel.Value(nodeID), typeURLLabel.Value(req.GetTypeUrl())).Increment()
 
 		if s.onNACK != nil {
-			s.onNACK(NACKEvent{
+			s.onNACK(&NACKEvent{
 				IRKey:   cluster,
 				NodeID:  nodeID,
 				TypeURL: req.GetTypeUrl(),
@@ -308,7 +308,7 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		//   - The version_info guard ensures we only clear once the proxy has accepted the
 		//     newest version we pushed, so a stale ACK of an intermediate version (while the
 		//     proxy is still catching up) doesn't prematurely clear an active rejection.
-		s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: 0, Version: req.GetVersionInfo()})
+		s.onNACK(&NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: 0, Version: req.GetVersionInfo()})
 	}
 
 	s.log.Debugf("handling v3 xDS resource request, version_info %s, response_nonce %s, nodeID %s, node_version %s, resource_names %v, type_url %s, errorCode %d, errorMessage %s",
@@ -434,7 +434,7 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		xdsNACKTotal.With(nodeIDLabel.Value(nodeID), typeURLLabel.Value(req.GetTypeUrl())).Increment()
 
 		if s.onNACK != nil {
-			s.onNACK(NACKEvent{
+			s.onNACK(&NACKEvent{
 				IRKey:   cluster,
 				NodeID:  nodeID,
 				TypeURL: req.GetTypeUrl(),
@@ -453,7 +453,7 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		// "only clear at the latest pushed version" guard cannot be applied here; delta
 		// tracks per-resource versions instead. EG serves SotW ADS by default, so this
 		// path is best-effort.
-		s.onNACK(NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: 0})
+		s.onNACK(&NACKEvent{IRKey: cluster, NodeID: nodeID, TypeURL: req.GetTypeUrl(), Code: 0})
 	}
 	s.log.Debugf("handling v3 xDS resource request, response_nonce %s, nodeID %s, node_version %s, resource_names_subscribe %v, resource_names_unsubscribe %v, type_url %s, errorCode %d, errorMessage %s",
 		req.ResponseNonce,

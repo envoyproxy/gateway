@@ -736,7 +736,7 @@ func TestHandleNACK(t *testing.T) {
 
 	// A rejection stores a NACK keyed by irKey, with the per-(node,type) detail
 	// including the rejected snapshot version.
-	r.handleNACK(cache.NACKEvent{
+	r.handleNACK(&cache.NACKEvent{
 		IRKey:   irKey,
 		NodeID:  "pod-1",
 		TypeURL: listenerURL,
@@ -754,7 +754,7 @@ func TestHandleNACK(t *testing.T) {
 
 	// A clean ACK (Code 0) for that same node+type clears the rejection. With no
 	// rejections left, the irKey entry is removed entirely.
-	r.handleNACK(cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: listenerURL, Code: 0})
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: listenerURL, Code: 0})
 	_, ok = nacks.Load(irKey)
 	require.False(t, ok)
 }
@@ -775,21 +775,21 @@ func TestHandleNACKScoping(t *testing.T) {
 	r := &Runner{Config: Config{XdsNACKs: nacks}}
 
 	// pod-1 rejects LDS, then pod-1 rejects CDS: both must be retained, not clobbered.
-	r.handleNACK(cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: listenerURL, Code: 13, Message: "bad listener"})
-	r.handleNACK(cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: clusterURL, Code: 13, Message: "bad cluster"})
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: listenerURL, Code: 13, Message: "bad listener"})
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: clusterURL, Code: 13, Message: "bad cluster"})
 
 	got, ok := nacks.Load(irKey)
 	require.True(t, ok)
 	require.Len(t, got.Rejections, 2)
 
 	// pod-2 cleanly ACKs CDS: it matches no recorded rejection, so nothing is cleared.
-	r.handleNACK(cache.NACKEvent{IRKey: irKey, NodeID: "pod-2", TypeURL: clusterURL, Code: 0})
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-2", TypeURL: clusterURL, Code: 0})
 	got, ok = nacks.Load(irKey)
 	require.True(t, ok)
 	require.Len(t, got.Rejections, 2)
 
 	// pod-1 cleanly ACKs CDS: only its CDS rejection is cleared; the LDS one survives.
-	r.handleNACK(cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: clusterURL, Code: 0})
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: clusterURL, Code: 0})
 	got, ok = nacks.Load(irKey)
 	require.True(t, ok)
 	require.Equal(t, &message.XdsNACK{
@@ -800,7 +800,7 @@ func TestHandleNACKScoping(t *testing.T) {
 	require.NotContains(t, got.Rejections, pod1Cls)
 
 	// pod-1 cleanly ACKs LDS: the last rejection clears, so the irKey entry is removed.
-	r.handleNACK(cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: listenerURL, Code: 0})
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: listenerURL, Code: 0})
 	_, ok = nacks.Load(irKey)
 	require.False(t, ok)
 }
