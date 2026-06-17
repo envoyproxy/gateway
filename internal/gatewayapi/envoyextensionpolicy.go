@@ -242,14 +242,13 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// policy overrides and populate its ancestor status.
 	parentRefs := GetManagedParentReferences(targetedRoute)
 	for _, p := range parentRefs {
-		if p.Kind == nil || *p.Kind == resource.KindGateway {
-			namespace := targetedRoute.GetNamespace()
-			if p.Namespace != nil {
-				namespace = string(*p.Namespace)
-			}
+		// Guaranteed to be non-nil due to GetManagedParentReferences filtering
+		parentRefCtx := targetedRoute.GetRouteParentContext(p)
+		gwCtx := parentRefCtx.GetGateway()
+		if gwCtx != nil {
 			gwNN := types.NamespacedName{
-				Namespace: namespace,
-				Name:      string(p.Name),
+				Namespace: gwCtx.Namespace,
+				Name:      gwCtx.Name,
 			}
 
 			key := gwNN.String()
@@ -265,11 +264,10 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 				listenerRouteMap[sectionName] = make(sets.Set[string])
 			}
 			listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
-
-			// Do need a section name since the policy is targeting to a route
-			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
-			ancestorRefs = append(ancestorRefs, &ancestorRef)
 		}
+
+		ancestorRef := getAncestorRefForRoutePolicy(parentRefCtx, targetedRoute.GetNamespace())
+		ancestorRefs = append(ancestorRefs, &ancestorRef)
 	}
 
 	// Set conditions for resolve error, then skip current xroute

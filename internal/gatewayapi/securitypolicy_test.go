@@ -935,7 +935,24 @@ func hasParentFalseCondition(p *egv1a1.SecurityPolicy) bool {
 }
 
 func SetRouteParentContext(route RouteContext, parentRef gwapiv1.ParentReference) {
-	ctx := &RouteParentContext{ParentReference: &parentRef}
+	ctx := &RouteParentContext{
+		ParentReference: &parentRef,
+		listeners: []*ListenerContext{
+			{
+				Listener: &gwapiv1.Listener{
+					Name: "listener",
+				},
+				gateway: &GatewayContext{
+					Gateway: &gwapiv1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      string(parentRef.Name),
+							Namespace: "default",
+						},
+					},
+				},
+			},
+		},
+	}
 	switch r := route.(type) {
 	case *HTTPRouteContext:
 		ctx.HTTPRoute = r.HTTPRoute
@@ -1100,6 +1117,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
+	xdsIR["default/test-gateway"] = &ir.Xds{}
 	trContext.SetServices(resources.Services)
 	tr.TranslatorContext = trContext
 

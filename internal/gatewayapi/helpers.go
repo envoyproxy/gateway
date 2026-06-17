@@ -669,6 +669,27 @@ func getAncestorRefForListenerSetPolicy(lsNN types.NamespacedName, sectionName *
 	}
 }
 
+// getAncestorRefForRoutePolicy returns Gateway or ListenerSet as an ancestor reference for route policy.
+func getAncestorRefForRoutePolicy(routeParentCtx *RouteParentContext, routeNamespace string) gwapiv1.ParentReference {
+	kind := resource.KindGateway
+	if routeParentCtx.Kind != nil && *routeParentCtx.Kind == resource.KindListenerSet {
+		kind = resource.KindListenerSet
+	}
+
+	namespace := routeParentCtx.Namespace
+	if namespace == nil {
+		namespace = NamespacePtr(routeNamespace)
+	}
+
+	return gwapiv1.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(kind),
+		Namespace:   namespace,
+		Name:        routeParentCtx.Name,
+		SectionName: routeParentCtx.SectionName,
+	}
+}
+
 type policyTargetRouteKey struct {
 	Kind      string
 	Namespace string

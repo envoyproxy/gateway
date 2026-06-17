@@ -454,19 +454,18 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// parentRefCtxs holds parent gateway/listener contexts for using in policy merge logic.
 	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
 	for _, p := range parentRefs {
-		if p.Kind == nil || *p.Kind == resource.KindGateway {
-			namespace := targetedRoute.GetNamespace()
-			if p.Namespace != nil {
-				namespace = string(*p.Namespace)
-			}
-
+		// Guaranteed to be non-nil due to GetManagedParentReferences filtering
+		parentRefCtx := targetedRoute.GetRouteParentContext(p)
+		gwCtx := parentRefCtx.GetGateway()
+		if gwCtx != nil {
 			mapKey := NamespacedNameWithSection{
 				NamespacedName: types.NamespacedName{
-					Name:      string(p.Name),
-					Namespace: namespace,
+					Name:      gwCtx.Name,
+					Namespace: gwCtx.Namespace,
 				},
 				SectionName: ptr.Deref(p.SectionName, ""),
 			}
+
 			if _, ok := gatewayRouteMap.Routes[mapKey]; !ok {
 				gatewayRouteMap.Routes[mapKey] = make(sets.Set[string])
 			}
@@ -477,12 +476,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				gatewayRouteMap.SectionIndex[mapKey.NamespacedName] = make(sets.Set[string])
 			}
 			gatewayRouteMap.SectionIndex[mapKey.NamespacedName].Insert(string(mapKey.SectionName))
-
-			// Do need a section name since the policy is targeting to a route.
-			ancestorRef := getAncestorRefForPolicy(mapKey.NamespacedName, p.SectionName)
-			ancestorRefs = append(ancestorRefs, &ancestorRef)
-			parentRefCtxs = append(parentRefCtxs, targetedRoute.GetRouteParentContext(p))
 		}
+
+		ancestorRef := getAncestorRefForRoutePolicy(parentRefCtx, targetedRoute.GetNamespace())
+		ancestorRefs = append(ancestorRefs, &ancestorRef)
+		parentRefCtxs = append(parentRefCtxs, parentRefCtx)
 	}
 
 	// Set conditions for resolve error, then skip current xroute
@@ -510,7 +508,8 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		for _, parentRefCtx := range parentRefCtxs {
 			for _, listener := range parentRefCtx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
-				ancestorRef := getAncestorRefForPolicy(gwNN, &listener.Name)
+				ancestorRef := getAncestorRefForRoutePolicy(parentRefCtx, targetedRoute.GetNamespace())
+				ancestorRef.SectionName = &listener.Name
 
 				// Find Gateway listener level policy
 				listenerMapKey := NamespacedNameWithSection{
