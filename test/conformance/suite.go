@@ -52,6 +52,7 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 		// TODO: retry after https://github.com/envoyproxy/gateway/pull/9196 merged
 		tests.GatewayListenerUnsupportedProtocol.ShortName,
 		tests.TCPRouteInvalidNonTCPListener.ShortName,
+		tests.TCPRouteMultipleRoutesAttachment.ShortName,
 		// https://github.com/envoyproxy/gateway/pull/9238
 		tests.HTTPRouteRetryConnectionError.ShortName,
 		// https://github.com/kubernetes-sigs/gateway-api/issues/4977
