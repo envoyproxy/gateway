@@ -1,0 +1,74 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.rbac:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: allow-admin-path
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
+                    singlePredicate:
+                      customMatch:
+                        name: cel_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/xds.type.matcher.v3.CelMatcher
+                          exprMatch:
+                            celExprString: request.path.startsWith('/admin')
+                      input:
+                        name: cel
+                        typedConfig:
+                          '@type': type.googleapis.com/xds.type.matcher.v3.HttpAttributesCelMatchInput
+                - onMatch:
+                    action:
+                      name: allow-team-post
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          customMatch:
+                            name: cel_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/xds.type.matcher.v3.CelMatcher
+                              exprMatch:
+                                celExprString: request.method == 'POST'
+                          input:
+                            name: cel
+                            typedConfig:
+                              '@type': type.googleapis.com/xds.type.matcher.v3.HttpAttributesCelMatchInput
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-team
+                          valueMatch:
+                            exact: team-a
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    action: DENY
+                    name: DENY

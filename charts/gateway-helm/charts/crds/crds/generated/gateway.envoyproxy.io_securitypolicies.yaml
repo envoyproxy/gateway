@@ -539,6 +539,9 @@ spec:
                       required:
                       - action
                       type: object
+                      x-kubernetes-validations:
+                      - message: at least one of principal or cel must be specified
+                        rule: has(self.principal) || has(self.cel)
                     type: array
                 type: object
               basicAuth:
@@ -7465,8 +7468,8 @@ spec:
                 ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
-                self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)
-                : true'
+                self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
+                : false)) ? has(self.jwt) : true'
           status:
             description: Status defines the current status of SecurityPolicy.
             properties:

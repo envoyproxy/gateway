@@ -13,6 +13,7 @@ import (
 
 	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
 	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
+	xdstypev3 "github.com/cncf/xds/go/xds/type/v3"
 	configv3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	rbacconfigv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -201,6 +202,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			// Predicates for JWT claims and scopes.
 			jwtPredicate []*matcherv3.Matcher_MatcherList_Predicate
 
+			// Predicate for CEL expressions.
+			celPredicate *matcherv3.Matcher_MatcherList_Predicate
+
 			// The final predicate that will be used for the current rule.
 			finalPredicate *matcherv3.Matcher_MatcherList_Predicate
 		)
@@ -265,6 +269,12 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			}
 		}
 
+		if rule.CEL != nil {
+			if celPredicate, err = buildCELPredicate(*rule.CEL); err != nil {
+				return nil, err
+			}
+		}
+
 		// AND all the predicates together.
 		var allPredicates []*matcherv3.Matcher_MatcherList_Predicate
 		if methodPredicate != nil {
@@ -278,6 +288,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		}
 		if geoIPPredicate != nil {
 			allPredicates = append(allPredicates, geoIPPredicate)
+		}
+		if celPredicate != nil {
+			allPredicates = append(allPredicates, celPredicate)
 		}
 		allPredicates = append(allPredicates, jwtPredicate...)
 		allPredicates = append(allPredicates, headerPredicate...)
@@ -387,6 +400,39 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 					CustomMatch: &cncfv3.TypedExtensionConfig{
 						Name:        "ip_matcher",
 						TypedConfig: ipMatcher,
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+func buildCELPredicate(cel string) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	input, err := proto.ToAnyWithValidation(&matcherv3.HttpAttributesCelMatchInput{})
+	if err != nil {
+		return nil, err
+	}
+
+	matcher, err := proto.ToAnyWithValidation(&matcherv3.CelMatcher{
+		ExprMatch: &xdstypev3.CelExpression{
+			CelExprString: cel,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: &cncfv3.TypedExtensionConfig{
+					Name:        "cel",
+					TypedConfig: input,
+				},
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+					CustomMatch: &cncfv3.TypedExtensionConfig{
+						Name:        "cel_matcher",
+						TypedConfig: matcher,
 					},
 				},
 			},

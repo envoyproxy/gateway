@@ -30,6 +30,8 @@ type Authorization struct {
 }
 
 // AuthorizationRule defines a single authorization rule.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.principal) || has(self.cel)",message="at least one of principal or cel must be specified"
 type AuthorizationRule struct {
 	// Name is a user-friendly name for the rule.
 	// If not specified, Envoy Gateway will generate a unique name for the rule.
@@ -54,7 +56,7 @@ type AuthorizationRule struct {
 	// the rule will match only if both the client IP and the JWT claim match.
 	//
 	// +optional
-	Principal Principal `json:"principal,omitempty"`
+	Principal *Principal `json:"principal,omitempty"`
 
 	// CEL specifies a Common Expression Language expression to evaluate for the
 	// request. If specified, the expression must evaluate to true for the rule to match.
@@ -82,7 +84,6 @@ type AuthorizationRule struct {
 	// `request.method == 'POST' && request.path.startsWith('/admin')`
 	//
 	// +optional
-	// +notImplementedHide
 	CEL *CELExpression `json:"cel,omitempty"`
 }
 

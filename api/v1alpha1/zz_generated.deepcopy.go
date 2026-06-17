@@ -334,7 +334,11 @@ func (in *AuthorizationRule) DeepCopyInto(out *AuthorizationRule) {
 		*out = new(Operation)
 		(*in).DeepCopyInto(*out)
 	}
-	in.Principal.DeepCopyInto(&out.Principal)
+	if in.Principal != nil {
+		in, out := &in.Principal, &out.Principal
+		*out = new(Principal)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.CEL != nil {
 		in, out := &in.CEL, &out.CEL
 		*out = new(CELExpression)
