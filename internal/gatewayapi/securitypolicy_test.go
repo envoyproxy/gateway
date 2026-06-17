@@ -942,8 +942,8 @@ func TestTranslatorFetchEndpointsFromIssuerPersistentFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	require.Equal(t, int32(1), callCount.Load())
-	require.NotNil(t, tr.oidcDiscoverySuccessCache, "success cache should be initialized")
-	require.Contains(t, tr.oidcDiscoverySuccessCache, serverURL, "success should be stored in persistent cache")
+	require.NotNil(t, oidcDiscoverySuccessCache, "success cache should be initialized")
+	require.Contains(t, oidcDiscoverySuccessCache, serverURL, "success should be stored in persistent cache")
 
 	// Simulate a new translation round: fresh per-round cache.
 	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
