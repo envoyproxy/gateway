@@ -20,6 +20,7 @@ import (
 	ratelimitfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
@@ -306,6 +307,12 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			// Set the per-rule XRateLimitOption if specified, overriding the filter-level setting.
 			rateLimit.XRatelimitOption = toEnvoyXRateLimitOption(rule.XRateLimitOption)
 
+			// Source the limit value from dynamic metadata if specified, overriding the static
+			// limit per request when the metadata value is present.
+			if md := rule.Limit.FromMetadata; md != nil {
+				rateLimit.Limit = buildRateLimitOverride(md)
+			}
+
 			if c := rule.RequestCost; c != nil {
 				// Set the hits addend for the request cost if specified.
 				rateLimit.HitsAddend = rateLimitCostToHitsAddend(c)
@@ -318,6 +325,9 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 				responseRule := &routev3.RateLimit{Actions: rlActions, ApplyOnStreamDone: true}
 				responseRule.XRatelimitOption = rateLimit.XRatelimitOption
 				responseRule.HitsAddend = rateLimitCostToHitsAddend(c)
+				// Keep the limit override consistent with the request-time rule so both
+				// descriptors for this shared counter reference the same per-request limit.
+				responseRule.Limit = rateLimit.Limit
 				rateLimits = append(rateLimits, responseRule)
 			}
 		}
@@ -597,6 +607,24 @@ func rateLimitCostToHitsAddend(c *ir.RateLimitCost) *routev3.RateLimit_HitsAdden
 		ret.Format = *c.Format
 	}
 	return ret
+}
+
+// buildRateLimitOverride builds an Envoy rate limit override that sources the limit value from
+// per-request dynamic metadata. The referenced metadata value must be a struct containing
+// "requests_per_unit" and "unit" properties.
+func buildRateLimitOverride(md *ir.RateLimitValueMetadata) *routev3.RateLimit_Override {
+	return &routev3.RateLimit_Override{
+		OverrideSpecifier: &routev3.RateLimit_Override_DynamicMetadata_{
+			DynamicMetadata: &routev3.RateLimit_Override_DynamicMetadata{
+				MetadataKey: &metadatav3.MetadataKey{
+					Key: md.Namespace,
+					Path: []*metadatav3.MetadataKey_PathSegment{
+						{Segment: &metadatav3.MetadataKey_PathSegment_Key{Key: md.Key}},
+					},
+				},
+			},
+		},
+	}
 }
 
 // GetRateLimitServiceConfigStr returns the PB string for the rate limit service configuration.
