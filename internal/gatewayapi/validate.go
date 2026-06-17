@@ -820,6 +820,9 @@ func setConflictedConditions(listener *ListenerContext, reason gwapiv1.ListenerC
 		listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionFalse, reason, msg)
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse, reason, msg)
 	}
+	if reason == gwapiv1.ListenerReasonProtocolConflict {
+		listener.protocolConflicted = true
+	}
 }
 
 // Port, protocol and hostname tuple should be unique across all listeners on merged Gateways.
@@ -982,7 +985,7 @@ func listenerDisplayName(l *ListenerContext) string {
 	return l.gateway.Namespace + "/" + l.gateway.Name + "/" + string(l.Name)
 }
 
-func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContext) {
+func (t *Translator) validateConflictedHostnameListeners(gateways []*GatewayContext) {
 	// Iterate through all layer-7 (HTTP, HTTPS, TLS) listeners and collect info about protocols
 	// and hostnames per port.
 	for _, gateway := range gateways {
@@ -993,7 +996,9 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 			}
 			// Skip listeners that are already marked as invalid from per-listener validation.
 			// This prevents an invalid first listener from blocking valid subsequent listeners.
-			if !isSpecValidForConflictChecks(listener) {
+			// Also skip listeners already rejected by protocol conflict resolution — a protocol
+			// loser must not win hostname precedence over a valid same-hostname listener.
+			if !isSpecValidForConflictChecks(listener) || listener.protocolConflicted {
 				continue
 			}
 			if portListenerInfo[listener.Port] == nil {
