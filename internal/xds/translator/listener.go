@@ -919,6 +919,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 
 func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsContext) {
 	needsDefaultValidationContext := tlsConfig.AcceptUntrusted ||
+		tlsConfig.AllowExpiredCertificate ||
 		len(tlsConfig.VerifyCertificateSpki) > 0 ||
 		len(tlsConfig.VerifyCertificateHash) > 0 ||
 		len(tlsConfig.MatchTypedSubjectAltNames) > 0
@@ -927,6 +928,9 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 
 	if tlsConfig.AcceptUntrusted {
 		validationContext.TrustChainVerification = tlsv3.CertificateValidationContext_ACCEPT_UNTRUSTED
+	}
+	if tlsConfig.AllowExpiredCertificate {
+		validationContext.AllowExpiredCertificate = true
 	}
 
 	validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)
