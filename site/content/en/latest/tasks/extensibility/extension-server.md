@@ -76,8 +76,8 @@ The hooks are executed in the following order during xDS translation:
 
 #### Route Hook (`PostRouteModifyHook`)
 
-- **When called**: After each individual route is generated from an HTTPRoute with extension filters
-- **Input**: Single route, hostnames, and extension resources from the HTTPRoute
+- **When called**: After each individual route is generated from an HTTPRoute that has extension filters attached or has extension server policies targeting it (or one of its rules)
+- **Input**: Single route, hostnames, the extension resources from the HTTPRoute, and the extension server policies targeting the route or its matching rule
 - **Output**: Modified route
 - **Use cases**: Add route-specific filters, modify route configuration, add typed per-filter config
 
@@ -108,6 +108,34 @@ The hooks are executed in the following order during xDS translation:
 - **Input**: All clusters, secrets, listeners, and routes, plus extension policies
 - **Output**: Complete set of modified resources
 - **Use cases**: Global resource injection, cross-resource modifications, cleanup operations
+
+### Targeting Resources with Extension Server Policies
+
+Extension server policies (the custom resources registered via `extensionManager.policyResources`) attach to
+Envoy Gateway resources through their `targetRefs`/`targetRef` and optional `sectionName`. The target determines
+which hooks receive the policy:
+
+| `targetRef` kind | `sectionName` | Attaches to | Delivered to hook(s) |
+|------------------|---------------|-------------|----------------------|
+| `Gateway`        | _(unset)_     | The whole Gateway | `PostTranslateModifyHook` |
+| `Gateway`        | Listener name | A single Listener | `PostHTTPListenerModifyHook` |
+| `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |
+| `HTTPRoute` / `GRPCRoute` | Rule name (`sectionName`) | A single route rule | `PostRouteModifyHook` (routes generated from that rule only) |
+
+#### Status reporting
+
+Envoy Gateway records the outcome of attachment in the policy's `status.ancestors` conditions (the ancestor is the
+Gateway the target resolves to):
+
+- **Attached**: the policy is delivered to the relevant hook(s) and an `Accepted: True` condition (reason
+  `Accepted`) is set.
+- **`sectionName` not found**: when a policy specifies a `sectionName` (route rule or listener) that does not exist
+  on the targeted resource, the policy does not attach and is not delivered to any hook; an `Accepted: False`
+  condition with reason `TargetNotFound` is set.
+- **Unsupported route kind**: targeting `TCPRoute`, `UDPRoute`, or `TLSRoute` is not currently supported. The policy
+  does not attach and an `Accepted: False` condition with reason `Invalid` is set.
+- **Target not found**: when the referenced `Gateway` / route does not exist (or the Gateway was not accepted), the
+  policy is skipped silently and no condition is written, since the target may be created (or become accepted) later.
 
 ### Configuration
 
