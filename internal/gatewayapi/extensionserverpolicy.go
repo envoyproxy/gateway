@@ -237,7 +237,6 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 			continue
 		}
 
-		// The targetRef points at a route kind that cannot be translated into xDS routes.
 		if !supportedRouteType {
 			status.SetTranslationErrorForPolicyAncestor(
 				&policyStatus,
