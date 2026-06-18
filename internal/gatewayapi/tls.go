@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -300,4 +301,37 @@ func validateCipherSuites(ciphers []string) error {
 		}
 	}
 	return nil
+}
+
+func appendDedupPEMCertsWithSeen(dst, src []byte, seen map[[sha256.Size]byte]struct{}) []byte {
+	// seed seen from dst so that certs already present are recognised as duplicates.
+	rest := dst
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+		if block.Type == "CERTIFICATE" {
+			seen[sha256.Sum256(block.Bytes)] = struct{}{}
+		}
+	}
+
+	rest = src
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+		if block.Type == "CERTIFICATE" {
+			hash := sha256.Sum256(block.Bytes)
+			if _, exists := seen[hash]; exists {
+				continue
+			}
+			seen[hash] = struct{}{}
+		}
+		dst = append(dst, pem.EncodeToMemory(block)...)
+	}
+	return dst
 }
