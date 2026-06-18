@@ -742,7 +742,7 @@ func TestBuildAuthorizationCEL(t *testing.T) {
 
 	t.Run("invalid cel returns translation error", func(t *testing.T) {
 		celExpression := egv1a1.CELExpression(")++++")
-		policy := sp("default", "authz-cel-invalid")
+		policy := sp("test", "authz-cel-invalid")
 		policy.Spec.Authorization = &egv1a1.Authorization{
 			Rules: []egv1a1.AuthorizationRule{
 				{
