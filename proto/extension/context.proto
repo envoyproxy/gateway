@@ -25,11 +25,11 @@ message PostRouteExtensionContext {
 }
 
 
-// PostVirtualHostExtensionContext provides extension server policies for the virtual host hook.
+// Empty for now but we can add fields to the context as use-cases are discovered without
+// breaking any clients that use the API
 // additional context information can be added to this message as more use-cases are discovered
 message PostVirtualHostExtensionContext {
-    // Policies introduced by the extension that are targeting routes within this virtual host.
-    repeated ExtensionResource extension_resources = 1;
+
 }
 
 

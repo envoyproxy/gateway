@@ -58,114 +58,101 @@ func (t *Translator) ProcessExtensionServerPolicies(
 
 	var errs error
 
-	// Translate
-	// 1. First translate Policies targeting RouteRules
-	// 2. Next translate Policies targeting xRoutes
-	// 3. Then translate Policies targeting Listeners
-	// 4. Finally, the policies targeting Gateways
-
-	// Process the policies targeting RouteRules (HTTP + TCP)
-	for i, currPolicy := range policies {
-		policyName := utils.NamespacedName(&currPolicy)
-		policyTargetRefs, err := extractTargetRefs(&currPolicy, gateways)
+	// Extract and validate the target references once per policy. The same
+	// references are reused across the translation phases below.
+	targetRefsList := make([]egv1a1.PolicyTargetReferences, len(policies))
+	validPolicy := make([]bool, len(policies))
+	for i := range policies {
+		refs, err := extractTargetRefs(&policies[i])
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("error finding targetRefs for policy %s: %w", currPolicy.GetName(), err))
+			errs = errors.Join(errs, fmt.Errorf("error finding targetRefs for policy %s: %w", policies[i].GetName(), err))
 			continue
 		}
-		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
-		targetRefs := resolvePolicyTargetsFromReferences(policyTargetRefs, currPolicy.GetNamespace())
+		targetRefsList[i] = refs
+		validPolicy[i] = true
+	}
+
+	getOrInitPolicy := func(i int) *unstructured.Unstructured {
+		policyName := utils.NamespacedName(&policies[i])
+		policy, found := handledPolicies[policyName]
+		if !found {
+			policy = policyCopies[i]
+			handledPolicies[policyName] = policy
+			handledPoliciesOrder = append(handledPoliciesOrder, policyName)
+		}
+		return policy
+	}
+
+	// Translate, in order:
+	// 1. Policies targeting route rules (HTTPRoute/GRPCRoute rules)
+	// 2. Policies targeting routes (HTTPRoute/GRPCRoute)
+	// 3. Policies targeting Listeners
+	// 4. Policies targeting Gateways
+
+	// Process the policies targeting route rules.
+	for i := range policies {
+		if !validPolicy[i] {
+			continue
+		}
+		targetRefs := resolvePolicyTargetsFromReferences(targetRefsList[i], policies[i].GetNamespace())
 		for _, currTarget := range targetRefs {
 			if isRouteRule(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = policyCopies[i]
-					handledPolicies[policyName] = policy
-					handledPoliciesOrder = append(handledPoliciesOrder, policyName)
-				}
-				t.processExtensionServerPolicyForRoute(xdsIR, routeMap, policy, currTarget)
+				t.processExtensionServerPolicyForRoute(xdsIR, routeMap, getOrInitPolicy(i), currTarget)
 			}
 		}
 	}
 
-	// Process the policies targeting xRoutes (HTTP + TCP)
-	for i, currPolicy := range policies {
-		policyName := utils.NamespacedName(&currPolicy)
-		policyTargetRefs, err := extractTargetRefs(&currPolicy, gateways)
-		if err != nil {
-			// First iteration already handles error propagation
+	// Process the policies targeting routes.
+	for i := range policies {
+		if !validPolicy[i] {
 			continue
 		}
-		gvk := currPolicy.GroupVersionKind()
+		gvk := policies[i].GroupVersionKind()
 		targetRefs := resolvePolicyTargets(
-			policyTargetRefs,
+			targetRefsList[i],
 			routes,
 			resources.ReferenceGrants,
 			gvk.Group,
 			gvk.Kind,
-			currPolicy.GetNamespace(),
+			policies[i].GetNamespace(),
 			t.GetNamespace)
 		for _, currTarget := range targetRefs {
 			if isRoute(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = policyCopies[i]
-					handledPolicies[policyName] = policy
-					handledPoliciesOrder = append(handledPoliciesOrder, policyName)
-				}
-				t.processExtensionServerPolicyForRoute(xdsIR, routeMap, policy, currTarget)
+				t.processExtensionServerPolicyForRoute(xdsIR, routeMap, getOrInitPolicy(i), currTarget)
 			}
 		}
 	}
 
 	// Process the policies targeting Listeners
-	for i, currPolicy := range policies {
-		policyName := utils.NamespacedName(&currPolicy)
-		policyTargetRefs, err := extractTargetRefs(&currPolicy, gateways)
-		if err != nil {
-			// First iteration already handles error propagation
+	for i := range policies {
+		if !validPolicy[i] {
 			continue
 		}
-		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
-		targetRefs := resolvePolicyTargetsFromReferences(policyTargetRefs, currPolicy.GetNamespace())
+		targetRefs := resolvePolicyTargetsFromReferences(targetRefsList[i], policies[i].GetNamespace())
 		for _, currTarget := range targetRefs {
 			if isListener(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = policyCopies[i]
-					handledPolicies[policyName] = policy
-					handledPoliciesOrder = append(handledPoliciesOrder, policyName)
-				}
-				t.processExtensionServerPolicyForGateway(xdsIR, gatewayMap, policy, currTarget)
+				t.processExtensionServerPolicyForGateway(xdsIR, gatewayMap, getOrInitPolicy(i), currTarget)
 			}
 		}
 	}
 
 	// Process the policies targeting Gateways
-	for i, currPolicy := range policies {
-		policyName := utils.NamespacedName(&currPolicy)
-		policyTargetRefs, err := extractTargetRefs(&currPolicy, gateways)
-		if err != nil {
-			// First iteration already handles error propagation
+	for i := range policies {
+		if !validPolicy[i] {
 			continue
 		}
-		gvk := currPolicy.GroupVersionKind()
+		gvk := policies[i].GroupVersionKind()
 		targetRefs := resolvePolicyTargets(
-			policyTargetRefs,
+			targetRefsList[i],
 			gateways,
 			resources.ReferenceGrants,
 			gvk.Group,
 			gvk.Kind,
-			currPolicy.GetNamespace(),
+			policies[i].GetNamespace(),
 			t.GetNamespace)
 		for _, currTarget := range targetRefs {
 			if isGateway(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = policyCopies[i]
-					handledPolicies[policyName] = policy
-					handledPoliciesOrder = append(handledPoliciesOrder, policyName)
-				}
-				t.processExtensionServerPolicyForGateway(xdsIR, gatewayMap, policy, currTarget)
+				t.processExtensionServerPolicyForGateway(xdsIR, gatewayMap, getOrInitPolicy(i), currTarget)
 			}
 		}
 	}
@@ -181,7 +168,7 @@ func (t *Translator) ProcessExtensionServerPolicies(
 	return res, errs
 }
 
-func extractTargetRefs(policy *unstructured.Unstructured, gateways []*GatewayContext) (egv1a1.PolicyTargetReferences, error) {
+func extractTargetRefs(policy *unstructured.Unstructured) (egv1a1.PolicyTargetReferences, error) {
 	var targetRefs egv1a1.PolicyTargetReferences
 	spec, found := policy.Object["spec"].(map[string]any)
 	if !found {
@@ -194,14 +181,12 @@ func extractTargetRefs(policy *unstructured.Unstructured, gateways []*GatewayCon
 	if err := json.Unmarshal(specAsJSON, &targetRefs); err != nil {
 		return targetRefs, fmt.Errorf("no targets found for the policy")
 	}
-	if
-		(
-			targetRefs.TargetRef == nil ||
-			targetRefs.TargetRef.LocalPolicyTargetReference.Group == "" ||
-			targetRefs.TargetRef.LocalPolicyTargetReference.Kind == "" ||
-			targetRefs.TargetRef.LocalPolicyTargetReference.Name == "") &&
-			len(targetRefs.TargetRefs) < 1 &&
-			len(targetRefs.TargetSelectors) < 1 {
+	if (targetRefs.TargetRef == nil ||
+		targetRefs.TargetRef.Group == "" ||
+		targetRefs.TargetRef.Kind == "" ||
+		targetRefs.TargetRef.Name == "") &&
+		len(targetRefs.TargetRefs) < 1 &&
+		len(targetRefs.TargetSelectors) < 1 {
 		return targetRefs, fmt.Errorf("no targets found for the policy")
 	}
 	return targetRefs, nil
@@ -213,10 +198,15 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 	policy *unstructured.Unstructured,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
-	targetedRoute := resolveExtServerPolicyRouteTargetRef(currTarget, routeMap)
+	targetedRoute, resolveErr := resolveExtServerPolicyRouteTargetRef(currTarget, routeMap)
 	if targetedRoute == nil {
+		// Route not found
 		return
 	}
+
+	// We only handle HTTPRoute/GRPCRoute for now
+	routeType := targetedRoute.GetRouteType()
+	supportedRouteType := routeType == resource.KindHTTPRoute || routeType == resource.KindGRPCRoute
 
 	parentRefs := GetParentReferences(targetedRoute)
 
@@ -236,34 +226,51 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 			continue
 		}
 
+		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
+		gatewayNN := utils.NamespacedName(gtwCtx)
+		ancestorRef := getAncestorRefForPolicy(gatewayNN, p.SectionName)
+
+		// The targetRef specified a sectionName (rule) that does not exist on the route.
+		if resolveErr != nil {
+			status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
+			policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+			continue
+		}
+
+		// The targetRef points at a route kind that cannot be translated into xDS routes.
+		if !supportedRouteType {
+			status.SetTranslationErrorForPolicyAncestor(
+				&policyStatus,
+				&ancestorRef,
+				t.GatewayControllerName,
+				policy.GetGeneration(),
+				fmt.Sprintf("ExtensionServerPolicy does not support targeting %s", routeType),
+			)
+			policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+			continue
+		}
+
 		found := false
-		switch targetedRoute.GetRouteType() {
-		case resource.KindHTTPRoute, resource.KindGRPCRoute:
-			for _, listener := range parentRefCtx.listeners {
-				irListener := gwXDS.GetHTTPListener(irListenerName(listener))
-				if irListener == nil {
+		for _, listener := range parentRefCtx.listeners {
+			irListener := gwXDS.GetHTTPListener(irListenerName(listener))
+			if irListener == nil {
+				continue
+			}
+			for _, r := range irListener.Routes {
+				if currTarget.SectionName != nil && string(*currTarget.SectionName) != r.Metadata.SectionName {
+					// Section name is specified but does not match the current route
 					continue
 				}
-				// Only add policy to listener if it does not target a specific route
-				if currTarget.SectionName == nil {
-					irListener.ExtensionServerPolicies = append(irListener.ExtensionServerPolicies, &ir.UnstructuredRef{Object: policy})
+				if !strings.HasPrefix(r.Name, irRoutePrefix(targetedRoute)) {
+					// target does not match the current route
+					continue
 				}
-				for _, r := range irListener.Routes {
-					if currTarget.SectionName != nil && string(*currTarget.SectionName) != r.Metadata.SectionName {
-						continue
-					}
-					if strings.HasPrefix(r.Name, irRoutePrefix(targetedRoute)) {
-						r.ExtensionServerPolicies = append(r.ExtensionServerPolicies, &ir.UnstructuredRef{Object: policy})
-						found = true
-					}
-				}
+				r.ExtensionServerPolicies = appendUnstructuredRefIfAbsent(r.ExtensionServerPolicies, policy)
+				found = true
 			}
 		}
 
 		if found {
-			policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
-			gatewayNN := utils.NamespacedName(gtwCtx)
-			ancestorRef := getAncestorRefForPolicy(gatewayNN, p.SectionName)
 			status.SetAcceptedForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration())
 			policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
 		}
@@ -319,8 +326,7 @@ func resolveExtServerPolicyGatewayTargetRef(
 func resolveExtServerPolicyRouteTargetRef(
 	target policyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
-) RouteContext {
-	// Check if the route exists
+) (RouteContext, *status.PolicyResolveError) {
 	key := policyTargetRouteKey{
 		Kind:      string(target.Kind),
 		Name:      string(target.Name),
@@ -328,20 +334,19 @@ func resolveExtServerPolicyRouteTargetRef(
 	}
 	route, ok := routes[key]
 
-	// Route not found
+	// Route not found. The policy may legitimately resolve once the route is
+	// created, so we stay silent and do not set a negative status.
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
-	// If sectionName is set, make sure its valid
 	if target.SectionName != nil {
 		if err := validateRouteRuleSectionName(*target.SectionName, key, route); err != nil {
-			// unable to find a matching section name for policy in route
-			return nil
+			return route.RouteContext, err
 		}
 	}
 
-	return route.RouteContext
+	return route.RouteContext, nil
 }
 
 func PolicyStatusToUnstructured(policyStatus gwapiv1.PolicyStatus) map[string]any {
@@ -407,6 +412,15 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		found = true
 	}
 	return found
+}
+
+func appendUnstructuredRefIfAbsent(refs []*ir.UnstructuredRef, policy *unstructured.Unstructured) []*ir.UnstructuredRef {
+	for _, ref := range refs {
+		if ref.Object == policy {
+			return refs
+		}
+	}
+	return append(refs, &ir.UnstructuredRef{Object: policy})
 }
 
 // extensionServerPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied status entries.

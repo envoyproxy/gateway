@@ -2506,6 +2506,17 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 			}
 		}
 	}
+	if in.ExtensionServerPolicies != nil {
+		in, out := &in.ExtensionServerPolicies, &out.ExtensionServerPolicies
+		*out = make([]*UnstructuredRef, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(UnstructuredRef)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.Traffic != nil {
 		in, out := &in.Traffic, &out.Traffic
 		*out = new(TrafficFeatures)
