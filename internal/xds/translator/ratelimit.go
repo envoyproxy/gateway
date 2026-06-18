@@ -178,8 +178,8 @@ func patchRouteWithRateLimit(irListener *ir.HTTPListener, route *routev3.Route, 
 		return nil
 	}
 	domain := irListener.Name
-	rateLimits, hasSharedRule := buildRouteRateLimits(irRoute)
-	if hasSharedRule {
+	rateLimits, useRouteRateLimits := buildRouteRateLimits(irRoute)
+	if useRouteRateLimits {
 		// for shared rules, we uses RateLimit on route instead of per filter config,
 		// since there're more than one ratelimit filters in HCM.
 		xdsRouteAction.RateLimits = rateLimits
@@ -219,7 +219,9 @@ func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, domain str
 }
 
 // buildRouteRateLimits constructs rate limit actions for a given route based on the global rate limit configuration.
-func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit, hasSharedRule bool) {
+// useRouteRateLimits is true when all rules are shared and none specify a custom cost, meaning rate limits can be
+// applied directly on the route action rather than per typed filter config.
+func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit, useRouteRateLimits bool) {
 	// Ensure route has rate limit config
 	if !isValidGlobalRateLimit(route) {
 		return nil, false
@@ -228,10 +230,15 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 	// Get the global rate limit configuration
 	global := route.Traffic.RateLimit.Global
 
+	var hasSharedRule, costSpecified bool
 	// Iterate over each rule in the global rate limit configuration.
 	for rIdx, rule := range global.Rules {
-		if isRuleShared(rule) {
+		ruleShared := isRuleShared(rule)
+		if ruleShared {
 			hasSharedRule = true
+		}
+		if rule.RequestCost != nil || rule.ResponseCost != nil {
+			costSpecified = true
 		}
 		// If method matches specified, create one rate limit rule per method (OR behavior),
 		// these rules share the same limit counter, so they share the same descriptor.
@@ -247,7 +254,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 
 			// Create the route descriptor using the rule's shared attribute
 			var descriptorKey, descriptorValue string
-			if isRuleShared(rule) {
+			if ruleShared {
 				// For shared rule, use full rule name
 				descriptorKey = rule.Name
 				descriptorValue = rule.Name
@@ -271,8 +278,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			rlActions = append(rlActions, routeDescriptor)
 
 			// Calculate the domain-specific rule index (0-based for each domain)
-			ruleIsShared := isRuleShared(rule)
-			domainRuleIdx := getDomainRuleIndex(global.Rules, rIdx, ruleIsShared)
+			domainRuleIdx := getDomainRuleIndex(global.Rules, rIdx, ruleShared)
 
 			// Process each header match in the rule.
 			buildHeaderMatchRateLimitActions(&rlActions, domainRuleIdx, rule.HeaderMatches)
@@ -332,7 +338,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			}
 		}
 	}
-	return rateLimits, hasSharedRule
+	return rateLimits, hasSharedRule && !costSpecified
 }
 
 // toEnvoyXRateLimitOption maps the EG API XRateLimitHeadersOption to the Envoy

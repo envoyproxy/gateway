@@ -62,21 +62,42 @@
       name: third-route
       route:
         cluster: third-route-dest
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: test-namespace/test-policy-2/rule/0
-              descriptorValue: test-namespace/test-policy-2/rule/0
-          - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: two
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit/test-namespace/test-policy-2:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: first-listener
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: test-namespace/test-policy-2/rule/0
+                descriptorValue: test-namespace/test-policy-2/rule/0
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: two
+            hitsAddend:
+              number: "0"
+          - actions:
+            - genericKey:
+                descriptorKey: test-namespace/test-policy-2/rule/0
+                descriptorValue: test-namespace/test-policy-2/rule/0
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: two
+            applyOnStreamDone: true
+            hitsAddend:
+              format: '%DYNAMIC_METADATA(my.cost.ns:request_cost)%'
     - match:
         path: foo/bar
       name: fourth-route

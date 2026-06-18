@@ -85,6 +85,10 @@ http:
                     requests: 10
                     unit: second
                   shared: true
+                  requestCost:
+                    number: 0
+                  responseCost:
+                    format: '%DYNAMIC_METADATA(my.cost.ns:request_cost)%'
         pathMatch:
           exact: "test"
         destination:
