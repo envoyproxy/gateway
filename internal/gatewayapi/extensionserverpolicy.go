@@ -282,7 +282,6 @@ func (t *Translator) processExtensionServerPolicyForGateway(
 	policy *unstructured.Unstructured,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
-
 	// Negative statuses have already been assigned so its safe to skip
 	gateway := resolveExtServerPolicyGatewayTargetRef(currTarget, gatewayMap)
 	if gateway == nil {
