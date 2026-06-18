@@ -215,7 +215,7 @@ data:
   lua: |
     function envoy_on_request(request_handle)
       local ctx = request_handle:filterContext()
-      local token = request_handle:headers():get(ctx["token_header"])
+      local token = request_handle:headers():get(ctx:get("token_header"))
       if token and token ~= "" then
         request_handle:headers():replace("authorization", "Bearer " .. token)
       end
@@ -255,7 +255,7 @@ data:
   lua: |
     function envoy_on_request(request_handle)
       local ctx = request_handle:filterContext()
-      local token = request_handle:headers():get(ctx["token_header"])
+      local token = request_handle:headers():get(ctx:get("token_header"))
       if token and token ~= "" then
         request_handle:headers():replace("authorization", "Bearer " .. token)
       end
