@@ -81,8 +81,25 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway",
+				": this policy can only have a targetRef.kind of Gateway or ListenerSet",
 			},
+		},
+		{
+			desc: "valid targetRef with ListenerSet kind",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("ListenerSet"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "targetRef unsupported group",
@@ -124,7 +141,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value",
 				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway",
+				": this policy can only have a targetRefs[*].kind of Gateway or ListenerSet",
 			},
 		},
 		{
@@ -145,7 +162,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway",
+				": this policy can only have a targetRef.kind of Gateway or ListenerSet",
 			},
 		},
 		{
