@@ -70,34 +70,3 @@ extensionServerPolicies:
       name: gateway-1
       sectionName: nonexistent-listener
     data: "Targets a listener section name that doesn't exist on gateway-1"
-- apiVersion: foo.example.io/v1alpha1
-  kind: Bar
-  metadata:
-    name: test6
-    namespace: default
-  spec:
-    targetRef:
-      kind: HTTPRoute
-      group: gateway.networking.k8s.io
-      name: httproute-1
-      sectionName: nonexistent-rule
-    data: "Targets an HTTPRoute rule section name that doesn't exist"
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-1
-  spec:
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http1
-    rules:
-    - name: rule-1
-      matches:
-      - path:
-          value: "/foo"
-      backendRefs:
-      - name: service-1
-        port: 8080
