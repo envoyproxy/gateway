@@ -177,7 +177,6 @@ func patchRouteWithRateLimit(irListener *ir.HTTPListener, route *routev3.Route, 
 	if !isValidGlobalRateLimit(irRoute) || xdsRouteAction == nil {
 		return nil
 	}
-	domain := irListener.Name
 	rateLimits, useRouteRateLimits := buildRouteRateLimits(irRoute)
 	if useRouteRateLimits {
 		// for shared rules, we uses RateLimit on route instead of per filter config,
@@ -186,6 +185,9 @@ func patchRouteWithRateLimit(irListener *ir.HTTPListener, route *routev3.Route, 
 		return nil
 	}
 
+	// RateLimitPerRoute.domain overrides the filter-level domain, so it must match
+	// the domain registered in BuildRateLimitServiceConfig for the rule type.
+	domain := getRateLimitDomain(irListener.Name, irRoute)
 	return patchRouteWithRateLimitOnTypedFilterConfig(route, domain, rateLimits, irRoute)
 }
 
@@ -1066,6 +1068,20 @@ func (t *Translator) getRateLimitServiceGrpcHostPort() (string, uint32) {
 		panic(err)
 	}
 	return u.Hostname(), uint32(p)
+}
+
+// getRateLimitDomain returns the domain to set on RateLimitPerRoute for a route.
+// It must match the domain registered in BuildRateLimitServiceConfig: shared rules use
+// stripRuleIndexSuffix(rule.Name), non-shared rules use the listener name.
+func getRateLimitDomain(listenerName string, route *ir.HTTPRoute) string {
+	if isValidGlobalRateLimit(route) {
+		for _, rule := range route.Traffic.RateLimit.Global.Rules {
+			if isRuleShared(rule) {
+				return stripRuleIndexSuffix(rule.Name)
+			}
+		}
+	}
+	return listenerName
 }
 
 // getRateLimitFilterName gets the filter name for rate limits.

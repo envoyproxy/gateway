@@ -67,7 +67,7 @@
       typedPerFilterConfig:
         envoy.filters.http.ratelimit/test-namespace/test-policy-2:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
-          domain: first-listener
+          domain: test-namespace/test-policy-2
           rateLimits:
           - actions:
             - genericKey:
