@@ -17,6 +17,8 @@ new features: |
   Added the `autoSNIFromEndpointHostname` TLS setting to Backends, allowing the SNI value sent to the backend to be automatically derived from the backend endpoint hostname instead of using a fixed SNI value.
   Added support for `ListenerSet` as a `targetRef` kind in `ClientTrafficPolicy`, allowing client traffic settings to be applied to a named group of listeners without a gateway-wide policy.
   Added a `fromMetadata` field to global rate limit `limit` in `BackendTrafficPolicy`, allowing the limit value to be sourced from per-request dynamic metadata (e.g. set by an upstream ext_proc), falling back to the static `requests`/`unit` when the metadata is absent.
+  Extension server policies can now target HTTPRoutes, HTTPRoute rules (via `sectionName`) in addition to Gateways and Gateway Listeners.
+  Extension server attachment outcome is now reported in the policy's `status.ancestors`.
 
 bug fixes: |
   Fixed HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, and UDPRoute Accepted condition being set to False when an attached listener is not programmed due to a missing TLS certificate ref; listener programmed state is now correctly separated from route acceptance.
