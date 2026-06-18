@@ -47,6 +47,7 @@ func translateUnstructuredToUnstructuredBytes(e []*unstructured.Unstructured) ([
 }
 
 func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources, extensionPolicies []*unstructured.Unstructured) (*route.Route, error) {
+	// Take all of the unstructured resources and policies for the extension and package them into bytes
 	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
 	if err != nil {
 		return route, err
@@ -56,6 +57,7 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 		return route, err
 	}
 
+	// Make the request to the extension server
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostRouteModify(ctx,
 		&extension.PostRouteModifyRequest{
