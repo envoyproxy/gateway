@@ -20,7 +20,7 @@ message PostRouteExtensionContext {
     repeated string hostnames = 2;
 
     // Policies introduced by the extension that are targeting this route
-    // (via HTTPRoute or HTTPRouteRule targetRef).
+    // (via HTTPRoute / GRPCRoute or rule targetRef).
     repeated ExtensionResource extension_policies = 3;
 }
 

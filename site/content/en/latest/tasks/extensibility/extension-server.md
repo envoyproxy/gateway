@@ -76,8 +76,8 @@ The hooks are executed in the following order during xDS translation:
 
 #### Route Hook (`PostRouteModifyHook`)
 
-- **When called**: After each individual route is generated from an HTTPRoute that has extension filters attached or has extension server policies targeting it (or one of its rules)
-- **Input**: Single route, hostnames, the extension resources from the HTTPRoute, and the extension server policies targeting the route or its matching rule
+- **When called**: After each individual route is generated from an HTTPRoute or GRPCRoute that has extension filters attached or has extension server policies targeting it (or one of its rules)
+- **Input**: Single route, hostnames, the extension resources from the HTTPRoute or GRPCRoute, and the extension server policies targeting the route or its matching rule
 - **Output**: Modified route
 - **Use cases**: Add route-specific filters, modify route configuration, add typed per-filter config
 
