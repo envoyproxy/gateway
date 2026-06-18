@@ -201,6 +201,11 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 // It accepts certificate bundles (multiple PEM blocks) and returns only the valid certificates.
 // A certificate is considered valid if the current time is within its NotBefore and NotAfter period.
 //
+// If the first PEM block (the leaf certificate) is expired or not yet valid, the entire chain
+// is considered invalid. This prevents a partial chain (e.g. intermediate CA without the leaf)
+// from being passed to Envoy, which would cause a KEY_VALUES_MISMATCH error because the
+// private key matches the leaf, not the intermediate.
+//
 // Return a status.ListenerError with InvalidCertificateRef Condition if no valid certificates are found in the provided data,
 // Return a status.ListenerError with PartiallyInvalidCertificateRef Condition if some certificates are invalid but also valid certificates exist.
 func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
@@ -214,9 +219,11 @@ func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 	now := time.Now()
 	var errs []error
 	validData := make([]byte, 0, len(data))
+	var firstBlockInvalid bool
 
 	// Process each PEM block in the data
 	rest := data
+	blockIndex := 0
 	for len(rest) > 0 {
 		block, remaining := pem.Decode(rest)
 		if block == nil {
@@ -228,6 +235,10 @@ func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 		certs, err := x509.ParseCertificates(block.Bytes)
 		if err != nil {
 			errs = append(errs, err)
+			if blockIndex == 0 {
+				firstBlockInvalid = true
+			}
+			blockIndex++
 			continue
 		}
 
@@ -245,10 +256,24 @@ func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 				break
 			}
 		}
+		if !blockValid && blockIndex == 0 {
+			firstBlockInvalid = true
+		}
 		// Only include this PEM block if all certificates in it are valid
 		if blockValid {
 			validData = append(validData, pem.EncodeToMemory(block)...)
 		}
+		blockIndex++
+	}
+
+	// If the first PEM block (leaf certificate) was invalid, the entire chain is unusable.
+	// The private key matches the leaf, not the intermediate CA, so passing a partial
+	// chain would cause Envoy to reject it with KEY_VALUES_MISMATCH.
+	if firstBlockInvalid {
+		return nil, status.NewListenerStatusError(
+			errors.Join(errs...),
+			gwapiv1.ListenerReasonInvalidCertificateRef,
+		)
 	}
 
 	if len(validData) == 0 {
