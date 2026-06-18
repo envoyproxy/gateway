@@ -14,6 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -23,6 +24,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
+
+// policyKey uniquely identifies an extension server policy by gvk and namespaced name.
+// See https://github.com/envoyproxy/gateway/pull/9249#discussion_r3437536064
+type policyKey struct {
+	gvk schema.GroupVersionKind
+	types.NamespacedName
+}
 
 func (t *Translator) ProcessExtensionServerPolicies(
 	policies []unstructured.Unstructured,
@@ -52,9 +60,9 @@ func (t *Translator) ProcessExtensionServerPolicies(
 
 	policyCopies := extensionServerPolicyCopiesWithStatusDeepCopy(policies)
 
-	handledPolicies := make(map[types.NamespacedName]*unstructured.Unstructured, len(policies))
+	handledPolicies := make(map[policyKey]*unstructured.Unstructured, len(policies))
 	// handledPoliciesOrder tracks insertion order so we can build res deterministically.
-	handledPoliciesOrder := make([]types.NamespacedName, 0, len(policies))
+	handledPoliciesOrder := make([]policyKey, 0, len(policies))
 
 	var errs error
 
@@ -73,12 +81,15 @@ func (t *Translator) ProcessExtensionServerPolicies(
 	}
 
 	getOrInitPolicy := func(i int) *unstructured.Unstructured {
-		policyName := utils.NamespacedName(&policies[i])
-		policy, found := handledPolicies[policyName]
+		key := policyKey{
+			gvk:            policies[i].GroupVersionKind(),
+			NamespacedName: utils.NamespacedName(&policies[i]),
+		}
+		policy, found := handledPolicies[key]
 		if !found {
 			policy = policyCopies[i]
-			handledPolicies[policyName] = policy
-			handledPoliciesOrder = append(handledPoliciesOrder, policyName)
+			handledPolicies[key] = policy
+			handledPoliciesOrder = append(handledPoliciesOrder, key)
 		}
 		return policy
 	}
@@ -158,8 +169,8 @@ func (t *Translator) ProcessExtensionServerPolicies(
 	}
 
 	// Only include policies that were accepted (have at least one ancestor status set).
-	for _, name := range handledPoliciesOrder {
-		policy := handledPolicies[name]
+	for _, key := range handledPoliciesOrder {
+		policy := handledPolicies[key]
 		if len(ExtServerPolicyStatusAsPolicyStatus(policy).Ancestors) > 0 {
 			res = append(res, *policy)
 		}
