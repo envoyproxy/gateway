@@ -7,9 +7,8 @@ clientTrafficPolicies:
   spec:
     clientIPDetection:
       xForwardedFor:
+        disableXForwardedForAppend: true
         numTrustedHops: 2
-    headers:
-      disableXForwardedForAppend: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -111,8 +110,13 @@ clientTrafficPolicies:
     name: target-gateway-1-http-4
     namespace: envoy-gateway
   spec:
-    headers:
-      disableXForwardedForAppend: true
+    clientIPDetection:
+      xForwardedFor:
+        disableXForwardedForAppend: true
+        trustedCIDRs:
+        - 192.168.1.0/24
+        - 10.0.0.0/16
+        - 172.16.0.0/12
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -332,11 +336,9 @@ xdsIR:
     - address: 0.0.0.0
       clientIPDetection:
         xForwardedFor:
+          disableXForwardedForAppend: true
           numTrustedHops: 2
       externalPort: 8081
-      headers:
-        disableXForwardedForAppend: true
-        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
       metadata:
@@ -386,10 +388,14 @@ xdsIR:
         mergeSlashes: true
       port: 8083
     - address: 0.0.0.0
+      clientIPDetection:
+        xForwardedFor:
+          disableXForwardedForAppend: true
+          trustedCIDRs:
+          - 192.168.1.0/24
+          - 10.0.0.0/16
+          - 172.16.0.0/12
       externalPort: 8084
-      headers:
-        disableXForwardedForAppend: true
-        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
       metadata:

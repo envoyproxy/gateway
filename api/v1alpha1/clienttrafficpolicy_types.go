@@ -139,14 +139,6 @@ type HeaderSettings struct {
 	// +optional
 	DisableRateLimitHeaders *bool `json:"disableRateLimitHeaders,omitempty"`
 
-	// DisableXForwardedForAppend configures Envoy Proxy to stop appending the downstream address
-	// to the X-Forwarded-For header.
-	//
-	// This only disables the automatic append behavior. It does not remove or sanitize
-	// an incoming X-Forwarded-For header.
-	// +optional
-	DisableXForwardedForAppend *bool `json:"disableXForwardedForAppend,omitempty"`
-
 	// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
 	//
 	// x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate
@@ -335,6 +327,14 @@ type XForwardedForSettings struct {
 	// +optional
 	// +kubebuilder:validation:MinItems=1
 	TrustedCIDRs []CIDR `json:"trustedCIDRs,omitempty"`
+
+	// DisableXForwardedForAppend configures Envoy Proxy to stop appending the downstream address
+	// to the X-Forwarded-For header.
+	//
+	// This only disables the automatic append behavior. It does not remove or sanitize
+	// an incoming X-Forwarded-For header.
+	// +optional
+	DisableXForwardedForAppend *bool `json:"disableXForwardedForAppend,omitempty"`
 }
 
 // CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on

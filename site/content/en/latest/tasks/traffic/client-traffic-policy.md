@@ -400,14 +400,16 @@ If `numTrustedHops` is set to N, the client IP is taken from the Nth address fro
 we set `numTrustedHops` to 2, so the client IP will be taken from the second rightmost address in the XFF header.
 
 To stop Envoy Gateway from automatically appending the downstream client address to `X-Forwarded-For`,
-set `spec.headers.disableXForwardedForAppend: true` in the same `ClientTrafficPolicy`.
+set `spec.clientIPDetection.xForwardedFor.disableXForwardedForAppend: true` in the same `ClientTrafficPolicy`.
 This only disables the automatic append behavior and does not remove or sanitize an incoming
 `X-Forwarded-For` header.
 
 ```yaml
 spec:
-  headers:
-    disableXForwardedForAppend: true
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 2
+      disableXForwardedForAppend: true
 ```
 
 You should expect 200 response status, see that `X-Forwarded-Proto` was preserved and `X-Envoy-External-Address` was set to the

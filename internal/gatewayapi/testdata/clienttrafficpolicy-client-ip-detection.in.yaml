@@ -8,8 +8,7 @@ clientTrafficPolicies:
     clientIPDetection:
       xForwardedFor:
         numTrustedHops: 2
-    headers:
-      disableXForwardedForAppend: true
+        disableXForwardedForAppend: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -51,8 +50,13 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1-http-4
   spec:
-    headers:
-      disableXForwardedForAppend: true
+    clientIPDetection:
+      xForwardedFor:
+        trustedCIDRs:
+        - 192.168.1.0/24
+        - 10.0.0.0/16
+        - 172.16.0.0/12
+        disableXForwardedForAppend: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -91,4 +95,3 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
-

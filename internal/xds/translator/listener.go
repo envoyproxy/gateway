@@ -149,7 +149,7 @@ func xffNumTrustedHops(clientIPDetection *ir.ClientIPDetectionSettings) uint32 {
 	return 0
 }
 
-func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettings, headers *ir.HeaderSettings) []*corev3.TypedExtensionConfig {
+func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettings) []*corev3.TypedExtensionConfig {
 	// Return early if settings are nil
 	if clientIPDetection == nil {
 		return nil
@@ -177,6 +177,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 		})
 	} else if clientIPDetection.XForwardedFor != nil {
 		var xffHeaderConfigAny *anypb.Any
+		skipXffAppend := ptr.Deref(clientIPDetection.XForwardedFor.DisableXForwardedForAppend, false)
 		if clientIPDetection.XForwardedFor.TrustedCIDRs != nil {
 			trustedCidrs := make([]*corev3.CidrRange, 0)
 			for _, cidr := range clientIPDetection.XForwardedFor.TrustedCIDRs {
@@ -191,12 +192,12 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 				XffTrustedCidrs: &xffv3.XffTrustedCidrs{
 					Cidrs: trustedCidrs,
 				},
-				SkipXffAppend: wrapperspb.Bool(headers != nil && headers.DisableXForwardedForAppend),
+				SkipXffAppend: wrapperspb.Bool(skipXffAppend),
 			})
 		} else if clientIPDetection.XForwardedFor.NumTrustedHops != nil {
 			xffHeaderConfigAny, _ = proto.ToAnyWithValidation(&xffv3.XffConfig{
 				XffNumTrustedHops: xffNumTrustedHops(clientIPDetection),
-				SkipXffAppend:     wrapperspb.Bool(headers != nil && headers.DisableXForwardedForAppend),
+				SkipXffAppend:     wrapperspb.Bool(skipXffAppend),
 			})
 		}
 		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
@@ -362,7 +363,7 @@ func (t *Translator) addHCMToXDSListener(
 	// HTTP filter configuration
 	// Client IP detection
 	useRemoteAddress := true
-	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection, irListener.Headers)
+	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection)
 	if originalIPDetectionExtensions != nil {
 		useRemoteAddress = false
 	}

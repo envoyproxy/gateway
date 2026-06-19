@@ -558,7 +558,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "valid disableXForwardedForAppend header setting",
+			desc: "valid disableXForwardedForAppend xff setting",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -570,8 +570,11 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					Headers: &egv1a1.HeaderSettings{
-						DisableXForwardedForAppend: new(true),
+					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
+						XForwardedFor: &egv1a1.XForwardedForSettings{
+							NumTrustedHops:             new(uint32(1)),
+							DisableXForwardedForAppend: new(true),
+						},
 					},
 				}
 			},

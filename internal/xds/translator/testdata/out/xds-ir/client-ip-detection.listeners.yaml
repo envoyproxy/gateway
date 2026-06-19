@@ -142,7 +142,7 @@
         - name: envoy.extensions.http.original_ip_detection.xff
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig
-            skipXffAppend: false
+            skipXffAppend: true
             xffTrustedCidrs:
               cidrs:
               - addressPrefix: 192.168.1.0

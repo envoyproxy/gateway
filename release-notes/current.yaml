@@ -18,7 +18,7 @@ new features: |
   Added support for `filterContext` field in Lua EnvoyExtensionPolicy, allowing shared Lua scripts to be parameterized per route via `request_handle:filterContext()`.
   Added support for `ListenerSet` as a `targetRef` kind in `ClientTrafficPolicy`, allowing client traffic settings to be applied to a named group of listeners without a gateway-wide policy.
   Added a `fromMetadata` field to global rate limit `limit` in `BackendTrafficPolicy`, allowing the limit value to be sourced from per-request dynamic metadata (e.g. set by an upstream ext_proc), falling back to the static `requests`/`unit` when the metadata is absent.
-  Added `spec.headers.disableXForwardedForAppend` to ClientTrafficPolicy to disable Envoy's automatic X-Forwarded-For append behavior when using XFF-based client IP detection.
+  Added `spec.clientIPDetection.xForwardedFor.disableXForwardedForAppend` to ClientTrafficPolicy to disable Envoy's automatic X-Forwarded-For append behavior when using XFF-based client IP detection.
 
 bug fixes: |
   Fixed HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, and UDPRoute Accepted condition being set to False when an attached listener is not programmed due to a missing TLS certificate ref; listener programmed state is now correctly separated from route acceptance.
