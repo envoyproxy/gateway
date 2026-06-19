@@ -2201,7 +2201,7 @@ func (t *Translator) buildExtAuth(
 		http              = policy.Spec.ExtAuth.HTTP
 		grpc              = policy.Spec.ExtAuth.GRPC
 		backendRefs       []egv1a1.BackendRef
-		backendSettings   *egv1a1.ClusterSettings
+		backendSettings   *egv1a1.BackendSettings
 		protocol          ir.AppProtocol
 		rd                *ir.RouteDestination
 		authority         string
