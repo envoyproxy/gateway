@@ -465,6 +465,18 @@ func extractGatewayNameFromListener(listenerName string) string {
 	return listenerName
 }
 
+func extractListenerSetPrefixFromListener(listenerName string) string {
+	parts := strings.Split(listenerName, "/")
+	if len(parts) >= 4 {
+		// Trailing slash is intentional: prevents a ListenerSet name from falsely
+		// matching another whose name shares the same string prefix (e.g. "ext" matching "ext-b")
+		// when used as a prefix in strings.Index comparisons.
+		return fmt.Sprintf("%s/%s/%s/%s/", parts[0], parts[1], parts[2], parts[3])
+	}
+	// should never happen
+	return listenerName
+}
+
 func irListenerName(listener *ListenerContext) string {
 	if listener.isFromListenerSet() {
 		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.listenerSet.Namespace, listener.listenerSet.Name, listener.Name)
@@ -640,6 +652,19 @@ func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv
 		Kind:        KindPtr(resource.KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),
 		Name:        gwapiv1.ObjectName(gatewayNN.Name),
+		SectionName: sectionName,
+	}
+}
+
+// getAncestorRefForListenerSetPolicy returns a ListenerSet as an ancestor reference for policy.
+// Used when a policy directly targets a ListenerSet, since the ListenerSet is the relevant
+// ancestor at which acceptance status meaningfully differs.
+func getAncestorRefForListenerSetPolicy(lsNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1.ParentReference {
+	return gwapiv1.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(resource.KindListenerSet),
+		Namespace:   NamespacePtr(lsNN.Namespace),
+		Name:        gwapiv1.ObjectName(lsNN.Name),
 		SectionName: sectionName,
 	}
 }
@@ -1026,6 +1051,42 @@ func resolvePolicyTargets[T client.Object](
 		namespaceLookup)
 	plainTargetRefs := resolvePolicyTargetsFromReferences(targetRefs, policyNamespace)
 	return composePolicyTargetRefs(selectorTargetRefs, plainTargetRefs)
+}
+
+// resolvePolicyTargetsForGatewayAndListenerSet is like resolvePolicyTargets but runs selector
+// resolution against both Gateways and ListenerSets, merging the results before combining with
+// plain targetRefs. Use this for policy types that support both kinds as targets.
+func resolvePolicyTargetsForGatewayAndListenerSet(
+	targetRefs egv1a1.PolicyTargetReferences,
+	gateways []*GatewayContext,
+	listenerSets []*gwapiv1.ListenerSet,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyGroup string,
+	policyKind string,
+	policyNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) []policyTargetReferenceWithSectionName {
+	selectorTargetRefsGateways := resolvePolicyTargetsFromSelectors(
+		targetRefs.TargetSelectors,
+		gateways,
+		referenceGrants,
+		policyGroup,
+		policyKind,
+		policyNamespace,
+		namespaceLookup,
+	)
+	selectorTargetRefsLS := resolvePolicyTargetsFromSelectors(
+		targetRefs.TargetSelectors,
+		listenerSets,
+		referenceGrants,
+		policyGroup,
+		policyKind,
+		policyNamespace,
+		namespaceLookup,
+	)
+	plainTargetRefs := resolvePolicyTargetsFromReferences(targetRefs, policyNamespace)
+	selectorTargetRefsGateways = append(selectorTargetRefsGateways, selectorTargetRefsLS...)
+	return composePolicyTargetRefs(selectorTargetRefsGateways, plainTargetRefs)
 }
 
 // legacy function to get policy target refs without considering cross-namespace policy attachment.
