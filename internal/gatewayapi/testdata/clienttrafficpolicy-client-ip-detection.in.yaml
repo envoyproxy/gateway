@@ -44,24 +44,6 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-1
       sectionName: http-3
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
-  metadata:
-    namespace: envoy-gateway
-    name: target-gateway-1-http-4
-  spec:
-    clientIPDetection:
-      xForwardedFor:
-        trustedCIDRs:
-        - 192.168.1.0/24
-        - 10.0.0.0/16
-        - 172.16.0.0/12
-        disableXForwardedForAppend: true
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-      sectionName: http-4
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

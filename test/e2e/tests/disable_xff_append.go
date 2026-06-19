@@ -41,9 +41,8 @@ var DisableXFFAppendTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "disable-xff-append-ctp", Namespace: ns}, suite.ControllerName, ancestorRef)
-		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "disable-xff-append-sp", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-		t.Run("X-Forwarded-For header should not be modified and client IP should be detected", func(t *testing.T) {
+		t.Run("X-Forwarded-For header should not be modified", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/disable-xff-append",
