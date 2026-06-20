@@ -6,6 +6,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Updated distroless base image.
   Fixed xDS server authentication bypass in GatewayNamespaceMode, adding Unary Interceptor and validating SotW requests.
 
 # New features or capabilities added in this release.
