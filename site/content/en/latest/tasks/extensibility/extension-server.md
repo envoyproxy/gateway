@@ -49,7 +49,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 
 | Hook Type | Hook Method Name | Purpose | Resources Modified | Execution Context |
 |-----------|------------------|---------|-------------------|-------------------|
-| `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters |
+| `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters or extension server policies targetting them |
 | `Cluster` | `PostClusterModifyHook` | Modify clusters for custom backends | Single `envoy.config.cluster.v3.Cluster` | Per-cluster, only for custom backend clusters |
 | `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host |
 | `HTTPListener` | `PostHTTPListenerModifyHook` | Modify HTTP listeners | Single `envoy.config.listener.v3.Listener` | Per-listener |
@@ -60,7 +60,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 The hooks are executed in the following order during xDS translation:
 
 1. **Route Processing Phase**
-   - `Route` hook (`PostRouteModifyHook`): Called for each route that has extension filters attached
+   - `Route` hook (`PostRouteModifyHook`): Called for each route that has extension filters attached or extension server policies targettig the route
    - `Cluster` hook (`PostClusterModifyHook`): Called for each cluster generated from custom backend references
 
 2. **Virtual Host Processing Phase**
