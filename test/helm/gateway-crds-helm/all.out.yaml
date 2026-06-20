@@ -30097,6 +30097,13 @@ spec:
                     Lua defines a Lua extension
                     Only one of Inline or ValueRef must be set
                   properties:
+                    filterContext:
+                      description: |-
+                        FilterContext is the filter context configuration for the Lua script.
+                        This must be a JSON object (key/value pairs). The values are made available
+                        to the Lua script via request_handle:filterContext(). This allows a shared
+                        script to be parameterized differently per EnvoyExtensionPolicy/route.
+                      x-kubernetes-preserve-unknown-fields: true
                     inline:
                       description: Inline contains the source code as an inline string.
                       type: string
