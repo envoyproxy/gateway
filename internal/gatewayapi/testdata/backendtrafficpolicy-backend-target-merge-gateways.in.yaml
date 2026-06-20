@@ -1,0 +1,135 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway-system
+  spec:
+    mergeGateways: true
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+# httproute-1 -> service-1 via gateway-1
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+# httproute-2 -> service-1 via gateway-2
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/v2"
+      backendRefs:
+      - name: service-1
+        port: 8080
+backendTrafficPolicies:
+# Gateway-1 BTP: circuitBreaker maxConnections=10
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-1
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    circuitBreaker:
+      maxConnections: 10
+# Gateway-2 BTP: circuitBreaker maxConnections=20
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-2
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+    circuitBreaker:
+      maxConnections: 20
+# Listener-targeted BTP on gateway-2/http: overrides gateway-2 circuitBreaker
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-2-listener
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      sectionName: http
+    circuitBreaker:
+      maxConnections: 30
+# Backend-targeted BTP for service-1 with mergeType (merges with gateway BTP)
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-service-1
+  spec:
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: service-1
+    mergeType: StrategicMerge
+    loadBalancer:
+      type: ConsistentHash
+      consistentHash:
+        type: SourceIP

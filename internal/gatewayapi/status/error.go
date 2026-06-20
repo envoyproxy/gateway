@@ -31,6 +31,9 @@ const (
 	RouteReasonInvalidAddress         gwapiv1.RouteConditionReason = "InvalidAddress"
 	RouteReasonEndpointsNotFound      gwapiv1.RouteConditionReason = "EndpointsNotFound"
 
+	// Backend policy related reasons
+	RouteReasonUnsupportedBackendTrafficPolicy gwapiv1.RouteConditionReason = "UnsupportedBackendTrafficPolicy"
+
 	// Network configuration related condition types
 	RouteConditionBackendsAvailable gwapiv1.RouteConditionType = "BackendsAvailable"
 )

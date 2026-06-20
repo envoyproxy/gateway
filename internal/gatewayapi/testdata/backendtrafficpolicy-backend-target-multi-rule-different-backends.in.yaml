@@ -1,0 +1,88 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+# Route with two rules pointing to different backends, each with its own backend BTP.
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - name: rule-svc1
+      matches:
+      - path:
+          value: "/svc1"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - name: rule-svc2
+      matches:
+      - path:
+          value: "/svc2"
+      backendRefs:
+      - name: service-2
+        port: 8080
+backendTrafficPolicies:
+# Backend BTP for service-1: circuitBreaker
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-service-1
+  spec:
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: service-1
+    circuitBreaker:
+      maxConnections: 100
+# Backend BTP for service-2: healthCheck
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-service-2
+  spec:
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: service-2
+    healthCheck:
+      active:
+        type: HTTP
+        http:
+          path: /healthz
+# Whole-route BTP with mergeType: sets tcpKeepalive
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    tcpKeepalive:
+      probes: 5

@@ -89,6 +89,10 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// MergeBackends enables backend-targeted BackendTrafficPolicy and
+	// cluster deduplication for routes sharing the same backend.
+	MergeBackends bool
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 

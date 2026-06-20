@@ -6,6 +6,8 @@
 package status
 
 import (
+	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -318,6 +320,23 @@ func getPolicyAncestorCondition(policyStatus *gwapiv1.PolicyStatus, ancestorRef 
 	}
 
 	return nil
+}
+
+// MergedConditionMessage builds the status message for a Merged condition.
+// mergedWith are the policies that were merged (e.g. per-rule backend BTPs).
+// When exactly one is present, it names that policy. When multiple are present,
+// it reports the count. fallback is used when mergedWith is empty (e.g. gateway parent).
+func MergedConditionMessage[T metav1.Object](mergedWith []T, fallback T) string {
+	switch {
+	case len(mergedWith) == 1:
+		return fmt.Sprintf("Merged with policy %s/%s", mergedWith[0].GetNamespace(), mergedWith[0].GetName())
+	case len(mergedWith) > 1:
+		return fmt.Sprintf("Merged with %d policies", len(mergedWith))
+	case any(fallback) != nil && !reflect.ValueOf(fallback).IsNil():
+		return fmt.Sprintf("Merged with policy %s/%s", fallback.GetNamespace(), fallback.GetName())
+	default:
+		return ""
+	}
 }
 
 func mergePolicyWarningMessages(existing, next string) string {

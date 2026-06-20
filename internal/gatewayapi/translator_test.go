@@ -52,6 +52,7 @@ func TestTranslate(t *testing.T) {
 		name                            string
 		EnvoyPatchPolicyEnabled         bool
 		BackendEnabled                  bool
+		MergeBackends                   bool
 		GatewayNamespaceMode            bool
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
@@ -93,6 +94,86 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled: true,
 			SDSEnabled:     true,
 		},
+		{
+			name:          "backendtrafficpolicy-backend-target-basic",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-feature-disabled",
+			MergeBackends: false,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-with-gateway-no-merge",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-with-gateway-merge",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-with-route-no-merge",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-with-route-merge-no-gateway",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-with-route-merge-backend-no-merge",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-with-route-merge-backend-merge",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-multi-backend-different-btps",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-multi-backend-partial-coverage",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-multi-backend-same-btp",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-tcp-basic",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-udp-basic",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-tcp-with-route-merge-backend-merge",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-tcp-multi-backend-partial-coverage",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-udp-with-route-merge-backend-merge",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-udp-multi-backend-partial-coverage",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-multi-rule-route",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-multi-rule-different-backends",
+			MergeBackends: true,
+		},
+		{
+			name:          "backendtrafficpolicy-backend-target-merge-gateways",
+			MergeBackends: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -114,6 +195,7 @@ func TestTranslate(t *testing.T) {
 			resources.Secrets = append(resources.Secrets, baseResources.Secrets...)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
+			backendTargetsInBTPEnabled := false
 			gatewayNamespaceMode := false
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
@@ -123,6 +205,7 @@ func TestTranslate(t *testing.T) {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
+					backendTargetsInBTPEnabled = config.MergeBackends
 					gatewayNamespaceMode = config.GatewayNamespaceMode
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
@@ -136,6 +219,7 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:          true,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
+				MergeBackends:                   backendTargetsInBTPEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),

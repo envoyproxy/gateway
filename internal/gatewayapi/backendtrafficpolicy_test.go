@@ -1749,3 +1749,22 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 		})
 	}
 }
+
+func TestIsBackendTargetKind(t *testing.T) {
+	tests := []struct {
+		kind gwapiv1.Kind
+		want bool
+	}{
+		{kind: "Service", want: true},
+		{kind: "ServiceImport", want: true},
+		{kind: "Backend", want: true},
+		{kind: "Gateway", want: false},
+		{kind: "HTTPRoute", want: false},
+		{kind: "GRPCRoute", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.kind), func(t *testing.T) {
+			require.Equal(t, tt.want, isBackendTargetKind(tt.kind))
+		})
+	}
+}

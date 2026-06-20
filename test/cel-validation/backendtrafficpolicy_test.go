@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -263,8 +264,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"invalid targetRef group/kind combination",
 			},
 		},
 		{
@@ -285,8 +285,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"invalid targetRefs group/kind combination",
 			},
 		},
 		{
@@ -305,8 +304,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"invalid targetRef group/kind combination",
 			},
 		},
 		{
@@ -325,9 +323,26 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"invalid targetRef group/kind combination",
+			},
+		},
+		{
+			desc: "targetRef invalid group-kind combination gateway.networking.k8s.io with Service",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Service"),
+								Name:  gwapiv1.ObjectName("my-svc"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"invalid targetRef group/kind combination",
 			},
 		},
 		{
@@ -3725,6 +3740,407 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "valid service targetRef with CDS-only fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(""),
+								Kind:  gwapiv1.Kind("Service"),
+								Name:  gwapiv1.ObjectName("my-svc"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck:    &egv1a1.HealthCheck{},
+						CircuitBreaker: &egv1a1.CircuitBreaker{},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid service targetRefs with CDS-only fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(""),
+									Kind:  gwapiv1.Kind("Service"),
+									Name:  gwapiv1.ObjectName("my-svc"),
+								},
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						CircuitBreaker: &egv1a1.CircuitBreaker{},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid serviceimport targetRef with CDS-only fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(mcsapiv1a1.GroupName),
+								Kind:  gwapiv1.Kind(mcsapiv1a1.ServiceImportKindName),
+								Name:  gwapiv1.ObjectName("my-svc-import"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.RoundRobinLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid serviceimport targetRefs with CDS-only fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(mcsapiv1a1.GroupName),
+									Kind:  gwapiv1.Kind(mcsapiv1a1.ServiceImportKindName),
+									Name:  gwapiv1.ObjectName("my-svc-import"),
+								},
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						TCPKeepalive: &egv1a1.TCPKeepalive{},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid backend targetRef with CDS-only fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(egv1a1.GroupName),
+								Kind:  gwapiv1.Kind(egv1a1.KindBackend),
+								Name:  gwapiv1.ObjectName("my-backend"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						TCPKeepalive: &egv1a1.TCPKeepalive{},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid backend targetRefs with CDS-only fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(egv1a1.GroupName),
+									Kind:  gwapiv1.Kind(egv1a1.KindBackend),
+									Name:  gwapiv1.ObjectName("my-backend"),
+								},
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						DNS: &egv1a1.DNS{},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "service targetRef rejects all RDS fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				val := true
+				rt := egv1a1.ServiceRoutingType
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(""),
+								Kind:  gwapiv1.Kind("Service"),
+								Name:  gwapiv1.ObjectName("my-svc"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Retry: &egv1a1.Retry{},
+					},
+					RateLimit:         &egv1a1.RateLimitSpec{},
+					FaultInjection:    &egv1a1.FaultInjection{},
+					UseClientProtocol: &val,
+					Compression:       []*egv1a1.Compression{{Type: egv1a1.GzipCompressorType}},
+					ResponseOverride: []*egv1a1.ResponseOverride{{
+						Match: egv1a1.CustomResponseMatch{
+							StatusCodes: []egv1a1.StatusCodeMatch{
+								{Type: new(egv1a1.StatusCodeValueTypeValue), Value: new(int(404))},
+							},
+						},
+					}},
+					HTTPUpgrade:   []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
+					RequestBuffer: &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
+					Telemetry:     &egv1a1.BackendTelemetry{},
+					RoutingType:    &rt,
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+				}
+			},
+			wantErrors: []string{
+				"rateLimit is not allowed when targeting a backend",
+				"faultInjection is not allowed when targeting a backend",
+				"useClientProtocol is not allowed when targeting a backend",
+				"compression is not allowed when targeting a backend",
+				"responseOverride is not allowed when targeting a backend",
+				"httpUpgrade is not allowed when targeting a backend",
+				"requestBuffer is not allowed when targeting a backend",
+				"telemetry is not allowed when targeting a backend",
+				"routingType is not allowed when targeting a backend",
+				"retry is not allowed when targeting a backend",
+				"bandwidthLimit is not allowed when targeting a backend",
+			},
+		},
+		{
+			desc: "serviceimport targetRef rejects all RDS fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				val := true
+				rt := egv1a1.ServiceRoutingType
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(mcsapiv1a1.GroupName),
+								Kind:  gwapiv1.Kind(mcsapiv1a1.ServiceImportKindName),
+								Name:  gwapiv1.ObjectName("my-svc-import"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Retry: &egv1a1.Retry{},
+					},
+					RateLimit:         &egv1a1.RateLimitSpec{},
+					FaultInjection:    &egv1a1.FaultInjection{},
+					UseClientProtocol: &val,
+					Compressor:        []*egv1a1.Compression{{Type: egv1a1.GzipCompressorType, Gzip: &egv1a1.GzipCompressor{}}},
+					ResponseOverride: []*egv1a1.ResponseOverride{{
+						Match: egv1a1.CustomResponseMatch{
+							StatusCodes: []egv1a1.StatusCodeMatch{
+								{Type: new(egv1a1.StatusCodeValueTypeValue), Value: new(int(404))},
+							},
+						},
+					}},
+					HTTPUpgrade:   []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
+					RequestBuffer: &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
+					Telemetry:     &egv1a1.BackendTelemetry{},
+					RoutingType:    &rt,
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+				}
+			},
+			wantErrors: []string{
+				"rateLimit is not allowed when targeting a backend",
+				"faultInjection is not allowed when targeting a backend",
+				"useClientProtocol is not allowed when targeting a backend",
+				"compressor is not allowed when targeting a backend",
+				"responseOverride is not allowed when targeting a backend",
+				"httpUpgrade is not allowed when targeting a backend",
+				"requestBuffer is not allowed when targeting a backend",
+				"telemetry is not allowed when targeting a backend",
+				"routingType is not allowed when targeting a backend",
+				"retry is not allowed when targeting a backend",
+				"bandwidthLimit is not allowed when targeting a backend",
+			},
+		},
+		{
+			desc: "backend targetRefs rejects all RDS fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				val := true
+				rt := egv1a1.ServiceRoutingType
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(egv1a1.GroupName),
+									Kind:  gwapiv1.Kind(egv1a1.KindBackend),
+									Name:  gwapiv1.ObjectName("my-backend"),
+								},
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Retry: &egv1a1.Retry{},
+					},
+					RateLimit:         &egv1a1.RateLimitSpec{},
+					FaultInjection:    &egv1a1.FaultInjection{},
+					UseClientProtocol: &val,
+					Compression:       []*egv1a1.Compression{{Type: egv1a1.GzipCompressorType}},
+					ResponseOverride: []*egv1a1.ResponseOverride{{
+						Match: egv1a1.CustomResponseMatch{
+							StatusCodes: []egv1a1.StatusCodeMatch{
+								{Type: new(egv1a1.StatusCodeValueTypeValue), Value: new(int(404))},
+							},
+						},
+					}},
+					HTTPUpgrade:   []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
+					RequestBuffer: &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
+					Telemetry:     &egv1a1.BackendTelemetry{},
+					RoutingType:    &rt,
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+				}
+			},
+			wantErrors: []string{
+				"rateLimit is not allowed when targeting a backend",
+				"faultInjection is not allowed when targeting a backend",
+				"useClientProtocol is not allowed when targeting a backend",
+				"compression is not allowed when targeting a backend",
+				"responseOverride is not allowed when targeting a backend",
+				"httpUpgrade is not allowed when targeting a backend",
+				"requestBuffer is not allowed when targeting a backend",
+				"telemetry is not allowed when targeting a backend",
+				"routingType is not allowed when targeting a backend",
+				"retry is not allowed when targeting a backend",
+				"bandwidthLimit is not allowed when targeting a backend",
+			},
+		},
+		{
+			desc: "service targetRef with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(""),
+								Kind:  gwapiv1.Kind("Service"),
+								Name:  gwapiv1.ObjectName("my-svc"),
+							},
+							SectionName: &sn,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "serviceimport targetRef with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(mcsapiv1a1.GroupName),
+								Kind:  gwapiv1.Kind(mcsapiv1a1.ServiceImportKindName),
+								Name:  gwapiv1.ObjectName("my-svc-import"),
+							},
+							SectionName: &sn,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "backend targetRef with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(egv1a1.GroupName),
+								Kind:  gwapiv1.Kind(egv1a1.KindBackend),
+								Name:  gwapiv1.ObjectName("my-backend"),
+							},
+							SectionName: &sn,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "service targetRefs with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(""),
+									Kind:  gwapiv1.Kind("Service"),
+									Name:  gwapiv1.ObjectName("my-svc"),
+								},
+								SectionName: &sn,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "serviceimport targetRefs with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(mcsapiv1a1.GroupName),
+									Kind:  gwapiv1.Kind(mcsapiv1a1.ServiceImportKindName),
+									Name:  gwapiv1.ObjectName("my-svc-import"),
+								},
+								SectionName: &sn,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "backend targetRefs with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(egv1a1.GroupName),
+									Kind:  gwapiv1.Kind(egv1a1.KindBackend),
+									Name:  gwapiv1.ObjectName("my-backend"),
+								},
+								SectionName: &sn,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
 		},
 	}
 
