@@ -15,6 +15,7 @@ new features: |
   Added a `requestBody` field to the HTTP active health checker in `BackendTrafficPolicy`, allowing a request body payload to be sent during HTTP health checking. The field requires the health check `method` to be `POST` or `PUT`.
   Added a `xdsNACKTotal` metric to track the number of NACKs received from Envoy, labeled by node ID and resource type URL. A NACK is a DiscoveryRequest carrying an ErrorDetail, indicating that Envoy rejected the last config update. This metric can be used to alert on config issues causing xDS rejections.
   Added the `autoSNIFromEndpointHostname` TLS setting to Backends, allowing the SNI value sent to the backend to be automatically derived from the backend endpoint hostname instead of using a fixed SNI value.
+  Added support for `filterContext` field in Lua EnvoyExtensionPolicy, allowing shared Lua scripts to be parameterized per route via `request_handle:filterContext()`.
   Added support for `ListenerSet` as a `targetRef` kind in `ClientTrafficPolicy`, allowing client traffic settings to be applied to a named group of listeners without a gateway-wide policy.
   Added a `fromMetadata` field to global rate limit `limit` in `BackendTrafficPolicy`, allowing the limit value to be sourced from per-request dynamic metadata (e.g. set by an upstream ext_proc), falling back to the static `requests`/`unit` when the metadata is absent.
 

@@ -317,6 +317,7 @@ xdsIR:
                   end
                   return envoy.lua.ResponseStatus.Continue
               end
+            FilterContext: null
             Name: envoyextensionpolicy/default/policy-for-http-route/lua/0
         hostname: www.example.com
         isHTTP2: false
