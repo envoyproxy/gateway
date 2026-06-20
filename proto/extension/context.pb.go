@@ -35,7 +35,7 @@ type PostRouteExtensionContext struct {
 	// hostnames are the fully qualified domain names attached to the HTTPRoute
 	Hostnames []string `protobuf:"bytes,2,rep,name=hostnames,proto3" json:"hostnames,omitempty"`
 	// Policies introduced by the extension that are targeting this route
-	// (via HTTPRoute or HTTPRouteRule targetRef).
+	// (via HTTPRoute / GRPCRoute or rule targetRef).
 	ExtensionPolicies []*ExtensionResource `protobuf:"bytes,3,rep,name=extension_policies,json=extensionPolicies,proto3" json:"extension_policies,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
