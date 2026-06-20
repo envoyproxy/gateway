@@ -22216,6 +22216,16 @@ spec:
                         using ALPN
                       type: string
                     type: array
+                  autoSNIFromEndpointHostname:
+                    description: |-
+                      AutoSNIFromEndpointHostname indicates whether the upstream endpoint's hostname should be used as the SNI value
+                      when establishing a TLS connection to the backend.
+                      This uses the resolved hostname of the upstream endpoint (e.g., from the Backend Endpoints list),
+                      rather than a static value.
+
+                      Mutually exclusive with SNI. When a BackendTLSPolicy is attached, its Hostname value takes
+                      precedence and AutoSNIFromEndpointHostname is ignored.
+                    type: boolean
                   caCertificateRefs:
                     description: |-
                       CACertificateRefs contains one or more references to Kubernetes objects that
@@ -22428,14 +22438,17 @@ spec:
                     type: array
                   sni:
                     description: |-
-                      SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
+                      SNI specifies the fixed SNI value used when establishing an upstream TLS connection to the backend.
 
                       Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:
                       1. Backend resources that do not set SNI, or
                       2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them
 
-                      When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence
-                      over this value.
+                      If a BackendTLSPolicy is attached to the Backend resource, the BackendTLSPolicy's validation.hostname
+                      value takes precedence over this field.
+
+                      If no BackendTLSPolicy validation.hostname applies and both this field and AutoSNIFromEndpointHostname
+                      are unset, Envoy Gateway configures Envoy to set the upstream SNI from the downstream HTTP host/authority header.
                     maxLength: 253
                     minLength: 1
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -22464,6 +22477,9 @@ spec:
                     && ((has(self.caCertificateRefs) && size(self.caCertificateRefs)
                     > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates
                     != "")))'
+                - message: sni and autoSNIFromEndpointHostname are mutually exclusive
+                  rule: '!(has(self.sni) && has(self.autoSNIFromEndpointHostname)
+                    && self.autoSNIFromEndpointHostname)'
                 - message: setting ciphers has no effect if the minimum possible TLS
                     version is 1.3
                   rule: 'has(self.minVersion) && self.minVersion == ''1.3'' ? !has(self.ciphers)
@@ -22484,6 +22500,14 @@ spec:
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
+            - message: DynamicResolver type cannot use autoSNIFromEndpointHostname
+              rule: self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
+                && self.tls.autoSNIFromEndpointHostname)
+            - message: when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints
+                must define a hostname
+              rule: '!has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
+                && self.tls.autoSNIFromEndpointHostname) || self.endpoints.all(e,
+                (!has(e.ip) && !has(e.unix)) || has(e.hostname))'
           status:
             description: Status defines the current status of Backend.
             properties:
@@ -24354,6 +24378,33 @@ spec:
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
+                                fromMetadata:
+                                  description: |-
+                                    FromMetadata sources the limit value from per-request dynamic metadata.
+                                    When the referenced metadata value is present, it overrides Requests/Unit for that
+                                    request; otherwise Requests/Unit are used as the default.
+
+                                    The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                    property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                    filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                    Only supported for Global Rate Limits.
+                                  properties:
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        limit value from within the namespaced filter
+                                        metadata.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - key
+                                  - namespace
+                                  type: object
                                 requests:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
@@ -24738,6 +24789,33 @@ spec:
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
+                                fromMetadata:
+                                  description: |-
+                                    FromMetadata sources the limit value from per-request dynamic metadata.
+                                    When the referenced metadata value is present, it overrides Requests/Unit for that
+                                    request; otherwise Requests/Unit are used as the default.
+
+                                    The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                    property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                    filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                    Only supported for Global Rate Limits.
+                                  properties:
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        limit value from within the namespaced filter
+                                        metadata.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - key
+                                  - namespace
+                                  type: object
                                 requests:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
@@ -24794,6 +24872,9 @@ spec:
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(r, !has(r.cost) || !has(r.cost.response))
+                        - message: limit fromMetadata is not supported for Local Rate
+                            Limits
+                          rule: self.all(r, !has(r.limit.fromMetadata))
                     type: object
                   type:
                     description: |-
@@ -28028,14 +28109,16 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway
-              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' : true'
+            - message: this policy can only have a targetRef.kind of Gateway or ListenerSet
+              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'']
+                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true'
-            - message: this policy can only have a targetRefs[*].kind of Gateway
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway'')
-                : true'
+            - message: this policy can only have a targetRefs[*].kind of Gateway or
+                ListenerSet
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
+                ''ListenerSet'']) : true'
           status:
             description: Status defines the current status of ClientTrafficPolicy.
             properties:

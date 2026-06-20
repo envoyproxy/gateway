@@ -521,7 +521,8 @@ _Appears in:_
 | `caCertificateRefs` | _[LocalObjectReference](#localobjectreference) array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
 | `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
 | `insecureSkipVerify` | _boolean_ |  false  | false | InsecureSkipVerify indicates whether the upstream's certificate verification<br />should be skipped. Defaults to "false". |
-| `sni` | _[PreciseHostname](#precisehostname)_ |  false  |  | SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.<br />Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:<br />1. Backend resources that do not set SNI, or<br />2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them<br />When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence<br />over this value. |
+| `sni` | _[PreciseHostname](#precisehostname)_ |  false  |  | SNI specifies the fixed SNI value used when establishing an upstream TLS connection to the backend.<br />Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:<br />1. Backend resources that do not set SNI, or<br />2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them<br />If a BackendTLSPolicy is attached to the Backend resource, the BackendTLSPolicy's validation.hostname<br />value takes precedence over this field.<br />If no BackendTLSPolicy validation.hostname applies and both this field and AutoSNIFromEndpointHostname<br />are unset, Envoy Gateway configures Envoy to set the upstream SNI from the downstream HTTP host/authority header. |
+| `autoSNIFromEndpointHostname` | _boolean_ |  false  |  | AutoSNIFromEndpointHostname indicates whether the upstream endpoint's hostname should be used as the SNI value<br />when establishing a TLS connection to the backend.<br />This uses the resolved hostname of the upstream endpoint (e.g., from the Backend Endpoints list),<br />rather than a static value.<br />Mutually exclusive with SNI. When a BackendTLSPolicy is attached, its Hostname value takes<br />precedence and AutoSNIFromEndpointHostname is ignored. |
 
 
 #### BackendTelemetry
@@ -5359,6 +5360,22 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `requests` | _integer_ |  true  |  | Requests is the number of requests (or cost units, when used with<br />cost-based rate limiting) allowed per Unit. |
 | `unit` | _[RateLimitUnit](#ratelimitunit)_ |  true  |  |  |
+| `fromMetadata` | _[RateLimitValueMetadata](#ratelimitvaluemetadata)_ |  false  |  | FromMetadata sources the limit value from per-request dynamic metadata.<br />When the referenced metadata value is present, it overrides Requests/Unit for that<br />request; otherwise Requests/Unit are used as the default.<br />The referenced metadata value must be a struct containing an integer "requests_per_unit"<br />property and a "unit" property with a value parseable to a RateLimitUnit. An upstream<br />filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.<br />Only supported for Global Rate Limits. |
+
+
+#### RateLimitValueMetadata
+
+
+
+RateLimitValueMetadata specifies the dynamic metadata to retrieve the limit value from.
+
+_Appears in:_
+- [RateLimitValue](#ratelimitvalue)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `namespace` | _string_ |  true  |  | Namespace is the namespace of the dynamic metadata. |
+| `key` | _string_ |  true  |  | Key is the key to retrieve the limit value from within the namespaced filter metadata. |
 
 
 #### RedisTLSSettings
