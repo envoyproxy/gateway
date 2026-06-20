@@ -256,6 +256,8 @@ func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 				break
 			}
 		}
+		// If the first PEM block (leaf) is expired or not-yet-valid, the entire
+		// chain is unusable. The private key matches the leaf, not the intermediate CA.
 		if !blockValid && blockIndex == 0 {
 			firstBlockInvalid = true
 		}
