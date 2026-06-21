@@ -23,7 +23,7 @@
         - name: envoy.extensions.http.original_ip_detection.xff
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig
-            skipXffAppend: false
+            skipXffAppend: true
             xffNumTrustedHops: 1
         rds:
           configSource:
