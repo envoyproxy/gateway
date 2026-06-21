@@ -558,6 +558,29 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "valid disableXForwardedForAppend xff setting",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
+						XForwardedFor: &egv1a1.XForwardedForSettings{
+							NumTrustedHops:             new(uint32(1)),
+							DisableXForwardedForAppend: new(true),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "invalid xffc setting",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
