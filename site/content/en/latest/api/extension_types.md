@@ -5430,6 +5430,7 @@ _Appears in:_
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `uri` | _string_ |  true  |  | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.<br />If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs. |
 | `cacheDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 300s |  |
+| `failedRefetchDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | FailedRefetchDuration is the duration Envoy waits before re-fetching the JWKS<br />after a failed fetch.<br />This does not control retries within a single fetch attempt (see BackendSettings.Retry),<br />only the interval between fetch attempts after a failure.<br />If not specified, Envoy's default of 1 second is used. |
 
 
 #### ReplaceRegexMatch
