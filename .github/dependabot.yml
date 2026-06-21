@@ -131,15 +131,6 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
-  - package-ecosystem: npm
-    target-branch: "release/v1.8"
-    directories:
-      - /site
-      - /tools
-    schedule:
-      interval: weekly
-    ignore:
-      - dependency-name: "@fortawesome/fontawesome-free"
   - package-ecosystem: pip
     target-branch: "release/v1.8"
     directories:
@@ -208,15 +199,6 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
-  - package-ecosystem: npm
-    target-branch: "release/v1.7"
-    directories:
-      - /site
-      - /tools
-    schedule:
-      interval: weekly
-    ignore:
-      - dependency-name: "@fortawesome/fontawesome-free"
   - package-ecosystem: pip
     target-branch: "release/v1.7"
     directories:
