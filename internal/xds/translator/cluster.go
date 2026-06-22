@@ -331,8 +331,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Set TypedExtensionProtocolOptions if not using Proxy Protocol
-	if !proxyProtocolEnabled && epo != nil {
+	if epo != nil {
 		cluster.TypedExtensionProtocolOptions = epo
 	}
 
