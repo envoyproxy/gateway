@@ -88,7 +88,7 @@ func TestExtractTargetRefs(t *testing.T) {
 			output: egv1a1.PolicyTargetReferences{
 				TargetSelectors: []egv1a1.TargetSelector{
 					{
-						Kind:  "SomeKind",
+						Kind: "SomeKind",
 						MatchLabels: map[string]string{
 							"some": "name",
 						},
