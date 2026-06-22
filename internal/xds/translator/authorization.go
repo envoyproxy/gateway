@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	expr "cel.dev/expr"
 	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
 	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
 	xdstypev3 "github.com/cncf/xds/go/xds/type/v3"
@@ -23,6 +24,8 @@ import (
 	ipmatcherv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/ip/v3"
 	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/metadata/v3"
 	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	"github.com/google/cel-go/cel"
+	googleproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
@@ -407,7 +410,43 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 	}, nil
 }
 
-func buildCELPredicate(cel string) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+var celEnv, _ = cel.NewEnv()
+
+// parseCELToProto parses a CEL expression string into a cel.expr.ParsedExpr.
+// Envoy CEL matcherdoes not support the raw cel_expr_string form yet, so the expression must
+// be translated into the pre-parsed AST (cel_expr_parsed) instead.
+//
+// cel-go returns the google.api.expr.v1alpha1 ParsedExpr, which is wire-compatible
+// with the cel.expr.ParsedExpr expected by the xDS CelExpression message, so we
+// bridge them via proto marshal/unmarshal.
+func parseCELToProto(celExpr string) (*expr.ParsedExpr, error) {
+	ast, issues := celEnv.Parse(celExpr)
+	if issues != nil && issues.Err() != nil {
+		return nil, fmt.Errorf("failed to parse CEL expression %q: %w", celExpr, issues.Err())
+	}
+
+	v1Parsed, err := cel.AstToParsedExpr(ast)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert CEL expression %q to parsed proto: %w", celExpr, err)
+	}
+
+	b, err := googleproto.Marshal(v1Parsed)
+	if err != nil {
+		return nil, err
+	}
+	parsed := &expr.ParsedExpr{}
+	if err := googleproto.Unmarshal(b, parsed); err != nil {
+		return nil, err
+	}
+	return parsed, nil
+}
+
+func buildCELPredicate(celExpr string) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	parsed, err := parseCELToProto(celExpr)
+	if err != nil {
+		return nil, err
+	}
+
 	input, err := proto.ToAnyWithValidation(&matcherv3.HttpAttributesCelMatchInput{})
 	if err != nil {
 		return nil, err
@@ -415,7 +454,7 @@ func buildCELPredicate(cel string) (*matcherv3.Matcher_MatcherList_Predicate, er
 
 	matcher, err := proto.ToAnyWithValidation(&matcherv3.CelMatcher{
 		ExprMatch: &xdstypev3.CelExpression{
-			CelExprString: cel,
+			CelExprParsed: parsed,
 		},
 	})
 	if err != nil {
