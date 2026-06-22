@@ -49,7 +49,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 
 | Hook Type | Hook Method Name | Purpose | Resources Modified | Execution Context |
 |-----------|------------------|---------|-------------------|-------------------|
-| `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters or extension server policies targetting them |
+| `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters or extension server policies targeting them |
 | `Cluster` | `PostClusterModifyHook` | Modify clusters for custom backends | Single `envoy.config.cluster.v3.Cluster` | Per-cluster, only for custom backend clusters |
 | `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host |
 | `HTTPListener` | `PostHTTPListenerModifyHook` | Modify HTTP listeners | Single `envoy.config.listener.v3.Listener` | Per-listener |
@@ -355,14 +355,14 @@ $ curl -v --header "Host: www.example.com" "http://${GATEWAY_HOST}/example"
 > Host: www.example.com
 > User-Agent: curl/7.81.0
 > Accept: */*
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 401 Unauthorized
 < www-authenticate: Basic realm="http://www.example.com/example"
 < content-length: 58
 < content-type: text/plain
 < date: Mon, 08 Jul 2024 10:53:11 GMT
-< 
+<
 ...
 User authentication failed. Missing username and password.
 ...
@@ -371,7 +371,7 @@ User authentication failed. Missing username and password.
 Add a new Username/Password combination using the example extension server's CRD:
 
 ```shell
-kubectl apply -f - << EOF 
+kubectl apply -f - << EOF
 apiVersion: example.extensions.io/v1alpha1
 kind: ListenerContextExample
 metadata:
@@ -396,14 +396,14 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 > Authorization: Basic dXNlcm5hbWU6cEBzc3cwcmQ=
 > User-Agent: curl/7.81.0
 > Accept: */*
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
 < x-content-type-options: nosniff
 < date: Mon, 08 Jul 2024 10:56:17 GMT
 < content-length: 559
-< 
+<
 ...
  "headers": {
   "Authorization": [
