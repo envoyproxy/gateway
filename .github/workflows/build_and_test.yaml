@@ -157,11 +157,10 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        # TODO: re-enable this after https://github.com/kubernetes-sigs/gateway-api/issues/4982
-        # - version: v1.32.11
-        #   ipFamily: ipv4
-        #   profile: default
-        #   gwapiChannel: standard
+        - version: v1.32.11
+          ipFamily: ipv4
+          profile: default
+          gwapiChannel: standard
         - version: v1.33.7
           ipFamily: ipv4
           profile: default
