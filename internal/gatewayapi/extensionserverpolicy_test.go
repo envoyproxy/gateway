@@ -74,6 +74,29 @@ func TestExtractTargetRefs(t *testing.T) {
 			},
 		},
 		{
+			desc: "valid targetSelectors",
+			specInput: map[string]any{
+				"targetSelectors": []any{
+					map[string]any{
+						"kind": "SomeKind",
+						"matchLabels": map[string]any{
+							"some": "name",
+						},
+					},
+				},
+			},
+			output: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind:  "SomeKind",
+						MatchLabels: map[string]string{
+							"some": "name",
+						},
+					},
+				},
+			},
+		},
+		{
 			desc: "valid multiple targetRefs",
 			specInput: map[string]any{
 				"targetRefs": []any{
@@ -126,6 +149,72 @@ func TestExtractTargetRefs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAppendUnstructuredRefIfAbsent(t *testing.T) {
+	p1 := &unstructured.Unstructured{Object: map[string]any{"metadata": map[string]any{"name": "p1"}}}
+	p2 := &unstructured.Unstructured{Object: map[string]any{"metadata": map[string]any{"name": "p2"}}}
+
+	// append nil list
+	refs := appendUnstructuredRefIfAbsent(nil, p1)
+	require.Len(t, refs, 1)
+	require.Same(t, p1, refs[0].Object)
+
+	// append valid list
+	refs = appendUnstructuredRefIfAbsent(refs, p2)
+	require.Len(t, refs, 2)
+	require.Same(t, p1, refs[0].Object)
+	require.Same(t, p2, refs[1].Object)
+
+	// append objects that were already added
+	refs = appendUnstructuredRefIfAbsent(refs, p1)
+	require.Len(t, refs, 2)
+	refs = appendUnstructuredRefIfAbsent(refs, p2)
+	require.Len(t, refs, 2)
+
+	// existence check if only done using pointers, adding a policy with the same name
+	// but a different pointer should work
+	p1Copy := &unstructured.Unstructured{Object: map[string]any{"metadata": map[string]any{"name": "p1"}}}
+	refs = appendUnstructuredRefIfAbsent(refs, p1Copy)
+	require.Len(t, refs, 3)
+	require.Same(t, p1Copy, refs[2].Object)
+}
+
+func TestExtensionServerPolicyCopiesWithStatusDeepCopy(t *testing.T) {
+	objectWithStatus := unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"name": "some-name"},
+		"status": map[string]any{
+			"ancestors": []any{
+				map[string]any{
+					"ancestorRef": map[string]any{"name": "some-gateway"},
+				},
+			},
+		},
+	}}
+	objectWithoutStatus := unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"name": "no-status"},
+	}}
+
+	policies := []unstructured.Unstructured{objectWithStatus, objectWithoutStatus}
+	copies := extensionServerPolicyCopiesWithStatusDeepCopy(policies)
+	require.Len(t, copies, 2)
+	// status does not differ after initial copy
+	require.Equal(t, objectWithStatus.Object["status"], copies[0].Object["status"])
+	require.Equal(t, objectWithoutStatus.Object["status"], copies[1].Object["status"])
+
+	// changing the status (or another top-level key) of a copy should not affect original status
+	copies[0].Object["status"].(map[string]any)["ancestors"].([]any)[0].(map[string]any)["ancestorRef"].(map[string]any)["name"] = "mutated"
+	require.Equal(t, "some-gateway", objectWithStatus.Object["status"].(map[string]any)["ancestors"].([]any)[0].(map[string]any)["ancestorRef"].(map[string]any)["name"])
+	copies[0].Object["status"] = map[string]any{"replaced": true}
+	copies[0].Object["newKey"] = "x"
+	require.NotEqual(t, copies[0].Object["status"], policies[0].Object["status"])
+	_, exists := objectWithStatus.Object["newKey"]
+	require.False(t, exists)
+
+	// policy with no status does not get a status after copy
+	_, hasStatus := copies[1].Object["status"]
+	require.False(t, hasStatus)
+	require.Equal(t, "no-status", copies[1].Object["metadata"].(map[string]any)["name"])
 }
 
 func TestMergeAncestorsForExtensionServerPolicies(t *testing.T) {
