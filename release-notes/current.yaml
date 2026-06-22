@@ -23,6 +23,7 @@ new features: |
   Added support for disabling the `crds` dependency on the gateway-helm chart via `crds.enabled` variable.
   Added `spec.clientIPDetection.xForwardedFor.disableXForwardedForAppend` to ClientTrafficPolicy to disable Envoy's automatic X-Forwarded-For append behavior when using XFF-based client IP detection.
   Added a `failedRefetchDuration` field to JWT providers in `SecurityPolicy`, configuring how long Envoy waits before re-fetching the JWKS after a failed fetch. If not specified, Envoy's default of 1 second is used.
+  Added support for `ListenerSet` as a `targetRef` kind in `SecurityPolicy`.
 
 bug fixes: |
   Fixed HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, and UDPRoute Accepted condition being set to False when an attached listener is not programmed due to a missing TLS certificate ref; listener programmed state is now correctly separated from route acceptance.
