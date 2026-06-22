@@ -38,6 +38,6 @@ http:
         spec:
           data: attached to the route
           targetRefs:
-            - group: gateway.networking.k8s.io
-              kind: HTTPRoute
-              name: first-route
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
+            name: first-route
