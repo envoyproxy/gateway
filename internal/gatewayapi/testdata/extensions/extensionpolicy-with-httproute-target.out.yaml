@@ -2,14 +2,97 @@ extensionServerPolicies:
 - apiVersion: foo.example.io/v1alpha1
   kind: Bar
   metadata:
-    name: policy-1
+    name: policy-2
     namespace: default
   spec:
-    data: attached to httproute
+    data: attached to httproute rule-1
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+      sectionName: rule-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-3
+    namespace: default
+  spec:
+    data: targets a rule that does not exist
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      sectionName: no-such-rule
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: No section name no-such-rule found for HTTPRoute default/httproute-1
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-1
+    namespace: default
+  spec:
+    data: attached to a whole httproute (multi-rule, multi-hostname)
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-4
+    namespace: default
+  spec:
+    data: attached to two httproutes via targetRefs
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
   status:
     ancestors:
     - ancestorRef:
@@ -42,7 +125,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -73,7 +156,8 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - foo.example.com
+    - bar.example.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -85,12 +169,51 @@ httpRoutes:
       matches:
       - path:
           value: /foo
+      name: rule-1
     - backendRefs:
       - name: service-2
         port: 8080
       matches:
       - path:
           value: /bar
+      name: rule-2
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          value: /baz
   status:
     parents:
     - conditions:
@@ -173,6 +296,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
+            sectionName: rule-1
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -192,10 +316,38 @@ xdsIR:
             apiVersion: foo.example.io/v1alpha1
             kind: Bar
             metadata:
+              name: policy-2
+              namespace: default
+            spec:
+              data: attached to httproute rule-1
+              targetRef:
+                group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-1
+                sectionName: rule-1
+            status:
+              ancestors:
+              - ancestorRef:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: gateway-1
+                  namespace: envoy-gateway
+                  sectionName: http
+                conditions:
+                - lastTransitionTime: null
+                  message: Policy has been accepted.
+                  reason: Accepted
+                  status: "True"
+                  type: Accepted
+                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        - object:
+            apiVersion: foo.example.io/v1alpha1
+            kind: Bar
+            metadata:
               name: policy-1
               namespace: default
             spec:
-              data: attached to httproute
+              data: attached to a whole httproute (multi-rule, multi-hostname)
               targetRef:
                 group: gateway.networking.k8s.io
                 kind: HTTPRoute
@@ -215,13 +367,44 @@ xdsIR:
                   status: "True"
                   type: Accepted
                 controllerName: gateway.envoyproxy.io/gatewayclass-controller
-        hostname: gateway.envoyproxy.io
+        - object:
+            apiVersion: foo.example.io/v1alpha1
+            kind: Bar
+            metadata:
+              name: policy-4
+              namespace: default
+            spec:
+              data: attached to two httproutes via targetRefs
+              targetRefs:
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-1
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-2
+            status:
+              ancestors:
+              - ancestorRef:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: gateway-1
+                  namespace: envoy-gateway
+                  sectionName: http
+                conditions:
+                - lastTransitionTime: null
+                  message: Policy has been accepted.
+                  reason: Accepted
+                  status: "True"
+                  type: Accepted
+                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        hostname: bar.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+          sectionName: rule-1
+        name: httproute/default/httproute-1/rule/0/match/0/bar_example_com
         pathMatch:
           distinct: false
           name: ""
@@ -231,6 +414,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
+            sectionName: rule-2
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -253,7 +437,7 @@ xdsIR:
               name: policy-1
               namespace: default
             spec:
-              data: attached to httproute
+              data: attached to a whole httproute (multi-rule, multi-hostname)
               targetRef:
                 group: gateway.networking.k8s.io
                 kind: HTTPRoute
@@ -273,17 +457,317 @@ xdsIR:
                   status: "True"
                   type: Accepted
                 controllerName: gateway.envoyproxy.io/gatewayclass-controller
-        hostname: gateway.envoyproxy.io
+        - object:
+            apiVersion: foo.example.io/v1alpha1
+            kind: Bar
+            metadata:
+              name: policy-4
+              namespace: default
+            spec:
+              data: attached to two httproutes via targetRefs
+              targetRefs:
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-1
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-2
+            status:
+              ancestors:
+              - ancestorRef:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: gateway-1
+                  namespace: envoy-gateway
+                  sectionName: http
+                conditions:
+                - lastTransitionTime: null
+                  message: Policy has been accepted.
+                  reason: Accepted
+                  status: "True"
+                  type: Accepted
+                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        hostname: bar.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
+          sectionName: rule-2
+        name: httproute/default/httproute-1/rule/1/match/0/bar_example_com
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: rule-1
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        extensionServerPolicies:
+        - object:
+            apiVersion: foo.example.io/v1alpha1
+            kind: Bar
+            metadata:
+              name: policy-2
+              namespace: default
+            spec:
+              data: attached to httproute rule-1
+              targetRef:
+                group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-1
+                sectionName: rule-1
+            status:
+              ancestors:
+              - ancestorRef:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: gateway-1
+                  namespace: envoy-gateway
+                  sectionName: http
+                conditions:
+                - lastTransitionTime: null
+                  message: Policy has been accepted.
+                  reason: Accepted
+                  status: "True"
+                  type: Accepted
+                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        - object:
+            apiVersion: foo.example.io/v1alpha1
+            kind: Bar
+            metadata:
+              name: policy-1
+              namespace: default
+            spec:
+              data: attached to a whole httproute (multi-rule, multi-hostname)
+              targetRef:
+                group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-1
+            status:
+              ancestors:
+              - ancestorRef:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: gateway-1
+                  namespace: envoy-gateway
+                  sectionName: http
+                conditions:
+                - lastTransitionTime: null
+                  message: Policy has been accepted.
+                  reason: Accepted
+                  status: "True"
+                  type: Accepted
+                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        - object:
+            apiVersion: foo.example.io/v1alpha1
+            kind: Bar
+            metadata:
+              name: policy-4
+              namespace: default
+            spec:
+              data: attached to two httproutes via targetRefs
+              targetRefs:
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-1
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-2
+            status:
+              ancestors:
+              - ancestorRef:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: gateway-1
+                  namespace: envoy-gateway
+                  sectionName: http
+                conditions:
+                - lastTransitionTime: null
+                  message: Policy has been accepted.
+                  reason: Accepted
+                  status: "True"
+                  type: Accepted
+                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        hostname: foo.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+          sectionName: rule-1
+        name: httproute/default/httproute-1/rule/0/match/0/foo_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: rule-2
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        extensionServerPolicies:
+        - object:
+            apiVersion: foo.example.io/v1alpha1
+            kind: Bar
+            metadata:
+              name: policy-1
+              namespace: default
+            spec:
+              data: attached to a whole httproute (multi-rule, multi-hostname)
+              targetRef:
+                group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-1
+            status:
+              ancestors:
+              - ancestorRef:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: gateway-1
+                  namespace: envoy-gateway
+                  sectionName: http
+                conditions:
+                - lastTransitionTime: null
+                  message: Policy has been accepted.
+                  reason: Accepted
+                  status: "True"
+                  type: Accepted
+                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        - object:
+            apiVersion: foo.example.io/v1alpha1
+            kind: Bar
+            metadata:
+              name: policy-4
+              namespace: default
+            spec:
+              data: attached to two httproutes via targetRefs
+              targetRefs:
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-1
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-2
+            status:
+              ancestors:
+              - ancestorRef:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: gateway-1
+                  namespace: envoy-gateway
+                  sectionName: http
+                conditions:
+                - lastTransitionTime: null
+                  message: Policy has been accepted.
+                  reason: Accepted
+                  status: "True"
+                  type: Accepted
+                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        hostname: foo.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+          sectionName: rule-2
+        name: httproute/default/httproute-1/rule/1/match/0/foo_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /bar
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        extensionServerPolicies:
+        - object:
+            apiVersion: foo.example.io/v1alpha1
+            kind: Bar
+            metadata:
+              name: policy-4
+              namespace: default
+            spec:
+              data: attached to two httproutes via targetRefs
+              targetRefs:
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-1
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                name: httproute-2
+            status:
+              ancestors:
+              - ancestorRef:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: gateway-1
+                  namespace: envoy-gateway
+                  sectionName: http
+                conditions:
+                - lastTransitionTime: null
+                  message: Policy has been accepted.
+                  reason: Accepted
+                  status: "True"
+                  type: Accepted
+                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /baz
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
