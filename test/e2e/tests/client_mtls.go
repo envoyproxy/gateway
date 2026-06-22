@@ -179,7 +179,7 @@ var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
 						Host: "www.example.com",
 						Path: "/cluster-trust-bundle",
 						Headers: map[string]string{
-							"X-Forwarded-Client-Cert": "Hash=42a13e4b02c8a6d2ae5bf2fdaa032e24fdbabbaa79b6017fd0db6c077e6999e0;Subject=\"O=example organization,CN=client.example.com\"",
+							"X-Forwarded-Client-Cert": "Hash=6d6abe782b02ce47420bda8d994ceff9acd53a0155861460f260192efefa6697;Subject=\"O=example organization,CN=client.example.com\"",
 						},
 					},
 				},
