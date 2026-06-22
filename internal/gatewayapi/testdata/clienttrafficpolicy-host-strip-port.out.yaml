@@ -6,7 +6,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     host:
-      stripPortMode: Matching
+      stripPort: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -119,7 +119,7 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       host:
-        stripPortMode: Matching
+        stripPort: true
       hostnames:
       - '*'
       metadata:
