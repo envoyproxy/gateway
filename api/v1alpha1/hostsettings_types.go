@@ -5,30 +5,23 @@
 
 package v1alpha1
 
-// StripPortMode determines how the port is stripped from the Host/Authority header
-// before route matching.
-// +kubebuilder:validation:Enum=Any;Matching
-type StripPortMode string
-
-const (
-	// StripPortModeAny strips the port from the Host/Authority header unconditionally.
-	StripPortModeAny StripPortMode = "Any"
-	// StripPortModeMatching strips the port from the Host/Authority header only when it
-	// matches the listener's port.
-	StripPortModeMatching StripPortMode = "Matching"
-)
-
 // HostSettings provides settings that manage how the incoming Host/Authority header
 // set by clients is normalized.
 type HostSettings struct {
-	// StripPortMode determines how the port is stripped from the Host/Authority header
-	// before route matching.
-	// "Any" strips the port unconditionally, "Matching" strips it only when it matches
-	// the listener's port.
+	// StripPort determines whether the port is removed from the Host/Authority header
+	// before route matching. It maps to Envoy's strip_any_host_port, which strips the
+	// port unconditionally.
 	// If not set, no port stripping is performed (Envoy default).
 	//
+	// Stripping only the port that matches the listener port (Envoy's
+	// strip_matching_host_port) is intentionally not offered: Envoy compares against the
+	// Envoy listener port, which differs from the user-facing Gateway listener port (for
+	// example, a Gateway listener on port 80 is translated to an Envoy listener on port
+	// 10080). Matching-port stripping would therefore be silently ineffective for the
+	// port clients actually use, so only unconditional stripping is exposed.
+	//
 	// +optional
-	StripPortMode *StripPortMode `json:"stripPortMode,omitempty"`
+	StripPort *bool `json:"stripPort,omitempty"`
 	// StripTrailingHostDot determines if the trailing dot of the host should be removed
 	// from the Host/Authority header before any processing of the request.
 	// This affects the upstream host header as well. Without this option, incoming requests

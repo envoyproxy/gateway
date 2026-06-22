@@ -12,11 +12,8 @@ using the [ClientTrafficPolicy][] API.
 ## Stripping Port from the Host Header
 
 Some clients include the port in the `Host` (or `:authority`) header
-(e.g. `example.com:443`). Use `host.stripPortMode` to have Envoy strip the port
-before route matching.
-
-- `Any` strips the port unconditionally.
-- `Matching` strips only when the port matches the listener port.
+(e.g. `example.com:443`). Set `host.stripPort` to `true` to have Envoy strip the
+port unconditionally before route matching.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -34,7 +31,7 @@ spec:
       kind: Gateway
       name: eg
   host:
-    stripPortMode: Any
+    stripPort: true
 EOF
 ```
 
@@ -55,7 +52,7 @@ spec:
       kind: Gateway
       name: eg
   host:
-    stripPortMode: Any
+    stripPort: true
 ```
 
 {{% /tab %}}

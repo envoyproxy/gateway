@@ -61,7 +61,7 @@
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8082
-        stripMatchingHostPort: true
+        stripAnyHostPort: true
         useRemoteAddress: true
     name: second-listener
   maxConnectionsToAcceptPerSocketEvent: 1
