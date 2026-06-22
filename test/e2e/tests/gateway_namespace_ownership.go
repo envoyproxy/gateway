@@ -37,8 +37,8 @@ var GatewayNamespaceOwnership = suite.ConformanceTest{
 		}
 
 		const (
-			ns      = "gateway-conformance-infra"
-			gwName  = "ownership-collision-test"
+			ns     = "gateway-conformance-infra"
+			gwName = "ownership-collision-test"
 		)
 
 		ctx := context.Background()
