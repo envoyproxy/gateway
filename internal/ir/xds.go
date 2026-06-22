@@ -1263,6 +1263,10 @@ type RemoteJWKS struct {
 
 	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
 	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
+
+	// FailedRefetchDuration is the interval Envoy waits before re-fetching the JWKS after a
+	// failed fetch. If not specified, Envoy's default of 1 second is used.
+	FailedRefetchDuration *metav1.Duration `json:"failedRefetchDuration,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -3714,6 +3718,9 @@ type Lua struct {
 	Name string
 	// Code is the Lua source code
 	Code *string
+	// FilterContext is the filter context configuration for the Lua script.
+	// This is a JSON object passed to the Lua script via request_handle:filterContext().
+	FilterContext *apiextensionsv1.JSON
 }
 
 // Wasm holds the information associated with the Wasm extensions.

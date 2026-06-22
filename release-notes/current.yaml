@@ -4,6 +4,7 @@ date: Pending
 breaking changes: |
   Moved the Gateway API safe-upgrades ValidatingAdmissionPolicy resources out of the CRD bundle and into the gateway-helm chart templates so tools such as Flux no longer treat them as CRDs. During upgrades, two upgrade cases require action: (1) if you install Gateway API CRDs separately (e.g. with the gateway-crds-helm chart and `helm install --skip-crds`), the safe-upgrades ValidatingAdmissionPolicy and its binding are now rendered by the gateway-helm chart, so add Helm ownership metadata (the `meta.helm.sh/release-name`, `meta.helm.sh/release-namespace` annotations and the `app.kubernetes.io/managed-by=Helm` label) to the `ValidatingAdmissionPolicy/safe-upgrades.gateway.networking.k8s.io` and `ValidatingAdmissionPolicyBinding/safe-upgrades.gateway.networking.k8s.io` resources before upgrading so Helm can manage them (see https://gateway.envoyproxy.io/v1.8/install/install-helm/#installing-crds-separately); (2) if Gateway API CRDs and safe upgrade policy resources are managed by your cloud provider (or any other mechanism outside this chart), note that `--skip-crds` does not skip chart-templated resources, so disable rendering of the safe-upgrades ValidatingAdmissionPolicy by setting `crds.gatewayAPI.safeUpgradePolicy.enabled=false` (see https://gateway.envoyproxy.io/v1.8/install/install-helm/#clusters-with-compatible-provider-managed-gateway-api-crds).
   Lua EnvoyExtensionPolicies are now disabled by default. Use the new `enableLua` field in `extensionApis` to explicitly enable them. The `disableLua` field is deprecated and will be removed in a future release.
+  `SecurityPolicy` `spec.apiKeyAuth.extractFrom` admission validation is now stricter: the list must contain at least one entry, each entry must specify exactly one of `headers`, `params`, or `cookies`, and source names must be non-empty. SecurityPolicies that previously applied with an empty or ambiguous `extractFrom` (which produced no usable API key sources) will now be rejected and must be corrected before upgrading.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -15,7 +16,12 @@ new features: |
   Added a `requestBody` field to the HTTP active health checker in `BackendTrafficPolicy`, allowing a request body payload to be sent during HTTP health checking. The field requires the health check `method` to be `POST` or `PUT`.
   Added a `xdsNACKTotal` metric to track the number of NACKs received from Envoy, labeled by node ID and resource type URL. A NACK is a DiscoveryRequest carrying an ErrorDetail, indicating that Envoy rejected the last config update. This metric can be used to alert on config issues causing xDS rejections.
   Added the `autoSNIFromEndpointHostname` TLS setting to Backends, allowing the SNI value sent to the backend to be automatically derived from the backend endpoint hostname instead of using a fixed SNI value.
+  Added support for `filterContext` field in Lua EnvoyExtensionPolicy, allowing shared Lua scripts to be parameterized per route via `request_handle:filterContext()`.
+  Added support for `ListenerSet` as a `targetRef` kind in `ClientTrafficPolicy`, allowing client traffic settings to be applied to a named group of listeners without a gateway-wide policy.
   Added a `fromMetadata` field to global rate limit `limit` in `BackendTrafficPolicy`, allowing the limit value to be sourced from per-request dynamic metadata (e.g. set by an upstream ext_proc), falling back to the static `requests`/`unit` when the metadata is absent.
+  Added support for disabling the `crds` dependency on the gateway-helm chart via `crds.enabled` variable.
+  Added `spec.clientIPDetection.xForwardedFor.disableXForwardedForAppend` to ClientTrafficPolicy to disable Envoy's automatic X-Forwarded-For append behavior when using XFF-based client IP detection.
+  Added a `failedRefetchDuration` field to JWT providers in `SecurityPolicy`, configuring how long Envoy waits before re-fetching the JWKS after a failed fetch. If not specified, Envoy's default of 1 second is used.
 
 bug fixes: |
   Fixed HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, and UDPRoute Accepted condition being set to False when an attached listener is not programmed due to a missing TLS certificate ref; listener programmed state is now correctly separated from route acceptance.
@@ -37,6 +43,7 @@ bug fixes: |
   Fixed API key auth credential ordering to avoid unnecessary xDS updates.
   Fixed the generated `install.yaml` creating a duplicate ValidatingAdmissionPolicy and its binding which caused `kustomize build` to fail with a duplicate resource error.
   Fixed ListenerSet hostname conflict resolution to apply listener precedence: Gateway-owned listeners win over ListenerSet listeners, and among ListenerSet listeners the first in processing order wins. Conflicted ListenerSet listeners now correctly report Accepted=False with the conflict reason. The Gateway's AttachedListenerSets count now only reflects ListenerSets with at least one accepted listener.
+  Fixed upstream PROXY protocol clusters to preserve generated HTTP protocol options, including auto protocol detection for Backend TLS.
   Fixed EnvoyGateway config hot-reload to apply defaults before validation, so validators always run against a fully-defaulted struct on both the startup and reload paths.
   Fixed deduplicate CA certificates in ClientTrafficPolicy mTLS.
 
