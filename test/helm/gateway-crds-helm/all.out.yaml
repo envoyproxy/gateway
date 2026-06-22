@@ -28399,6 +28399,14 @@ spec:
                       using X-Forwarded-For headers for determining the client IP
                       address.
                     properties:
+                      disableXForwardedForAppend:
+                        description: |-
+                          DisableXForwardedForAppend configures Envoy Proxy to stop appending the downstream address
+                          to the X-Forwarded-For header.
+
+                          This only disables the automatic append behavior. It does not remove or sanitize
+                          an incoming X-Forwarded-For header.
+                        type: boolean
                       numTrustedHops:
                         description: |-
                           NumTrustedHops specifies how many trusted hops to count from the rightmost side of
@@ -30144,14 +30152,16 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway
-              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' : true'
+            - message: this policy can only have a targetRef.kind of Gateway or ListenerSet
+              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'']
+                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true'
-            - message: this policy can only have a targetRefs[*].kind of Gateway
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway'')
-                : true'
+            - message: this policy can only have a targetRefs[*].kind of Gateway or
+                ListenerSet
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
+                ''ListenerSet'']) : true'
           status:
             description: Status defines the current status of ClientTrafficPolicy.
             properties:
@@ -32130,6 +32140,13 @@ spec:
                     Lua defines a Lua extension
                     Only one of Inline or ValueRef must be set
                   properties:
+                    filterContext:
+                      description: |-
+                        FilterContext is the filter context configuration for the Lua script.
+                        This must be a JSON object (key/value pairs). The values are made available
+                        to the Lua script via request_handle:filterContext(). This allows a shared
+                        script to be parameterized differently per EnvoyExtensionPolicy/route.
+                      x-kubernetes-preserve-unknown-fields: true
                     inline:
                       description: Inline contains the source code as an inline string.
                       type: string
@@ -57747,6 +57764,15 @@ spec:
                               description: |-
                                 Duration is a string value representing a duration in time. The format is as specified
                                 in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
+                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                              type: string
+                            failedRefetchDuration:
+                              description: |-
+                                FailedRefetchDuration is the duration Envoy waits before re-fetching the JWKS
+                                after a failed fetch.
+                                This does not control retries within a single fetch attempt (see BackendSettings.Retry),
+                                only the interval between fetch attempts after a failure.
+                                If not specified, Envoy's default of 1 second is used.
                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                               type: string
                             uri:
