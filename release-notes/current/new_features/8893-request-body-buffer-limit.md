@@ -1,0 +1,1 @@
+Added a `requestBodyBufferLimit` field to `BackendTrafficPolicy`, setting the maximum request body size Envoy will buffer for a route. Requests whose buffered body exceeds the limit are rejected with HTTP 413. Unlike `requestBuffer`, this only raises the buffer limit without enabling full request buffering.
