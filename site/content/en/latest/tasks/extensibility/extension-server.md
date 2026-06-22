@@ -118,7 +118,7 @@ which hooks receive the policy:
 | `targetRef` kind | `sectionName` | Attaches to | Delivered to hook(s) |
 |------------------|---------------|-------------|----------------------|
 | `Gateway`        | _(unset)_     | The whole Gateway | `PostTranslateModifyHook` |
-| `Gateway`        | Listener name | A single Listener | `PostHTTPListenerModifyHook` |
+| `Gateway`        | Listener name | A single Listener | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
 | `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |
 | `HTTPRoute` / `GRPCRoute` | Rule name (`sectionName`) | A single route rule | `PostRouteModifyHook` (routes generated from that rule only) |
 
