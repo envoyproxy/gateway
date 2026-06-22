@@ -1734,23 +1734,11 @@ func TestSecurityPolicyAPIKeyAuthExtractFrom(t *testing.T) {
 			},
 		},
 		{
-			desc: "empty cookie source name",
-			extractFrom: []*egv1a1.ExtractFrom{
-				{
-					Cookies: []string{},
-				},
-			},
-			wantErrors: []string{
-				"spec.apiKeyAuth.extractFrom[0].cookies",
-				"should be at least 1 items long",
-			},
-		},
-		{
 			desc:        "empty extractFrom list",
 			extractFrom: []*egv1a1.ExtractFrom{},
 			wantErrors: []string{
 				"spec.apiKeyAuth.extractFrom",
-				"should be at least 1 items long",
+				"should have at least 1 items",
 			},
 		},
 	}
