@@ -39,9 +39,9 @@ type ClientTrafficPolicy struct {
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind == 'Gateway' : true", message="this policy can only have a targetRef.kind of Gateway"
+// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'ListenerSet'] : true", message="this policy can only have a targetRef.kind of Gateway or ListenerSet"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == 'Gateway') : true", message="this policy can only have a targetRefs[*].kind of Gateway"
+// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet']) : true", message="this policy can only have a targetRefs[*].kind of Gateway or ListenerSet"
 type ClientTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 
@@ -327,6 +327,14 @@ type XForwardedForSettings struct {
 	// +optional
 	// +kubebuilder:validation:MinItems=1
 	TrustedCIDRs []CIDR `json:"trustedCIDRs,omitempty"`
+
+	// DisableXForwardedForAppend configures Envoy Proxy to stop appending the downstream address
+	// to the X-Forwarded-For header.
+	//
+	// This only disables the automatic append behavior. It does not remove or sanitize
+	// an incoming X-Forwarded-For header.
+	// +optional
+	DisableXForwardedForAppend *bool `json:"disableXForwardedForAppend,omitempty"`
 }
 
 // CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on
