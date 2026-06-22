@@ -35,7 +35,7 @@ require (
 	k8s.io/kubectl v0.36.2
 	sigs.k8s.io/controller-runtime v0.24.1
 	sigs.k8s.io/gateway-api v1.6.0-rc.1
-	sigs.k8s.io/gateway-api/conformance v1.6.0-rc.1
+	sigs.k8s.io/gateway-api/conformance v1.6.0-rc.1.0.20260619155250-740d32eeb658
 	sigs.k8s.io/yaml v1.6.0
 )
 
