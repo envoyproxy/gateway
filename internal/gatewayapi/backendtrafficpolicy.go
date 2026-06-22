@@ -15,6 +15,7 @@ import (
 
 	perr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -1489,6 +1490,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
+		rbbl        *uint64
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
 		err, errs   error
@@ -1557,6 +1559,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
+	if rbbl, err = buildRequestBodyBufferLimit(policy.Spec.RequestBodyBufferLimit); err != nil {
+		err = perr.WithMessage(err, "RequestBodyBufferLimit")
+		errs = errors.Join(errs, err)
+	}
+
 	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
 		err = perr.WithMessage(err, "Telemetry")
 		errs = errors.Join(errs, err)
@@ -1585,15 +1592,16 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 			HTTP2:             h2,
 			DNS:               ds,
 		},
-		RateLimit:        rl,
-		BandwidthLimit:   bl,
-		FaultInjection:   fi,
-		Retry:            rt,
-		ResponseOverride: ro,
-		Compression:      cp,
-		HTTPUpgrade:      httpUpgrade,
-		Telemetry:        buildBackendTelemetry(policy.Spec.Telemetry),
-		RequestBuffer:    rb,
+		RateLimit:              rl,
+		BandwidthLimit:         bl,
+		FaultInjection:         fi,
+		Retry:                  rt,
+		ResponseOverride:       ro,
+		Compression:            cp,
+		HTTPUpgrade:            httpUpgrade,
+		Telemetry:              buildBackendTelemetry(policy.Spec.Telemetry),
+		RequestBuffer:          rb,
+		RequestBodyBufferLimit: rbbl,
 	}, errs
 }
 
@@ -2354,6 +2362,25 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 	return &ir.RequestBuffer{
 		Limit: spec.Limit,
 	}, nil
+}
+
+// buildRequestBodyBufferLimit converts the request body buffer limit Quantity into a byte count.
+func buildRequestBodyBufferLimit(limit *apiresource.Quantity) (*uint64, error) {
+	if limit == nil {
+		return nil, nil
+	}
+
+	v, ok := limit.AsInt64()
+	if !ok {
+		return nil, fmt.Errorf("invalid RequestBodyBufferLimit value %s", limit.String())
+	}
+
+	if v < 0 {
+		return nil, fmt.Errorf("RequestBodyBufferLimit value %s is out of range, must be >= 0", limit.String())
+	}
+
+	out := uint64(v)
+	return &out, nil
 }
 
 func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.ResponseOverride, error) {
