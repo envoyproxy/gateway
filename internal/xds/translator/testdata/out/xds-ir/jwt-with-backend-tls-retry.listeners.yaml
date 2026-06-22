@@ -32,7 +32,8 @@
                   - scp
                 payloadInMetadata: foobar
                 remoteJwks:
-                  asyncFetch: {}
+                  asyncFetch:
+                    failedRefetchDuration: 30s
                   cacheDuration: 300s
                   httpUri:
                     cluster: securitypolicy/default/policy-for-route/jwt/0

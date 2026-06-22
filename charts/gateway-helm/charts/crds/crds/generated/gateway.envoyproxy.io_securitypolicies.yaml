@@ -5368,6 +5368,15 @@ spec:
                                 in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                               type: string
+                            failedRefetchDuration:
+                              description: |-
+                                FailedRefetchDuration is the duration Envoy waits before re-fetching the JWKS
+                                after a failed fetch.
+                                This does not control retries within a single fetch attempt (see BackendSettings.Retry),
+                                only the interval between fetch attempts after a failure.
+                                If not specified, Envoy's default of 1 second is used.
+                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                              type: string
                             uri:
                               description: |-
                                 URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
