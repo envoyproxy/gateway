@@ -3381,6 +3381,16 @@ func (in *ExtAuth) DeepCopy() *ExtAuth {
 func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 	*out = *in
 	in.BackendCluster.DeepCopyInto(&out.BackendCluster)
+	if in.Name != nil {
+		in, out := &in.Name, &out.Name
+		*out = new(string)
+		**out = **in
+	}
+	if in.StatPrefix != nil {
+		in, out := &in.StatPrefix, &out.StatPrefix
+		*out = new(string)
+		**out = **in
+	}
 	if in.MessageTimeout != nil {
 		in, out := &in.MessageTimeout, &out.MessageTimeout
 		*out = new(v1.Duration)

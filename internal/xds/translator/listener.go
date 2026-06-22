@@ -217,7 +217,7 @@ func (t *Translator) buildXdsTCPListener(
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
 	socketOptions := buildTCPSocketOptions(keepalive)
-	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (t *Translator) buildXdsQuicListener(
 	ipFamily *egv1a1.IPFamily,
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
-	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
+	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +350,7 @@ func (t *Translator) addHCMToXDSListener(
 	http3Listener bool,
 	connection *ir.ClientConnection,
 ) error {
-	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute, collectListenerExtProcs(irListener))
 	if err != nil {
 		return err
 	}
@@ -737,7 +737,7 @@ func buildTCPFilterChain(
 ) (*listenerv3.FilterChain, error) {
 	var filters []*listenerv3.Filter
 
-	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1126,7 +1126,7 @@ func buildXdsUDPListener(
 		return nil, err
 	}
 
-	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute, nil)
 	if error != nil {
 		return nil, error
 	}
@@ -1151,7 +1151,7 @@ func buildXdsUDPListener(
 		return nil, err
 	}
 
-	if al, err = buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener); err != nil {
+	if al, err = buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener, nil); err != nil {
 		return nil, err
 	}
 	xdsListener := &listenerv3.Listener{

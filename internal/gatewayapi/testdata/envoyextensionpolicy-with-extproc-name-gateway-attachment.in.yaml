@@ -1,0 +1,144 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /foo
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - www.bar.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /bar
+      backendRefs:
+      - name: service-1
+        port: 8080
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: grpc-backend-1
+  spec:
+    ports:
+    - port: 9000
+      name: grpc
+      protocol: TCP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: grpc-backend-2
+  spec:
+    ports:
+    - port: 9000
+      name: grpc
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-grpc-backend-1
+    namespace: default
+    labels:
+      kubernetes.io/service-name: grpc-backend-1
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    port: 9000
+  endpoints:
+  - addresses:
+    - 7.7.7.7
+    conditions:
+      ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-grpc-backend-2
+    namespace: default
+    labels:
+      kubernetes.io/service-name: grpc-backend-2
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    port: 9000
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true
+envoyExtensionPolicies:
+# Gateway-targeted EEP and route-targeted EEP both use name "auth" on the same listener.
+# The route policy is more specific, so it claims "auth" first; the gateway policy gets
+# an AmbiguousDefinition warning and its CustomName is cleared.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-gateway-1
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    extProc:
+    - name: auth
+      backendRefs:
+      - name: grpc-backend-1
+        port: 9000
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-2
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    extProc:
+    - name: auth
+      backendRefs:
+      - name: grpc-backend-2
+        port: 9000

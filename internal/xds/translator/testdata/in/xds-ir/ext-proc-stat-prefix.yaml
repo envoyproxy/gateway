@@ -1,0 +1,60 @@
+http:
+- name: "envoy-gateway/gateway-1/http"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+    hostname: www.foo.com
+    isHTTP2: false
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
+    envoyExtensions:
+      extProcs:
+      # Case 1: explicit statPrefix overrides name — customName "auth", statPrefix "auth-east"
+      - name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
+        customName: auth
+        statPrefix: auth-east
+        authority: grpc-backend.default:9000
+        destination:
+          name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend
+          settings:
+          - protocol: GRPC
+            weight: 1
+            name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend/backend/0
+      # Case 2: statPrefix absent, customName set — statPrefix falls back to customName "enrich"
+      - name: envoyextensionpolicy/default/policy-for-route-2/extproc/0
+        customName: enrich
+        statPrefix: enrich
+        authority: grpc-backend-2.default:9000
+        destination:
+          name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-2
+          settings:
+          - protocol: GRPC
+            weight: 1
+            name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-2/backend/0
+      # Case 3: neither customName nor statPrefix — Envoy uses its own default
+      - name: envoyextensionpolicy/default/policy-for-route-3/extproc/0
+        authority: grpc-backend-3.default:9000
+        destination:
+          name: envoyextensionpolicy/default/policy-for-route-3/0/grpc-backend-3
+          settings:
+          - protocol: GRPC
+            weight: 1
+            name: envoyextensionpolicy/default/policy-for-route-3/0/grpc-backend-3/backend/0

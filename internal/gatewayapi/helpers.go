@@ -1426,3 +1426,30 @@ func getOverriddenAndMergedTargetsMessageForGateway(
 	}
 	return overrideMessage, mergedMessage
 }
+
+// nameRegistry tracks first-claimant-wins ownership of string identifiers within named
+// scopes (e.g. an IR listener name). It is used to detect ambiguous definitions across
+// policies that share a scope, such as ext-proc custom names on the same listener.
+type nameRegistry struct {
+	// scopes maps scope key → (name → first owner ID)
+	scopes map[string]map[string]string
+}
+
+func newNameRegistry() *nameRegistry {
+	return &nameRegistry{scopes: make(map[string]map[string]string)}
+}
+
+// claim attempts to register name under ownerID within scope.
+// Returns true if ownerID is the first claimant (new registration).
+// Returns false if the name was already claimed by a different owner.
+// A second claim by the same ownerID is a no-op and returns true.
+func (r *nameRegistry) claim(scope, name, ownerID string) bool {
+	if r.scopes[scope] == nil {
+		r.scopes[scope] = make(map[string]string)
+	}
+	if existing, ok := r.scopes[scope][name]; ok {
+		return existing == ownerID
+	}
+	r.scopes[scope][name] = ownerID
+	return true
+}

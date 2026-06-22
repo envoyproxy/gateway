@@ -1,0 +1,24 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.foo.com
+    name: envoy-gateway/gateway-1/http/www_foo_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-1/extproc/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-2/extproc/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-3/extproc/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

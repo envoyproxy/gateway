@@ -7,6 +7,8 @@ package translator
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
@@ -84,7 +86,153 @@ func init() {
 	}
 }
 
-func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([]*accesslog.AccessLog, error) {
+// egExtFilterStateRe matches %EG_EXT_PROC_FILTER_STATE(name:args)% operators where args is passed
+// through verbatim as the %FILTER_STATE% arguments after the key. Users are responsible for
+// including the correct serialize type, e.g. %EG_EXT_PROC_FILTER_STATE(auth-proc:FIELD:latency_ns)%.
+var egExtFilterStateRe = regexp.MustCompile(`%EG_EXT_PROC_FILTER_STATE\(([^:)]+)(:[^)]*)\)%`)
+
+const egOperatorPrefix = "%EG_EXT_PROC_FILTER_STATE("
+
+// resolveEGOperators rewrites all EG-synthetic access log operators to their canonical Envoy equivalents.
+// Handles %EG_EXT_PROC_FILTER_STATE(name:args)% → %FILTER_STATE(<filter-name>:args)%.
+// args is passed through verbatim — users control the serialize type and any additional arguments.
+// Operators that cannot be resolved (no matching ext-proc) are replaced with "[EG_UNRESOLVED:name]"
+// so users can distinguish a translation-time name lookup failure from a runtime filter state miss.
+func resolveEGOperators(format string, extensions []ir.ExtProc) string {
+	if !strings.Contains(format, egOperatorPrefix) {
+		return format
+	}
+	return egExtFilterStateRe.ReplaceAllStringFunc(format, func(match string) string {
+		parts := egExtFilterStateRe.FindStringSubmatch(match)
+		name, args := parts[1], parts[2]
+		for i := range extensions {
+			ep := &extensions[i]
+			if ep.CustomName == name {
+				filterStateName := fmt.Sprintf("%s/%s", string(egv1a1.EnvoyFilterExtProc), ep.Name)
+				return fmt.Sprintf("%%FILTER_STATE(%s%s)%%", filterStateName, args)
+			}
+		}
+		return fmt.Sprintf("[EG_UNRESOLVED:%s]", name)
+	})
+}
+
+// hasUnresolvedEGOperators reports whether any access log entry in the slice
+// still contains unresolved EG-synthetic operators (e.g. %EG_EXT_PROC_FILTER_STATE(...)%).
+func hasUnresolvedEGOperators(logs []*accesslog.AccessLog) bool {
+	for _, al := range logs {
+		if accessLogEntryHasUnresolvedEGOperators(al) {
+			return true
+		}
+	}
+	return false
+}
+
+func accessLogEntryHasUnresolvedEGOperators(al *accesslog.AccessLog) bool {
+	fal := &fileaccesslog.FileAccessLog{}
+	if err := al.GetTypedConfig().UnmarshalTo(fal); err != nil {
+		return false
+	}
+	lf := fal.GetLogFormat()
+	if lf == nil {
+		return false
+	}
+	switch f := lf.GetFormat().(type) {
+	case *cfgcore.SubstitutionFormatString_TextFormatSource:
+		return strings.Contains(f.TextFormatSource.GetInlineString(), egOperatorPrefix)
+	case *cfgcore.SubstitutionFormatString_JsonFormat:
+		for _, v := range f.JsonFormat.GetFields() {
+			if strings.Contains(v.GetStringValue(), egOperatorPrefix) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// resolveAccessLogs resolves EG-synthetic operators in a slice of access log entries using
+// the supplied extensions. Unresolved operators are replaced with "-". Returns the patched slice.
+func resolveAccessLogs(logs []*accesslog.AccessLog, extensions []ir.ExtProc) ([]*accesslog.AccessLog, error) {
+	result := make([]*accesslog.AccessLog, len(logs))
+	for i, al := range logs {
+		patched, err := patchAccessLogEntry(al, extensions)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = patched
+	}
+	return result, nil
+}
+
+func patchAccessLogEntry(al *accesslog.AccessLog, extensions []ir.ExtProc) (*accesslog.AccessLog, error) {
+	fal := &fileaccesslog.FileAccessLog{}
+	if err := al.GetTypedConfig().UnmarshalTo(fal); err != nil {
+		return al, nil // not a file access log — nothing to patch
+	}
+	lf := fal.GetLogFormat()
+	if lf == nil {
+		return al, nil
+	}
+
+	changed := false
+	switch f := lf.GetFormat().(type) {
+	case *cfgcore.SubstitutionFormatString_TextFormatSource:
+		orig := f.TextFormatSource.GetInlineString()
+		resolved := resolveEGOperators(orig, extensions)
+		if resolved != orig {
+			f.TextFormatSource = &cfgcore.DataSource{
+				Specifier: &cfgcore.DataSource_InlineString{InlineString: resolved},
+			}
+			changed = true
+		}
+	case *cfgcore.SubstitutionFormatString_JsonFormat:
+		for k, v := range f.JsonFormat.GetFields() {
+			orig := v.GetStringValue()
+			resolved := resolveEGOperators(orig, extensions)
+			if resolved != orig {
+				f.JsonFormat.Fields[k] = &structpb.Value{
+					Kind: &structpb.Value_StringValue{StringValue: resolved},
+				}
+				changed = true
+			}
+		}
+	}
+
+	if !changed {
+		return al, nil
+	}
+
+	newAny, err := proto.ToAnyWithValidation(fal)
+	if err != nil {
+		return nil, err
+	}
+	return &accesslog.AccessLog{
+		Name:       al.Name,
+		Filter:     al.Filter,
+		ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: newAny},
+	}, nil
+}
+
+// collectListenerExtProcs returns the deduplicated ext-proc instances across all routes
+// on a single IR listener, for use in %EG_EXT_PROC_FILTER_STATE(...)% operator resolution.
+func collectListenerExtProcs(irListener *ir.HTTPListener) []ir.ExtProc {
+	seen := map[string]struct{}{}
+	var result []ir.ExtProc
+	for _, route := range irListener.Routes {
+		if route.EnvoyExtensions == nil {
+			continue
+		}
+		for i := range route.EnvoyExtensions.ExtProcs {
+			ep := &route.EnvoyExtensions.ExtProcs[i]
+			if _, ok := seen[ep.Name]; !ok {
+				seen[ep.Name] = struct{}{}
+				result = append(result, *ep)
+			}
+		}
+	}
+	return result
+}
+
+func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType, extensions []ir.ExtProc) ([]*accesslog.AccessLog, error) {
 	if al == nil {
 		return nil, nil
 	}
@@ -111,6 +259,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		}
 
 		format := *text.Format
+		format = resolveEGOperators(format, extensions)
 
 		filelog.AccessLogFormat = &fileaccesslog.FileAccessLog_LogFormat{
 			LogFormat: &cfgcore.SubstitutionFormatString{
@@ -169,7 +318,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		for _, entry := range jsonLogFields {
 			jsonFormat.Fields[entry.Key] = &structpb.Value{
 				Kind: &structpb.Value_StringValue{
-					StringValue: entry.Value,
+					StringValue: resolveEGOperators(entry.Value, extensions),
 				},
 			}
 		}

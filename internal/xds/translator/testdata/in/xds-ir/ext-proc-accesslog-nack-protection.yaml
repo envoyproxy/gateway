@@ -1,0 +1,97 @@
+accesslog:
+  text:
+  - path: "/dev/stdout"
+    format: |
+      [%START_TIME%] %REQ(:METHOD)% ep=%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%
+  - path: "/dev/stdout"
+    logType: Route
+    format: |
+      [%START_TIME%] %REQ(:METHOD)% ep=%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%
+  - path: "/dev/stdout"
+    logType: Upstream
+    format: |
+      [%START_TIME%] %REQ(:METHOD)% ep=%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%
+  json:
+  - path: "/dev/stdout"
+    json:
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: ep_latency
+      value: "%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%"
+  - path: "/dev/stdout"
+    logType: Route
+    json:
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: ep_latency
+      value: "%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%"
+  - path: "/dev/stdout"
+    logType: Upstream
+    json:
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: ep_latency
+      value: "%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%"
+http:
+# Listener 1: non-TLS — HCM lives in DefaultFilterChain
+- name: "envoy-gateway/gateway-1/http"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: httproute/default/httproute-1/rule/0/match/0/example_com
+    hostname: example.com
+    isHTTP2: false
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /
+    destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 1.2.3.4
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
+# Listener 2: TLS — HCM lives in a named FilterChain
+- name: "envoy-gateway/gateway-1/https"
+  address: "0.0.0.0"
+  port: 10443
+  hostnames:
+  - "secure.example.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: secret-1
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: httproute/default/httproute-2/rule/0/match/0/secure_example_com
+    hostname: secure.example.com
+    isHTTP2: false
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /
+    destination:
+      name: httproute/default/httproute-2/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 5.6.7.8
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-2/rule/0/backend/0

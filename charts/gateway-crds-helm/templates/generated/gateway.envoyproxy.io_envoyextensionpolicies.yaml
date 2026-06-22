@@ -1519,7 +1519,7 @@ spec:
                       type: boolean
                     messageTimeout:
                       description: |-
-                        MessageTimeout is the timeout for a response to be returned from the external processor
+                        MessageTimeout is the timeout for a response to be returned from the external processor.
                         Default: 200ms
                       pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                       type: string
@@ -1550,6 +1550,15 @@ spec:
                               Envoy HTTP filter namespaces
                             rule: self.all(f, !f.startsWith('envoy.filters.http'))
                       type: object
+                    name:
+                      description: |-
+                        Name is an optional identifier for this ext-proc instance.
+                        Enables the %EG_EXT_PROC_FILTER_STATE(name:attribute)% access log operator for
+                        downstream (listener/route) access logs. Upstream access logs are not currently supported.
+                        When StatPrefix is not set, also used as the Envoy stat prefix for this filter.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
                     processingMode:
                       description: |-
                         ProcessingMode defines how request and response body is processed
@@ -1609,6 +1618,14 @@ spec:
                               type: string
                           type: object
                       type: object
+                    statPrefix:
+                      description: |-
+                        StatPrefix sets the Envoy stat prefix for this ext-proc filter instance
+                        (e.g. ext_proc.<statPrefix>.streams_started).
+                        Defaults to Name if Name is set, otherwise Envoy uses its own default.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
                   type: object
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.

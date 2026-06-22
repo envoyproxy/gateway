@@ -226,3 +226,179 @@ spec:
       group: ''
       kind: ConfigMap
     hostname: grpc-ext-proc.envoygateway
+---
+# Access log scenarios — single gateway with three listeners, one EnvoyProxy.
+# Port 8083: scenarios 1 and 2 (shared HCM, first-match conflict detection).
+# Ports 8084/8085: scenario 3 (per-listener HCM isolation).
+# Both format strings are present; each operator resolves only on the listener
+# that carries the matching ext-proc instance.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: ext-proc-accesslog-proxy
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  telemetry:
+    accessLog:
+      settings:
+      - format:
+          type: Text
+          text: |
+            ep_bs=%EG_EXT_PROC_FILTER_STATE(auth-proc:FIELD:bytes_sent)% ep_bs_iso=%EG_EXT_PROC_FILTER_STATE(isolated-proc:FIELD:bytes_sent)% path=%REQ(:PATH)%
+        sinks:
+        - type: File
+          file:
+            path: /dev/stdout
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ext-proc-accesslog-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http-8083
+    port: 8083
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+  - name: http-8084
+    port: 8084
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+  - name: http-8085
+    port: 8085
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: ext-proc-accesslog-proxy
+---
+# Scenario 1: straightforward expansion — route1 with named ext-proc "auth-proc".
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ext-proc-accesslog-route1
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: ext-proc-accesslog-gtw
+    sectionName: http-8083
+  hostnames: ["accesslog.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /route1
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-accesslog-eep1
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: ext-proc-accesslog-route1
+  extProc:
+  - name: auth-proc
+    processingMode:
+      request: {}
+    backendRefs:
+    - name: grpc-ext-proc
+      namespace: gateway-conformance-infra
+      port: 9002
+---
+# Scenario 3: filter-chain isolation — route-a on 8084, route-b on 8085.
+# Each listener has its own HCM and resolves "isolated-proc" independently.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ext-proc-accesslog-route-a
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: ext-proc-accesslog-gtw
+    sectionName: http-8084
+  hostnames: ["accesslog-iso.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /isolated-a
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-accesslog-eep-a
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: ext-proc-accesslog-route-a
+  extProc:
+  - name: isolated-proc
+    processingMode:
+      request: {}
+    backendRefs:
+    - name: grpc-ext-proc
+      namespace: gateway-conformance-infra
+      port: 9002
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ext-proc-accesslog-route-b
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: ext-proc-accesslog-gtw
+    sectionName: http-8085
+  hostnames: ["accesslog-iso.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /isolated-b
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-accesslog-eep-b
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: ext-proc-accesslog-route-b
+  extProc:
+  - name: isolated-proc
+    processingMode:
+      request: {}
+    backendRefs:
+    - name: grpc-ext-proc
+      namespace: gateway-conformance-infra
+      port: 9002

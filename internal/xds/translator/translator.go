@@ -477,6 +477,36 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 	}
 
+	// Replace any still-unresolved EG-synthetic operators with "-".
+	// This handles operators that referenced an ext-proc name not present on any listener.
+	// Both DefaultFilterChain (non-TLS/MergeGateways) and FilterChains (TLS) are covered.
+	for _, xdsListener := range tCtx.XdsResources[resourcev3.ListenerType] {
+		l, ok := xdsListener.(*listenerv3.Listener)
+		if !ok {
+			continue
+		}
+		var chains []*listenerv3.FilterChain
+		if l.DefaultFilterChain != nil {
+			chains = append(chains, l.DefaultFilterChain)
+		}
+		chains = append(chains, l.FilterChains...)
+		for _, chain := range chains {
+			hcm, err := findHCMinFilterChain(chain)
+			if err != nil || !hasUnresolvedEGOperators(hcm.AccessLog) {
+				continue
+			}
+			patched, err := resolveAccessLogs(hcm.AccessLog, nil)
+			if err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+			hcm.AccessLog = patched
+			if err = replaceHCMInFilterChain(hcm, chain); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+	}
+
 	return errs
 }
 
@@ -707,6 +737,13 @@ func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, ht
 	if err = t.patchHCMWithFilters(hcm, httpListener, accesslog); err != nil {
 		return err
 	}
+	// Resolve any EG-synthetic access log operators introduced by this listener's ext-procs.
+	// Operators that remain unresolved after all listeners are processed are finalized later.
+	patched, err := resolveAccessLogs(hcm.AccessLog, collectListenerExtProcs(httpListener))
+	if err != nil {
+		return err
+	}
+	hcm.AccessLog = patched
 	return replaceHCMInFilterChain(hcm, filterChain)
 }
 

@@ -501,6 +501,45 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
 }
 
+// EnvoyExtensionPolicyMustHaveWarning waits for the specified EnvoyExtensionPolicy to be accepted
+// and have a Warning condition whose message contains the given substring.
+func EnvoyExtensionPolicyMustHaveWarning(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference, messageSubstr string) {
+	t.Helper()
+
+	policy := &egv1a1.EnvoyExtensionPolicy{}
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyExtensionPolicy: %w", err)
+		}
+
+		if policyHasWarningByAncestor(policy.Status.Ancestors, controllerName, ancestorRef, messageSubstr) {
+			tlog.Logf(t, "EnvoyExtensionPolicy has expected warning: %+v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "EnvoyExtensionPolicy warning not yet present: %+v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy warning containing %q: %v", messageSubstr, policy)
+}
+
+func policyHasWarningByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference, messageSubstr string) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(egv1a1.PolicyConditionWarning) &&
+					condition.Status == metav1.ConditionTrue &&
+					strings.Contains(condition.Message, messageSubstr) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // BackendMustBeAccepted waits for the specified Backend to be accepted.
 func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types.NamespacedName) {
 	t.Helper()

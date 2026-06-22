@@ -214,6 +214,74 @@ Verify the BackendTLSPolicy configuration:
 kubectl get backendtlspolicy/grpc-ext-proc-btls -o yaml
 ```
 
+### Observability
+
+Each `extProc` entry has two optional observability fields:
+
+- **`name`**: a friendly identifier for the ext-proc instance. Use it in `EnvoyProxy` access log format strings via `%EG_EXT_PROC_FILTER_STATE(name:attribute)%`. EG resolves this at translation time to the standard `%FILTER_STATE(...)%` form.
+
+- **`statPrefix`**: Envoy stat prefix for this filter (e.g. `ext_proc.<statPrefix>.streams_started`). Defaults to `name` when unset. Share the same value across deployments to aggregate metrics, or use distinct values to isolate them.
+
+#### Access log operator
+
+Set `name` on an ext-proc entry:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-example
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  extProc:
+  - name: auth-service
+    backendRefs:
+    - name: grpc-ext-proc
+      port: 9002
+EOF
+```
+
+Then reference it in your `EnvoyProxy` access log format. Common attributes are `latency_ns` and `grpc_status_code`; Envoy's optional format arguments (serialization type, max length) are passed through verbatim:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: ext-proc-accesslog
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - format:
+            type: Text
+            text: |
+              [%START_TIME%] %REQ(:METHOD)% %RESPONSE_CODE% auth_latency=%EG_EXT_PROC_FILTER_STATE(auth-service:latency_ns)%
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+EOF
+```
+
+The operator works in both `Text` and `JSON` formats and can reference instances from multiple EEPs in a single format string.
+
+#### Name conflicts
+
+When multiple `EnvoyExtensionPolicy` resources on the same listener use the same name, the most-specific target scope wins (route-rule > route > listener > gateway); within the same scope, the oldest policy wins. Shadowed policies receive a `Warning` with reason `AmbiguousDefinition`.
+
+The effective policy's filter identity is used for `%EG_EXT_PROC_FILTER_STATE(name:...)%` across the entire listener. On routes where only a shadowed policy's ext-proc runs, the operator expands to an absent filter-state key and produces an empty value (typically `"-"`).
+
+Each listener has its own isolated name registry, so the same name can be reused safely across separate listeners or gateways. Under [`MergeGateways`](https://gateway.envoyproxy.io/docs/api/extension_types/#mergegatewaysconfig), `name` is only supported on TLS listeners; it is silently ignored on non-TLS listeners.
+
+For a full explanation of the design, see the [Ext-Proc Observability design document](/community/design/ext-proc-observability).
+
 ### Testing
 
 Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the

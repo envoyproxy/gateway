@@ -72,7 +72,26 @@ type ExtProcProcessingMode struct {
 type ExtProc struct {
 	BackendCluster `json:",inline"`
 
-	// MessageTimeout is the timeout for a response to be returned from the external processor
+	// Name is an optional identifier for this ext-proc instance.
+	// Enables the %EG_EXT_PROC_FILTER_STATE(name:attribute)% access log operator for
+	// downstream (listener/route) access logs. Upstream access logs are not currently supported.
+	// When StatPrefix is not set, also used as the Envoy stat prefix for this filter.
+	//
+	// +optional
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
+	Name *string `json:"name,omitempty"`
+
+	// StatPrefix sets the Envoy stat prefix for this ext-proc filter instance
+	// (e.g. ext_proc.<statPrefix>.streams_started).
+	// Defaults to Name if Name is set, otherwise Envoy uses its own default.
+	//
+	// +optional
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
+	StatPrefix *string `json:"statPrefix,omitempty"`
+
+	// MessageTimeout is the timeout for a response to be returned from the external processor.
 	// Default: 200ms
 	//
 	// +optional

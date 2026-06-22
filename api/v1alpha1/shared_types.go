@@ -70,6 +70,12 @@ const (
 	// PolicyReasonDeprecatedField is used with the "Warning" condition when the policy
 	// uses deprecated fields that should be migrated to newer alternatives.
 	PolicyReasonDeprecatedField gwapiv1.PolicyConditionReason = "DeprecatedField"
+
+	// PolicyReasonAmbiguousDefinition is used with the "Warning" condition when one or
+	// more definitions within the policy are ambiguous — for example, because an
+	// identifier collides with one already claimed by an older policy. The ambiguous
+	// definitions are ignored; the remainder of the policy may still be applied.
+	PolicyReasonAmbiguousDefinition gwapiv1.PolicyConditionReason = "AmbiguousDefinition"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.

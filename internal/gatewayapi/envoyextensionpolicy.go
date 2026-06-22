@@ -103,6 +103,9 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// The routes are grouped by sectionNames of their targetRefs.
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
+	// extProcNameRegistry tracks CustomName ownership per IR listener (specificity-then-age).
+	extProcNameRegistry := newNameRegistry()
+
 	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
@@ -128,7 +131,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				}
 
 				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, gatewayRouteMap, extProcNameRegistry, policy, currTarget)
 			}
 		}
 	}
@@ -154,7 +157,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				}
 
 				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, gatewayRouteMap, extProcNameRegistry, policy, currTarget)
 			}
 		}
 	}
@@ -174,7 +177,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				}
 
 				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
-					gatewayMap, gatewayRouteMap, policy, currTarget)
+					gatewayMap, gatewayRouteMap, extProcNameRegistry, policy, currTarget)
 			}
 		}
 	}
@@ -200,7 +203,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				}
 
 				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
-					gatewayMap, gatewayRouteMap, policy, currTarget)
+					gatewayMap, gatewayRouteMap, extProcNameRegistry, policy, currTarget)
 			}
 		}
 	}
@@ -219,6 +222,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
+	extProcNameRegistry *nameRegistry,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -284,7 +288,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateEnvoyExtensionPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, resources); err != nil {
+	if err := t.translateEnvoyExtensionPolicyForRoute(policy, ancestorRefs, targetedRoute, currTarget, xdsIR, resources, extProcNameRegistry); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 			ancestorRefs,
 			t.GatewayControllerName,
@@ -326,6 +330,7 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	xdsIR resource.XdsIRMap,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
+	extProcNameRegistry *nameRegistry,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -360,7 +365,7 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, xdsIR, resources); err != nil {
+	if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, xdsIR, resources, extProcNameRegistry); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -514,10 +519,12 @@ func resolveEnvoyExtensionPolicyRouteTargetRef(
 
 func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	policy *egv1a1.EnvoyExtensionPolicy,
+	ancestorRefs []*gwapiv1.ParentReference,
 	route RouteContext,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
+	extProcNameRegistry *nameRegistry,
 ) error {
 	var (
 		wasms                                                 []ir.Wasm
@@ -604,6 +611,39 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							}
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
+							// Non-TLS MergeGateways: xDS listener order follows gateway timestamps,
+							// independent of EEP age, so name resolution would be non-deterministic.
+							if t.MergeGateways && irListener.TLS == nil {
+								if named := clearExtProcNames(extProcs); len(named) > 0 {
+									status.SetWarningForPolicyAncestors(&policy.Status,
+										ancestorRefs,
+										t.GatewayControllerName,
+										egv1a1.PolicyReasonAmbiguousDefinition,
+										fmt.Sprintf("ext-proc name(s) %v are not supported on non-TLS MergeGateways listeners; %%EG_EXT_PROC_FILTER_STATE%% will not resolve",
+											named),
+										policy.Generation,
+									)
+								}
+							} else {
+								// Specificity-then-age: more-specific or older policy wins; shadowed policies get CustomName cleared.
+								var conflictedNames []string
+								for i := range extProcs {
+									name := extProcs[i].CustomName
+									if claimExtProcName(extProcNameRegistry, irListener.Name, &extProcs[i]) {
+										conflictedNames = append(conflictedNames, name)
+									}
+								}
+								if len(conflictedNames) > 0 {
+									status.SetWarningForPolicyAncestors(&policy.Status,
+										ancestorRefs,
+										t.GatewayControllerName,
+										egv1a1.PolicyReasonAmbiguousDefinition,
+										fmt.Sprintf("ext-proc name(s) %v already claimed on listener %s by a more-specific or older policy; %%EG_EXT_PROC_FILTER_STATE%% access log operator will not resolve for this policy",
+											conflictedNames, irListener.Name),
+										policy.Generation,
+									)
+								}
+							}
 							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 								ExtProcs:       extProcs,
 								Wasms:          wasms,
@@ -633,6 +673,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	gateway *GatewayContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
+	extProcNameRegistry *nameRegistry,
 ) error {
 	var (
 		extProcs                                              []ir.ExtProc
@@ -680,6 +721,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 		// targeting a lesser specific scope(Gateway).
+		namesClaimedForListener := false
 		for _, r := range http.Routes {
 			// if already set - there's a specific level policy, so skip
 			if r.EnvoyExtensions != nil {
@@ -707,6 +749,47 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				}
 				routesWithDirectResponse.Insert(r.Name)
 			} else {
+				// Non-TLS MergeGateways: xDS listener order follows gateway timestamps,
+				// independent of EEP age, so name resolution would be non-deterministic.
+				if t.MergeGateways && http.TLS == nil {
+					if !namesClaimedForListener {
+						namesClaimedForListener = true
+						ancestorRef := getAncestorRefForPolicy(utils.NamespacedName(gateway.Gateway), target.SectionName)
+						if named := clearExtProcNames(extProcs); len(named) > 0 {
+							status.SetWarningForPolicyAncestors(&policy.Status,
+								[]*gwapiv1.ParentReference{&ancestorRef},
+								t.GatewayControllerName,
+								egv1a1.PolicyReasonAmbiguousDefinition,
+								fmt.Sprintf("ext-proc name(s) %v are not supported on non-TLS MergeGateways listeners; %%EG_EXT_PROC_FILTER_STATE%% will not resolve",
+									named),
+								policy.Generation,
+							)
+						}
+					}
+				} else {
+					// Claim names once: gateway-targeted EEP shares extProcs across all routes on this listener.
+					if !namesClaimedForListener {
+						namesClaimedForListener = true
+						ancestorRef := getAncestorRefForPolicy(utils.NamespacedName(gateway.Gateway), target.SectionName)
+						var conflictedNames []string
+						for i := range extProcs {
+							name := extProcs[i].CustomName
+							if claimExtProcName(extProcNameRegistry, http.Name, &extProcs[i]) {
+								conflictedNames = append(conflictedNames, name)
+							}
+						}
+						if len(conflictedNames) > 0 {
+							status.SetWarningForPolicyAncestors(&policy.Status,
+								[]*gwapiv1.ParentReference{&ancestorRef},
+								t.GatewayControllerName,
+								egv1a1.PolicyReasonAmbiguousDefinition,
+								fmt.Sprintf("ext-proc name(s) %v already claimed on listener %s by a more-specific or older policy; %%EG_EXT_PROC_FILTER_STATE%% access log operator will not resolve for this policy",
+									conflictedNames, http.Name),
+								policy.Generation,
+							)
+						}
+					}
+				}
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 					ExtProcs:       extProcs,
 					Wasms:          wasms,
@@ -821,7 +904,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
+		extProcIR, err := t.buildExtProc(name, policy, &ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -842,7 +925,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 func (t *Translator) buildExtProc(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
-	extProc egv1a1.ExtProc,
+	extProc *egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
@@ -880,6 +963,17 @@ func (t *Translator) buildExtProc(
 		Destination: *rd,
 		Traffic:     traffic,
 		Authority:   authority,
+	}
+
+	if extProc.Name != nil {
+		extProcIR.CustomName = *extProc.Name
+	}
+
+	switch {
+	case extProc.StatPrefix != nil:
+		extProcIR.StatPrefix = *extProc.StatPrefix
+	case extProc.Name != nil:
+		extProcIR.StatPrefix = *extProc.Name
 	}
 
 	if extProc.MessageTimeout != nil {
@@ -1277,6 +1371,31 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
+}
+
+// claimExtProcName registers ep.CustomName in the registry for listenerName.
+// Clears ep.CustomName and returns true if already claimed by a different owner.
+func claimExtProcName(registry *nameRegistry, listenerName string, ep *ir.ExtProc) bool {
+	if ep.CustomName == "" {
+		return false
+	}
+	if !registry.claim(listenerName, ep.CustomName, ep.Name) {
+		ep.CustomName = ""
+		return true
+	}
+	return false
+}
+
+// clearExtProcNames clears CustomName on all ext-procs and returns the names cleared.
+func clearExtProcNames(extProcs []ir.ExtProc) []string {
+	var cleared []string
+	for i := range extProcs {
+		if extProcs[i].CustomName != "" {
+			cleared = append(cleared, extProcs[i].CustomName)
+			extProcs[i].CustomName = ""
+		}
+	}
+	return cleared
 }
 
 // envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.

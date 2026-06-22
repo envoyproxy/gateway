@@ -6,7 +6,6 @@ Envoy Gateway provides observability for the ControlPlane and the underlying Env
 This task show you how to config proxy access logs.
 
 ## Prerequisites
-
 {{< boilerplate o11y_prerequisites >}}
 
 By default, the Service type of `loki` is ClusterIP, you can change it to LoadBalancer type for further usage:
@@ -307,3 +306,9 @@ spec:
                   k8s.cluster.name: "cluster-1"
 EOF
 ```
+
+## Ext-Proc Enrichment in Access Logs
+
+When using [External Processing (ext-proc)](../extensibility/ext-proc) filters, Envoy Gateway provides the `%EG_EXT_PROC_FILTER_STATE(name:attribute)%` operator to include ext-proc filter state in access log format strings. The operator is resolved at xDS translation time using the `name` field set on the `extProc` entry.
+
+See the [ext-proc task guide](../extensibility/ext-proc#observability) for configuration examples, conflict resolution rules, and the `statPrefix` option for metric naming.

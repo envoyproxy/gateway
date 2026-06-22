@@ -1332,6 +1332,232 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		// ExtProc name and statPrefix field validation
+		{
+			desc: "ExtProc with valid name",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							Name: new(string("auth-proc")),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ExtProc with invalid name (uppercase)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							Name: new(string("Auth-Proc")),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.extProc[0].name"},
+		},
+		{
+			desc: "ExtProc with name exceeding max length",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							Name: new(string("a-very-long-name-that-exceeds-the-maximum-allowed-length-of-63-chars")),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.extProc[0].name"},
+		},
+		{
+			desc: "ExtProc with valid statPrefix",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							Name:       new(string("auth-proc")),
+							StatPrefix: new(string("auth-proc-east")),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ExtProc with statPrefix only (no name)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							StatPrefix: new(string("my-prefix")),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ExtProc with invalid statPrefix (uppercase)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							StatPrefix: new(string("MyPrefix")),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.extProc[0].statPrefix"},
+		},
+		{
+			desc: "ExtProc with statPrefix exceeding max length",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							StatPrefix: new(string("a-very-long-prefix-that-exceeds-the-maximum-allowed-length-of-63ch")),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.extProc[0].statPrefix"},
+		},
 	}
 
 	for _, tc := range cases {
