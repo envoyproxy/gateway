@@ -155,6 +155,7 @@ spec:
                           specified
                         rule: '(has(self.headers) ? 1 : 0) + (has(self.params) ? 1
                           : 0) + (has(self.cookies) ? 1 : 0) == 1'
+                    minItems: 1
                     type: array
                   forwardClientIDHeader:
                     description: |-

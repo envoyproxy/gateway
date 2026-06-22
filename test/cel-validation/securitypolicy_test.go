@@ -1745,6 +1745,14 @@ func TestSecurityPolicyAPIKeyAuthExtractFrom(t *testing.T) {
 				"should be at least 1 items long",
 			},
 		},
+		{
+			desc:        "empty extractFrom list",
+			extractFrom: []*egv1a1.ExtractFrom{},
+			wantErrors: []string{
+				"spec.apiKeyAuth.extractFrom",
+				"should be at least 1 items long",
+			},
+		},
 	}
 
 	for _, tc := range cases {

@@ -50516,9 +50516,9 @@ spec:
                       x-kubernetes-validations:
                       - message: exactly one of headers, params, or cookies must be
                           specified
-                        rule: (has(self.headers) && !has(self.params) && !has(self.cookies))
-                          || (!has(self.headers) && has(self.params) && !has(self.cookies))
-                          || (!has(self.headers) && !has(self.params) && has(self.cookies))
+                        rule: '(has(self.headers) ? 1 : 0) + (has(self.params) ? 1
+                          : 0) + (has(self.cookies) ? 1 : 0) == 1'
+                    minItems: 1
                     type: array
                   forwardClientIDHeader:
                     description: |-

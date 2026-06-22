@@ -21,6 +21,8 @@ type APIKeyAuth struct {
 
 	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.
+	//
+	// +kubebuilder:validation:MinItems=1
 	ExtractFrom []*ExtractFrom `json:"extractFrom"`
 
 	// ForwardClientIDHeader is the name of the header to forward the client identity to the backend
