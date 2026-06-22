@@ -181,6 +181,19 @@ func Test_BasicValidation(t *testing.T) {
 			},
 			expectedErrSubstring: "",
 		},
+		{
+			name: "stream:filterContext:get",
+			code: `function envoy_on_response(response_handle)
+                     local ctx = response_handle:filterContext()
+                     if ctx ~= nil then
+                       local custom_value = ctx:get("custom_value")
+                       if custom_value ~= nil then
+                         response_handle:headers():add("X-Lua-Filter-Context", custom_value)
+                       end
+                     end
+                   end`,
+			expectedErrSubstring: "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
