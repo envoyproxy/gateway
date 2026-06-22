@@ -15,6 +15,9 @@
       typedPerFilterConfig:
         envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          filterContext:
+            mode: strict
+            token_header: x-api-key
           sourceCode:
             inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
               end

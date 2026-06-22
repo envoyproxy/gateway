@@ -115,6 +115,15 @@ type RemoteJWKS struct {
 	// +kubebuilder:default="300s"
 	// +optional
 	CacheDuration *gwapiv1.Duration `json:"cacheDuration,omitempty"`
+
+	// FailedRefetchDuration is the duration Envoy waits before re-fetching the JWKS
+	// after a failed fetch.
+	// This does not control retries within a single fetch attempt (see BackendSettings.Retry),
+	// only the interval between fetch attempts after a failure.
+	// If not specified, Envoy's default of 1 second is used.
+	//
+	// +optional
+	FailedRefetchDuration *gwapiv1.Duration `json:"failedRefetchDuration,omitempty"`
 }
 
 // LocalJWKSType defines the types of values for Local JWKS.
