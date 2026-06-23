@@ -75,6 +75,9 @@ def main():
     version = sys.argv[1]
     if not version.startswith("v"):
         version = "v" + version
+    if not re.match(r"^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$", version):
+        print("Invalid version '{}'; expected vX.Y.Z or vX.Y.Z-rc.M".format(version))
+        sys.exit(1)
     date = sys.argv[2].strip() if len(sys.argv) == 3 else ""
     if not date:
         date = "Pending"
