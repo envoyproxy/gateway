@@ -57,13 +57,15 @@ def read_fragments(section_dir):
     bullets, paths = [], []
     for f in files:
         fp = os.path.join(path, f)
-        with open(fp) as fh:
+        with open(fp, encoding="utf-8") as fh:
             # One change per file: collapse any internal whitespace into a single
             # line so it renders as a single bullet, matching the existing format.
             text = " ".join(fh.read().split())
-        if text:
-            bullets.append(text)
-            paths.append(fp)
+        if not text:
+             print("Empty release note fragment: {}".format(fp), file=sys.stderr)
+             sys.exit(1)
+        bullets.append(text)
+        paths.append(fp)
     return bullets, paths
 
 
@@ -80,7 +82,8 @@ def main():
         sys.exit(1)
     date = sys.argv[2].strip() if len(sys.argv) == 3 else ""
     if not date:
-        date = "Pending"
+        print('Release note date is required (e.g. "June 23, 2026")')
+        sys.exit(1)
 
     out_lines = ["date: {}".format(date), ""]
     consumed = []
@@ -96,7 +99,10 @@ def main():
 
     output = "\n".join(out_lines).rstrip("\n") + "\n"
     out_file = os.path.join(ROOT_DIR, "release-notes", "{}.yaml".format(version))
-    with open(out_file, "w") as f:
+    if os.path.exists(out_file):
+        print("Refusing to overwrite existing file: {}".format(out_file))
+        sys.exit(1)
+    with open(out_file, "w", encoding="utf-8") as f:
         f.write(output)
     print("Wrote {} ({} fragments)".format(out_file, len(consumed)))
 

@@ -245,4 +245,5 @@ release-notes-gen: # Compile release-notes/current/ fragments into release-notes
 	@$(LOG_TARGET)
 	$(eval RELEASE_NOTE_VERSION := $(if $(RELEASE_NOTE_VERSION),$(RELEASE_NOTE_VERSION),$(shell cat VERSION)))
 	@echo "Compiling release-notes/current/ fragments into release-notes/$(RELEASE_NOTE_VERSION).yaml"
+	@test -n "$(RELEASE_NOTE_DATE)" || (echo "ERROR: RELEASE_NOTE_DATE is required (e.g. \"June 23, 2026\")"; exit 1)
 	python3 tools/src/release-notes-docs/compile.py $(RELEASE_NOTE_VERSION) "$(RELEASE_NOTE_DATE)"
