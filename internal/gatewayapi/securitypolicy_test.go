@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -913,6 +914,29 @@ func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, cfgAfter)
 	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cached error")
+}
+
+func TestDiscoverEndpointsFromIssuerRejectsOversizeBody(t *testing.T) {
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		// Valid JSON that would decode fine, padded well past the size cap so the
+		// only reason to reject it is the bounded read.
+		padding := strings.Repeat("a", 4<<20)
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q,"padding":%q}`,
+			server.URL+"/token", server.URL+"/authorize", padding)
+	}))
+	defer server.Close()
+
+	cfg, err := discoverEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfg)
+	require.Contains(t, err.Error(), "exceeds maximum size")
 }
 
 // / tiny helper to build a minimal SecurityPolicy

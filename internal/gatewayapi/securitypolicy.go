@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/mail"
@@ -51,6 +52,11 @@ const (
 	defaultRefreshToken          = true
 	defaultPassThroughAuthHeader = false
 	defaultOIDCHTTPTimeout       = 5 * time.Second
+	// maxOIDCConfigSize caps how much of the issuer's openid-configuration
+	// response we are willing to read. A well-known document is a few KB, so
+	// 1mb is generous while still keeping the issuer from streaming an
+	// unbounded body into the control plane.
+	maxOIDCConfigSize = 1 << 20
 
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
@@ -1962,8 +1968,17 @@ func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamCo
 		case resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusBadRequest:
 			return &backoff.PermanentError{Err: fmt.Errorf("failed fetching openid-configuration from issuer URL: %s, status code: %d", issuerURL, resp.StatusCode)}
 		case resp.StatusCode == http.StatusOK:
+			// The issuer is externally controlled, so bound the response before
+			// decoding it rather than reading an arbitrary amount into memory.
+			body, err := io.ReadAll(io.LimitReader(resp.Body, maxOIDCConfigSize+1))
+			if err != nil {
+				return err
+			}
+			if int64(len(body)) > maxOIDCConfigSize {
+				return &backoff.PermanentError{Err: fmt.Errorf("openid-configuration response from issuer URL %s exceeds maximum size %d", issuerURL, maxOIDCConfigSize)}
+			}
 			// Do not retry if decoding fails
-			if err = json.NewDecoder(resp.Body).Decode(&config); err != nil {
+			if err = json.Unmarshal(body, &config); err != nil {
 				return &backoff.PermanentError{Err: fmt.Errorf("error decoding openid-configuration response: %w", err)}
 			}
 		default:

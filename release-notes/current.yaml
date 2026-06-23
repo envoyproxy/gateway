@@ -10,6 +10,7 @@ breaking changes: |
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
   Fixed xDS server authentication bypass in GatewayNamespaceMode, adding Unary Interceptor and validating SotW requests.
+  Bounded the OIDC issuer openid-configuration response read during SecurityPolicy translation so a misbehaving or malicious issuer cannot stream an unbounded body into the control plane.
 
 # New features or capabilities added in this release.
 new features: |
