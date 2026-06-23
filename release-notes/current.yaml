@@ -13,6 +13,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added `allowExpiredCertificate` to ClientTrafficPolicy `tls.clientValidation`, allowing operators to accept expired client certificates while still validating the CA chain and signature.
   Added support for authorization path match.
   Added a `requestBody` field to the HTTP active health checker in `BackendTrafficPolicy`, allowing a request body payload to be sent during HTTP health checking. The field requires the health check `method` to be `POST` or `PUT`.
   Added a `xdsNACKTotal` metric to track the number of NACKs received from Envoy, labeled by node ID and resource type URL. A NACK is a DiscoveryRequest carrying an ErrorDetail, indicating that Envoy rejected the last config update. This metric can be used to alert on config issues causing xDS rejections.
