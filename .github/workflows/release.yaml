@@ -14,7 +14,7 @@ jobs:
   verify-build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Verify Build and Test Success
         env:
           GH_TOKEN: ${{ github.token }}
@@ -56,7 +56,7 @@ jobs:
     if: ${{ !contains(github.ref, '-rc.0') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - uses: ./tools/github-actions/setup-deps
 
 
@@ -93,7 +93,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - uses: ./tools/github-actions/reclaim-storage
 
       - name: Extract Release Tag and Commit SHA
@@ -107,7 +107,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Login to DockerHub
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4.1.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -159,7 +159,7 @@ jobs:
 
       - name: Upload Release Manifests
         if: ${{ !contains(github.ref, '-rc.0') }}
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
         with:
           files: |
             release-artifacts/install.yaml
