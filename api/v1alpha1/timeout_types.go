@@ -71,6 +71,14 @@ type ClientTimeout struct {
 	//
 	// +optional
 	HTTP *HTTPClientTimeout `json:"http,omitempty"`
+
+	// ListenerFiltersTimeout is the duration envoy waits for all listener filters to complete operation.
+	// If the timeout is reached, the accepted socket is closed without a connection being created.
+	// Specify 0 to disable the timeout.
+	// Default: 15 seconds.
+	//
+	// +optional
+	ListenerFiltersTimeout  *gwapiv1.Duration `json:"listenerFiltersTimeout,omitempty"`
 }
 
 // TCPClientTimeout only provides timeout configuration on the listener whose protocol is TCP or TLS.
@@ -81,6 +89,13 @@ type TCPClientTimeout struct {
 	//
 	// +optional
 	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
+
+	// TransportSocketConnectTimeout is the duration envoy waits for incoming connections to complete any transport socket negotiations.
+	// If this expires before the transport reports connection establishment, the connection is summarily closed.
+	// Default: 5 seconds.
+	//
+	// +optional
+	TransportSocketConnectTimeout  *gwapiv1.Duration `json:"transportSocketConnectTimeout,omitempty"`
 }
 
 type HTTPClientTimeout struct {
@@ -101,4 +116,13 @@ type HTTPClientTimeout struct {
 	//
 	// +optional
 	StreamIdleTimeout *gwapiv1.Duration `json:"streamIdleTimeout,omitempty"`
+
+	// RequestHeadersTimeout is the duration envoy waits for the request headers to arrive.
+	// The timer is activated when the first byte of the headers is received,
+	// and is disarmed when the last byte of the headers has been received.
+	// Specify 0 to disable the timeout.
+	// Default: 10 seconds.
+	//
+	// +optional
+	RequestHeadersTimeout *gwapiv1.Duration `json:"requestHeadersTimeout,omitempty"`
 }
