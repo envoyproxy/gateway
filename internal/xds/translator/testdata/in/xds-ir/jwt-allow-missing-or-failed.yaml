@@ -47,3 +47,28 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "first-route-dest/backend/0"
+  - name: "second-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/baz"
+    security:
+      jwt:
+        # allowMissingOrFailed supersedes allowMissing: with both set, only the
+        # allow_missing_or_failed requirement is emitted.
+        allowMissing: true
+        allowMissingOrFailed: true
+        providers:
+        - name: example
+          issuer: https://www.example.com
+          audiences:
+          - foo.com
+          remoteJWKS:
+            uri: https://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "5.6.7.8"
+          port: 50000
+        name: "second-route-dest/backend/0"

@@ -57,12 +57,34 @@
                     cluster: localhost_443
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
+              second-route/example:
+                audiences:
+                - foo.com
+                forward: true
+                issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                  - scp
+                payloadInMetadata: example
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 10s
+                    uri: https://localhost/jwt/public-key/jwks.json
             requirementMap:
               first-route:
                 requiresAny:
                   requirements:
                   - providerName: first-route/example-cookie
                   - providerName: first-route/example-header
+                  - allowMissingOrFailed: {}
+              second-route:
+                requiresAny:
+                  requirements:
+                  - providerName: second-route/example
                   - allowMissingOrFailed: {}
         - name: envoy.filters.http.router
           typedConfig:
