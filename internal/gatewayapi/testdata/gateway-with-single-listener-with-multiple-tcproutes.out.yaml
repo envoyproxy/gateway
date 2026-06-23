@@ -15,7 +15,7 @@ gateways:
       protocol: TCP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -103,9 +103,9 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Multiple routes on the same TCP listener
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -182,3 +182,27 @@ xdsIR:
           name: tcproute-1
           namespace: default
         name: tcproute/default/tcproute-1
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-2
+            namespace: default
+          name: tcproute/default/tcproute-2/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8163
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8163"
+            name: tcproute/default/tcproute-2/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcproute-2
+          namespace: default
+        name: tcproute/default/tcproute-2
