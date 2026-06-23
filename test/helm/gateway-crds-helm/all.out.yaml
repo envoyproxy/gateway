@@ -54157,10 +54157,17 @@ spec:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
                 properties:
+                  ignoreFailure:
+                    description: |-
+                      IgnoreFailure allows a request to pass the JWT filter even when its JWT is
+                      missing or invalid. Supersedes Optional and maps to Envoy's  `allow_missing_or_failed`.
+                      It does not enforce authentication on its own, so pair it with an Authorization policy.
+                    type: boolean
                   optional:
                     description: |-
                       Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
-                      Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
+                      Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT
+                      is presented. See IgnoreFailure if this is necessary for your use case.
                     type: boolean
                   providers:
                     description: |-

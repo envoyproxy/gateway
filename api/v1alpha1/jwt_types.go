@@ -12,8 +12,14 @@ import (
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
 type JWT struct {
 	// Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
-	// Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
+	// Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT
+	// is presented. See IgnoreFailure if this is necessary for your use case.
 	Optional *bool `json:"optional,omitempty"`
+
+	// IgnoreFailure allows a request to pass the JWT filter even when its JWT is
+	// missing or invalid. Supersedes Optional and maps to Envoy's  `allow_missing_or_failed`.
+	// It does not enforce authentication on its own, so pair it with an Authorization policy.
+	IgnoreFailure *bool `json:"ignoreFailure,omitempty"`
 
 	// Providers defines the JSON Web Token (JWT) authentication provider type.
 	// When multiple JWT providers are specified, the JWT is considered valid if

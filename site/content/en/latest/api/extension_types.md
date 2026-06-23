@@ -3526,7 +3526,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `optional` | _boolean_ |  true  |  | Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.<br />Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented. |
+| `optional` | _boolean_ |  true  |  | Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.<br />Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT<br />is presented. See IgnoreFailure if this is necessary for your use case. |
+| `ignoreFailure` | _boolean_ |  true  |  | IgnoreFailure allows a request to pass the JWT filter even when its JWT is<br />missing or invalid. Supersedes Optional and maps to Envoy's  `allow_missing_or_failed`.<br />It does not enforce authentication on its own, so pair it with an Authorization policy. |
 | `providers` | _[JWTProvider](#jwtprovider) array_ |  true  |  | Providers defines the JSON Web Token (JWT) authentication provider type.<br />When multiple JWT providers are specified, the JWT is considered valid if<br />any of the providers successfully validate the JWT. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
 
 

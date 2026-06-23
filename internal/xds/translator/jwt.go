@@ -215,7 +215,16 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 			})
 		}
 
-		if route.Security.JWT.AllowMissing {
+		// AllowMissingOrFailed supersedes AllowMissing: it tolerates a missing or
+		// invalid token, whereas AllowMissing still rejects an invalid one.
+		switch {
+		case route.Security.JWT.AllowMissingOrFailed:
+			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
+				RequiresType: &jwtauthnv3.JwtRequirement_AllowMissingOrFailed{
+					AllowMissingOrFailed: &emptypb.Empty{},
+				},
+			})
+		case route.Security.JWT.AllowMissing:
 			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
 				RequiresType: &jwtauthnv3.JwtRequirement_AllowMissing{
 					AllowMissing: &emptypb.Empty{},

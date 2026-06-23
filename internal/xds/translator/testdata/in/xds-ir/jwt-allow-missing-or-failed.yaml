@@ -1,0 +1,49 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/bar"
+    security:
+      jwt:
+        # allowMissingOrFailed lets a valid token from one source pass even when
+        # another source carries an invalid token (maps to Envoy's
+        # allow_missing_or_failed). The two single-source providers are OR-ed.
+        allowMissingOrFailed: true
+        providers:
+        - name: example-cookie
+          issuer: https://www.example.com
+          audiences:
+          - foo.com
+          remoteJWKS:
+            uri: https://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
+          extractFrom:
+            cookies:
+            - session_access_token
+        - name: example-header
+          issuer: https://www.example.com
+          audiences:
+          - foo.com
+          remoteJWKS:
+            uri: https://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
+          extractFrom:
+            headers:
+            - name: Authorization
+              valuePrefix: 'Bearer '
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
