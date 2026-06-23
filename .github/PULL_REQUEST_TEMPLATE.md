@@ -28,6 +28,7 @@ Fixes #
 
 <!--
 For any non-trivial changes, you need to provide a brief description of the changes in the release notes.
-Please add the description to the release-notes/current.yaml file and include this file in the PR.
+Please add a new fragment file under release-notes/current/<section>/<pr-number>-<slug>.md and include it in the PR.
+See release-notes/current/README.md for the available sections and the naming convention.
 -->
 Release Notes: Yes/No
