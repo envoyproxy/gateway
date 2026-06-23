@@ -87,6 +87,8 @@ updates:
       - /tools/docker/envoy-gateway/
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "[release-1.8]"
   - package-ecosystem: github-actions
     target-branch: "release/v1.8"
     directories:
@@ -94,6 +96,8 @@ updates:
       - /tools/github-actions/setup-deps
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "[release-1.8]"
     ignore:
       - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
     groups:
@@ -106,6 +110,8 @@ updates:
       - "/"
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "[release-1.8]"
     ignore:
       - dependency-name: "github.com/google/cel-go"
       - dependency-name: "github.com/google/go-containerregistry"
@@ -135,6 +141,8 @@ updates:
       - /tools/src/yamllint
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "[release-1.8]"
   # release/v1.7 branch updates — remove when release/v1.7 reaches EOL
   - package-ecosystem: docker
     target-branch: "release/v1.7"
@@ -142,6 +150,8 @@ updates:
       - /tools/docker/envoy-gateway/
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "[release-1.7]"
   - package-ecosystem: github-actions
     target-branch: "release/v1.7"
     directories:
@@ -149,6 +159,8 @@ updates:
       - /tools/github-actions/setup-deps
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "[release-1.7]"
     ignore:
       - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
     groups:
@@ -161,6 +173,8 @@ updates:
       - "/"
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "[release-1.7]"
     ignore:
       - dependency-name: "github.com/google/cel-go"
       - dependency-name: "github.com/google/go-containerregistry"
@@ -190,3 +204,5 @@ updates:
       - /tools/src/yamllint
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "[release-1.7]"
