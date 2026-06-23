@@ -81,3 +81,139 @@ updates:
       helm:
         patterns:
           - "*"
+  # release/v1.8 branch updates — remove when release/v1.8 reaches EOL
+  - package-ecosystem: docker
+    target-branch: "release/v1.8"
+    directories:
+      - /tools/docker/envoy-gateway/
+      - /site
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    target-branch: "release/v1.8"
+    directories:
+      - /
+      - /tools/github-actions/setup-deps
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
+    groups:
+      actions:
+        patterns:
+          - "*"
+  - package-ecosystem: gomod
+    target-branch: "release/v1.8"
+    directories:
+      - "/"
+      - "examples/*"
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "github.com/google/cel-go"
+      - dependency-name: "github.com/google/go-containerregistry"
+      - dependency-name: "k8s.io/apimachinery"
+    groups:
+      gomod:
+        patterns:
+          - "github.com*"
+          - "go.opentelemetry.io*"
+          - "golang*"
+          - "golang.org*"
+          - "google*"
+          - "google.golang.org*"
+          - "fortio.org*"
+          - "gopkg.in*"
+          - "helm.sh*"
+          - "gomodules.xyz*"
+        exclude-patterns:
+          - "github.com/envoyproxy/go-control-plane*"
+      k8s.io:
+        patterns:
+          - "k8s.io/*"
+  - package-ecosystem: pip
+    target-branch: "release/v1.8"
+    directories:
+      - /tools/src/codespell
+      - /tools/src/sphinx-build
+      - /tools/src/yamllint
+    schedule:
+      interval: weekly
+  - package-ecosystem: "helm"
+    target-branch: "release/v1.8"
+    directories:
+      - "/charts/gateway-addons-helm"
+    schedule:
+      interval: "weekly"
+    groups:
+      helm:
+        patterns:
+          - "*"
+  # release/v1.7 branch updates — remove when release/v1.7 reaches EOL
+  - package-ecosystem: docker
+    target-branch: "release/v1.7"
+    directories:
+      - /tools/docker/envoy-gateway/
+      - /site
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    target-branch: "release/v1.7"
+    directories:
+      - /
+      - /tools/github-actions/setup-deps
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
+    groups:
+      actions:
+        patterns:
+          - "*"
+  - package-ecosystem: gomod
+    target-branch: "release/v1.7"
+    directories:
+      - "/"
+      - "examples/*"
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "github.com/google/cel-go"
+      - dependency-name: "github.com/google/go-containerregistry"
+      - dependency-name: "k8s.io/apimachinery"
+    groups:
+      gomod:
+        patterns:
+          - "github.com*"
+          - "go.opentelemetry.io*"
+          - "golang*"
+          - "golang.org*"
+          - "google*"
+          - "google.golang.org*"
+          - "fortio.org*"
+          - "gopkg.in*"
+          - "helm.sh*"
+          - "gomodules.xyz*"
+        exclude-patterns:
+          - "github.com/envoyproxy/go-control-plane*"
+      k8s.io:
+        patterns:
+          - "k8s.io/*"
+  - package-ecosystem: pip
+    target-branch: "release/v1.7"
+    directories:
+      - /tools/src/codespell
+      - /tools/src/sphinx-build
+      - /tools/src/yamllint
+    schedule:
+      interval: weekly
+  - package-ecosystem: "helm"
+    target-branch: "release/v1.7"
+    directories:
+      - "/charts/gateway-addons-helm"
+    schedule:
+      interval: "weekly"
+    groups:
+      helm:
+        patterns:
+          - "*"
