@@ -1,4 +1,3 @@
-hasSharedRule: false
 rateLimits:
 - actions:
   - ActionSpecifier:
@@ -15,3 +14,4 @@ rateLimits:
         descriptor_key: masked_remote_address
         descriptor_value: 192.168.0.0/16
 routeName: first-route
+useRouteRateLimits: false
