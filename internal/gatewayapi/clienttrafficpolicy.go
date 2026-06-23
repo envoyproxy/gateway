@@ -228,23 +228,28 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		}
 	}
 
+	// Resolve each policy's targets.
+	policyTargets := make([][]policyTargetReferenceWithSectionName, len(clientTrafficPolicies))
+	for i, currPolicy := range clientTrafficPolicies {
+		policyTargets[i] = resolvePolicyTargetsForGatewayAndListenerSet(
+			currPolicy.Spec.PolicyTargetReferences,
+			gateways,
+			resources.ListenerSets,
+			resources.ReferenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindClientTrafficPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace,
+		)
+	}
+
 	// Policy with no section set (targeting all sections of a Gateway or ListenerSet).
 	// ListenerSet-wide policies are processed before Gateway-wide so that the more specific
 	// target always wins regardless of input order.
 	for _, passKind := range []gwapiv1.Kind{resource.KindListenerSet, resource.KindGateway} {
 		for i, currPolicy := range clientTrafficPolicies {
 			policyName := utils.NamespacedName(currPolicy)
-			targetRefs := resolvePolicyTargetsForGatewayAndListenerSet(
-				currPolicy.Spec.PolicyTargetReferences,
-				gateways,
-				resources.ListenerSets,
-				resources.ReferenceGrants,
-				egv1a1.GroupName,
-				egv1a1.KindClientTrafficPolicy,
-				currPolicy.Namespace,
-				t.GetNamespace,
-			)
-			for _, currTarget := range targetRefs {
+			for _, currTarget := range policyTargets[i] {
 				if !hasSectionName(&currTarget) {
 
 					if currTarget.Kind != passKind {
