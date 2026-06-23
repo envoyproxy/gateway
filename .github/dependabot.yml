@@ -68,7 +68,6 @@ updates:
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell
-      - /tools/src/sphinx-build
       - /tools/src/yamllint
     schedule:
       interval: weekly
@@ -86,7 +85,6 @@ updates:
     target-branch: "release/v1.8"
     directories:
       - /tools/docker/envoy-gateway/
-      - /site
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
@@ -106,7 +104,6 @@ updates:
     target-branch: "release/v1.8"
     directories:
       - "/"
-      - "examples/*"
     schedule:
       interval: weekly
     ignore:
@@ -135,26 +132,14 @@ updates:
     target-branch: "release/v1.8"
     directories:
       - /tools/src/codespell
-      - /tools/src/sphinx-build
       - /tools/src/yamllint
     schedule:
       interval: weekly
-  - package-ecosystem: "helm"
-    target-branch: "release/v1.8"
-    directories:
-      - "/charts/gateway-addons-helm"
-    schedule:
-      interval: "weekly"
-    groups:
-      helm:
-        patterns:
-          - "*"
   # release/v1.7 branch updates — remove when release/v1.7 reaches EOL
   - package-ecosystem: docker
     target-branch: "release/v1.7"
     directories:
       - /tools/docker/envoy-gateway/
-      - /site
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
@@ -174,7 +159,6 @@ updates:
     target-branch: "release/v1.7"
     directories:
       - "/"
-      - "examples/*"
     schedule:
       interval: weekly
     ignore:
@@ -203,17 +187,6 @@ updates:
     target-branch: "release/v1.7"
     directories:
       - /tools/src/codespell
-      - /tools/src/sphinx-build
       - /tools/src/yamllint
     schedule:
       interval: weekly
-  - package-ecosystem: "helm"
-    target-branch: "release/v1.7"
-    directories:
-      - "/charts/gateway-addons-helm"
-    schedule:
-      interval: "weekly"
-    groups:
-      helm:
-        patterns:
-          - "*"
