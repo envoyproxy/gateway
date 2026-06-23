@@ -47,6 +47,7 @@ bug fixes: |
   Fixed upstream PROXY protocol clusters to preserve generated HTTP protocol options, including auto protocol detection for Backend TLS.
   Fixed EnvoyGateway config hot-reload to apply defaults before validation, so validators always run against a fully-defaulted struct on both the startup and reload paths.
   Fixed deduplicate CA certificates in ClientTrafficPolicy mTLS.
+  Fixed shared global rate limit rules with a `cost` field not working as expected.
 
 # Enhancements that improve performance.
 performance improvements: |
