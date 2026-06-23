@@ -1,6 +1,6 @@
 module github.com/exampleorg/envoygateway-extension
 
-go 1.25.11
+go 1.26.0
 
 require (
 	github.com/envoyproxy/gateway v1.3.1
@@ -8,8 +8,8 @@ require (
 	github.com/envoyproxy/go-control-plane/envoy v1.36.1-0.20260115164926-066cbd5b3989
 	github.com/urfave/cli/v2 v2.27.7
 	google.golang.org/grpc v1.79.3
-	google.golang.org/protobuf v1.36.11
-	k8s.io/apimachinery v0.35.0
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
+	k8s.io/apimachinery v0.36.2
 	sigs.k8s.io/controller-runtime v0.23.1
 	sigs.k8s.io/gateway-api v1.4.1
 	sigs.k8s.io/gateway-api-inference-extension v1.3.0
@@ -50,23 +50,23 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
+	golang.org/x/tools v0.41.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.35.0 // indirect
-	k8s.io/apiextensions-apiserver v0.35.0 // indirect
-	k8s.io/code-generator v0.35.0 // indirect
+	k8s.io/api v0.36.2 // indirect
+	k8s.io/apiextensions-apiserver v0.36.2 // indirect
+	k8s.io/code-generator v0.36.2 // indirect
 	k8s.io/gengo/v2 v2.0.0-20250922181213-ec3ebc5fd46b // indirect
-	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 // indirect
-	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4 // indirect
+	k8s.io/klog/v2 v2.140.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
+	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
 	sigs.k8s.io/controller-tools v0.19.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v6 v6.3.2-0.20260122202528-d9cc6641c482 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
