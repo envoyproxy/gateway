@@ -1,4 +1,3 @@
-hasSharedRule: false
 rateLimits:
 - actions:
   - ActionSpecifier:
@@ -35,3 +34,4 @@ rateLimits:
                 Exact: two
           name: x-user-id
 routeName: first-route
+useRouteRateLimits: false

@@ -2471,16 +2471,16 @@ _Appears in:_
 
 
 ExtractFrom is where to fetch the key from the coming request.
-Only one of header, param or cookie is supposed to be specified.
+Only one of headers, params or cookies must be specified.
 
 _Appears in:_
 - [APIKeyAuth](#apikeyauth)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `headers` | _string array_ |  false  |  | Headers is the names of the header to fetch the key from.<br />If multiple headers are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
-| `params` | _string array_ |  false  |  | Params is the names of the query parameter to fetch the key from.<br />If multiple params are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
-| `cookies` | _string array_ |  false  |  | Cookies is the names of the cookie to fetch the key from.<br />If multiple cookies are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
+| `headers` | _string array_ |  false  |  | Headers is the names of the header to fetch the key from.<br />If multiple headers are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies must be specified. |
+| `params` | _string array_ |  false  |  | Params is the names of the query parameter to fetch the key from.<br />If multiple params are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies must be specified. |
+| `cookies` | _string array_ |  false  |  | Cookies is the names of the cookie to fetch the key from.<br />If multiple cookies are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies must be specified. |
 
 
 #### FQDNEndpoint
@@ -4125,6 +4125,7 @@ _Appears in:_
 | `type` | _[LuaValueType](#luavaluetype)_ |  true  | Inline | Type is the type of method to use to read the Lua value.<br />Valid values are Inline and ValueRef, default is Inline. |
 | `inline` | _string_ |  false  |  | Inline contains the source code as an inline string. |
 | `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  |  | ValueRef has the source code specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br />The value of key `lua` in the ConfigMap will be used.<br />If the key is not found, the first value in the ConfigMap will be used. |
+| `filterContext` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | FilterContext is the filter context configuration for the Lua script.<br />This must be a JSON object (key/value pairs). The values are made available<br />to the Lua script via request_handle:filterContext(). This allows a shared<br />script to be parameterized differently per EnvoyExtensionPolicy/route. |
 
 
 #### LuaValidation
@@ -5446,6 +5447,7 @@ _Appears in:_
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `uri` | _string_ |  true  |  | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.<br />If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs. |
 | `cacheDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 300s |  |
+| `failedRefetchDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | FailedRefetchDuration is the duration Envoy waits before re-fetching the JWKS<br />after a failed fetch.<br />This does not control retries within a single fetch attempt (see BackendSettings.Retry),<br />only the interval between fetch attempts after a failure.<br />If not specified, Envoy's default of 1 second is used. |
 
 
 #### ReplaceRegexMatch
@@ -6649,6 +6651,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `numTrustedHops` | _integer_ |  false  |  | NumTrustedHops specifies how many trusted hops to count from the rightmost side of<br />the X-Forwarded-For (XFF) header when determining the original client’s IP address.<br />If NumTrustedHops is set to N, the client IP is taken from the Nth address from the<br />right end of the XFF header.<br />Example:<br />  XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"<br />  NumTrustedHops = 2<br />  → Trusted client address = 203.0.113.10<br />Only one of NumTrustedHops or TrustedCIDRs should be configured. |
 | `trustedCIDRs` | _[CIDR](#cidr) array_ |  false  |  | TrustedCIDRs is a list of CIDR ranges to trust when evaluating<br />the remote IP address to determine the original client’s IP address.<br />When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,<br />each entry in the x-forwarded-for header is evaluated from right to left<br />and the first public non-trusted address is used as the original client address.<br />If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
+| `disableXForwardedForAppend` | _boolean_ |  false  |  | DisableXForwardedForAppend configures Envoy Proxy to stop appending the downstream address<br />to the X-Forwarded-For header.<br />This only disables the automatic append behavior. It does not remove or sanitize<br />an incoming X-Forwarded-For header. |
 
 
 #### XRateLimitHeadersOption
@@ -6664,7 +6667,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Disabled` | XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,<br />regardless of the global ClientTrafficPolicy setting.<br /> | 
+| `Off` | XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,<br />regardless of the global ClientTrafficPolicy setting.<br /> | 
 | `DraftVersion03` | XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03<br />for this rate limit rule, regardless of the global ClientTrafficPolicy setting.<br /> | 
 
 
