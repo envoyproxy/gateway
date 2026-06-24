@@ -105,7 +105,7 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 
 		keyData := secret.Data[corev1.TLSPrivateKeyKey]
 
-		keyBlock, _ := pem.Decode(keyData)
+		keyBlock := firstSupportedPrivateKeyBlock(keyData)
 		if keyBlock == nil {
 			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s",
 				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
@@ -203,6 +203,25 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 //
 // Return a status.ListenerError with InvalidCertificateRef Condition if no valid certificates are found in the provided data,
 // Return a status.ListenerError with PartiallyInvalidCertificateRef Condition if some certificates are invalid but also valid certificates exist.
+func firstSupportedPrivateKeyBlock(data []byte) *pem.Block {
+	var firstBlock *pem.Block
+	for len(data) > 0 {
+		block, rest := pem.Decode(data)
+		if block == nil {
+			return firstBlock
+		}
+		if firstBlock == nil {
+			firstBlock = block
+		}
+		switch block.Type {
+		case "PRIVATE KEY", "RSA PRIVATE KEY", "EC PRIVATE KEY":
+			return block
+		}
+		data = rest
+	}
+	return firstBlock
+}
+
 func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 	if len(data) == 0 {
 		return nil, status.NewListenerStatusError(
