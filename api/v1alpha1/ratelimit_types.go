@@ -82,7 +82,7 @@ type XRateLimitHeadersOption string
 const (
 	// XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,
 	// regardless of the global ClientTrafficPolicy setting.
-	XRateLimitHeadersOptionDisabled XRateLimitHeadersOption = "Disabled"
+	XRateLimitHeadersOptionDisabled XRateLimitHeadersOption = "Off"
 
 	// XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03
 	// for this rate limit rule, regardless of the global ClientTrafficPolicy setting.
