@@ -15,6 +15,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -85,13 +86,19 @@ func newStatusCommand() *cobra.Command {
 			case len(args) > 1:
 				return fmt.Errorf("unknown args: %s", strings.Join(args[1:], ","))
 			default:
-				return fmt.Errorf("invalid args: must specific a resources type")
+				return fmt.Errorf("invalid args: must specify a resource type")
 			}
 
 			switch strings.ToLower(resourceType) {
 			case "all":
 				for _, rt := range supportedAllTypes {
 					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+						if meta.IsNoMatchError(err) {
+							if verbose {
+								fmt.Fprintf(cmd.ErrOrStderr(), "skipping %s: CRD not installed in cluster\n", rt)
+							}
+							continue
+						}
 						return err
 					}
 				}
@@ -99,6 +106,12 @@ func newStatusCommand() *cobra.Command {
 			case "xroute":
 				for _, rt := range supportedXRouteTypes {
 					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+						if meta.IsNoMatchError(err) {
+							if verbose {
+								fmt.Fprintf(cmd.ErrOrStderr(), "skipping %s: CRD not installed in cluster\n", rt)
+							}
+							continue
+						}
 						return err
 					}
 				}
@@ -106,6 +119,12 @@ func newStatusCommand() *cobra.Command {
 			case "xpolicy":
 				for _, rt := range supportedXPolicyTypes {
 					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+						if meta.IsNoMatchError(err) {
+							if verbose {
+								fmt.Fprintf(cmd.ErrOrStderr(), "skipping %s: CRD not installed in cluster\n", rt)
+							}
+							continue
+						}
 						return err
 					}
 				}
@@ -119,7 +138,7 @@ func newStatusCommand() *cobra.Command {
 	statusCommand.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Show the first status of resources only")
 	statusCommand.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show the status of resources with details")
 	statusCommand.PersistentFlags().BoolVarP(&allNamespaces, "all-namespaces", "A", false, "Get the status of resources from all namespaces")
-	statusCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Specific a namespace to get the status of resources")
+	statusCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Specify a namespace to get the status of resources")
 
 	return statusCommand
 }

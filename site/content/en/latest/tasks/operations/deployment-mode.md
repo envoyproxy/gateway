@@ -46,6 +46,7 @@ Please follow the example [Gateway Namespace Mode][].
 and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
 * Envoy Gateway also supports [Namespaced deployment mode][], you can watch resources in the specific namespaces by assigning
 `EnvoyGateway.provider.kubernetes.watch.namespaces` or `EnvoyGateway.provider.kubernetes.watch.namespaceSelector` and **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
+  The namespace where Envoy Gateway is running is always included so Envoy Gateway can reconcile its own managed infrastructure resources.
 
 ### Multi-tenancy
 

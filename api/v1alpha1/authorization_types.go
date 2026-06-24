@@ -56,15 +56,24 @@ type AuthorizationRule struct {
 }
 
 // Operation specifies the operation of a request.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.methods) || has(self.path)",message="at least one of methods or path must be specified"
 type Operation struct {
 	// Methods are the HTTP methods of the request.
 	// If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
 	//
+	// +optional
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=16
-	Methods []gwapiv1.HTTPMethod `json:"methods"`
+	Methods []gwapiv1.HTTPMethod `json:"methods,omitempty"`
 
-	// Other fields may be supported in the future, such as path or host.
+	// Path is the HTTP path of the request.
+	// Support Exact, PathPrefix and RegularExpression match types.
+	//
+	// +optional
+	Path *PathMatch `json:"path,omitempty"`
+
+	// Other fields may be supported in the future, such as host.
 }
 
 // Principal specifies the client identity of a request.

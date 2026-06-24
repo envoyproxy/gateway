@@ -1,0 +1,83 @@
+{{- /*
+Render Gateway API safe upgrade policy resources only when
+.Values.gatewayAPI.safeUpgradePolicy.enabled is true. These are the
+safe-upgrades ValidatingAdmissionPolicy and binding shipped with the
+Gateway API bundle.
+*/ -}}
+{{- if .Values.gatewayAPI.safeUpgradePolicy.enabled }}
+{{- $renderSafeUpgradePolicy := true -}}
+{{- /*
+Require existing Gateway API policy resources to be absent or already owned by this Helm release 
+so Helm does not overwrite resources managed by another installation or by the cluster provider.
+*/ -}}
+{{- $safeUpgradePolicyName := "safe-upgrades.gateway.networking.k8s.io" -}}
+{{- $vap := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicy" "" $safeUpgradePolicyName -}}
+{{- $vapBinding := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicyBinding" "" $safeUpgradePolicyName -}}
+{{- $vapOwned := and $vap
+  (eq (dig "metadata" "labels" "app.kubernetes.io/managed-by" "" $vap) "Helm")
+  (eq (dig "metadata" "annotations" "meta.helm.sh/release-name" "" $vap) .Release.Name)
+  (eq (dig "metadata" "annotations" "meta.helm.sh/release-namespace" "" $vap) .Release.Namespace)
+ -}}
+{{- $vapBindingOwned := and $vapBinding
+  (eq (dig "metadata" "labels" "app.kubernetes.io/managed-by" "" $vapBinding) "Helm")
+  (eq (dig "metadata" "annotations" "meta.helm.sh/release-name" "" $vapBinding) .Release.Name)
+  (eq (dig "metadata" "annotations" "meta.helm.sh/release-namespace" "" $vapBinding) .Release.Namespace)
+ -}}
+{{- $vapOwnedOrAbsent := or (not $vap) $vapOwned -}}
+{{- $vapBindingOwnedOrAbsent := or (not $vapBinding) $vapBindingOwned -}}
+{{- $renderSafeUpgradePolicy = and $vapOwnedOrAbsent $vapBindingOwnedOrAbsent -}}
+{{- if $renderSafeUpgradePolicy }}
+---
+#
+# config/crd/experimental/gateway.networking.k8s.io_vap_safeupgrades.yaml
+#
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  annotations:
+    gateway.networking.k8s.io/bundle-version: v1.5.0-dev
+    gateway.networking.k8s.io/channel: standard
+  name: "safe-upgrades.gateway.networking.k8s.io"
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["apiextensions.k8s.io"]
+      apiVersions: ["v1"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["*"]
+  validations:
+    - expression: "object.spec.group != 'gateway.networking.k8s.io' || oldObject == null || (
+        has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/channel') && 
+        object.metadata.annotations['gateway.networking.k8s.io/channel'] == 'standard' ) || (
+        oldObject != null && has(oldObject.metadata.annotations) && oldObject.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/channel') && 
+        oldObject.metadata.annotations['gateway.networking.k8s.io/channel'] == 'experimental' )"
+      message: "Installing experimental CRDs on top of standard channel CRDs is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install experimental CRDs on top of standard channel CRDs."
+      reason: Invalid
+    - expression: "object.spec.group != 'gateway.networking.k8s.io' ||
+        (has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/bundle-version') &&
+        !matches(object.metadata.annotations['gateway.networking.k8s.io/bundle-version'], 'v1.[0-4].\\\\d+') &&
+        !matches(object.metadata.annotations['gateway.networking.k8s.io/bundle-version'], 'v0'))" #TODO Kubernetes 1.37: Migrate to kubernetes semver library
+      message: "Installing CRDs with version before v1.5.0 is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install older versions."
+      reason: Invalid
+
+---
+
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  annotations:
+    gateway.networking.k8s.io/bundle-version: v1.5.0-dev
+    gateway.networking.k8s.io/channel: standard
+  name: safe-upgrades.gateway.networking.k8s.io
+spec:
+  policyName: safe-upgrades.gateway.networking.k8s.io
+  validationActions: [Deny]
+  matchResources:
+    resourceRules:
+    - apiGroups:   ["apiextensions.k8s.io"]
+      apiVersions: ["v1"]
+      resources:   ["customresourcedefinitions"]
+      operations:  ["CREATE", "UPDATE"]
+{{- end }}
+{{- end }}

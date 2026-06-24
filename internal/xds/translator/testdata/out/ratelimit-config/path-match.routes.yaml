@@ -1,4 +1,3 @@
-hasSharedRule: false
 rateLimits:
 - actions:
   - ActionSpecifier:
@@ -37,3 +36,4 @@ rateLimits:
                   regex: foo/bar
           name: :path
 routeName: first-route
+useRouteRateLimits: false

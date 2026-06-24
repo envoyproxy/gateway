@@ -33,8 +33,6 @@ updates:
     ignore:
       # Ignore cel-go, since it should be updated alongside k8s.io/apiserver
       - dependency-name: "github.com/google/cel-go"
-      # Ignore github.com/docker/docker, since it should be updated alongside github.com/google/go-containerregistry
-      - dependency-name: "github.com/docker/docker"
       # Ignore github.com/google/go-containerregistry, since it should be updated alongside github.com/replicatedhq/troubleshoot
       - dependency-name: "github.com/google/go-containerregistry"
       # Ignore k8s.io/apimachinery, since it should be updated alongside k8s.io/api
@@ -70,7 +68,6 @@ updates:
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell
-      - /tools/src/sphinx-build
       - /tools/src/yamllint
     schedule:
       interval: weekly
@@ -83,3 +80,129 @@ updates:
       helm:
         patterns:
           - "*"
+  # release/v1.8 branch updates — remove when release/v1.8 reaches EOL
+  - package-ecosystem: docker
+    target-branch: "release/v1.8"
+    directories:
+      - /tools/docker/envoy-gateway/
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "[release-1.8]"
+  - package-ecosystem: github-actions
+    target-branch: "release/v1.8"
+    directories:
+      - /
+      - /tools/github-actions/setup-deps
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "[release-1.8]"
+    ignore:
+      - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
+    groups:
+      actions:
+        patterns:
+          - "*"
+  - package-ecosystem: gomod
+    target-branch: "release/v1.8"
+    directories:
+      - "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "[release-1.8]"
+    ignore:
+      - dependency-name: "github.com/google/cel-go"
+      - dependency-name: "github.com/google/go-containerregistry"
+      - dependency-name: "k8s.io/apimachinery"
+    groups:
+      gomod:
+        patterns:
+          - "github.com*"
+          - "go.opentelemetry.io*"
+          - "golang*"
+          - "golang.org*"
+          - "google*"
+          - "google.golang.org*"
+          - "fortio.org*"
+          - "gopkg.in*"
+          - "helm.sh*"
+          - "gomodules.xyz*"
+        exclude-patterns:
+          - "github.com/envoyproxy/go-control-plane*"
+      k8s.io:
+        patterns:
+          - "k8s.io/*"
+  - package-ecosystem: pip
+    target-branch: "release/v1.8"
+    directories:
+      - /tools/src/codespell
+      - /tools/src/yamllint
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "[release-1.8]"
+  # release/v1.7 branch updates — remove when release/v1.7 reaches EOL
+  - package-ecosystem: docker
+    target-branch: "release/v1.7"
+    directories:
+      - /tools/docker/envoy-gateway/
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "[release-1.7]"
+  - package-ecosystem: github-actions
+    target-branch: "release/v1.7"
+    directories:
+      - /
+      - /tools/github-actions/setup-deps
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "[release-1.7]"
+    ignore:
+      - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
+    groups:
+      actions:
+        patterns:
+          - "*"
+  - package-ecosystem: gomod
+    target-branch: "release/v1.7"
+    directories:
+      - "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "[release-1.7]"
+    ignore:
+      - dependency-name: "github.com/google/cel-go"
+      - dependency-name: "github.com/google/go-containerregistry"
+      - dependency-name: "k8s.io/apimachinery"
+    groups:
+      gomod:
+        patterns:
+          - "github.com*"
+          - "go.opentelemetry.io*"
+          - "golang*"
+          - "golang.org*"
+          - "google*"
+          - "google.golang.org*"
+          - "fortio.org*"
+          - "gopkg.in*"
+          - "helm.sh*"
+          - "gomodules.xyz*"
+        exclude-patterns:
+          - "github.com/envoyproxy/go-control-plane*"
+      k8s.io:
+        patterns:
+          - "k8s.io/*"
+  - package-ecosystem: pip
+    target-branch: "release/v1.7"
+    directories:
+      - /tools/src/codespell
+      - /tools/src/yamllint
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "[release-1.7]"
