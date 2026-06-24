@@ -188,6 +188,16 @@ httpRoutes:
         - 500
       timeouts:
         backendRequest: 3s
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /v2
+      retry:
+        attempts: 3
+      timeouts:
+        backendRequest: 3s
   status:
     parents:
     - conditions:
@@ -330,6 +340,60 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
+        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /v2
+        retry:
+          numRetries: 3
+          perRetry:
+            timeout: 3s
+        traffic:
+          retry:
+            numAttemptsPerPriority: 1
+            numRetries: 5
+            perRetry:
+              backOff:
+                baseInterval: 100ms
+                maxInterval: 10s
+              timeout: 250ms
+            retryOn:
+              httpStatusCodes:
+              - 429
+              - 503
+              triggers:
+              - connect-failure
+              - retriable-status-codes
       - destination:
           metadata:
             kind: HTTPRoute
