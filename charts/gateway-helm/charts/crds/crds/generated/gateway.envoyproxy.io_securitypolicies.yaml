@@ -117,33 +117,45 @@ spec:
                     items:
                       description: |-
                         ExtractFrom is where to fetch the key from the coming request.
-                        Only one of header, param or cookie is supposed to be specified.
+                        Only one of headers, params or cookies must be specified.
                       properties:
                         cookies:
                           description: |-
                             Cookies is the names of the cookie to fetch the key from.
                             If multiple cookies are specified, envoy will look for the api key in the order of the list.
-                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                            This field is optional, but only one of headers, params or cookies must be specified.
                           items:
+                            minLength: 1
                             type: string
+                          minItems: 1
                           type: array
                         headers:
                           description: |-
                             Headers is the names of the header to fetch the key from.
                             If multiple headers are specified, envoy will look for the api key in the order of the list.
-                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                            This field is optional, but only one of headers, params or cookies must be specified.
                           items:
+                            minLength: 1
                             type: string
+                          minItems: 1
                           type: array
                         params:
                           description: |-
                             Params is the names of the query parameter to fetch the key from.
                             If multiple params are specified, envoy will look for the api key in the order of the list.
-                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                            This field is optional, but only one of headers, params or cookies must be specified.
                           items:
+                            minLength: 1
                             type: string
+                          minItems: 1
                           type: array
                       type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of headers, params, or cookies must be
+                          specified
+                        rule: '(has(self.headers) ? 1 : 0) + (has(self.params) ? 1
+                          : 0) + (has(self.cookies) ? 1 : 0) == 1'
+                    minItems: 1
                     type: array
                   forwardClientIDHeader:
                     description: |-
@@ -5366,6 +5378,15 @@ spec:
                               description: |-
                                 Duration is a string value representing a duration in time. The format is as specified
                                 in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
+                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                              type: string
+                            failedRefetchDuration:
+                              description: |-
+                                FailedRefetchDuration is the duration Envoy waits before re-fetching the JWKS
+                                after a failed fetch.
+                                This does not control retries within a single fetch attempt (see BackendSettings.Retry),
+                                only the interval between fetch attempts after a failure.
+                                If not specified, Envoy's default of 1 second is used.
                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                               type: string
                             uri:

@@ -2351,6 +2351,33 @@ spec:
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
+                                fromMetadata:
+                                  description: |-
+                                    FromMetadata sources the limit value from per-request dynamic metadata.
+                                    When the referenced metadata value is present, it overrides Requests/Unit for that
+                                    request; otherwise Requests/Unit are used as the default.
+
+                                    The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                    property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                    filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                    Only supported for Global Rate Limits.
+                                  properties:
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        limit value from within the namespaced filter
+                                        metadata.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - key
+                                  - namespace
+                                  type: object
                                 requests:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
@@ -2735,6 +2762,33 @@ spec:
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
+                                fromMetadata:
+                                  description: |-
+                                    FromMetadata sources the limit value from per-request dynamic metadata.
+                                    When the referenced metadata value is present, it overrides Requests/Unit for that
+                                    request; otherwise Requests/Unit are used as the default.
+
+                                    The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                    property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                    filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                    Only supported for Global Rate Limits.
+                                  properties:
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        limit value from within the namespaced filter
+                                        metadata.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - key
+                                  - namespace
+                                  type: object
                                 requests:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
@@ -2791,6 +2845,9 @@ spec:
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(r, !has(r.cost) || !has(r.cost.response))
+                        - message: limit fromMetadata is not supported for Local Rate
+                            Limits
+                          rule: self.all(r, !has(r.limit.fromMetadata))
                     type: object
                   type:
                     description: |-
@@ -4280,6 +4337,14 @@ spec:
                       using X-Forwarded-For headers for determining the client IP
                       address.
                     properties:
+                      disableXForwardedForAppend:
+                        description: |-
+                          DisableXForwardedForAppend configures Envoy Proxy to stop appending the downstream address
+                          to the X-Forwarded-For header.
+
+                          This only disables the automatic append behavior. It does not remove or sanitize
+                          an incoming X-Forwarded-For header.
+                        type: boolean
                       numTrustedHops:
                         description: |-
                           NumTrustedHops specifies how many trusted hops to count from the rightmost side of
@@ -6025,14 +6090,16 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway
-              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' : true'
+            - message: this policy can only have a targetRef.kind of Gateway or ListenerSet
+              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'']
+                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true'
-            - message: this policy can only have a targetRefs[*].kind of Gateway
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway'')
-                : true'
+            - message: this policy can only have a targetRefs[*].kind of Gateway or
+                ListenerSet
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
+                ''ListenerSet'']) : true'
           status:
             description: Status defines the current status of ClientTrafficPolicy.
             properties:
@@ -8011,6 +8078,13 @@ spec:
                     Lua defines a Lua extension
                     Only one of Inline or ValueRef must be set
                   properties:
+                    filterContext:
+                      description: |-
+                        FilterContext is the filter context configuration for the Lua script.
+                        This must be a JSON object (key/value pairs). The values are made available
+                        to the Lua script via request_handle:filterContext(). This allows a shared
+                        script to be parameterized differently per EnvoyExtensionPolicy/route.
+                      x-kubernetes-preserve-unknown-fields: true
                     inline:
                       description: Inline contains the source code as an inline string.
                       type: string
@@ -28385,33 +28459,45 @@ spec:
                     items:
                       description: |-
                         ExtractFrom is where to fetch the key from the coming request.
-                        Only one of header, param or cookie is supposed to be specified.
+                        Only one of headers, params or cookies must be specified.
                       properties:
                         cookies:
                           description: |-
                             Cookies is the names of the cookie to fetch the key from.
                             If multiple cookies are specified, envoy will look for the api key in the order of the list.
-                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                            This field is optional, but only one of headers, params or cookies must be specified.
                           items:
+                            minLength: 1
                             type: string
+                          minItems: 1
                           type: array
                         headers:
                           description: |-
                             Headers is the names of the header to fetch the key from.
                             If multiple headers are specified, envoy will look for the api key in the order of the list.
-                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                            This field is optional, but only one of headers, params or cookies must be specified.
                           items:
+                            minLength: 1
                             type: string
+                          minItems: 1
                           type: array
                         params:
                           description: |-
                             Params is the names of the query parameter to fetch the key from.
                             If multiple params are specified, envoy will look for the api key in the order of the list.
-                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                            This field is optional, but only one of headers, params or cookies must be specified.
                           items:
+                            minLength: 1
                             type: string
+                          minItems: 1
                           type: array
                       type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of headers, params, or cookies must be
+                          specified
+                        rule: '(has(self.headers) ? 1 : 0) + (has(self.params) ? 1
+                          : 0) + (has(self.cookies) ? 1 : 0) == 1'
+                    minItems: 1
                     type: array
                   forwardClientIDHeader:
                     description: |-
@@ -33634,6 +33720,15 @@ spec:
                               description: |-
                                 Duration is a string value representing a duration in time. The format is as specified
                                 in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
+                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                              type: string
+                            failedRefetchDuration:
+                              description: |-
+                                FailedRefetchDuration is the duration Envoy waits before re-fetching the JWKS
+                                after a failed fetch.
+                                This does not control retries within a single fetch attempt (see BackendSettings.Retry),
+                                only the interval between fetch attempts after a failure.
+                                If not specified, Envoy's default of 1 second is used.
                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                               type: string
                             uri:
