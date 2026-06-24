@@ -1,0 +1,30 @@
+# Binaries
+sds-server
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.log
+*.out
+
+# Go test coverage
+*.test
+*.prof
+coverage.txt
+coverage.html
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+vendor/
