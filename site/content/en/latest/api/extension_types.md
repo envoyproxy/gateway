@@ -2471,16 +2471,16 @@ _Appears in:_
 
 
 ExtractFrom is where to fetch the key from the coming request.
-Only one of header, param or cookie is supposed to be specified.
+Only one of headers, params or cookies must be specified.
 
 _Appears in:_
 - [APIKeyAuth](#apikeyauth)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `headers` | _string array_ |  false  |  | Headers is the names of the header to fetch the key from.<br />If multiple headers are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
-| `params` | _string array_ |  false  |  | Params is the names of the query parameter to fetch the key from.<br />If multiple params are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
-| `cookies` | _string array_ |  false  |  | Cookies is the names of the cookie to fetch the key from.<br />If multiple cookies are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
+| `headers` | _string array_ |  false  |  | Headers is the names of the header to fetch the key from.<br />If multiple headers are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies must be specified. |
+| `params` | _string array_ |  false  |  | Params is the names of the query parameter to fetch the key from.<br />If multiple params are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies must be specified. |
+| `cookies` | _string array_ |  false  |  | Cookies is the names of the cookie to fetch the key from.<br />If multiple cookies are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies must be specified. |
 
 
 #### FQDNEndpoint
@@ -6650,7 +6650,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Disabled` | XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,<br />regardless of the global ClientTrafficPolicy setting.<br /> | 
+| `Off` | XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,<br />regardless of the global ClientTrafficPolicy setting.<br /> | 
 | `DraftVersion03` | XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03<br />for this rate limit rule, regardless of the global ClientTrafficPolicy setting.<br /> | 
 
 
