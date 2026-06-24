@@ -1,0 +1,1 @@
+Added the `autoSNIFromEndpointHostname` TLS setting to Backends, allowing the SNI value sent to the backend to be automatically derived from the backend endpoint hostname instead of using a fixed SNI value.
