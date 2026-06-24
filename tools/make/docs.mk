@@ -239,3 +239,11 @@ release-notes-docs: $(tools/release-notes-docs) # Read version from Environment 
 	@for file in $(wildcard release-notes/$(RELEASE_NOTE_VERSION).yaml); do \
 		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
 	done
+
+.PHONY: release-notes-gen
+release-notes-gen: # Compile release-notes/current/ fragments into release-notes/$(RELEASE_NOTE_VERSION).yaml and clear the fragments
+	@$(LOG_TARGET)
+	$(eval RELEASE_NOTE_VERSION := $(if $(RELEASE_NOTE_VERSION),$(RELEASE_NOTE_VERSION),$(shell cat VERSION)))
+	@echo "Compiling release-notes/current/ fragments into release-notes/$(RELEASE_NOTE_VERSION).yaml"
+	@test -n "$(RELEASE_NOTE_DATE)" || (echo "ERROR: RELEASE_NOTE_DATE is required (e.g. \"June 23, 2026\")"; exit 1)
+	python3 tools/src/release-notes-docs/compile.py $(RELEASE_NOTE_VERSION) "$(RELEASE_NOTE_DATE)"
