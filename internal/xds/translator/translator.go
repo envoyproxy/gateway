@@ -869,9 +869,35 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				}
 			}
 
-			// Only add the filter chain once per xDS listener; multiple IR listeners may share
-			// the same address/port and map to the same xDS listener.
-			if !emptyFilterChainAdded[xdsListener.Name] {
+			if len(tcpListener.Hostnames) > 0 {
+				// TLS listener with a specific hostname: give the empty filter chain a unique SNI
+				// match so it does not collide with other wildcard filter chains on the same xDS
+				// listener (e.g. an HTTPS listener with hostname "*").
+				emptyTCPRoute := &ir.TCPRoute{
+					Name: emptyClusterName + "/" + tcpListener.Name,
+					Destination: &ir.RouteDestination{
+						Name: emptyClusterName,
+					},
+					TLS: &ir.TLS{
+						TLSInspectorConfig: &ir.TLSInspectorConfig{
+							SNIs: tcpListener.Hostnames,
+						},
+					},
+				}
+				if err := t.addXdsTCPFilterChain(
+					xdsListener,
+					emptyTCPRoute,
+					emptyClusterName,
+					accesslog,
+					tcpListener.Timeout,
+					tcpListener.Connection,
+					tcpListener.TLS,
+				); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			} else if !emptyFilterChainAdded[xdsListener.Name] {
+				// No hostname: add one shared wildcard empty filter chain per xDS listener.
+				// Multiple IR listeners may share the same address/port and map to the same xDS listener.
 				if err := t.addXdsTCPFilterChain(
 					xdsListener,
 					sharedEmptyTCPRoute,
