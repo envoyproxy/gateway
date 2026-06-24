@@ -1740,6 +1740,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 		parentPolicy *egv1a1.SecurityPolicy
 		wantSpec     egv1a1.SecurityPolicySpec
 		wantErr      bool
+		wantFellBack bool
 	}{
 		{
 			name: "merge with StrategicMerge - different fields",
@@ -1947,11 +1948,54 @@ func TestMergeSecurityPolicy(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "fallback to JSONMerge when an authorization rule omits its name",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: new(egv1a1.StrategicMerge),
+					Authorization: &egv1a1.Authorization{
+						DefaultAction: new(egv1a1.AuthorizationActionDeny),
+						Rules: []egv1a1.AuthorizationRule{{
+							// No Name: forces the keyed strategic merge to fall back.
+							Action:    egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"1.2.3.4/32"}},
+						}},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					Authorization: &egv1a1.Authorization{
+						DefaultAction: new(egv1a1.AuthorizationActionAllow),
+						Rules: []egv1a1.AuthorizationRule{{
+							Name:      new("parent-internal"),
+							Action:    egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"}},
+						}},
+					},
+				},
+			},
+			// JSONMerge slice-replaces rules with the route's array while the
+			// route's DefaultAction overrides the parent's.
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				Authorization: &egv1a1.Authorization{
+					DefaultAction: new(egv1a1.AuthorizationActionDeny),
+					Rules: []egv1a1.AuthorizationRule{{
+						Action:    egv1a1.AuthorizationActionAllow,
+						Principal: egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"1.2.3.4/32"}},
+					}},
+				},
+			},
+			wantFellBack: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _, err := mergeSecurityPolicy(tt.routePolicy, tt.parentPolicy)
+			got, _, fellBack, err := mergeSecurityPolicy(tt.routePolicy, tt.parentPolicy)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mergeSecurityPolicy() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1963,6 +2007,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 				require.Equal(t, tt.wantSpec.BasicAuth, got.Spec.BasicAuth, "BasicAuth should match")
 				require.Equal(t, tt.wantSpec.CORS, got.Spec.CORS, "CORS should match")
 				require.Equal(t, tt.wantSpec.Authorization, got.Spec.Authorization, "Authorization should match")
+				require.Equal(t, tt.wantFellBack, fellBack, "authorization rules merge fallback should match")
 			}
 		})
 	}
@@ -2057,7 +2102,7 @@ func Test_securityPolicyOwnerChoose(t *testing.T) {
 			},
 		}
 
-		_, owners, err := mergeSecurityPolicy(routePolicy, parentPolicy)
+		_, owners, _, err := mergeSecurityPolicy(routePolicy, parentPolicy)
 		require.NoError(t, err)
 		require.NotNil(t, owners)
 
@@ -2098,7 +2143,7 @@ func Test_securityPolicyOwnerChoose(t *testing.T) {
 			Spec:       egv1a1.SecurityPolicySpec{MergeType: new(egv1a1.StrategicMerge)},
 		}
 
-		_, owners, err := mergeSecurityPolicy(routePolicy, parentPolicy)
+		_, owners, _, err := mergeSecurityPolicy(routePolicy, parentPolicy)
 		require.NoError(t, err)
 		require.NotNil(t, owners)
 

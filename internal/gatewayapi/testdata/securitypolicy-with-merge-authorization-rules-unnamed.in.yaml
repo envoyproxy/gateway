@@ -1,0 +1,213 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-A
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: a.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-B
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: b.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-C
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: c.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-A
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-A
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-B
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-B
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-2
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-C
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-C
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-3
+        port: 8080
+securityPolicies:
+# CASE A: parent has UNNAMED rule, child has NAMED rule. Tests whether parent's
+# nameless rule is preserved / dropped / errors when merge key 'name' is missing.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-A
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-A
+    authorization:
+      defaultAction: Allow
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: child-A
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-A
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: child-specific
+        action: Allow
+        principal:
+          clientCIDRs:
+          - 1.2.3.4/32
+# CASE B: parent has NAMED rule, child has UNNAMED rule. Tests whether child's
+# nameless rule is appended / dropped / errors with merge key 'name' missing.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-B
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-B
+    authorization:
+      defaultAction: Allow
+      rules:
+      - name: parent-internal
+        action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: child-B
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-B
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 1.2.3.4/32
+# CASE C: both parent and child have UNNAMED rules. Tests the worst case for
+# regression — pre-fix behavior was full slice-replace; we want to confirm we
+# don't break it.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-C
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-C
+    authorization:
+      defaultAction: Allow
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: child-C
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-C
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 1.2.3.4/32

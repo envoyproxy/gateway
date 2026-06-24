@@ -18,6 +18,13 @@ spec:
         - name: x-role
           values:
           - route
+    - action: Allow
+      name: parent-rule
+      principal:
+        headers:
+        - name: x-role
+          values:
+          - parent
   basicAuth:
     users:
       name: users-route

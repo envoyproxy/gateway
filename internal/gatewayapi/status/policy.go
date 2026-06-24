@@ -25,6 +25,12 @@ const (
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
+
+	// PolicyReasonAuthorizationRulesMergeFallback is used with the "Warning" condition when a
+	// SecurityPolicy requesting StrategicMerge falls back to JSONMerge for the entire policy
+	// because one or more authorization rules omit the `name` field used as the
+	// strategic-merge key. The downgrade affects every spec field, not only `authorization.rules`.
+	PolicyReasonAuthorizationRulesMergeFallback gwapiv1.PolicyConditionReason = "AuthorizationRulesMergeFallback"
 )
 
 type PolicyResolveError struct {

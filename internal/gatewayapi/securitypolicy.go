@@ -441,7 +441,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Merge with parent policy
-				mergedPolicy, owners, err := mergeSecurityPolicy(policy, parentPolicy)
+				mergedPolicy, owners, authzRulesMergeFellBack, err := mergeSecurityPolicy(policy, parentPolicy)
 				if err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -500,6 +500,27 @@ func (t *Translator) processSecurityPolicyForRoute(
 					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
 					policy.Generation,
 				)
+
+				// Surface a warning when the requested StrategicMerge was downgraded
+				// to JSONMerge because an authorization rule omits its `name` merge
+				// key. The downgrade applies to the entire policy spec — not only
+				// `authorization.rules` — so the user sees that other slices
+				// (e.g. `extAuth.contextExtensions`, `jwt.providers`) are also
+				// slice-replaced instead of strategic-merged.
+				if authzRulesMergeFellBack {
+					status.SetWarningForPolicyAncestor(&policy.Status,
+						&ancestorRef,
+						t.GatewayControllerName,
+						status.PolicyReasonAuthorizationRulesMergeFallback,
+						fmt.Sprintf("policy was merged with %s/%s using JSONMerge (slice-replace for all fields) "+
+							"instead of the requested StrategicMerge because one or more `authorization.rules` "+
+							"omit the `name` field used as the strategic-merge key; this affects every spec field, "+
+							"not only `authorization.rules`. Set a unique `name` on every authorization rule to "+
+							"keep the requested StrategicMerge semantics",
+							parentPolicy.Namespace, parentPolicy.Name),
+						policy.Generation,
+					)
+				}
 			}
 		}
 	}
@@ -2615,15 +2636,45 @@ func policyOwnerOr(owner, fallback *egv1a1.SecurityPolicy) *egv1a1.SecurityPolic
 }
 
 // mergeSecurityPolicy merges a route-level SecurityPolicy with a parent (Gateway/Listener) SecurityPolicy.
-func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, *securityPolicyOwners, error) {
+// It also reports whether the requested StrategicMerge for the whole policy fell back to JSONMerge
+// because an authorization rule omits the `name` strategic-merge key.
+func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, *securityPolicyOwners, bool, error) {
 	if routePolicy.Spec.MergeType == nil || parentPolicy == nil {
-		return routePolicy, nil, nil
+		return routePolicy, nil, false, nil
 	}
-	mergedPolicy, err := utils.Merge[*egv1a1.SecurityPolicy](parentPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	mergeType := *routePolicy.Spec.MergeType
+	// Strategic merge of authorization.rules is keyed by the rule's `name`. If
+	// any rule on either side omits its name, strategic merge would fail with
+	// `does not contain declared merge key: name`. Fall back to JSONMerge for
+	// the entire policy — JSONMerge slice-replaces every array (including
+	// authorization.rules), matching the pre-keyed-merge behavior for unnamed
+	// rules — instead of rejecting the child policy.
+	authzRulesMergeFellBack := mergeType == egv1a1.StrategicMerge && hasUnnamedAuthorizationRule(parentPolicy, routePolicy)
+	if authzRulesMergeFellBack {
+		mergeType = egv1a1.JSONMerge
+	}
+	mergedPolicy, err := utils.Merge[*egv1a1.SecurityPolicy](parentPolicy, routePolicy, mergeType)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
-	return mergedPolicy, buildSecurityPolicyOwners(routePolicy, parentPolicy), nil
+	return mergedPolicy, buildSecurityPolicyOwners(routePolicy, parentPolicy), authzRulesMergeFellBack, nil
+}
+
+// hasUnnamedAuthorizationRule reports whether any of the given policies declares
+// an authorization rule whose `name` is empty. Used to skip the keyed strategic
+// merge path on the Authorization.Rules slice.
+func hasUnnamedAuthorizationRule(policies ...*egv1a1.SecurityPolicy) bool {
+	for _, p := range policies {
+		if p == nil || p.Spec.Authorization == nil {
+			continue
+		}
+		for _, r := range p.Spec.Authorization.Rules {
+			if r.Name == nil || *r.Name == "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ownerOf returns route if routeOwns(route) is true, otherwise parent.
