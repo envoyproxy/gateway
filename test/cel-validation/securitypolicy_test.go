@@ -1672,3 +1672,150 @@ func TestSecurityPolicyTarget(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityPolicyAPIKeyAuthExtractFrom(t *testing.T) {
+	ctx := context.Background()
+	baseSP := egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sp",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: egv1a1.SecurityPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group("gateway.networking.k8s.io"),
+						Kind:  gwapiv1.Kind("Gateway"),
+						Name:  gwapiv1.ObjectName("eg"),
+					},
+				},
+			},
+			APIKeyAuth: &egv1a1.APIKeyAuth{
+				CredentialRefs: []gwapiv1.SecretObjectReference{
+					{
+						Name: gwapiv1.ObjectName("api-key-secret"),
+					},
+				},
+			},
+		},
+	}
+
+	cases := []struct {
+		desc        string
+		extractFrom []*egv1a1.ExtractFrom
+		wantErrors  []string
+	}{
+		{
+			desc: "headers source is valid",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Headers: []string{"x-api-key"},
+				},
+			},
+		},
+		{
+			desc: "params source is valid",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Params: []string{"api_key"},
+				},
+			},
+		},
+		{
+			desc: "cookies source is valid",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Cookies: []string{"api-key"},
+				},
+			},
+		},
+		{
+			desc: "no source specified",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{},
+			},
+			wantErrors: []string{
+				"exactly one of headers, params, or cookies must be specified",
+			},
+		},
+		{
+			desc: "multiple sources specified",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Headers: []string{"x-api-key"},
+					Params:  []string{"api_key"},
+				},
+			},
+			wantErrors: []string{
+				"exactly one of headers, params, or cookies must be specified",
+			},
+		},
+		{
+			desc: "empty header source name",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Headers: []string{""},
+				},
+			},
+			wantErrors: []string{
+				"spec.apiKeyAuth.extractFrom[0].headers[0]",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc: "empty param source name",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Params: []string{""},
+				},
+			},
+			wantErrors: []string{
+				"spec.apiKeyAuth.extractFrom[0].params[0]",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc: "empty cookie source name",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Cookies: []string{""},
+				},
+			},
+			wantErrors: []string{
+				"spec.apiKeyAuth.extractFrom[0].cookies[0]",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc:        "empty extractFrom list",
+			extractFrom: []*egv1a1.ExtractFrom{},
+			wantErrors: []string{
+				"spec.apiKeyAuth.extractFrom",
+				"should have at least 1 items",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sp := baseSP.DeepCopy()
+			sp.Name = fmt.Sprintf("sp-api-key-auth-%v", time.Now().UnixNano())
+			sp.Spec.APIKeyAuth.ExtractFrom = tc.extractFrom
+
+			err := c.Create(ctx, sp)
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}

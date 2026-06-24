@@ -1485,11 +1485,12 @@ func (t *Translator) buildRemoteJWKS(
 	gtwCtx *GatewayContext,
 ) (*ir.RemoteJWKS, error) {
 	var (
-		protocol      ir.AppProtocol
-		rd            *ir.RouteDestination
-		traffic       *ir.TrafficFeatures
-		err           error
-		cacheDuration *metav1.Duration
+		protocol              ir.AppProtocol
+		rd                    *ir.RouteDestination
+		traffic               *ir.TrafficFeatures
+		err                   error
+		cacheDuration         *metav1.Duration
+		failedRefetchDuration *metav1.Duration
 	)
 
 	u, err := url.Parse(remoteJWKS.URI)
@@ -1524,11 +1525,20 @@ func (t *Translator) buildRemoteJWKS(
 		cacheDuration = ir.MetaV1DurationPtr(d)
 	}
 
+	if remoteJWKS.FailedRefetchDuration != nil {
+		d, err := time.ParseDuration(string(*remoteJWKS.FailedRefetchDuration))
+		if err != nil {
+			return nil, err
+		}
+		failedRefetchDuration = ir.MetaV1DurationPtr(d)
+	}
+
 	return &ir.RemoteJWKS{
-		Destination:   rd,
-		Traffic:       traffic,
-		URI:           remoteJWKS.URI,
-		CacheDuration: cacheDuration,
+		Destination:           rd,
+		Traffic:               traffic,
+		URI:                   remoteJWKS.URI,
+		CacheDuration:         cacheDuration,
+		FailedRefetchDuration: failedRefetchDuration,
 	}, nil
 }
 
