@@ -21,47 +21,59 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestServiceAppProtocolToIRAppProtocol(t *testing.T) {
+func TestAppProtocolToIRAppProtocol(t *testing.T) {
 	tests := []struct {
-		name              string
-		appProtocol       string
-		defaultProtocol   ir.AppProtocol
-		grpcCompatibility bool
-		want              ir.AppProtocol
-		wantForceHTTP1    bool
+		name            string
+		appProtocol     string
+		defaultProtocol ir.AppProtocol
+		want            ir.AppProtocol
+		wantForceHTTP1  bool
 	}{
 		{
-			name:            "h2c",
+			name:            "h2c service convention",
 			appProtocol:     "kubernetes.io/h2c",
 			defaultProtocol: ir.HTTP,
 			want:            ir.HTTP2,
 		},
 		{
-			name:            "ws",
+			name:            "h2c backend convention",
+			appProtocol:     "gateway.envoyproxy.io/h2c",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP2,
+		},
+		{
+			name:            "ws service convention",
 			appProtocol:     "kubernetes.io/ws",
-			defaultProtocol: ir.HTTP2,
-			want:            ir.HTTP,
-			wantForceHTTP1:  true,
-		},
-		{
-			name:            "wss",
-			appProtocol:     "kubernetes.io/wss",
-			defaultProtocol: ir.HTTP2,
-			want:            ir.HTTP,
-			wantForceHTTP1:  true,
-		},
-		{
-			name:              "grpc compatible",
-			appProtocol:       "grpc",
-			defaultProtocol:   ir.HTTP,
-			grpcCompatibility: true,
-			want:              ir.GRPC,
-		},
-		{
-			name:            "grpc not compatible",
-			appProtocol:     "grpc",
 			defaultProtocol: ir.HTTP,
 			want:            ir.HTTP,
+			wantForceHTTP1:  true,
+		},
+		{
+			name:            "wss service convention",
+			appProtocol:     "kubernetes.io/wss",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP,
+			wantForceHTTP1:  true,
+		},
+		{
+			name:            "ws backend convention",
+			appProtocol:     "gateway.envoyproxy.io/ws",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP,
+			wantForceHTTP1:  true,
+		},
+		{
+			name:            "wss backend convention",
+			appProtocol:     "gateway.envoyproxy.io/wss",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP,
+			wantForceHTTP1:  true,
+		},
+		{
+			name:            "grpc",
+			appProtocol:     "grpc",
+			defaultProtocol: ir.HTTP,
+			want:            ir.GRPC,
 		},
 		{
 			name:            "unknown",
@@ -69,12 +81,25 @@ func TestServiceAppProtocolToIRAppProtocol(t *testing.T) {
 			defaultProtocol: ir.HTTP,
 			want:            ir.HTTP,
 		},
+		{
+			// appProtocol must not refine the protocol of non-HTTP (L4) routes.
+			name:            "h2c ignored on non-HTTP route",
+			appProtocol:     "kubernetes.io/h2c",
+			defaultProtocol: ir.TCP,
+			want:            ir.TCP,
+		},
+		{
+			name:            "grpc ignored on non-HTTP route",
+			appProtocol:     "grpc",
+			defaultProtocol: ir.TCP,
+			want:            ir.TCP,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, serviceAppProtocolToIRAppProtocol(tt.appProtocol, tt.defaultProtocol, tt.grpcCompatibility))
-			require.Equal(t, tt.wantForceHTTP1, isWebSocketServiceAppProtocol(tt.appProtocol))
+			require.Equal(t, tt.want, appProtocolToIRAppProtocol(tt.appProtocol, tt.defaultProtocol))
+			require.Equal(t, tt.wantForceHTTP1, isWebSocketAppProtocol(tt.appProtocol))
 		})
 	}
 }
