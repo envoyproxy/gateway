@@ -59,6 +59,7 @@ The Helm chart for Envoy Gateway
 | deployment.pod.extraVolumes | list | `[]` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
+| deployment.pod.securityContext.fsGroup | int | `65532` |  |
 | deployment.pod.securityContext.runAsGroup | int | `65532` |  |
 | deployment.pod.securityContext.runAsNonRoot | bool | `true` |  |
 | deployment.pod.securityContext.runAsUser | int | `65532` |  |
