@@ -1,0 +1,7 @@
+deployment:
+  envoyGateway:
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
