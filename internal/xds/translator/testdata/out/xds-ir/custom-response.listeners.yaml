@@ -157,6 +157,71 @@
                           '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
                       valueMatch:
                         exact: "403"
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/1
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: matched response header
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: text/plain
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http-response-header-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseHeaderMatchInput
+                              headerName: X-Custom-Header
+                          valueMatch:
+                            exact: custom-value
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/2
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: '{"error":"combined match"}'
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: application/json
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http-response-status-code-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                          valueMatch:
+                            exact: "503"
+                      - andMatcher:
+                          predicate:
+                          - singlePredicate:
+                              input:
+                                name: http-response-header-match-input
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseHeaderMatchInput
+                                  headerName: X-Error-Type
+                              valueMatch:
+                                prefix: upstream-
+                          - singlePredicate:
+                              input:
+                                name: http-response-header-match-input
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseHeaderMatchInput
+                                  headerName: X-Region
+                              valueMatch:
+                                safeRegex:
+                                  googleRe2: {}
+                                  regex: ^us-.*$
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

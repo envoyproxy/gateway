@@ -2899,6 +2899,51 @@ spec:
                     match:
                       description: Match configuration.
                       properties:
+                        responseHeaders:
+                          description: Response headers to match on. The match evaluates
+                            to true if any of the matches are successful.
+                          items:
+                            description: ResponseOverrideHeaderMatch defines the configuration
+                              for matching a response header.
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the HTTP header.
+                                  The header name is case-insensitive.
+                                  For example, "Foo" and "foo" are considered the same header.
+                                maxLength: 256
+                                minLength: 1
+                                type: string
+                              value:
+                                description: Value within the HTTP header to match
+                                  against.
+                                properties:
+                                  type:
+                                    default: Exact
+                                    description: Type specifies how to match against
+                                      a string.
+                                    enum:
+                                    - Exact
+                                    - Prefix
+                                    - Suffix
+                                    - RegularExpression
+                                    type: string
+                                  value:
+                                    description: Value specifies the string value
+                                      that the match must have.
+                                    maxLength: 1024
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - value
+                                type: object
+                            required:
+                            - name
+                            - value
+                            type: object
+                          maxItems: 16
+                          minItems: 1
+                          type: array
                         statusCodes:
                           description: Status code to match on. The match evaluates
                             to true if any of the matches are successful.
@@ -2954,9 +2999,11 @@ spec:
                           maxItems: 50
                           minItems: 1
                           type: array
-                      required:
-                      - statusCodes
                       type: object
+                      x-kubernetes-validations:
+                      - message: at least one of statusCodes or responseHeaders must
+                          be specified
+                        rule: has(self.statusCodes) || has(self.responseHeaders)
                     redirect:
                       description: Redirect configuration
                       properties:

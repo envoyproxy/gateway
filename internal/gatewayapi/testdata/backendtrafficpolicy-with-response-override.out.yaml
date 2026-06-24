@@ -68,6 +68,35 @@ backendTrafficPolicies:
           value: 403
       response:
         statusCode: 401
+    - match:
+        responseHeaders:
+        - name: X-Custom-Header
+          value:
+            type: Exact
+            value: custom-value
+      response:
+        body:
+          inline: matched response header
+          type: null
+        contentType: text/plain
+    - match:
+        responseHeaders:
+        - name: X-Error-Type
+          value:
+            type: Prefix
+            value: upstream-
+        - name: X-Region
+          value:
+            type: RegularExpression
+            value: ^us-.*$
+        statusCodes:
+        - type: null
+          value: 503
+      response:
+        body:
+          inline: '{"error":"combined match"}'
+          type: null
+        contentType: application/json
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -710,6 +739,35 @@ xdsIR:
               name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/0
               response:
                 statusCode: 401
+            - match:
+                responseHeaders:
+                - name: X-Custom-Header
+                  value:
+                    distinct: false
+                    exact: custom-value
+                    name: X-Custom-Header
+              name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/1
+              response:
+                body: bWF0Y2hlZCByZXNwb25zZSBoZWFkZXI=
+                contentType: text/plain
+            - match:
+                responseHeaders:
+                - name: X-Error-Type
+                  value:
+                    distinct: false
+                    name: X-Error-Type
+                    prefix: upstream-
+                - name: X-Region
+                  value:
+                    distinct: false
+                    name: X-Region
+                    safeRegex: ^us-.*$
+                statusCodes:
+                - value: 503
+              name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/2
+              response:
+                body: eyJlcnJvciI6ImNvbWJpbmVkIG1hdGNoIn0=
+                contentType: application/json
       - destination:
           metadata:
             kind: HTTPRoute

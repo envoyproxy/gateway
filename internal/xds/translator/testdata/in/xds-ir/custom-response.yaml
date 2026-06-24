@@ -98,3 +98,29 @@ http:
                 name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
                 response:
                   statusCode: 404
+              - match:
+                  responseHeaders:
+                    - name: X-Custom-Header
+                      value:
+                        name: X-Custom-Header
+                        exact: custom-value
+                name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/1
+                response:
+                  body: bWF0Y2hlZCByZXNwb25zZSBoZWFkZXI=
+                  contentType: text/plain
+              - match:
+                  statusCodes:
+                    - value: 503
+                  responseHeaders:
+                    - name: X-Error-Type
+                      value:
+                        name: X-Error-Type
+                        prefix: upstream-
+                    - name: X-Region
+                      value:
+                        name: X-Region
+                        safeRegex: "^us-.*$"
+                name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/2
+                response:
+                  body: eyJlcnJvciI6ImNvbWJpbmVkIG1hdGNoIn0=
+                  contentType: application/json
