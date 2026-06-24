@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 )
 
@@ -28,6 +29,7 @@ func GetEnvoyCommand() *cobra.Command {
 
 // getShutdownCommand returns the shutdown cobra command to be executed.
 func getShutdownCommand() *cobra.Command {
+	var drainDelay time.Duration
 	var drainTimeout time.Duration
 	var minDrainDuration time.Duration
 	var exitAtConnections int
@@ -36,11 +38,14 @@ func getShutdownCommand() *cobra.Command {
 		Use:   "shutdown",
 		Short: "Gracefully drain open connections prior to pod shutdown.",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return envoy.Shutdown(drainTimeout, minDrainDuration, exitAtConnections)
+			return envoy.Shutdown(drainDelay, drainTimeout, minDrainDuration, exitAtConnections)
 		},
 	}
 
-	cmd.PersistentFlags().DurationVar(&drainTimeout, "drain-timeout", 60*time.Second,
+	cmd.PersistentFlags().DurationVar(&drainDelay, "drain-delay", 0*time.Second,
+		"Delay before starting the drain process.")
+
+	cmd.PersistentFlags().DurationVar(&drainTimeout, "drain-timeout", egv1a1.DefaultDrainTimeout,
 		"Graceful shutdown timeout. This should be less than the pod's terminationGracePeriodSeconds.")
 
 	cmd.PersistentFlags().DurationVar(&minDrainDuration, "min-drain-duration", 10*time.Second,

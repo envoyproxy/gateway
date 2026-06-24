@@ -309,7 +309,7 @@ spec:
       - args:
         - envoy
         - shutdown-manager
-        - --ready-timeout=40s
+        - --ready-timeout=55s
         command:
         - envoy-gateway
         env:
@@ -341,6 +341,7 @@ spec:
               - envoy-gateway
               - envoy
               - shutdown
+              - --drain-delay=15s
               - --drain-timeout=30s
               - --min-drain-duration=15s
         livenessProbe:
@@ -395,7 +396,7 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
-      terminationGracePeriodSeconds: 330
+      terminationGracePeriodSeconds: 345
       volumes:
       - name: certs
         secret:

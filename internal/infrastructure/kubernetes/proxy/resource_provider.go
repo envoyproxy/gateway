@@ -620,6 +620,15 @@ func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
 		}
 		s = int(d.Seconds() + 300) // 5 minutes longer than drain timeout
 	}
+
+	if cfg != nil && cfg.DrainDelay != nil {
+		d, err := time.ParseDuration(string(*cfg.DrainDelay))
+		if err != nil {
+			return nil
+		}
+		s += int(d.Seconds())
+	}
+
 	return new(int64(s))
 }
 

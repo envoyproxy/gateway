@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
@@ -179,6 +180,53 @@ func TestGetImageTag(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tt.expectedTag, tag)
 			}
+		})
+	}
+}
+
+func TestExpectedShutdownManagerArgs(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      *egv1a1.ShutdownConfig
+		expected []string
+	}{
+		{
+			name:     "nil config",
+			cfg:      nil,
+			expected: []string{"envoy", "shutdown-manager"},
+		},
+		{
+			name:     "empty config",
+			cfg:      &egv1a1.ShutdownConfig{},
+			expected: []string{"envoy", "shutdown-manager"},
+		},
+		{
+			name: "only drainTimeout",
+			cfg: &egv1a1.ShutdownConfig{
+				DrainTimeout: new(gwapiv1.Duration("30s")),
+			},
+			expected: []string{"envoy", "shutdown-manager", "--ready-timeout=40s"},
+		},
+		{
+			name: "only drainDelay",
+			cfg: &egv1a1.ShutdownConfig{
+				DrainDelay: new(gwapiv1.Duration("15s")),
+			},
+			expected: []string{"envoy", "shutdown-manager", "--ready-timeout=85s"},
+		},
+		{
+			name: "drainDelay and drainTimeout",
+			cfg: &egv1a1.ShutdownConfig{
+				DrainDelay:   new(gwapiv1.Duration("15s")),
+				DrainTimeout: new(gwapiv1.Duration("30s")),
+			},
+			expected: []string{"envoy", "shutdown-manager", "--ready-timeout=55s"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, expectedShutdownManagerArgs(tt.cfg))
 		})
 	}
 }
