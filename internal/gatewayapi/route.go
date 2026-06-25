@@ -2044,6 +2044,8 @@ func (t *Translator) processServiceImportDestinationSetting(
 	if servicePort.AppProtocol != nil {
 		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
+	// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
 	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	backendIps := serviceImport.Spec.IPs
@@ -2115,6 +2117,8 @@ func (t *Translator) processServiceDestinationSetting(
 	if servicePort.AppProtocol != nil {
 		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
+	// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
 	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	isHeadless := isServiceHeadless(service)
@@ -2587,6 +2591,7 @@ func (t *Translator) processBackendDestinationSetting(
 // appProtocol is irrelevant; returning the default avoids emitting HTTP protocol options
 // on an L4 cluster.
 func resolveBackendProtocol(backendAppProtocol string, defaultProtocol ir.AppProtocol) ir.AppProtocol {
+	// The backendAppProtocol is only relevant for HTTP-based routes, so if the default protocol is not HTTP, return the default.
 	if defaultProtocol != ir.HTTP {
 		return defaultProtocol
 	}
