@@ -83,7 +83,7 @@ deployment:
     #       claimName: envoy-gateway-wasm-cache
     strategy: {}
     wasmCacheVolume: {}
-ports:
+  ports:
     - name: grpc
       port: 18000
       targetPort: 18000
