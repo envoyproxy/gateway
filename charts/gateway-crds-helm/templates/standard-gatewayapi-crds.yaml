@@ -25,7 +25,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -1405,7 +1405,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   name: gatewayclasses.gateway.networking.k8s.io
 spec:
@@ -1921,7 +1921,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   name: gateways.gateway.networking.k8s.io
 spec:
@@ -2819,8 +2819,8 @@ spec:
                   rule: 'self.all(l, l.protocol in [''HTTP'', ''TCP'', ''UDP''] ?
                     !has(l.tls) : true)'
                 - message: tls mode must be Terminate for protocol HTTPS
-                  rule: 'self.all(l, (l.protocol == ''HTTPS'' && has(l.tls)) ? (l.tls.mode
-                    == '''' || l.tls.mode == ''Terminate'') : true)'
+                  rule: 'self.all(l, (l.protocol == ''HTTPS'' ? has(l.tls) && (l.tls.mode
+                    == '''' || l.tls.mode == ''Terminate'') : true))'
                 - message: tls mode must be set for protocol TLS
                   rule: 'self.all(l, (l.protocol == ''TLS'' ? has(l.tls) && has(l.tls.mode)
                     && l.tls.mode != '''' : true))'
@@ -4453,8 +4453,8 @@ spec:
                   rule: 'self.all(l, l.protocol in [''HTTP'', ''TCP'', ''UDP''] ?
                     !has(l.tls) : true)'
                 - message: tls mode must be Terminate for protocol HTTPS
-                  rule: 'self.all(l, (l.protocol == ''HTTPS'' && has(l.tls)) ? (l.tls.mode
-                    == '''' || l.tls.mode == ''Terminate'') : true)'
+                  rule: 'self.all(l, (l.protocol == ''HTTPS'' ? has(l.tls) && (l.tls.mode
+                    == '''' || l.tls.mode == ''Terminate'') : true))'
                 - message: tls mode must be set for protocol TLS
                   rule: 'self.all(l, (l.protocol == ''TLS'' ? has(l.tls) && has(l.tls.mode)
                     && l.tls.mode != '''' : true))'
@@ -5216,7 +5216,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   name: grpcroutes.gateway.networking.k8s.io
 spec:
@@ -7292,7 +7292,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   name: httproutes.gateway.networking.k8s.io
 spec:
@@ -14215,7 +14215,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   name: listenersets.gateway.networking.k8s.io
 spec:
@@ -14681,8 +14681,8 @@ spec:
                   rule: 'self.all(l, l.protocol in [''HTTP'', ''TCP'', ''UDP''] ?
                     !has(l.tls) : true)'
                 - message: tls mode must be Terminate for protocol HTTPS
-                  rule: 'self.all(l, (l.protocol == ''HTTPS'' && has(l.tls)) ? (l.tls.mode
-                    == '''' || l.tls.mode == ''Terminate'') : true)'
+                  rule: 'self.all(l, (l.protocol == ''HTTPS'' ? has(l.tls) && (l.tls.mode
+                    == '''' || l.tls.mode == ''Terminate'') : true))'
                 - message: tls mode must be set for protocol TLS
                   rule: 'self.all(l, (l.protocol == ''TLS'' ? has(l.tls) && has(l.tls.mode)
                     && l.tls.mode != '''' : true))'
@@ -14993,7 +14993,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   name: referencegrants.gateway.networking.k8s.io
 spec:
@@ -15348,7 +15348,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   name: tcproutes.gateway.networking.k8s.io
 spec:
@@ -16644,7 +16644,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   name: tlsroutes.gateway.networking.k8s.io
 spec:
@@ -18771,7 +18771,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0-rc.2
     gateway.networking.k8s.io/channel: standard
   name: udproutes.gateway.networking.k8s.io
 spec:
