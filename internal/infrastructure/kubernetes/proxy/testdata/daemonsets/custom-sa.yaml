@@ -398,7 +398,7 @@ spec:
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
-      serviceAccountName: gateway-1
+      serviceAccountName: custom-sa
       terminationGracePeriodSeconds: 360
       volumes:
       - name: sa-token
