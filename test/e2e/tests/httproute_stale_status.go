@@ -66,7 +66,7 @@ var HTTPRouteStaleStatusTest = suite.ConformanceTest{
 		})
 
 		// Phase 2: Add a second listener whose hostname matches the route's hostname.
-		// The original non-matching listener is kept. 
+		// The original non-matching listener is kept.
 		t.Run("matching listener added to gateway", func(t *testing.T) {
 			tlog.Logf(t, "Adding matching listener (stale.example.com) to gateway %s", gwNN)
 			require.NoError(t, wait.PollUntilContextTimeout(
