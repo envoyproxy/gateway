@@ -50,7 +50,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			// Test 404 response override with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:        "/status/404",
 				contentType: "text/plain",
 				body:        "404 Oops! Your request is not found.",
@@ -64,7 +64,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 			})
 
 			// Test 500 response override with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:        "/status/500",
 				contentType: "application/json",
 				body:        `{"error": "Internal Server Error"}`,
@@ -76,7 +76,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 			})
 
 			// Test 403 response override with add and set headers (status override to 404)
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:       "/status/403",
 				statusCode: 404,
 				headers: map[string]string{
@@ -85,13 +85,13 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				},
 			})
 
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:       "/status/401",
 				statusCode: 301,
 			})
 
-			// Test header match response override and add X-Override-Matched header (body is also overriden)
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			// Test header match response override and add X-Override-Matched header (body is also overridden)
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:           "/response-override-header-match",
 				requestHeaders: map[string]string{"X-Echo-Set-Header": "X-Custom-Header: custom-value"},
 				contentType:    "text/plain",
@@ -100,8 +100,8 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				headers:        map[string]string{"X-Override-Matched": "true"},
 			})
 
-			// Test header match response override NOT doing anything because teh header does not match
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			// Test header match response override NOT doing anything because the header does not match
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:           "/response-override-header-match",
 				requestHeaders: map[string]string{"X-Echo-Set-Header": "X-Custom-Header: other-value"},
 				contentType:    "application/json",
@@ -110,8 +110,8 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				statusCode:     200,
 			})
 
-			// Test header match response override NOT doing anything because teh header is never set
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			// Test header match response override NOT doing anything because the header is never set
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:         "/response-override-header-match",
 				contentType:  "application/json",
 				body:         "matched on response header",
@@ -123,16 +123,16 @@ var ResponseOverrideTest = suite.ConformanceTest{
 }
 
 type expectedResponse struct {
-	path string
+	path           string
 	requestHeaders map[string]string
-	contentType string
-	body         string
-	bodyNotEqual bool
-	statusCode int
-	headers map[string]string
+	contentType    string
+	body           string
+	bodyNotEqual   bool
+	statusCode     int
+	headers        map[string]string
 }
 
-func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwAddr string, expected expectedResponse) {
+func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwAddr string, expected *expectedResponse) {
 	if timeoutConfig == nil {
 		t.Fatalf("timeoutConfig cannot be nil")
 	}
@@ -178,7 +178,7 @@ func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwA
 			return false
 		}
 
-		if expected.bodyNotEqual && string(body) == expected.body{
+		if expected.bodyNotEqual && string(body) == expected.body {
 			tlog.Logf(t, "expected response body NOT to be %s, but it was", expected.body)
 			return false
 		} else if string(body) != expected.body {
