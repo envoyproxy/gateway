@@ -8,6 +8,7 @@ clientTrafficPolicies:
     clientIPDetection:
       xForwardedFor:
         numTrustedHops: 2
+        disableXForwardedForAppend: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -76,4 +77,3 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
-

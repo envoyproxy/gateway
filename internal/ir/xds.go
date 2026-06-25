@@ -1263,6 +1263,10 @@ type RemoteJWKS struct {
 
 	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
 	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
+
+	// FailedRefetchDuration is the interval Envoy waits before re-fetching the JWKS after a
+	// failed fetch. If not specified, Envoy's default of 1 second is used.
+	FailedRefetchDuration *metav1.Duration `json:"failedRefetchDuration,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -2737,6 +2741,18 @@ type RateLimitValue struct {
 	Requests uint32 `json:"requests" yaml:"requests"`
 	// Unit of rate limiting.
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
+	// FromMetadata sources the limit value from per-request dynamic metadata,
+	// overriding Requests/Unit when the metadata value is present.
+	FromMetadata *RateLimitValueMetadata `json:"fromMetadata,omitempty" yaml:"fromMetadata,omitempty"`
+}
+
+// RateLimitValueMetadata specifies the dynamic metadata to source the limit value from.
+// +k8s:deepcopy-gen=true
+type RateLimitValueMetadata struct {
+	// Namespace is the namespace of the dynamic metadata.
+	Namespace string `json:"namespace" yaml:"namespace"`
+	// Key is the key to retrieve the limit value from within the namespaced filter metadata.
+	Key string `json:"key" yaml:"key"`
 }
 
 // BandwidthLimit holds bandwidth limiting configuration for request and/or response directions.
@@ -3702,6 +3718,9 @@ type Lua struct {
 	Name string
 	// Code is the Lua source code
 	Code *string
+	// FilterContext is the filter context configuration for the Lua script.
+	// This is a JSON object passed to the Lua script via request_handle:filterContext().
+	FilterContext *apiextensionsv1.JSON
 }
 
 // Wasm holds the information associated with the Wasm extensions.

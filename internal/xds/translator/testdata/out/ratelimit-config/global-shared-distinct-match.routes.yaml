@@ -1,4 +1,3 @@
-hasSharedRule: true
 rateLimits:
 - actions:
   - ActionSpecifier:
@@ -10,3 +9,4 @@ rateLimits:
         descriptor_key: rule-0-match-0
         header_name: x-user-id
 routeName: first-route
+useRouteRateLimits: true
