@@ -32,6 +32,7 @@ The Helm chart for Envoy Gateway
 | certgen | object | `{"job":{"affinity":{},"annotations":{},"args":[],"nodeSelector":{},"pod":{"annotations":{},"labels":{}},"resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
 | commonLabels | object | `{}` | Labels to apply to all resources |
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
+| crds.enabled | bool | `true` | Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately. |
 | createNamespace | bool | `false` |  |
 | deployment.annotations | object | `{}` |  |
 | deployment.envoyGateway.extraEnv | list | `[]` | Additional environment variables for the envoy-gateway container. |
@@ -65,6 +66,7 @@ The Helm chart for Envoy Gateway
 | deployment.envoyGateway.startupProbe.periodSeconds | int | `1` |  |
 | deployment.envoyGateway.startupProbe.successThreshold | int | `1` |  |
 | deployment.envoyGateway.startupProbe.timeoutSeconds | int | `1` |  |
+| deployment.envoyGateway.strategy | object | `{}` |  |
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
@@ -72,6 +74,10 @@ The Helm chart for Envoy Gateway
 | deployment.pod.extraVolumes | list | `[]` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
+| deployment.pod.securityContext.runAsGroup | int | `65532` |  |
+| deployment.pod.securityContext.runAsNonRoot | bool | `true` |  |
+| deployment.pod.securityContext.runAsUser | int | `65532` |  |
+| deployment.pod.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | deployment.pod.tolerations | list | `[]` |  |
 | deployment.pod.topologySpreadConstraints | list | `[]` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |

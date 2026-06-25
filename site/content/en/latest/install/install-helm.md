@@ -29,6 +29,13 @@ You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gat
 
 Install the Gateway API CRDs and Envoy Gateway:
 
+{{% alert title="Gateway API CRD compatibility" color="warning" %}}
+The default Helm install applies both Gateway API CRDs and Envoy Gateway CRDs. If your Kubernetes provider already
+manages Gateway API CRDs for the cluster, confirm that the provider-installed Gateway API version and channel are
+compatible with the Envoy Gateway release and the Gateway API resources you plan to use. If they are compatible,
+install only the Envoy Gateway CRDs separately, then install the Envoy Gateway Helm chart with `--set crds.enabled=false`.
+{{% /alert %}}
+
 ```shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
 ```
@@ -82,15 +89,55 @@ helm template eg oci://docker.io/envoyproxy/gateway-crds-helm \
 **Note**: We're using `helm template` piped into `kubectl apply` instead of `helm install` due to a [known Helm limitation](https://github.com/helm/helm/pull/12277)
 related to large CRDs in the `templates/` directory.
 
-Once the CRDs are installed, you can install the main Envoy Gateway Helm chart without re-applying CRDs by using the `--skip-crds` flag:
+Once the CRDs are installed, you can install the main Envoy Gateway Helm chart without re-applying CRDs by disabling the dependency via `--set crds.enabled=false`:
 
 ```shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm \
   --version {{< helm-version >}} \
   -n envoy-gateway-system \
   --create-namespace \
-  --skip-crds
+  --set crds.enabled=false
 ```
+
+### Clusters with compatible provider-managed Gateway API CRDs
+
+Some Kubernetes providers can manage Gateway API CRDs for the cluster. For example, GKE can install Gateway API
+Standard Channel CRDs when Gateway API is enabled for a cluster. Before relying on provider-managed CRDs, compare the
+provider-installed Gateway API version and channel with the [Envoy Gateway compatibility matrix](/news/releases/matrix)
+and the Gateway API resources required by your configuration.
+You can check the installed Gateway API version and channel from the CRD annotations:
+
+```shell
+kubectl get crd gateways.gateway.networking.k8s.io \
+  -o go-template='version={{ index .metadata.annotations "gateway.networking.k8s.io/bundle-version" }} channel={{ index .metadata.annotations "gateway.networking.k8s.io/channel" }}{{ "\n" }}'
+```
+
+If the provider-managed Gateway API CRDs are compatible, leave the provider as the owner of those CRDs and install only
+the Envoy Gateway CRDs:
+
+```shell
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
+  --version {{< helm-version >}} \
+  --set crds.gatewayAPI.enabled=false \
+  --set crds.envoyGateway.enabled=true \
+  | kubectl apply --server-side -f -
+```
+
+Then install the main Envoy Gateway Helm chart without re-applying CRDs. Gateway API safe upgrade policy resources
+(the safe-upgrades ValidatingAdmissionPolicy and binding shipped with the Gateway API bundle) are rendered from the
+chart templates on install by default, so disable them when these resources are managed outside this chart:
+
+```shell
+helm install eg oci://docker.io/envoyproxy/gateway-helm \
+  --version {{< helm-version >}} \
+  -n envoy-gateway-system \
+  --create-namespace \
+  --set crds.enabled=false
+```
+
+If the provider-managed Gateway API CRDs are not compatible with your Envoy Gateway release or required Gateway API
+resources, do not mix them with another copy installed by Envoy Gateway. Use a compatible Gateway API CRD installation
+method for the cluster first, then install Envoy Gateway with `--set crds.enabled=false`.
 
 ## Upgrading from the previous version
 
