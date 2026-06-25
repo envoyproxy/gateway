@@ -2509,7 +2509,7 @@ func (t *Translator) processBackendDestinationSetting(
 		protocol = resolveBackendProtocol(string(ap), protocol)
 		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
 		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-		forceHTTP1Upstream = forceHTTP1Upstream || isWebSocketAppProtocol(string(ap))
+		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
 	}
 
 	ds := &ir.DestinationSetting{Name: name}
