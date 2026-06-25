@@ -2593,7 +2593,7 @@ func resolveBackendProtocol(backendAppProtocol string, defaultProtocol ir.AppPro
 	switch {
 	case backendAppProtocol == "kubernetes.io/h2c" || backendAppProtocol == string(egv1a1.AppProtocolTypeH2C):
 		return ir.HTTP2
-	// HTTPRoute can reoute to gRPC backends, returning ir.GRPC allows the IR to emit gRPC protocol options on the cluster.
+	// HTTPRoute can route to gRPC backends, returning ir.GRPC allows the IR to emit gRPC protocol options on the cluster.
 	case backendAppProtocol == "grpc":
 		return ir.GRPC
 	default:
