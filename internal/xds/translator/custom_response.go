@@ -233,8 +233,8 @@ func (c *customResponse) buildResponseHeaderPredicate(headers []ir.ResponseOverr
 	}
 
 	return &matcherv3.Matcher_MatcherList_Predicate{
-		MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
-			AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+			OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
 				Predicate: predicates,
 			},
 		},
