@@ -52,6 +52,7 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 		// TODO: retry after https://github.com/envoyproxy/gateway/pull/9196 merged
 		tests.GatewayListenerUnsupportedProtocol.ShortName,
 		tests.TCPRouteInvalidNonTCPListener.ShortName,
+		// TODO: will be fixed in https://github.com/envoyproxy/gateway/pull/9247
 		tests.TCPRouteMultipleRoutesAttachment.ShortName,
 		tests.UDPRouteMultipleRoutesAttachment.ShortName,
 	)
