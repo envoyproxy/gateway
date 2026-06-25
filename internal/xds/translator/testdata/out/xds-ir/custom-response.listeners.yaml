@@ -200,7 +200,7 @@
                               '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
                           valueMatch:
                             exact: "503"
-                      - andMatcher:
+                      - orMatcher:
                           predicate:
                           - singlePredicate:
                               input:
