@@ -1278,6 +1278,12 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 		perHostRoutes := make([]*ir.HTTPRoute, 0, len(hosts)*len(routeRoutes))
 		for _, host := range hosts {
 			for _, routeRoute := range routeRoutes {
+				// Deep copy the route first to avoid modifying the original and
+				// affecting other listeners that may be attached to the same route.
+				// This is important when a route has multiple parent refs (listeners)
+				// with different ports, as the redirect port needs to be derived
+				// independently for each listener.
+				routeRoute := routeRoute.DeepCopy()
 				// If the redirect port is not set, the final redirect port must be derived.
 				if routeRoute.Redirect != nil && routeRoute.Redirect.Port == nil {
 					redirectPort := uint32(listener.Port)
