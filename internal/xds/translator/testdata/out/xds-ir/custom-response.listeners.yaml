@@ -170,16 +170,14 @@
                             key: Content-Type
                             value: text/plain
                   predicate:
-                    andMatcher:
-                      predicate:
-                      - singlePredicate:
-                          input:
-                            name: http-response-header-match-input
-                            typedConfig:
-                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseHeaderMatchInput
-                              headerName: X-Custom-Header
-                          valueMatch:
-                            exact: custom-value
+                    singlePredicate:
+                      input:
+                        name: http-response-header-match-input
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseHeaderMatchInput
+                          headerName: X-Custom-Header
+                      valueMatch:
+                        exact: custom-value
                 - onMatch:
                     action:
                       name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/2

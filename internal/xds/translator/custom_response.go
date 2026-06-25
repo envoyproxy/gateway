@@ -225,7 +225,7 @@ func (c *customResponse) buildResponseHeaderPredicate(headers []ir.ResponseOverr
 					},
 				},
 			},
-		}, nil)
+		})
 	}
 
 	if len(predicates) == 1 {
