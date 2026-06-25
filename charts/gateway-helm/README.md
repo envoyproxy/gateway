@@ -107,6 +107,7 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.envoyGateway.securityContext.runAsNonRoot | bool | `true` |  |
 | deployment.envoyGateway.securityContext.runAsUser | int | `65532` |  |
 | deployment.envoyGateway.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
+| deployment.envoyGateway.strategy | object | `{}` |  |
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |

@@ -14,6 +14,10 @@ spec:
 {{- if not .Values.hpa.enabled }}
   replicas: {{ .Values.deployment.replicas }}
 {{- end }}
+{{- with .Values.deployment.envoyGateway.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+{{- end }}
   selector:
     matchLabels:
       control-plane: envoy-gateway
