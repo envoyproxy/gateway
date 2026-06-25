@@ -552,18 +552,22 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
 	if retry.Backoff != nil {
 		backoff, err := time.ParseDuration(string(*retry.Backoff))
 		if err == nil {
-			res.PerRetry = &ir.PerRetryPolicy{
-				BackOff: &ir.BackOffPolicy{
-					BaseInterval: ir.MetaV1DurationPtr(backoff),
-				},
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
 			}
-			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
-			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
-				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
-				if err == nil {
-					res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
-				}
+			res.PerRetry.BackOff = &ir.BackOffPolicy{
+				BaseInterval: ir.MetaV1DurationPtr(backoff),
 			}
+		}
+	}
+	// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
+	if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+		backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+		if err == nil {
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
+			}
+			res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
 		}
 	}
 	if len(retry.Codes) > 0 {
