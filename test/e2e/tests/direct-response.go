@@ -34,7 +34,7 @@ var DirectResponseTest = suite.ConformanceTest{
 			kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, routeNN, gwNN)
 
 			// Test inline response with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:        "/inline",
 				contentType: "text/plain",
 				body:        "GET Oops! Your request is not found.",
@@ -48,7 +48,7 @@ var DirectResponseTest = suite.ConformanceTest{
 			})
 
 			// Test value-ref response with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:        "/value-ref",
 				contentType: "application/json",
 				body:        `{"error": "Internal Server Error"}`,
@@ -60,7 +60,7 @@ var DirectResponseTest = suite.ConformanceTest{
 			})
 
 			// Test status-only response with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, expectedResponse{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
 				path:       "/401",
 				statusCode: 401,
 				headers: map[string]string{
