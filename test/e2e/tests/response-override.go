@@ -178,9 +178,11 @@ func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwA
 			return false
 		}
 
-		if expected.bodyNotEqual && string(body) == expected.body {
-			tlog.Logf(t, "expected response body NOT to be %s, but it was", expected.body)
-			return false
+		if expected.bodyNotEqual {
+			if string(body) == expected.body {
+				tlog.Logf(t, "expected response body NOT to be %s", expected.body)
+				return false
+			}
 		} else if string(body) != expected.body {
 			tlog.Logf(t, "expected response body to be %s but got %s", expected.body, string(body))
 			return false
