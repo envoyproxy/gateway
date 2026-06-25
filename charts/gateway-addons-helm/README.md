@@ -172,7 +172,7 @@ helm uninstall eg-addons -n monitoring
 | opentelemetry-collector.enabled | bool | `false` |  |
 | opentelemetry-collector.fullnameOverride | string | `"otel-collector"` |  |
 | opentelemetry-collector.image.repository | string | `"otel/opentelemetry-collector-contrib"` |  |
-| opentelemetry-collector.image.tag | string | `"0.154.0"` |  |
+| opentelemetry-collector.image.tag | string | `"0.155.0"` |  |
 | opentelemetry-collector.mode | string | `"deployment"` |  |
 | opentelemetry-collector.ports.datadog.containerPort | int | `8126` |  |
 | opentelemetry-collector.ports.datadog.enabled | bool | `true` |  |
