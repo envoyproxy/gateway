@@ -2593,9 +2593,7 @@ func appProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol) ir.Ap
 	switch {
 	case ap == "kubernetes.io/h2c" || ap == string(egv1a1.AppProtocolTypeH2C):
 		return ir.HTTP2
-	case isWebSocketAppProtocol(ap):
-		return ir.HTTP
-	case ap == "grpc":
+	case ap == "grpc": // HTTPRoute can reoute to gRPC backends, returning ir.GRPC allows the IR to emit gRPC protocol options on the cluster.
 		return ir.GRPC
 	default:
 		return defaultProtocol
