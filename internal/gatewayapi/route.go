@@ -2022,13 +2022,14 @@ func (t *Translator) processServiceImportDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
+		protocol  = defaultProtocol
 	)
 
 	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
@@ -2041,11 +2042,9 @@ func (t *Translator) processServiceImportDestinationSetting(
 	}
 
 	if servicePort.AppProtocol != nil {
-		protocol = appProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol)
+		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
-	// For WebSocket services, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
-	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-	forceHTTP1Upstream := servicePort.AppProtocol != nil && isWebSocketAppProtocol(*servicePort.AppProtocol)
+	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	backendIps := serviceImport.Spec.IPs
 	isHeadless := len(backendIps) == 0
@@ -2083,7 +2082,7 @@ func (t *Translator) processServiceDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
@@ -2091,6 +2090,7 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
 	)
+	protocol := defaultProtocol
 
 	service := t.GetService(backendNamespace, string(backendRef.Name))
 	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
@@ -2113,11 +2113,9 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// support HTTPRouteBackendProtocolH2C/GRPC
 	if servicePort.AppProtocol != nil {
-		protocol = appProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol)
+		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
-	// For WebSocket services, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
-	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-	forceHTTP1Upstream := servicePort.AppProtocol != nil && isWebSocketAppProtocol(*servicePort.AppProtocol)
+	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	isHeadless := isServiceHeadless(service)
 
@@ -2499,15 +2497,16 @@ func (t *Translator) processBackendDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 ) *ir.DestinationSetting {
 	var dstAddrType *ir.DestinationAddressType
+	protocol := defaultProtocol
 	forceHTTP1Upstream := false
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
-		protocol = appProtocolToIRAppProtocol(string(ap), protocol)
+		protocol = resolveBackendProtocol(string(ap), protocol)
 		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
 		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
 		forceHTTP1Upstream = forceHTTP1Upstream || isWebSocketAppProtocol(string(ap))
@@ -2577,26 +2576,44 @@ func (t *Translator) processBackendDestinationSetting(
 	return ds
 }
 
-// appProtocolToIRAppProtocol translates an appProtocol string into an ir.AppProtocol.
-// It recognizes both the Kubernetes Service convention ("kubernetes.io/*") and the
-// Envoy Gateway Backend convention ("gateway.envoyproxy.io/*").
+// resolveBackendProtocol computes the upstream ir.AppProtocol for a backend from the
+// backend's own appProtocol and the route's default (fallback) protocol. It recognizes
+// both the Kubernetes Service convention ("kubernetes.io/*") and the Envoy Gateway
+// Backend convention ("gateway.envoyproxy.io/*").
 //
-// appProtocol describes an HTTP-layer protocol (h2c/ws/grpc), so it only refines the
-// upstream protocol of HTTP-based routes. For non-HTTP routes (e.g. TCPRoute, TLSRoute
+// backendAppProtocol describes an HTTP-layer protocol (h2c/ws/grpc), so it only refines
+// the upstream protocol of HTTP-based routes. For non-HTTP routes (e.g. TCPRoute, TLSRoute
 // and UDPRoute, whose default protocol is TCP/UDP), the route is a raw L4 proxy and the
 // appProtocol is irrelevant; returning the default avoids emitting HTTP protocol options
 // on an L4 cluster.
-func appProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol) ir.AppProtocol {
+func resolveBackendProtocol(backendAppProtocol string, defaultProtocol ir.AppProtocol) ir.AppProtocol {
 	if defaultProtocol != ir.HTTP {
 		return defaultProtocol
 	}
 	switch {
-	case ap == "kubernetes.io/h2c" || ap == string(egv1a1.AppProtocolTypeH2C):
+	case backendAppProtocol == "kubernetes.io/h2c" || backendAppProtocol == string(egv1a1.AppProtocolTypeH2C):
 		return ir.HTTP2
-	case ap == "grpc": // HTTPRoute can reoute to gRPC backends, returning ir.GRPC allows the IR to emit gRPC protocol options on the cluster.
+	// HTTPRoute can reoute to gRPC backends, returning ir.GRPC allows the IR to emit gRPC protocol options on the cluster.
+	case backendAppProtocol == "grpc":
 		return ir.GRPC
 	default:
 		return defaultProtocol
+	}
+}
+
+// shouldForceHTTP1Upstream reports whether the upstream connection should be forced to
+// HTTP/1.1. WebSocket over HTTP/2 is not widely supported by upstreams and can lead to
+// connection failures, so a WebSocket backend on an HTTP-based route must use HTTP/1.1.
+func shouldForceHTTP1Upstream(appProtocol ir.AppProtocol, backendAppProtocol *string) bool {
+	return backendAppProtocol != nil && isHTTPProtocol(appProtocol) && isWebSocketAppProtocol(*backendAppProtocol)
+}
+
+func isHTTPProtocol(appProtocol ir.AppProtocol) bool {
+	switch appProtocol {
+	case ir.HTTP, ir.HTTP2, ir.GRPC:
+		return true
+	default:
+		return false
 	}
 }
 
