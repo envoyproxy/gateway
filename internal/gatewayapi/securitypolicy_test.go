@@ -1402,7 +1402,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 				CountryDBSource: countryDB,
 			}),
 			clientIPDetection: &ir.ClientIPDetectionSettings{},
-			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directRemoteAddress}",
+			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}",
 		},
 		{
 			name:          "multiple client ip detection modes rejected",
@@ -1411,19 +1411,19 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 				CountryDBSource: countryDB,
 			}),
 			clientIPDetection: &ir.ClientIPDetectionSettings{
-				CustomHeader:        &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
-				DirectRemoteAddress: &egv1a1.DirectRemoteAddressSettings{},
+				CustomHeader:   &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
+				DirectSourceIP: &egv1a1.DirectSourceIPSettings{},
 			},
-			wantErr: "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directRemoteAddress}",
+			wantErr: "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}",
 		},
 		{
-			name:          "direct remote address accepted",
+			name:          "direct source ip accepted",
 			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CountryDBSource: countryDB,
 			}),
 			clientIPDetection: &ir.ClientIPDetectionSettings{
-				DirectRemoteAddress: &egv1a1.DirectRemoteAddressSettings{},
+				DirectSourceIP: &egv1a1.DirectSourceIPSettings{},
 			},
 			wantProvider: true,
 		},

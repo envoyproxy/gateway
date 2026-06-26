@@ -862,9 +862,9 @@ func (in *ClientIPDetectionSettings) DeepCopyInto(out *ClientIPDetectionSettings
 		*out = new(v1alpha1.CustomHeaderExtensionSettings)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.DirectRemoteAddress != nil {
-		in, out := &in.DirectRemoteAddress, &out.DirectRemoteAddress
-		*out = new(v1alpha1.DirectRemoteAddressSettings)
+	if in.DirectSourceIP != nil {
+		in, out := &in.DirectSourceIP, &out.DirectSourceIP
+		*out = new(v1alpha1.DirectSourceIPSettings)
 		**out = **in
 	}
 }

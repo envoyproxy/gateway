@@ -281,8 +281,8 @@ const (
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
-// Exactly one of XForwardedFor, CustomHeader, or DirectRemoteAddress must be set.
-// +kubebuilder:validation:XValidation:rule="[has(self.xForwardedFor), has(self.customHeader), has(self.directRemoteAddress)].filter(x, x).size() == 1",message="exactly one of xForwardedFor, customHeader, or directRemoteAddress must be set"
+// Exactly one of XForwardedFor, CustomHeader, or DirectSourceIP must be set.
+// +kubebuilder:validation:XValidation:rule="[has(self.xForwardedFor), has(self.customHeader), has(self.directSourceIP)].filter(x, x).size() == 1",message="exactly one of xForwardedFor, customHeader, or directSourceIP must be set"
 type ClientIPDetectionSettings struct {
 	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 	//
@@ -295,7 +295,7 @@ type ClientIPDetectionSettings struct {
 	//
 	// +optional
 	CustomHeader *CustomHeaderExtensionSettings `json:"customHeader,omitempty"`
-	// DirectRemoteAddress configures the geoip filter to use the downstream connection
+	// DirectSourceIP configures the geoip filter to use the downstream connection
 	// source address (the TCP peer of the connection terminated by Envoy) as the client IP.
 	//
 	// Use this in L4-transparent topologies where a load balancer preserves the original
@@ -306,13 +306,13 @@ type ClientIPDetectionSettings struct {
 	// Mutually exclusive with XForwardedFor and CustomHeader.
 	//
 	// +optional
-	DirectRemoteAddress *DirectRemoteAddressSettings `json:"directRemoteAddress,omitempty"`
+	DirectSourceIP *DirectSourceIPSettings `json:"directSourceIP,omitempty"`
 }
 
-// DirectRemoteAddressSettings configures client IP detection from the downstream
+// DirectSourceIPSettings configures client IP detection from the downstream
 // connection source address. It currently has no fields; its presence opts the listener
 // into using the TCP peer address as the client IP.
-type DirectRemoteAddressSettings struct{}
+type DirectSourceIPSettings struct{}
 
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 // Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
