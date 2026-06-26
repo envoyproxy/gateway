@@ -1,0 +1,1 @@
+Added `ClientTrafficPolicy.spec.clientIPDetection.directRemoteAddress` to opt the listener into using the downstream TCP connection source address as the client IP. This unlocks SecurityPolicy `clientIPGeoLocations` in L4-transparent topologies (e.g. AWS NLB with `target-type: instance` + `externalTrafficPolicy: Local`, Azure Standard Load Balancer).
