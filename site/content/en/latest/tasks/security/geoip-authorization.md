@@ -258,7 +258,7 @@ The geoip filter resolves the client IP from one of three sources, configured vi
 
 1. **`xForwardedFor`** — read the client IP from the `X-Forwarded-For` header, trusting `numTrustedHops` rightmost entries.
 2. **`customHeader`** — read the client IP from a trusted custom HTTP header populated by an upstream load balancer.
-3. **`directRemoteAddress`** — use the downstream TCP connection source address. Use this in L4-transparent topologies where a load balancer preserves the original client source IP at TCP level (e.g. AWS NLB with `target-type: instance` + `externalTrafficPolicy: Local`, Azure Standard Load Balancer).
+3. **`directSourceIP`** — use the downstream TCP connection source address. Use this in L4-transparent topologies where a load balancer preserves the original client source IP at TCP level (e.g. AWS NLB with `target-type: instance` + `externalTrafficPolicy: Local`, Azure Standard Load Balancer).
 
 The following `ClientTrafficPolicy` tells Envoy Gateway to use the `X-Forwarded-For` header and trust one upstream hop:
 

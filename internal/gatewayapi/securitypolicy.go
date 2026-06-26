@@ -2518,11 +2518,11 @@ func validateAuthorizationGeoIP(
 	if clientIPDetection.CustomHeader != nil {
 		modeCount++
 	}
-	if clientIPDetection.DirectRemoteAddress != nil {
+	if clientIPDetection.DirectSourceIP != nil {
 		modeCount++
 	}
 	if modeCount != 1 {
-		return nil, errors.New("authorization clientIPGeoLocations requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directRemoteAddress}")
+		return nil, errors.New("authorization clientIPGeoLocations requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}")
 	}
 
 	if clientIPDetection.XForwardedFor != nil &&

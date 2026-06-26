@@ -2,11 +2,11 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    name: enable-direct-remote-address-detection
+    name: enable-direct-source-ip-detection
     namespace: envoy-gateway
   spec:
     clientIPDetection:
-      directRemoteAddress: {}
+      directSourceIP: {}
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -267,7 +267,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       clientIPDetection:
-        directRemoteAddress: {}
+        directSourceIP: {}
       externalPort: 80
       geoIPProvider:
         maxMind:
