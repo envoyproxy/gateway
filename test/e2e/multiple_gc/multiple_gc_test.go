@@ -46,12 +46,13 @@ func TestMultipleGC(t *testing.T) {
 	t.Run("Internet GC Test", func(t *testing.T) {
 		t.Parallel()
 		internetGatewaySuiteGatewayClassName := "internet"
-		suiteOpts.GatewayClassName = internetGatewaySuiteGatewayClassName
+		opts := suiteOpts
+		opts.GatewayClassName = internetGatewaySuiteGatewayClassName
 		internetGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:              c,
 			RestConfig:          cfg,
 			Hook:                e2e.Hook,
-			ConfigurableOptions: suiteOpts,
+			ConfigurableOptions: opts,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
@@ -75,11 +76,12 @@ func TestMultipleGC(t *testing.T) {
 	t.Run("Private GC Test", func(t *testing.T) {
 		t.Parallel()
 		privateGatewaySuiteGatewayClassName := "private"
-		suiteOpts.GatewayClassName = privateGatewaySuiteGatewayClassName
+		opts := suiteOpts
+		opts.GatewayClassName = privateGatewaySuiteGatewayClassName
 		privateGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:              c,
 			RestConfig:          cfg,
-			ConfigurableOptions: suiteOpts,
+			ConfigurableOptions: opts,
 			Hook:                e2e.Hook,
 		})
 		if err != nil {
