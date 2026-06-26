@@ -210,8 +210,8 @@ var MergeGatewaysTest = suite.ConformanceTest{
 
 			expectedHTTPRouteCondition := metav1.Condition{
 				Type:   string(gwapiv1.RouteConditionAccepted),
-				Status: metav1.ConditionTrue,
-				Reason: string(gwapiv1.RouteReasonAccepted),
+				Status: metav1.ConditionFalse,
+				Reason: "NoReadyListeners",
 			}
 			kubernetes.HTTPRouteMustHaveCondition(t, suite.Client, suite.TimeoutConfig, route4NN, gw4NN, expectedHTTPRouteCondition)
 		})
