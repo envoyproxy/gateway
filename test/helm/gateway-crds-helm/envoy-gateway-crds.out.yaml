@@ -24208,12 +24208,9 @@ spec:
                               - path
                               type: object
                             type:
-                              allOf:
-                              - enum:
-                                - File
-                              - enum:
-                                - File
                               description: Type defines the type of sink.
+                              enum:
+                              - File
                               type: string
                           required:
                           - type

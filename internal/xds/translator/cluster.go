@@ -461,7 +461,14 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
-		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog)
+		if args.healthCheckLog != nil && args.healthCheck.Active.EventLog == nil {
+			args.healthCheck.Active.EventLog = args.healthCheckLog
+		}
+		hcs, err := buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname)
+		if err != nil {
+			return nil, err
+		}
+		cluster.HealthChecks = hcs
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {
@@ -581,7 +588,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 	return lbConfig
 }
 
-func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, healthCheckLogging *ir.ProxyHealthCheckLog) []*corev3.HealthCheck {
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
@@ -633,23 +640,24 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 		}
 	}
 
-	if healthCheckLogging != nil {
+	if healthCheckLogging := healthcheck.EventLog; healthCheckLogging != nil {
 		hc.AlwaysLogHealthCheckFailures = healthCheckLogging.AlwaysLogHealthCheckFailures
 		hc.AlwaysLogHealthCheckSuccess = healthCheckLogging.AlwaysLogHealthCheckSuccess
 		for _, fs := range healthCheckLogging.FileSinks {
 			fileSinkAny, err := proto.ToAnyWithValidation(&hcfilev3.HealthCheckEventFileSink{
 				EventLogPath: fs.Path,
 			})
-			if err == nil {
-				hc.EventLogger = append(hc.EventLogger, &corev3.TypedExtensionConfig{
-					Name:        "envoy.health_check.event_sinks.file",
-					TypedConfig: fileSinkAny,
-				})
+			if err != nil {
+				return nil, err
 			}
+			hc.EventLogger = append(hc.EventLogger, &corev3.TypedExtensionConfig{
+				Name:        "envoy.health_check.event_sinks.file",
+				TypedConfig: fileSinkAny,
+			})
 		}
 	}
 
-	return []*corev3.HealthCheck{hc}
+	return []*corev3.HealthCheck{hc}, nil
 }
 
 func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {

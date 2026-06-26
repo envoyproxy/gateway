@@ -285,7 +285,11 @@ var BackendHealthCheckEventLogTest = suite.ConformanceTest{
 		}
 
 		// Phase 1: only the no-HC route is live — no BTP means no health check
-		// probes are running, so Loki must have zero HC events.
+		// probes are running, so there should be no new HC events while we wait.
+		// Record a baseline first: a prior run within Loki's 10-minute window may
+		// have left events in the log, so we delta against that count rather than
+		// asserting zero.
+		var hcLogBaseline int
 		t.Run("no health check events before HC route is active", func(t *testing.T) {
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 				Request:   http.Request{Path: "/no-hc-event-log"},
@@ -294,9 +298,10 @@ var BackendHealthCheckEventLogTest = suite.ConformanceTest{
 			})
 
 			// Scope to HC events from this test's route only.
-			count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, `health_checker_type.*http-with-hc-event-log`)
+			baseline, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, `health_checker_type.*http-with-hc-event-log`)
 			require.NoError(t, err, "loki query failed")
-			require.Equal(t, 0, count, "expected no HC events before HC-enabled route is active")
+			tlog.Logf(t, "HC event log baseline (pre-route) count=%d", baseline)
+			hcLogBaseline = baseline
 		})
 
 		// Phase 2: apply the HC-enabled route and BTP, then wait for events.
@@ -337,8 +342,8 @@ var BackendHealthCheckEventLogTest = suite.ConformanceTest{
 						tlog.Logf(t, "loki query error: %v", err)
 						return false
 					}
-					tlog.Logf(t, "loki match %q count=%d", hcLogMatch, count)
-					return count > 0
+					tlog.Logf(t, "loki match %q count=%d (baseline=%d)", hcLogMatch, count, hcLogBaseline)
+					return count > hcLogBaseline
 				},
 			)
 		})

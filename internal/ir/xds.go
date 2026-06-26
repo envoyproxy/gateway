@@ -3249,6 +3249,8 @@ type ActiveHealthCheck struct {
 	// Overrides defines the configuration of the overriding health check settings for all endpoints
 	// in the backend cluster.
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
+	// EventLog configures health check event logging for this cluster.
+	EventLog *ProxyHealthCheckLog `json:"eventLog,omitempty" yaml:"eventLog,omitempty"`
 }
 
 // Validate the fields within the HealthCheck structure.

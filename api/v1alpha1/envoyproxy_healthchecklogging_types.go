@@ -56,7 +56,6 @@ const (
 )
 
 // ProxyHealthCheckLogSinkType is the type of a ProxyHealthCheckLog sink.
-// +kubebuilder:validation:Enum=File
 type ProxyHealthCheckLogSinkType string
 
 const (
