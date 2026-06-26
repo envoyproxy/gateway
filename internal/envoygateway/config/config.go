@@ -50,6 +50,8 @@ type Server struct {
 	// KubernetesClient holds the controller-runtime client created by the Kubernetes provider.
 	// This is used by the infrastructure runner to create the envoy proxy and rate limit infra resources.
 	KubernetesClient *KubernetesClientHolder
+	// KubernetesAPIReader holds the uncached API reader created by the Kubernetes provider.
+	KubernetesAPIReader *KubernetesAPIReaderHolder
 }
 
 type KubernetesClientHolder struct {
@@ -73,6 +75,27 @@ func (h *KubernetesClientHolder) Get() client.Client {
 	return h.client
 }
 
+type KubernetesAPIReaderHolder struct {
+	reader client.Reader
+}
+
+func NewKubernetesAPIReaderHolder() *KubernetesAPIReaderHolder {
+	return &KubernetesAPIReaderHolder{}
+}
+
+func (h *KubernetesAPIReaderHolder) Set(r client.Reader) {
+	if h != nil {
+		h.reader = r
+	}
+}
+
+func (h *KubernetesAPIReaderHolder) Get() client.Reader {
+	if h == nil {
+		return nil
+	}
+	return h.reader
+}
+
 // New returns a Server with default parameters.
 func New(stdout, stderr io.Writer) (*Server, error) {
 	return &Server{
@@ -85,6 +108,7 @@ func New(stdout, stderr io.Writer) (*Server, error) {
 		Elected:             make(chan struct{}),
 		ProviderReady:       make(chan struct{}),
 		KubernetesClient:    NewKubernetesClientHolder(),
+		KubernetesAPIReader: NewKubernetesAPIReaderHolder(),
 	}, nil
 }
 

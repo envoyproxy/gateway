@@ -734,7 +734,15 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
 	existing := obj.DeepCopyObject().(client.Object)
-	err := i.Client.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
+
+	// use a non-cached api reader to check for ownership,
+	// since the cached client may not have the latest state of the object.
+	reader := i.APIReader
+	if reader == nil {
+		reader = i.Client
+	}
+
+	err := reader.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil

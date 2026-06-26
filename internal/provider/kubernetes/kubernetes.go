@@ -415,6 +415,11 @@ func (p *Provider) GetClient() client.Client {
 	return p.client
 }
 
+// GetAPIReader returns an uncached API reader for live reads that bypass the informer cache.
+func (p *Provider) GetAPIReader() client.Reader {
+	return p.manager.GetAPIReader()
+}
+
 // Start starts the Provider synchronously until a message is received from ctx.
 func (p *Provider) Start(ctx context.Context) error {
 	errChan := make(chan error)

@@ -59,6 +59,9 @@ type Infra struct {
 	// Client wrap k8s client.
 	Client *InfraClient
 
+	// APIReader is a non-cached reader.
+	APIReader client.Reader
+
 	logger logging.Logger
 
 	// errors is the notifier used to send async errors to the main control loop.
@@ -67,6 +70,10 @@ type Infra struct {
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client, cfg *config.Server, errors message.RunnerErrorNotifier) *Infra {
+	var apiReader client.Reader
+	if cfg.KubernetesAPIReader != nil {
+		apiReader = cfg.KubernetesAPIReader.Get()
+	}
 	return &Infra{
 		// Always set infra namespace to cfg.ControllerNamespace,
 		// Otherwise RateLimit resource provider will failed to create/delete.
@@ -74,6 +81,7 @@ func NewInfra(cli client.Client, cfg *config.Server, errors message.RunnerErrorN
 		DNSDomain:           cfg.DNSDomain,
 		EnvoyGateway:        cfg.EnvoyGateway,
 		Client:              New(cli),
+		APIReader:           apiReader,
 		logger:              cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
 		errors:              errors,
 	}
