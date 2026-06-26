@@ -65,6 +65,27 @@ http:
         backend: true
       path:
         prefixMatchReplace: /rewrite
+  - name: "rewrite-host-path-regex"
+    pathMatch:
+      prefix: "/node"
+    hostname: gateway.envoyproxy.io
+    headerMatches:
+    - name: ":authority"
+      exact: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route-dest/backend/0"
+    urlRewrite:
+      host:
+        pathRegex:
+          pattern: "^/node/([0-9]+)/api.*"
+          substitution: "backend-\\1.service.namespace.svc.cluster.local"
+      path:
+        prefixMatchReplace: /rewrite
   - name: "rewrite-route-timeout"
     pathMatch:
       prefix: "/origin"

@@ -395,6 +395,33 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				t.Logger.Info("setting 500 direct response in routes due to all valid destinations having 0 weight",
 					"routes", sets.List(routesWithDirectResponse))
 			}
+		// Host rewrite from path (PathRegex) is rejected for dynamic resolver routes: the upstream host is
+		// derived from request-controlled path text, which is not validated by the dynamic forward proxy
+		// loopback protection (that guard only inspects the rewrite header or :authority). Allowing it would
+		// let a crafted path resolve to a loopback address and bypass the SSRF protection.
+		case hasDynamicResolver && hasPathRegexHostRewrite(ruleRoutes):
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: new(uint32(500)),
+				}
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			errorCollector.Add(status.NewRouteStatusError(
+				fmt.Errorf(
+					"failed to process route rule %d: host rewrite from path (PathRegex) is not supported with a dynamic resolver backend",
+					ruleIdx),
+				gwapiv1.RouteReasonUnsupportedValue,
+			))
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info("setting 500 direct response in routes due to dynamic resolver with host rewrite from path",
+					"routes", sets.List(routesWithDirectResponse))
+			}
 		// A route can only have one destination if this destination is a dynamic resolver, because the behavior of
 		// multiple destinations with one being a dynamic resolver just doesn't make sense.
 		case hasDynamicResolver && len(rule.BackendRefs) > 1:
@@ -456,6 +483,17 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	}
 
 	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
+}
+
+// hasPathRegexHostRewrite reports whether any of the given IR routes rewrites the upstream host
+// from the request path via a regex substitution (urlRewrite.hostname.type: PathRegex).
+func hasPathRegexHostRewrite(routes []*ir.HTTPRoute) bool {
+	for _, irRoute := range routes {
+		if irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.PathRegex != nil {
+			return true
+		}
+	}
+	return false
 }
 
 type routeMatchCombination struct {

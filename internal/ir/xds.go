@@ -58,7 +58,8 @@ var (
 	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrHTTPPathRegexModifierNoSetting           = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
-	ErrHTTPHostModifierDoubleReplace            = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
+	ErrHTTPHostModifierDoubleReplace            = errors.New("url rewrite filter cannot have a host modifier that supplies more than one of Name, Header, Backend and PathRegex")
+	ErrHTTPHostModifierEmptyPathRegex           = errors.New("host modifier with a PathRegex must supply both a Pattern and a Substitution")
 	ErrAddHeaderEmptyName                       = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate                       = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate                    = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
@@ -2300,16 +2301,17 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 // +k8s:deepcopy-gen=true
 type HTTPHostModifier struct {
 	// Name provides a string to replace the host of the request.
-	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
-	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
-	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
+	Name      *string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Header    *string            `json:"header,omitempty" yaml:"header,omitempty"`
+	Backend   *bool              `json:"backend,omitempty" yaml:"backend,omitempty"`
+	PathRegex *RegexMatchReplace `json:"pathRegex,omitempty" yaml:"pathRegex,omitempty"`
 }
 
 // Validate the fields within the HTTPPathModifier structure
 func (r HTTPHostModifier) Validate() error {
 	var errs error
 
-	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil}
+	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil, r.PathRegex != nil}
 	rwc := 0
 	for _, rw := range rewrites {
 		if rw {
@@ -2319,6 +2321,10 @@ func (r HTTPHostModifier) Validate() error {
 
 	if rwc > 1 {
 		errs = errors.Join(errs, ErrHTTPHostModifierDoubleReplace)
+	}
+
+	if r.PathRegex != nil && (r.PathRegex.Pattern == "" || r.PathRegex.Substitution == "") {
+		errs = errors.Join(errs, ErrHTTPHostModifierEmptyPathRegex)
 	}
 
 	return errs
