@@ -163,6 +163,12 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		}
 	}()
 
+	if deployment.Name == r.Name() {
+		if err = i.checkOwnership(ctx, deployment); err != nil {
+			return err
+		}
+	}
+
 	old := &appsv1.Deployment{}
 	err = i.Client.Get(ctx, types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}, old)
 	if err != nil {
@@ -250,6 +256,12 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		}
 	}()
 
+	if daemonSet.Name == r.Name() {
+		if err = i.checkOwnership(ctx, daemonSet); err != nil {
+			return err
+		}
+	}
+
 	old := &appsv1.DaemonSet{}
 	err = i.Client.Get(ctx, types.NamespacedName{Name: daemonSet.Name, Namespace: daemonSet.Namespace}, old)
 	if err != nil {
@@ -334,6 +346,12 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		}
 	}()
 
+	if pdb.Name == r.Name() {
+		if err = i.checkOwnership(ctx, pdb); err != nil {
+			return err
+		}
+	}
+
 	return i.Client.ServerSideApply(ctx, pdb)
 }
 
@@ -383,6 +401,12 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		}
 	}()
 
+	if hpa.Name == r.Name() {
+		if err = i.checkOwnership(ctx, hpa); err != nil {
+			return err
+		}
+	}
+
 	return i.Client.ServerSideApply(ctx, hpa)
 }
 
@@ -423,6 +447,12 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
+
+	if svc.Name == r.Name() {
+		if err = i.checkOwnership(ctx, svc); err != nil {
+			return err
+		}
+	}
 
 	return i.Client.ServerSideApply(ctx, svc)
 }

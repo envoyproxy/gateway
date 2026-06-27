@@ -416,3 +416,98 @@ func TestCheckOwnership_UnownedConfigMap(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
 }
+
+// TestCheckOwnership_UnownedDeployment verifies the protection applies to Deployments.
+func TestCheckOwnership_UnownedDeployment(t *testing.T) {
+	ctx := context.Background()
+	existing := &appsv1.Deployment{
+		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &appsv1.Deployment{
+		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newTestInfraWithClient(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedDaemonSet verifies the protection applies to DaemonSets.
+func TestCheckOwnership_UnownedDaemonSet(t *testing.T) {
+	ctx := context.Background()
+	existing := &appsv1.DaemonSet{
+		TypeMeta:   metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &appsv1.DaemonSet{
+		TypeMeta:   metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newTestInfraWithClient(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedService verifies the protection applies to Services.
+func TestCheckOwnership_UnownedService(t *testing.T) {
+	ctx := context.Background()
+	existing := &corev1.Service{
+		TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &corev1.Service{
+		TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newTestInfraWithClient(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedPDB verifies the protection applies to PodDisruptionBudgets.
+func TestCheckOwnership_UnownedPDB(t *testing.T) {
+	ctx := context.Background()
+	existing := &policyv1.PodDisruptionBudget{
+		TypeMeta:   metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &policyv1.PodDisruptionBudget{
+		TypeMeta:   metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newTestInfraWithClient(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedHPA verifies the protection applies to HPAs.
+func TestCheckOwnership_UnownedHPA(t *testing.T) {
+	ctx := context.Background()
+	existing := &autoscalingv2.HorizontalPodAutoscaler{
+		TypeMeta:   metav1.TypeMeta{Kind: "HorizontalPodAutoscaler", APIVersion: "autoscaling/v2"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &autoscalingv2.HorizontalPodAutoscaler{
+		TypeMeta:   metav1.TypeMeta{Kind: "HorizontalPodAutoscaler", APIVersion: "autoscaling/v2"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newTestInfraWithClient(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
