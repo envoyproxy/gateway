@@ -1,0 +1,36 @@
+date: June 27, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  The `XRateLimitHeadersOptionDisabled` constant in `BackendTrafficPolicy` now correctly holds the value `"Off"` to match the CRD enum (previously `"Disabled"`). Since `"Disabled"` was never a valid CRD enum value and would have been rejected by the API server, no existing manifests are affected.
+  `SecurityPolicy` `spec.apiKeyAuth.extractFrom` admission validation is now stricter: the list must contain at least one entry, each entry must specify exactly one of `headers`, `params`, or `cookies`, and source names must be non-empty. SecurityPolicies that previously applied with an empty or ambiguous `extractFrom` (which produced no usable API key sources) will now be rejected and must be corrected before upgrading.
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+
+# New features or capabilities added in this release.
+new features: |
+  Added support for disabling the `crds` dependency on the gateway-helm chart via `crds.enabled` variable.
+
+bug fixes: |
+  Fixed API key auth credential ordering to avoid unnecessary xDS updates.
+  Fixed the EnvoyProxy resource not allowing IPv6 ranges in loadBalancerSourceRanges when configuring the envoy service.
+  Fixed HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, and UDPRoute Accepted condition being set to False when an attached listener is not programmed due to a missing TLS certificate ref; listener programmed state is now correctly separated from route acceptance.
+  Fixed Backend TLS `alpnProtocols: []` to disable upstream ALPN instead of inheriting EnvoyProxy BackendTLS defaults.
+  Fixed BackendTrafficPolicy rate limit validation failing on Kubernetes 1.36, which now cross-validates integer ranges against their configured maximum, by validating the affected field as int64.
+  Fixed the generated `install.yaml` creating a duplicate ValidatingAdmissionPolicy and its binding which caused `kustomize build` to fail with a duplicate resource error.
+  Fixed an `ExternalName` Service referenced as a route backend producing an invalid xDS cluster (with an empty address) that failed IR validation and stalled config delivery for the whole snapshot. `ExternalName` Services are now explicitly rejected as backends with a `ResolvedRefs: False` route condition; use an Envoy Gateway `Backend` resource with an FQDN endpoint instead.
+  Fixed ListenerSet hostname conflict resolution to apply listener precedence: Gateway-owned listeners win over ListenerSet listeners, and among ListenerSet listeners the first in processing order wins. Conflicted ListenerSet listeners now correctly report Accepted=False with the conflict reason. The Gateway's AttachedListenerSets count now only reflects ListenerSets with at least one accepted listener.
+  Fixed Gateway status reporting `Programmed: False` with reason `AddressNotAssigned` when the Envoy LoadBalancer service has no load balancer ingress (e.g. bare-metal clusters without a load balancer controller) but has addresses configured in `spec.externalIPs`, such as via an EnvoyProxy service patch. The external IPs are now used as a fallback for the Gateway status addresses.
+  Fixed EnvoyGateway config hot-reload to apply defaults before validation, so validators always run against a fully-defaulted struct on both the startup and reload paths.
+  Fixed HTTPRoute per-retry timeout (derived from `rule.timeouts.backendRequest`) not being applied when no retry backoff was configured.
+  Fixed shared global rate limit rules with a `cost` field not working as expected.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
