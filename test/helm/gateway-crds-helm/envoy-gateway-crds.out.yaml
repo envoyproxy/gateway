@@ -20847,6 +20847,12 @@ spec:
                       If unspecified, defaults to 10 seconds.
                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
+                  readinessFailureDelay:
+                    description: |-
+                      ReadinessFailureDelay defines the delay before failing readiness during the graceful drain process.
+                      If unspecified, defaults to 0 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                 type: object
               telemetry:
                 description: Telemetry defines telemetry parameters for managed proxies.

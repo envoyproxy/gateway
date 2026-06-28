@@ -284,6 +284,14 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 		return command
 	}
 
+	if cfg.ReadinessFailureDelay != nil {
+		d, err := time.ParseDuration(string(*cfg.ReadinessFailureDelay))
+		if err != nil {
+			return nil
+		}
+		command = append(command, fmt.Sprintf("--readiness-failure-delay=%.0fs", d.Seconds()))
+	}
+
 	if cfg.DrainTimeout != nil {
 		d, err := time.ParseDuration(string(*cfg.DrainTimeout))
 		if err != nil {
