@@ -508,6 +508,11 @@ type EnvoyProxyProvider struct {
 
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
 type ShutdownConfig struct {
+	// HealthCheckFailureDelay defines the delay before failing health checks during the graceful drain process.
+	// If unspecified, defaults to 0 seconds.
+	//
+	// +optional
+	HealthCheckFailureDelay *gwapiv1.Duration `json:"healthCheckFailureDelay,omitempty"`
 	// DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
 	// If unspecified, defaults to 60 seconds.
 	//
