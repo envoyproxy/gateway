@@ -118,9 +118,10 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 // Shutdown is called from a preStop hook on the shutdown-manager container where
 // it will initiate a drain sequence on the Envoy proxy and block until
 // connections are drained or a timeout is exceeded.
-func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections int) error {
+func Shutdown(readinessFailureDelay, drainTimeout, minDrainDuration time.Duration, exitAtConnections int) error {
 	startTime := time.Now()
 	allowedToExit := false
+	var readinessFailureTimer *time.Timer
 
 	// Reconfigure logger to write to stdout of main process if running in Kubernetes
 	if _, k8s := os.LookupEnv("KUBERNETES_SERVICE_HOST"); k8s && os.Getpid() != 1 {
@@ -130,10 +131,7 @@ func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections in
 	logger.Info(fmt.Sprintf("initiating drain with %.0f second minimum drain period and %.0f second timeout",
 		minDrainDuration.Seconds(), drainTimeout.Seconds()))
 
-	// Start failing active health checks
-	if err := postEnvoyAdminAPI("healthcheck/fail"); err != nil {
-		logger.Error(err, "error failing active health checks")
-	}
+	readinessFailureTimer = startDrain(readinessFailureDelay, postEnvoyAdminAPI)
 
 	// Poll total connections from Envoy admin API until minimum drain period has
 	// been reached and total connections reaches threshold or timeout is exceeded
@@ -161,10 +159,36 @@ func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections in
 		time.Sleep(1 * time.Second)
 	}
 
+	if readinessFailureTimer != nil {
+		readinessFailureTimer.Stop()
+	}
+
 	// Signal to shutdownReadyHandler that drain process is complete
 	if _, err := os.Create(ShutdownReadyFile); err != nil {
 		logger.Error(err, "error creating shutdown ready file")
 		return err
+	}
+
+	return nil
+}
+
+func startDrain(readinessFailureDelay time.Duration, post func(string) error) *time.Timer {
+	if readinessFailureDelay > 0 {
+		if err := post("drain_listeners?graceful&skip_exit"); err != nil {
+			logger.Error(err, "error draining listeners")
+		}
+
+		logger.Info(fmt.Sprintf("delaying readiness failure by %.0f seconds", readinessFailureDelay.Seconds()))
+		return time.AfterFunc(readinessFailureDelay, func() {
+			if err := post("healthcheck/fail"); err != nil {
+				logger.Error(err, "error failing active health checks")
+			}
+		})
+	}
+
+	// Start failing active health checks
+	if err := post("healthcheck/fail"); err != nil {
+		logger.Error(err, "error failing active health checks")
 	}
 
 	return nil

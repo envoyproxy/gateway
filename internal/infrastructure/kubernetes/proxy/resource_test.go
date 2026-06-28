@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
@@ -179,6 +180,42 @@ func TestGetImageTag(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tt.expectedTag, tag)
 			}
+		})
+	}
+}
+
+func TestExpectedShutdownPreStopCommand(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      *egv1a1.ShutdownConfig
+		expected []string
+	}{
+		{
+			name:     "nil config",
+			cfg:      nil,
+			expected: []string{"envoy-gateway", "envoy", "shutdown"},
+		},
+		{
+			name: "readiness failure delay",
+			cfg: &egv1a1.ShutdownConfig{
+				ReadinessFailureDelay: new(gwapiv1.Duration("15s")),
+				DrainTimeout:          new(gwapiv1.Duration("30s")),
+				MinDrainDuration:      new(gwapiv1.Duration("5s")),
+			},
+			expected: []string{
+				"envoy-gateway",
+				"envoy",
+				"shutdown",
+				"--readiness-failure-delay=15s",
+				"--drain-timeout=30s",
+				"--min-drain-duration=5s",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, expectedShutdownPreStopCommand(tt.cfg))
 		})
 	}
 }

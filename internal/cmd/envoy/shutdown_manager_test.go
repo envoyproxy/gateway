@@ -47,6 +47,76 @@ func setupFakeEnvoyStats(t *testing.T, content string) *http.Server {
 	return s
 }
 
+func TestStartDrain(t *testing.T) {
+	tests := []struct {
+		name                  string
+		readinessFailureDelay time.Duration
+		expectedContains      []string
+		expectedNotContains   []string
+	}{
+		{
+			name:                  "zero readiness failure delay preserves existing healthcheck fail behavior",
+			readinessFailureDelay: 0,
+			expectedContains: []string{
+				"healthcheck/fail",
+			},
+			expectedNotContains: []string{
+				"drain_listeners?graceful&skip_exit",
+			},
+		},
+		{
+			name:                  "positive readiness failure delay drains then fails healthcheck",
+			readinessFailureDelay: 5 * time.Millisecond,
+			expectedContains: []string{
+				"drain_listeners?graceful&skip_exit",
+				"healthcheck/fail",
+			},
+		},
+		{
+			name:                  "readiness failure can be stopped before delay",
+			readinessFailureDelay: 50 * time.Millisecond,
+			expectedContains: []string{
+				"drain_listeners?graceful&skip_exit",
+			},
+			expectedNotContains: []string{
+				"healthcheck/fail",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotCh := make(chan string, len(tc.expectedContains)+len(tc.expectedNotContains)+1)
+			timer := startDrain(tc.readinessFailureDelay, func(path string) error {
+				gotCh <- path
+				return nil
+			})
+			if timer != nil {
+				defer timer.Stop()
+			}
+			if tc.readinessFailureDelay > 0 && len(tc.expectedNotContains) == 0 {
+				require.Eventually(t, func() bool {
+					return len(gotCh) == len(tc.expectedContains)
+				}, time.Second, time.Millisecond)
+			} else if timer != nil {
+				timer.Stop()
+			}
+
+			var got []string
+			for len(gotCh) > 0 {
+				got = append(got, <-gotCh)
+			}
+
+			for _, expected := range tc.expectedContains {
+				require.Contains(t, got, expected)
+			}
+			for _, unexpected := range tc.expectedNotContains {
+				require.NotContains(t, got, unexpected)
+			}
+		})
+	}
+}
+
 func TestGetTotalConnections(t *testing.T) {
 	cases := []struct {
 		name  string

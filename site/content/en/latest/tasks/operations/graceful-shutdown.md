@@ -31,6 +31,7 @@ Graceful shutdown behavior includes default values that can be overridden using 
 **Default Values:**
 - `drainTimeout`: 60 seconds - Maximum time for connection draining
 - `minDrainDuration`: 10 seconds - Minimum wait before allowing exit
+- `readinessFailureDelay`: 0 seconds - Optional delay before failing readiness after drain starts
 
 {{< tabpane text=true >}}
 {{% tab header="Gateway-Level Configuration" %}}
@@ -58,8 +59,9 @@ metadata:
   name: graceful-shutdown-config
 spec:
   shutdown:
-    drainTimeout: "90s"      # Override default 60s
-    minDrainDuration: "15s"  # Override default 10s
+    drainTimeout: "90s"              # Override default 60s
+    minDrainDuration: "15s"          # Override default 10s
+    readinessFailureDelay: "40s"     # Override default 0s
 ```
 
 {{% /tab %}}
@@ -83,9 +85,16 @@ metadata:
   name: graceful-shutdown-config
 spec:
   shutdown:
-    drainTimeout: "90s"      # Override default 60s
-    minDrainDuration: "15s"  # Override default 10s
+    drainTimeout: "90s"              # Override default 60s
+    minDrainDuration: "15s"          # Override default 10s
+    readinessFailureDelay: "40s"     # Override default 0s
 ```
 
 {{% /tab %}}
 {{< /tabpane >}}
+
+When `readinessFailureDelay` is greater than zero, Envoy Gateway starts listener
+drain immediately and delays only the readiness failure. This lets Envoy begin
+graceful HTTP drain behavior while keeping the Kubernetes readiness probe passing
+for the configured window. If the drain completes before the delay elapses,
+`/healthcheck/fail` is not called.
