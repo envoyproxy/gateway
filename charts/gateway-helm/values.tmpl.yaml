@@ -75,6 +75,7 @@ deployment:
       runAsUser: 65532
       seccompProfile:
         type: RuntimeDefault
+    strategy: {}
   ports:
     - name: grpc
       port: 18000
