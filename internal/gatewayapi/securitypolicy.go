@@ -559,16 +559,12 @@ func (t *Translator) processSecurityPolicyForRoute(
 					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
 
-					switch {
-					case listenerSetPolicyMap[lsListenerKey] != nil:
-						parentPolicy = listenerSetPolicyMap[lsListenerKey]
-						parentScope = listenerSetListenerScope(lsNN, listener.Name)
-					case listenerSetPolicyMap[lsKey] != nil:
-						parentPolicy = listenerSetPolicyMap[lsKey]
-						parentScope = listenerSetScope(lsNN)
-					case gatewayPolicyMap[gwKey] != nil:
-						parentPolicy = gatewayPolicyMap[gwKey]
-						parentScope = gatewayScope(gwNN)
+					if p, ok := listenerSetPolicyMap[lsListenerKey]; ok {
+						parentPolicy, parentScope = p, listenerSetListenerScope(lsNN, listener.Name)
+					} else if p, ok := listenerSetPolicyMap[lsKey]; ok {
+						parentPolicy, parentScope = p, listenerSetScope(lsNN)
+					} else if p, ok := gatewayPolicyMap[gwKey]; ok {
+						parentPolicy, parentScope = p, gatewayScope(gwNN)
 					}
 				} else {
 					ancestorRef = getAncestorRefForPolicy(gwNN, &listener.Name)
@@ -576,13 +572,10 @@ func (t *Translator) processSecurityPolicyForRoute(
 					listenerKey := NamespacedNameWithSection{NamespacedName: gwNN, SectionName: listener.Name}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
 
-					switch {
-					case gatewayPolicyMap[listenerKey] != nil:
-						parentPolicy = gatewayPolicyMap[listenerKey]
-						parentScope = gatewayListenerScope(gwNN, listener.Name)
-					case gatewayPolicyMap[gwKey] != nil:
-						parentPolicy = gatewayPolicyMap[gwKey]
-						parentScope = gatewayScope(gwNN)
+					if p, ok := gatewayPolicyMap[listenerKey]; ok {
+						parentPolicy, parentScope = p, gatewayListenerScope(gwNN, listener.Name)
+					} else if p, ok := gatewayPolicyMap[gwKey]; ok {
+						parentPolicy, parentScope = p, gatewayScope(gwNN)
 					}
 				}
 
