@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -226,6 +227,18 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 
 	if oidc.CSRFTokenTTL != nil {
 		oauth2.Config.CsrfTokenExpiresIn = durationpb.New(oidc.CSRFTokenTTL.Duration)
+	}
+
+	if oidc.ForwardIDToken != nil {
+		oauth2.Config.ForwardIdToken = &oauth2v3.OAuth2TokenForwarding{
+			Header: *oidc.ForwardIDToken,
+		}
+		// When the ID token is forwarded on the Authorization header, Envoy sets
+		// that header from the validated ID token, so the inbound Authorization
+		// header must not be preserved.
+		if strings.EqualFold(*oidc.ForwardIDToken, "Authorization") {
+			oauth2.Config.PreserveAuthorizationHeader = false
+		}
 	}
 
 	return oauth2, nil

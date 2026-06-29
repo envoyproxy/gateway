@@ -56039,10 +56039,17 @@ spec:
                       If not specified, the ID token will not be forwarded.
                     properties:
                       header:
-                        description: Header is the upstream request header that will
-                          carry the ID token.
+                        description: |-
+                          Header is the upstream request header that will carry the ID token.
+                          It must be a valid HTTP header name. Pseudo-headers (names starting with ":")
+                          and the "Host" header are not allowed.
+                        maxLength: 256
                         minLength: 1
+                        pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                         type: string
+                        x-kubernetes-validations:
+                        - message: header cannot be the Host header
+                          rule: self.lowerAscii() != 'host'
                     required:
                     - header
                     type: object

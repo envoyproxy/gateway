@@ -19,6 +19,7 @@ import (
 	"net/mail"
 	"net/netip"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -1571,6 +1572,11 @@ func (t *Translator) buildLocalJWKS(
 	return *localJWKS.Inline, nil
 }
 
+// validForwardHeaderName matches a valid HTTP header field-name (an RFC 7230
+// token). It mirrors the kubebuilder Pattern on OIDCTokenForwarding.Header so the
+// translation-time safety net agrees with the CRD admission validation.
+var validForwardHeaderName = regexp.MustCompile("^[-A-Za-z0-9!#$%&'*+.^_`|~]+$")
+
 func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
 	owners *securityPolicyOwners,
@@ -1586,6 +1592,7 @@ func (t *Translator) buildOIDC(
 		redirectPath           = defaultRedirectPath
 		logoutPath             = defaultLogoutPath
 		forwardAccessToken     = defaultForwardAccessToken
+		forwardIDToken         *string
 		refreshToken           = defaultRefreshToken
 		passThroughAuthHeader  = defaultPassThroughAuthHeader
 		disableTokenEncryption = false
@@ -1655,6 +1662,9 @@ func (t *Translator) buildOIDC(
 	if oidc.ForwardAccessToken != nil {
 		forwardAccessToken = *oidc.ForwardAccessToken
 	}
+	if oidc.ForwardIDToken != nil {
+		forwardIDToken = &oidc.ForwardIDToken.Header
+	}
 	if oidc.RefreshToken != nil {
 		refreshToken = *oidc.RefreshToken
 	}
@@ -1698,6 +1708,7 @@ func (t *Translator) buildOIDC(
 		RedirectPath:           redirectPath,
 		LogoutPath:             logoutPath,
 		ForwardAccessToken:     forwardAccessToken,
+		ForwardIDToken:         forwardIDToken,
 		RefreshToken:           refreshToken,
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,

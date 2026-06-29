@@ -1586,6 +1586,212 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{"only one of clientID or clientIDRef must be set"},
 		},
+		{
+			desc: "oidc-forward-id-token-custom-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "X-ID-Token",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-forward-id-token-token-chars-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						// Underscore is a valid RFC 7230 token character; it must be
+						// accepted by both the CRD and the translation-time validation.
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "X_Id_Token",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-forward-id-token-authorization",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "Authorization",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-forward-id-token-pseudo-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: ":path",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should match"},
+		},
+		{
+			desc: "oidc-forward-id-token-control-char-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "X-Id\nToken",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should match"},
+		},
+		{
+			desc: "oidc-forward-id-token-host-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "host",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"header cannot be the Host header"},
+		},
+		{
+			desc: "oidc-forward-id-token-and-access-token-on-authorization",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:           new("client-id"),
+						ClientSecret:       gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardAccessToken: new(true),
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "authorization",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"forwardAccessToken cannot be true when forwardIDToken.header is Authorization"},
+		},
 	}
 
 	for _, tc := range cases {
