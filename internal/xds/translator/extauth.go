@@ -330,6 +330,6 @@ func convertContextExtensions(irCtxExts []*ir.ContextExtention) map[string]strin
 	return ctxExts
 }
 
-func (*extAuth) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+func (*extAuth) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

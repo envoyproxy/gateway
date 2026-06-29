@@ -203,6 +203,6 @@ func (c *cors) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) erro
 	return nil
 }
 
-func (*cors) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+func (*cors) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

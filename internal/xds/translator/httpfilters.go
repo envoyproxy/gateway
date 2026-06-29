@@ -58,8 +58,10 @@ type httpFilter interface {
 	// patchRoute patches the provide Route with a filter's Route level configuration.
 	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error
 
-	// patchRoute patches the provider RouteConfiguration.
-	patchRouteConfiguration(rc *routev3.RouteConfiguration, httpListener *ir.HTTPListener) error
+	// patchVirtualHost patches the provided VirtualHost with a filter's VirtualHost level configuration.
+	// Note: this method may be called multiple times for the same VirtualHost when multiple IR listeners
+	// share the same RouteConfiguration (cleartext listeners on the same port).
+	patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error
 
 	// patchResources adds all the other needed resources referenced by this
 	// filter to the resource version table.
@@ -347,14 +349,13 @@ func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, h
 	return nil
 }
 
-// patchRouteConfiguration
-func patchRouteConfiguration(rc *routev3.RouteConfiguration, httpListener *ir.HTTPListener) error {
+// patchVirtualHost calls each filter's patchVirtualHost to apply VirtualHost-level configuration.
+func patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error {
 	for _, filter := range httpFilters {
-		if err := filter.patchRouteConfiguration(rc, httpListener); err != nil {
+		if err := filter.patchVirtualHost(vh, httpListener); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 

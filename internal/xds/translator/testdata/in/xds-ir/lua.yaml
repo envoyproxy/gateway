@@ -143,3 +143,135 @@ http:
       distinct: false
       name: ""
       prefix: /foo
+# Listener Lua with an ExtProc-only route override (EnvoyExtensions non-nil, Luas empty).
+# The ExtProc route must disable the inherited listener Lua even though it has no route-level Lua.
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  name: envoy-gateway/gateway-1/http-4
+  envoyExtensions:
+    luas:
+    - code: function envoy_on_request(request_handle)
+        request_handle:logInfo('Goodbye from gateway.')
+        end
+      name: envoyextensionpolicy/default/policy-for-gateway/lua/0
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10083
+  routes:
+  # This route has an ExtProc-only EnvoyExtensionPolicy (Luas is empty).
+  # Inherited listener Lua must be disabled so the more-specific policy fully governs this route.
+  - destination:
+      name: httproute/default/httproute-4/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-4/rule/0/backend/0
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-4/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    envoyExtensions:
+      extProcs:
+      - name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
+        authority: grpc-backend.default:8000
+        destination:
+          name: envoyextensionpolicy/default/policy-for-http-route/0/grpc-backend
+          settings:
+          - protocol: GRPC
+            weight: 1
+            name: envoyextensionpolicy/default/policy-for-http-route/0/grpc-backend/backend/0
+  # This route has no EnvoyExtensionPolicy — it inherits the listener Lua normally.
+  - destination:
+      name: httproute/default/httproute-5/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-5/rule/0/backend/0
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-5/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /bar
+# Two cleartext listeners sharing the same port — shared RouteConfiguration.
+# Each listener's Lua script must be scoped to its own virtual hosts only.
+# Listener A
+- address: 0.0.0.0
+  hostnames:
+  - 'app-a.example.com'
+  name: envoy-gateway/gateway-1/http-5
+  envoyExtensions:
+    luas:
+    - code: function envoy_on_request(request_handle)
+        request_handle:logInfo('tenant-A script.')
+        end
+      name: envoyextensionpolicy/default/policy-for-gateway-a/lua/0
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10084
+  routes:
+  - destination:
+      name: httproute/default/httproute-6/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-6/rule/0/backend/0
+    hostname: app-a.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-6/rule/0/match/0/app-a_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /
+# Listener B — same port 10084, different hostname
+- address: 0.0.0.0
+  hostnames:
+  - 'app-b.example.com'
+  name: envoy-gateway/gateway-1/http-6
+  envoyExtensions:
+    luas:
+    - code: function envoy_on_request(request_handle)
+        request_handle:logInfo('tenant-B script.')
+        end
+      name: envoyextensionpolicy/default/policy-for-gateway-b/lua/0
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10084
+  routes:
+  - destination:
+      name: httproute/default/httproute-7/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 8.8.8.8
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-7/rule/0/backend/0
+    hostname: app-b.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-7/rule/0/match/0/app-b_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /

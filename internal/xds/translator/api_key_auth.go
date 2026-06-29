@@ -177,6 +177,6 @@ func buildAPIKeyAuthFilterPerRouteConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv
 	}
 }
 
-func (*apiKeyAuth) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+func (*apiKeyAuth) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

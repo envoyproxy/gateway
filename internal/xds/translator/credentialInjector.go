@@ -161,6 +161,6 @@ func (*credentialInjector) patchRoute(route *routev3.Route, irRoute *ir.HTTPRout
 	return nil
 }
 
-func (*credentialInjector) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+func (*credentialInjector) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }
