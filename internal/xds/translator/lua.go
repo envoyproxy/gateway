@@ -166,13 +166,17 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.EnvoyExtensions == nil || len(irRoute.EnvoyExtensions.Luas) == 0 {
+	if irRoute.EnvoyExtensions == nil {
 		return nil
 	}
 
+	// Count the route level extensions, if it > 0, that means a route level policy is applied.
+	extensionsCount := len(irRoute.EnvoyExtensions.Luas) + len(irRoute.EnvoyExtensions.Wasms) +
+		len(irRoute.EnvoyExtensions.DynamicModules) + len(irRoute.EnvoyExtensions.ExtProcs)
+
 	// Route has its own Lua entries — disable the inherited listener-level Lua and
 	// install the route's scripts instead.
-	if irListener != nil && irListener.EnvoyExtensions != nil {
+	if irListener != nil && irListener.EnvoyExtensions != nil && extensionsCount > 0 {
 		for i := range irListener.EnvoyExtensions.Luas {
 			luaPerRoute := &luafilterv3.LuaPerRoute{
 				Override: &luafilterv3.LuaPerRoute_Disabled{
