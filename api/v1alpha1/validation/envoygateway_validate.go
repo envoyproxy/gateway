@@ -267,6 +267,10 @@ func ValidateRedisURL(redisURL string) error {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}
 	}
+
+	if rateLimit.URL != nil {
+		return fmt.Errorf("direct ratelimit url is not supported for Kubernetes provider")
+	}
 	return nil
 }
 
