@@ -7,6 +7,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Bumped the Envoy Proxy image to v1.38.3, which includes several CVE fixes. Read https://www.envoyproxy.io/docs/envoy/v1.38.3/version_history/v1.38/v1.38.3 for additional details.
 
 # New features or capabilities added in this release.
 new features: |
@@ -25,6 +26,7 @@ bug fixes: |
   Fixed EnvoyGateway config hot-reload to apply defaults before validation, so validators always run against a fully-defaulted struct on both the startup and reload paths.
   Fixed HTTPRoute per-retry timeout (derived from `rule.timeouts.backendRequest`) not being applied when no retry backoff was configured.
   Fixed shared global rate limit rules with a `cost` field not working as expected.
+  Fixed a panic when the EnvoyGateway Kubernetes provider sets a `deploy` block without specifying a `type`.
 
 # Enhancements that improve performance.
 performance improvements: |
