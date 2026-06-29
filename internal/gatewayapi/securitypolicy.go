@@ -650,11 +650,11 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 			return errors.New("the OIDC.PassThroughAuthHeader setting must be used in conjunction with a JWT provider that is configured to read from a header")
 		}
 
-		// The ID token must not be forwarded on a header that a JWT provider also
-		// extracts from. The OAuth2 filter runs before the JWT filter and strips the
-		// forward_id_token header from inbound requests (anti-spoofing), even on
-		// pass-through bypasses, so a non-browser client presenting its token on that
-		// header would have it removed before the JWT filter could validate it.
+		// Envoy rejects (NACKs) an OAuth2 config whose pass_through_matcher keys on the
+		// forward_id_token header. EG builds the pass_through_matcher from
+		// the JWT providers' extractFrom headers (defaulting to "Authorization"), so
+		// reject the equivalent collision here to surface a clear policy error instead
+		// of a listener NACK.
 		if oidc.ForwardIDToken != nil {
 			fwdHeader := oidc.ForwardIDToken.Header
 			for _, provider := range jwt.Providers {
