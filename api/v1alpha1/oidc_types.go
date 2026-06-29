@@ -105,6 +105,13 @@ type OIDC struct {
 	// If the configured header is "Authorization", EG forwards the ID token using
 	// the "Bearer " prefix. For any other header, EG forwards the raw token value.
 	// If not specified, the ID token will not be forwarded.
+	//
+	// Note: Envoy sanitizes (strips) the configured header from incoming requests
+	// before setting the ID token, to prevent clients from spoofing it. When
+	// passThroughAuthHeader is enabled, this header must not be the same as the
+	// header a JWT provider reads from (the "Authorization" header by default),
+	// otherwise a passed-through token would be stripped before the JWT filter
+	// can validate it.
 	// +optional
 	ForwardIDToken *OIDCTokenForwarding `json:"forwardIDToken,omitempty"`
 
