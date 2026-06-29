@@ -123,7 +123,7 @@ lint.dependabot: ## Check if dependabot configuration is valid
 
 .PHONY: lint.release-notes-filenames
 lint: lint.release-notes-filenames
-lint.release-notes-filenames: ## Check if release notes filenames follow naming conventions
+lint.release-notes-filenames: ## Check release notes filenames and current/ fragment layout follow conventions
 	@$(LOG_TARGET)
 	@tools/hack/check-release-notes-filenames.sh
 

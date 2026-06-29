@@ -292,6 +292,7 @@ xdsIR:
           luas:
           - Code: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
               end
+            FilterContext: null
             Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
         hostname: www.example.com
         isHTTP2: false
@@ -327,6 +328,7 @@ xdsIR:
           luas:
           - Code: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
               end
+            FilterContext: null
             Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
         hostname: www.example.com
         isHTTP2: false
