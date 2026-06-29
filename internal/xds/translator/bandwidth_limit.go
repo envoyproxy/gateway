@@ -182,3 +182,7 @@ func buildBandwidthLimitResponseProto(cfg *ir.BandwidthLimitConfig) *bwlimitv3.B
 	}
 	return proto
 }
+
+func (*bandwidthLimit) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}

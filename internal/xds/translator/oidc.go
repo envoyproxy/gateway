@@ -587,3 +587,7 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterOAuth2)] = oauth2Any
 	return nil
 }
+
+func (*oidc) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}
