@@ -401,7 +401,7 @@ xdsIR:
             defaultTokenTTL: 1h0m0s
             disableTokenEncryption: true
             forwardAccessToken: true
-            forwardIDToken: X-Id-Token
+            forwardIDTokenHeader: X-Id-Token
             hmacSecret: '[redacted]'
             logoutPath: /foo/logout
             name: securitypolicy/default/policy-for-http-route

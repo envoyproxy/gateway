@@ -3242,8 +3242,8 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.ForwardIDToken != nil {
-		in, out := &in.ForwardIDToken, &out.ForwardIDToken
+	if in.ForwardIDTokenHeader != nil {
+		in, out := &in.ForwardIDTokenHeader, &out.ForwardIDTokenHeader
 		*out = new(string)
 		**out = **in
 	}

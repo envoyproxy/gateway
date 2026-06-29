@@ -1586,7 +1586,7 @@ func (t *Translator) buildOIDC(
 		redirectPath           = defaultRedirectPath
 		logoutPath             = defaultLogoutPath
 		forwardAccessToken     = defaultForwardAccessToken
-		forwardIDToken         *string
+		forwardIDTokenHeader   *string
 		refreshToken           = defaultRefreshToken
 		passThroughAuthHeader  = defaultPassThroughAuthHeader
 		disableTokenEncryption = false
@@ -1657,7 +1657,7 @@ func (t *Translator) buildOIDC(
 		forwardAccessToken = *oidc.ForwardAccessToken
 	}
 	if oidc.ForwardIDToken != nil {
-		forwardIDToken = &oidc.ForwardIDToken.Header
+		forwardIDTokenHeader = &oidc.ForwardIDToken.Header
 	}
 	if oidc.RefreshToken != nil {
 		refreshToken = *oidc.RefreshToken
@@ -1702,7 +1702,7 @@ func (t *Translator) buildOIDC(
 		RedirectPath:           redirectPath,
 		LogoutPath:             logoutPath,
 		ForwardAccessToken:     forwardAccessToken,
-		ForwardIDToken:         forwardIDToken,
+		ForwardIDTokenHeader:   forwardIDTokenHeader,
 		RefreshToken:           refreshToken,
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
