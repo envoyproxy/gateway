@@ -145,3 +145,7 @@ func buildRequestBufferPerRouteProto(spec *ir.RequestBuffer) (*anypb.Any, error)
 func routeContainsRequestBuffer(route *ir.HTTPRoute) bool {
 	return route.Traffic != nil && route.Traffic.RequestBuffer != nil
 }
+
+func (*requestBuffer) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}

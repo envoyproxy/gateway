@@ -855,3 +855,7 @@ func wrapPredicateWithNot(predicate *matcherv3.Matcher_MatcherList_Predicate, in
 		},
 	}
 }
+
+func (*rbac) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}

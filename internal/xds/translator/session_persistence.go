@@ -232,3 +232,7 @@ func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRo
 func (s *sessionPersistence) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
 	return nil
 }
+
+func (*sessionPersistence) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}

@@ -464,6 +464,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 		}
 
+		if err = patchRouteConfiguration(xdsRouteCfg, httpListener); err != nil {
+			errs = errors.Join(errs, err)
+		}
+
 		// Generate xDS virtual hosts and routes for the given HTTPListener,
 		// and add them to the xDS route config.
 		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings); err != nil {

@@ -265,3 +265,7 @@ func translateExtProcBodyProcessingMode(mode *ir.ExtProcBodyProcessingMode) extp
 	}
 	return extprocv3.ProcessingMode_NONE
 }
+
+func (*extProc) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}

@@ -298,7 +298,7 @@ xdsIR:
             weight: 1
         envoyExtensions:
           luas:
-          - Code: |
+          - code: |
               local json = require("json")
               function envoy_on_response(response_handle)
                   local content_type = response_handle:headers():get("content-type")
@@ -317,8 +317,7 @@ xdsIR:
                   end
                   return envoy.lua.ResponseStatus.Continue
               end
-            FilterContext: null
-            Name: envoyextensionpolicy/default/policy-for-http-route/lua/0
+            name: envoyextensionpolicy/default/policy-for-http-route/lua/0
         hostname: www.example.com
         isHTTP2: false
         metadata:

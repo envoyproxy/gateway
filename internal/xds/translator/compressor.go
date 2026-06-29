@@ -195,3 +195,7 @@ func compressorPerRouteConfig() *compressorv3.CompressorPerRoute {
 		},
 	}
 }
+
+func (*compressor) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}
