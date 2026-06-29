@@ -7,6 +7,7 @@ metadata:
 spec:
   parentRefs:
     - name: same-namespace
+    - name: all-namespaces
   hostnames: ["www.example.com"]
   rules:
     - matches:
@@ -43,6 +44,7 @@ metadata:
 spec:
   parentRefs:
     - name: same-namespace
+    - name: all-namespaces
   hostnames: ["www.example.com"]
   rules:
     - matches:
@@ -98,6 +100,23 @@ data:
         end
       end
     end
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: lua-for-gateway
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_response(response_handle)
+          response_handle:headers():add("X-Custom-Response-Header", "gateway")
+        end
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyExtensionPolicy

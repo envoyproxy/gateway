@@ -176,3 +176,7 @@ func buildAPIKeyAuthFilterPerRouteConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv
 		Forwarding:  apiKeyAuthProto.Forwarding,
 	}
 }
+
+func (*apiKeyAuth) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}

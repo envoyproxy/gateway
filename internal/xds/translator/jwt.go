@@ -492,3 +492,7 @@ func buildJwtFromHeaders(headers []egv1a1.JWTHeaderExtractor) []*jwtauthnv3.JwtH
 
 	return jwtHeaders
 }
+
+func (*jwt) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}

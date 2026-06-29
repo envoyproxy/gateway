@@ -197,3 +197,7 @@ func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	}
 	return nil
 }
+
+func (*wasm) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}
