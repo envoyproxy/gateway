@@ -110,6 +110,7 @@ func (e *EnvoyGateway) GatewayNamespaceMode() bool {
 	return e.Provider != nil &&
 		e.Provider.Kubernetes != nil &&
 		e.Provider.Kubernetes.Deploy != nil &&
+		e.Provider.Kubernetes.Deploy.Type != nil &&
 		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
 }
 
