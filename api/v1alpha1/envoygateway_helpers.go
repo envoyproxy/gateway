@@ -114,11 +114,15 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 
 // WatchesNamespaces returns true when Envoy Gateway is configured to watch specific Kubernetes namespaces.
 func (e *EnvoyGateway) WatchesNamespaces() bool {
-	return e.Provider != nil &&
-		e.Provider.Kubernetes != nil &&
-		e.Provider.Kubernetes.Watch != nil &&
-		e.Provider.Kubernetes.Watch.Type == KubernetesWatchModeTypeNamespaces &&
-		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
+	if e.Provider == nil || !e.Provider.IsRunningOnKubernetes() {
+		return false
+	}
+
+	cfg := e.Provider.GetKubernetesConfiguration()
+
+	return cfg.Watch != nil &&
+		cfg.Watch.Type == KubernetesWatchModeTypeNamespaces &&
+		len(cfg.Watch.Namespaces) > 0
 }
 
 // GatewayNamespaceMode returns true if controller uses gateway namespace mode for infra deployments.
