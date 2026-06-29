@@ -88,7 +88,7 @@ var OIDCTest = suite.ConformanceTest{
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
 			for _, tc := range urlBackedCases {
 				t.Run(tc.routeName, func(t *testing.T) {
-					testOIDC(t, suite, tc, "testdata/oidc-securitypolicy.yaml")
+					testOIDC(t, suite, &tc, "testdata/oidc-securitypolicy.yaml")
 				})
 			}
 		})
@@ -164,7 +164,7 @@ var OIDCTest = suite.ConformanceTest{
 		// Apply the security policy that configures OIDC authentication with BackendCluster.
 		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy-backendcluster.yaml", true)
 		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
-			testOIDC(t, suite, oidcRouteTestCase{
+			testOIDC(t, suite, &oidcRouteTestCase{
 				routeName:          "http-with-oidc",
 				securityPolicyName: "oidc-test",
 				testURL:            "http://www.example.com/myapp",
@@ -174,7 +174,7 @@ var OIDCTest = suite.ConformanceTest{
 	},
 }
 
-func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc oidcRouteTestCase, securityPolicyManifest string) {
+func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc *oidcRouteTestCase, securityPolicyManifest string) {
 	const ns = "gateway-conformance-infra"
 
 	routeNN := types.NamespacedName{Name: tc.routeName, Namespace: ns}

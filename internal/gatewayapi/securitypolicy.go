@@ -649,6 +649,30 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		if !hasValidJwtExtractor {
 			return errors.New("the OIDC.PassThroughAuthHeader setting must be used in conjunction with a JWT provider that is configured to read from a header")
 		}
+
+		// The ID token must not be forwarded on a header that a JWT provider also
+		// extracts from. The OAuth2 filter runs before the JWT filter and strips the
+		// forward_id_token header from inbound requests (anti-spoofing), even on
+		// pass-through bypasses, so a non-browser client presenting its token on that
+		// header would have it removed before the JWT filter could validate it.
+		if oidc.ForwardIDToken != nil {
+			fwdHeader := oidc.ForwardIDToken.Header
+			for _, provider := range jwt.Providers {
+				// When ExtractFrom is not specified, JWT (and the pass-through matcher)
+				// falls back to the "Authorization" header.
+				if provider.ExtractFrom == nil {
+					if strings.EqualFold(fwdHeader, "Authorization") {
+						return fmt.Errorf("the OIDC.ForwardIDToken header %q cannot be the Authorization header when passThroughAuthHeader is enabled and a JWT provider reads from it", fwdHeader)
+					}
+					continue
+				}
+				for _, h := range provider.ExtractFrom.Headers {
+					if strings.EqualFold(fwdHeader, h.Name) {
+						return fmt.Errorf("the OIDC.ForwardIDToken header %q cannot be the same as a JWT provider extractFrom header when passThroughAuthHeader is enabled", fwdHeader)
+					}
+				}
+			}
+		}
 	}
 
 	basicAuth := p.Spec.BasicAuth
