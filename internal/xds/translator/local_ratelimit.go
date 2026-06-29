@@ -483,3 +483,7 @@ func buildQueryParamMatchLocalRateLimitActions(
 		*descriptorEntries = append(*descriptorEntries, entry)
 	}
 }
+
+func (*localRateLimit) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}

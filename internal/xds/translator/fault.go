@@ -174,3 +174,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTP
 
 	return nil
 }
+
+func (*fault) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}

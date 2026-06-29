@@ -210,3 +210,7 @@ func (*dynamicModule) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ 
 	}
 	return nil
 }
+
+func (*dynamicModule) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+	return nil
+}
