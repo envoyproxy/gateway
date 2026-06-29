@@ -1,0 +1,1 @@
+Added `backendTrafficPolicy.defaultMergeType` to `EnvoyProxy`, so a route-level `BackendTrafficPolicy` that doesn't set `mergeType` merges into its parent policy instead of replacing it. An optional `excludeLabel` lets individual policies opt out.
