@@ -13,6 +13,29 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
+# two listeners on the same port, each with a distinct Lua policy.
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-a
+      protocol: HTTP
+      port: 80
+      hostname: "app-a.example.com"
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-b
+      protocol: HTTP
+      port: 80
+      hostname: "app-b.example.com"
+      allowedRoutes:
+        namespaces:
+          from: All
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -52,6 +75,46 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-a
+  spec:
+    hostnames:
+    - app-a.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http-a
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-b
+  spec:
+    hostnames:
+    - app-b.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http-b
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
 envoyextensionpolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -88,3 +151,37 @@ envoyextensionpolicies:
       filterContext:
         token_header: x-api-key
         mode: strict
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-a
+    generation: 30
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      sectionName: http-a
+    lua:
+    - type: Inline
+      inline: "function envoy_on_request(request_handle)
+      request_handle:logInfo('tenant-A script.')
+      end"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-b
+    generation: 30
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      sectionName: http-b
+    lua:
+    - type: Inline
+      inline: "function envoy_on_request(request_handle)
+      request_handle:logInfo('tenant-B script.')
+      end"

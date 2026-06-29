@@ -464,10 +464,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 		}
 
-		if err = patchRouteConfiguration(xdsRouteCfg, httpListener); err != nil {
-			errs = errors.Join(errs, err)
-		}
-
 		// Generate xDS virtual hosts and routes for the given HTTPListener,
 		// and add them to the xDS route config.
 		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings); err != nil {
@@ -663,6 +659,10 @@ func (t *Translator) addRouteToRouteConfig(
 	}
 
 	for _, vHost := range vHostList {
+		if err = patchVirtualHost(vHost, httpListener); err != nil {
+			errs = errors.Join(errs, err)
+		}
+
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {

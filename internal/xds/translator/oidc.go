@@ -588,6 +588,6 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	return nil
 }
 
-func (*oidc) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+func (*oidc) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

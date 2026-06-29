@@ -233,6 +233,6 @@ func (s *sessionPersistence) patchResources(_ *types.ResourceVersionTable, _ []*
 	return nil
 }
 
-func (*sessionPersistence) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+func (*sessionPersistence) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

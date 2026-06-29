@@ -300,6 +300,6 @@ func (*geoip) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error
 	return nil
 }
 
-func (*geoip) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+func (*geoip) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }
