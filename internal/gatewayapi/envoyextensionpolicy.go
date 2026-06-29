@@ -946,10 +946,33 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 		listenerNames.Insert(irListenerName(listener))
 	}
 
-	routesWithDirectResponse := sets.New[string]()
+	failed := luaError != nil
+	if wasmError != nil {
+		failed = failed || !wasmFailOpen
+	}
+	if extProcError != nil {
+		failed = failed || !extProcFailOpen
+	}
+	if dynamicModuleError != nil {
+		failed = true
+	}
+
 	for _, http := range x.HTTP {
 		if !listenerNames.Has(http.Name) {
 			continue
+		}
+
+		// if already set - there's a specific level policy, so skip
+		if http.EnvoyExtensions != nil {
+			continue
+		}
+
+		// TODO: move other extensions to listener level.
+		totalExtensions := len(luas)
+		if totalExtensions > 0 {
+			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+				Luas: luas,
+			}
 		}
 
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway
@@ -961,42 +984,18 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 				continue
 			}
 
-			failRoute := false
-			// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
-			// TODO: we may also add fail open option for Lua extension to align with other extensions
-			if luaError != nil {
-				failRoute = true
-			}
-			if wasmError != nil {
-				failRoute = failRoute || !wasmFailOpen
-			}
-			if extProcError != nil {
-				failRoute = failRoute || !extProcFailOpen
-			}
-			if dynamicModuleError != nil {
-				failRoute = true
-			}
-			if failRoute {
+			if failed {
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
-				routesWithDirectResponse.Insert(r.Name)
 			} else {
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 					ExtProcs:       extProcs,
 					Wasms:          wasms,
-					Luas:           luas,
 					DynamicModules: dynamicModules,
 				}
 			}
 		}
-	}
-	if len(routesWithDirectResponse) > 0 {
-		t.Logger.Info("setting 500 direct response in routes due to errors in EnvoyExtensionPolicy",
-			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
-			"routes", sets.List(routesWithDirectResponse),
-			"error", errs,
-		)
 	}
 
 	return errs

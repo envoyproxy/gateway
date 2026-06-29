@@ -58,6 +58,9 @@ type httpFilter interface {
 	// patchRoute patches the provide Route with a filter's Route level configuration.
 	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error
 
+	// patchRoute patches the provider RouteConfiguration.
+	patchRouteConfiguration(rc *routev3.RouteConfiguration, httpListener *ir.HTTPListener) error
+
 	// patchResources adds all the other needed resources referenced by this
 	// filter to the resource version table.
 	// for example:
@@ -124,7 +127,12 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
 		order = 11
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 12 + mustGetFilterIndex(filter.Name)
+		if strings.Contains(filter.Name, "/listener/") {
+			// Listener-level Lua runs before route-level Lua (12+idx vs 62+idx).
+			order = 12 + mustGetFilterIndex(filter.Name)
+		} else {
+			order = 62 + mustGetFilterIndex(filter.Name)
+		}
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
@@ -334,6 +342,17 @@ func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, h
 	// TODO: merge this into filter.PatchRoute
 	if err := patchRouteWithRateLimit(httpListener, route, irRoute); err != nil {
 		return nil
+	}
+
+	return nil
+}
+
+// patchRouteConfiguration
+func patchRouteConfiguration(rc *routev3.RouteConfiguration, httpListener *ir.HTTPListener) error {
+	for _, filter := range httpFilters {
+		if err := filter.patchRouteConfiguration(rc, httpListener); err != nil {
+			return err
+		}
 	}
 
 	return nil
