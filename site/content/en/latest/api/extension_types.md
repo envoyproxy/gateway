@@ -559,6 +559,21 @@ between the Envoy Proxy listener and the backend service.
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#policystatus)_ |  true  |  | status defines the current status of BackendTrafficPolicy. |
 
 
+#### BackendTrafficPolicyDefaults
+
+
+
+BackendTrafficPolicyDefaults defines defaults applied to BackendTrafficPolicy resources.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `defaultMergeType` | _[MergeType](#mergetype)_ |  false  |  | DefaultMergeType is the mergeType used for a BackendTrafficPolicy that does not set one,<br />so a route-level policy merges into its parent instead of replacing it. |
+| `excludeLabel` | _string_ |  false  |  | ExcludeLabel, when present on a BackendTrafficPolicy, opts that policy out of DefaultMergeType. |
+
+
 #### BackendTrafficPolicySpec
 
 
@@ -2241,6 +2256,7 @@ _Appears in:_
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
+| `backendTrafficPolicy` | _[BackendTrafficPolicyDefaults](#backendtrafficpolicydefaults)_ |  false  |  | BackendTrafficPolicy defines defaults applied to BackendTrafficPolicy resources<br />attached to Gateways that use this EnvoyProxy. |
 
 
 #### EnvoyProxyStatus
@@ -4162,6 +4178,7 @@ _Underlying type:_ _string_
 MergeType defines the type of merge operation
 
 _Appears in:_
+- [BackendTrafficPolicyDefaults](#backendtrafficpolicydefaults)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [EnvoyProxySpec](#envoyproxyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)

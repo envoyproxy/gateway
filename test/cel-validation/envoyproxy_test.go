@@ -2485,6 +2485,40 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
+		{
+			desc: "backendTrafficPolicy defaultMergeType StrategicMerge is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{
+						DefaultMergeType: new(egv1a1.StrategicMerge),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "backendTrafficPolicy defaultMergeType JSONMerge with excludeLabel is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{
+						DefaultMergeType: new(egv1a1.JSONMerge),
+						ExcludeLabel:     new("gateway.envoyproxy.io/skip-merge-default"),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "backendTrafficPolicy defaultMergeType Replace is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{
+						DefaultMergeType: new(egv1a1.MergeType("Replace")),
+					},
+				}
+			},
+			wantErrors: []string{"Unsupported value: \"Replace\": supported values: \"StrategicMerge\", \"JSONMerge\""},
+		},
 	}
 
 	for _, tc := range cases {

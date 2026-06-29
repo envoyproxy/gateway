@@ -147,7 +147,7 @@ spec:
 
 In this example, `alpha-policy` would take precedence due to its earlier creation time, so the HTTPRoute would use `maxConnections: 30`.
 
-When the `mergeType` field is unset, no merging occurs and only the most specific configuration takes effect. However, policies can be configured to merge with parent policies using the `mergeType` field (see [Policy Merging](#policy-merging) section below).
+When the `mergeType` field is unset, no merging occurs and only the most specific configuration takes effect, unless a default is configured on the EnvoyProxy (see [Defaulting mergeType via EnvoyProxy](#defaulting-mergetype-via-envoyproxy)). Policies can also opt into merging explicitly using the `mergeType` field (see [Policy Merging](#policy-merging) section below).
 
 ## Policy Merging
 
@@ -214,10 +214,37 @@ spec:
 
 In this example, the route-level policy merges with the gateway-level policy, resulting in both rate limits being enforced: the global 100 requests/second abuse limit and the route-specific 5 requests/minute limit.
 
+### Defaulting mergeType via EnvoyProxy
+
+Setting `mergeType` on every route-level policy can be repetitive when an organization wants merging to be the norm. To make merging the default, configure `defaultMergeType` on the [EnvoyProxy](../../api/extension_types#envoyproxy) attached to the GatewayClass or Gateway:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  backendTrafficPolicy:
+    defaultMergeType: StrategicMerge
+    # Optional: a policy carrying this label key opts out of the default and replaces
+    # its parent instead of merging. The label's value is ignored.
+    excludeLabel: gateway.envoyproxy.io/skip-merge-default
+```
+
+With this configuration, a route-level BackendTrafficPolicy that does **not** set `mergeType` merges into its parent (gateway-level or listener-level) policy as if it had set `mergeType: StrategicMerge`. The default follows the same precedence as other EnvoyProxy settings, so it can be set once at the GatewayClass level or overridden per Gateway.
+
+The defaulting behavior follows these rules:
+
+- A policy's own `mergeType` always wins; the default only applies when `mergeType` is unset.
+- `defaultMergeType` accepts only `StrategicMerge` or `JSONMerge`. `Replace` is not allowed because defaulting to a replace would have no effect.
+- A policy that carries the configured `excludeLabel` key opts out of the default and replaces its parent, even when `mergeType` is unset.
+- Policies in the Envoy Gateway control-plane namespace are not defaulted.
+
 ### Key Constraints
 
 - The `mergeType` field can only be set on policies targeting child resources (like HTTPRoute), not parent resources (like Gateway)
-- When `mergeType` is unset, no merging occurs - only the most specific policy takes effect
+- When `mergeType` is unset, no merging occurs - only the most specific policy takes effect - unless a [default is configured on the EnvoyProxy](#defaulting-mergetype-via-envoyproxy)
 - The merged configuration combines both policies, enabling layered protection strategies
 
 ## Related Resources

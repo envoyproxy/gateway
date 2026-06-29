@@ -216,6 +216,24 @@ type EnvoyProxySpec struct {
 	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
+
+	// BackendTrafficPolicy defines defaults applied to BackendTrafficPolicy resources
+	// attached to Gateways that use this EnvoyProxy.
+	// +optional
+	BackendTrafficPolicy *BackendTrafficPolicyDefaults `json:"backendTrafficPolicy,omitempty"`
+}
+
+// BackendTrafficPolicyDefaults defines defaults applied to BackendTrafficPolicy resources.
+type BackendTrafficPolicyDefaults struct {
+	// DefaultMergeType is the mergeType used for a BackendTrafficPolicy that does not set one,
+	// so a route-level policy merges into its parent instead of replacing it.
+	// +kubebuilder:validation:Enum=StrategicMerge;JSONMerge
+	// +optional
+	DefaultMergeType *MergeType `json:"defaultMergeType,omitempty"`
+
+	// ExcludeLabel, when present on a BackendTrafficPolicy, opts that policy out of DefaultMergeType.
+	// +optional
+	ExcludeLabel *string `json:"excludeLabel,omitempty"`
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
