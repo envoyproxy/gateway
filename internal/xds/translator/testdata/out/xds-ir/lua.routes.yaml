@@ -115,6 +115,9 @@
         envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-http-route/extproc/0:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
+        envoy.filters.http.lua/listener/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          disabled: true
     - match:
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-5/rule/0/match/0/www_example_com
