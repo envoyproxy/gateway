@@ -137,7 +137,7 @@ helm uninstall eg -n envoy-gateway-system
 | global.images.envoyProxy.image | string | `""` |  |
 | global.images.envoyProxy.pullPolicy | string | `""` |  |
 | global.images.envoyProxy.pullSecrets | list | `[]` |  |
-| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:ff287602"` |  |
+| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:1e50889b"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | hpa.behavior | object | `{}` |  |
