@@ -484,6 +484,6 @@ func buildQueryParamMatchLocalRateLimitActions(
 	}
 }
 
-func (*localRateLimit) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+func (*localRateLimit) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

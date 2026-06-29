@@ -156,10 +156,9 @@ func (*lua) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) err
 }
 
 // patchRoute patches the provided route with LuaPerRoute so the Lua filter runs with the route's script.
-// Any route that carries an EnvoyExtensionPolicy override (EnvoyExtensions != nil) disables inherited
-// listener-level Lua, even when the overriding policy contains no Lua entries (e.g. ExtProc/Wasm only).
-// Without this, the listener Lua installed via RouteConfiguration.TypedPerFilterConfig would remain
-// active on the route despite the gateway translation treating EnvoyExtensions != nil as a full override.
+// Routes with no Lua entries fall back to the listener-level Lua inherited from the virtual host.
+// Only routes with their own Lua entries disable the inherited listener-level Lua and install
+// their own scripts in its place.
 func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
@@ -167,12 +166,12 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.EnvoyExtensions == nil {
+	if irRoute.EnvoyExtensions == nil || len(irRoute.EnvoyExtensions.Luas) == 0 {
 		return nil
 	}
 
-	// Disable inherited listener-level Lua for any route that carries an overriding
-	// EnvoyExtensionPolicy, even when that policy contains no Lua entries.
+	// Route has its own Lua entries — disable the inherited listener-level Lua and
+	// install the route's scripts instead.
 	if irListener != nil && irListener.EnvoyExtensions != nil {
 		for i := range irListener.EnvoyExtensions.Luas {
 			luaPerRoute := &luafilterv3.LuaPerRoute{
@@ -184,10 +183,6 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 				return err
 			}
 		}
-	}
-
-	if len(irRoute.EnvoyExtensions.Luas) == 0 {
-		return nil
 	}
 
 	for idx, ep := range irRoute.EnvoyExtensions.Luas {
@@ -223,26 +218,26 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 	return nil
 }
 
-// patchRouteConfiguration patches the RouteConfiguration for the listener so that listener-level
-// Lua source code and filter context are delivered via RDS rather than baked into the HCM filter,
-// preventing Lua script changes from causing a listener drain.
-func (l *lua) patchRouteConfiguration(rc *routev3.RouteConfiguration, httpListener *ir.HTTPListener) error {
+// patchVirtualHost delivers listener-level Lua source at VirtualHost scope so that a listener's
+// Lua policy does not bleed into virtual hosts belonging to a different listener that shares the
+// same RouteConfiguration (cleartext listeners on the same port). Delivery via VirtualHost
+// TypedPerFilterConfig still goes through RDS, so Lua script changes do not trigger listener drains.
+func (*lua) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error {
 	if httpListener.EnvoyExtensions == nil {
 		return nil
 	}
 
-	if rc.TypedPerFilterConfig == nil {
-		rc.TypedPerFilterConfig = map[string]*anypb.Any{}
+	if vh.TypedPerFilterConfig == nil {
+		vh.TypedPerFilterConfig = map[string]*anypb.Any{}
 	}
 
 	var errs error
 	for i, ep := range httpListener.EnvoyExtensions.Luas {
 		filterName := luaListenerFilterName(i)
-		if rc.TypedPerFilterConfig[filterName] != nil {
+		if vh.TypedPerFilterConfig[filterName] != nil {
 			continue
 		}
 
-		// Override lua if needed, this won't create lua VM per route.
 		luaPerRoute := &luafilterv3.LuaPerRoute{
 			Override: &luafilterv3.LuaPerRoute_SourceCode{
 				SourceCode: &corev3.DataSource{
@@ -265,7 +260,7 @@ func (l *lua) patchRouteConfiguration(rc *routev3.RouteConfiguration, httpListen
 			continue
 		}
 
-		rc.TypedPerFilterConfig[filterName] = luaPerRouteAny
+		vh.TypedPerFilterConfig[filterName] = luaPerRouteAny
 	}
 
 	return errs

@@ -163,6 +163,6 @@ func buildHeaderMutationRules(addHeaders []ir.AddHeader, removeHeaders []string,
 	return mutationRules
 }
 
-func (*headerMutation) patchRouteConfiguration(_ *routev3.RouteConfiguration, _ *ir.HTTPListener) error {
+func (*headerMutation) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }
