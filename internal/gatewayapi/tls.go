@@ -235,9 +235,6 @@ func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 		certs, err := x509.ParseCertificates(block.Bytes)
 		if err != nil {
 			errs = append(errs, err)
-			if blockIndex == 0 {
-				firstBlockInvalid = true
-			}
 			blockIndex++
 			continue
 		}
