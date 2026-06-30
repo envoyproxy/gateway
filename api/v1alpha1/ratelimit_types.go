@@ -438,7 +438,7 @@ type RateLimitValue struct {
 	//
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=4294967295
-	// +kubebuilder:validation:Format=uint32
+	// +kubebuilder:validation:Format=int64
 	Requests uint32        `json:"requests"`
 	Unit     RateLimitUnit `json:"unit"`
 	// FromMetadata sources the limit value from per-request dynamic metadata.
