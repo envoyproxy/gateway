@@ -242,6 +242,9 @@ envoyExtensionPolicies:
         type: Image
       name: wasm-filter-1
       rootID: my-root-id
+    lua:
+    - inline: function envoy_on_request(request_handle) end
+      type: Inline
   status:
     ancestors:
     - ancestorRef:
