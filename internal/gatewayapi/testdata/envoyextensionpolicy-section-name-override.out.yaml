@@ -526,6 +526,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0
+          fromGatewayPolicy: true
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -596,6 +597,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
+          fromGatewayPolicy: true
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

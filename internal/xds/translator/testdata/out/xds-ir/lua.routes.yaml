@@ -173,4 +173,31 @@
         sourceCode:
           inlineString: function envoy_on_request(request_handle) request_handle:logInfo('tenant-B
             script.') end
+<<<<<<< HEAD
 >>>>>>> 9b269cbe5 (fix: disable inherited Lua for any overridden route)
+=======
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-7
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http-7/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-8/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-8/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-gateway/extproc/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    typedPerFilterConfig:
+      envoy.filters.http.lua/listener/0:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+        sourceCode:
+          inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Gateway
+            Lua.') end
+>>>>>>> 72ee6d6a9 (fix same-policy listener Lua for route extensions)
