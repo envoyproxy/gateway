@@ -10,8 +10,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestEffectiveMergeType(t *testing.T) {
@@ -197,4 +200,43 @@ func TestAnyGatewayMergeDefault(t *testing.T) {
 			assert.Equal(t, tt.want, tr.anyGatewayMergeDefault(policy, tt.parents))
 		})
 	}
+}
+
+// TestApplyTrafficFeatureToRoute_MergeGatewayScoping covers the MergeGateways scoping in
+// applyTrafficFeatureToRoute for the TCP and UDP listener loops: a listener belonging to a
+// different Gateway must be skipped, so a defaulted merged policy does not bleed across Gateways
+// that share one IR. The HTTP path is covered by the merged-gateways golden fixture.
+func TestApplyTrafficFeatureToRoute_MergeGatewayScoping(t *testing.T) {
+	tr := &Translator{}
+	gwNN := &types.NamespacedName{Namespace: "envoy-gateway", Name: "gw"}
+	policy := &egv1a1.BackendTrafficPolicy{}
+	target := policyTargetReferenceWithSectionName{}
+
+	t.Run("tcp listener of another gateway is skipped", func(t *testing.T) {
+		route := &TCPRouteContext{TCPRoute: &gwapiv1a2.TCPRoute{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "tcproute-1"},
+		}}
+		sibling := &ir.TCPRoute{Destination: &ir.RouteDestination{Name: irRoutePrefix(route) + "rule/0"}}
+		x := &ir.Xds{TCP: []*ir.TCPListener{{
+			CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/other-gw/tcp"},
+			Routes:              []*ir.TCPRoute{sibling},
+		}}}
+		tr.applyTrafficFeatureToRoute(route, &ir.TrafficFeatures{CircuitBreaker: &ir.CircuitBreaker{}},
+			nil, policy, target, x, gwNN, nil)
+		assert.Nil(t, sibling.CircuitBreaker, "route on a sibling Gateway's listener must be skipped")
+	})
+
+	t.Run("udp listener of another gateway is skipped", func(t *testing.T) {
+		route := &UDPRouteContext{UDPRoute: &gwapiv1a2.UDPRoute{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "udproute-1"},
+		}}
+		sibling := &ir.UDPRoute{Destination: &ir.RouteDestination{Name: irRoutePrefix(route) + "rule/0"}}
+		x := &ir.Xds{UDP: []*ir.UDPListener{{
+			CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/other-gw/udp"},
+			Route:               sibling,
+		}}}
+		tr.applyTrafficFeatureToRoute(route, &ir.TrafficFeatures{LoadBalancer: &ir.LoadBalancer{}},
+			nil, policy, target, x, gwNN, nil)
+		assert.Nil(t, sibling.LoadBalancer, "route on a sibling Gateway's listener must be skipped")
+	})
 }
