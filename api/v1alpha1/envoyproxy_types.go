@@ -220,18 +220,19 @@ type EnvoyProxySpec struct {
 	// BackendTrafficPolicy defines defaults applied to BackendTrafficPolicy resources
 	// attached to Gateways that use this EnvoyProxy.
 	// +optional
-	BackendTrafficPolicy *BackendTrafficPolicyDefaults `json:"backendTrafficPolicy,omitempty"`
+	BackendTrafficPolicy *PolicyDefaults `json:"backendTrafficPolicy,omitempty"`
 }
 
-// BackendTrafficPolicyDefaults defines defaults applied to BackendTrafficPolicy resources.
-type BackendTrafficPolicyDefaults struct {
-	// DefaultMergeType is the mergeType used for a BackendTrafficPolicy that does not set one,
+// PolicyDefaults defines default settings shared by Envoy Gateway xPolicies (e.g. BackendTrafficPolicy)
+// attached to Gateways that use this EnvoyProxy.
+type PolicyDefaults struct {
+	// DefaultMergeType is the mergeType used for a policy that does not set one,
 	// so a route-level policy merges into its parent instead of replacing it.
 	// +kubebuilder:validation:Enum=StrategicMerge;JSONMerge
 	// +optional
 	DefaultMergeType *MergeType `json:"defaultMergeType,omitempty"`
 
-	// ExcludeLabel, when present on a BackendTrafficPolicy, opts that policy out of DefaultMergeType.
+	// ExcludeLabel, when present on a policy, opts that policy out of DefaultMergeType.
 	// +optional
 	ExcludeLabel *string `json:"excludeLabel,omitempty"`
 }

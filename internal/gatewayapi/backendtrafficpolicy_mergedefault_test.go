@@ -19,7 +19,7 @@ func TestEffectiveMergeType(t *testing.T) {
 	jsonMerge := egv1a1.JSONMerge
 
 	ep := func(mt *egv1a1.MergeType, label string) *egv1a1.EnvoyProxy {
-		d := &egv1a1.BackendTrafficPolicyDefaults{DefaultMergeType: mt}
+		d := &egv1a1.PolicyDefaults{DefaultMergeType: mt}
 		if label != "" {
 			d.ExcludeLabel = new(label)
 		}
@@ -91,7 +91,7 @@ func TestEffectiveMergeType_AdditionalBranches(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "app", Labels: map[string]string{"other": "x"}},
 			},
 			ep: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
-				BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{
+				BackendTrafficPolicy: &egv1a1.PolicyDefaults{
 					DefaultMergeType: &strategic,
 					ExcludeLabel:     new("skip"),
 				},
@@ -105,12 +105,27 @@ func TestEffectiveMergeType_AdditionalBranches(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "app"},
 			},
 			ep: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
-				BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{
+				BackendTrafficPolicy: &egv1a1.PolicyDefaults{
 					DefaultMergeType: &strategic,
 					ExcludeLabel:     new("skip"),
 				},
 			}},
 			want: &strategic,
+		},
+		{
+			// Defense in depth: a non-merge value (e.g. Replace, which can slip through the
+			// unvalidated EnvoyGateway default spec) is ignored instead of producing a "merged"
+			// status while actually replacing.
+			name: "replace default is ignored",
+			pol: &egv1a1.BackendTrafficPolicy{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "app"},
+			},
+			ep: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				BackendTrafficPolicy: &egv1a1.PolicyDefaults{
+					DefaultMergeType: new(egv1a1.Replace),
+				},
+			}},
+			want: nil,
 		},
 	}
 
@@ -133,7 +148,7 @@ func TestAnyGatewayMergeDefault(t *testing.T) {
 	strategic := egv1a1.StrategicMerge
 
 	epWithDefault := &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
-		BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{DefaultMergeType: &strategic},
+		BackendTrafficPolicy: &egv1a1.PolicyDefaults{DefaultMergeType: &strategic},
 	}}
 	epNoDefault := &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{}}
 
