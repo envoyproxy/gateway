@@ -1,0 +1,51 @@
+{{- if .Values.monitoring.podMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+{{- if .Values.monitoring.podMonitor.annotations }}
+  annotations:
+{{ toYaml .Values.monitoring.podMonitor.annotations | indent 4 }}
+{{- end }}
+{{- if .Values.monitoring.podMonitor.labels }}
+  labels:
+{{ toYaml .Values.monitoring.podMonitor.labels | indent 4 }}
+{{- end }}
+  name: {{ include "eg.fullname" . }}
+  namespace: {{ if .Values.monitoring.podMonitor.namespace }}{{ .Values.monitoring.podMonitor.namespace }}{{ else }}{{ include "eg.namespace" . }}{{ end }}
+spec:
+  podMetricsEndpoints:
+  - port: metrics
+{{- if .Values.monitoring.podMonitor.interval }}
+    interval: {{ .Values.monitoring.podMonitor.interval }}
+{{- end }}
+{{- if .Values.monitoring.podMonitor.telemetryPath }}
+    path: {{ .Values.monitoring.podMonitor.telemetryPath }}
+{{- end }}
+{{- if .Values.monitoring.podMonitor.timeout }}
+    scrapeTimeout: {{ .Values.monitoring.podMonitor.timeout }}
+{{- end }}
+{{- if .Values.monitoring.podMonitor.authorization }}
+    authorization:
+{{ toYaml .Values.monitoring.podMonitor.authorization | indent 6 }}
+{{- end }}
+{{- if .Values.monitoring.podMonitor.metricRelabelings }}
+    metricRelabelings:
+{{ toYaml .Values.monitoring.podMonitor.metricRelabelings | indent 4 }}
+{{- end }}
+{{- if .Values.monitoring.podMonitor.relabelings }}
+    relabelings:
+{{ toYaml .Values.monitoring.podMonitor.relabelings | indent 4 }}
+{{- end }}
+  namespaceSelector:
+    matchNames:
+    - {{ include "eg.namespace" . }}
+  selector:
+    matchLabels:
+{{- include "eg.selectorLabels" . | nindent 6 }}
+{{- if .Values.monitoring.podMonitor.podTargetLabels }}
+  podTargetLabels:
+{{- range .Values.monitoring.podMonitor.podTargetLabels }}
+    - {{ . }}
+{{- end }}
+{{- end }}
+{{- end }}
