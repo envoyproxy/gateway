@@ -85,6 +85,10 @@ http:
                     requests: 10
                     unit: second
                   shared: true
+                  requestCost:
+                    number: 0
+                  responseCost:
+                    format: '%DYNAMIC_METADATA(my.cost.ns:request_cost)%'
         pathMatch:
           exact: "test"
         destination:
@@ -118,3 +122,38 @@ http:
                 - host: "1.2.3.4"
                   port: 50000
               name: "fourth-route-dest/backend/0"
+
+      # fifth-route: mixed shared+non-shared rules with cost — verifies per-domain TypedPerFilterConfig split
+      - name: "fifth-route"
+        hostname: "*"
+        traffic:
+          rateLimit:
+            global:
+              rules:
+                - name: "test-namespace/test-policy-4/rule/0"
+                  headerMatches:
+                    - name: "x-user-id"
+                      exact: "shared-with-cost"
+                  limit:
+                    requests: 5
+                    unit: second
+                  shared: true
+                  requestCost:
+                    number: 3
+                - name: "test-namespace/test-policy-4/rule/1"
+                  headerMatches:
+                    - name: "x-user-id"
+                      exact: "non-shared"
+                  limit:
+                    requests: 5
+                    unit: second
+                  shared: false
+        pathMatch:
+          exact: "fifth"
+        destination:
+          name: "fifth-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "fifth-route-dest/backend/0"
