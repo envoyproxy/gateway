@@ -77,7 +77,7 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 			if hcmContainsFilter(mgr, filterName) {
 				continue
 			}
-			luaFilter, err := buildHCMLuaFilter(filterName)
+			luaFilter, err := buildHCMLuaFilter(filterName, false)
 			if err != nil {
 				errs = errors.Join(errs, err)
 				continue
@@ -87,13 +87,14 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 		}
 	}
 
-	// add place holder filters for route Lua
+	// add place holder filters for route Lua — disabled by default so they only execute
+	// on routes that explicitly enable them via LuaPerRoute in TypedPerFilterConfig.
 	for idx := range maxRouteLuaCount {
 		filterName := luaFilterName(idx)
 		if hcmContainsFilter(mgr, filterName) {
 			continue
 		}
-		filter, err := buildHCMLuaFilter(filterName)
+		filter, err := buildHCMLuaFilter(filterName, true)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -103,7 +104,11 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 	return errs
 }
 
-func buildHCMLuaFilter(filterName string) (*hcmv3.HttpFilter, error) {
+// buildHCMLuaFilter builds a Lua HTTP filter for the HCM filter chain.
+// Pass disabled=true for route-level slots so they only run on routes that supply
+// a LuaPerRoute override; pass disabled=false for listener-level slots that run
+// on every route by default and are disabled per-route where needed.
+func buildHCMLuaFilter(filterName string, disabled bool) (*hcmv3.HttpFilter, error) {
 	var (
 		luaProto *luafilterv3.Lua
 		luaAny   *anypb.Any
@@ -122,7 +127,8 @@ func buildHCMLuaFilter(filterName string) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: filterName,
+		Name:     filterName,
+		Disabled: disabled,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: luaAny,
 		},
