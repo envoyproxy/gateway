@@ -15,26 +15,13 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/default/policy-for-http-route/lua/0
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
-                end
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+          name: envoy.filters.http.filter_chain.eep.lua.listener
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
-                end
-        - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/1
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: function envoy_on_response(response_handle) response_handle:logError('Hello.')
-                end
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -70,16 +57,14 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.lua/listener/0
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
-        - name: envoy.filters.http.lua/0
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua.listener
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -115,11 +100,14 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.lua/listener/0
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua.listener
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -155,11 +143,14 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.lua/listener/0
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua.listener
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-http-route/extproc/0
           typedConfig:
@@ -209,11 +200,14 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.lua/listener/0
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua.listener
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -249,11 +243,14 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.lua/listener/0
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua.listener
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-gateway/extproc/0
           typedConfig:
@@ -303,11 +300,14 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.lua/listener/0
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua.listener
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
