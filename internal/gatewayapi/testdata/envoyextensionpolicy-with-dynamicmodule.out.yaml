@@ -434,6 +434,7 @@ xdsIR:
               sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
               url: https://modules.example.com/libremote_auth.so
             terminalFilter: false
+          fromGatewayPolicy: true
         hostname: www.example.com
         isHTTP2: false
         metadata:

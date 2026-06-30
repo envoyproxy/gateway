@@ -275,3 +275,48 @@ http:
       distinct: false
       name: ""
       prefix: /
+# Gateway policy with Lua (at listener) + ExtProc (at route), both from the same policy.
+# The route's ExtProc carries fromGatewayPolicy:true so the listener Lua must NOT be disabled.
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  name: envoy-gateway/gateway-1/http-7
+  envoyExtensions:
+    luas:
+    - code: function envoy_on_request(request_handle)
+        request_handle:logInfo('Gateway Lua.')
+        end
+      name: envoyextensionpolicy/default/policy-for-gateway/lua/0
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10085
+  routes:
+  - destination:
+      name: httproute/default/httproute-8/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-8/rule/0/backend/0
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-8/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    envoyExtensions:
+      fromGatewayPolicy: true
+      extProcs:
+      - name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
+        authority: grpc-backend.default:8000
+        destination:
+          name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend
+          settings:
+          - protocol: GRPC
+            weight: 1
+            name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend/backend/0

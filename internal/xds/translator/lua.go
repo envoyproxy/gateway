@@ -17,6 +17,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -174,9 +175,14 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 	extensionsCount := len(irRoute.EnvoyExtensions.Luas) + len(irRoute.EnvoyExtensions.Wasms) +
 		len(irRoute.EnvoyExtensions.DynamicModules) + len(irRoute.EnvoyExtensions.ExtProcs)
 
+	// Only disable inherited listener-level Lua when the route's extensions come from a
+	// more-specific route policy. When they come from the same gateway/listener policy that
+	// also installed the listener Lua (FromGatewayPolicy=true), both coexist.
+	disableListenerLevelFilter := !ptr.Deref(irRoute.EnvoyExtensions.FromGatewayPolicy, false) && extensionsCount > 0
+
 	// Route has its own Lua entries — disable the inherited listener-level Lua and
 	// install the route's scripts instead.
-	if irListener != nil && irListener.EnvoyExtensions != nil && extensionsCount > 0 {
+	if irListener != nil && irListener.EnvoyExtensions != nil && disableListenerLevelFilter {
 		for i := range irListener.EnvoyExtensions.Luas {
 			luaPerRoute := &luafilterv3.LuaPerRoute{
 				Override: &luafilterv3.LuaPerRoute_Disabled{
