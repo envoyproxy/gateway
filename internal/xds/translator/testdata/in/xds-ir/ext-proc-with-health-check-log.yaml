@@ -1,0 +1,55 @@
+http:
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  name: default/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
+    envoyExtensions:
+      extProcs:
+      - authority: grpc-backend.default:9000
+        destination:
+          name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 1.2.3.4
+              port: 9000
+            protocol: GRPC
+            weight: 1
+            name: envoyextensionpolicy/default/policy-for-http-route/extproc/0/backend/0
+        name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
+        traffic:
+          healthCheck:
+            active:
+              timeout: "500ms"
+              interval: "5s"
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              grpc:
+                service: envoy.service.ext_proc.v3.ExternalProcessor
+              eventLog:
+                fileSinks:
+                - path: "/dev/stdout"
+                alwaysLogHealthCheckFailures: true
+                alwaysLogHealthCheckSuccess: false
+    hostname: '*'
+    isHTTP2: false
+    name: httproute/default/httproute-1/rule/0/match/0/*
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /

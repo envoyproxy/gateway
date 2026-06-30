@@ -215,7 +215,7 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 			},
 		}
 
-		tf, err := tr.buildTrafficFeatures(policy)
+		tf, err := tr.buildTrafficFeatures(policy, nil)
 		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})
@@ -241,7 +241,7 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 		mergedPolicy, err := tr.mergeBackendTrafficPolicy(routePolicy, parentPolicy)
 		require.NoError(t, err)
 
-		tf, err := tr.buildTrafficFeatures(mergedPolicy)
+		tf, err := tr.buildTrafficFeatures(mergedPolicy, nil)
 		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})

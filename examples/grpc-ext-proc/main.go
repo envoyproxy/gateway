@@ -23,11 +23,21 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type extProcServer struct{}
+
+// healthServer implements the gRPC health checking protocol.
+type healthServer struct {
+	healthpb.UnimplementedHealthServer
+}
+
+func (h *healthServer) Check(_ context.Context, _ *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
+	return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_SERVING}, nil
+}
 
 var (
 	port     int
@@ -50,6 +60,7 @@ func main() {
 	}
 	gs := grpc.NewServer(grpc.Creds(creds))
 	envoy_service_proc_v3.RegisterExternalProcessorServer(gs, &extProcServer{})
+	healthpb.RegisterHealthServer(gs, &healthServer{})
 
 	go func() {
 		err = gs.Serve(lis)
@@ -61,6 +72,7 @@ func main() {
 	// Create Unix listener
 	gus := grpc.NewServer(grpc.Creds(creds))
 	envoy_service_proc_v3.RegisterExternalProcessorServer(gus, &extProcServer{})
+	healthpb.RegisterHealthServer(gus, &healthServer{})
 
 	udsAddr := "/var/run/ext-proc/extproc.sock"
 	if _, err := os.Stat(udsAddr); err == nil {
