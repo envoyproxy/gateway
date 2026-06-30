@@ -694,8 +694,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		}
 
 		// TODO: move other extensions to listener level.
-		totalExtensions := len(luas)
-		if totalExtensions > 0 {
+		// Only attach listener-level Lua when the policy succeeds; a fail-closed error in
+		// any other extension makes every route return a 500, so the Lua filter must not
+		// run on those synthetic error responses.
+		if len(luas) > 0 && !failed {
 			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 				Luas: luas,
 			}
