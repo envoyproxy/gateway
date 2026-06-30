@@ -1160,6 +1160,8 @@ type EnvoyExtensionFeatures struct {
 	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
 	// Dynamic Module extensions
 	DynamicModules []DynamicModule `json:"dynamicModules,omitempty" yaml:"dynamicModules,omitempty"`
+	// TODO: remove this after we moved all the extensions(e.g. extProc, Wasm, DYM) to use listener-level and route-level.
+	FromGatewayPolicy *bool `json:"fromGatewayPolicy,omitempty" yaml:"fromGatewayPolicy,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
