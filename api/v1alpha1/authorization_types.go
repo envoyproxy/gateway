@@ -126,7 +126,8 @@ type Principal struct {
 	//
 	// If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 	//
-	// The client IP is inferred from the X-Forwarded-For header or a custom header.
+	// The client IP is inferred from the X-Forwarded-For header, a custom header, or the
+	// direct downstream connection source address (the TCP peer of the connection terminated by Envoy).
 	// You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
 	//
 	// +optional
