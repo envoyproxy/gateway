@@ -990,9 +990,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 				}
 			} else {
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-					ExtProcs:       extProcs,
-					Wasms:          wasms,
-					DynamicModules: dynamicModules,
+					ExtProcs:          extProcs,
+					Wasms:             wasms,
+					DynamicModules:    dynamicModules,
+					FromGatewayPolicy: new(true),
 				}
 			}
 		}
