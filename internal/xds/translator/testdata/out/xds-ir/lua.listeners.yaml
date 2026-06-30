@@ -14,12 +14,14 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.lua/0
+        - disabled: true
+          name: envoy.filters.http.lua/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
               inlineString: ""
-        - name: envoy.filters.http.lua/1
+        - disabled: true
+          name: envoy.filters.http.lua/1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
@@ -64,7 +66,8 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
               inlineString: ""
-        - name: envoy.filters.http.lua/0
+        - disabled: true
+          name: envoy.filters.http.lua/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
