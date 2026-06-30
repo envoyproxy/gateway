@@ -316,3 +316,6 @@ envoyExtensionPolicies:
           pullSecretRef:
             name: my-pull-secret-1
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
+    lua:
+    - type: Inline
+      inline: "function envoy_on_request(request_handle) end"
