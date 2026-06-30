@@ -518,7 +518,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc0
+    gateway.networking.k8s.io/bundle-version: v1.6.0
     gateway.networking.k8s.io/channel: standard
   name: "safe-upgrades.gateway.networking.k8s.io"
 spec:
@@ -551,7 +551,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.0-rc0
+    gateway.networking.k8s.io/bundle-version: v1.6.0
     gateway.networking.k8s.io/channel: standard
   name: safe-upgrades.gateway.networking.k8s.io
 spec:
