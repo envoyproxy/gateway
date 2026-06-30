@@ -15,17 +15,9 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.lua/0
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
-        - disabled: true
-          name: envoy.filters.http.lua/1
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -67,11 +59,9 @@
             defaultSourceCode:
               inlineString: ""
         - disabled: true
-          name: envoy.filters.http.lua/0
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -112,6 +102,10 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
               inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -152,6 +146,10 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
               inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-http-route/extproc/0
           typedConfig:
@@ -206,6 +204,10 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
               inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -246,6 +248,10 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
               inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-gateway/extproc/0
           typedConfig:
@@ -300,6 +306,10 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
               inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

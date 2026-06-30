@@ -13,14 +13,21 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
+        envoy.filters.http.filter_chain.eep.lua:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.lua/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+                defaultSourceCode:
+                  inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
+                    end
         envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           filterContext:
             mode: strict
             token_header: x-api-key
-          sourceCode:
-            inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
-              end
     - match:
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-2/rule/0/match/0/www_example_com
@@ -29,16 +36,22 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/0:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          sourceCode:
-            inlineString: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
-              end
-        envoy.filters.http.lua/1:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          sourceCode:
-            inlineString: function envoy_on_response(response_handle) response_handle:logError('Hello.')
-              end
+        envoy.filters.http.filter_chain.eep.lua:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.lua/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+                defaultSourceCode:
+                  inlineString: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
+                    end
+            - name: envoy.filters.http.lua/1
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+                defaultSourceCode:
+                  inlineString: function envoy_on_response(response_handle) response_handle:logError('Hello.')
+                    end
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/http-2
   virtualHosts:
@@ -54,14 +67,21 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
+        envoy.filters.http.filter_chain.eep.lua:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.lua/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+                defaultSourceCode:
+                  inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
+                    end
         envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           filterContext:
             mode: strict
             token_header: x-api-key
-          sourceCode:
-            inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
-              end
         envoy.filters.http.lua/listener/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           disabled: true

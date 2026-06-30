@@ -12,6 +12,7 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	filterchainv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/filter_chain/v3"
 	luafilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -71,7 +72,7 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 
 	var errs error
 	// add place holder http filter for per listener lua filter
-	if hasListenerLua {
+	if irListener.EnvoyExtensions != nil {
 		for i := range irListener.EnvoyExtensions.Luas {
 			filterName := luaListenerFilterName(i)
 			if hcmContainsFilter(mgr, filterName) {
@@ -89,19 +90,45 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 
 	// add place holder filters for route Lua — disabled by default so they only execute
 	// on routes that explicitly enable them via LuaPerRoute in TypedPerFilterConfig.
-	for idx := range maxRouteLuaCount {
-		filterName := luaFilterName(idx)
-		if hcmContainsFilter(mgr, filterName) {
-			continue
-		}
-		filter, err := buildHCMLuaFilter(filterName, true)
-		if err != nil {
-			errs = errors.Join(errs, err)
-			continue
-		}
-		mgr.HttpFilters = append(mgr.HttpFilters, filter)
+	filterName := luaFCFilterName()
+	if hcmContainsFilter(mgr, filterName) {
+		return nil
 	}
+	filter, err := buildHCMFilterChainFilter(filterName)
+	if err != nil {
+		return err
+	}
+	mgr.HttpFilters = append(mgr.HttpFilters, filter)
+
 	return errs
+}
+
+func luaFCFilterName() string {
+	return FilterChainFilterNamePrefixForEEP + "lua"
+}
+
+func buildHCMFilterChainFilter(filterName string) (*hcmv3.HttpFilter, error) {
+	var (
+		fcProto *filterchainv3.FilterChainConfig
+		fcAny   *anypb.Any
+		err     error
+	)
+	fcProto = &filterchainv3.FilterChainConfig{}
+
+	if err = fcProto.ValidateAll(); err != nil {
+		return nil, err
+	}
+	if fcAny, err = anypb.New(fcProto); err != nil {
+		return nil, err
+	}
+
+	return &hcmv3.HttpFilter{
+		Name:     filterName,
+		Disabled: true,
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: fcAny,
+		},
+	}, nil
 }
 
 // buildHCMLuaFilter builds a Lua HTTP filter for the HCM filter chain.
@@ -200,36 +227,57 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 		}
 	}
 
+	if route.TypedPerFilterConfig == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+	filterChainConfigPerRoute := &filterchainv3.FilterChainConfigPerRoute{
+		FilterChain: &filterchainv3.FilterChain{},
+	}
 	for idx, ep := range irRoute.EnvoyExtensions.Luas {
 		filterName := luaFilterName(idx)
-		luaPerRoute := &luafilterv3.LuaPerRoute{
-			Override: &luafilterv3.LuaPerRoute_SourceCode{
-				SourceCode: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineString{
-						InlineString: *ep.Code,
-					},
+		luaOnFCFilter := &luafilterv3.Lua{
+			DefaultSourceCode: &corev3.DataSource{
+				Specifier: &corev3.DataSource_InlineString{
+					InlineString: *ep.Code,
 				},
 			},
 		}
+
+		// TODO: support filterContext in Lua filter make this simpler
 		if ep.FilterContext != nil && ep.FilterContext.Raw != nil {
+			luaPerRoute := &luafilterv3.LuaPerRoute{}
 			filterCtx := &structpb.Struct{}
 			if err := protojson.Unmarshal(ep.FilterContext.Raw, filterCtx); err != nil {
 				return err
 			}
 			luaPerRoute.FilterContext = filterCtx
+			luaPerRouteAny, err := anypb.New(luaPerRoute)
+			if err != nil {
+				return err
+			}
+			route.TypedPerFilterConfig[filterName] = luaPerRouteAny
 		}
-		luaPerRouteAny, err := anypb.New(luaPerRoute)
+		luaOnFCFilterAny, err := anypb.New(luaOnFCFilter)
 		if err != nil {
 			return err
 		}
-		if route.TypedPerFilterConfig == nil {
-			route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-		}
-		if _, exists := route.TypedPerFilterConfig[filterName]; exists {
-			return fmt.Errorf("route already has Lua per-route config for %s", filterName)
-		}
-		route.TypedPerFilterConfig[filterName] = luaPerRouteAny
+		filterChainConfigPerRoute.FilterChain.Filters = append(filterChainConfigPerRoute.FilterChain.Filters,
+			&corev3.TypedExtensionConfig{
+				Name:        filterName,
+				TypedConfig: luaOnFCFilterAny,
+			},
+		)
 	}
+
+	if len(filterChainConfigPerRoute.FilterChain.Filters) == 0 {
+		return nil
+	}
+	fcAny, err := anypb.New(filterChainConfigPerRoute)
+	if err != nil {
+		return err
+	}
+
+	route.TypedPerFilterConfig[luaFCFilterName()] = fcAny
 	return nil
 }
 
