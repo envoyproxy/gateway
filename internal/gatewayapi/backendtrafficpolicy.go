@@ -850,7 +850,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 			// Skip if not the gateway wanted
 			continue
 		}
-		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, policyTargetListener)
+		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, policyTargetGatewayNN, policyTargetListener)
 	}
 
 	return errs
@@ -911,9 +911,21 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		// should not happen.
 		return nil
 	}
-	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, policyTargetListener)
+	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, &policyTargetGatewayNN, policyTargetListener)
 
 	return nil
+}
+
+// listenerBelongsToGateway reports whether an IR listener (named "<gw-ns>/<gw-name>/<section>...")
+// belongs to the given Gateway. In MergeGateways mode multiple Gateways share a single IR, so a
+// route policy merged with a Gateway-specific parent must be scoped to that Gateway's listeners;
+// otherwise the section name alone (e.g. "http") would also match sibling Gateways' listeners and
+// the first applied policy would win for all of them. A nil gwNN means "no Gateway scoping".
+func listenerBelongsToGateway(listenerName string, gwNN *types.NamespacedName) bool {
+	if gwNN == nil {
+		return true
+	}
+	return strings.HasPrefix(listenerName, gwNN.Namespace+"/"+gwNN.Name+"/")
 }
 
 func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
@@ -921,6 +933,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	policy *egv1a1.BackendTrafficPolicy,
 	target policyTargetReferenceWithSectionName,
 	x *ir.Xds,
+	policyTargetGatewayNN *types.NamespacedName,
 	policyTargetListener *gwapiv1.SectionName,
 ) {
 	routeStatName := ""
@@ -930,6 +943,11 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
+		// In MergeGateways mode multiple Gateways share one IR, so scope to the target Gateway's
+		// listeners; otherwise the section name alone would match sibling Gateways' listeners.
+		if !listenerBelongsToGateway(tcp.Name, policyTargetGatewayNN) {
+			continue
+		}
 		// if listenerName is not nil, only apply to the specific listener
 		if policyTargetListener != nil && string(*policyTargetListener) != tcp.Metadata.SectionName {
 			// Skip if not the listener wanted
@@ -958,6 +976,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	}
 
 	for _, udp := range x.UDP {
+		if !listenerBelongsToGateway(udp.Name, policyTargetGatewayNN) {
+			continue
+		}
 		// if listenerName is not nil, only apply to the specific listener
 		if policyTargetListener != nil && string(*policyTargetListener) != udp.Metadata.SectionName {
 			// Skip if not the listener wanted
@@ -980,6 +1001,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 
 	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
+		if !listenerBelongsToGateway(http.Name, policyTargetGatewayNN) {
+			continue
+		}
 		// if listenerName is not nil, only apply to the specific listener
 		if policyTargetListener != nil && string(*policyTargetListener) != http.Metadata.SectionName {
 			// Skip if not the listener wanted
@@ -1067,6 +1091,13 @@ func (t *Translator) effectiveMergeType(policy *egv1a1.BackendTrafficPolicy, ep 
 		if _, ok := policy.Labels[label]; ok {
 			return nil
 		}
+	}
+	// Defense in depth: the CRD enum restricts DefaultMergeType to StrategicMerge/JSONMerge, but the
+	// EnvoyGateway default EnvoyProxySpec is not subject to CRD validation. Ignore anything that is
+	// not a real merge so a stray value (e.g. Replace) can never produce a "merged" status while
+	// actually replacing the parent.
+	if *d.DefaultMergeType != egv1a1.StrategicMerge && *d.DefaultMergeType != egv1a1.JSONMerge {
+		return nil
 	}
 	return d.DefaultMergeType
 }

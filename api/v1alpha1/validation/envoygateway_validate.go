@@ -71,7 +71,27 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		return fmt.Errorf("disableLua and enableLua must not have the same value")
 	}
 
+	if err := validateEnvoyGatewayDefaultEnvoyProxy(eg.EnvoyProxy); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// validateEnvoyGatewayDefaultEnvoyProxy validates fields of the default EnvoyProxySpec that are
+// enforced by CRD validation for EnvoyProxy resources but not when the spec is provided inline as
+// the EnvoyGateway default, since that path does not go through CRD admission.
+func validateEnvoyGatewayDefaultEnvoyProxy(spec *egv1a1.EnvoyProxySpec) error {
+	if spec == nil || spec.BackendTrafficPolicy == nil || spec.BackendTrafficPolicy.DefaultMergeType == nil {
+		return nil
+	}
+	switch *spec.BackendTrafficPolicy.DefaultMergeType {
+	case egv1a1.StrategicMerge, egv1a1.JSONMerge:
+		return nil
+	default:
+		return fmt.Errorf("envoyProxy.backendTrafficPolicy.defaultMergeType must be one of StrategicMerge or JSONMerge, got %q",
+			*spec.BackendTrafficPolicy.DefaultMergeType)
+	}
 }
 
 // WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.

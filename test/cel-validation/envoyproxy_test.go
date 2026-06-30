@@ -2489,7 +2489,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			desc: "backendTrafficPolicy defaultMergeType StrategicMerge is valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{
+					BackendTrafficPolicy: &egv1a1.PolicyDefaults{
 						DefaultMergeType: new(egv1a1.StrategicMerge),
 					},
 				}
@@ -2500,7 +2500,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			desc: "backendTrafficPolicy defaultMergeType JSONMerge with excludeLabel is valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{
+					BackendTrafficPolicy: &egv1a1.PolicyDefaults{
 						DefaultMergeType: new(egv1a1.JSONMerge),
 						ExcludeLabel:     new("gateway.envoyproxy.io/skip-merge-default"),
 					},
@@ -2512,7 +2512,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			desc: "backendTrafficPolicy defaultMergeType Replace is rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{
+					BackendTrafficPolicy: &egv1a1.PolicyDefaults{
 						DefaultMergeType: new(egv1a1.MergeType("Replace")),
 					},
 				}
