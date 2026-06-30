@@ -192,3 +192,27 @@
         sourceCode:
           inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Gateway
             Lua.') end
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-8
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http-8/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-9/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-9/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.lua/listener/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          disabled: true
+    typedPerFilterConfig:
+      envoy.filters.http.lua/listener/0:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+        sourceCode:
+          inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Gateway
+            Lua.') end

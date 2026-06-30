@@ -171,14 +171,13 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 		return nil
 	}
 
-	// Count the route level extensions, if it > 0, that means a route level policy is applied.
-	extensionsCount := len(irRoute.EnvoyExtensions.Luas) + len(irRoute.EnvoyExtensions.Wasms) +
-		len(irRoute.EnvoyExtensions.DynamicModules) + len(irRoute.EnvoyExtensions.ExtProcs)
-
-	// Only disable inherited listener-level Lua when the route's extensions come from a
-	// more-specific route policy. When they come from the same gateway/listener policy that
-	// also installed the listener Lua (FromGatewayPolicy=true), both coexist.
-	disableListenerLevelFilter := !ptr.Deref(irRoute.EnvoyExtensions.FromGatewayPolicy, false) && extensionsCount > 0
+	// Disable the inherited listener-level Lua whenever EnvoyExtensions was set by a
+	// more-specific route policy (FromGatewayPolicy is false/nil). The extension count
+	// is intentionally not checked here: an empty result (e.g. fail-open invalid Wasm)
+	// still represents a more-specific policy that owns this route and must suppress the
+	// lower-scope Lua. When FromGatewayPolicy is true the route-level extensions come
+	// from the same gateway/listener policy that also installed the listener Lua, so both coexist.
+	disableListenerLevelFilter := !ptr.Deref(irRoute.EnvoyExtensions.FromGatewayPolicy, false)
 
 	// Route has its own Lua entries — disable the inherited listener-level Lua and
 	// install the route's scripts instead.
