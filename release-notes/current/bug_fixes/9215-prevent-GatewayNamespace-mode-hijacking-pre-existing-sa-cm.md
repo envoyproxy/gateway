@@ -1,0 +1,1 @@
+Fixed prevent GatewayNamespace mode from hijacking pre-existing ServiceAccounts and ConfigMaps.
