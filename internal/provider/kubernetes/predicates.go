@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -586,7 +585,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	}
 
 	if r.tcpRouteCRDExists {
-		tcpRouteList := &gwapiv1a2.TCPRouteList{}
+		tcpRouteList := &gwapiv1.TCPRouteList{}
 		if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {
@@ -599,7 +598,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	}
 
 	if r.udpRouteCRDExists {
-		udpRouteList := &gwapiv1a2.UDPRouteList{}
+		udpRouteList := &gwapiv1.UDPRouteList{}
 		if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {

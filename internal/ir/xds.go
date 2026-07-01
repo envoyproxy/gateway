@@ -1658,6 +1658,9 @@ type AuthorizationRule struct {
 
 	// Principal defines the principal to be matched.
 	Principal Principal `json:"principal"`
+
+	// CEL defines a CEL expression to be matched.
+	CEL *string `json:"cel,omitempty"`
 }
 
 // Principal defines the schema for the principal.

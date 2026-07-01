@@ -676,6 +676,12 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	}
 	for i := range p.Spec.Authorization.Rules {
 		rule := &p.Spec.Authorization.Rules[i]
+		if rule.CEL != nil {
+			return fmt.Errorf("rule %d: CEL not supported for TCP", i)
+		}
+		if rule.Principal == nil {
+			continue
+		}
 		if rule.Principal.JWT != nil {
 			return fmt.Errorf("rule %d: JWT not supported for TCP", i)
 		}
@@ -2453,18 +2459,20 @@ func (t *Translator) buildAuthorization(
 		rule := &authorization.Rules[i]
 		irPrincipal := ir.Principal{}
 
-		for _, cidr := range rule.Principal.ClientCIDRs {
-			cidrMatch, err := parseCIDR(string(cidr))
-			if err != nil {
-				return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+		if rule.Principal != nil {
+			for _, cidr := range rule.Principal.ClientCIDRs {
+				cidrMatch, err := parseCIDR(string(cidr))
+				if err != nil {
+					return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+				}
+
+				irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
 			}
 
-			irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
+			irPrincipal.JWT = rule.Principal.JWT
+			irPrincipal.Headers = rule.Principal.Headers
+			irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations
 		}
-
-		irPrincipal.JWT = rule.Principal.JWT
-		irPrincipal.Headers = rule.Principal.Headers
-		irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations
 
 		if err := validateAuthorizationOperation(rule.Operation); err != nil {
 			return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
@@ -2476,11 +2484,21 @@ func (t *Translator) buildAuthorization(
 		} else {
 			name = defaultAuthorizationRuleName(ownerPolicy, i)
 		}
+
+		var celExpression *string
+		if rule.CEL != nil {
+			if !validCELExpression(string(*rule.CEL)) {
+				return nil, fmt.Errorf("invalid CEL expression: %s", *rule.CEL)
+			}
+			celExpression = new(string(*rule.CEL))
+		}
+
 		irAuth.Rules = append(irAuth.Rules, &ir.AuthorizationRule{
 			Name:      name,
 			Action:    rule.Action,
 			Operation: rule.Operation,
 			Principal: irPrincipal,
+			CEL:       celExpression,
 		})
 	}
 

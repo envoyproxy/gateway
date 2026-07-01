@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -158,16 +157,16 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 	})
 
 	t.Run("TCPRoute indices", func(t *testing.T) {
-		err := cli.List(context.Background(), &gwapiv1a2.TCPRouteList{}, client.MatchingFields{gatewayTCPRouteIndex: "any"})
+		err := cli.List(context.Background(), &gwapiv1.TCPRouteList{}, client.MatchingFields{gatewayTCPRouteIndex: "any"})
 		require.NoError(t, err)
-		err = cli.List(context.Background(), &gwapiv1a2.TCPRouteList{}, client.MatchingFields{backendTCPRouteIndex: "any"})
+		err = cli.List(context.Background(), &gwapiv1.TCPRouteList{}, client.MatchingFields{backendTCPRouteIndex: "any"})
 		require.NoError(t, err)
 	})
 
 	t.Run("UDPRoute indices", func(t *testing.T) {
-		err := cli.List(context.Background(), &gwapiv1a2.UDPRouteList{}, client.MatchingFields{gatewayUDPRouteIndex: "any"})
+		err := cli.List(context.Background(), &gwapiv1.UDPRouteList{}, client.MatchingFields{gatewayUDPRouteIndex: "any"})
 		require.NoError(t, err)
-		err = cli.List(context.Background(), &gwapiv1a2.UDPRouteList{}, client.MatchingFields{backendUDPRouteIndex: "any"})
+		err = cli.List(context.Background(), &gwapiv1.UDPRouteList{}, client.MatchingFields{backendUDPRouteIndex: "any"})
 		require.NoError(t, err)
 	})
 
