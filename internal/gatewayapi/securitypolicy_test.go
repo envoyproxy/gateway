@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -1004,26 +1003,26 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 
 	// Create a mock TCP route
 	tcpRoute := &TCPRouteContext{
-		TCPRoute: &gwapiv1a2.TCPRoute{
+		TCPRoute: &gwapiv1.TCPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "tcp-route",
 			},
-			Spec: gwapiv1a2.TCPRouteSpec{
-				CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-					ParentRefs: []gwapiv1a2.ParentReference{
+			Spec: gwapiv1.TCPRouteSpec{
+				CommonRouteSpec: gwapiv1.CommonRouteSpec{
+					ParentRefs: []gwapiv1.ParentReference{
 						{
 							Name: "test-gateway",
 						},
 					},
 				},
-				Rules: []gwapiv1a2.TCPRouteRule{
+				Rules: []gwapiv1.TCPRouteRule{
 					{
-						BackendRefs: []gwapiv1a2.BackendRef{
+						BackendRefs: []gwapiv1.BackendRef{
 							{
-								BackendObjectReference: gwapiv1a2.BackendObjectReference{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
 									Name: "test-service",
-									Port: new(gwapiv1a2.PortNumber(80)),
+									Port: new(gwapiv1.PortNumber(80)),
 								},
 							},
 						},
@@ -1093,7 +1092,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 				Name:      "http-route",
 			},
 			Spec: gwapiv1.HTTPRouteSpec{
-				CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+				CommonRouteSpec: gwapiv1.CommonRouteSpec{
 					ParentRefs: []gwapiv1.ParentReference{
 						{
 							Name: "test-gateway",

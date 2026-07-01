@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -431,7 +430,7 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 
 // processTCPRoute processes a single TCPRoute, performing namespace label checks,
 // backend reference validation, and updating the resource map and tree.
-func (r *gatewayAPIReconciler) processTCPRoute(ctx context.Context, tcpRoute *gwapiv1a2.TCPRoute,
+func (r *gatewayAPIReconciler) processTCPRoute(ctx context.Context, tcpRoute *gwapiv1.TCPRoute,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
 	key := utils.NamespacedName(tcpRoute).String()
@@ -467,7 +466,7 @@ func (r *gatewayAPIReconciler) processTCPRoute(ctx context.Context, tcpRoute *gw
 	resourceMap.allAssociatedTCPRoutes.Insert(key)
 	// Discard Status to reduce memory consumption in watchable
 	// It will be recomputed by the gateway-api layer
-	tcpRoute.Status = gwapiv1a2.TCPRouteStatus{}
+	tcpRoute.Status = gwapiv1.TCPRouteStatus{}
 	resourceTree.TCPRoutes = append(resourceTree.TCPRoutes, tcpRoute)
 }
 
@@ -476,7 +475,7 @@ func (r *gatewayAPIReconciler) processTCPRoute(ctx context.Context, tcpRoute *gw
 func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
-	tcpRouteList := &gwapiv1a2.TCPRouteList{}
+	tcpRouteList := &gwapiv1.TCPRouteList{}
 
 	// Process TCPRoutes attached to the gateway
 	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
@@ -493,7 +492,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 
 	// Process TCPRoutes attached to the ListenerSet
 	for _, lsNN := range resourceMap.gatewayToListenerSets[gatewayNamespaceName] {
-		tcpRouteList = &gwapiv1a2.TCPRouteList{}
+		tcpRouteList = &gwapiv1.TCPRouteList{}
 		if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(listenerSetTCPRouteIndex, lsNN.String()),
 		}); err != nil {
@@ -511,7 +510,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 
 // processUDPRoute processes a single UDPRoute, performing namespace label checks,
 // backend reference validation, and updating the resource map and tree.
-func (r *gatewayAPIReconciler) processUDPRoute(ctx context.Context, udpRoute *gwapiv1a2.UDPRoute,
+func (r *gatewayAPIReconciler) processUDPRoute(ctx context.Context, udpRoute *gwapiv1.UDPRoute,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
 	key := utils.NamespacedName(udpRoute).String()
@@ -547,7 +546,7 @@ func (r *gatewayAPIReconciler) processUDPRoute(ctx context.Context, udpRoute *gw
 	resourceMap.allAssociatedUDPRoutes.Insert(key)
 	// Discard Status to reduce memory consumption in watchable
 	// It will be recomputed by the gateway-api layer
-	udpRoute.Status = gwapiv1a2.UDPRouteStatus{}
+	udpRoute.Status = gwapiv1.UDPRouteStatus{}
 	resourceTree.UDPRoutes = append(resourceTree.UDPRoutes, udpRoute)
 }
 
@@ -556,7 +555,7 @@ func (r *gatewayAPIReconciler) processUDPRoute(ctx context.Context, udpRoute *gw
 func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
-	udpRouteList := &gwapiv1a2.UDPRouteList{}
+	udpRouteList := &gwapiv1.UDPRouteList{}
 
 	// Process UDPRoutes attached to the gateway
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
@@ -573,7 +572,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 
 	// Process UDPRoutes attached to the ListenerSet
 	for _, lsNN := range resourceMap.gatewayToListenerSets[gatewayNamespaceName] {
-		udpRouteList = &gwapiv1a2.UDPRouteList{}
+		udpRouteList = &gwapiv1.UDPRouteList{}
 		if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(listenerSetUDPRouteIndex, lsNN.String()),
 		}); err != nil {

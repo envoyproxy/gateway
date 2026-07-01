@@ -74,7 +74,7 @@ infraIR:
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 tcpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcproute-1
