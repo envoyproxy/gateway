@@ -15,6 +15,27 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func TestBuildHCMTracingSampling(t *testing.T) {
+	tracing := &ir.Tracing{
+		ServiceName:         "test-service",
+		SamplingRate:        10,
+		ClientSamplingRate:  new(20.0),
+		OverallSamplingRate: new(30.0),
+		Destination: ir.RouteDestination{
+			Name: "tracing",
+		},
+		Provider: egv1a1.TracingProvider{
+			Type: egv1a1.TracingProviderTypeOpenTelemetry,
+		},
+	}
+
+	got, err := buildHCMTracing(tracing)
+	require.NoError(t, err)
+	require.Equal(t, 10.0, got.RandomSampling.Value)
+	require.Equal(t, 20.0, got.ClientSampling.Value)
+	require.Equal(t, 30.0, got.OverallSampling.Value)
+}
+
 func TestBuildSampler(t *testing.T) {
 	testCases := []struct {
 		name          string

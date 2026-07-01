@@ -16326,6 +16326,38 @@ spec:
                       Tracing defines tracing configuration for managed proxies.
                       If unspecified, will not send tracing data.
                     properties:
+                      clientSamplingFraction:
+                        description: |-
+                          ClientSamplingFraction represents the fraction of requests that should be
+                          selected for tracing when requested by the client.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
+                      clientSamplingRate:
+                        description: |-
+                          ClientSamplingRate controls the rate at which traffic will be
+                          selected for tracing when requested by the client.
+                          Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+
+                          Only one of ClientSamplingRate or ClientSamplingFraction may be specified.
+                          If neither field is specified, all client requests will be sampled.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
                       customTags:
                         additionalProperties:
                           properties:
@@ -16390,6 +16422,38 @@ spec:
 
                           Deprecated: Use Tags instead.
                         type: object
+                      overallSamplingFraction:
+                        description: |-
+                          OverallSamplingFraction represents the fraction of requests that should be
+                          selected for tracing after all other sampling checks have been applied.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
+                      overallSamplingRate:
+                        description: |-
+                          OverallSamplingRate controls the rate at which traffic will be
+                          selected for tracing after all other sampling checks have been applied.
+                          Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+
+                          Only one of OverallSamplingRate or OverallSamplingFraction may be specified.
+                          If neither field is specified, all requests will be sampled.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
                       provider:
                         description: Provider defines the tracing provider.
                         properties:
@@ -18065,6 +18129,12 @@ spec:
                     - message: only one of SamplingRate or SamplingFraction can be
                         specified
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
+                    - message: only one of ClientSamplingRate or ClientSamplingFraction
+                        can be specified
+                      rule: '!(has(self.clientSamplingRate) && has(self.clientSamplingFraction))'
+                    - message: only one of OverallSamplingRate or OverallSamplingFraction
+                        can be specified
+                      rule: '!(has(self.overallSamplingRate) && has(self.overallSamplingFraction))'
                 type: object
             type: object
           status:

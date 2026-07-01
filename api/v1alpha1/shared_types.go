@@ -941,6 +941,16 @@ type Tracing struct {
 	//
 	// +optional
 	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
+	// ClientSamplingFraction represents the fraction of requests that should be
+	// selected for tracing when requested by the client.
+	//
+	// +optional
+	ClientSamplingFraction *gwapiv1.Fraction `json:"clientSamplingFraction,omitempty"`
+	// OverallSamplingFraction represents the fraction of requests that should be
+	// selected for tracing after all other sampling checks have been applied.
+	//
+	// +optional
+	OverallSamplingFraction *gwapiv1.Fraction `json:"overallSamplingFraction,omitempty"`
 	// CustomTags defines the custom tags to add to each span.
 	// If provider is kubernetes, pod name and namespace are added by default.
 	//

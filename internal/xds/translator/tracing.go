@@ -116,10 +116,10 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 
 	return &hcm.HttpConnectionManager_Tracing{
 		ClientSampling: &xdstype.Percent{
-			Value: 100.0,
+			Value: ptr.Deref(tracing.ClientSamplingRate, 100),
 		},
 		OverallSampling: &xdstype.Percent{
-			Value: 100.0,
+			Value: ptr.Deref(tracing.OverallSamplingRate, 100),
 		},
 		RandomSampling: &xdstype.Percent{
 			Value: randomSamplingValue(tracing),

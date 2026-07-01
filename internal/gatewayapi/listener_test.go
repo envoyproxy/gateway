@@ -34,23 +34,39 @@ type expectedListenerStatus struct {
 	message      string
 }
 
-func TestProxySamplingRate(t *testing.T) {
+func TestProxySamplingRates(t *testing.T) {
 	cases := []struct {
-		name     string
-		tracing  *egv1a1.ProxyTracing
-		expected float64
+		name            string
+		tracing         *egv1a1.ProxyTracing
+		expectedRandom  float64
+		expectedClient  float64
+		expectedOverall float64
 	}{
 		{
-			name:     "default",
-			tracing:  &egv1a1.ProxyTracing{},
-			expected: 100.0,
+			name:            "default",
+			tracing:         &egv1a1.ProxyTracing{},
+			expectedRandom:  100.0,
+			expectedClient:  100.0,
+			expectedOverall: 100.0,
 		},
 		{
 			name: "rate",
 			tracing: &egv1a1.ProxyTracing{
 				SamplingRate: new(uint32(10)),
 			},
-			expected: 10.0,
+			expectedRandom:  10.0,
+			expectedClient:  100.0,
+			expectedOverall: 100.0,
+		},
+		{
+			name: "client and overall rate",
+			tracing: &egv1a1.ProxyTracing{
+				ClientSamplingRate:  new(uint32(20)),
+				OverallSamplingRate: new(uint32(30)),
+			},
+			expectedRandom:  100.0,
+			expectedClient:  20.0,
+			expectedOverall: 30.0,
 		},
 		{
 			name: "fraction numerator only",
@@ -61,7 +77,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 100,
+			expectedRandom:  100,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "fraction",
@@ -73,7 +91,27 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 10,
+			expectedRandom:  10,
+			expectedClient:  100,
+			expectedOverall: 100,
+		},
+		{
+			name: "client and overall fraction",
+			tracing: &egv1a1.ProxyTracing{
+				Tracing: egv1a1.Tracing{
+					ClientSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: new(int32(4)),
+					},
+					OverallSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   3,
+						Denominator: new(int32(4)),
+					},
+				},
+			},
+			expectedRandom:  100,
+			expectedClient:  25,
+			expectedOverall: 75,
 		},
 		{
 			name: "less than zero",
@@ -85,7 +123,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 0,
+			expectedRandom:  0,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "greater than 100",
@@ -97,7 +137,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 100,
+			expectedRandom:  100,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "less than 1",
@@ -109,16 +151,20 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 0.1,
+			expectedRandom:  0.1,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := proxySamplingRate(tc.tracing)
-			if actual != tc.expected {
-				t.Errorf("expected %v, got %v", tc.expected, actual)
-			}
+			random := proxySamplingRate(tc.tracing.SamplingRate, tc.tracing.SamplingFraction)
+			client := proxySamplingRate(tc.tracing.ClientSamplingRate, tc.tracing.ClientSamplingFraction)
+			overall := proxySamplingRate(tc.tracing.OverallSamplingRate, tc.tracing.OverallSamplingFraction)
+			assert.Equal(t, tc.expectedRandom, random)
+			assert.Equal(t, tc.expectedClient, client)
+			assert.Equal(t, tc.expectedOverall, overall)
 		})
 	}
 }
