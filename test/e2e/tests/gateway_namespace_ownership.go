@@ -89,8 +89,9 @@ var GatewayNamespaceOwnership = suite.ConformanceTest{
 			}
 			require.NoError(t, suite.Client.Create(ctx, preExistingSA))
 			t.Cleanup(func() {
-				_ = suite.Client.Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
-				_ = suite.Client.Delete(ctx, &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+				cleanupCtx := context.Background()
+				_ = suite.Client.Delete(cleanupCtx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+				_ = suite.Client.Delete(cleanupCtx, &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
 			})
 
 			gw := newCollisionGateway(ns, gwName, suite.GatewayClassName)
@@ -122,8 +123,9 @@ var GatewayNamespaceOwnership = suite.ConformanceTest{
 			}
 			require.NoError(t, suite.Client.Create(ctx, preExistingCM))
 			t.Cleanup(func() {
-				_ = suite.Client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
-				_ = suite.Client.Delete(ctx, &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+				cleanupCtx := context.Background()
+				_ = suite.Client.Delete(cleanupCtx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+				_ = suite.Client.Delete(cleanupCtx, &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
 			})
 
 			gw := newCollisionGateway(ns, gwName, suite.GatewayClassName)
