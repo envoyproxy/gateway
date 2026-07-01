@@ -48,7 +48,7 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute'])))", message="admissionControl can only be used with HTTPRoute, GRPCRoute, or Gateway targets"
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
-	ClusterSettings        `json:",inline"`
+	BackendSettings        `json:",inline"`
 
 	// MergeType determines how this configuration is merged with existing BackendTrafficPolicy
 	// configurations targeting a parent resource. When set, this configuration will be merged
