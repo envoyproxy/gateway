@@ -8,6 +8,7 @@ breaking changes: |
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
   Bumped the Envoy Proxy image to v1.38.3, which includes several CVE fixes. Read https://www.envoyproxy.io/docs/envoy/v1.38.3/version_history/v1.38/v1.38.3 for additional details.
+  Bump Envoy ratelimit image to `1e50889b`.
 
 # New features or capabilities added in this release.
 new features: |

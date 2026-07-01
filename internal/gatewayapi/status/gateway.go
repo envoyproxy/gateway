@@ -230,6 +230,12 @@ func collectLoadBalancerAddresses(svc *corev1.Service) (addresses, hostnames []s
 			hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
 		}
 	}
+	// Fall back to spec.externalIPs (e.g. set via an EnvoyProxy service patch)
+	// when no load balancer ingress has been assigned, such as on bare-metal
+	// clusters without a load balancer controller.
+	if len(addresses) == 0 && len(hostnames) == 0 {
+		addresses = append(addresses, svc.Spec.ExternalIPs...)
+	}
 	return addresses, hostnames
 }
 

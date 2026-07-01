@@ -542,18 +542,22 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
 	if retry.Backoff != nil {
 		backoff, err := time.ParseDuration(string(*retry.Backoff))
 		if err == nil {
-			res.PerRetry = &ir.PerRetryPolicy{
-				BackOff: &ir.BackOffPolicy{
-					BaseInterval: ir.MetaV1DurationPtr(backoff),
-				},
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
 			}
-			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
-			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
-				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
-				if err == nil {
-					res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
-				}
+			res.PerRetry.BackOff = &ir.BackOffPolicy{
+				BaseInterval: ir.MetaV1DurationPtr(backoff),
 			}
+		}
+	}
+	// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
+	if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+		backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+		if err == nil {
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
+			}
+			res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
 		}
 	}
 	if len(retry.Codes) > 0 {
@@ -1625,11 +1629,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
+			accepted = true
 			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
-			accepted = true
 
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
@@ -1777,12 +1781,11 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
+			accepted = true
+			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
-			listener.IncrementAttachedRoutes()
-
-			accepted = true
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
@@ -2008,6 +2011,13 @@ func isServiceHeadless(service *corev1.Service) bool {
 	return false
 }
 
+// isServiceExternalName reports true when a Kubernetes Service is of type ExternalName.
+// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
+// translated into a valid backend and are not supported.
+func isServiceExternalName(service *corev1.Service) bool {
+	return service != nil && service.Spec.Type == corev1.ServiceTypeExternalName
+}
+
 func (t *Translator) processServiceImportDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
@@ -2083,6 +2093,16 @@ func (t *Translator) processServiceDestinationSetting(
 	)
 
 	service := t.GetService(backendNamespace, string(backendRef.Name))
+	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
+	// translated into a valid backend.
+	// Backend with FQDN endpoint should be used instead of ExternalName Service to route to external services.
+	if isServiceExternalName(service) {
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("Service %s/%s is of type ExternalName, which is not supported as a backend; "+
+				"use an Envoy Gateway Backend resource with an FQDN endpoint instead",
+				backendNamespace, string(backendRef.Name)),
+			gwapiv1.RouteReasonUnsupportedValue)
+	}
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -2299,19 +2319,6 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			continue
 		}
 		parentRefCtx.SetListeners(allowedListeners...)
-
-		if !HasReadyListener(allowedListeners) {
-			routeStatus := GetRouteStatus(routeContext)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRefCtx.routeParentStatusIdx,
-				routeContext.GetGeneration(),
-				gwapiv1.RouteConditionAccepted,
-				metav1.ConditionFalse,
-				"NoReadyListeners",
-				"There are no ready listeners for this parent ref",
-			)
-			continue
-		}
 
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,

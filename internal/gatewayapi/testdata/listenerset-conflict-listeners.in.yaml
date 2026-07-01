@@ -32,6 +32,12 @@ gateways:
       name: conflict-listener
       port: 8888
       protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: parent-wins-over-dup-child
+      port: 8092
+      protocol: HTTP
 listenerSets:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: ListenerSet
@@ -72,6 +78,27 @@ listenerSets:
     - name: good-listener
       protocol: HTTP
       port: 8090
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: gateway-xls
+    name: same-xls-dup-conflict-with-gateway
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: dup-child-1
+      protocol: HTTP
+      port: 8092
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: dup-child-2
+      protocol: HTTP
+      port: 8092
       allowedRoutes:
         namespaces:
           from: All

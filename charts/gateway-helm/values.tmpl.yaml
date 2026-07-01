@@ -19,7 +19,7 @@ global:
       pullSecrets: []
     ratelimit:
       # This is the full image name including the hub, repo, and tag.
-      image: "docker.io/envoyproxy/ratelimit:ff287602"
+      image: "docker.io/envoyproxy/ratelimit:1e50889b"
       # Specify image pull policy if default behavior isn't desired.
       # Default behavior: latest images will be Always else IfNotPresent.
       pullPolicy: IfNotPresent
@@ -34,6 +34,11 @@ global:
       pullPolicy: ""
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
+
+# Values for CRDs dependency
+crds:
+  # -- Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately.
+  enabled: true
 
 # -- Labels to apply to all resources
 commonLabels: {}
