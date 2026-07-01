@@ -1932,6 +1932,13 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 			}
 		}
 
+		for _, h := range ro.Match.ResponseHeaders {
+			match.ResponseHeaders = append(match.ResponseHeaders, ir.ResponseOverrideHeaderMatch{
+				Name:  h.Name,
+				Value: *irStringMatch(h.Name, h.Value),
+			})
+		}
+
 		if ro.Redirect != nil {
 			redirect := &ir.Redirect{
 				Scheme: ro.Redirect.Scheme,

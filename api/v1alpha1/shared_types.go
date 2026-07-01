@@ -813,11 +813,36 @@ type ResponseOverride struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+// When both statusCodes and responseHeaders are specified, both must match.
+// +kubebuilder:validation:XValidation:rule="has(self.statusCodes) || has(self.responseHeaders)",message="at least one of statusCodes or responseHeaders must be specified"
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
+	//
+	// +optional
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
-	StatusCodes []StatusCodeMatch `json:"statusCodes"`
+	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// Response headers to match on. The match evaluates to true if any of the matches are successful.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	ResponseHeaders []ResponseOverrideHeaderMatch `json:"responseHeaders,omitempty"`
+}
+
+// ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+type ResponseOverrideHeaderMatch struct {
+	// Name of the HTTP header.
+	// The header name is case-insensitive.
+	// For example, "Foo" and "foo" are considered the same header.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	Name string `json:"name"`
+
+	// Value within the HTTP header to match against.
+	Value StringMatch `json:"value"`
 }
 
 // StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.

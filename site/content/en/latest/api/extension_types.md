@@ -1361,13 +1361,15 @@ _Appears in:_
 
 
 CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+When both statusCodes and responseHeaders are specified, both must match.
 
 _Appears in:_
 - [ResponseOverride](#responseoverride)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  true  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  false  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `responseHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Response headers to match on. The match evaluates to true if any of the matches are successful. |
 
 
 #### CustomTag
@@ -5571,6 +5573,21 @@ _Appears in:_
 | `source` | _[ResponseOverrideSource](#responseoverridesource)_ |  false  |  | Source specifies which responses this rule applies to.<br />Local overrides only Envoy-generated responses (e.g. auth failures).<br />Backend overrides only upstream responses.<br />All (default) overrides both. |
 
 
+#### ResponseOverrideHeaderMatch
+
+
+
+ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+
+_Appears in:_
+- [CustomResponseMatch](#customresponsematch)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive.<br />For example, "Foo" and "foo" are considered the same header. |
+| `value` | _[StringMatch](#stringmatch)_ |  true  |  | Value within the HTTP header to match against. |
+
+
 #### ResponseOverrideSource
 
 _Underlying type:_ _string_
@@ -6033,6 +6050,7 @@ _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)
+- [ResponseOverrideHeaderMatch](#responseoverrideheadermatch)
 - [SubjectAltNames](#subjectaltnames)
 
 | Field | Type | Required | Default | Description |

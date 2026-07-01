@@ -204,6 +204,32 @@ backendTrafficPolicies:
               - value: 403
           response:
             statusCode: 401
+        - match:
+            responseHeaders:
+              - name: X-Custom-Header
+                value:
+                  type: Exact
+                  value: custom-value
+          response:
+            contentType: text/plain
+            body:
+              inline: "matched response header"
+        - match:
+            statusCodes:
+              - value: 503
+            responseHeaders:
+              - name: X-Error-Type
+                value:
+                  type: Prefix
+                  value: "upstream-"
+              - name: X-Region
+                value:
+                  type: RegularExpression
+                  value: "^us-.*$"
+          response:
+            contentType: application/json
+            body:
+              inline: '{"error":"combined match"}'
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
