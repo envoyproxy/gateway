@@ -50563,6 +50563,35 @@ spec:
                           - Allow
                           - Deny
                           type: string
+                        cel:
+                          description: |-
+                            CEL specifies a Common Expression Language expression to evaluate for the
+                            request. If specified, the expression must evaluate to true for the rule to match.
+
+                            The expression can use Envoy attributes exposed to the CEL runtime.
+                            Request attributes, such as request.path, request.url_path, request.host,
+                            request.scheme, request.method, request.headers, and request.query, are
+                            generally available during authorization. Connection attributes, such as
+                            source.address, source.port, destination.address, destination.port,
+                            connection.mtls, and connection.requested_server_name, may also be used.
+                            Dynamic metadata and filter state produced by earlier filters may also be
+                            available through attributes such as metadata and filter_state.
+                            Response attributes are only available after the request completes and
+                            should not be used for authorization decisions.
+
+                            For more details, see:
+                            https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
+
+                            The rule matches only when the expression evaluates to a boolean true.
+                            Non-boolean results, false, null, and CEL evaluation errors are treated as
+                            no match.
+
+                            Examples:
+                            `request.headers['x-tenant'] == 'team-a'`
+                            `request.method == 'POST' && request.path.startsWith('/admin')`
+                          maxLength: 4096
+                          minLength: 1
+                          type: string
                         name:
                           description: |-
                             Name is a user-friendly name for the rule.
@@ -50884,8 +50913,10 @@ spec:
                               || has(self.clientIPGeoLocations))
                       required:
                       - action
-                      - principal
                       type: object
+                      x-kubernetes-validations:
+                      - message: at least one of principal or cel must be specified
+                        rule: has(self.principal) || has(self.cel)
                     type: array
                 type: object
               basicAuth:
@@ -57821,8 +57852,8 @@ spec:
                 ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
-                self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)
-                : true'
+                self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
+                : false)) ? has(self.jwt) : true'
           status:
             description: Status defines the current status of SecurityPolicy.
             properties:

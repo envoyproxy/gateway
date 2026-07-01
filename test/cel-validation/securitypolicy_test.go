@@ -1311,7 +1311,33 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "authorization-missing principal",
+			desc: "authorization-missing-principal-and-cel",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"at least one of principal or cel must be specified"},
+		},
+		{
+			desc: "authorization-empty-principal",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1329,13 +1355,40 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action:    egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{},
+								Principal: &egv1a1.Principal{},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{"at least one of clientCIDRs, jwt, headers, or clientIPGeoLocations must be specified"},
+		},
+		{
+			desc: "authorization-cel-only",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								CEL:    new(egv1a1.CELExpression("request.path.startsWith('/admin')")),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "authorization-client-ip-geo-locations",
@@ -1356,7 +1409,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{
 										{Country: new("US")},
 									},
@@ -1387,7 +1440,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									JWT: &egv1a1.JWTPrincipal{
 										Claims: []egv1a1.JWTClaim{
 											{
@@ -1423,7 +1476,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									JWT: &egv1a1.JWTPrincipal{},
 								},
 							},

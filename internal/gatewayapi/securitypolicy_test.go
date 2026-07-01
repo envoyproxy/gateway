@@ -717,6 +717,48 @@ func ToPointer[T any](v T) *T {
 	return &v
 }
 
+func TestBuildAuthorizationCEL(t *testing.T) {
+	tr := &Translator{}
+
+	t.Run("valid cel is translated to string pointer", func(t *testing.T) {
+		celExpression := egv1a1.CELExpression("request.path.startsWith('/admin')")
+		policy := sp("default", "authz-cel")
+		policy.Spec.Authorization = &egv1a1.Authorization{
+			Rules: []egv1a1.AuthorizationRule{
+				{
+					Action: egv1a1.AuthorizationActionAllow,
+					CEL:    &celExpression,
+				},
+			},
+		}
+
+		authorization, err := tr.buildAuthorization(policy, &securityPolicyOwners{})
+
+		require.NoError(t, err)
+		require.Len(t, authorization.Rules, 1)
+		require.NotNil(t, authorization.Rules[0].CEL)
+		require.Equal(t, string(celExpression), *authorization.Rules[0].CEL)
+	})
+
+	t.Run("invalid cel returns translation error", func(t *testing.T) {
+		celExpression := egv1a1.CELExpression(")++++")
+		policy := sp("test", "authz-cel-invalid")
+		policy.Spec.Authorization = &egv1a1.Authorization{
+			Rules: []egv1a1.AuthorizationRule{
+				{
+					Action: egv1a1.AuthorizationActionAllow,
+					CEL:    &celExpression,
+				},
+			},
+		}
+
+		authorization, err := tr.buildAuthorization(policy, &securityPolicyOwners{})
+
+		require.ErrorContains(t, err, "invalid CEL expression: )++++")
+		require.Nil(t, authorization)
+	})
+}
+
 func Test_validateHtpasswdFormat(t *testing.T) {
 	// #nosec G101 - These are test htpasswd hashes, not real credentials
 	tests := []struct {
@@ -1039,7 +1081,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	policy := sp("default", "bad-http")
 	policy.Spec.Authorization = &egv1a1.Authorization{
 		Rules: []egv1a1.AuthorizationRule{
-			{Principal: egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"not-a-cidr"}}},
+			{Principal: &egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"not-a-cidr"}}},
 		},
 	}
 
@@ -1153,7 +1195,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
 							},
 						},
@@ -1169,7 +1211,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
 							},
 						},
@@ -1185,7 +1227,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionDeny,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
 							},
 						},
@@ -1201,7 +1243,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
 								JWT:         &egv1a1.JWTPrincipal{},
 							},
@@ -1218,7 +1260,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
 								Headers:     []egv1a1.AuthorizationHeaderMatch{{}},
 							},
@@ -1235,11 +1277,25 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{
 									{Country: new("US")},
 								},
 							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "cel not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							CEL:    new(egv1a1.CELExpression("request.path.startsWith('/admin')")),
 						},
 					},
 				},
@@ -1253,13 +1309,13 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"192.168.0.0/16"},
 							},
 						},
 						{
 							Action:    egv1a1.AuthorizationActionDeny,
-							Principal: egv1a1.Principal{},
+							Principal: &egv1a1.Principal{},
 						},
 					},
 				},
