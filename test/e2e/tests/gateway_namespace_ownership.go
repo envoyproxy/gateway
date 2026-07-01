@@ -36,81 +36,124 @@ var GatewayNamespaceOwnership = suite.ConformanceTest{
 			t.Skip("GatewayNamespaceOwnership test only applies to gateway-namespace-mode")
 		}
 
-		const (
-			ns     = "gateway-conformance-infra"
-			gwName = "ownership-collision-test"
-		)
+		const ns = "gateway-conformance-infra"
 
-		ctx := context.Background()
-
-		preExistingSA := &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      gwName,
-				Labels:    map[string]string{"app": "pre-existing"},
-			},
-		}
-		require.NoError(t, suite.Client.Create(ctx, preExistingSA))
-
-		t.Cleanup(func() {
-			_ = suite.Client.Delete(ctx, &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName},
-			})
-			_ = suite.Client.Delete(ctx, &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName},
-			})
-		})
-
-		// create a Gateway whose auto-generated SA name equals gwName, the collision case.
-		gw := &gwapiv1.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      gwName,
-				Namespace: ns,
-			},
-			Spec: gwapiv1.GatewaySpec{
-				GatewayClassName: gwapiv1.ObjectName(suite.GatewayClassName),
-				Listeners: []gwapiv1.Listener{
-					{
-						Name:     "http",
-						Port:     8000,
-						Protocol: "HTTP",
-					},
-				},
-			},
-		}
-		require.NoError(t, suite.Client.Create(ctx, gw))
-
-		gwNN := types.NamespacedName{Name: gwName, Namespace: ns}
-
-		// The infra reconciler must detect the collision and surface it as a condition rather
-		// than silently patching the pre-existing SA.
-		tlog.Logf(t, "waiting for Gateway to surface ownership conflict")
-		err := wait.PollUntilContextTimeout(ctx, time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true,
-			func(ctx context.Context) (bool, error) {
-				fetched := &gwapiv1.Gateway{}
-				if err := suite.Client.Get(ctx, gwNN, fetched); err != nil {
-					return false, nil
-				}
-				for _, cond := range fetched.Status.Conditions {
-					// controller noticed the problem with Accepted=False or Programmed=False.
-					if cond.Status == metav1.ConditionFalse {
-						tlog.Logf(t, "Gateway has non-ready condition %s=%s: %s", cond.Type, cond.Status, cond.Message)
+		// waitForSettled blocks until the Gateway's Programmed condition is False,
+		// ObservedGeneration matches Generation, and the condition is stable.
+		waitForSettled := func(t *testing.T, gwNN types.NamespacedName) {
+			t.Helper()
+			var settledTransitionTime metav1.Time
+			var settledGeneration int64
+			err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true,
+				func(ctx context.Context) (bool, error) {
+					fetched := &gwapiv1.Gateway{}
+					if err := suite.Client.Get(ctx, gwNN, fetched); err != nil {
+						return false, nil
+					}
+					var programmed *metav1.Condition
+					for i := range fetched.Status.Conditions {
+						if fetched.Status.Conditions[i].Type == string(gwapiv1.GatewayConditionProgrammed) {
+							programmed = &fetched.Status.Conditions[i]
+							break
+						}
+					}
+					if programmed == nil || programmed.Status != metav1.ConditionFalse {
+						return false, nil
+					}
+					if programmed.ObservedGeneration != fetched.Generation {
+						return false, nil
+					}
+					if settledGeneration == fetched.Generation &&
+						settledTransitionTime.Equal(&programmed.LastTransitionTime) {
+						tlog.Logf(t, "Gateway Programmed=False settled: reason=%s message=%s",
+							programmed.Reason, programmed.Message)
 						return true, nil
 					}
-				}
-				return false, nil
-			})
-		require.NoError(t, err, "expected Gateway to reflect an error condition due to SA ownership conflict")
-
-		fetchedSA := &corev1.ServiceAccount{}
-		require.NoError(t, suite.Client.Get(ctx, client.ObjectKey{Namespace: ns, Name: gwName}, fetchedSA))
-
-		for _, ref := range fetchedSA.OwnerReferences {
-			assert.NotEqual(t, "Gateway", ref.Kind,
-				"pre-existing ServiceAccount must not have a Gateway ownerReference injected by Envoy Gateway")
+					settledGeneration = fetched.Generation
+					settledTransitionTime = programmed.LastTransitionTime
+					return false, nil
+				})
+			require.NoError(t, err, "expected Gateway Programmed=False to settle after ownership conflict")
 		}
 
-		assert.Equal(t, map[string]string{"app": "pre-existing"}, fetchedSA.Labels,
-			"pre-existing ServiceAccount labels must not be modified")
+		t.Run("ServiceAccount", func(t *testing.T) {
+			gwName := "ownership-collision-sa"
+			ctx := t.Context()
+
+			preExistingSA := &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      gwName,
+					Labels:    map[string]string{"app": "pre-existing"},
+				},
+			}
+			require.NoError(t, suite.Client.Create(ctx, preExistingSA))
+			t.Cleanup(func() {
+				_ = suite.Client.Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+				_ = suite.Client.Delete(ctx, &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+			})
+
+			gw := newCollisionGateway(ns, gwName, suite.GatewayClassName)
+			require.NoError(t, suite.Client.Create(ctx, gw))
+
+			gwNN := types.NamespacedName{Name: gwName, Namespace: ns}
+			waitForSettled(t, gwNN)
+
+			fetchedSA := &corev1.ServiceAccount{}
+			require.NoError(t, suite.Client.Get(ctx, client.ObjectKey{Namespace: ns, Name: gwName}, fetchedSA))
+			for _, ref := range fetchedSA.OwnerReferences {
+				assert.NotEqual(t, "Gateway", ref.Kind,
+					"pre-existing ServiceAccount must not have a Gateway ownerReference injected")
+			}
+			assert.Equal(t, map[string]string{"app": "pre-existing"}, fetchedSA.Labels,
+				"pre-existing ServiceAccount labels must not be modified")
+		})
+
+		t.Run("ConfigMap", func(t *testing.T) {
+			gwName := "ownership-collision-cm"
+			ctx := t.Context()
+
+			preExistingCM := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      gwName,
+					Labels:    map[string]string{"app": "pre-existing"},
+				},
+			}
+			require.NoError(t, suite.Client.Create(ctx, preExistingCM))
+			t.Cleanup(func() {
+				_ = suite.Client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+				_ = suite.Client.Delete(ctx, &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+			})
+
+			gw := newCollisionGateway(ns, gwName, suite.GatewayClassName)
+			require.NoError(t, suite.Client.Create(ctx, gw))
+
+			gwNN := types.NamespacedName{Name: gwName, Namespace: ns}
+			waitForSettled(t, gwNN)
+
+			fetchedCM := &corev1.ConfigMap{}
+			require.NoError(t, suite.Client.Get(ctx, client.ObjectKey{Namespace: ns, Name: gwName}, fetchedCM))
+			for _, ref := range fetchedCM.OwnerReferences {
+				assert.NotEqual(t, "Gateway", ref.Kind,
+					"pre-existing ConfigMap must not have a Gateway ownerReference injected")
+			}
+			assert.Equal(t, map[string]string{"app": "pre-existing"}, fetchedCM.Labels,
+				"pre-existing ConfigMap labels must not be modified")
+		})
 	},
+}
+
+// newCollisionGateway returns a minimal Gateway whose auto-generated infra resource
+// names equal gwName in GatewayNamespace mode.
+func newCollisionGateway(ns, gwName, gwClassName string) *gwapiv1.Gateway {
+	return &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: gwName, Namespace: ns},
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gwClassName),
+			Listeners: []gwapiv1.Listener{
+				{Name: "http", Port: 8000, Protocol: "HTTP"},
+			},
+		},
+	}
 }

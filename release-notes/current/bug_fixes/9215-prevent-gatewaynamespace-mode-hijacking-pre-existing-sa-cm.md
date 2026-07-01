@@ -1,1 +1,1 @@
-Fixed prevent GatewayNamespace mode from hijacking pre-existing ServiceAccounts and ConfigMaps.
+Fixed an issue where GatewayNamespace mode could hijack pre-existing ServiceAccounts and ConfigMaps when names collided.

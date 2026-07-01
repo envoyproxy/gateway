@@ -763,6 +763,11 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 }
 
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
+	// no collision guard is needed for resources in the controller namespace.
+	if obj.GetNamespace() == i.ControllerNamespace {
+		return nil
+	}
+
 	existing := obj.DeepCopyObject().(client.Object)
 
 	// use a non-cached api reader to check for ownership,
@@ -794,6 +799,19 @@ func ownedByGateway(existingLabels, desiredLabels map[string]string) bool {
 	if existingLabels["app.kubernetes.io/managed-by"] != "envoy-gateway" {
 		return false
 	}
-	return existingLabels[gatewayapi.OwningGatewayNameLabel] == desiredLabels[gatewayapi.OwningGatewayNameLabel] &&
-		existingLabels[gatewayapi.OwningGatewayNamespaceLabel] == desiredLabels[gatewayapi.OwningGatewayNamespaceLabel]
+
+	gwName := desiredLabels[gatewayapi.OwningGatewayNameLabel]
+	gwNS := desiredLabels[gatewayapi.OwningGatewayNamespaceLabel]
+	if gwName != "" || gwNS != "" {
+		return existingLabels[gatewayapi.OwningGatewayNameLabel] == gwName &&
+			existingLabels[gatewayapi.OwningGatewayNamespaceLabel] == gwNS
+	}
+
+	gwClass := desiredLabels[gatewayapi.OwningGatewayClassLabel]
+	if gwClass != "" {
+		return existingLabels[gatewayapi.OwningGatewayClassLabel] == gwClass
+	}
+
+	// no identity labels present.
+	return false
 }

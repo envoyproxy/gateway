@@ -331,6 +331,93 @@ func owningLabels(ns, name string) map[string]string {
 	}
 }
 
+// owningClassLabels returns labels for a MergeGateways resource identified by GatewayClass.
+func owningClassLabels(gwClass string) map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/managed-by":    "envoy-gateway",
+		gatewayapi.OwningGatewayClassLabel: gwClass,
+	}
+}
+
+// TestOwnedByGateway covers ownedByGateway across all three label.
+func TestOwnedByGateway(t *testing.T) {
+	tests := []struct {
+		name     string
+		existing map[string]string
+		desired  map[string]string
+		want     bool
+	}{
+		// gateway-scoped
+		{
+			name:     "gateway-scoped: exact match",
+			existing: owningLabels("default", "my-gateway"),
+			desired:  owningLabels("default", "my-gateway"),
+			want:     true,
+		},
+		{
+			name:     "gateway-scoped: different gateway name",
+			existing: owningLabels("default", "other-gateway"),
+			desired:  owningLabels("default", "my-gateway"),
+			want:     false,
+		},
+		{
+			name:     "gateway-scoped: different namespace",
+			existing: owningLabels("other-ns", "my-gateway"),
+			desired:  owningLabels("default", "my-gateway"),
+			want:     false,
+		},
+		{
+			name:     "gateway-scoped: managed-by absent on existing",
+			existing: map[string]string{gatewayapi.OwningGatewayNamespaceLabel: "default", gatewayapi.OwningGatewayNameLabel: "my-gateway"},
+			desired:  owningLabels("default", "my-gateway"),
+			want:     false,
+		},
+		{
+			name:     "gateway-scoped: managed-by wrong controller",
+			existing: map[string]string{"app.kubernetes.io/managed-by": "helm", gatewayapi.OwningGatewayNamespaceLabel: "default", gatewayapi.OwningGatewayNameLabel: "my-gateway"},
+			desired:  owningLabels("default", "my-gateway"),
+			want:     false,
+		},
+		// gatewayclass-scoped
+		{
+			name:     "gatewayclass-scoped: exact match",
+			existing: owningClassLabels("my-class"),
+			desired:  owningClassLabels("my-class"),
+			want:     true,
+		},
+		{
+			name:     "gatewayclass-scoped: different class",
+			existing: owningClassLabels("other-class"),
+			desired:  owningClassLabels("my-class"),
+			want:     false,
+		},
+		{
+			name:     "gatewayclass-scoped: existing has correct managed-by but empty class",
+			existing: map[string]string{"app.kubernetes.io/managed-by": "envoy-gateway"},
+			desired:  owningClassLabels("my-class"),
+			want:     false,
+		},
+		// no-identity-labels
+		{
+			name:     "no-identity-labels: existing has managed-by only",
+			existing: map[string]string{"app.kubernetes.io/managed-by": "envoy-gateway"},
+			desired:  map[string]string{"app.kubernetes.io/managed-by": "envoy-gateway"},
+			want:     false,
+		},
+		{
+			name:     "no-identity-labels: nil existing labels",
+			existing: nil,
+			desired:  map[string]string{"app.kubernetes.io/managed-by": "envoy-gateway"},
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, ownedByGateway(tt.existing, tt.desired))
+		})
+	}
+}
+
 // TestCheckOwnership_NotFound verifies that checkOwnership returns nil when the
 // resource does not yet exist.
 func TestCheckOwnership_NotFound(t *testing.T) {
