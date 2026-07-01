@@ -216,7 +216,7 @@ xdsIR:
               namespace: default
               sectionName: "9000"
             name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
-            protocol: HTTP
+            protocol: GRPC
             tls:
               alpnProtocols: null
               caCertificate:

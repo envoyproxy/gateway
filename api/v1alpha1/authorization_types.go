@@ -30,6 +30,8 @@ type Authorization struct {
 }
 
 // AuthorizationRule defines a single authorization rule.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.principal) || has(self.cel)",message="at least one of principal or cel must be specified"
 type AuthorizationRule struct {
 	// Name is a user-friendly name for the rule.
 	// If not specified, Envoy Gateway will generate a unique name for the rule.
@@ -52,8 +54,44 @@ type AuthorizationRule struct {
 	// If there are multiple principal types, all principals must match for the rule to match.
 	// For example, if there are two principals: one for client IP and one for JWT claim,
 	// the rule will match only if both the client IP and the JWT claim match.
-	Principal Principal `json:"principal"`
+	//
+	// +optional
+	Principal *Principal `json:"principal,omitempty"`
+
+	// CEL specifies a Common Expression Language expression to evaluate for the
+	// request. If specified, the expression must evaluate to true for the rule to match.
+	//
+	// The expression can use Envoy attributes exposed to the CEL runtime.
+	// Request attributes, such as request.path, request.url_path, request.host,
+	// request.scheme, request.method, request.headers, and request.query, are
+	// generally available during authorization. Connection attributes, such as
+	// source.address, source.port, destination.address, destination.port,
+	// connection.mtls, and connection.requested_server_name, may also be used.
+	// Dynamic metadata and filter state produced by earlier filters may also be
+	// available through attributes such as metadata and filter_state.
+	// Response attributes are only available after the request completes and
+	// should not be used for authorization decisions.
+	//
+	// For more details, see:
+	// https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
+	//
+	// The rule matches only when the expression evaluates to a boolean true.
+	// Non-boolean results, false, null, and CEL evaluation errors are treated as
+	// no match.
+	//
+	// Examples:
+	// `request.headers['x-tenant'] == 'team-a'`
+	// `request.method == 'POST' && request.path.startsWith('/admin')`
+	//
+	// +optional
+	CEL *CELExpression `json:"cel,omitempty"`
 }
+
+// CELExpression specifies a CEL expression.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=4096
+type CELExpression string
 
 // Operation specifies the operation of a request.
 //

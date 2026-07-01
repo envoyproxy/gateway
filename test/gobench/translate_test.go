@@ -112,7 +112,7 @@ spec:
           port: 8000
 `
 	udpRouteYAML = `---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: UDPRoute
 metadata:
   name: backend
@@ -363,7 +363,7 @@ func genUDPRoutes(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
 		fmt.Fprintf(&sb, `---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: UDPRoute
 metadata:
   name: backend-udp-%d

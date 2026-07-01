@@ -308,7 +308,8 @@ _Appears in:_
 | `name` | _string_ |  false  |  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action defines the action to be taken if the rule matches. |
 | `operation` | _[Operation](#operation)_ |  false  |  | Operation specifies the operation of a request, such as HTTP methods.<br />If not specified, all operations are matched on. |
-| `principal` | _[Principal](#principal)_ |  true  |  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
+| `principal` | _[Principal](#principal)_ |  false  |  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
+| `cel` | _[CELExpression](#celexpression)_ |  false  |  | CEL specifies a Common Expression Language expression to evaluate for the<br />request. If specified, the expression must evaluate to true for the rule to match.<br />The expression can use Envoy attributes exposed to the CEL runtime.<br />Request attributes, such as request.path, request.url_path, request.host,<br />request.scheme, request.method, request.headers, and request.query, are<br />generally available during authorization. Connection attributes, such as<br />source.address, source.port, destination.address, destination.port,<br />connection.mtls, and connection.requested_server_name, may also be used.<br />Dynamic metadata and filter state produced by earlier filters may also be<br />available through attributes such as metadata and filter_state.<br />Response attributes are only available after the request completes and<br />should not be used for authorization decisions.<br />For more details, see:<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes<br />The rule matches only when the expression evaluates to a boolean true.<br />Non-boolean results, false, null, and CEL evaluation errors are treated as<br />no match.<br />Examples:<br />`request.headers['x-tenant'] == 'team-a'`<br />`request.method == 'POST' && request.path.startsWith('/admin')` |
 
 
 #### BackOffPolicy
@@ -790,6 +791,17 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli
 
 _Appears in:_
 - [Compression](#compression)
+
+
+
+#### CELExpression
+
+_Underlying type:_ _string_
+
+CELExpression specifies a CEL expression.
+
+_Appears in:_
+- [AuthorizationRule](#authorizationrule)
 
 
 
