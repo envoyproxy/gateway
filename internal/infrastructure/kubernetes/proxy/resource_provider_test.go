@@ -1148,6 +1148,12 @@ func TestDaemonSet(t *testing.T) {
 			daemonset:            nil,
 			gatewayNamespaceMode: true,
 		},
+		{
+			caseName:             "custom-sa",
+			infra:                newTestInfraWithCustomServiceAccount(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
+			daemonset:            nil,
+			gatewayNamespaceMode: true,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
