@@ -339,6 +339,21 @@ func owningClassLabels(gwClass string) map[string]string {
 	}
 }
 
+// newGatewayNamespaceInfra returns a test Infra with GatewayNamespace mode enabled.
+func newGatewayNamespaceInfra(t *testing.T, cli client.Client) *Infra {
+	t.Helper()
+	kube := newTestInfraWithClient(t, cli)
+	kube.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeKubernetes,
+		Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+			Deploy: &egv1a1.KubernetesDeployMode{
+				Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+			},
+		},
+	}
+	return kube
+}
+
 // TestOwnedByGateway covers ownedByGateway across all three label.
 func TestOwnedByGateway(t *testing.T) {
 	tests := []struct {
@@ -422,7 +437,7 @@ func TestOwnedByGateway(t *testing.T) {
 // resource does not yet exist.
 func TestCheckOwnership_NotFound(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	sa := &corev1.ServiceAccount{
 		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
@@ -440,7 +455,7 @@ func TestCheckOwnership_SameGateway(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "my-gateway", Labels: owningLabels("default", "my-gateway")},
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(sa).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	require.NoError(t, kube.checkOwnership(ctx, sa))
 }
@@ -458,7 +473,7 @@ func TestCheckOwnership_UnownedResource(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway", Labels: owningLabels("kube-system", "envoy-gateway")},
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	err := kube.checkOwnership(ctx, desired)
 	require.Error(t, err)
@@ -478,7 +493,7 @@ func TestCheckOwnership_DifferentGateway(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "shared-name", Labels: owningLabels("default", "gateway-b")},
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	err := kube.checkOwnership(ctx, desired)
 	require.Error(t, err)
@@ -497,7 +512,7 @@ func TestCheckOwnership_UnownedConfigMap(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway", Labels: owningLabels("kube-system", "envoy-gateway")},
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	err := kube.checkOwnership(ctx, desired)
 	require.Error(t, err)
@@ -516,7 +531,7 @@ func TestCheckOwnership_UnownedDeployment(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	err := kube.checkOwnership(ctx, desired)
 	require.Error(t, err)
@@ -535,7 +550,7 @@ func TestCheckOwnership_UnownedDaemonSet(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	err := kube.checkOwnership(ctx, desired)
 	require.Error(t, err)
@@ -554,7 +569,7 @@ func TestCheckOwnership_UnownedService(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	err := kube.checkOwnership(ctx, desired)
 	require.Error(t, err)
@@ -573,7 +588,7 @@ func TestCheckOwnership_UnownedPDB(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	err := kube.checkOwnership(ctx, desired)
 	require.Error(t, err)
@@ -592,7 +607,7 @@ func TestCheckOwnership_UnownedHPA(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
-	kube := newTestInfraWithClient(t, cli)
+	kube := newGatewayNamespaceInfra(t, cli)
 
 	err := kube.checkOwnership(ctx, desired)
 	require.Error(t, err)

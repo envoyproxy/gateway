@@ -750,8 +750,7 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 }
 
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
-	// no collision guard is needed for resources in the controller namespace.
-	if obj.GetNamespace() == i.ControllerNamespace {
+	if !i.EnvoyGateway.GatewayNamespaceMode() {
 		return nil
 	}
 
