@@ -27,7 +27,7 @@ metadata:
   namespace: gateway-conformance-infra
   name: oidc-authz-secret
 data:
-  client-secret: b2lkY3Rlc3QtZm9vLWNsaWVudC1zZWNyZXQ= # base64 of "oidctest-foo-client-secret"
+  client-secret: b2lkY3Rlc3QtZm9vLWNsaWVudC1zZWNyZXQ=  # base64 of "oidctest-foo-client-secret"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -64,7 +64,7 @@ spec:
     passThroughAuthHeader: true
   jwt:
     providers:
-      - name: "keycloak" # This is needed so JWTs generated through the OIDC flow can be validated
+      - name: "keycloak"  # This is needed so JWTs generated through the OIDC flow can be validated
         remoteJWKS:
           uri: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/certs"
           cacheDuration: 300s
