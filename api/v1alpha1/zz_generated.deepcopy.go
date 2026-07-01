@@ -7054,6 +7054,16 @@ func (in *ProxyTracing) DeepCopyInto(out *ProxyTracing) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.ClientSamplingRate != nil {
+		in, out := &in.ClientSamplingRate, &out.ClientSamplingRate
+		*out = new(uint32)
+		**out = **in
+	}
+	if in.OverallSamplingRate != nil {
+		in, out := &in.OverallSamplingRate, &out.OverallSamplingRate
+		*out = new(uint32)
+		**out = **in
+	}
 	in.Provider.DeepCopyInto(&out.Provider)
 }
 
@@ -8440,6 +8450,16 @@ func (in *Tracing) DeepCopyInto(out *Tracing) {
 	*out = *in
 	if in.SamplingFraction != nil {
 		in, out := &in.SamplingFraction, &out.SamplingFraction
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ClientSamplingFraction != nil {
+		in, out := &in.ClientSamplingFraction, &out.ClientSamplingFraction
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.OverallSamplingFraction != nil {
+		in, out := &in.OverallSamplingFraction, &out.OverallSamplingFraction
 		*out = new(v1.Fraction)
 		(*in).DeepCopyInto(*out)
 	}

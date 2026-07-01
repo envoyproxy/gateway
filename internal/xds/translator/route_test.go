@@ -10,10 +10,42 @@ import (
 	"testing"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"github.com/stretchr/testify/require"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
+
+func TestBuildRouteTracingSampling(t *testing.T) {
+	httpRoute := &ir.HTTPRoute{
+		Traffic: &ir.TrafficFeatures{
+			Telemetry: &ir.BackendTelemetry{
+				Tracing: &ir.BackendTracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: new(int32(100)),
+					},
+					ClientSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   2,
+						Denominator: new(int32(100)),
+					},
+					OverallSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   3,
+						Denominator: new(int32(100)),
+					},
+				},
+			},
+		},
+	}
+
+	got, err := buildRouteTracing(httpRoute)
+	require.NoError(t, err)
+	require.Equal(t, &xdstype.FractionalPercent{Numerator: 1}, got.RandomSampling)
+	require.Equal(t, &xdstype.FractionalPercent{Numerator: 2}, got.ClientSampling)
+	require.Equal(t, &xdstype.FractionalPercent{Numerator: 3}, got.OverallSampling)
+}
 
 func TestBuildHashPolicy(t *testing.T) {
 	tests := []struct {

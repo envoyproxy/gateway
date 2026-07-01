@@ -11,6 +11,8 @@ envoyProxyForGatewayClass:
         samplingFraction:
           numerator: 1
           denominator: 100
+        clientSamplingRate: 20
+        overallSamplingRate: 30
         provider:
           host: otel-collector.monitoring.svc.cluster.local
           port: 4317
