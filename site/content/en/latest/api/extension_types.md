@@ -4103,6 +4103,8 @@ _Appears in:_
 | `info` | LogLevelInfo defines the "Info" logging level.<br /> | 
 | `warn` | LogLevelWarn defines the "Warn" logging level.<br /> | 
 | `error` | LogLevelError defines the "Error" logging level.<br /> | 
+| `off` | LogLevelOff disables logging.<br /> | 
+| `critical` | LogLevelCritical defines the "critical" logging level.<br /> | 
 
 
 #### Lua

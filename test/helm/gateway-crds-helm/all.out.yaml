@@ -34373,6 +34373,8 @@ spec:
                       - info
                       - warn
                       - error
+                      - "off"
+                      - critical
                       type: string
                     default:
                       default: warn
