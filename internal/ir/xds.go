@@ -316,6 +316,8 @@ type HTTPListener struct {
 	GeoIPProvider *GeoIPProvider `json:"geoIPProvider,omitempty" yaml:"geoIPProvider,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
+	// Host contains settings for Host/Authority header normalization
+	Host *HostSettings `json:"host,omitempty" yaml:"host,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
@@ -587,6 +589,16 @@ const (
 type PathSettings struct {
 	MergeSlashes         bool                   `json:"mergeSlashes" yaml:"mergeSlashes"`
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
+}
+
+// HostSettings holds configuration for Host/Authority header normalization
+// +k8s:deepcopy-gen=true
+type HostSettings struct {
+	// StripPort strips the port from the Host/Authority header unconditionally
+	// (Envoy's strip_any_host_port). A false value means no port stripping is performed.
+	StripPort bool `json:"stripPort,omitempty" yaml:"stripPort,omitempty"`
+	// StripTrailingHostDot strips the trailing dot from the Host/Authority header before processing.
+	StripTrailingHostDot bool `json:"stripTrailingHostDot,omitempty" yaml:"stripTrailingHostDot,omitempty"`
 }
 
 // ProxyProtocolSettings holds configuration for proxy protocol

@@ -998,6 +998,7 @@ _Appears in:_
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  |  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
 | `tls` | _[ClientTLSSettings](#clienttlssettings)_ |  false  |  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  |  | Path enables managing how the incoming path set by clients can be normalized. |
+| `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header set by clients can be normalized. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  |  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  |  | Timeout settings for the client connections. |
 | `connection` | _[ClientConnection](#clientconnection)_ |  false  |  | Connection includes client connection settings. |
@@ -3374,6 +3375,22 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `path` | _string_ |  true  |  | Path specifies the HTTP path to match on for health check requests. |
+
+
+#### HostSettings
+
+
+
+HostSettings provides settings that manage how the incoming Host/Authority header
+set by clients is normalized.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `stripPort` | _boolean_ |  false  |  | StripPort determines whether the port is removed from the Host/Authority header<br />before route matching. It maps to Envoy's strip_any_host_port, which strips the<br />port unconditionally.<br />If not set, no port stripping is performed (Envoy default).<br />Stripping only the port that matches the listener port (Envoy's<br />strip_matching_host_port) is intentionally not offered: Envoy compares against the<br />Envoy listener port, which differs from the user-facing Gateway listener port (for<br />example, a Gateway listener on port 80 is translated to an Envoy listener on port<br />10080). Matching-port stripping would therefore be silently ineffective for the<br />port clients actually use, so only unconditional stripping is exposed. |
+| `stripTrailingHostDot` | _boolean_ |  false  |  | StripTrailingHostDot determines if the trailing dot of the host should be removed<br />from the Host/Authority header before any processing of the request.<br />This affects the upstream host header as well. Without this option, incoming requests<br />with host "example.com." will not match routes with domains set to "example.com".<br />When the host includes a port (for example "example.com.:443"), only the trailing dot<br />from the host section is stripped, leaving the port as-is ("example.com:443").<br />Defaults to false. |
 
 
 #### IPEndpoint
