@@ -1,0 +1,82 @@
+# This manifest exercises the BackendTrafficPolicy requestBodyBufferLimit field.
+#
+# Both routes are forced to buffer the request body via an inline Lua filter that
+# calls request_handle:body(). Buffering is what makes Envoy enforce the request
+# body buffer limit (a 413 is only returned when a filter buffers the body and the
+# buffered size exceeds the stream decoder buffer limit; pure streaming proxies any
+# size). The Lua filter is used purely as the buffering trigger and, unlike the
+# Buffer filter, does not impose its own max_request_bytes.
+#
+# - request-body-buffer-limit-default has no requestBodyBufferLimit, so the limit
+#   defaults to the listener per_connection_buffer_limit_bytes (32768 bytes). A body
+#   larger than that is rejected with HTTP 413.
+# - request-body-buffer-limit-high sets requestBodyBufferLimit to 1Mi, which raises
+#   the stream decoder buffer limit so the same body is buffered and forwarded (200).
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: request-body-buffer-limit-default
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /request-body-buffer-limit-default
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: request-body-buffer-limit-high
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /request-body-buffer-limit-high
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: request-body-buffer-limit-buffer-body
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: request-body-buffer-limit-default
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: request-body-buffer-limit-high
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(request_handle)
+          -- Force Envoy to buffer the full request body so that the configured
+          -- request body buffer limit is enforced.
+          request_handle:body()
+        end
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: request-body-buffer-limit-high
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: request-body-buffer-limit-high
+  requestBodyBufferLimit: 1Mi
