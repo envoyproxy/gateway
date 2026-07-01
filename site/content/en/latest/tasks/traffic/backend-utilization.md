@@ -121,6 +121,7 @@ All fields on `backendUtilization` are optional.
 | `errorUtilizationPenaltyPercent` | `0` | Multiplier (as `percent × 100`) applied to an endpoint's effective utilization based on its error rate (eps/qps). `100` = 1.0×, `150` = 1.5×, `200` = 2.0×. Higher values push errant endpoints out of rotation faster. |
 | `metricNamesForComputingUtilization` | _unset_ | Custom ORCA metric keys to feed into the weight formula when `application_utilization` isn't reported. Use `named_metrics.<key>` for keys inside the ORCA proto's `named_metrics` map. |
 | `keepResponseHeaders` | `false` | By default Envoy strips the ORCA headers/trailers before forwarding the response. Set to `true` to let downstream clients see them (useful for chained load balancers or debugging). |
+| `oob` | _unset_ | Enables [out-of-band ORCA reporting](#out-of-band-oob-reporting) — Envoy streams load reports from the endpoint's `OpenRcaService` instead of relying only on in-band response headers. |
 
 ### Example: Tuned for a Bursty Backend
 
@@ -163,6 +164,36 @@ Your backend must emit ORCA load metrics. Envoy accepts metrics in three formats
 | TEXT | `endpoint-load-metrics` | `TEXT cpu=0.3,mem=0.8,named_metrics.queue_depth=0.42` |
 
 For gRPC backends, the [xDS ORCA][grpc-orca] libraries emit these automatically via the `orca_load_report` service. For HTTP backends, add a response middleware that measures and serializes your CPU/memory/custom metrics on each response.
+
+## Out-of-Band (OOB) Reporting
+
+By default Envoy reads ORCA metrics **in-band** — from the response headers or trailers of regular requests (see [Backend Instrumentation](#backend-instrumentation) above). With out-of-band (OOB) reporting, Envoy instead opens a dedicated server-streaming gRPC connection to each endpoint's [`OpenRcaService`][open-rca] (`xds.service.orca.v3.OpenRcaService/StreamCoreMetrics`) and receives load reports on a fixed schedule, independent of request traffic.
+
+OOB reporting is useful when:
+
+* Request volume is low or bursty, so in-band samples arrive too infrequently to weight endpoints well.
+* You want load signals even for endpoints that are currently idle.
+* A separate reporting sidecar exposes the ORCA stream on its own port.
+
+Enable it by adding an `oob` block. Its presence turns OOB on; an empty `oob: {}` enables it with Envoy's defaults. In-band metrics (and `keepResponseHeaders`) continue to be honored alongside OOB.
+
+```yaml
+loadBalancer:
+  type: BackendUtilization
+  backendUtilization:
+    oob:
+      reportingPeriod: 5s     # how often Envoy requests a report (default 10s)
+      port: 9001              # optional: reach a reporting sidecar on a different port
+      authority: orca.local   # optional: :authority header for the OOB gRPC stream
+```
+
+| Field | Default | Purpose |
+|---|---|---|
+| `oob.reportingPeriod` | `10s` | How often Envoy requests a load report from the endpoint. The server may report less frequently than requested. |
+| `oob.port` | endpoint port | Alternative port for the OOB reporting connection, e.g. a dedicated reporting sidecar. Must be between `1` and `65535`. |
+| `oob.authority` | _unset_ | Overrides the `:authority` header on the OOB gRPC stream. |
+
+Your backend must implement the `OpenRcaService` streaming RPC for OOB to take effect. gRPC backends can use the [xDS ORCA][grpc-orca] server libraries; the same [`OrcaLoadReport`][orca-proto] message carries both in-band and OOB reports.
 
 ## Combining With Zone-Aware Routing
 
@@ -212,6 +243,7 @@ kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/ex
 [orca-proto]: https://www.envoyproxy.io/docs/envoy/latest/xds/data/orca/v3/orca_load_report.proto
 [client-side-wrr]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/client_side_weighted_round_robin/v3/client_side_weighted_round_robin.proto
 [grpc-orca]: https://github.com/grpc/proposal/blob/master/A51-custom-backend-metrics.md
+[open-rca]: https://github.com/cncf/xds/blob/main/xds/service/orca/v3/orca.proto
 [concepts-lb]: ../../../concepts/load-balancing#backend-utilization-orca
 [zone-aware-weighted]: ../zone-aware-routing#weightedzones
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
