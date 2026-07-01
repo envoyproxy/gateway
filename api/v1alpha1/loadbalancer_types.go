@@ -238,15 +238,19 @@ type BackendUtilization struct {
 	//
 	// The backend must implement OpenRcaService for this to take effect.
 	// +optional
+	// +notImplementedHide
 	OOB *OOBReporting `json:"oob,omitempty"`
 }
 
 // OOBReporting configures out-of-band ORCA load reporting for the
 // BackendUtilization load balancer.
+//
+// +notImplementedHide
 type OOBReporting struct {
 	// ReportingPeriod is how often Envoy requests load reports from the server.
 	// If omitted, uses Envoy's default of 10s.
 	// +optional
+	// +notImplementedHide
 	ReportingPeriod *gwapiv1.Duration `json:"reportingPeriod,omitempty"`
 
 	// Port overrides the port used for the OOB reporting connection, e.g. to
@@ -254,12 +258,14 @@ type OOBReporting struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +optional
+	// +notImplementedHide
 	Port *uint32 `json:"port,omitempty"`
 
 	// Authority overrides the :authority header on the OOB gRPC stream.
 	//
 	// +kubebuilder:validation:Pattern=`^[^\x00\n\r]*$`
 	// +optional
+	// +notImplementedHide
 	Authority *string `json:"authority,omitempty"`
 }
 
