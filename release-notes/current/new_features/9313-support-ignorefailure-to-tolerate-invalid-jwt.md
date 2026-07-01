@@ -1,0 +1,1 @@
+Added an `ignoreFailure` field to JWT in `SecurityPolicy`, allowing a request to pass the JWT filter even when its JWT is missing or invalid (maps to Envoy's `allow_missing_or_failed`). Verified claims are still forwarded, so it should be paired with an Authorization policy for enforcement.

@@ -1388,8 +1388,9 @@ func (t *Translator) buildJWT(
 	}
 
 	return &ir.JWT{
-		AllowMissing: ptr.Deref(policy.Spec.JWT.Optional, false),
-		Providers:    providers,
+		AllowMissing:         ptr.Deref(policy.Spec.JWT.Optional, false),
+		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.IgnoreFailure, false),
+		Providers:            providers,
 	}, nil
 }
 
