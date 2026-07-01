@@ -67,11 +67,8 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		return err
 	}
 
-	// only check auto-generated names.
-	if sa.Name == r.Name() {
-		if err = i.checkOwnership(ctx, sa); err != nil {
-			return err
-		}
+	if err = i.checkOwnership(ctx, sa); err != nil {
+		return err
 	}
 	return i.Client.ServerSideApply(ctx, sa)
 }
@@ -163,10 +160,8 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		}
 	}()
 
-	if deployment.Name == r.Name() {
-		if err = i.checkOwnership(ctx, deployment); err != nil {
-			return err
-		}
+	if err = i.checkOwnership(ctx, deployment); err != nil {
+		return err
 	}
 
 	old := &appsv1.Deployment{}
@@ -256,10 +251,8 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		}
 	}()
 
-	if daemonSet.Name == r.Name() {
-		if err = i.checkOwnership(ctx, daemonSet); err != nil {
-			return err
-		}
+	if err = i.checkOwnership(ctx, daemonSet); err != nil {
+		return err
 	}
 
 	old := &appsv1.DaemonSet{}
@@ -346,10 +339,8 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		}
 	}()
 
-	if pdb.Name == r.Name() {
-		if err = i.checkOwnership(ctx, pdb); err != nil {
-			return err
-		}
+	if err = i.checkOwnership(ctx, pdb); err != nil {
+		return err
 	}
 
 	return i.Client.ServerSideApply(ctx, pdb)
@@ -401,10 +392,8 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		}
 	}()
 
-	if hpa.Name == r.Name() {
-		if err = i.checkOwnership(ctx, hpa); err != nil {
-			return err
-		}
+	if err = i.checkOwnership(ctx, hpa); err != nil {
+		return err
 	}
 
 	return i.Client.ServerSideApply(ctx, hpa)
@@ -448,10 +437,8 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 		}
 	}()
 
-	if svc.Name == r.Name() {
-		if err = i.checkOwnership(ctx, svc); err != nil {
-			return err
-		}
+	if err = i.checkOwnership(ctx, svc); err != nil {
+		return err
 	}
 
 	return i.Client.ServerSideApply(ctx, svc)

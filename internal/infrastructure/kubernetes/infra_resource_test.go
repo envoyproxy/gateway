@@ -334,7 +334,7 @@ func owningLabels(ns, name string) map[string]string {
 // owningClassLabels returns labels for a MergeGateways resource identified by GatewayClass.
 func owningClassLabels(gwClass string) map[string]string {
 	return map[string]string{
-		"app.kubernetes.io/managed-by":    "envoy-gateway",
+		"app.kubernetes.io/managed-by":     "envoy-gateway",
 		gatewayapi.OwningGatewayClassLabel: gwClass,
 	}
 }
