@@ -413,7 +413,7 @@ type ProxyTelemetry struct {
 
 // EnvoyProxyProviderType defines the types of providers supported by Envoy Proxy.
 //
-// +kubebuilder:validation:Enum=Kubernetes;Host
+// +kubebuilder:validation:Enum=Kubernetes;Host;Remote
 type EnvoyProxyProviderType string
 
 const (
@@ -422,6 +422,9 @@ const (
 
 	// EnvoyProxyProviderTypeHost defines the "Host" provider.
 	EnvoyProxyProviderTypeHost EnvoyProxyProviderType = "Host"
+
+	// EnvoyProxyProviderTypeRemote defines the "Remote" provider.
+	EnvoyProxyProviderTypeRemote EnvoyProxyProviderType = "Remote"
 )
 
 // RequestIDSettings defines configuration for Envoy's UUID request ID extension.
@@ -467,7 +470,7 @@ const (
 type EnvoyProxyProvider struct {
 	// Type is the type of resource provider to use. A resource provider provides
 	// infrastructure resources for running the data plane, e.g. Envoy proxy, and
-	// optional auxiliary control planes. Supported types are "Kubernetes"and "Host".
+	// optional auxiliary control planes. Supported types are "Kubernetes", "Remote', and "Host".
 	//
 	// +unionDiscriminator
 	Type EnvoyProxyProviderType `json:"type"`
@@ -485,6 +488,12 @@ type EnvoyProxyProvider struct {
 	//
 	// +optional
 	Host *EnvoyProxyHostProvider `json:"host,omitempty"`
+	// Remote defers runtime deployment of the data plane to another process.
+	// If unspecified and type is "Remote", default settings for the custom provider
+	// are applied.
+	//
+	// +optional
+	Remote *EnvoyProxyRemoteProvider `json:"remote,omitempty"`
 }
 
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
@@ -554,6 +563,17 @@ type EnvoyProxyHostProvider struct {
 	//
 	// +optional
 	EnvoyVersion *string `json:"envoyVersion,omitempty"`
+}
+
+// EnvoyProxyRemoteProvider defines configuration for the "Remote" resource provider.
+type EnvoyProxyRemoteProvider struct {
+	// UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
+	// When set to false, if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.
+	// This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability.
+	// The default value is True, which means no port shifting occurs.
+	//
+	// +optional
+	UseListenerPortAsContainerPort *bool `json:"useListenerPortAsContainerPort,omitempty"`
 }
 
 type KubernetesServiceAccountSpec struct {

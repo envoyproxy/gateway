@@ -175,7 +175,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	}
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
-		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
+		r.namespaceLabel = cfg.EnvoyGateway.Provider.GetKubernetesConfiguration().Watch.NamespaceSelector
 		// Always allow controller-namespace infrastructure resources to bypass
 		// user namespace selectors.
 		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
@@ -218,8 +218,8 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	}
 
 	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
-	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
-		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+	if cfg.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
+		!ptr.Deref(cfg.EnvoyGateway.Provider.GetKubernetesConfiguration().LeaderElection.Disable, false) {
 		go func() {
 			select {
 			case <-ctx.Done():
@@ -274,13 +274,13 @@ func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
-	if eg.Provider == nil ||
-		eg.Provider.Kubernetes == nil ||
-		eg.Provider.Kubernetes.Watch == nil {
+	if eg.Provider == nil {
 		return false
 	}
-
-	watch := eg.Provider.Kubernetes.Watch
+	watch := eg.Provider.GetKubernetesConfiguration().Watch
+	if watch == nil {
+		return false
+	}
 	switch watch.Type {
 	case egv1a1.KubernetesWatchModeTypeNamespaceSelector:
 		// Make sure that the namespace selector has at least one label or expression is set.

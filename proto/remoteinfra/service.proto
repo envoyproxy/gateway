@@ -1,0 +1,43 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+syntax = "proto3";
+
+package envoygateway.remoteinfra;
+
+option go_package = "proto/remoteinfra";
+
+service EnvoyGatewayRemoteInfrastructureProvider {
+    rpc CreateOrUpdateProxyInfra(CreateOrUpdateProxyInfraRequest) returns (CreateOrUpdateProxyInfraResponse) {};
+    rpc DeleteProxyInfra(DeleteProxyInfraRequest) returns (DeleteProxyInfraResponse) {};
+    rpc CreateOrUpdateRateLimitInfra(CreateOrUpdateRateLimitInfraRequest) returns (CreateOrUpdateRateLimitInfraResponse) {};
+    rpc DeleteRateLimitInfra(DeleteRateLimitInfraRequest) returns (DeleteRateLimitInfraResponse) {};
+}
+
+message CreateOrUpdateProxyInfraRequest {
+  bytes ir_bytes = 1;
+}
+
+message CreateOrUpdateProxyInfraResponse {
+}
+
+message DeleteProxyInfraRequest {
+  bytes ir_bytes = 1;
+}
+
+message DeleteProxyInfraResponse {
+}
+
+message CreateOrUpdateRateLimitInfraRequest {
+}
+
+message CreateOrUpdateRateLimitInfraResponse {
+}
+
+message DeleteRateLimitInfraRequest {
+}
+
+message DeleteRateLimitInfraResponse {
+}

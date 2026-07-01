@@ -23,10 +23,11 @@ import (
 // TestUpdateGatewayStatusProgrammedCondition tests whether UpdateGatewayStatusProgrammedCondition correctly updates the addresses in the Gateway status.
 func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	type args struct {
-		gw            *gwapiv1.Gateway
-		svc           *corev1.Service
-		deployment    *appsv1.Deployment
-		nodeAddresses NodeAddresses
+		gw                   *gwapiv1.Gateway
+		svc                  *corev1.Service
+		deployment           *appsv1.Deployment
+		nodeAddresses        NodeAddresses
+		remoteInfrastructure bool
 	}
 	tests := []struct {
 		name          string
@@ -437,7 +438,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment, tt.args.nodeAddresses)
+			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment, tt.args.nodeAddresses, tt.args.remoteInfrastructure)
 			assert.True(t, reflect.DeepEqual(tt.wantAddresses, tt.args.gw.Status.Addresses))
 		})
 	}
@@ -447,9 +448,10 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 	testCases := []struct {
 		name string
 		// serviceAddressNum indicates how many addresses are set in the Gateway status.
-		serviceAddressNum int
-		deploymentStatus  appsv1.DeploymentStatus
-		expectCondition   []metav1.Condition
+		serviceAddressNum    int
+		deploymentStatus     appsv1.DeploymentStatus
+		expectCondition      []metav1.Condition
+		remoteInfrastructure bool
 	}{
 		{
 			name:              "ready gateway",
@@ -503,6 +505,19 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:                 "ready gateway with remote infrastructure",
+			serviceAddressNum:    1,
+			remoteInfrastructure: true,
+			expectCondition: []metav1.Condition{
+				{
+					Type:    string(gwapiv1.GatewayConditionProgrammed),
+					Status:  metav1.ConditionTrue,
+					Reason:  string(gwapiv1.GatewayConditionProgrammed),
+					Message: messageFmtProgrammedRemotely,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -518,7 +533,7 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 			}
 
 			deployment := &appsv1.Deployment{Status: tc.deploymentStatus}
-			updateGatewayProgrammedCondition(gtw, deployment)
+			updateGatewayProgrammedCondition(gtw, deployment, tc.remoteInfrastructure)
 
 			if d := cmp.Diff(tc.expectCondition, gtw.Status.Conditions, cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")); d != "" {
 				t.Errorf("unexpected condition diff: %s", d)

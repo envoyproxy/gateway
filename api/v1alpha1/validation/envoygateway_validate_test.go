@@ -339,6 +339,240 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
+			name: "ratelimit url provided when not using custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("grpc://cool-rate-limiter.com:50051"),
+						Backend: egv1a1.RateLimitDatabaseBackend{
+							Type: egv1a1.RedisBackendType,
+							Redis: &egv1a1.RateLimitRedisSettings{
+								URL: "node-0:6376,node-1:6376,node-2:6376",
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "happy ratelimit for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("grpc://cool-rate-limiter.com:50051"),
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "malformed ratelimit url for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new(":foo"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "missing ratelimit url for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						Backend: egv1a1.RateLimitDatabaseBackend{
+							Type: egv1a1.RedisBackendType,
+							Redis: &egv1a1.RateLimitRedisSettings{
+								URL: "node-0:6376,node-1:6376,node-2:6376",
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "ratelimit url without scheme for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("cool-rate-limiter.com:50051"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "ratelimit url with non-grpc scheme for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("https://cool-rate-limiter.com:50051"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "ratelimit url without port for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("grpc://cool-rate-limiter.com"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "ratelimit url without host for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("grpc://:50051"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
 			name: "happy extension settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -716,8 +950,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: "foobar",
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: "foobar",
+								},
 							},
 						},
 					},
@@ -733,9 +969,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
-								Namespaces: []string{"foo"},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
+									Namespaces: []string{"foo"},
+								},
 							},
 						},
 					},
@@ -751,9 +989,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
-								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
+									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+								},
 							},
 						},
 					},
@@ -769,9 +1009,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
-								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+								},
 							},
 						},
 					},
@@ -787,8 +1029,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+								},
 							},
 						},
 					},
@@ -1187,10 +1431,12 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Replicas:  nil,
-			Pod:       nil,
-			Container: nil,
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Replicas:  nil,
+				Pod:       nil,
+				Container: nil,
+			},
 		},
 	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
@@ -1199,12 +1445,14 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Pod: nil,
-			Container: &egv1a1.KubernetesContainerSpec{
-				Resources:       nil,
-				SecurityContext: nil,
-				Image:           nil,
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Pod: nil,
+				Container: &egv1a1.KubernetesContainerSpec{
+					Resources:       nil,
+					SecurityContext: nil,
+					Image:           nil,
+				},
 			},
 		},
 	}

@@ -1049,10 +1049,11 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 
 func TestServicePortToContainerPort(t *testing.T) {
 	testCases := []struct {
-		servicePort   int32
-		containerPort int32
-		envoyProxy    *egv1a1.EnvoyProxy
-		runningOnHost bool
+		servicePort          int32
+		containerPort        int32
+		envoyProxy           *egv1a1.EnvoyProxy
+		runningOnHost        bool
+		infraManagedRemotely bool
 	}{
 		{
 			servicePort:   99,
@@ -1114,15 +1115,52 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
+			servicePort:          99,
+			containerPort:        99,
+			infraManagedRemotely: true,
+		},
+		{
+			servicePort:   99,
+			containerPort: 10099,
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeRemote,
+						Remote: &egv1a1.EnvoyProxyRemoteProvider{
+							UseListenerPortAsContainerPort: new(false),
+						},
+					},
+				},
+			},
+			infraManagedRemotely: true,
+		},
+		{
+			servicePort:   99,
+			containerPort: 99,
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeRemote,
+						Remote: &egv1a1.EnvoyProxyRemoteProvider{
+							UseListenerPortAsContainerPort: new(true),
+						},
+					},
+				},
+			},
+			infraManagedRemotely: true,
+		},
+		{
 			servicePort:   99,
 			containerPort: 99,
 			runningOnHost: true,
 		},
 	}
-	for _, tc := range testCases {
-		translator := &Translator{RunningOnHost: tc.runningOnHost}
-		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
-		assert.Equal(t, tc.containerPort, got)
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			translator := &Translator{RunningOnHost: tc.runningOnHost, InfraRemotelyManaged: tc.infraManagedRemotely}
+			got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
+			assert.Equal(t, tc.containerPort, got)
+		})
 	}
 }
 

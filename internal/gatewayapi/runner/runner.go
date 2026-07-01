@@ -182,7 +182,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		return
 	}
 	cacheOption := wasm.CacheOptions{}
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+	if r.EnvoyGateway.Provider.IsRunningOnKubernetes() {
 		cacheOption.CacheDir = "/var/lib/eg/wasm"
 	} else {
 		h, _ := os.UserHomeDir() // Assume we always get the home directory.
@@ -301,6 +301,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:                       r.wasmCache,
 					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
 					Logger:                          traceLogger,
 					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
 				}

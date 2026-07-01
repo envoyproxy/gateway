@@ -738,28 +738,27 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		return
 	}
 
-	// Get envoyObjects
-	envoyObj, err := r.envoyObjectForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Deployment for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-
-	// Get service
-	svc, err := r.envoyServiceForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Service for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-
 	if status.GatewayAccepted(gtw) {
+		// Get envoyObjects
+		envoyObj, err := r.envoyObjectForGateway(ctx, gtw)
+		if err != nil {
+			r.log.Info("failed to get Deployment for gateway",
+				"namespace", gtw.Namespace, "name", gtw.Name)
+		}
+
+		// Get service
+		svc, err := r.envoyServiceForGateway(ctx, gtw)
+		if err != nil {
+			r.log.Info("failed to get Service for gateway",
+				"namespace", gtw.Namespace, "name", gtw.Name)
+		}
 		// update accepted condition to true if it is not false
 		// this is needed because the accepted condition is not set to true by the Gateway API translator
 		// TODO (huabing): this is tricky and confusing for later readers, we should remove this and set the accepted condition
-		// to true in the Gateway API translator
+		// to true in the Gateway  API translator
 		status.UpdateGatewayStatusAccepted(gtw)
 		// update address field and programmed condition
-		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses())
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses(), r.envoyGateway.Provider.IsInfraManagedRemotely())
 	}
 
 	key := utils.NamespacedName(gtw)

@@ -189,7 +189,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 
 	// Setup the Extension Manager
 	var extMgr types.Manager
-	if extMgr, err = extensionregistry.NewManager(cfg, cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes); err != nil {
+	if extMgr, err = extensionregistry.NewManager(cfg, cfg.EnvoyGateway.Provider.IsRunningOnKubernetes()); err != nil {
 		return err
 	}
 

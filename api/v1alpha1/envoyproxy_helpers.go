@@ -63,15 +63,22 @@ func (e *EnvoyProxy) NeedToSwitchPorts() bool {
 		return true
 	}
 
-	if e.Spec.Provider.Kubernetes == nil {
-		return true
+	var useListenerPortAsContainerPort *bool
+	switch e.Spec.Provider.Type {
+	case EnvoyProxyProviderTypeRemote:
+		if e.Spec.Provider.Remote != nil {
+			useListenerPortAsContainerPort = e.Spec.Provider.Remote.UseListenerPortAsContainerPort
+		}
+	case EnvoyProxyProviderTypeKubernetes:
+		if e.Spec.Provider.Kubernetes != nil {
+			useListenerPortAsContainerPort = e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort
+		}
 	}
 
-	if e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort == nil {
+	if useListenerPortAsContainerPort == nil {
 		return true
 	}
-
-	return !*e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort
+	return !*useListenerPortAsContainerPort
 }
 
 // GetEnvoyProxyHostProvider returns the EnvoyProxyHostProvider of EnvoyProxyProvider or
