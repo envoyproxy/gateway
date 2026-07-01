@@ -604,6 +604,8 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 		irHC.Overrides = buildHealthCheckOverrides(hc.Overrides)
 	}
 
+    irHC.IgnoreNewHostsUntilFirstHealthCheck = hc.IgnoreNewHostsUntilFirstHealthCheck
+
 	return irHC
 }
 
