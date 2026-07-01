@@ -502,6 +502,7 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"), // TODO: remove once Settings is dropped and BackendClusterRefs is serialized
 				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
 				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
@@ -813,6 +814,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"), // TODO: remove once Settings is dropped and BackendClusterRefs is serialized
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})

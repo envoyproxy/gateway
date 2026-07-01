@@ -79,13 +79,21 @@ func (t *Translator) translateExtServiceBackendRefs(
 		Settings: ds,
 		Metadata: buildResourceMetadata(policy, nil),
 	}
+	if len(ds) > 0 {
+		bc := &ir.BackendCluster{
+			Name:     destName,
+			Settings: ds,
+			Metadata: buildResourceMetadata(policy, nil),
+		}
+		// TODO: Support mixed destinations for ext service
+		if bc.HasMixedEndpoints() {
+			return nil, errors.New("external service destinations having multiple endpoint types are not supported")
+		}
+		rs.BackendClusterRefs = []*ir.BackendClusterRef{{Backend: bc}}
+	}
 
 	if validationErr := rs.Validate(); validationErr != nil {
 		return nil, validationErr
-	}
-	// TODO: Support mixed destinations for ext service
-	if rs.HasMixedEndpoints() {
-		return nil, errors.New("external service destinations having multiple endpoint types are not supported")
 	}
 
 	return rs, nil

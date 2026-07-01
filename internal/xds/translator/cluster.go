@@ -61,8 +61,7 @@ const (
 )
 
 type xdsClusterArgs struct {
-	name              string
-	settings          []*ir.DestinationSetting
+	backendCluster    *ir.BackendCluster
 	tSocket           *corev3.TransportSocket
 	endpointType      EndpointType
 	loadBalancer      *ir.LoadBalancer
@@ -80,7 +79,6 @@ type xdsClusterArgs struct {
 	admissionControl  *ir.AdmissionControl
 	useClientProtocol bool
 	ipFamily          *egv1a1.IPFamily
-	metadata          *ir.ResourceMetadata
 	statName          *string
 	unstructuredRefs  []*unstructured.Unstructured
 	extensionMgr      *extensionTypes.Manager
@@ -208,12 +206,12 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	dnsLookupFamily := computeDNSLookupFamily(args.ipFamily, args.dns)
 
 	cluster := &clusterv3.Cluster{
-		Name:                          args.name,
+		Name:                          args.backendCluster.Name,
 		DnsLookupFamily:               dnsLookupFamily,
 		CommonLbConfig:                &clusterv3.Cluster_CommonLbConfig{},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 		PreconnectPolicy:              buildBackendConnectionPreconnectPolicy(args.backendConnection),
-		Metadata:                      buildXdsMetadata(args.metadata),
+		Metadata:                      buildXdsMetadata(args.backendCluster.Metadata),
 		// Dont wait for a health check to determine health and remove these endpoints
 		// if the endpoint has been removed via EDS by the control plane or removed from DNS query results
 		IgnoreHealthOnHostRemoval: true,
@@ -249,12 +247,12 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// scan through settings to determine cluster-level configuration options, as some of them
 	// influence transport socket specific settings
-	requiresAutoHTTPConfig := len(args.settings) > 0
+	requiresAutoHTTPConfig := len(args.backendCluster.Settings) > 0
 	requiresHTTP2Options := false
 	forceHTTP1UpstreamProtocol := false
 	hasLiteralSNI := false
 	hasAutoSNIFromEndpointHostname := false
-	for _, ds := range args.settings {
+	for _, ds := range args.backendCluster.Settings {
 		if ds.Protocol == ir.GRPC ||
 			ds.Protocol == ir.HTTP2 {
 			requiresHTTP2Options = true
@@ -291,7 +289,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.TransportSocket = args.tSocket
 	}
 
-	for i, ds := range args.settings {
+	for i, ds := range args.backendCluster.Settings {
 		if ds.TLS != nil {
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS, requiresAutoSNI, args.endpointType)
 			if err != nil {
@@ -301,7 +299,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			if proxyProtocolEnabled {
 				socket = buildProxyProtocolSocket(args.proxyProtocol, socket, requiresAutoHTTPConfig)
 			}
-			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
+			matchName := fmt.Sprintf("%s/tls/%d", args.backendCluster.Name, i)
 
 			// Dynamic resolver clusters have no endpoints, so we need to set the transport socket directly.
 			if args.endpointType == EndpointTypeDynamicResolver {
@@ -506,7 +504,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	case EndpointTypeStatic:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
-			ServiceName: args.name,
+			ServiceName: args.backendCluster.Name,
 			EdsConfig: &corev3.ConfigSource{
 				ResourceApiVersion: resource.DefaultAPIVersion,
 				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
@@ -550,8 +548,8 @@ func buildLocalityLbConfig(args *xdsClusterArgs) *commonv3.LocalityLbConfig {
 		}
 		// Zone aware enabled backendRefs use weighted clusters and
 		// always have a single DestinationSetting per-cluster.
-	} else if len(args.settings) == 1 && args.settings[0].PreferLocal != nil {
-		if cfg := buildZoneAwareLbConfig(args.settings[0].PreferLocal); cfg != nil {
+	} else if len(args.backendCluster.Settings) == 1 && args.backendCluster.Settings[0].PreferLocal != nil {
+		if cfg := buildZoneAwareLbConfig(args.backendCluster.Settings[0].PreferLocal); cfg != nil {
 			localityLbConfig.LocalityConfigSpecifier = cfg
 		}
 	}
@@ -1046,7 +1044,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresHTTP1Options := args.http1Settings != nil &&
 		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
-	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
+	requiresHTTPFilters := (len(args.backendCluster.Settings) > 0 && args.backendCluster.Settings[0].Filters != nil && args.backendCluster.Settings[0].Filters.CredentialInjection != nil) ||
 		args.admissionControl != nil
 
 	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
@@ -1173,16 +1171,16 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv3.Secret, error) {
 	filters := make([]*hcmv3.HttpFilter, 0)
 	secrets := make([]*tlsv3.Secret, 0)
-	if len(args.settings) > 0 {
+	if len(args.backendCluster.Settings) > 0 {
 		// There is only one setting in the settings slice because EG creates one cluster per backendRef
 		// if there are backend filters.
-		if args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil {
-			filter, err := buildHCMCredentialInjectorFilter(args.settings[0].Filters.CredentialInjection)
+		if args.backendCluster.Settings[0].Filters != nil && args.backendCluster.Settings[0].Filters.CredentialInjection != nil {
+			filter, err := buildHCMCredentialInjectorFilter(args.backendCluster.Settings[0].Filters.CredentialInjection)
 			filter.Disabled = false
 			if err != nil {
 				return nil, nil, err
 			}
-			secret := buildCredentialSecret(args.settings[0].Filters.CredentialInjection)
+			secret := buildCredentialSecret(args.backendCluster.Settings[0].Filters.CredentialInjection)
 			filters = append(filters, filter)
 			secrets = append(secrets, secret)
 		}
@@ -1376,28 +1374,22 @@ type ExtraArgs struct {
 }
 
 type clusterArgs interface {
-	asClusterArgs(name string, settings []*ir.DestinationSetting, extras *ExtraArgs, metadata *ir.ResourceMetadata) *xdsClusterArgs
+	asClusterArgs(bc *ir.BackendCluster, extras *ExtraArgs) *xdsClusterArgs
 }
 
 type UDPRouteTranslator struct {
 	*ir.UDPRoute
 }
 
-func (route *UDPRouteTranslator) asClusterArgs(name string,
-	settings []*ir.DestinationSetting,
-	extra *ExtraArgs,
-	metadata *ir.ResourceMetadata,
-) *xdsClusterArgs {
+func (route *UDPRouteTranslator) asClusterArgs(bc *ir.BackendCluster, extra *ExtraArgs) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:         name,
-		settings:     settings,
-		loadBalancer: route.LoadBalancer,
-		endpointType: buildEndpointType(settings),
-		metrics:      extra.metrics,
-		dns:          route.DNS,
-		ipFamily:     extra.ipFamily,
-		metadata:     metadata,
-		isRoute:      true,
+		backendCluster: bc,
+		loadBalancer:   route.LoadBalancer,
+		endpointType:   buildEndpointType(bc.Settings),
+		metrics:        extra.metrics,
+		dns:            route.DNS,
+		ipFamily:       extra.ipFamily,
+		isRoute:        true,
 	}
 }
 
@@ -1405,26 +1397,20 @@ type TCPRouteTranslator struct {
 	*ir.TCPRoute
 }
 
-func (route *TCPRouteTranslator) asClusterArgs(name string,
-	settings []*ir.DestinationSetting,
-	extra *ExtraArgs,
-	metadata *ir.ResourceMetadata,
-) *xdsClusterArgs {
+func (route *TCPRouteTranslator) asClusterArgs(bc *ir.BackendCluster, extra *ExtraArgs) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:              name,
-		settings:          settings,
+		backendCluster:    bc,
 		loadBalancer:      route.LoadBalancer,
 		proxyProtocol:     route.ProxyProtocol,
 		circuitBreaker:    route.CircuitBreaker,
 		tcpkeepalive:      route.TCPKeepalive,
 		healthCheck:       route.HealthCheck,
 		timeout:           route.Timeout,
-		endpointType:      buildEndpointType(settings),
+		endpointType:      buildEndpointType(bc.Settings),
 		metrics:           extra.metrics,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
 		ipFamily:          extra.ipFamily,
-		metadata:          metadata,
 		isRoute:           true,
 	}
 }
@@ -1433,23 +1419,17 @@ type HTTPRouteTranslator struct {
 	*ir.HTTPRoute
 }
 
-func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
-	settings []*ir.DestinationSetting,
-	extra *ExtraArgs,
-	metadata *ir.ResourceMetadata,
-) *xdsClusterArgs {
+func (httpRoute *HTTPRouteTranslator) asClusterArgs(bc *ir.BackendCluster, extra *ExtraArgs) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
-		name:              name,
-		settings:          settings,
+		backendCluster:    bc,
 		tSocket:           nil,
-		endpointType:      buildEndpointType(settings),
+		endpointType:      buildEndpointType(bc.Settings),
 		routeHostname:     httpRoute.Hostname,
 		metrics:           extra.metrics,
 		http1Settings:     extra.http1Settings,
 		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 		ipFamily:          extra.ipFamily,
-		metadata:          metadata,
 		statName:          extra.statName,
 		extensionMgr:      extra.extensionMgr,
 		unstructuredRefs:  extra.unstructuredRefs,

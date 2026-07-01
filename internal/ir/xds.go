@@ -963,17 +963,16 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
 		return true
 	}
-	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
-	// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
-	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().NoEndpoints > 0 {
-		return true
-	}
 	return h.Destination.NeedsClusterPerSetting()
 }
 
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
 	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
-	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
+	if h.Destination == nil {
+		return false
+	}
+	bcs := h.Destination.GetBackendClusters()
+	return len(bcs) == 1 && len(bcs[0].Settings) == 1 && bcs[0].Settings[0].IsDynamicResolver
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -1894,6 +1893,9 @@ type RouteDestination struct {
 	Name     string                `json:"name" yaml:"name"`
 	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// BackendClusterRefs holds references to backend clusters for this route rule.
+	// TODO: remove json/yaml skip tags once Settings is removed and consumers read from BackendClusterRefs.
+	BackendClusterRefs []*BackendClusterRef `json:"-" yaml:"-"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
 	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
@@ -1911,22 +1913,104 @@ func (r *RouteDestination) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-
+	for _, ref := range r.BackendClusterRefs {
+		if err := ref.Backend.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if len(r.BackendClusterRefs) > 1 {
+		for _, ref := range r.BackendClusterRefs {
+			if len(ref.Backend.Settings) != 1 {
+				errs = errors.Join(errs, fmt.Errorf("BackendCluster %s must have exactly one setting when multiple BackendClusterRefs exist", ref.Backend.Name))
+			}
+		}
+	}
 	return errs
 }
 
-func (r *RouteDestination) NeedsClusterPerSetting() bool {
-	return r.HasMixedEndpoints() ||
-		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
-		r.HasMixedUpstreamProtocolRequirements() ||
-		r.HasMixedAutoSNISettings()
+// GetBackendClusters returns the BackendClusters for this destination.
+// TODO: remove Settings fallback once BackendClusterRefs is always populated.
+func (r *RouteDestination) GetBackendClusters() []*BackendCluster {
+	if len(r.BackendClusterRefs) > 0 {
+		bcs := make([]*BackendCluster, len(r.BackendClusterRefs))
+		for i, ref := range r.BackendClusterRefs {
+			bcs[i] = ref.Backend
+		}
+		return bcs
+	}
+	return []*BackendCluster{{Name: r.Name, Settings: r.Settings, Metadata: r.Metadata}}
 }
 
-// HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
-func (r *RouteDestination) HasMixedEndpoints() bool {
+func (r *RouteDestination) NeedsClusterPerSetting() bool {
+	if len(r.BackendClusterRefs) > 1 {
+		return true
+	}
+	if len(r.BackendClusterRefs) == 1 {
+		return r.BackendClusterRefs[0].Backend.NeedsClusterPerSetting()
+	}
+	// TODO: remove Settings fallback once BackendClusterRefs is always populated.
+	bc := &BackendCluster{Settings: r.Settings}
+	return bc.NeedsClusterPerSetting()
+}
+
+func (r *RouteDestination) ToBackendWeights() *BackendWeights {
+	if len(r.BackendClusterRefs) > 0 {
+		w := &BackendWeights{Name: r.Name}
+		for _, ref := range r.BackendClusterRefs {
+			bw := ref.Backend.ToBackendWeights()
+			w.Valid += bw.Valid
+			w.Invalid += bw.Invalid
+			w.NoEndpoints += bw.NoEndpoints
+		}
+		return w
+	}
+	// TODO: remove Settings fallback once BackendClusterRefs is always populated.
+	bc := &BackendCluster{Name: r.Name, Settings: r.Settings}
+	return bc.ToBackendWeights()
+}
+
+// BackendCluster represents a single backend (Service, ServiceImport, or Backend resource)
+// and its endpoint configuration. In Step 2 (MergeBackends=true), multiple routes sharing the
+// same backend will reference a shared BackendCluster, enabling cluster deduplication.
+// +kubebuilder:object:generate=true
+type BackendCluster struct {
+	// Name uniquely identifies this backend cluster.
+	Name string `json:"name" yaml:"name"`
+	// Settings holds the endpoint localities for this backend.
+	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// Metadata describes the backend resource (Service, Backend, etc.)
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+}
+
+func (b *BackendCluster) Validate() error {
+	var errs error
+	if len(b.Name) == 0 {
+		errs = errors.Join(errs, ErrDestinationNameEmpty)
+	}
+	for _, s := range b.Settings {
+		if err := s.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
+}
+
+func (b *BackendCluster) NeedsClusterPerSetting() bool {
+	w := b.ToBackendWeights()
+	return b.HasMixedEndpoints() ||
+		b.HasFiltersInSettings() ||
+		(len(b.Settings) > 1 && b.HasPreferLocalZone()) ||
+		b.HasMixedUpstreamProtocolRequirements() ||
+		b.HasMixedAutoSNISettings() ||
+		// When the cluster has both valid and invalid backend weights, we use weighted clusters to distribute between
+		// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
+		w.Invalid > 0 || w.NoEndpoints > 0
+}
+
+// HasMixedEndpoints returns true if the BackendCluster has endpoints of multiple types
+func (b *BackendCluster) HasMixedEndpoints() bool {
 	destinationAddressTypes := sets.Set[DestinationAddressType]{}
-	for _, s := range r.Settings {
+	for _, s := range b.Settings {
 		if s.AddressType != nil {
 			destinationAddressTypes.Insert(*s.AddressType)
 		}
@@ -1934,20 +2018,19 @@ func (r *RouteDestination) HasMixedEndpoints() bool {
 	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
 }
 
-// HasFiltersInSettings returns true if any setting in the destination has a filter
-func (r *RouteDestination) HasFiltersInSettings() bool {
-	for _, setting := range r.Settings {
-		filters := setting.Filters
-		if filters != nil {
+// HasFiltersInSettings returns true if any setting in the cluster has a filter
+func (b *BackendCluster) HasFiltersInSettings() bool {
+	for _, setting := range b.Settings {
+		if setting.Filters != nil {
 			return true
 		}
 	}
 	return false
 }
 
-// HasPreferLocalZone returns true if any setting in the destination has PreferLocalZone set
-func (r *RouteDestination) HasPreferLocalZone() bool {
-	for _, setting := range r.Settings {
+// HasPreferLocalZone returns true if any setting in the cluster has PreferLocalZone set
+func (b *BackendCluster) HasPreferLocalZone() bool {
+	for _, setting := range b.Settings {
 		if setting.PreferLocal != nil {
 			return true
 		}
@@ -1957,11 +2040,11 @@ func (r *RouteDestination) HasPreferLocalZone() bool {
 
 // HasMixedUpstreamProtocolRequirements returns true if destination settings require
 // mutually exclusive cluster-level upstream protocol configuration.
-func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
+func (b *BackendCluster) HasMixedUpstreamProtocolRequirements() bool {
 	hasForceHTTP1Upstream := false
 	hasHTTP2Upstream := false
 
-	for _, setting := range r.Settings {
+	for _, setting := range b.Settings {
 		if setting == nil {
 			continue
 		}
@@ -1978,11 +2061,11 @@ func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
 
 // HasMixedAutoSNISettings returns true if some settings use AutoSNIFromEndpointHostname while
 // others don't. These two modes compute requiresAutoSNI in conflicting ways and cannot share a cluster.
-func (r *RouteDestination) HasMixedAutoSNISettings() bool {
+func (b *BackendCluster) HasMixedAutoSNISettings() bool {
 	hasAutoSNIFromHost := 0
-	totalSettings := len(r.Settings)
+	totalSettings := len(b.Settings)
 
-	for _, s := range r.Settings {
+	for _, s := range b.Settings {
 		if s.TLS == nil {
 			continue
 		}
@@ -1994,12 +2077,12 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
 }
 
-func (r *RouteDestination) ToBackendWeights() *BackendWeights {
+func (b *BackendCluster) ToBackendWeights() *BackendWeights {
 	w := &BackendWeights{
-		Name: r.Name,
+		Name: b.Name,
 	}
 
-	for _, s := range r.Settings {
+	for _, s := range b.Settings {
 		if s.Weight == nil {
 			continue
 		}
@@ -2019,6 +2102,17 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	}
 
 	return w
+}
+
+// BackendClusterRef is a reference from a route rule to a BackendCluster.
+// +kubebuilder:object:generate=true
+type BackendClusterRef struct {
+	// Backend points to the shared BackendCluster.
+	Backend *BackendCluster `json:"backend" yaml:"backend"`
+	// Weight for weighted routing across multiple BackendRefs.
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	// Filters are per-backendRef filters (header modification, credential injection, etc.)
+	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // DestinationSetting holds the settings associated with the destination

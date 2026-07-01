@@ -135,6 +135,12 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 }
 
 func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
+	backends := rd.GetBackendClusters()
+	if len(backends) != 1 {
+		return fmt.Errorf("ext service destination %s must have exactly one backend cluster, got %d", rd.Name, len(backends))
+	}
+	bc := backends[0]
+
 	var (
 		endpointType EndpointType
 		tSocket      *corev3.TransportSocket
@@ -144,9 +150,10 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 	if traffic == nil {
 		traffic = &ir.TrafficFeatures{}
 	}
+
 	// Get the address type from the first setting.
 	// This is safe because no mixed address types in the settings.
-	addrTypeState := rd.Settings[0].AddressType
+	addrTypeState := bc.Settings[0].AddressType
 	if addrTypeState != nil && *addrTypeState == ir.FQDN {
 		endpointType = EndpointTypeDNS
 	} else {
@@ -154,11 +161,9 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 	}
 
 	args := &xdsClusterArgs{
-		name:         rd.Name,
-		settings:     rd.Settings,
-		tSocket:      tSocket,
-		endpointType: endpointType,
-		metadata:     rd.Metadata,
+		backendCluster: bc,
+		tSocket:        tSocket,
+		endpointType:   endpointType,
 	}
 
 	applyTraffic(args, traffic)
@@ -188,10 +193,12 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 	}
 
 	clusterArgs := &xdsClusterArgs{
-		name:         uc.name,
-		settings:     []*ir.DestinationSetting{ds},
+		backendCluster: &ir.BackendCluster{
+			Name:     uc.name,
+			Settings: []*ir.DestinationSetting{ds},
+			Metadata: ds.Metadata,
+		},
 		endpointType: uc.endpointType,
-		metadata:     ds.Metadata,
 	}
 
 	if uc.tls {
@@ -222,29 +229,26 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
 	args.admissionControl = traffic.AdmissionControl
 }
 
-// determineIPFamily determines the IP family based on multiple destination settings
-func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
-	// If there's only one setting, return its IPFamily directly
-	if len(settings) == 1 {
-		return settings[0].IPFamily
-	}
-
+// determineIPFamily determines the IP family based on backend cluster settings
+func determineIPFamily(backends []*ir.BackendCluster) *egv1a1.IPFamily {
 	hasIPv4 := false
 	hasIPv6 := false
 	hasDualStack := false
 
-	for _, setting := range settings {
-		if setting.IPFamily == nil {
-			continue
-		}
+	for _, bc := range backends {
+		for _, setting := range bc.Settings {
+			if setting.IPFamily == nil {
+				continue
+			}
 
-		switch *setting.IPFamily {
-		case egv1a1.IPv4:
-			hasIPv4 = true
-		case egv1a1.IPv6:
-			hasIPv6 = true
-		case egv1a1.DualStack:
-			hasDualStack = true
+			switch *setting.IPFamily {
+			case egv1a1.IPv4:
+				hasIPv4 = true
+			case egv1a1.IPv6:
+				hasIPv6 = true
+			case egv1a1.DualStack:
+				hasDualStack = true
+			}
 		}
 	}
 

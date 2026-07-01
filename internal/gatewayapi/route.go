@@ -313,11 +313,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 		}
 
-		// process each IR route generated for this rule, and set its destination
-		destination := &ir.RouteDestination{
+		bc := &ir.BackendCluster{
+			Name:     destName,
 			Settings: allDs,
 			Metadata: routeRuleMetadata,
 		}
+		backendWeights := bc.ToBackendWeights()
 		switch {
 		// return 500 if any filter processing error occurred
 		case processFilterError != nil:
@@ -337,7 +338,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 		// return 500 if no valid destination settings exist
 		// the error is already added to the error list when processing the destination
-		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
+		case processDestinationError != nil && backendWeights.Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -359,7 +360,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 		// return 503 if no ready endpoints exist
 		// the error is already added to the error list when processing the destination
-		case failedNoReadyEndpoints && destination.ToBackendWeights().Valid == 0:
+		case failedNoReadyEndpoints && backendWeights.Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -377,7 +378,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					"routes", sets.List(routesWithDirectResponse))
 			}
 		// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
-		case destination.ToBackendWeights().Valid == 0:
+		case backendWeights.Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -426,12 +427,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
 					continue
 				}
-				destination := &ir.RouteDestination{
-					Name:     destName,
-					Settings: allDs,
-					Metadata: routeRuleMetadata,
+				irRoute.Destination = &ir.RouteDestination{
+					Name:               destName,
+					Settings:           allDs,
+					BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+					Metadata:           routeRuleMetadata,
 				}
-				irRoute.Destination = destination
 			}
 		}
 
@@ -1027,11 +1028,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 		}
 
-		// process each ir route
-		destination := &ir.RouteDestination{
+		bc := &ir.BackendCluster{
+			Name:     destName,
 			Settings: allDs,
 			Metadata: buildResourceMetadata(grpcRoute, rule.Name),
 		}
+		backendWeights := bc.ToBackendWeights()
 		switch {
 		// return 500 if any filter processing error occurred
 		case processFilterError != nil:
@@ -1055,7 +1057,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			}
 		// return 500 if any destination setting is invalid
 		// the error is already added to the error list when processing the destination
-		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
+		case processDestinationError != nil && backendWeights.Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -1076,7 +1078,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			}
 		// return 503 if endpoints does not exist
 		// the error is already added to the error list when processing the destination
-		case failedNoReadyEndpoints && destination.ToBackendWeights().Valid == 0:
+		case failedNoReadyEndpoints && backendWeights.Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -1094,7 +1096,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					"routes", sets.List(routesWithDirectResponse))
 			}
 		// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
-		case destination.ToBackendWeights().Valid == 0:
+		case backendWeights.Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -1118,12 +1120,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
 					continue
 				}
-				destination := &ir.RouteDestination{
-					Name:     destName,
-					Settings: allDs,
-					Metadata: buildResourceMetadata(grpcRoute, rule.Name),
+				irRoute.Destination = &ir.RouteDestination{
+					Name:               destName,
+					Settings:           allDs,
+					BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+					Metadata:           buildResourceMetadata(grpcRoute, rule.Name),
 				}
-				irRoute.Destination = destination
 			}
 
 		}
@@ -1473,13 +1475,19 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					}
 				}
 
+				bc := &ir.BackendCluster{
+					Name:     destName,
+					Settings: destSettings,
+					Metadata: buildResourceMetadata(tlsRoute, nil),
+				}
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
 					TLS:  tlsConfig,
 					Destination: &ir.RouteDestination{
-						Name:     destName,
-						Settings: destSettings,
-						Metadata: buildResourceMetadata(tlsRoute, nil),
+						Name:               destName,
+						Settings:           destSettings,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+						Metadata:           buildResourceMetadata(tlsRoute, nil),
 					},
 					Metadata: buildResourceMetadata(tlsRoute, nil),
 				}
@@ -1632,11 +1640,17 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
 			if irListener != nil {
+				bc := &ir.BackendCluster{
+					Name:     destName,
+					Settings: destSettings,
+					Metadata: buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name),
+				}
 				irRoute := &ir.UDPRoute{
 					Name: irUDPRouteName(udpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     destName,
-						Settings: destSettings,
+						Name:               destName,
+						Settings:           destSettings,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
 						// udpRoute Must have a single rule, so can use index 0.
 						Metadata: buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name),
 					},
@@ -1783,12 +1797,18 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
 			if irListener != nil {
+				bc := &ir.BackendCluster{
+					Name:     destName,
+					Settings: destSettings,
+					Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
+				}
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tcpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     destName,
-						Settings: destSettings,
-						Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
+						Name:               destName,
+						Settings:           destSettings,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+						Metadata:           buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
 					},
 					Metadata: buildResourceMetadata(tcpRoute, nil),
 				}

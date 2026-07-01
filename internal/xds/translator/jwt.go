@@ -148,7 +148,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 				var jwksCluster string
 
 				jwks := irProvider.RemoteJWKS
-				if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
+				if jwks.Destination != nil && len(jwks.Destination.GetBackendClusters()) > 0 {
 					jwksCluster = jwks.Destination.Name
 				} else {
 					var cluster *urlCluster
@@ -325,12 +325,12 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 			}
 
 			// If the remote JWKS has a destination, use it.
-			if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
+			if jwks.Destination != nil && len(jwks.Destination.GetBackendClusters()) > 0 {
 				if err := createExtServiceXDSCluster(
 					jwks.Destination, jwks.Traffic, tCtx); err != nil {
 					errs = errors.Join(errs, err)
 				}
-				if err := processClientCertificates(tCtx, jwks.Destination.Settings); err != nil {
+				if err := processClientCertificates(tCtx, jwks.Destination.GetBackendClusters()); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			} else {

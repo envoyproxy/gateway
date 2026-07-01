@@ -1786,9 +1786,14 @@ func (t *Translator) buildOIDCProvider(
 	}
 
 	if rd != nil {
-		for _, st := range rd.Settings {
-			if st.TLS != nil {
-				providerTLS = st.TLS
+		for _, bc := range rd.GetBackendClusters() {
+			for _, st := range bc.Settings {
+				if st.TLS != nil {
+					providerTLS = st.TLS
+					break
+				}
+			}
+			if providerTLS != nil {
 				break
 			}
 		}

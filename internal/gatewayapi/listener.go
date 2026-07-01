@@ -878,12 +878,18 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					setting.Protocol = ir.GRPC
 				}
 
+				alBC := &ir.BackendCluster{
+					Name:     destName,
+					Settings: ds,
+					Metadata: buildResourceMetadata(envoyproxy, nil),
+				}
 				al := &ir.ALSAccessLog{
 					LogName: logName,
 					Destination: ir.RouteDestination{
-						Name:     destName,
-						Settings: ds,
-						Metadata: buildResourceMetadata(envoyproxy, nil),
+						Name:               destName,
+						Settings:           ds,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: alBC}},
+						Metadata:           buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic:    traffic,
 					Type:       sink.ALS.Type,
@@ -930,9 +936,10 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					Headers:            sink.OpenTelemetry.Headers,
 					Authority:          getAuthorityFromDestination(ds),
 					Destination: ir.RouteDestination{
-						Name:     destName,
-						Settings: ds,
-						Metadata: buildResourceMetadata(envoyproxy, nil),
+						Name:               destName,
+						Settings:           ds,
+						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}}},
+						Metadata:           buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic: traffic,
 					LogType: accessLogType,
@@ -946,6 +953,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
 					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
+					al.Destination.BackendClusterRefs = []*ir.BackendClusterRef{{Backend: &ir.BackendCluster{Name: destName, Settings: al.Destination.Settings}}}
 					al.Authority = host
 				}
 
@@ -1022,9 +1030,10 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		Tags:               ir.MapToSlice(tracing.Tags),
 		ResourceAttributes: ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
 		Destination: ir.RouteDestination{
-			Name:     destName,
-			Settings: ds,
-			Metadata: buildResourceMetadata(envoyproxy, nil),
+			Name:               destName,
+			Settings:           ds,
+			BackendClusterRefs: []*ir.BackendClusterRef{{Backend: &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}}},
+			Metadata:           buildResourceMetadata(envoyproxy, nil),
 		},
 		Provider: tracing.Provider,
 		Traffic:  traffic,
@@ -1144,9 +1153,10 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 
 			resolvedSinks = append(resolvedSinks, ir.ResolvedMetricSink{
 				Destination: ir.RouteDestination{
-					Name:     destName,
-					Settings: ds,
-					Metadata: buildResourceMetadata(envoyproxy, nil),
+					Name:               destName,
+					Settings:           ds,
+					BackendClusterRefs: []*ir.BackendClusterRef{{Backend: &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}}},
+					Metadata:           buildResourceMetadata(envoyproxy, nil),
 				},
 				Authority:                authority,
 				Headers:                  sink.OpenTelemetry.Headers,

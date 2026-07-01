@@ -1070,9 +1070,14 @@ func (t *Translator) processRequestMirrorFilter(
 		return err
 	}
 
-	routeDst := &ir.RouteDestination{
+	bc := &ir.BackendCluster{
 		Name:     destName,
 		Settings: []*ir.DestinationSetting{ds},
+	}
+	routeDst := &ir.RouteDestination{
+		Name:               destName,
+		Settings:           []*ir.DestinationSetting{ds},
+		BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
 	}
 
 	var percent *float32
