@@ -4348,9 +4348,6 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `reportingPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ReportingPeriod is how often Envoy requests load reports from the server.<br />If omitted, uses Envoy's default of 10s. |
-| `port` | _integer_ |  false  |  | Port overrides the port used for the OOB reporting connection, e.g. to<br />reach a separate reporting sidecar. Defaults to the endpoint's port. |
-| `authority` | _string_ |  false  |  | Authority overrides the :authority header on the OOB gRPC stream. |
 
 
 #### OTelSampler
