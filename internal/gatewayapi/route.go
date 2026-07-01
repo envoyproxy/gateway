@@ -1776,7 +1776,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
-			if irListener != nil {
+			// When there's multiple TCPRoutes attached to same listener,
+			// the oldest one win.
+			if irListener != nil && len(irListener.Routes) == 0 {
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tcpRoute),
 					Destination: &ir.RouteDestination{
