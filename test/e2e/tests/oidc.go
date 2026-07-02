@@ -88,6 +88,8 @@ var OIDCTest = suite.ConformanceTest{
 			}
 		})
 
+		testOIDCWithAuthorizationDeny(t, suite)
+
 		t.Run("oidc bypass", func(t *testing.T) {
 			routeWithOIDCFooNN := types.NamespacedName{Name: "http-with-oidc-foo", Namespace: ns}
 			routeWithOIDCBarNN := types.NamespacedName{Name: "http-with-oidc-bar", Namespace: ns}
