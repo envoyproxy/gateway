@@ -355,6 +355,37 @@ func (t *Translator) processSecurityPolicyForRoute(
 			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
 				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
 			}
+		} else if isRefToListenerSet(p) {
+			// For ListenerSet parent refs, resolve the underlying Gateway via the route parent context
+			parentRefCtx := targetedRoute.GetRouteParentContext(p)
+			if parentRefCtx == nil {
+				continue
+			}
+			parentRefCtxs = append(parentRefCtxs, parentRefCtx)
+
+			// Populate gatewayRouteMap using the underlying Gateway NN derived from the listeners
+			for _, listener := range parentRefCtx.listeners {
+				gwNN := utils.NamespacedName(listener.gateway.Gateway)
+				mapKey := NamespacedNameWithSection{
+					NamespacedName: gwNN,
+					SectionName:    listener.Name,
+				}
+				if _, ok := gatewayRouteMap.Routes[mapKey]; !ok {
+					gatewayRouteMap.Routes[mapKey] = make(sets.Set[string])
+				}
+				gatewayRouteMap.Routes[mapKey].Insert(utils.NamespacedName(targetedRoute).String())
+				if _, ok := gatewayRouteMap.SectionIndex[gwNN]; !ok {
+					gatewayRouteMap.SectionIndex[gwNN] = make(sets.Set[string])
+				}
+				gatewayRouteMap.SectionIndex[gwNN].Insert(string(listener.Name))
+			}
+
+			// Add one ancestor ref for the backing Gateway (used for error status reporting)
+			if gtwCtx := parentRefCtx.GetGateway(); gtwCtx != nil {
+				gwNN := utils.NamespacedName(gtwCtx.Gateway)
+				ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+				ancestorRefs = append(ancestorRefs, &ancestorRef)
+			}
 		}
 	}
 
