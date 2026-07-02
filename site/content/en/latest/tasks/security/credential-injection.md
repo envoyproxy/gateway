@@ -11,6 +11,9 @@ by the client. For example, you can use this feature to inject an access token i
 Credentials can be injected at the HTTPRoute level or at the BackendRef level, allowing for fine-grained control over
 which requests receive injected credentials.
 
+The same [HTTPRouteFilter][HTTPRouteFilter] can also be referenced from a [GRPCRoute][] via an `extensionRef` filter, so
+credentials can be injected into gRPC traffic in the same way.
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
@@ -257,5 +260,6 @@ kubectl delete secret/jwt-credential
 Check out the [Developer Guide](/community/develop) to get involved in the project.
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
 [BackendRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpbackendref
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
