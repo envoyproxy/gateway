@@ -1,0 +1,1 @@
+Fixed a duplicate filter chain matcher error when a TLS listener with a specific hostname and no routes shares a port with an HTTPS wildcard listener, which caused Envoy to reject the xDS config update.

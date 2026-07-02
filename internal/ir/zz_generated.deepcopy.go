@@ -4551,6 +4551,11 @@ func (in *TCPKeepalive) DeepCopy() *TCPKeepalive {
 func (in *TCPListener) DeepCopyInto(out *TCPListener) {
 	*out = *in
 	in.CoreListenerDetails.DeepCopyInto(&out.CoreListenerDetails)
+	if in.Hostnames != nil {
+		in, out := &in.Hostnames, &out.Hostnames
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.TLS != nil {
 		in, out := &in.TLS, &out.TLS
 		*out = new(TLSConfig)
