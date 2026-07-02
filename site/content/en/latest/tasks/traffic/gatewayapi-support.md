@@ -76,7 +76,8 @@ provide additional traffic processing:
   gRPC traffic. Since gRPC runs over HTTP/2, a GRPCRoute reuses the same `HTTPRouteFilter` API as HTTPRoute, supporting
   URL rewrite (authority/host and regex `:path` rewrite), direct response, and credential injection. Note the
   gRPC-specific semantics: a regex `:path` rewrite operates on the gRPC path, which has the form
-  `/<package>.<Service>/<Method>`, and a direct response returns a raw HTTP response rather than a gRPC-status trailer.
+  `/<package>.<Service>/<Method>`, and for a direct response Envoy adds gRPC status trailers so gRPC clients handle the
+  response correctly.
 
 __Notes:__
 - The only [BackendRef][grpc-filter] kind supported by Envoy Gateway is a [Service][]. Routing traffic to other
