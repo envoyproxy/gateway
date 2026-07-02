@@ -29624,6 +29624,15 @@ spec:
                           Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      requestHeadersTimeout:
+                        description: |-
+                          RequestHeadersTimeout is the duration envoy waits for the request headers to arrive.
+                          The timer is activated when the first byte of the headers is received,
+                          and is disarmed when the last byte of the headers has been received.
+                          Specify 0 to disable the timeout.
+                          Default: 10 seconds.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       requestReceivedTimeout:
                         description: |-
                           RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
@@ -29637,6 +29646,14 @@ spec:
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
+                  listenerFiltersTimeout:
+                    description: |-
+                      ListenerFiltersTimeout is the duration envoy waits for all listener filters to complete operation.
+                      If the timeout is reached, the accepted socket is closed without a connection being created.
+                      Specify 0 to disable the timeout.
+                      Default: 15 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   tcp:
                     description: Timeout settings for TCP.
                     properties:
@@ -29645,6 +29662,13 @@ spec:
                           IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
                           bytes sent or received on either the upstream or downstream connection.
                           Default: 1 hour.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      transportSocketConnectTimeout:
+                        description: |-
+                          TransportSocketConnectTimeout is the duration envoy waits for incoming connections to complete any transport socket negotiations.
+                          If this expires before the transport reports connection establishment, the connection is summarily closed.
+                          Default: 5 seconds.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
