@@ -68,26 +68,17 @@ spec:
       extensionRef:
         group: gateway.envoyproxy.io
         kind: HTTPRouteFilter
-        name: grpc-credential-injection
+        name: grpc-cookie-match
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
 metadata:
-  name: grpc-credential-injection
+  name: grpc-cookie-match
   namespace: gateway-conformance-infra
 spec:
-  credentialInjection:
-    header: x-credential
-    overwrite: true
-    credential:
-      valueRef:
-        name: grpc-credential
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: grpc-credential
-  namespace: gateway-conformance-infra
-data:
-  # base64("Basic dXNlcjE6dGVzdDI=")
-  credential: QmFzaWMgZFhObGNqRTZkR1Z6ZERJPQ==
+  # The cookie match is ANDed with the rule's method match: the request must
+  # target the Echo method AND carry the "canary=true" cookie to be routed.
+  matches:
+  - cookies:
+    - name: canary
+      value: "true"

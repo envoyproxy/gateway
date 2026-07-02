@@ -8,10 +8,9 @@
 package tests
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/echo-basic/grpcechoserver"
@@ -25,45 +24,40 @@ func init() {
 }
 
 // GRPCRouteHTTPRouteFilterTest verifies that a GRPCRoute can reference an Envoy Gateway
-// HTTPRouteFilter via an extensionRef filter. It uses a credential-injection filter and
-// asserts the injected header reaches the upstream, confirming the filter is resolved,
-// translated, and enforced end-to-end for gRPC traffic.
+// HTTPRouteFilter via an extensionRef filter. It uses an HTTPRouteFilter that contributes
+// a cookie match, which is ANDed with the rule's method match, and asserts that routing is
+// enforced end-to-end for gRPC traffic: a request carrying the cookie is routed to the
+// backend, while a request without it does not match the route.
 var GRPCRouteHTTPRouteFilterTest = suite.ConformanceTest{
 	ShortName:   "GRPCRouteHTTPRouteFilter",
 	Description: "GRPCRoute referencing an Envoy Gateway HTTPRouteFilter via extensionRef",
 	Manifests:   []string{"testdata/grpcroute-httproutefilter.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("inject credential into gRPC request via HTTPRouteFilter", func(t *testing.T) {
+		t.Run("cookie match contributed by HTTPRouteFilter is enforced for gRPC", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "grpcroute-httproutefilter", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.GRPCRoute{}, true, routeNN)
 
-			okResp := grpc.ExpectedResponse{
+			// A request that carries the "canary=true" cookie matches the rule and is
+			// routed to the backend.
+			matchResp := grpc.ExpectedResponse{
 				EchoRequest: &grpcechoserver.EchoRequest{},
-				Backend:     "grpc-infra-backend-v1",
-				Namespace:   ns,
+				RequestMetadata: &grpc.RequestMetadata{
+					Metadata: map[string]string{"cookie": "canary=true"},
+				},
+				Backend:   "grpc-infra-backend-v1",
+				Namespace: ns,
 			}
+			grpc.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.GRPCClient, suite.TimeoutConfig, gwAddr, matchResp)
 
-			// Ensure the route with the HTTPRouteFilter is reachable and returns OK.
-			grpc.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.GRPCClient, suite.TimeoutConfig, gwAddr, okResp)
-
-			// The credential-injection HTTPRouteFilter must have added the x-credential
-			// header to the request received by the upstream gRPC server.
-			resp, err := suite.GRPCClient.SendRPC(t, gwAddr, okResp, suite.TimeoutConfig.MaxTimeToConsistency)
-			require.NoError(t, err, "failed to send gRPC request")
-
-			const expectedHeader = "x-credential"
-			const expectedValue = "Basic dXNlcjE6dGVzdDI="
-			found := false
-			for _, h := range resp.Response.GetAssertions().GetHeaders() {
-				if strings.EqualFold(h.GetKey(), expectedHeader) && h.GetValue() == expectedValue {
-					found = true
-					break
-				}
+			// A request without the cookie does not match the route. gRPC surfaces an
+			// unmatched route (HTTP 404) as the Unimplemented status code.
+			noMatchResp := grpc.ExpectedResponse{
+				EchoRequest: &grpcechoserver.EchoRequest{},
+				Response:    grpc.Response{Code: codes.Unimplemented},
 			}
-			require.Truef(t, found, "expected upstream request to contain header %q=%q injected by the HTTPRouteFilter, got headers %v",
-				expectedHeader, expectedValue, resp.Response.GetAssertions().GetHeaders())
+			grpc.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.GRPCClient, suite.TimeoutConfig, gwAddr, noMatchResp)
 		})
 	},
 }

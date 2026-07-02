@@ -229,6 +229,8 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 func httpRouteFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
 	grpcroute := rawObj.(*gwapiv1.GRPCRoute)
 	httpRouteFilterRefs := make(map[string]struct{})
+	// HTTPRouteFilter is only supported at the rule level for GRPCRoute, so
+	// backendRef-level filters are intentionally not indexed.
 	for _, rule := range grpcroute.Spec.Rules {
 		for _, filter := range rule.Filters {
 			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
@@ -236,16 +238,6 @@ func httpRouteFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
 					Namespace: grpcroute.Namespace,
 					Name:      string(filter.ExtensionRef.Name),
 				}.String()] = struct{}{}
-			}
-		}
-		for _, backendRef := range rule.BackendRefs {
-			for _, filter := range backendRef.Filters {
-				if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
-					httpRouteFilterRefs[types.NamespacedName{
-						Namespace: grpcroute.Namespace,
-						Name:      string(filter.ExtensionRef.Name),
-					}.String()] = struct{}{}
-				}
 			}
 		}
 	}

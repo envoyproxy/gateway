@@ -887,16 +887,6 @@ func TestProcessGRPCRoutes(t *testing.T) {
 												Name:  "test",
 											},
 										},
-										Filters: []gwapiv1.GRPCRouteFilter{
-											{
-												Type: gwapiv1.GRPCRouteFilterExtensionRef,
-												ExtensionRef: &gwapiv1.LocalObjectReference{
-													Group: gwapiv1.Group(egv1a1.GroupName),
-													Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
-													Name:  gwapiv1.ObjectName("test-backend"),
-												},
-											},
-										},
 									},
 								},
 							},
@@ -905,23 +895,6 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				},
 			},
 			httpRouteFilters: []*egv1a1.HTTPRouteFilter{
-				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.KindHTTPRouteFilter,
-						APIVersion: egv1a1.GroupVersion.String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test-backend",
-					},
-					Spec: egv1a1.HTTPRouteFilterSpec{
-						URLRewrite: &egv1a1.HTTPURLRewriteFilter{
-							Hostname: &egv1a1.HTTPHostnameModifier{
-								Type: egv1a1.BackendHTTPHostnameModifier,
-							},
-						},
-					},
-				},
 				{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       egv1a1.KindHTTPRouteFilter,

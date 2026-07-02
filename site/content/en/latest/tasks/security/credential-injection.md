@@ -12,7 +12,8 @@ Credentials can be injected at the HTTPRoute level or at the BackendRef level, a
 which requests receive injected credentials.
 
 The same [HTTPRouteFilter][HTTPRouteFilter] can also be referenced from a [GRPCRoute][] via an `extensionRef` filter, so
-credentials can be injected into gRPC traffic in the same way.
+credentials can be injected into gRPC traffic in the same way. Note that, for a `GRPCRoute`, the filter is only supported
+at the rule level; referencing it at the BackendRef level is not supported.
 
 ## Prerequisites
 

@@ -172,15 +172,10 @@ func (r *gatewayAPIReconciler) processGRPCRoute(ctx context.Context, grpcRoute *
 					"failed to process BackendRef for GRPCRoute",
 					"grpcRoute", grpcRoute, "backendRef", backendRef.BackendObjectReference)
 			}
-
-			for j := range backendRef.Filters {
-				if err := r.processGRPCRouteFilter(ctx, &backendRef.Filters[j], grpcRoute, resourceMap, resourceTree); err != nil {
-					r.log.Error(err, "bypassing backendRef filter", "index", j)
-					continue
-				}
-			}
 		}
 
+		// HTTPRouteFilter is only supported at the rule level for GRPCRoute;
+		// backendRef-level extended filters are not supported.
 		for i := range rule.Filters {
 			if err := r.processGRPCRouteFilter(ctx, &rule.Filters[i], grpcRoute, resourceMap, resourceTree); err != nil {
 				r.log.Error(err, "bypassing filter rule", "index", i)

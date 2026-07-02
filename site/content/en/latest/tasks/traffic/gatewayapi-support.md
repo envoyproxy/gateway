@@ -81,8 +81,7 @@ provide additional traffic processing:
 __Notes:__
 - The only [BackendRef][grpc-filter] kind supported by Envoy Gateway is a [Service][]. Routing traffic to other
   destinations such as arbitrary URLs is not currently possible.
-- Only `requestHeaderModifier`, `responseHeaderModifier`, and `extensionRef` (referencing an Envoy Gateway
-  [HTTPRouteFilter][]) filters are currently supported within [GRPCBackendRef][].
+- Only `requestHeaderModifier` and `responseHeaderModifier` filters are currently supported within [GRPCBackendRef][].
 
 ## TLSRoute
 
