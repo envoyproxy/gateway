@@ -80,7 +80,7 @@ func BuildBTPRoutingTypeIndex(
 		gatewayLevel:   make(map[btpRoutingKey]*egv1a1.RoutingType),
 	}
 
-	// Combine routes and gateways into a single target slice for getPolicyTargetRefs.
+	// Combine routes and gateways into a single target slice for resolvePolicyTargets.
 	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
 	allTargets = append(allTargets, routes...)
 	for _, gw := range gateways {

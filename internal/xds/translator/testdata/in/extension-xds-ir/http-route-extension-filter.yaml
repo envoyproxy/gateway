@@ -28,3 +28,16 @@ http:
           namespace: extensions
         spec:
           foo: bar
+    extensionServerPolicies:
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: ExamplePolicy
+        metadata:
+          name: policy-on-route
+          namespace: extensions
+        spec:
+          data: attached to the route
+          targetRefs:
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
+            name: first-route

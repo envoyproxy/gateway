@@ -49,7 +49,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 
 | Hook Type | Hook Method Name | Purpose | Resources Modified | Execution Context |
 |-----------|------------------|---------|-------------------|-------------------|
-| `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters |
+| `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters or extension server policies targeting them |
 | `Cluster` | `PostClusterModifyHook` | Modify clusters for custom backends | Single `envoy.config.cluster.v3.Cluster` | Per-cluster, only for custom backend clusters |
 | `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host |
 | `HTTPListener` | `PostHTTPListenerModifyHook` | Modify HTTP listeners | Single `envoy.config.listener.v3.Listener` | Per-listener |
@@ -60,7 +60,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 The hooks are executed in the following order during xDS translation:
 
 1. **Route Processing Phase**
-   - `Route` hook (`PostRouteModifyHook`): Called for each route that has extension filters attached
+   - `Route` hook (`PostRouteModifyHook`): Called for each route that has extension filters attached or extension server policies targettig the route
    - `Cluster` hook (`PostClusterModifyHook`): Called for each cluster generated from custom backend references
 
 2. **Virtual Host Processing Phase**
@@ -76,8 +76,8 @@ The hooks are executed in the following order during xDS translation:
 
 #### Route Hook (`PostRouteModifyHook`)
 
-- **When called**: After each individual route is generated from an HTTPRoute with extension filters
-- **Input**: Single route, hostnames, and extension resources from the HTTPRoute
+- **When called**: After each individual route is generated from an HTTPRoute or GRPCRoute that has extension filters attached or has extension server policies targeting it (or one of its rules)
+- **Input**: Single route, hostnames, the extension resources from the HTTPRoute or GRPCRoute, and the extension server policies targeting the route or its matching rule
 - **Output**: Modified route
 - **Use cases**: Add route-specific filters, modify route configuration, add typed per-filter config
 
@@ -108,6 +108,34 @@ The hooks are executed in the following order during xDS translation:
 - **Input**: All clusters, secrets, listeners, and routes, plus extension policies
 - **Output**: Complete set of modified resources
 - **Use cases**: Global resource injection, cross-resource modifications, cleanup operations
+
+### Targeting Resources with Extension Server Policies
+
+Extension server policies (the custom resources registered via `extensionManager.policyResources`) attach to
+Envoy Gateway resources through their `targetRefs`/`targetRef` and optional `sectionName`. The target determines
+which hooks receive the policy:
+
+| `targetRef` kind | `sectionName` | Attaches to | Delivered to hook(s) |
+|------------------|---------------|-------------|----------------------|
+| `Gateway`        | _(unset)_     | The whole Gateway | `PostTranslateModifyHook` |
+| `Gateway`        | Listener name | A single Listener | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |
+| `HTTPRoute` / `GRPCRoute` | Rule name (`sectionName`) | A single route rule | `PostRouteModifyHook` (routes generated from that rule only) |
+
+#### Status reporting
+
+Envoy Gateway records the outcome of attachment in the policy's `status.ancestors` conditions (the ancestor is the
+Gateway the target resolves to):
+
+- **Attached**: the policy is delivered to the relevant hook(s) and an `Accepted: True` condition (reason
+  `Accepted`) is set.
+- **`sectionName` not found**: when a policy specifies a `sectionName` (route rule or listener) that does not exist
+  on the targeted resource, the policy does not attach and is not delivered to any hook; an `Accepted: False`
+  condition with reason `TargetNotFound` is set.
+- **Unsupported route kind**: targeting `TCPRoute`, `UDPRoute`, or `TLSRoute` is not currently supported. The policy
+  does not attach and an `Accepted: False` condition with reason `Invalid` is set.
+- **Target not found**: when the referenced `Gateway` / route does not exist (or the Gateway was not accepted), the
+  policy is skipped silently and no condition is written, since the target may be created (or become accepted) later.
 
 ### Configuration
 
@@ -327,14 +355,14 @@ $ curl -v --header "Host: www.example.com" "http://${GATEWAY_HOST}/example"
 > Host: www.example.com
 > User-Agent: curl/7.81.0
 > Accept: */*
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 401 Unauthorized
 < www-authenticate: Basic realm="http://www.example.com/example"
 < content-length: 58
 < content-type: text/plain
 < date: Mon, 08 Jul 2024 10:53:11 GMT
-< 
+<
 ...
 User authentication failed. Missing username and password.
 ...
@@ -343,7 +371,7 @@ User authentication failed. Missing username and password.
 Add a new Username/Password combination using the example extension server's CRD:
 
 ```shell
-kubectl apply -f - << EOF 
+kubectl apply -f - << EOF
 apiVersion: example.extensions.io/v1alpha1
 kind: ListenerContextExample
 metadata:
@@ -368,14 +396,14 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 > Authorization: Basic dXNlcm5hbWU6cEBzc3cwcmQ=
 > User-Agent: curl/7.81.0
 > Accept: */*
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
 < x-content-type-options: nosniff
 < date: Mon, 08 Jul 2024 10:56:17 GMT
 < content-length: 559
-< 
+<
 ...
  "headers": {
   "Authorization": [

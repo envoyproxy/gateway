@@ -89,6 +89,40 @@ func (t *testingExtensionServer) PostRouteModify(_ context.Context, req *pb.Post
 			},
 		)
 	}
+	for _, extensionPolicyBytes := range req.PostRouteContext.ExtensionPolicies {
+		extensionPolicy := unstructured.Unstructured{}
+		if err := extensionPolicy.UnmarshalJSON(extensionPolicyBytes.UnstructuredBytes); err != nil {
+			return &pb.PostRouteModifyResponse{
+				Route: req.Route,
+			}, err
+		}
+		modifiedRoute.ResponseHeadersToAdd = append(modifiedRoute.ResponseHeadersToAdd,
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
+					Key:   "mock-extension-was-here-extensionPolicy-name",
+					Value: extensionPolicy.GetName(),
+				},
+			},
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
+					Key:   "mock-extension-was-here-extensionPolicy-namespace",
+					Value: extensionPolicy.GetNamespace(),
+				},
+			},
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
+					Key:   "mock-extension-was-here-extensionPolicy-kind",
+					Value: extensionPolicy.GetKind(),
+				},
+			},
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
+					Key:   "mock-extension-was-here-extensionPolicy-apiversion",
+					Value: extensionPolicy.GetAPIVersion(),
+				},
+			},
+		)
+	}
 	return &pb.PostRouteModifyResponse{
 		Route: modifiedRoute,
 	}, nil
