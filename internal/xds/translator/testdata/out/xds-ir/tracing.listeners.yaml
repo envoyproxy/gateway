@@ -30,7 +30,7 @@
         statPrefix: http-10080
         tracing:
           clientSampling:
-            value: 100
+            value: 20
           customTags:
           - environment:
               defaultValue: '-'
@@ -44,7 +44,7 @@
               name: X-Request-Id
             tag: req1
           overallSampling:
-            value: 100
+            value: 30
           provider:
             name: envoy.tracers.opentelemetry
             typedConfig:

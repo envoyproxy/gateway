@@ -8443,6 +8443,16 @@ func (in *Tracing) DeepCopyInto(out *Tracing) {
 		*out = new(v1.Fraction)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ClientSamplingFraction != nil {
+		in, out := &in.ClientSamplingFraction, &out.ClientSamplingFraction
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.OverallSamplingFraction != nil {
+		in, out := &in.OverallSamplingFraction, &out.OverallSamplingFraction
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.CustomTags != nil {
 		in, out := &in.CustomTags, &out.CustomTags
 		*out = make(map[string]CustomTag, len(*in))
