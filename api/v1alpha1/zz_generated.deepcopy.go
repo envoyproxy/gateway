@@ -3405,6 +3405,11 @@ func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 		*out = new(ExtProcProcessingMode)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ShadowMode != nil {
+		in, out := &in.ShadowMode, &out.ShadowMode
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Metadata != nil {
 		in, out := &in.Metadata, &out.Metadata
 		*out = new(ExtProcMetadata)

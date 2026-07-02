@@ -1629,6 +1629,11 @@ func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.ShadowMode != nil {
+		in, out := &in.ShadowMode, &out.ShadowMode
+		*out = new(bool)
+		**out = **in
+	}
 	if in.FailOpen != nil {
 		in, out := &in.FailOpen, &out.FailOpen
 		*out = new(bool)
