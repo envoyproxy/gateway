@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/metrics"
 	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
@@ -66,6 +67,9 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		return err
 	}
 
+	if err = i.checkOwnership(ctx, sa); err != nil {
+		return err
+	}
 	return i.Client.ServerSideApply(ctx, sa)
 }
 
@@ -105,6 +109,9 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 		}
 	}()
 
+	if err = i.checkOwnership(ctx, cm); err != nil {
+		return err
+	}
 	return i.Client.ServerSideApply(ctx, cm)
 }
 
@@ -152,6 +159,10 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
+
+	if err = i.checkOwnership(ctx, deployment); err != nil {
+		return err
+	}
 
 	old := &appsv1.Deployment{}
 	err = i.Client.Get(ctx, types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}, old)
@@ -240,6 +251,10 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		}
 	}()
 
+	if err = i.checkOwnership(ctx, daemonSet); err != nil {
+		return err
+	}
+
 	old := &appsv1.DaemonSet{}
 	err = i.Client.Get(ctx, types.NamespacedName{Name: daemonSet.Name, Namespace: daemonSet.Namespace}, old)
 	if err != nil {
@@ -324,6 +339,10 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		}
 	}()
 
+	if err = i.checkOwnership(ctx, pdb); err != nil {
+		return err
+	}
+
 	return i.Client.ServerSideApply(ctx, pdb)
 }
 
@@ -373,6 +392,10 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		}
 	}()
 
+	if err = i.checkOwnership(ctx, hpa); err != nil {
+		return err
+	}
+
 	return i.Client.ServerSideApply(ctx, hpa)
 }
 
@@ -413,6 +436,10 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
+
+	if err = i.checkOwnership(ctx, svc); err != nil {
+		return err
+	}
 
 	return i.Client.ServerSideApply(ctx, svc)
 }
@@ -720,4 +747,67 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 		return ""
 	}
 	return string(secret.Data[proxy.XdsTLSCaFileName])
+}
+
+// checkOwnership guards against adopting a pre-existing resource that shares a
+// name with a Gateway-owned resource in GatewayNamespace mode. If a resource
+// with the same name/namespace already exists and is not labeled as owned by
+// this Gateway, the apply is skipped to avoid hijacking (and later garbage-
+// collecting) an unrelated resource.
+//
+// This uses the cached client, so it is best-effort: there is a small window
+// where a same-named resource created just before this reconcile may not yet be
+// reflected in the cache and could be adopted. This is considered an acceptable
+// edge case — it does not cause EG to fail, and using the cache avoids extra
+// uncached API reads on every reconcile (see #8764).
+func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
+	desired := obj.GetLabels()
+	// if not in GatewayNamespace mode or the desired object carries
+	// no gateway identity labels, skip the ownership checking.
+	if !i.EnvoyGateway.GatewayNamespaceMode() ||
+		(desired[gatewayapi.OwningGatewayNameLabel] == "" &&
+			desired[gatewayapi.OwningGatewayNamespaceLabel] == "" &&
+			desired[gatewayapi.OwningGatewayClassLabel] == "") {
+		return nil
+	}
+
+	existing := obj.DeepCopyObject().(client.Object)
+	err := i.Client.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	if !ownedByGateway(existing.GetLabels(), obj.GetLabels()) {
+		ownershipErr := fmt.Errorf("%s %s/%s already exists and is not owned by this Gateway",
+			obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
+		i.logger.Error(ownershipErr, "resource already exists and is not owned by this Gateway, skipping",
+			"kind", obj.GetObjectKind().GroupVersionKind().Kind,
+			"name", obj.GetName(), "namespace", obj.GetNamespace())
+		return ownershipErr
+	}
+	return nil
+}
+
+func ownedByGateway(existingLabels, desiredLabels map[string]string) bool {
+	if existingLabels["app.kubernetes.io/managed-by"] != "envoy-gateway" {
+		return false
+	}
+
+	gwName := desiredLabels[gatewayapi.OwningGatewayNameLabel]
+	gwNS := desiredLabels[gatewayapi.OwningGatewayNamespaceLabel]
+	if gwName != "" || gwNS != "" {
+		return existingLabels[gatewayapi.OwningGatewayNameLabel] == gwName &&
+			existingLabels[gatewayapi.OwningGatewayNamespaceLabel] == gwNS
+	}
+
+	gwClass := desiredLabels[gatewayapi.OwningGatewayClassLabel]
+	if gwClass != "" {
+		return existingLabels[gatewayapi.OwningGatewayClassLabel] == gwClass
+	}
+
+	// no identity labels present.
+	return false
 }
