@@ -161,6 +161,8 @@ type Xds struct {
 	Tracing *Tracing `json:"tracing,omitempty" yaml:"tracing,omitempty"`
 	// Metrics configuration for the gateway.
 	Metrics *Metrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
+	// HealthCheckLog configuration for the gateway.
+	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty" yaml:"healthCheckLog,omitempty"`
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.
@@ -2811,6 +2813,25 @@ type AccessLog struct {
 	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty" yaml:"openTelemetry,omitempty"`
 }
 
+// ProxyHealthCheckLog holds health check event logging configuration.
+// Events are written as JSON to the specified file path.
+// +k8s:deepcopy-gen=true
+type ProxyHealthCheckLog struct {
+	// FileSinks holds file-based HC event log sinks.
+	FileSinks []*FileEnvoyProxyHealthCheckLog `json:"fileSinks,omitempty" yaml:"fileSinks,omitempty"`
+	// AlwaysLogHealthCheckFailures forces logging of every failed health check.
+	AlwaysLogHealthCheckFailures bool `json:"alwaysLogHealthCheckFailures,omitempty" yaml:"alwaysLogHealthCheckFailures,omitempty"`
+	// AlwaysLogHealthCheckSuccess forces logging of every successful health check.
+	AlwaysLogHealthCheckSuccess bool `json:"alwaysLogHealthCheckSuccess,omitempty" yaml:"alwaysLogHealthCheckSuccess,omitempty"`
+}
+
+// FileEnvoyProxyHealthCheckLog is the IR representation of a file-based health check event log sink.
+// +k8s:deepcopy-gen=true
+type FileEnvoyProxyHealthCheckLog struct {
+	// Path is the file path for HC event JSON output.
+	Path string `json:"path" yaml:"path"`
+}
+
 // TextAccessLog holds the configuration for text access logging.
 // +k8s:deepcopy-gen=true
 type TextAccessLog struct {
@@ -3231,6 +3252,8 @@ type ActiveHealthCheck struct {
 	// Overrides defines the configuration of the overriding health check settings for all endpoints
 	// in the backend cluster.
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
+	// EventLog configures health check event logging for this cluster.
+	EventLog *ProxyHealthCheckLog `json:"eventLog,omitempty" yaml:"eventLog,omitempty"`
 }
 
 // Validate the fields within the HealthCheck structure.
