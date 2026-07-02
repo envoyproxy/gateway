@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
+	csuite "sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/envoyproxy/gateway/test/resilience/tests"
@@ -26,12 +27,14 @@ func TestResilience(t *testing.T) {
 	cli, _ := kubetest.NewClient(t)
 	// Parse benchmark options.
 	flag.Parse()
+	opts := &csuite.ConfigurableOptions{}
+	flags.ApplyAll(opts)
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 	bSuite, err := suite.NewResilienceTestSuite(
 		cli,
 		*suite.ReportSaveDir,
 		[]fs.FS{Manifests},
-		*flags.GatewayClassName,
+		opts.GatewayClassName,
 	)
 	if err != nil {
 		t.Fatalf("Failed to create the resilience test suite: %v", err)

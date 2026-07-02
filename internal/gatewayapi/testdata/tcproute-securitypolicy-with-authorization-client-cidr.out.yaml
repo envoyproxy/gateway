@@ -442,7 +442,7 @@ securityPolicies:
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 tcpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcpr-app-foo
@@ -474,7 +474,7 @@ tcpRoutes:
         name: gateway-tcp
         namespace: envoy-gateway
         sectionName: foo
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcpr-app-bar
@@ -506,7 +506,7 @@ tcpRoutes:
         name: gateway-tcp
         namespace: envoy-gateway
         sectionName: bar
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcpr-app-mixed

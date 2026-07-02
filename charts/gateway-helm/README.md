@@ -38,7 +38,7 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest 
 This command installs both Gateway API CRDs and Envoy Gateway CRDs. If your Kubernetes provider already manages
 Gateway API CRDs for the cluster, confirm that the provider-installed Gateway API version and channel are compatible
 with the Envoy Gateway release and the Gateway API resources you plan to use. If they are compatible, install only the
-Envoy Gateway CRDs separately and use `--skip-crds` when installing this chart.
+Envoy Gateway CRDs separately and use `--set crds.enabled=false` when installing this chart.
 
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-helm/tags)
 
@@ -54,8 +54,9 @@ make kube-deploy TAG=latest
 
 ### Skip install CRDs
 
-You can install the eg chart without Gateway API CRDs and Envoy Gateway CRDs. Make sure the CRDs exist in the cluster
-before installing the chart with `--skip-crds`, otherwise Envoy Gateway may fail to start.
+You can install the eg chart without the bundled Gateway API CRDs, Envoy Gateway CRDs, and Gateway API safe upgrade
+policy resources by setting `crds.enabled=false`. Make sure these resources exist in the cluster before installing the
+chart with `--set crds.enabled=false`, otherwise Envoy Gateway may fail to start.
 
 If your Kubernetes provider manages compatible Gateway API CRDs, install only the Envoy Gateway CRDs from the
 `gateway-crds-helm` chart first:
@@ -66,14 +67,14 @@ helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm --set 'crds.g
 ```
 
 If the provider-managed Gateway API CRDs are not compatible, use a compatible Gateway API CRD installation method for
-the cluster first, then install this chart with `--skip-crds`.
+the cluster first, then install this chart with `--set crds.enabled=false`.
 
-After the required CRDs are installed, install the eg chart with `--skip-crds`. Gateway API safe upgrade policy
-resources (the safe-upgrades ValidatingAdmissionPolicy and binding shipped with the Gateway API bundle) are rendered
-from the chart templates on install by default, so disable them when these resources are managed outside this chart:
+After the required CRDs are installed, install the eg chart with `--set crds.enabled=false`. Setting `crds.enabled=false`
+also skips the Gateway API safe upgrade policy resources (the safe-upgrades ValidatingAdmissionPolicy and binding shipped
+with the Gateway API bundle), so manage them outside this chart when these resources are owned elsewhere:
 
 ``` shell
-helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds --set crds.gatewayAPI.safeUpgradePolicy.enabled=false
+helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --set crds.enabled=false
 ```
 
 To uninstall the chart:
@@ -89,6 +90,7 @@ helm uninstall eg -n envoy-gateway-system
 | certgen | object | `{"job":{"affinity":{},"annotations":{},"args":[],"nodeSelector":{},"pod":{"annotations":{},"labels":{}},"resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
 | commonLabels | object | `{}` | Labels to apply to all resources |
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
+| crds.enabled | bool | `true` | Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately. |
 | createNamespace | bool | `false` |  |
 | deployment.annotations | object | `{}` |  |
 | deployment.envoyGateway.extraEnv | list | `[]` | Additional environment variables for the envoy-gateway container. |
@@ -106,6 +108,7 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.envoyGateway.securityContext.runAsNonRoot | bool | `true` |  |
 | deployment.envoyGateway.securityContext.runAsUser | int | `65532` |  |
 | deployment.envoyGateway.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
+| deployment.envoyGateway.strategy | object | `{}` |  |
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
