@@ -39,3 +39,180 @@
           sourceCode:
             inlineString: function envoy_on_response(response_handle) response_handle:logError('Hello.')
               end
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-2
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http-2/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-3/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.lua/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          filterContext:
+            mode: strict
+            token_header: x-api-key
+          sourceCode:
+            inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
+              end
+        envoy.filters.http.lua/listener/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          disabled: true
+    typedPerFilterConfig:
+      envoy.filters.http.lua/listener/0:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+        filterContext:
+          mode: strict
+          token_header: x-api-key
+        sourceCode:
+          inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye
+            from gateway.') end
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-3
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http-3/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-3/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-3/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    typedPerFilterConfig:
+      envoy.filters.http.lua/listener/0:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+        filterContext:
+          mode: strict
+          token_header: x-api-key
+        sourceCode:
+          inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye
+            from gateway.') end
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-4
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http-4/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-4/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-4/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-http-route/extproc/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+        envoy.filters.http.lua/listener/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          disabled: true
+    - match:
+        pathSeparatedPrefix: /bar
+      name: httproute/default/httproute-5/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-5/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    typedPerFilterConfig:
+      envoy.filters.http.lua/listener/0:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+        sourceCode:
+          inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye
+            from gateway.') end
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-5
+  virtualHosts:
+  - domains:
+    - app-a.example.com
+    name: envoy-gateway/gateway-1/http-5/app-a_example_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-6/rule/0/match/0/app-a_example_com
+      route:
+        cluster: httproute/default/httproute-6/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    typedPerFilterConfig:
+      envoy.filters.http.lua/listener/0:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+        sourceCode:
+          inlineString: function envoy_on_request(request_handle) request_handle:logInfo('tenant-A
+            script.') end
+  - domains:
+    - app-b.example.com
+    name: envoy-gateway/gateway-1/http-6/app-b_example_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-7/rule/0/match/0/app-b_example_com
+      route:
+        cluster: httproute/default/httproute-7/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    typedPerFilterConfig:
+      envoy.filters.http.lua/listener/0:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+        sourceCode:
+          inlineString: function envoy_on_request(request_handle) request_handle:logInfo('tenant-B
+            script.') end
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-7
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http-7/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-8/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-8/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-gateway/extproc/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    typedPerFilterConfig:
+      envoy.filters.http.lua/listener/0:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+        sourceCode:
+          inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Gateway
+            Lua.') end
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-8
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http-8/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-9/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-9/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.lua/listener/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          disabled: true
+    typedPerFilterConfig:
+      envoy.filters.http.lua/listener/0:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+        sourceCode:
+          inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Gateway
+            Lua.') end

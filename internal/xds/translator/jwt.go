@@ -389,3 +389,7 @@ func buildJwtFromHeaders(headers []egv1a1.JWTHeaderExtractor) []*jwtauthnv3.JwtH
 
 	return jwtHeaders
 }
+
+func (*jwt) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}
