@@ -275,6 +275,10 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			if parentRefCtx == nil {
 				continue
 			}
+			gtwCtx := parentRefCtx.GetGateway()
+			if gtwCtx == nil {
+				continue
+			}
 
 			// Populate gatewayRouteMap using the underlying Gateway NN derived from the listeners
 			for _, listener := range parentRefCtx.listeners {
@@ -292,11 +296,9 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			}
 
 			// Add one ancestor ref for the backing Gateway (used for error status reporting)
-			if gtwCtx := parentRefCtx.GetGateway(); gtwCtx != nil {
-				gwNN := utils.NamespacedName(gtwCtx.Gateway)
-				ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
-				ancestorRefs = append(ancestorRefs, &ancestorRef)
-			}
+			gwNN := utils.NamespacedName(gtwCtx.Gateway)
+			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+			ancestorRefs = append(ancestorRefs, &ancestorRef)
 		}
 	}
 

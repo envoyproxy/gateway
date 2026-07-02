@@ -488,6 +488,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			if parentRefCtx == nil {
 				continue
 			}
+			gtwCtx := parentRefCtx.GetGateway()
+			if gtwCtx == nil {
+				continue
+			}
 			parentRefCtxs = append(parentRefCtxs, parentRefCtx)
 
 			// Populate gatewayRouteMap using the underlying Gateway NN derived from the listeners
@@ -508,11 +512,9 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			}
 
 			// Add one ancestor ref for the backing Gateway (used for error status reporting)
-			if gtwCtx := parentRefCtx.GetGateway(); gtwCtx != nil {
-				gwNN := utils.NamespacedName(gtwCtx.Gateway)
-				ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
-				ancestorRefs = append(ancestorRefs, &ancestorRef)
-			}
+			gwNN := utils.NamespacedName(gtwCtx.Gateway)
+			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+			ancestorRefs = append(ancestorRefs, &ancestorRef)
 		}
 	}
 
