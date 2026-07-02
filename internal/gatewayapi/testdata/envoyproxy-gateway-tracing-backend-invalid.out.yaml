@@ -1,101 +1,44 @@
-envoyProxyForGatewayClass:
-  apiVersion: gateway.envoyproxy.io/v1alpha1
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:
     name: test
-    namespace: envoy-gateway-system
+    namespace: envoy-gateway
   spec:
     logging: {}
     provider:
       kubernetes:
         envoyDeployment:
           container:
-            env:
-            - name: env_a
-              value: env_a_value
-            - name: env_b
-              value: env_b_name
             image: envoyproxy/envoy:distroless-dev
-            resources:
-              requests:
-                cpu: 100m
-                memory: 512Mi
-            securityContext:
-              allowPrivilegeEscalation: false
-              runAsUser: 2000
-          pod:
-            affinity:
-              nodeAffinity:
-                requiredDuringSchedulingIgnoredDuringExecution:
-                  nodeSelectorTerms:
-                  - matchExpressions:
-                    - key: cloud.google.com/gke-nodepool
-                      operator: In
-                      values:
-                      - router-node
-            annotations:
-              key1: val1
-              key2: val2
-            securityContext:
-              fsGroup: 2000
-              fsGroupChangePolicy: OnRootMismatch
-              runAsGroup: 3000
-              runAsUser: 1000
-            tolerations:
-            - effect: NoSchedule
-              key: node-type
-              operator: Exists
-              value: router
-            volumes:
-            - name: certs
-              secret:
-                secretName: envoy-cert
           replicas: 2
         envoyService:
           type: LoadBalancer
       type: Kubernetes
     telemetry:
-      metrics:
-        sinks:
-        - openTelemetry:
-            backendRefs:
-            - name: service-not-found
-              namespace: monitoring
-              port: 4317
+      tracing:
+        provider:
+          backendRefs:
+          - name: service-not-found
+            namespace: monitoring
+            port: 4317
           type: OpenTelemetry
+        samplingRate: 100
   status:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
-        name: envoy-gateway-class
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
         message: 'EnvoyProxy has been accepted, but the following telemetry configuration
-          was ignored: invalid metrics backendRefs in the referenced EnvoyProxy: service
+          was ignored: invalid tracing backendRefs in the referenced EnvoyProxy: service
           monitoring/service-not-found not found'
         reason: Accepted
         status: "True"
         type: Accepted
-gatewayClass:
-  apiVersion: gateway.networking.k8s.io/v1
-  kind: GatewayClass
-  metadata:
-    name: envoy-gateway-class
-  spec:
-    controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    parametersRef:
-      group: gateway.envoyproxy.io
-      kind: EnvoyProxy
-      name: test
-      namespace: envoy-gateway-system
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: Valid GatewayClass
-      reason: Accepted
-      status: "True"
-      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -104,6 +47,11 @@ gateways:
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: test
     listeners:
     - allowedRoutes:
         namespaces:
@@ -144,76 +92,38 @@ infraIR:
         kind: EnvoyProxy
         metadata:
           name: test
-          namespace: envoy-gateway-system
+          namespace: envoy-gateway
         spec:
           logging: {}
           provider:
             kubernetes:
               envoyDeployment:
                 container:
-                  env:
-                  - name: env_a
-                    value: env_a_value
-                  - name: env_b
-                    value: env_b_name
                   image: envoyproxy/envoy:distroless-dev
-                  resources:
-                    requests:
-                      cpu: 100m
-                      memory: 512Mi
-                  securityContext:
-                    allowPrivilegeEscalation: false
-                    runAsUser: 2000
-                pod:
-                  affinity:
-                    nodeAffinity:
-                      requiredDuringSchedulingIgnoredDuringExecution:
-                        nodeSelectorTerms:
-                        - matchExpressions:
-                          - key: cloud.google.com/gke-nodepool
-                            operator: In
-                            values:
-                            - router-node
-                  annotations:
-                    key1: val1
-                    key2: val2
-                  securityContext:
-                    fsGroup: 2000
-                    fsGroupChangePolicy: OnRootMismatch
-                    runAsGroup: 3000
-                    runAsUser: 1000
-                  tolerations:
-                  - effect: NoSchedule
-                    key: node-type
-                    operator: Exists
-                    value: router
-                  volumes:
-                  - name: certs
-                    secret:
-                      secretName: envoy-cert
                 replicas: 2
               envoyService:
                 type: LoadBalancer
             type: Kubernetes
           telemetry:
-            metrics:
-              sinks:
-              - openTelemetry:
-                  backendRefs:
-                  - name: service-not-found
-                    namespace: monitoring
-                    port: 4317
+            tracing:
+              provider:
+                backendRefs:
+                - name: service-not-found
+                  namespace: monitoring
+                  port: 4317
                 type: OpenTelemetry
+              samplingRate: 100
         status:
           ancestors:
           - ancestorRef:
               group: gateway.networking.k8s.io
-              kind: GatewayClass
-              name: envoy-gateway-class
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
             conditions:
             - lastTransitionTime: null
               message: 'EnvoyProxy has been accepted, but the following telemetry
-                configuration was ignored: invalid metrics backendRefs in the referenced
+                configuration was ignored: invalid tracing backendRefs in the referenced
                 EnvoyProxy: service monitoring/service-not-found not found'
               reason: Accepted
               status: "True"
