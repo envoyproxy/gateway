@@ -118,9 +118,10 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 // Shutdown is called from a preStop hook on the shutdown-manager container where
 // it will initiate a drain sequence on the Envoy proxy and block until
 // connections are drained or a timeout is exceeded.
-func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections int) error {
+func Shutdown(readinessFailureDelay, drainTimeout, minDrainDuration time.Duration, exitAtConnections int) error {
 	startTime := time.Now()
 	allowedToExit := false
+	readinessFailurePending := false
 
 	// Reconfigure logger to write to stdout of main process if running in Kubernetes
 	if _, k8s := os.LookupEnv("KUBERNETES_SERVICE_HOST"); k8s && os.Getpid() != 1 {
@@ -130,15 +131,26 @@ func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections in
 	logger.Info(fmt.Sprintf("initiating drain with %.0f second minimum drain period and %.0f second timeout",
 		minDrainDuration.Seconds(), drainTimeout.Seconds()))
 
-	// Start failing active health checks
-	if err := postEnvoyAdminAPI("healthcheck/fail"); err != nil {
-		logger.Error(err, "error failing active health checks")
+	if readinessFailureDelay > 0 {
+		if err := postEnvoyAdminAPI("drain_listeners?graceful&skip_exit"); err != nil {
+			logger.Error(err, "error starting listener drain")
+		}
+		logger.Info(fmt.Sprintf("delaying readiness failure by %.0f seconds", readinessFailureDelay.Seconds()))
+		readinessFailurePending = true
+	} else {
+		// Failing active health checks also starts Envoy listener drain.
+		failActiveHealthChecks(postEnvoyAdminAPI)
 	}
 
 	// Poll total connections from Envoy admin API until minimum drain period has
 	// been reached and total connections reaches threshold or timeout is exceeded
 	for {
 		elapsedTime := time.Since(startTime)
+
+		if readinessFailurePending && elapsedTime >= readinessFailureDelay {
+			failActiveHealthChecks(postEnvoyAdminAPI)
+			readinessFailurePending = false
+		}
 
 		conn, err := getTotalConnections(bootstrap.EnvoyAdminPort)
 		if err != nil {
@@ -168,6 +180,12 @@ func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections in
 	}
 
 	return nil
+}
+
+func failActiveHealthChecks(post func(string) error) {
+	if err := post("healthcheck/fail"); err != nil {
+		logger.Error(err, "error failing active health checks")
+	}
 }
 
 // postEnvoyAdminAPI sends a POST request to the Envoy admin API
