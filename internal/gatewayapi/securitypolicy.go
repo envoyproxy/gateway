@@ -2529,6 +2529,20 @@ func validateAuthorizationGeoIP(
 		return nil, errors.New("authorization clientIPGeoLocations requires ClientTrafficPolicy.spec.clientIPDetection to be configured")
 	}
 
+	modeCount := 0
+	if clientIPDetection.XForwardedFor != nil {
+		modeCount++
+	}
+	if clientIPDetection.CustomHeader != nil {
+		modeCount++
+	}
+	if clientIPDetection.DirectSourceIP != nil {
+		modeCount++
+	}
+	if modeCount != 1 {
+		return nil, errors.New("authorization clientIPGeoLocations requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}")
+	}
+
 	if clientIPDetection.XForwardedFor != nil &&
 		len(clientIPDetection.XForwardedFor.TrustedCIDRs) > 0 {
 		return nil, errors.New("authorization clientIPGeoLocations does not support ClientIPDetection.XForwardedFor.TrustedCIDRs")
