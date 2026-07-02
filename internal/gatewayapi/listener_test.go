@@ -59,14 +59,22 @@ func TestProxySamplingRates(t *testing.T) {
 			expectedOverall: 100.0,
 		},
 		{
-			name: "client and overall rate",
+			name: "client and overall fraction",
 			tracing: &egv1a1.ProxyTracing{
-				ClientSamplingRate:  new(uint32(20)),
-				OverallSamplingRate: new(uint32(30)),
+				Tracing: egv1a1.Tracing{
+					ClientSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: new(int32(4)),
+					},
+					OverallSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   3,
+						Denominator: new(int32(4)),
+					},
+				},
 			},
 			expectedRandom:  100.0,
-			expectedClient:  20.0,
-			expectedOverall: 30.0,
+			expectedClient:  25.0,
+			expectedOverall: 75.0,
 		},
 		{
 			name: "fraction numerator only",
@@ -94,24 +102,6 @@ func TestProxySamplingRates(t *testing.T) {
 			expectedRandom:  10,
 			expectedClient:  100,
 			expectedOverall: 100,
-		},
-		{
-			name: "client and overall fraction",
-			tracing: &egv1a1.ProxyTracing{
-				Tracing: egv1a1.Tracing{
-					ClientSamplingFraction: &gwapiv1.Fraction{
-						Numerator:   1,
-						Denominator: new(int32(4)),
-					},
-					OverallSamplingFraction: &gwapiv1.Fraction{
-						Numerator:   3,
-						Denominator: new(int32(4)),
-					},
-				},
-			},
-			expectedRandom:  100,
-			expectedClient:  25,
-			expectedOverall: 75,
 		},
 		{
 			name: "less than zero",
@@ -160,8 +150,8 @@ func TestProxySamplingRates(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			random := proxySamplingRate(tc.tracing.SamplingRate, tc.tracing.SamplingFraction)
-			client := proxySamplingRate(tc.tracing.ClientSamplingRate, tc.tracing.ClientSamplingFraction)
-			overall := proxySamplingRate(tc.tracing.OverallSamplingRate, tc.tracing.OverallSamplingFraction)
+			client := proxySamplingRate(nil, tc.tracing.ClientSamplingFraction)
+			overall := proxySamplingRate(nil, tc.tracing.OverallSamplingFraction)
 			assert.Equal(t, tc.expectedRandom, random)
 			assert.Equal(t, tc.expectedClient, client)
 			assert.Equal(t, tc.expectedOverall, overall)

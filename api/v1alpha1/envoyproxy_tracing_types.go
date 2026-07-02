@@ -9,8 +9,6 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // ProxyTracing defines the tracing configuration for a proxy.
 // +kubebuilder:validation:XValidation:message="only one of SamplingRate or SamplingFraction can be specified",rule="!(has(self.samplingRate) && has(self.samplingFraction))"
-// +kubebuilder:validation:XValidation:message="only one of ClientSamplingRate or ClientSamplingFraction can be specified",rule="!(has(self.clientSamplingRate) && has(self.clientSamplingFraction))"
-// +kubebuilder:validation:XValidation:message="only one of OverallSamplingRate or OverallSamplingFraction can be specified",rule="!(has(self.overallSamplingRate) && has(self.overallSamplingFraction))"
 type ProxyTracing struct {
 	Tracing `json:",inline"`
 	// SamplingRate controls the rate at which traffic will be
@@ -24,28 +22,6 @@ type ProxyTracing struct {
 	// +kubebuilder:validation:Maximum=100
 	// +optional
 	SamplingRate *uint32 `json:"samplingRate,omitempty"`
-	// ClientSamplingRate controls the rate at which traffic will be
-	// selected for tracing when requested by the client.
-	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
-	//
-	// Only one of ClientSamplingRate or ClientSamplingFraction may be specified.
-	// If neither field is specified, all client requests will be sampled.
-	//
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=100
-	// +optional
-	ClientSamplingRate *uint32 `json:"clientSamplingRate,omitempty"`
-	// OverallSamplingRate controls the rate at which traffic will be
-	// selected for tracing after all other sampling checks have been applied.
-	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
-	//
-	// Only one of OverallSamplingRate or OverallSamplingFraction may be specified.
-	// If neither field is specified, all requests will be sampled.
-	//
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=100
-	// +optional
-	OverallSamplingRate *uint32 `json:"overallSamplingRate,omitempty"`
 	// Provider defines the tracing provider.
 	Provider TracingProvider `json:"provider"`
 }

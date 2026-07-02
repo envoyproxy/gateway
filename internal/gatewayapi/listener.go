@@ -1018,8 +1018,8 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		Authority:           authority,
 		ServiceName:         serviceName,
 		SamplingRate:        proxySamplingRate(tracing.SamplingRate, tracing.SamplingFraction),
-		ClientSamplingRate:  proxySamplingRatePtr(tracing.ClientSamplingRate, tracing.ClientSamplingFraction),
-		OverallSamplingRate: proxySamplingRatePtr(tracing.OverallSamplingRate, tracing.OverallSamplingFraction),
+		ClientSamplingRate:  proxySamplingFractionPtr(tracing.ClientSamplingFraction),
+		OverallSamplingRate: proxySamplingFractionPtr(tracing.OverallSamplingFraction),
 		CustomTags:          ir.CustomTagMapToSlice(tracing.CustomTags),
 		Tags:                ir.MapToSlice(tracing.Tags),
 		ResourceAttributes:  ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
@@ -1035,11 +1035,11 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}, nil
 }
 
-func proxySamplingRatePtr(rate *uint32, fraction *gwapiv1.Fraction) *float64 {
-	if rate == nil && fraction == nil {
+func proxySamplingFractionPtr(fraction *gwapiv1.Fraction) *float64 {
+	if fraction == nil {
 		return nil
 	}
-	return new(proxySamplingRate(rate, fraction))
+	return new(proxySamplingRate(nil, fraction))
 }
 
 func proxySamplingRate(rate *uint32, fraction *gwapiv1.Fraction) float64 {
