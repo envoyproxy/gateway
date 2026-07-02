@@ -170,6 +170,9 @@ const (
 	XDSNameSchemeV2 RuntimeFlag = "XDSNameSchemeV2"
 
 	// EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.
+	// It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.
+	// If the additional controller memory usage for the indexes becomes a concern,
+	// consider disabling this flag.
 	EndpointSliceIndex RuntimeFlag = "EndpointSliceIndex"
 )
 
