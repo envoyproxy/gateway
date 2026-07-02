@@ -16,6 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -25,15 +26,17 @@ const (
 	wasmHTTPServiceClusterName       = "wasm_cluster"
 	wasmHTTPServiceHost              = "envoy-gateway"
 	wasmHTTPServicePort              = 18002
+
+	// SystemTrustStoreSecretName is the shared SDS secret name for the system CA trust store.
+	SystemTrustStoreSecretName = "system_ca_certificates" //nolint:gosec // not a credential
 )
 
-// patchGlobalResources builds and appends the global resources that are shared across listeners and routes.
-// for example, the envoy client certificate and the OIDC HMAC secret.
+// patchGlobalResources builds and appends global resources shared across listeners and routes.
 func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXds *ir.Xds) error {
 	var errs error
 
 	if irXds.GlobalResources != nil && irXds.GlobalResources.EnvoyClientCertificate != nil {
-		// Create the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components.
+		// Create the envoy client TLS secret for control plane connections (rate limit, wasm).
 		if err := createEnvoyClientTLSCertSecret(tCtx, irXds.GlobalResources); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -64,6 +67,37 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 		}
 	}
 	return false
+}
+
+// ensureSystemTrustStoreSecret creates the shared system trust store SDS secret if not yet present.
+func ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
+	if findXdsSecret(tCtx, SystemTrustStoreSecretName) != nil {
+		return nil
+	}
+	return tCtx.AddXdsResource(resourcev3.SecretType, &tlsv3.Secret{
+		Name: SystemTrustStoreSecretName,
+		Type: &tlsv3.Secret_ValidationContext{
+			ValidationContext: &tlsv3.CertificateValidationContext{
+				TrustedCa: &corev3.DataSource{
+					Specifier: &corev3.DataSource_Filename{Filename: cert.SystemCertPath},
+				},
+			},
+		},
+	})
+}
+
+// validateSystemTrustStoreSecret verifies system_ca_certificates has expected content if present.
+// Called once at end of Translate() to catch conflicts from EnvoyPatchPolicy or extensions.
+func validateSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
+	existing := findXdsSecret(tCtx, SystemTrustStoreSecretName)
+	if existing == nil {
+		return nil
+	}
+	vc := existing.GetValidationContext()
+	if vc == nil || vc.GetTrustedCa().GetFilename() != cert.SystemCertPath {
+		return fmt.Errorf("secret name %q is reserved for the system trust store and cannot be used by other resources", SystemTrustStoreSecretName)
+	}
+	return nil
 }
 
 func createEnvoyClientTLSCertSecret(tCtx *types.ResourceVersionTable, globalResources *ir.GlobalResources) error {

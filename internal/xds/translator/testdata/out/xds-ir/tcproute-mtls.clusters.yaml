@@ -47,7 +47,7 @@
                   exact: subdomain.secondexample.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: policy-btls-for-service-1/default-ca
+              name: system_ca_certificates
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3

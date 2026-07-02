@@ -41,7 +41,7 @@
                   exact: example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: policy-btls/policies-ca
+              name: system_ca_certificates
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
