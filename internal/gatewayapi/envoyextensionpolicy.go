@@ -269,6 +269,34 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			// Do need a section name since the policy is targeting to a route
 			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
+		} else if isRefToListenerSet(p) {
+			// For ListenerSet parent refs, resolve the underlying Gateway via the route parent context
+			parentRefCtx := targetedRoute.GetRouteParentContext(p)
+			if parentRefCtx == nil {
+				continue
+			}
+
+			// Populate gatewayRouteMap using the underlying Gateway NN derived from the listeners
+			for _, listener := range parentRefCtx.listeners {
+				gwNN := utils.NamespacedName(listener.gateway.Gateway)
+				key := gwNN.String()
+				if _, ok := gatewayRouteMap[key]; !ok {
+					gatewayRouteMap[key] = make(map[string]sets.Set[string])
+				}
+				listenerRouteMap := gatewayRouteMap[key]
+				sectionName := string(listener.Name)
+				if _, ok := listenerRouteMap[sectionName]; !ok {
+					listenerRouteMap[sectionName] = make(sets.Set[string])
+				}
+				listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
+			}
+
+			// Add one ancestor ref for the backing Gateway (used for error status reporting)
+			if gtwCtx := parentRefCtx.GetGateway(); gtwCtx != nil {
+				gwNN := utils.NamespacedName(gtwCtx.Gateway)
+				ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+				ancestorRefs = append(ancestorRefs, &ancestorRef)
+			}
 		}
 	}
 

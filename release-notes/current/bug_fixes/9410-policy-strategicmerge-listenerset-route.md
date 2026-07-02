@@ -1,1 +1,1 @@
-Fixed SecurityPolicy and BackendTrafficPolicy with `mergeType: StrategicMerge` being silently dropped when the target HTTPRoute has a parentRef pointing to a ListenerSet instead of a Gateway directly.
+Fixed SecurityPolicy, BackendTrafficPolicy, and EnvoyExtensionPolicy silently dropping status conditions (and StrategicMerge policies being fully dropped) when the target HTTPRoute has a parentRef pointing to a ListenerSet instead of a Gateway directly.
