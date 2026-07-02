@@ -199,13 +199,23 @@ The default Envoy Gateway configuration.
   {{- if .Values.global.images.envoyProxy.pullPolicy }}
     {{- $_ := set $container "imagePullPolicy" .Values.global.images.envoyProxy.pullPolicy }}
   {{- end }}
-  {{- $deployment := dict "container" $container }}
+
+  {{- $workload := dict "container" $container }}
+
   {{- if or .Values.global.imagePullSecrets .Values.global.images.envoyProxy.pullSecrets }}
     {{- $pullSecretsYaml := include "eg.envoyProxy.image.pullSecrets" . }}
     {{- $pullSecrets := dict "imagePullSecrets" ($pullSecretsYaml | fromYaml).imagePullSecrets }}
-    {{- $_ := set $deployment "pod" $pullSecrets }}
+    {{- $_ := set $workload "pod" $pullSecrets }}
   {{- end }}
-  {{- $kubernetes := dict "envoyDeployment" $deployment }}
+
+  {{- $envoyProvider := dig "provider" "kubernetes" dict $envoyProxyBase }}
+  {{- $workloadKey := "envoyDeployment" }}
+
+  {{- if hasKey $envoyProvider "envoyDaemonSet" }}
+    {{- $workloadKey = "envoyDaemonSet" }}
+  {{- end }}
+
+  {{- $kubernetes := dict $workloadKey $workload }}
   {{- $provider := dict "type" "Kubernetes" "kubernetes" $kubernetes }}
   {{- $imageOverride = dict "provider" $provider }}
 {{- end }}

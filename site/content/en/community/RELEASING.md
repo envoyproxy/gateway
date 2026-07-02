@@ -55,7 +55,7 @@ export GITHUB_REMOTE=origin
    ```shell
    git checkout -b release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
-
+f
 8. Push the branch to the Envoy Gateway repo.
 
     ```shell
@@ -63,7 +63,7 @@ export GITHUB_REMOTE=origin
     ```
 
 9. Create a topic branch for updating the [Envoy proxy image][] and [Envoy Ratelimit image][] to the tag supported by the release.
- Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
+ Please note that the tags should be updated in both the source code and the Helm chart, including `global.images.envoyProxy.image` in `charts/gateway-helm/values.tmpl.yaml`. Reference [PR #5872][]
    for additional details on updating the image tag.
 
     (+v1.8.x only) After updating the Envoy proxy image tag, update the dynamic module SDK and example dependencies:
@@ -217,7 +217,7 @@ export GITHUB_REMOTE=origin
 
    9. If upstream has updated the [Envoy proxy image][] or [Envoy Ratelimit image][] tag supported by the release,
    you should also create a topic branch for bumping these tags.
-   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
+   Please note that the tags should be updated in both the source code and the Helm chart, including `global.images.envoyProxy.image` in `charts/gateway-helm/values.tmpl.yaml`. Reference [PR #5872][]
 
 8. Tag the head of your release branch with the release tag. For example:
 
@@ -374,7 +374,7 @@ export GITHUB_REMOTE=origin
 
    9. If upstream has updated the [Envoy proxy image][] or [Envoy Ratelimit image][] tag supported by the release,
    you should also create a topic branch for bumping these tags.
-   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
+   Please note that the tags should be updated in both the source code and the Helm chart, including `global.images.envoyProxy.image` in `charts/gateway-helm/values.tmpl.yaml`. Reference [PR #5872][]
 
 9. Tag the head of your release branch with the release tag. For example:
 
