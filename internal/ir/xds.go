@@ -1316,6 +1316,10 @@ type OIDC struct {
 	// via the Authorization header Bearer scheme to the upstream.
 	ForwardAccessToken bool `json:"forwardAccessToken,omitempty"`
 
+	// ForwardIDTokenHeader is the upstream request header on which the OIDC ID token
+	// is forwarded. If nil, the ID token is not forwarded.
+	ForwardIDTokenHeader *string `json:"forwardIDTokenHeader,omitempty"`
+
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
 	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
 

@@ -2,38 +2,71 @@
 
 ## Reporting a Vulnerability or a Crash
 
-We take security seriously and appreciate your help in identifying and responsibly disclosing vulnerabilities to protect our users.
+Please report suspected vulnerabilities privately.
 
-To report a security issue:
+### What to report
+
+In scope:
+
+- Crashes or denial-of-service in Envoy Gateway itself.
+- Remote code execution, privilege escalation, or authentication/authorization bypass in the control plane.
+- Information disclosure of secrets or other sensitive data handled by Envoy Gateway.
+
+Out of scope (please report elsewhere):
+
+- Vulnerabilities in upstream Envoy proxy — report to [envoy-security@googlegroups.com](mailto:envoy-security@googlegroups.com).
+- Issues in third-party dependencies — report to the respective project.
+- Findings that only affect a misconfigured or self-managed deployment.
+
+### How to report
 
 1. **Do not open a public issue** on the GitHub repository to disclose a vulnerability.
-2. Send an email to our security team at [envoy-gateway-security@googlegroups.com](mailto:envoy-gateway-security@googlegroups.com).
-3. Include the following details in your email:
-    - A detailed description of the vulnerability.
-    - Steps to reproduce the issue.
-    - Potential impact of the vulnerability.
-    - Any suggested remediation or patches (if applicable).
+2. Report privately through one of:
+    - GitHub's [private vulnerability reporting](https://github.com/envoyproxy/gateway/security/advisories/new) (preferred).
+    - Email to our security team at [envoy-gateway-security@googlegroups.com](mailto:envoy-gateway-security@googlegroups.com).
+3. Include the following details:
+    - Description of the vulnerability.
+    - Steps to reproduce it.
+    - Potential impact.
+    - Suggested fixes or patches, if any.
 
-We aim to respond to vulnerability reports within **48 hours** and will work with you to validate and address the issue. 
-Once a resolution is identified, we will coordinate a release timeline with you and provide credit if applicable (with your consent).
+### Responsible disclosure
 
-## Security Updates
+When investigating, please act in good faith: do not access, modify, or exfiltrate data that is not yours, and do not degrade or disrupt running services. We will not pursue legal action against researchers who follow this policy and report in good faith.
 
-Security patches are announced through:
+We aim to **acknowledge receipt within 48 hours** (calendar time); this is an acknowledgment, not a full assessment or fix. If the issue is confirmed, we will coordinate the release timeline with you and, with your consent, credit you in the advisory.
 
+## Vulnerability Review and Fix Process
+
+The Envoy Gateway security team reviews reports privately. The team checks scope, validates the issue, asks for details when needed, and identifies affected versions and impact.
+
+Accepted vulnerabilities are tracked in a draft GitHub Security Advisory after initial validation. The advisory tracks affected versions, severity, CVSS assessment, credits, fix status, and disclosure plan. When appropriate, the team requests or attaches a CVE before public disclosure.
+
+The team assigns fixes to security team members or Envoy Gateway maintainers with the right expertise. Fixes for accepted, undisclosed vulnerabilities are developed privately until coordinated disclosure, using a GitHub Security Advisory temporary private fork when appropriate, and coordinated with release managers for affected active branches.
+
+Once fixes are ready for supported versions, we publish the advisory and announce the patched releases through the channels below.
+
+## Public Vulnerability Disclosure
+
+The Envoy Gateway security team and release managers coordinate public disclosure for affected release branches.
+
+We announce advisories and patched releases through:
+
+- [GitHub Security Advisories](https://github.com/envoyproxy/gateway/security/advisories)
 - The [GitHub Releases page](https://github.com/envoyproxy/gateway/releases)
+- The `#gateway-users` channel in the [Envoy Slack workspace](https://communityinviter.com/apps/envoyproxy/envoy)
+- The [envoy-gateway-announce mailing list](https://groups.google.com/g/envoy-gateway-announce)
 
-To stay up-to-date with the latest security updates, we recommend subscribing to these channels.
+Security fixes are merged into active, non-EOL release branches as patch releases when the affected versions are still supported. See the [release matrix](https://gateway.envoyproxy.io/news/releases/matrix/) for support windows and the [patch release process](https://gateway.envoyproxy.io/community/releasing/#patch-release) for release mechanics.
 
 ## Best Practices for Secure Usage
 
-To minimize security risks when using Envoy Gateway:
+To reduce risk:
 
 - Use the latest supported version of Envoy Gateway.
 - Regularly monitor for updates and apply patches promptly.
+- Subscribe to the [envoy-gateway-announce mailing list](https://groups.google.com/g/envoy-gateway-announce) for security updates.
 
 ## Contact
 
-If you have any questions about this security policy, please contact us at [envoy-gateway-security@googlegroups.com](mailto:envoy-gateway-security@googlegroups.com).
-
-Thank you for helping us ensure the security of Envoy Gateway!
+Questions? Email [envoy-gateway-security@googlegroups.com](mailto:envoy-gateway-security@googlegroups.com).

@@ -5705,12 +5705,24 @@ spec:
                       If the configured header is "Authorization", EG forwards the ID token using
                       the "Bearer " prefix. For any other header, EG forwards the raw token value.
                       If not specified, the ID token will not be forwarded.
+
+                      Note: when passThroughAuthHeader is enabled, this header must not be the same
+                      as a header a JWT provider extracts from (the "Authorization" header by
+                      default). The forwarded ID token header is owned by Envoy, and Envoy rejects
+                      an OAuth2 configuration whose pass-through matcher keys on it.
                     properties:
                       header:
-                        description: Header is the upstream request header that will
-                          carry the ID token.
+                        description: |-
+                          Header is the upstream request header that will carry the ID token.
+                          It must be a valid HTTP header name. Pseudo-headers (names starting with ":")
+                          and the "Host" header are not allowed.
+                        maxLength: 256
                         minLength: 1
+                        pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                         type: string
+                        x-kubernetes-validations:
+                        - message: header cannot be the Host header
+                          rule: self.lowerAscii() != 'host'
                     required:
                     - header
                     type: object

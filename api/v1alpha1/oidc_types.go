@@ -105,8 +105,11 @@ type OIDC struct {
 	// If the configured header is "Authorization", EG forwards the ID token using
 	// the "Bearer " prefix. For any other header, EG forwards the raw token value.
 	// If not specified, the ID token will not be forwarded.
-	// +optional
-	// +notImplementedHide
+	//
+	// Note: when passThroughAuthHeader is enabled, this header must not be the same
+	// as a header a JWT provider extracts from (the "Authorization" header by
+	// default). The forwarded ID token header is owned by Envoy, and Envoy rejects
+	// an OAuth2 configuration whose pass-through matcher keys on it.
 	ForwardIDToken *OIDCTokenForwarding `json:"forwardIDToken,omitempty"`
 
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
@@ -247,7 +250,12 @@ type OIDCCookieNames struct {
 // OIDCTokenForwarding defines how an OIDC token is forwarded upstream.
 type OIDCTokenForwarding struct {
 	// Header is the upstream request header that will carry the ID token.
+	// It must be a valid HTTP header name. Pseudo-headers (names starting with ":")
+	// and the "Host" header are not allowed.
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$`
+	// +kubebuilder:validation:XValidation:rule="self.lowerAscii() != 'host'",message="header cannot be the Host header"
 	Header string `json:"header"`
 }
 
