@@ -749,21 +749,24 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 	return string(secret.Data[proxy.XdsTLSCaFileName])
 }
 
+// checkOwnership guards against adopting a pre-existing resource that shares a
+// name with a Gateway-owned resource in GatewayNamespace mode. If a resource
+// with the same name/namespace already exists and is not labeled as owned by
+// this Gateway, the apply is skipped to avoid hijacking (and later garbage-
+// collecting) an unrelated resource.
+//
+// This uses the cached client, so it is best-effort: there is a small window
+// where a same-named resource created just before this reconcile may not yet be
+// reflected in the cache and could be adopted. This is considered an acceptable
+// edge case — it does not cause EG to fail, and using the cache avoids extra
+// uncached API reads on every reconcile (see #8764).
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
 	if !i.EnvoyGateway.GatewayNamespaceMode() {
 		return nil
 	}
 
 	existing := obj.DeepCopyObject().(client.Object)
-
-	// use a non-cached api reader to check for ownership,
-	// since the cached client may not have the latest state of the object.
-	reader := i.APIReader
-	if reader == nil {
-		reader = i.Client
-	}
-
-	err := reader.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
+	err := i.Client.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
