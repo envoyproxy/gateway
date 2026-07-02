@@ -24,6 +24,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -1893,6 +1894,16 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			routeRuleName,
 		)
 	}
+	var btpEndpointHostname *egv1a1.BackendEndpointHostname
+	if gatewayCtx != nil {
+		btpEndpointHostname = t.BTPEndpointHostnameIndex.LookupBTPEndpointHostname(
+			route.GetRouteType(),
+			types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()},
+			types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
+			parentRef.SectionName,
+			routeRuleName,
+		)
+	}
 
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
@@ -1922,7 +1933,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			return emptyDS, nil, err
 		}
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
+		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType, btpEndpointHostname)
 		if err != nil {
 			return emptyDS, nil, err
 		}
@@ -1963,7 +1974,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	if filtersErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
-
 	if err := validateDestinationSettings(ds, t.IsServiceRouting(envoyProxy, btpRoutingType), backendRef.Kind); err != nil {
 		return emptyDS, nil, err
 	}
@@ -1990,6 +2000,13 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, isS
 	}
 
 	return nil
+}
+
+func (t *Translator) dnsDomain() string {
+	if t.DNSDomain != "" {
+		return t.DNSDomain
+	}
+	return config.DefaultDNSDomain
 }
 
 // isServiceHeadless reports true when a Kubernetes Service is headless.
@@ -2047,7 +2064,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	useEndpointRouting := !t.IsServiceRouting(envoyProxy, btpRoutingType) || isHeadless
 	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
-		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol), nil)
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related ServiceImport %s/%s", backendNamespace, backendRef.Name),
@@ -2079,6 +2096,7 @@ func (t *Translator) processServiceDestinationSetting(
 	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
+	btpEndpointHostname *egv1a1.BackendEndpointHostname,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
@@ -2117,9 +2135,10 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// Route to endpoints by default, or if service routing is enabled but service is headless
 	useEndpointRouting := !t.IsServiceRouting(envoyProxy, btpRoutingType) || isHeadless
+	endpointHostname := t.serviceEndpointHostname(service, btpEndpointHostname)
 	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
-		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol), endpointHostname)
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related Service %s/%s", backendNamespace, backendRef.Name),
@@ -2128,7 +2147,7 @@ func (t *Translator) processServiceDestinationSetting(
 		}
 	} else {
 		// Use Service ClusterIP routing
-		ep := ir.NewDestEndpoint(nil, service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
+		ep := ir.NewDestEndpoint(endpointHostname, service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
 		endpoints = append(endpoints, ep)
 	}
 
@@ -2141,6 +2160,27 @@ func (t *Translator) processServiceDestinationSetting(
 		PreferLocal:        processPreferLocalZone(service),
 		Metadata:           buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
+}
+
+func (t *Translator) serviceEndpointHostname(service *corev1.Service, endpointHostname *egv1a1.BackendEndpointHostname) *string {
+	if endpointHostname == nil {
+		return nil
+	}
+
+	switch endpointHostname.Type {
+	case egv1a1.BackendEndpointHostnameTypeKubernetesService:
+		if service == nil || service.Name == "" || service.Namespace == "" {
+			return nil
+		}
+		return new(fmt.Sprintf("%s.%s.svc.%s", service.Name, service.Namespace, t.dnsDomain()))
+	case egv1a1.BackendEndpointHostnameTypeStatic:
+		if endpointHostname.Hostname == nil || *endpointHostname.Hostname == "" {
+			return nil
+		}
+		return endpointHostname.Hostname
+	default:
+		return nil
+	}
 }
 
 func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {
@@ -2332,7 +2372,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 	return relevantRoute
 }
 
-func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
+func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol, endpointHostname *string) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
 	var (
 		dstEndpoints []*ir.DestinationEndpoint
 		dstAddrType  *ir.DestinationAddressType
@@ -2345,7 +2385,7 @@ func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlic
 		} else {
 			addrTypeMap[ir.IP]++
 		}
-		endpoints := getIREndpointsFromEndpointSlice(endpointSlice, portName, portProtocol)
+		endpoints := getIREndpointsFromEndpointSlice(endpointSlice, portName, portProtocol, endpointHostname)
 		dstEndpoints = append(dstEndpoints, endpoints...)
 	}
 
@@ -2363,7 +2403,7 @@ func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlic
 	return dstEndpoints, dstAddrType
 }
 
-func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
+func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol, endpointHostname *string) []*ir.DestinationEndpoint {
 	var endpoints []*ir.DestinationEndpoint
 	for _, endpoint := range endpointSlice.Endpoints {
 		for _, endpointPort := range endpointSlice.Ports {
@@ -2385,7 +2425,7 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 			}
 
 			for _, address := range endpoint.Addresses {
-				ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
+				ep := ir.NewDestEndpoint(endpointHostname, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
 				endpoints = append(endpoints, ep)
 			}
 

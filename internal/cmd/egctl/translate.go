@@ -25,6 +25,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -292,6 +293,7 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
+		DNSDomain:               config.DefaultDNSDomain,
 		// Discard logs during translation for egctl command to avoid polluting output
 		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
@@ -322,6 +324,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
+		DNSDomain:               config.DefaultDNSDomain,
 		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
@@ -362,6 +365,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		EndpointRoutingDisabled: opts.EndpointRoutingDisabled,
 		EnvoyPatchPolicyEnabled: opts.EnvoyPatchPolicyEnabled,
 		BackendEnabled:          opts.BackendEnabled,
+		DNSDomain:               dnsDomain,
 		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
