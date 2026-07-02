@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-infra-backend-v1
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: grpc-infra-backend-v1
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 3000
+    appProtocol: kubernetes.io/h2c
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-infra-backend-v1
+  namespace: gateway-conformance-infra
+  labels:
+    app: grpc-infra-backend-v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: grpc-infra-backend-v1
+  template:
+    metadata:
+      labels:
+        app: grpc-infra-backend-v1
+    spec:
+      containers:
+      - name: grpc-infra-backend-v1
+        image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: GRPC_ECHO_SERVER
+          value: "1"
+        resources:
+          requests:
+            cpu: 10m
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpcroute-httproutefilter
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - method:
+        service: gateway_api_conformance.echo_basic.grpcecho.GrpcEcho
+        method: Echo
+    backendRefs:
+    - name: grpc-infra-backend-v1
+      port: 8080
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: grpc-credential-injection
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: grpc-credential-injection
+  namespace: gateway-conformance-infra
+spec:
+  credentialInjection:
+    header: x-credential
+    overwrite: true
+    credential:
+      valueRef:
+        name: grpc-credential
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grpc-credential
+  namespace: gateway-conformance-infra
+data:
+  # base64("Basic dXNlcjE6dGVzdDI=")
+  credential: QmFzaWMgZFhObGNqRTZkR1Z6ZERJPQ==
