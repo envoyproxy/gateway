@@ -55,20 +55,15 @@ var HTTPLuaTest = suite.ConformanceTest{
 					Headers: map[string]string{
 						"X-Custom-Lua-Header": "lua_value_1",
 					},
-					AbsentHeaders: []string{"X-Custom-Lua-Another-Header"},
+					AbsentHeaders: []string{
+						"X-Custom-Response-Header", // gateway policy never took effect
+						"X-Custom-Lua-Another-Header",
+					},
 				},
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
 		t.Run("http route with lua filter 2", func(t *testing.T) {
@@ -97,22 +92,17 @@ var HTTPLuaTest = suite.ConformanceTest{
 						"X-Custom-Lua-Header":         "lua_value_2",
 						"X-Custom-Lua-Another-Header": "lua_another_value",
 					},
+					AbsentHeaders: []string{
+						"X-Custom-Response-Header", // gateway policy never took effect
+					},
 				},
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
-		t.Run("http route without lua filter", func(t *testing.T) {
+		t.Run("http route fallback to gateway policy", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "example-route-3-without-lua", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -133,21 +123,18 @@ var HTTPLuaTest = suite.ConformanceTest{
 					Path: "/route3",
 				},
 				Response: http.Response{
-					StatusCodes:   []int{200},
-					AbsentHeaders: []string{"X-Custom-Lua-Header", "X-Custom-Lua-Another-Header"},
+					StatusCodes: []int{200},
+					Headers: map[string]string{
+						"X-Custom-Response-Header": "gateway", // fallback to gateway policy
+					},
+					AbsentHeaders: []string{
+						"X-Custom-Lua-Header", "X-Custom-Lua-Another-Header",
+					},
 				},
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
 		t.Run("http route with lua filter context", func(t *testing.T) {
@@ -173,6 +160,41 @@ var HTTPLuaTest = suite.ConformanceTest{
 					StatusCodes: []int{200},
 					Headers: map[string]string{
 						"X-Lua-Filter-Context": "hello_from_filter_context",
+					},
+					AbsentHeaders: []string{
+						"X-Custom-Response-Header", // gateway policy never took effect
+					},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("http route without lua filter", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "example-route-3-without-lua", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "example-lua-1", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/route3",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					AbsentHeaders: []string{
+						"X-Custom-Response-Header", // no policy for all-namespaces gatweway
+						"X-Custom-Lua-Header", "X-Custom-Lua-Another-Header",
 					},
 				},
 				Namespace: ns,

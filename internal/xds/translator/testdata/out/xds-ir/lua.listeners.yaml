@@ -15,17 +15,9 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.lua/0
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
-        - disabled: true
-          name: envoy.filters.http.lua/1
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: ""
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -44,4 +36,296 @@
     name: envoy-gateway/gateway-1/http
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10081
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.lua/listener/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http-2
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10081
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http-2
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http-2
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10082
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.lua/listener/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http-3
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10082
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http-3
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http-3
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10083
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.lua/listener/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - disabled: true
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-http-route/extproc/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend.default:8000
+                clusterName: envoyextensionpolicy/default/policy-for-http-route/0/grpc-backend
+              timeout: 10s
+            processingMode:
+              requestHeaderMode: SKIP
+              requestTrailerMode: SKIP
+              responseHeaderMode: SKIP
+              responseTrailerMode: SKIP
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http-4
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10083
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http-4
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http-4
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10084
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.lua/listener/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http-5
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10084
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http-5
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http-5
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10085
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.lua/listener/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - disabled: true
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-gateway/extproc/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend.default:8000
+                clusterName: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend
+              timeout: 10s
+            processingMode:
+              requestHeaderMode: SKIP
+              requestTrailerMode: SKIP
+              responseHeaderMode: SKIP
+              responseTrailerMode: SKIP
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http-7
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10085
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http-7
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http-7
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10086
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.lua/listener/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: ""
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http-8
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10086
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http-8
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http-8
   perConnectionBufferLimitBytes: 32768
