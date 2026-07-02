@@ -35,6 +35,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
+	"github.com/envoyproxy/gateway/internal/xds/cache"
 )
 
 func newTestTraceContext() context.Context {
@@ -719,4 +720,87 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.NotNil(t, tlsConfig.GetConfigForClient)
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
+}
+
+// TestHandleNACK verifies that the NACK handler folds cache rejections into the
+// XdsNACKs message map and clears them on a clean ACK.
+func TestHandleNACK(t *testing.T) {
+	const (
+		irKey       = "default/eg"
+		listenerURL = "type.googleapis.com/envoy.config.listener.v3.Listener"
+	)
+	lisKey := message.XdsNACKKey{NodeID: "pod-1", TypeURL: listenerURL}
+
+	nacks := new(message.XdsNACKs)
+	r := &Runner{Config: Config{XdsNACKs: nacks}}
+
+	// A rejection stores a NACK keyed by irKey, with the per-(node,type) detail
+	// including the rejected snapshot version.
+	r.handleNACK(&cache.NACKEvent{
+		IRKey:   irKey,
+		NodeID:  "pod-1",
+		TypeURL: listenerURL,
+		Code:    13,
+		Message: "invalid access log format",
+		Version: "7",
+	})
+	got, ok := nacks.Load(irKey)
+	require.True(t, ok)
+	require.Equal(t, &message.XdsNACK{
+		Rejections: map[message.XdsNACKKey]message.XdsNACKError{
+			lisKey: {Code: 13, Message: "invalid access log format", Version: "7"},
+		},
+	}, got)
+
+	// A clean ACK (Code 0) for that same node+type clears the rejection. With no
+	// rejections left, the irKey entry is removed entirely.
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: listenerURL, Code: 0})
+	_, ok = nacks.Load(irKey)
+	require.False(t, ok)
+}
+
+// TestHandleNACKScoping verifies that clearing is scoped to the (node, type) that
+// produced the rejection: an ACK from another proxy, or for another resource type,
+// must not wipe an unrelated active rejection on the same irKey.
+func TestHandleNACKScoping(t *testing.T) {
+	const (
+		irKey       = "default/eg"
+		listenerURL = "type.googleapis.com/envoy.config.listener.v3.Listener"
+		clusterURL  = "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+	)
+	pod1Lis := message.XdsNACKKey{NodeID: "pod-1", TypeURL: listenerURL}
+	pod1Cls := message.XdsNACKKey{NodeID: "pod-1", TypeURL: clusterURL}
+
+	nacks := new(message.XdsNACKs)
+	r := &Runner{Config: Config{XdsNACKs: nacks}}
+
+	// pod-1 rejects LDS, then pod-1 rejects CDS: both must be retained, not clobbered.
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: listenerURL, Code: 13, Message: "bad listener"})
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: clusterURL, Code: 13, Message: "bad cluster"})
+
+	got, ok := nacks.Load(irKey)
+	require.True(t, ok)
+	require.Len(t, got.Rejections, 2)
+
+	// pod-2 cleanly ACKs CDS: it matches no recorded rejection, so nothing is cleared.
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-2", TypeURL: clusterURL, Code: 0})
+	got, ok = nacks.Load(irKey)
+	require.True(t, ok)
+	require.Len(t, got.Rejections, 2)
+
+	// pod-1 cleanly ACKs CDS: only its CDS rejection is cleared; the LDS one survives.
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: clusterURL, Code: 0})
+	got, ok = nacks.Load(irKey)
+	require.True(t, ok)
+	require.Equal(t, &message.XdsNACK{
+		Rejections: map[message.XdsNACKKey]message.XdsNACKError{
+			pod1Lis: {Code: 13, Message: "bad listener"},
+		},
+	}, got)
+	require.NotContains(t, got.Rejections, pod1Cls)
+
+	// pod-1 cleanly ACKs LDS: the last rejection clears, so the irKey entry is removed.
+	r.handleNACK(&cache.NACKEvent{IRKey: irKey, NodeID: "pod-1", TypeURL: listenerURL, Code: 0})
+	_, ok = nacks.Load(irKey)
+	require.False(t, ok)
 }
