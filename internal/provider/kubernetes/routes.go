@@ -194,7 +194,7 @@ func (r *gatewayAPIReconciler) processGRPCRoute(ctx context.Context, grpcRoute *
 // loads the referenced resource into the resourceTree. EG's own HTTPRouteFilter can
 // be referenced from a GRPCRoute (gRPC runs over HTTP/2 and shares the same extended
 // filter behavior); any other kind is resolved from extension-server registered kinds.
-// It is used for both rule-level and backendRef-level filters.
+// It is used for rule-level filters.
 func (r *gatewayAPIReconciler) processGRPCRouteFilter(
 	ctx context.Context,
 	filter *gwapiv1.GRPCRouteFilter,
