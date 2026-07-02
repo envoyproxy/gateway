@@ -59,6 +59,12 @@ const (
 	JWKSConfigMapKey = "jwks"
 )
 
+// oidcDiscoverySuccessCache stores the last successfully discovered OIDC configuration per issuer.
+// It persists across translation rounds so that a temporary discovery failure does not break
+// every route protected by the OIDC policy. Only successful results are stored; errors are not
+// cached here, so a failed discovery does not prevent future retries.
+var oidcDiscoverySuccessCache map[string]*OpenIDConfig
+
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
@@ -83,9 +89,13 @@ func (t *Translator) ProcessSecurityPolicies(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.SecurityPolicy {
-	// Cache is only reused during one translation across multiple routes and gateways.
-	// The failed fetches will be retried in the next translation when the provider resources are reconciled again.
+	// Per-round cache deduplicates discovery within a single translation.
+	// The persistent success cache survives across rounds so that a transient
+	// discovery failure does not break every route protected by the OIDC policy.
 	t.oidcDiscoveryCache = newOIDCDiscoveryCache()
+	if oidcDiscoverySuccessCache == nil {
+		oidcDiscoverySuccessCache = make(map[string]*OpenIDConfig)
+	}
 
 	// SecurityPolicies are already sorted by the provider layer
 
@@ -1916,6 +1926,12 @@ func (o *OpenIDConfig) validate() error {
 func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
 	if config, cachedErr, ok := t.oidcDiscoveryCache.Get(issuerURL); ok {
 		if cachedErr != nil {
+			// Per-round cache has an error, but we may have a previously
+			// successful result in the persistent cache. Fall back to it
+			// so that a transient failure does not break all routes.
+			if cachedConfig, ok := oidcDiscoverySuccessCache[issuerURL]; ok {
+				return cachedConfig, nil
+			}
 			return nil, cachedErr
 		}
 		return config, nil
@@ -1923,11 +1939,24 @@ func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.
 
 	config, err := discoverEndpointsFromIssuer(issuerURL, providerTLS)
 	if err != nil {
+		// If discovery fails, fall back to the last successfully retrieved
+		// discovery document so that routes are not broken by a transient
+		// IdP outage or misconfiguration.
+		if cachedConfig, ok := oidcDiscoverySuccessCache[issuerURL]; ok {
+			t.Logger.Info("OIDC discovery failed, falling back to cached configuration",
+				"issuer", issuerURL, "error", err)
+			t.oidcDiscoveryCache.Set(issuerURL, cachedConfig, nil)
+			return cachedConfig, nil
+		}
 		t.oidcDiscoveryCache.Set(issuerURL, nil, err)
 		return nil, err
 	}
 
 	t.oidcDiscoveryCache.Set(issuerURL, config, nil)
+	if oidcDiscoverySuccessCache == nil {
+		oidcDiscoverySuccessCache = make(map[string]*OpenIDConfig)
+	}
+	oidcDiscoverySuccessCache[issuerURL] = config
 	return config, nil
 }
 
