@@ -11,8 +11,10 @@ import (
 	"strconv"
 	"strings"
 
+	expr "cel.dev/expr"
 	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
 	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
+	xdstypev3 "github.com/cncf/xds/go/xds/type/v3"
 	configv3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	rbacconfigv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -22,13 +24,17 @@ import (
 	ipmatcherv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/ip/v3"
 	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/metadata/v3"
 	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	"github.com/google/cel-go/cel"
+	googleproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -184,6 +190,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			// Predicates for HTTP methods.
 			methodPredicate *matcherv3.Matcher_MatcherList_Predicate
 
+			// Predicate for HTTP path.
+			pathPredicate *matcherv3.Matcher_MatcherList_Predicate
+
 			// Predicates for HTTP headers.
 			headerPredicate []*matcherv3.Matcher_MatcherList_Predicate
 
@@ -195,6 +204,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 
 			// Predicates for JWT claims and scopes.
 			jwtPredicate []*matcherv3.Matcher_MatcherList_Predicate
+
+			// Predicate for CEL expressions.
+			celPredicate *matcherv3.Matcher_MatcherList_Predicate
 
 			// The final predicate that will be used for the current rule.
 			finalPredicate *matcherv3.Matcher_MatcherList_Predicate
@@ -242,6 +254,12 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			}
 		}
 
+		if rule.Operation != nil && rule.Operation.Path != nil {
+			if pathPredicate, err = buildPathPredicate(rule.Operation.Path); err != nil {
+				return nil, err
+			}
+		}
+
 		if len(rule.Principal.Headers) > 0 {
 			if headerPredicate, err = buildHeadersPredicate(rule.Principal.Headers); err != nil {
 				return nil, err
@@ -254,16 +272,28 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			}
 		}
 
+		if rule.CEL != nil {
+			if celPredicate, err = buildCELPredicate(*rule.CEL); err != nil {
+				return nil, err
+			}
+		}
+
 		// AND all the predicates together.
 		var allPredicates []*matcherv3.Matcher_MatcherList_Predicate
 		if methodPredicate != nil {
 			allPredicates = append(allPredicates, methodPredicate)
+		}
+		if pathPredicate != nil {
+			allPredicates = append(allPredicates, pathPredicate)
 		}
 		if ipPredicate != nil {
 			allPredicates = append(allPredicates, ipPredicate)
 		}
 		if geoIPPredicate != nil {
 			allPredicates = append(allPredicates, geoIPPredicate)
+		}
+		if celPredicate != nil {
+			allPredicates = append(allPredicates, celPredicate)
 		}
 		allPredicates = append(allPredicates, jwtPredicate...)
 		allPredicates = append(allPredicates, headerPredicate...)
@@ -373,6 +403,75 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 					CustomMatch: &cncfv3.TypedExtensionConfig{
 						Name:        "ip_matcher",
 						TypedConfig: ipMatcher,
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+var celEnv, _ = cel.NewEnv()
+
+// parseCELToProto parses a CEL expression string into a cel.expr.ParsedExpr.
+// Envoy CEL matcherdoes not support the raw cel_expr_string form yet, so the expression must
+// be translated into the pre-parsed AST (cel_expr_parsed) instead.
+//
+// cel-go returns the google.api.expr.v1alpha1 ParsedExpr, which is wire-compatible
+// with the cel.expr.ParsedExpr expected by the xDS CelExpression message, so we
+// bridge them via proto marshal/unmarshal.
+func parseCELToProto(celExpr string) (*expr.ParsedExpr, error) {
+	ast, issues := celEnv.Parse(celExpr)
+	if issues != nil && issues.Err() != nil {
+		return nil, fmt.Errorf("failed to parse CEL expression %q: %w", celExpr, issues.Err())
+	}
+
+	v1Parsed, err := cel.AstToParsedExpr(ast)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert CEL expression %q to parsed proto: %w", celExpr, err)
+	}
+
+	b, err := googleproto.Marshal(v1Parsed)
+	if err != nil {
+		return nil, err
+	}
+	parsed := &expr.ParsedExpr{}
+	if err := googleproto.Unmarshal(b, parsed); err != nil {
+		return nil, err
+	}
+	return parsed, nil
+}
+
+func buildCELPredicate(celExpr string) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	parsed, err := parseCELToProto(celExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	input, err := proto.ToAnyWithValidation(&matcherv3.HttpAttributesCelMatchInput{})
+	if err != nil {
+		return nil, err
+	}
+
+	matcher, err := proto.ToAnyWithValidation(&matcherv3.CelMatcher{
+		ExprMatch: &xdstypev3.CelExpression{
+			CelExprParsed: parsed,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: &cncfv3.TypedExtensionConfig{
+					Name:        "cel",
+					TypedConfig: input,
+				},
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+					CustomMatch: &cncfv3.TypedExtensionConfig{
+						Name:        "cel_matcher",
+						TypedConfig: matcher,
 					},
 				},
 			},
@@ -755,24 +854,89 @@ func buildHeaderPredicate(name string, values []string, ignoreCase bool) ([]*mat
 
 	predicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(values))
 	for _, value := range values {
-		predicates = append(predicates, &matcherv3.Matcher_MatcherList_Predicate{
-			MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
-				SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
-					Input: &cncfv3.TypedExtensionConfig{
-						Name:        "http_header",
-						TypedConfig: headerMatchInput,
-					},
-					Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
-						ValueMatch: &matcherv3.StringMatcher{
-							MatchPattern: &matcherv3.StringMatcher_Exact{
-								Exact: value,
-							},
-							IgnoreCase: ignoreCase,
-						},
-					},
-				},
+		predicates = append(predicates, buildHTTPHeaderSinglePredicate(headerMatchInput, &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Exact{
+				Exact: value,
 			},
-		})
+			IgnoreCase: ignoreCase,
+		}))
 	}
 	return predicates, nil
+}
+
+func buildPathPredicate(path *egv1a1.PathMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	if path == nil {
+		return nil, nil
+	}
+
+	headerMatchInput, err := proto.ToAnyWithValidation(&envoymatcherv3.HttpRequestHeaderMatchInput{
+		HeaderName: ":path",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	stringMatcher := &matcherv3.StringMatcher{}
+	// PathMatch validation is handled in the Gateway API translation layer, so
+	// it is intentionally skipped here and this layer only performs xDS conversion.
+	switch ptr.Deref(path.Type, gwapiv1.PathMatchPathPrefix) {
+	case gwapiv1.PathMatchPathPrefix:
+		if path.Value == "/" {
+			stringMatcher.MatchPattern = &matcherv3.StringMatcher_Prefix{Prefix: "/"}
+		} else {
+			stringMatcher.MatchPattern = &matcherv3.StringMatcher_SafeRegex{
+				SafeRegex: &matcherv3.RegexMatcher{
+					Regex:      regex.PathSeparatedPrefixRegex(path.Value),
+					EngineType: &matcherv3.RegexMatcher_GoogleRe2{GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{}},
+				},
+			}
+		}
+	case gwapiv1.PathMatchExact:
+		stringMatcher.MatchPattern = &matcherv3.StringMatcher_SafeRegex{
+			SafeRegex: &matcherv3.RegexMatcher{
+				Regex:      regex.PathExactRegex(path.Value),
+				EngineType: &matcherv3.RegexMatcher_GoogleRe2{GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{}},
+			},
+		}
+	case gwapiv1.PathMatchRegularExpression:
+		stringMatcher.MatchPattern = &matcherv3.StringMatcher_SafeRegex{
+			SafeRegex: &matcherv3.RegexMatcher{
+				Regex:      path.Value,
+				EngineType: &matcherv3.RegexMatcher_GoogleRe2{GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{}},
+			},
+		}
+	}
+
+	return wrapPredicateWithNot(
+		buildHTTPHeaderSinglePredicate(headerMatchInput, stringMatcher),
+		path.Invert != nil && *path.Invert,
+	), nil
+}
+
+func buildHTTPHeaderSinglePredicate(headerMatchInput *anypb.Any, stringMatcher *matcherv3.StringMatcher) *matcherv3.Matcher_MatcherList_Predicate {
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: &cncfv3.TypedExtensionConfig{
+					Name:        "http_header",
+					TypedConfig: headerMatchInput,
+				},
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+					ValueMatch: stringMatcher,
+				},
+			},
+		},
+	}
+}
+
+func wrapPredicateWithNot(predicate *matcherv3.Matcher_MatcherList_Predicate, invert bool) *matcherv3.Matcher_MatcherList_Predicate {
+	if !invert {
+		return predicate
+	}
+
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_NotMatcher{
+			NotMatcher: predicate,
+		},
+	}
 }

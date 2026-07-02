@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -29,8 +28,10 @@ import (
 type GatewayContext struct {
 	*gwapiv1.Gateway
 
-	listeners  []*ListenerContext
-	envoyProxy *egv1a1.EnvoyProxy
+	listeners             []*ListenerContext
+	envoyProxy            *egv1a1.EnvoyProxy
+	envoyProxyFromGateway bool
+
 	backendTLS *egv1a1.BackendTLSConfig
 }
 
@@ -105,6 +106,7 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
+				g.envoyProxyFromGateway = true
 				gatewayProxy = ep
 			}
 		}
@@ -503,7 +505,7 @@ func (r *TLSRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefer
 // UDPRouteContext wraps a UDPRoute and provides helper methods for
 // accessing the route's parents.
 type UDPRouteContext struct {
-	*gwapiv1a2.UDPRoute
+	*gwapiv1.UDPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -558,7 +560,7 @@ func (r *UDPRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RoutePare
 // TCPRouteContext wraps a TCPRoute and provides helper methods for
 // accessing the route's parents.
 type TCPRouteContext struct {
-	*gwapiv1a2.TCPRoute
+	*gwapiv1.TCPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -785,8 +787,8 @@ type RouteParentContext struct {
 	HTTPRoute *gwapiv1.HTTPRoute
 	GRPCRoute *gwapiv1.GRPCRoute
 	TLSRoute  *gwapiv1.TLSRoute
-	TCPRoute  *gwapiv1a2.TCPRoute
-	UDPRoute  *gwapiv1a2.UDPRoute
+	TCPRoute  *gwapiv1.TCPRoute
+	UDPRoute  *gwapiv1.UDPRoute
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext

@@ -2,6 +2,10 @@
 # Source: gateway-helm/templates/envoy-gateway-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+# Disable token automounting on the ServiceAccount by default to satisfy
+# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
+# enable automountServiceAccountToken in their pod spec.
+automountServiceAccountToken: false
 metadata:
   name: envoy-gateway
   namespace: envoy-gateway-system
@@ -145,6 +149,7 @@ rules:
 - apiGroups:
   - gateway.envoyproxy.io
   resources:
+  - envoyproxies/status
   - envoypatchpolicies/status
   - clienttrafficpolicies/status
   - backendtrafficpolicies/status
@@ -256,9 +261,19 @@ rules:
   - watch
 - apiGroups:
   - autoscaling
-  - policy
   resources:
   - horizontalpodautoscalers
+  verbs:
+  - create
+  - get
+  - list
+  - delete
+  - deletecollection
+  - patch
+  - watch
+- apiGroups:
+  - policy
+  resources:
   - poddisruptionbudgets
   verbs:
   - create
@@ -430,6 +445,13 @@ spec:
         app.kubernetes.io/name: gateway-helm
         app.kubernetes.io/instance: gateway-helm
     spec:
+      automountServiceAccountToken: true
+      securityContext:
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - args:
         - server
@@ -504,9 +526,67 @@ spec:
         secret:
           secretName: envoy-gateway
 ---
+# Source: gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
+#
+# config/crd/experimental/gateway.networking.k8s.io_vap_safeupgrades.yaml
+#
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  annotations:
+    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/channel: standard
+  name: "safe-upgrades.gateway.networking.k8s.io"
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["apiextensions.k8s.io"]
+      apiVersions: ["v1"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["*"]
+  validations:
+    - expression: "object.spec.group != 'gateway.networking.k8s.io' || oldObject == null || (
+        has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/channel') && 
+        object.metadata.annotations['gateway.networking.k8s.io/channel'] == 'standard' ) || (
+        oldObject != null && has(oldObject.metadata.annotations) && oldObject.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/channel') && 
+        oldObject.metadata.annotations['gateway.networking.k8s.io/channel'] == 'experimental' )"
+      message: "Installing experimental CRDs on top of standard channel CRDs is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install experimental CRDs on top of standard channel CRDs."
+      reason: Invalid
+    - expression: |
+        object.spec.group != 'gateway.networking.k8s.io' ||
+        (has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/bundle-version') &&
+        (object.metadata.annotations['gateway.networking.k8s.io/bundle-version'] == 'v0.0.0-dev' ||
+        (object.metadata.annotations['gateway.networking.k8s.io/bundle-version'].startsWith('v1.') &&
+         !matches(object.metadata.annotations['gateway.networking.k8s.io/bundle-version'], '^v1\\.[0-4](\\.|$)'))))
+      message: "Installing CRDs with version other than v0.0.0-dev or v1.5+ is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install other versions."
+      reason: Invalid
+---
+# Source: gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  annotations:
+    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/channel: standard
+  name: safe-upgrades.gateway.networking.k8s.io
+spec:
+  policyName: safe-upgrades.gateway.networking.k8s.io
+  validationActions: [Deny]
+  matchResources:
+    resourceRules:
+    - apiGroups:   ["apiextensions.k8s.io"]
+      apiVersions: ["v1"]
+      resources:   ["customresourcedefinitions"]
+      operations:  ["CREATE", "UPDATE"]
+---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
+# Disable token automounting on the ServiceAccount by default to satisfy
+# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
+# enable automountServiceAccountToken in their pod spec.
+automountServiceAccountToken: false
 metadata:
   name: gateway-helm-certgen
   namespace: envoy-gateway-system
@@ -648,6 +728,7 @@ spec:
       labels:
         app: certgen
     spec:
+      automountServiceAccountToken: true
       containers:
       - command:
         - envoy-gateway

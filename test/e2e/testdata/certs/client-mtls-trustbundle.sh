@@ -5,7 +5,7 @@
 rm -rf www.* client.* example.com.*
 
 # Generate a Private Key
-openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout example.com.key -out example.com.crt -addext "subjectAltName = DNS:*.example.com"
+openssl req -x509 -sha256 -nodes -days 3650 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout example.com.key -out example.com.crt -addext "subjectAltName = DNS:*.example.com"
 
 # Generate server cert for www.example.com
 cat > www.ext  <<EOF

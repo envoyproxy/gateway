@@ -26,6 +26,7 @@ spec:
         {{- toYaml .Values.certgen.job.pod.annotations | nindent 8 -}}
       {{- end }}
     spec:
+      automountServiceAccountToken: true
       containers:
       {{- $args := .Values.certgen.job.args }}
       {{- if not .Values.topologyInjector.enabled }}

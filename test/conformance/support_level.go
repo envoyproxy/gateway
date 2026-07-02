@@ -12,7 +12,7 @@ import (
 )
 
 // SupportLevel represents the level of support for a feature.
-// See https://gateway-api.sigs.k8s.io/concepts/conformance/#2-support-levels.
+// See https://gateway-api.sigs.k8s.io/docs/concepts/conformance/#2-support-levels.
 type SupportLevel string
 
 const (

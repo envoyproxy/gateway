@@ -22,6 +22,91 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func TestAppProtocolToIRAppProtocol(t *testing.T) {
+	tests := []struct {
+		name            string
+		appProtocol     string
+		defaultProtocol ir.AppProtocol
+		want            ir.AppProtocol
+		wantForceHTTP1  bool
+	}{
+		{
+			name:            "h2c service convention",
+			appProtocol:     "kubernetes.io/h2c",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP2,
+		},
+		{
+			name:            "h2c backend convention",
+			appProtocol:     "gateway.envoyproxy.io/h2c",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP2,
+		},
+		{
+			name:            "ws service convention",
+			appProtocol:     "kubernetes.io/ws",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP,
+			wantForceHTTP1:  true,
+		},
+		{
+			name:            "wss service convention",
+			appProtocol:     "kubernetes.io/wss",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP,
+			wantForceHTTP1:  true,
+		},
+		{
+			name:            "ws backend convention",
+			appProtocol:     "gateway.envoyproxy.io/ws",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP,
+			wantForceHTTP1:  true,
+		},
+		{
+			name:            "wss backend convention",
+			appProtocol:     "gateway.envoyproxy.io/wss",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP,
+			wantForceHTTP1:  true,
+		},
+		{
+			name:            "grpc",
+			appProtocol:     "grpc",
+			defaultProtocol: ir.HTTP,
+			want:            ir.GRPC,
+		},
+		{
+			name:            "unknown",
+			appProtocol:     "example.com/custom",
+			defaultProtocol: ir.HTTP,
+			want:            ir.HTTP,
+		},
+		{
+			// appProtocol must not refine the protocol of non-HTTP (L4) routes.
+			name:            "h2c ignored on non-HTTP route",
+			appProtocol:     "kubernetes.io/h2c",
+			defaultProtocol: ir.TCP,
+			want:            ir.TCP,
+		},
+		{
+			name:            "grpc ignored on non-HTTP route",
+			appProtocol:     "grpc",
+			defaultProtocol: ir.TCP,
+			want:            ir.TCP,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			protocol := resolveBackendProtocol(tt.appProtocol, tt.defaultProtocol)
+			require.Equal(t, tt.want, protocol)
+			ap := tt.appProtocol
+			require.Equal(t, tt.wantForceHTTP1, shouldForceHTTP1Upstream(protocol, &ap))
+		})
+	}
+}
+
 func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 	tests := []struct {
 		name              string

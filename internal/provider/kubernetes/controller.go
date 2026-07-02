@@ -40,7 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -121,8 +120,8 @@ type subscriptions struct {
 	httpRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
 	grpcRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
 	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.TLSRouteStatus]
-	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
-	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.TCPRouteStatus]
+	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.UDPRouteStatus]
 	listenerSetStatuses          <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.ListenerSetStatus]
 	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
@@ -132,6 +131,7 @@ type subscriptions struct {
 	securityPolicyStatuses       <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendStatuses              <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.BackendStatus]
 	extensionPolicyStatuses      <-chan watchable.Snapshot[message.NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
+	envoyProxyStatuses           <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.EnvoyProxyStatus]
 }
 
 // newGatewayAPIController
@@ -176,7 +176,9 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
 		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
-		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel)
+		// Always allow controller-namespace infrastructure resources to bypass
+		// user namespace selectors.
+		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
 	}
 
 	// controller-runtime doesn't allow run controller with same name for more than once
@@ -254,6 +256,7 @@ func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
 	r.subscriptions.securityPolicyStatuses = r.resources.SecurityPolicyStatuses.Subscribe(ctx)
 	r.subscriptions.backendStatuses = r.resources.BackendStatuses.Subscribe(ctx)
 	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyProxyStatuses = r.resources.EnvoyProxyStatuses.Subscribe(ctx)
 }
 
 func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
@@ -2359,7 +2362,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	r.udpRouteCRDExists, err = checkCRD(resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
+	r.udpRouteCRDExists, err = checkCRD(resource.KindUDPRoute, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
 	}
@@ -2367,15 +2370,15 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("UDPRoute CRD not found, skipping UDPRoute watch")
 	} else {
 		// Watch UDPRoute CRUDs and process affected Gateways.
-		udprPredicates := commonPredicates[*gwapiv1a2.UDPRoute]()
+		udprPredicates := commonPredicates[*gwapiv1.UDPRoute]()
 		if r.namespaceLabel != nil {
-			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.UDPRoute) bool {
+			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.UDPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.UDPRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1.UDPRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.UDPRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				udprPredicates...)); err != nil {
@@ -2386,7 +2389,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tcpRouteCRDExists, err = checkCRD(resource.KindTCPRoute, gwapiv1a2.GroupVersion.String())
+	r.tcpRouteCRDExists, err = checkCRD(resource.KindTCPRoute, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
 	}
@@ -2394,15 +2397,15 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("TCPRoute CRD not found, skipping TCPRoute watch")
 	} else {
 		// Watch TCPRoute CRUDs and process affected Gateways.
-		tcprPredicates := commonPredicates[*gwapiv1a2.TCPRoute]()
+		tcprPredicates := commonPredicates[*gwapiv1.TCPRoute]()
 		if r.namespaceLabel != nil {
-			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.TCPRoute) bool {
+			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TCPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.TCPRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1.TCPRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.TCPRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				tcprPredicates...)); err != nil {
@@ -2923,9 +2926,10 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return fmt.Errorf("failed to find envoyproxy %s/%s for Gateway %s: %w", gtw.Namespace, ref.Name, gtw.Name, err)
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	ep.Status = egv1a1.EnvoyProxyStatus{}
+	r.processEnvoyProxy(ep, resourceMap)
 
 	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
@@ -2961,19 +2965,20 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 		return errors.New("using Merged Gateways with Gateway Namespace Mode is not supported")
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	ep.Status = egv1a1.EnvoyProxyStatus{}
+	r.processEnvoyProxy(ep, resourceMap)
 	resourceTree.EnvoyProxyForGatewayClass = ep
 	return nil
 }
 
-// processEnvoyProxy processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) error {
+// processEnvoyProxy processes the parametersRef of the provided GatewayClass/Gateway.
+func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) {
 	key := utils.NamespacedName(ep).String()
 	if resourceMap.allAssociatedEnvoyProxies.Has(key) {
 		r.log.Info("current EnvoyProxy has been processed already", "namespace", ep.Namespace, "name", ep.Name)
-		return nil
+		return
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
@@ -3021,7 +3026,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	resourceMap.allAssociatedEnvoyProxies.Insert(key)
-	return nil
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it.

@@ -358,7 +358,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				} else {
 					// Hostname specifies the virtual hostname to match for protocol types that define this concept.
 					// When unspecified, all hostnames are matched. This field is ignored for protocols that don't require hostname based matching.
-					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/gwapiv1.Listener.
+					// see more https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/gwapiv1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
 				irListener.PreserveRouteOrder = getPreserveRouteOrder(gateway.envoyProxy)

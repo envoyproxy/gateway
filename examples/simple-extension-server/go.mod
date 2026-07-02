@@ -1,12 +1,12 @@
 module github.com/envoyproxy/gateway-simple-extension-server
 
-go 1.26.2
+go 1.26.4
 
 require (
-	github.com/envoyproxy/gateway v1.7.2
-	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260304210048-a81710db7097
+	github.com/envoyproxy/gateway v1.8.2
+	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260409050421-3f47accd6e14
 	github.com/urfave/cli/v2 v2.27.7
-	google.golang.org/grpc v1.81.0
+	google.golang.org/grpc v1.82.0
 )
 
 require (
@@ -17,10 +17,10 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/net v0.51.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260226221140-a57be14db171 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 )

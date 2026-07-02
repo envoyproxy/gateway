@@ -6,10 +6,12 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -22,21 +24,40 @@ import (
 // validCipherSuites contains the list of supported TLS cipher suites.
 // The source of truth for these ciphers is the Envoy documentation:
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
+//
+// Envoy accepts IANA cipher suite names by mapping them to OpenSSL names before
+// strict validation. See:
+// https://github.com/envoyproxy/envoy/blob/main/compat/openssl/source/iana_2_ossl_names.cc
+// https://github.com/envoyproxy/envoy/blob/main/compat/openssl/source/SSL_CTX_set_strict_cipher_list.cc
 var validCipherSuites = sets.New(
 	"ECDHE-ECDSA-AES128-GCM-SHA256",
+	"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
 	"ECDHE-RSA-AES128-GCM-SHA256",
+	"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
 	"ECDHE-ECDSA-AES256-GCM-SHA384",
+	"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
 	"ECDHE-RSA-AES256-GCM-SHA384",
+	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 	"ECDHE-ECDSA-CHACHA20-POLY1305",
+	"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
 	"ECDHE-RSA-CHACHA20-POLY1305",
+	"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
 	"ECDHE-ECDSA-AES128-SHA",
+	"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
 	"ECDHE-RSA-AES128-SHA",
+	"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
 	"AES128-GCM-SHA256",
+	"TLS_RSA_WITH_AES_128_GCM_SHA256",
 	"AES128-SHA",
+	"TLS_RSA_WITH_AES_128_CBC_SHA",
 	"ECDHE-ECDSA-AES256-SHA",
+	"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
 	"ECDHE-RSA-AES256-SHA",
+	"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
 	"AES256-GCM-SHA384",
+	"TLS_RSA_WITH_AES_256_GCM_SHA384",
 	"AES256-SHA",
+	"TLS_RSA_WITH_AES_256_CBC_SHA",
 )
 
 // parseCertsFromTLSSecretsData parses the cert and key provided in a secret
@@ -148,8 +169,12 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, keyBlock.Type, corev1.TLSPrivateKeyKey))
 			continue
 		}
+		normalizedSecret := *secret
+		normalizedSecret.Data = maps.Clone(secret.Data)
+		normalizedSecret.Data[corev1.TLSCertKey] = validData
+		normalizedSecret.Data[corev1.TLSPrivateKeyKey] = pem.EncodeToMemory(keyBlock)
+		validSecrets = append(validSecrets, &normalizedSecret)
 
-		validSecrets = append(validSecrets, secret)
 		certs = append(certs, cert)
 	}
 
@@ -276,4 +301,37 @@ func validateCipherSuites(ciphers []string) error {
 		}
 	}
 	return nil
+}
+
+func appendDedupPEMCertsWithSeen(dst, src []byte, seen map[[sha256.Size]byte]struct{}) []byte {
+	// seed seen from dst so that certs already present are recognised as duplicates.
+	rest := dst
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+		if block.Type == "CERTIFICATE" {
+			seen[sha256.Sum256(block.Bytes)] = struct{}{}
+		}
+	}
+
+	rest = src
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+		if block.Type == "CERTIFICATE" {
+			hash := sha256.Sum256(block.Bytes)
+			if _, exists := seen[hash]; exists {
+				continue
+			}
+			seen[hash] = struct{}{}
+		}
+		dst = append(dst, pem.EncodeToMemory(block)...)
+	}
+	return dst
 }

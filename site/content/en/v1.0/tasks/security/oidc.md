@@ -318,5 +318,5 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
 [SecurityPolicy]: /community/design/security-policy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/

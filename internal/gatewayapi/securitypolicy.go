@@ -19,6 +19,7 @@ import (
 	"net/mail"
 	"net/netip"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -39,6 +40,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 const (
@@ -612,6 +614,11 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 		)
 	}
+
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
 }
 
 // validateSecurityPolicy validates the SecurityPolicy.
@@ -669,6 +676,12 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	}
 	for i := range p.Spec.Authorization.Rules {
 		rule := &p.Spec.Authorization.Rules[i]
+		if rule.CEL != nil {
+			return fmt.Errorf("rule %d: CEL not supported for TCP", i)
+		}
+		if rule.Principal == nil {
+			continue
+		}
 		if rule.Principal.JWT != nil {
 			return fmt.Errorf("rule %d: JWT not supported for TCP", i)
 		}
@@ -997,8 +1010,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						continue
 					}
 					// Only authorization for TCP
-					authCopy := *authorization
-					r.Authorization = &authCopy
+					if authorization != nil {
+						authCopy := *authorization
+						r.Authorization = &authCopy
+					}
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
@@ -1470,11 +1485,12 @@ func (t *Translator) buildRemoteJWKS(
 	gtwCtx *GatewayContext,
 ) (*ir.RemoteJWKS, error) {
 	var (
-		protocol      ir.AppProtocol
-		rd            *ir.RouteDestination
-		traffic       *ir.TrafficFeatures
-		err           error
-		cacheDuration *metav1.Duration
+		protocol              ir.AppProtocol
+		rd                    *ir.RouteDestination
+		traffic               *ir.TrafficFeatures
+		err                   error
+		cacheDuration         *metav1.Duration
+		failedRefetchDuration *metav1.Duration
 	)
 
 	u, err := url.Parse(remoteJWKS.URI)
@@ -1509,11 +1525,20 @@ func (t *Translator) buildRemoteJWKS(
 		cacheDuration = ir.MetaV1DurationPtr(d)
 	}
 
+	if remoteJWKS.FailedRefetchDuration != nil {
+		d, err := time.ParseDuration(string(*remoteJWKS.FailedRefetchDuration))
+		if err != nil {
+			return nil, err
+		}
+		failedRefetchDuration = ir.MetaV1DurationPtr(d)
+	}
+
 	return &ir.RemoteJWKS{
-		Destination:   rd,
-		Traffic:       traffic,
-		URI:           remoteJWKS.URI,
-		CacheDuration: cacheDuration,
+		Destination:           rd,
+		Traffic:               traffic,
+		URI:                   remoteJWKS.URI,
+		CacheDuration:         cacheDuration,
+		FailedRefetchDuration: failedRefetchDuration,
 	}, nil
 }
 
@@ -2055,7 +2080,13 @@ func (t *Translator) buildAPIKeyAuth(
 		if err != nil {
 			return nil, err
 		}
-		for clientid, key := range credentialsSecret.Data {
+		clientIDs := make([]string, 0, len(credentialsSecret.Data))
+		for clientID := range credentialsSecret.Data {
+			clientIDs = append(clientIDs, clientID)
+		}
+		sort.Strings(clientIDs)
+		for _, clientid := range clientIDs {
+			key := credentialsSecret.Data[clientid]
 			if seenClients.Has(clientid) {
 				continue
 			}
@@ -2428,18 +2459,24 @@ func (t *Translator) buildAuthorization(
 		rule := &authorization.Rules[i]
 		irPrincipal := ir.Principal{}
 
-		for _, cidr := range rule.Principal.ClientCIDRs {
-			cidrMatch, err := parseCIDR(string(cidr))
-			if err != nil {
-				return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+		if rule.Principal != nil {
+			for _, cidr := range rule.Principal.ClientCIDRs {
+				cidrMatch, err := parseCIDR(string(cidr))
+				if err != nil {
+					return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+				}
+
+				irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
 			}
 
-			irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
+			irPrincipal.JWT = rule.Principal.JWT
+			irPrincipal.Headers = rule.Principal.Headers
+			irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations
 		}
 
-		irPrincipal.JWT = rule.Principal.JWT
-		irPrincipal.Headers = rule.Principal.Headers
-		irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations
+		if err := validateAuthorizationOperation(rule.Operation); err != nil {
+			return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+		}
 
 		var name string
 		if rule.Name != nil && *rule.Name != "" {
@@ -2447,15 +2484,40 @@ func (t *Translator) buildAuthorization(
 		} else {
 			name = defaultAuthorizationRuleName(ownerPolicy, i)
 		}
+
+		var celExpression *string
+		if rule.CEL != nil {
+			if !validCELExpression(string(*rule.CEL)) {
+				return nil, fmt.Errorf("invalid CEL expression: %s", *rule.CEL)
+			}
+			celExpression = new(string(*rule.CEL))
+		}
+
 		irAuth.Rules = append(irAuth.Rules, &ir.AuthorizationRule{
 			Name:      name,
 			Action:    rule.Action,
 			Operation: rule.Operation,
 			Principal: irPrincipal,
+			CEL:       celExpression,
 		})
 	}
 
 	return irAuth, nil
+}
+
+func validateAuthorizationOperation(operation *egv1a1.Operation) error {
+	if operation == nil || operation.Path == nil {
+		return nil
+	}
+
+	switch ptr.Deref(operation.Path.Type, gwapiv1.PathMatchPathPrefix) {
+	case gwapiv1.PathMatchPathPrefix, gwapiv1.PathMatchExact:
+		return nil
+	case gwapiv1.PathMatchRegularExpression:
+		return regex.Validate(operation.Path.Value)
+	default:
+		return fmt.Errorf("invalid path type")
+	}
 }
 
 func validateAuthorizationGeoIP(

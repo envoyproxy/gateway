@@ -35,6 +35,11 @@ global:
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
 
+# Values for CRDs dependency
+crds:
+  # -- Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately.
+  enabled: true
+
 # -- Labels to apply to all resources
 commonLabels: {}
 
@@ -70,6 +75,7 @@ deployment:
       runAsUser: 65532
       seccompProfile:
         type: RuntimeDefault
+    strategy: {}
   ports:
     - name: grpc
       port: 18000
@@ -104,6 +110,12 @@ deployment:
     # - name: foo
     #   configMap:
     #     name: myconfigmap
+    securityContext:
+      runAsNonRoot: true
+      runAsGroup: 65532
+      runAsUser: 65532
+      seccompProfile:
+        type: RuntimeDefault
 
 service:
   # If set to PreferClose, the Envoy fleet will prioritize connecting to the Envoy Gateway pods that are topologically closest to them.

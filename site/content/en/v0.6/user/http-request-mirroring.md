@@ -245,6 +245,6 @@ Error from server: error when creating "STDIN": admission webhook "validate.gate
 ```
 
 [Quickstart Guide]: ./quickstart/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[backendRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendRef
-[HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRequestMirrorFilter
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[backendRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.BackendRef
+[HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.HTTPRequestMirrorFilter

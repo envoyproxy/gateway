@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -112,11 +111,30 @@ func mergePolicyStatus(aggregated aggregatedPolicyStatus, incoming *gwapiv1.Poli
 		return aggregated
 	}
 
-	aggregated.status.Ancestors = append(aggregated.status.Ancestors, incoming.Ancestors...)
+	// Prevent self-merge when aggregated and incoming reference the same object
+	if aggregated.status != incoming {
+		aggregated.status.Ancestors = append(aggregated.status.Ancestors, incoming.Ancestors...)
+	}
 	if generation > aggregated.generation {
 		aggregated.generation = generation
 	}
 
+	return aggregated
+}
+
+func mergeEnvoyProxyStatus(aggregated, incoming *egv1a1.EnvoyProxyStatus) *egv1a1.EnvoyProxyStatus {
+	if incoming == nil {
+		return aggregated
+	}
+
+	if aggregated == nil {
+		return incoming
+	}
+
+	// Prevent self-merge when aggregated and incoming reference the same object
+	if aggregated != incoming {
+		aggregated.Ancestors = append(aggregated.Ancestors, incoming.Ancestors...)
+	}
 	return aggregated
 }
 
@@ -206,6 +224,13 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
 			if update.Delete || valWrapper == nil || valWrapper.Resources == nil {
+				// Clear EnvoyProxy statuses before deleting to remove stale ancestor conditions
+				for key := range r.keyCache.EnvoyProxyStatus {
+					emptyStatus := &egv1a1.EnvoyProxyStatus{
+						Ancestors: []egv1a1.EnvoyProxyAncestorStatus{},
+					}
+					r.ProviderResources.EnvoyProxyStatuses.Store(key, emptyStatus)
+				}
 				r.deleteAllKeys()
 				return
 			}
@@ -229,6 +254,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			var tlsRouteStatusCount, tcpRouteStatusCount, udpRouteStatusCount int
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
+			var envoyproxyStatusCount int
 
 			// `aggregatedStatuses` aggregates status result of resources from all
 			// parents/ancestors, and then stores the status once for every resource.
@@ -244,6 +270,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				SecurityPolicies        map[types.NamespacedName]aggregatedPolicyStatus
 				EnvoyExtensionPolicies  map[types.NamespacedName]aggregatedPolicyStatus
 				ExtensionServerPolicies map[message.NamespacedNameAndGVK]aggregatedPolicyStatus
+				EnvoyProxies            map[types.NamespacedName]*egv1a1.EnvoyProxyStatus
 			}{
 				HTTPRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
 				GRPCRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
@@ -256,6 +283,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				SecurityPolicies:        make(map[types.NamespacedName]aggregatedPolicyStatus),
 				EnvoyExtensionPolicies:  make(map[types.NamespacedName]aggregatedPolicyStatus),
 				ExtensionServerPolicies: make(map[message.NamespacedNameAndGVK]aggregatedPolicyStatus),
+				EnvoyProxies:            make(map[types.NamespacedName]*egv1a1.EnvoyProxyStatus),
 			}
 
 			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
@@ -275,7 +303,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					WasmCache:                       r.wasmCache,
 					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 					Logger:                          traceLogger,
-					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.DisableLua,
+					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
 				}
 
 				// If extensions are loaded, pass their supported groups/kinds to the translator
@@ -448,6 +476,15 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						aggregatedStatuses.ExtensionServerPolicies[key] = mergePolicyStatus(aggregatedStatuses.ExtensionServerPolicies[key], &policyStatus, extServerPolicy.GetGeneration())
 					}
 				}
+				// EnvoyProxy status
+				for _, ep := range result.EnvoyProxiesForGateways {
+					r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
+					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
+				}
+				if ep := result.EnvoyProxyForGatewayClass; ep != nil {
+					r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
+					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
+				}
 				statusUpdateSpan.End()
 			}
 
@@ -478,7 +515,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 			for key, entry := range aggregatedStatuses.TCPRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
-				s := gwapiv1a2.TCPRouteStatus{RouteStatus: *entry.status}
+				s := gwapiv1.TCPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.TCPRouteStatuses.Store(key, &s)
 				tcpRouteStatusCount++
 				delete(keysToDelete.TCPRouteStatus, key)
@@ -486,7 +523,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 			for key, entry := range aggregatedStatuses.UDPRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
-				s := gwapiv1a2.UDPRouteStatus{RouteStatus: *entry.status}
+				s := gwapiv1.UDPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.UDPRouteStatuses.Store(key, &s)
 				udpRouteStatusCount++
 				delete(keysToDelete.UDPRouteStatus, key)
@@ -534,6 +571,15 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				delete(keysToDelete.ExtensionServerPolicyStatus, key)
 				r.keyCache.ExtensionServerPolicyStatus[key] = true
 			}
+			for key, entry := range aggregatedStatuses.EnvoyProxies {
+				s := egv1a1.EnvoyProxyStatus{
+					Ancestors: entry.Ancestors,
+				}
+				r.ProviderResources.EnvoyProxyStatuses.Store(key, &s)
+				envoyproxyStatusCount++
+				delete(keysToDelete.EnvoyProxyStatus, key)
+				r.keyCache.EnvoyProxyStatus[key] = true
+			}
 			// Publish aggregated metrics
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, infraIRCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
@@ -552,6 +598,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyExtensionPolicyStatusMessageName}, envoyExtensionPolicyStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendStatusMessageName}, backendStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ExtensionServerPoliciesStatusMessageName}, extensionServerPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyProxyStatusMessageName}, envoyproxyStatusCount)
 
 			// Delete keys using mark and sweep
 			r.deleteKeys(keysToDelete)
@@ -661,6 +708,9 @@ func (r *Runner) deleteAllKeys() {
 	for key := range r.keyCache.BackendStatus {
 		r.ProviderResources.BackendStatuses.Delete(key)
 	}
+	for key := range r.keyCache.EnvoyProxyStatus {
+		r.ProviderResources.EnvoyProxyStatuses.Delete(key)
+	}
 
 	// Clear all tracking
 	r.keyCache = newKeyCache()
@@ -685,6 +735,7 @@ type KeyCache struct {
 	SecurityPolicyStatus        map[types.NamespacedName]bool
 	EnvoyExtensionPolicyStatus  map[types.NamespacedName]bool
 	ExtensionServerPolicyStatus map[message.NamespacedNameAndGVK]bool
+	EnvoyProxyStatus            map[types.NamespacedName]bool
 
 	BackendStatus map[types.NamespacedName]bool
 }
@@ -738,6 +789,9 @@ func (kc *KeyCache) copy() *KeyCache {
 	for key := range kc.ExtensionServerPolicyStatus {
 		copied.ExtensionServerPolicyStatus[key] = true
 	}
+	for key := range kc.EnvoyProxyStatus {
+		copied.EnvoyProxyStatus[key] = true
+	}
 	for key := range kc.BackendStatus {
 		copied.BackendStatus[key] = true
 	}
@@ -761,6 +815,7 @@ func newKeyCache() *KeyCache {
 		SecurityPolicyStatus:        make(map[types.NamespacedName]bool),
 		EnvoyExtensionPolicyStatus:  make(map[types.NamespacedName]bool),
 		ExtensionServerPolicyStatus: make(map[message.NamespacedNameAndGVK]bool),
+		EnvoyProxyStatus:            make(map[types.NamespacedName]bool),
 		BackendStatus:               make(map[types.NamespacedName]bool),
 	}
 }
@@ -812,6 +867,9 @@ func (r *Runner) populateKeyCache() {
 	}
 	for key := range r.ProviderResources.ExtensionPolicyStatuses.LoadAll() {
 		r.keyCache.ExtensionServerPolicyStatus[key] = true
+	}
+	for key := range r.ProviderResources.EnvoyProxyStatuses.LoadAll() {
+		r.keyCache.EnvoyProxyStatus[key] = true
 	}
 	for key := range r.ProviderResources.BackendStatuses.LoadAll() {
 		r.keyCache.BackendStatus[key] = true
@@ -879,6 +937,10 @@ func (r *Runner) deleteKeys(kc *KeyCache) {
 	for key := range kc.ExtensionServerPolicyStatus {
 		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
 		delete(r.keyCache.ExtensionServerPolicyStatus, key)
+	}
+	for key := range kc.EnvoyProxyStatus {
+		r.ProviderResources.EnvoyProxyStatuses.Delete(key)
+		delete(r.keyCache.EnvoyProxyStatus, key)
 	}
 	for key := range kc.BackendStatus {
 		r.ProviderResources.BackendStatuses.Delete(key)

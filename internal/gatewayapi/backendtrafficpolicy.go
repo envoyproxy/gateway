@@ -123,7 +123,7 @@ func BuildBTPRoutingTypeIndex(
 			kind := string(ref.Kind)
 			key := btpRoutingKey{
 				Kind:        kind,
-				Namespace:   btp.Namespace,
+				Namespace:   string(ref.Namespace),
 				Name:        string(ref.Name),
 				SectionName: string(ptr.Deref(ref.SectionName, "")),
 			}
@@ -1645,6 +1645,13 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		Shared:           rule.Shared,
 		ShadowMode:       rule.ShadowMode,
 		XRateLimitOption: rule.XRateLimitHeaders,
+	}
+
+	if md := rule.Limit.FromMetadata; md != nil {
+		irRule.Limit.FromMetadata = &ir.RateLimitValueMetadata{
+			Namespace: md.Namespace,
+			Key:       md.Key,
+		}
 	}
 
 	for _, match := range rule.ClientSelectors {

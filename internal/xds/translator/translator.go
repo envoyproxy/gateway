@@ -649,6 +649,7 @@ func (t *Translator) addRouteToRouteConfig(
 						endpointType: buildEndpointType(mrr.Destination.Settings),
 						metrics:      metrics,
 						metadata:     mrr.Destination.Metadata,
+						isRoute:      true,
 					}); err != nil {
 						errs = errors.Join(errs, err)
 					}
@@ -1294,13 +1295,17 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 		// 4. Endpoint is not a dynamic resolver, which uses a different strategy for Auto SAN validation
 		// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#validate-an-endpoint-s-certificates-when-connecting
 		// Also, only enable validation if InsecureSkipVerify id disabled
-		if !hasSANValidations && (tlsConfig.SNI != nil || requiresAutoSNI) && endpointType != EndpointTypeDynamicResolver {
+		if !hasSANValidations && (tlsConfig.SNI != nil || requiresAutoSNI || tlsConfig.AutoSNIFromEndpointHostname) && endpointType != EndpointTypeDynamicResolver {
 			tlsCtx.AutoSniSanValidation = true
 		}
 	}
 
 	if tlsConfig.SNI != nil {
 		tlsCtx.Sni = *tlsConfig.SNI
+	}
+
+	if tlsConfig.AutoSNIFromEndpointHostname {
+		tlsCtx.AutoHostSni = true
 	}
 
 	tlsParams := buildTLSParams(&tlsConfig.TLSConfig)

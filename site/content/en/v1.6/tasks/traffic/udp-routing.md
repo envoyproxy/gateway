@@ -165,5 +165,5 @@ kubectl delete udproute/coredns
 
 Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
-[UDPRoute]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#udproute
+[UDPRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#udproute
 [UDP proxy documentation]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/udp_filters/udp_proxy

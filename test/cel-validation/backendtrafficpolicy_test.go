@@ -2859,6 +2859,37 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{`response cost is not supported for Local Rate Limits`},
 		},
 		{
+			desc: "invalid local rate limit rule sourcing limit from metadata",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{
+										Requests: 10,
+										Unit:     "Minute",
+										// This is not supported for LocalRateLimit.
+										FromMetadata: &egv1a1.RateLimitValueMetadata{Namespace: "something.com", Key: "some_limit"},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{`limit fromMetadata is not supported for Local Rate Limits`},
+		},
+		{
 			desc: "invalid RateLimitSelectCondition with no selectors",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -3631,6 +3662,164 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"at least one of request or response must be specified"},
+		},
+		{
+			desc: "valid HTTP healthcheck requestBody with lowercase post method",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path:   "/healthz",
+									Method: new("post"),
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ping"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid HTTP healthcheck requestBody without a method (defaults to GET)",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path: "/healthz",
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ping"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"The requestBody field can only be set when method is POST or PUT"},
+		},
+		{
+			desc: "invalid HTTP healthcheck requestBody with lowercase get method",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path:   "/healthz",
+									Method: new("get"),
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ping"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"The requestBody field can only be set when method is POST or PUT"},
+		},
+		{
+			desc: "invalid HTTP healthcheck requestBody with empty method",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path:   "/healthz",
+									Method: new(""),
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ping"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"The requestBody field can only be set when method is POST or PUT"},
+		},
+		{
+			desc: "valid HTTP healthcheck without requestBody and default method",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path: "/healthz",
+									ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ok"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 	}
 

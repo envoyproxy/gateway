@@ -41,7 +41,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
     # Generate the installation manifests first, so it can check
     # for errors while running `make -k lint`
@@ -52,14 +52,14 @@ jobs:
   gen-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
@@ -72,20 +72,21 @@ jobs:
     - changes
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
 
     # test
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v7.0.0
       with:
         fail_ci_if_error: true
         files: ./coverage.xml
         name: codecov-envoy-gateway
         verbose: true
         use_oidc: true
+        version: v11.2.8
 
   go-benchmark-test:
     runs-on: ubuntu-latest
@@ -94,7 +95,7 @@ jobs:
     - build
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       with:
         fetch-depth: 0  # Need main branch access for benchmark comparison
     - uses: ./tools/github-actions/setup-deps
@@ -111,7 +112,7 @@ jobs:
     needs: [changes, lint, gen-check, license-check, coverage-test]
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       # For main branch builds, we need to fetch tags so go binary will be built with
       # the recent vX.Y.Z-rc.0 tag, which helps avoid false positives in vulnerability scans.
       # `fetch-tags: true` doesn't work: https://github.com/actions/checkout/issues/1471
@@ -140,7 +141,7 @@ jobs:
     needs: [changes, lint, gen-check, license-check, coverage-test]
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build egctl Binary
@@ -156,37 +157,37 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.32.11
+        - version: v1.33.12
           ipFamily: ipv4
           profile: default
           gwapiChannel: standard
-        - version: v1.33.7
+        - version: v1.34.8
           ipFamily: ipv4
           profile: default
           gwapiChannel: experimental
-        - version: v1.34.3
+        - version: v1.35.5
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
           gwapiChannel: experimental
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
           gwapiChannel: experimental
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           gwapiChannel: experimental
           profile: gateway-namespace-mode
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: xds-name-scheme-v2
           gwapiChannel: experimental
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: watch-namespaces
           gwapiChannel: experimental
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -222,31 +223,31 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.32.11
+        - version: v1.33.12
           ipFamily: ipv4
           profile: default
-        - version: v1.33.7
+        - version: v1.34.8
           ipFamily: ipv4
           profile: default
-        - version: v1.34.3
+        - version: v1.35.5
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: xds-name-scheme-v2
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: watch-namespaces
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
     - uses: ./tools/github-actions/reclaim-storage
 
@@ -289,7 +290,7 @@ jobs:
     # So we need to check if this is a pull request and changes.
     if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -329,7 +330,7 @@ jobs:
     - build
     - changes
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -353,7 +354,7 @@ jobs:
     needs: [conformance-test, e2e-test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -367,7 +368,7 @@ jobs:
 
     # build and push image
     - name: Login to DockerHub
-      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4.1.0
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
