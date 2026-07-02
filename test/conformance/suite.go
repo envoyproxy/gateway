@@ -67,7 +67,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := make([]suite.ConformanceTest, 0, 4)
 	skipTests = append(skipTests,
 		// TODO: fix following conformance tests
-		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
 	)
 
