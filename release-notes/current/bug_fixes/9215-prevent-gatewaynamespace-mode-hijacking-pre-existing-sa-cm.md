@@ -1,1 +1,1 @@
-Fixed an issue where GatewayNamespace mode could hijack pre-existing ServiceAccounts and ConfigMaps when names collided.
+Fixed an issue where, in GatewayNamespace mode, Envoy Gateway could take ownership of existing ServiceAccounts and ConfigMaps with colliding names; it now refuses to reconcile those resources unless they are already labeled as owned by the same Gateway.

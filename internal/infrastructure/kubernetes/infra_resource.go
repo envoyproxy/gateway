@@ -761,7 +761,13 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 // edge case — it does not cause EG to fail, and using the cache avoids extra
 // uncached API reads on every reconcile (see #8764).
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
-	if !i.EnvoyGateway.GatewayNamespaceMode() {
+	desired := obj.GetLabels()
+	// if not in GatewayNamespace mode or the desired object carries
+	// no gateway identity labels, skip the ownership checking.
+	if !i.EnvoyGateway.GatewayNamespaceMode() ||
+		(desired[gatewayapi.OwningGatewayNameLabel] == "" &&
+			desired[gatewayapi.OwningGatewayNamespaceLabel] == "" &&
+			desired[gatewayapi.OwningGatewayClassLabel] == "") {
 		return nil
 	}
 
@@ -775,11 +781,12 @@ func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
 	}
 
 	if !ownedByGateway(existing.GetLabels(), obj.GetLabels()) {
-		i.logger.Error(nil, "resource already exists and is not owned by this Gateway, skipping",
+		ownershipErr := fmt.Errorf("%s %s/%s already exists and is not owned by this Gateway",
+			obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
+		i.logger.Error(ownershipErr, "resource already exists and is not owned by this Gateway, skipping",
 			"kind", obj.GetObjectKind().GroupVersionKind().Kind,
 			"name", obj.GetName(), "namespace", obj.GetNamespace())
-		return fmt.Errorf("%s %s/%s already exists and is not owned by this Gateway",
-			obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
+		return ownershipErr
 	}
 	return nil
 }

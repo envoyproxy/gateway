@@ -354,7 +354,7 @@ func newGatewayNamespaceInfra(t *testing.T, cli client.Client) *Infra {
 	return kube
 }
 
-// TestOwnedByGateway covers ownedByGateway across all three label.
+// TestOwnedByGateway covers ownedByGateway across all three labels.
 func TestOwnedByGateway(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -108,6 +109,15 @@ var GatewayNamespaceOwnership = suite.ConformanceTest{
 			}
 			assert.Equal(t, map[string]string{"app": "pre-existing"}, fetchedSA.Labels,
 				"pre-existing ServiceAccount labels must not be modified")
+
+			// Ensure deleting the Gateway does not garbage-collect the pre-existing ServiceAccount.
+			require.NoError(t, suite.Client.Delete(ctx, gw))
+			require.NoError(t, wait.PollUntilContextTimeout(ctx, time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true,
+				func(ctx context.Context) (bool, error) {
+					err := suite.Client.Get(ctx, gwNN, &gwapiv1.Gateway{})
+					return apierrors.IsNotFound(err), nil
+				}))
+			require.NoError(t, suite.Client.Get(ctx, client.ObjectKey{Namespace: ns, Name: gwName}, &corev1.ServiceAccount{}))
 		})
 
 		t.Run("ConfigMap", func(t *testing.T) {
@@ -142,6 +152,15 @@ var GatewayNamespaceOwnership = suite.ConformanceTest{
 			}
 			assert.Equal(t, map[string]string{"app": "pre-existing"}, fetchedCM.Labels,
 				"pre-existing ConfigMap labels must not be modified")
+
+			// Ensure deleting the Gateway does not garbage-collect the pre-existing ConfigMap.
+			require.NoError(t, suite.Client.Delete(ctx, gw))
+			require.NoError(t, wait.PollUntilContextTimeout(ctx, time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true,
+				func(ctx context.Context) (bool, error) {
+					err := suite.Client.Get(ctx, gwNN, &gwapiv1.Gateway{})
+					return apierrors.IsNotFound(err), nil
+				}))
+			require.NoError(t, suite.Client.Get(ctx, client.ObjectKey{Namespace: ns, Name: gwName}, &corev1.ConfigMap{}))
 		})
 	},
 }
