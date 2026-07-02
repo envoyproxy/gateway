@@ -194,8 +194,12 @@ infraIR:
           mergeGateways: true
           telemetry:
             tracing:
-              clientSamplingRate: 20
-              overallSamplingRate: 30
+              clientSamplingFraction:
+                denominator: 100
+                numerator: 20
+              overallSamplingFraction:
+                denominator: 100
+                numerator: 30
               provider:
                 host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
