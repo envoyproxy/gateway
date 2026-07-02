@@ -35,17 +35,17 @@ grpcRoutes:
         extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
-          name: direct-response-inline
+          name: direct-response-2xx
 httpFilters:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: HTTPRouteFilter
   metadata:
-    name: direct-response-inline
+    name: direct-response-2xx
     namespace: default
   spec:
     directResponse:
       contentType: text/plain
-      statusCode: 404
+      statusCode: 200
       body:
         type: Inline
-        inline: "blocked"
+        inline: "OK"
