@@ -4336,6 +4336,20 @@ _Appears in:_
 | `header` | _string_ |  true  |  | Header is the upstream request header that will carry the ID token. |
 
 
+#### OOBReporting
+
+
+
+OOBReporting configures out-of-band ORCA load reporting for the
+BackendUtilization load balancer.
+
+_Appears in:_
+- [BackendUtilization](#backendutilization)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
 #### OTelSampler
 
 
