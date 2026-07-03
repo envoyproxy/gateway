@@ -732,6 +732,16 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 	return string(secret.Data[proxy.XdsTLSCaFileName])
 }
 
+// noGatewayIdentityLabels reports whether labels carry none of the three
+// gateway ownership identity labels. Resources in GatewayNamespace mode
+// with no identity labels (such as ratelimit resources) are controller-scoped
+// and need no collision guard.
+func noGatewayIdentityLabels(labels map[string]string) bool {
+	return labels[gatewayapi.OwningGatewayNameLabel] == "" &&
+		labels[gatewayapi.OwningGatewayNamespaceLabel] == "" &&
+		labels[gatewayapi.OwningGatewayClassLabel] == ""
+}
+
 // checkOwnership guards against adopting a pre-existing resource that shares a
 // name with a Gateway-owned resource in GatewayNamespace mode. If a resource
 // with the same name/namespace already exists and is not labeled as owned by
@@ -744,13 +754,7 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 // edge case — it does not cause EG to fail, and using the cache avoids extra
 // uncached API reads on every reconcile (see #8764).
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
-	desired := obj.GetLabels()
-	// if not in GatewayNamespace mode or the desired object carries
-	// no gateway identity labels, skip the ownership checking.
-	if !i.EnvoyGateway.GatewayNamespaceMode() ||
-		(desired[gatewayapi.OwningGatewayNameLabel] == "" &&
-			desired[gatewayapi.OwningGatewayNamespaceLabel] == "" &&
-			desired[gatewayapi.OwningGatewayClassLabel] == "") {
+	if !i.EnvoyGateway.GatewayNamespaceMode() || noGatewayIdentityLabels(obj.GetLabels()) {
 		return nil
 	}
 
