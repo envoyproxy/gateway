@@ -24985,9 +24985,107 @@ spec:
                   properties:
                     brotli:
                       description: The configuration for Brotli compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of the compressor's next output buffer, from
+                            4096 to 65536. If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        disableLiteralContextModeling:
+                          description: |-
+                            DisableLiteralContextModeling disables the "literal context modeling" format
+                            feature. This flag is a "decoding-speed vs compression ratio" trade-off.
+                            If not set, defaults to false.
+                          type: boolean
+                        encoderMode:
+                          description: |-
+                            EncoderMode tunes the encoder for a specific input.
+                            If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Generic
+                          - Text
+                          - Font
+                          type: string
+                        inputBlockBits:
+                          description: |-
+                            InputBlockBits represents the base two logarithm of the compressor's input block
+                            size, from 16 to 24. Larger input block results in better compression at the
+                            expense of memory usage. If not set, defaults to 24.
+                          format: int32
+                          maximum: 24
+                          minimum: 16
+                          type: integer
+                        quality:
+                          description: |-
+                            Quality controls the main compression speed-density lever, from 0 to 11.
+                            The higher the quality, the slower the compression. If not set, defaults to 3.
+                          format: int32
+                          maximum: 11
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithm of the compressor's window size,
+                            from 10 to 24. Larger window results in better compression at the expense of
+                            memory usage. If not set, defaults to 18.
+                          format: int32
+                          maximum: 24
+                          minimum: 10
+                          type: integer
                       type: object
                     gzip:
                       description: The configuration for GZIP compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.
+                            If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets the zlib compression level, from 1 (fastest compression,
+                            lowest compression ratio) to 9 (slowest compression, best compression ratio).
+                            If not set, Envoy uses the zlib default level, which is equivalent to level 6.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        compressionStrategy:
+                          description: |-
+                            CompressionStrategy selects the zlib compression strategy, which is directly
+                            related to the characteristics of the content. Most of the time "Default" is
+                            the best choice. If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Filtered
+                          - HuffmanOnly
+                          - RLE
+                          - Fixed
+                          type: string
+                        memoryLevel:
+                          description: |-
+                            MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.
+                            Higher values use more memory, but are faster and produce better compression
+                            results. If not set, defaults to 5.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithm of the compressor's window size,
+                            from 9 to 15. Larger window results in better compression at the expense of
+                            memory usage. If not set, defaults to 12, which will produce a 4096 bytes window.
+                          format: int32
+                          maximum: 15
+                          minimum: 9
+                          type: integer
                       type: object
                     minContentLength:
                       allOf:
@@ -25013,6 +25111,47 @@ spec:
                       type: string
                     zstd:
                       description: The configuration for Zstd compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of the compressor's next output buffer, from
+                            4096 to 65536. If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets the compression parameters according to the pre-defined
+                            zstd compression level table, from 1 to 22. Note that the exact compression
+                            parameters are dynamically determined, depending on both compression level and
+                            source content size (when known). If not set, defaults to 3.
+                          format: int32
+                          maximum: 22
+                          minimum: 1
+                          type: integer
+                        enableChecksum:
+                          description: |-
+                            EnableChecksum specifies whether a 32-bits checksum of the content is written
+                            at the end of the frame. If not set, defaults to false.
+                          type: boolean
+                        strategy:
+                          description: |-
+                            Strategy selects the zstd compression strategy. The higher the value of the
+                            selected strategy, the more complex it is, resulting in stronger and slower
+                            compression. If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Fast
+                          - DFast
+                          - Greedy
+                          - Lazy
+                          - Lazy2
+                          - BTLazy2
+                          - BTOpt
+                          - BTUltra
+                          - BTUltra2
+                          type: string
                       type: object
                   required:
                   - type
@@ -25030,9 +25169,107 @@ spec:
                   properties:
                     brotli:
                       description: The configuration for Brotli compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of the compressor's next output buffer, from
+                            4096 to 65536. If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        disableLiteralContextModeling:
+                          description: |-
+                            DisableLiteralContextModeling disables the "literal context modeling" format
+                            feature. This flag is a "decoding-speed vs compression ratio" trade-off.
+                            If not set, defaults to false.
+                          type: boolean
+                        encoderMode:
+                          description: |-
+                            EncoderMode tunes the encoder for a specific input.
+                            If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Generic
+                          - Text
+                          - Font
+                          type: string
+                        inputBlockBits:
+                          description: |-
+                            InputBlockBits represents the base two logarithm of the compressor's input block
+                            size, from 16 to 24. Larger input block results in better compression at the
+                            expense of memory usage. If not set, defaults to 24.
+                          format: int32
+                          maximum: 24
+                          minimum: 16
+                          type: integer
+                        quality:
+                          description: |-
+                            Quality controls the main compression speed-density lever, from 0 to 11.
+                            The higher the quality, the slower the compression. If not set, defaults to 3.
+                          format: int32
+                          maximum: 11
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithm of the compressor's window size,
+                            from 10 to 24. Larger window results in better compression at the expense of
+                            memory usage. If not set, defaults to 18.
+                          format: int32
+                          maximum: 24
+                          minimum: 10
+                          type: integer
                       type: object
                     gzip:
                       description: The configuration for GZIP compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.
+                            If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets the zlib compression level, from 1 (fastest compression,
+                            lowest compression ratio) to 9 (slowest compression, best compression ratio).
+                            If not set, Envoy uses the zlib default level, which is equivalent to level 6.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        compressionStrategy:
+                          description: |-
+                            CompressionStrategy selects the zlib compression strategy, which is directly
+                            related to the characteristics of the content. Most of the time "Default" is
+                            the best choice. If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Filtered
+                          - HuffmanOnly
+                          - RLE
+                          - Fixed
+                          type: string
+                        memoryLevel:
+                          description: |-
+                            MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.
+                            Higher values use more memory, but are faster and produce better compression
+                            results. If not set, defaults to 5.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithm of the compressor's window size,
+                            from 9 to 15. Larger window results in better compression at the expense of
+                            memory usage. If not set, defaults to 12, which will produce a 4096 bytes window.
+                          format: int32
+                          maximum: 15
+                          minimum: 9
+                          type: integer
                       type: object
                     minContentLength:
                       allOf:
@@ -25058,6 +25295,47 @@ spec:
                       type: string
                     zstd:
                       description: The configuration for Zstd compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of the compressor's next output buffer, from
+                            4096 to 65536. If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets the compression parameters according to the pre-defined
+                            zstd compression level table, from 1 to 22. Note that the exact compression
+                            parameters are dynamically determined, depending on both compression level and
+                            source content size (when known). If not set, defaults to 3.
+                          format: int32
+                          maximum: 22
+                          minimum: 1
+                          type: integer
+                        enableChecksum:
+                          description: |-
+                            EnableChecksum specifies whether a 32-bits checksum of the content is written
+                            at the end of the frame. If not set, defaults to false.
+                          type: boolean
+                        strategy:
+                          description: |-
+                            Strategy selects the zstd compression strategy. The higher the value of the
+                            selected strategy, the more complex it is, resulting in stronger and slower
+                            compression. If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Fast
+                          - DFast
+                          - Greedy
+                          - Lazy
+                          - Lazy2
+                          - BTLazy2
+                          - BTOpt
+                          - BTUltra
+                          - BTUltra2
+                          type: string
                       type: object
                   required:
                   - type
@@ -48362,9 +48640,107 @@ spec:
                             properties:
                               brotli:
                                 description: The configuration for Brotli compressor.
+                                properties:
+                                  chunkSize:
+                                    description: |-
+                                      ChunkSize is the size in bytes of the compressor's next output buffer, from
+                                      4096 to 65536. If not set, defaults to 4096.
+                                    format: int32
+                                    maximum: 65536
+                                    minimum: 4096
+                                    type: integer
+                                  disableLiteralContextModeling:
+                                    description: |-
+                                      DisableLiteralContextModeling disables the "literal context modeling" format
+                                      feature. This flag is a "decoding-speed vs compression ratio" trade-off.
+                                      If not set, defaults to false.
+                                    type: boolean
+                                  encoderMode:
+                                    description: |-
+                                      EncoderMode tunes the encoder for a specific input.
+                                      If not set, defaults to Default.
+                                    enum:
+                                    - Default
+                                    - Generic
+                                    - Text
+                                    - Font
+                                    type: string
+                                  inputBlockBits:
+                                    description: |-
+                                      InputBlockBits represents the base two logarithm of the compressor's input block
+                                      size, from 16 to 24. Larger input block results in better compression at the
+                                      expense of memory usage. If not set, defaults to 24.
+                                    format: int32
+                                    maximum: 24
+                                    minimum: 16
+                                    type: integer
+                                  quality:
+                                    description: |-
+                                      Quality controls the main compression speed-density lever, from 0 to 11.
+                                      The higher the quality, the slower the compression. If not set, defaults to 3.
+                                    format: int32
+                                    maximum: 11
+                                    type: integer
+                                  windowBits:
+                                    description: |-
+                                      WindowBits represents the base two logarithm of the compressor's window size,
+                                      from 10 to 24. Larger window results in better compression at the expense of
+                                      memory usage. If not set, defaults to 18.
+                                    format: int32
+                                    maximum: 24
+                                    minimum: 10
+                                    type: integer
                                 type: object
                               gzip:
                                 description: The configuration for GZIP compressor.
+                                properties:
+                                  chunkSize:
+                                    description: |-
+                                      ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.
+                                      If not set, defaults to 4096.
+                                    format: int32
+                                    maximum: 65536
+                                    minimum: 4096
+                                    type: integer
+                                  compressionLevel:
+                                    description: |-
+                                      CompressionLevel sets the zlib compression level, from 1 (fastest compression,
+                                      lowest compression ratio) to 9 (slowest compression, best compression ratio).
+                                      If not set, Envoy uses the zlib default level, which is equivalent to level 6.
+                                    format: int32
+                                    maximum: 9
+                                    minimum: 1
+                                    type: integer
+                                  compressionStrategy:
+                                    description: |-
+                                      CompressionStrategy selects the zlib compression strategy, which is directly
+                                      related to the characteristics of the content. Most of the time "Default" is
+                                      the best choice. If not set, defaults to Default.
+                                    enum:
+                                    - Default
+                                    - Filtered
+                                    - HuffmanOnly
+                                    - RLE
+                                    - Fixed
+                                    type: string
+                                  memoryLevel:
+                                    description: |-
+                                      MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.
+                                      Higher values use more memory, but are faster and produce better compression
+                                      results. If not set, defaults to 5.
+                                    format: int32
+                                    maximum: 9
+                                    minimum: 1
+                                    type: integer
+                                  windowBits:
+                                    description: |-
+                                      WindowBits represents the base two logarithm of the compressor's window size,
+                                      from 9 to 15. Larger window results in better compression at the expense of
+                                      memory usage. If not set, defaults to 12, which will produce a 4096 bytes window.
+                                    format: int32
+                                    maximum: 15
+                                    minimum: 9
+                                    type: integer
                                 type: object
                               minContentLength:
                                 allOf:
@@ -48390,6 +48766,47 @@ spec:
                                 type: string
                               zstd:
                                 description: The configuration for Zstd compressor.
+                                properties:
+                                  chunkSize:
+                                    description: |-
+                                      ChunkSize is the size in bytes of the compressor's next output buffer, from
+                                      4096 to 65536. If not set, defaults to 4096.
+                                    format: int32
+                                    maximum: 65536
+                                    minimum: 4096
+                                    type: integer
+                                  compressionLevel:
+                                    description: |-
+                                      CompressionLevel sets the compression parameters according to the pre-defined
+                                      zstd compression level table, from 1 to 22. Note that the exact compression
+                                      parameters are dynamically determined, depending on both compression level and
+                                      source content size (when known). If not set, defaults to 3.
+                                    format: int32
+                                    maximum: 22
+                                    minimum: 1
+                                    type: integer
+                                  enableChecksum:
+                                    description: |-
+                                      EnableChecksum specifies whether a 32-bits checksum of the content is written
+                                      at the end of the frame. If not set, defaults to false.
+                                    type: boolean
+                                  strategy:
+                                    description: |-
+                                      Strategy selects the zstd compression strategy. The higher the value of the
+                                      selected strategy, the more complex it is, resulting in stronger and slower
+                                      compression. If not set, defaults to Default.
+                                    enum:
+                                    - Default
+                                    - Fast
+                                    - DFast
+                                    - Greedy
+                                    - Lazy
+                                    - Lazy2
+                                    - BTLazy2
+                                    - BTOpt
+                                    - BTUltra
+                                    - BTUltra2
+                                    type: string
                                 type: object
                             required:
                             - type

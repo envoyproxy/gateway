@@ -1025,6 +1025,12 @@ type Compression struct {
 	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
 	// MinContentLength defines the minimum response size in bytes to apply compression.
 	MinContentLength *uint32 `json:"minContentLength,omitempty" yaml:"minContentLength,omitempty"`
+	// Gzip holds the settings for the Gzip compressor library.
+	Gzip *egv1a1.GzipCompressor `json:"gzip,omitempty" yaml:"gzip,omitempty"`
+	// Brotli holds the settings for the Brotli compressor library.
+	Brotli *egv1a1.BrotliCompressor `json:"brotli,omitempty" yaml:"brotli,omitempty"`
+	// Zstd holds the settings for the Zstd compressor library.
+	Zstd *egv1a1.ZstdCompressor `json:"zstd,omitempty" yaml:"zstd,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
