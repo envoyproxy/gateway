@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -165,10 +164,10 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind, ena
 		WithIndex(&gwapiv1.HTTPRoute{}, httpRouteFilterHTTPRouteIndex, httpRouteFilterHTTPRouteIndexFunc).
 		WithIndex(&gwapiv1.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc).
 		WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
-		WithIndex(&gwapiv1a2.TCPRoute{}, gatewayTCPRouteIndex, gatewayTCPRouteIndexFunc).
-		WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
-		WithIndex(&gwapiv1a2.UDPRoute{}, gatewayUDPRouteIndex, gatewayUDPRouteIndexFunc).
-		WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
+		WithIndex(&gwapiv1.TCPRoute{}, gatewayTCPRouteIndex, gatewayTCPRouteIndexFunc).
+		WithIndex(&gwapiv1.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+		WithIndex(&gwapiv1.UDPRoute{}, gatewayUDPRouteIndex, gatewayUDPRouteIndexFunc).
+		WithIndex(&gwapiv1.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 		WithIndex(&gwapiv1.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc).
 		WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc)
 	if enableEndpointSliceIndex {

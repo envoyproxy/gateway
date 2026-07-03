@@ -1410,6 +1410,32 @@ func (t *Translator) validateExtServiceBackendReference(
 	return nil
 }
 
+// validateListenerSetListenerSectionName check:
+// if the section name exists in the target ListenerSet listeners.
+func validateListenerSetListenerSectionName(
+	sectionName gwapiv1.SectionName,
+	targetKey types.NamespacedName,
+	listeners []gwapiv1.ListenerEntry,
+) *status.PolicyResolveError {
+	found := false
+	for _, l := range listeners {
+		if l.Name == sectionName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		message := fmt.Sprintf("No section name %s found for ListenerSet %s",
+			string(sectionName), targetKey.String())
+
+		return &status.PolicyResolveError{
+			Reason:  gwapiv1.PolicyReasonTargetNotFound,
+			Message: message,
+		}
+	}
+	return nil
+}
+
 // validateGatewayListenerSectionName check:
 // if the section name exists in the target Gateway listeners.
 func validateGatewayListenerSectionName(

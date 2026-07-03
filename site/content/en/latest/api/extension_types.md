@@ -308,7 +308,8 @@ _Appears in:_
 | `name` | _string_ |  false  |  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action defines the action to be taken if the rule matches. |
 | `operation` | _[Operation](#operation)_ |  false  |  | Operation specifies the operation of a request, such as HTTP methods.<br />If not specified, all operations are matched on. |
-| `principal` | _[Principal](#principal)_ |  true  |  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
+| `principal` | _[Principal](#principal)_ |  false  |  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
+| `cel` | _[CELExpression](#celexpression)_ |  false  |  | CEL specifies a Common Expression Language expression to evaluate for the<br />request. If specified, the expression must evaluate to true for the rule to match.<br />The expression can use Envoy attributes exposed to the CEL runtime.<br />Request attributes, such as request.path, request.url_path, request.host,<br />request.scheme, request.method, request.headers, and request.query, are<br />generally available during authorization. Connection attributes, such as<br />source.address, source.port, destination.address, destination.port,<br />connection.mtls, and connection.requested_server_name, may also be used.<br />Dynamic metadata and filter state produced by earlier filters may also be<br />available through attributes such as metadata and filter_state.<br />Response attributes are only available after the request completes and<br />should not be used for authorization decisions.<br />For more details, see:<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes<br />The rule matches only when the expression evaluates to a boolean true.<br />Non-boolean results, false, null, and CEL evaluation errors are treated as<br />no match.<br />Examples:<br />`request.headers['x-tenant'] == 'team-a'`<br />`request.method == 'POST' && request.path.startsWith('/admin')` |
 
 
 #### BackOffPolicy
@@ -790,6 +791,17 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli
 
 _Appears in:_
 - [Compression](#compression)
+
+
+
+#### CELExpression
+
+_Underlying type:_ _string_
+
+CELExpression specifies a CEL expression.
+
+_Appears in:_
+- [AuthorizationRule](#authorizationrule)
 
 
 
@@ -5770,7 +5782,7 @@ Gateway.
 
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
-NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
+NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, and TCPRoute.
 When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
 (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 authentication/authorization features such as JWT, API Key, Basic Auth,
@@ -5785,7 +5797,7 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](#localpolicytargetreferencewithsectionname)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
-| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).<br />This field cannot be set when targeting a parent resource (Gateway).<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent SecurityPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `apiKeyAuth` | _[APIKeyAuth](#apikeyauth)_ |  false  |  | APIKeyAuth defines the configuration for the API Key Authentication. |
 | `cors` | _[CORS](#cors)_ |  false  |  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  |  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
