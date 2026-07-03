@@ -16,7 +16,20 @@ envoyExtensionPolicies:
       kind: HTTPRoute
       name: httproute-1
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: non-existent
+      conditions:
+      - lastTransitionTime: null
+        message: No listeners in the ListenerSet match this parent ref
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

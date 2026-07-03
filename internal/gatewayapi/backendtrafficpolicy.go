@@ -259,6 +259,12 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		SectionIndex: make(map[types.NamespacedName]sets.Set[string], gatewayMapSize),
 	}
 
+	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext, len(resources.ListenerSets))
+	for _, ls := range resources.ListenerSets {
+		key := types.NamespacedName{Name: ls.Name, Namespace: ls.Namespace}
+		listenerSetMap[key] = &policyListenerSetTargetContext{ListenerSet: ls}
+	}
+
 	policyCopies := backendTrafficPolicyCopiesWithStatusDeepCopy(backendTrafficPolicies)
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
@@ -287,7 +293,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 				}
 
 				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
+					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, listenerSetMap, policy, currTarget)
 			}
 		}
 	}
@@ -313,7 +319,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 				}
 
 				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
+					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, listenerSetMap, policy, currTarget)
 			}
 		}
 	}
@@ -429,6 +435,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	gatewayRouteMap *GatewayPolicyRouteMap,
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
+	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -483,29 +490,51 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 			parentRefCtxs = append(parentRefCtxs, targetedRoute.GetRouteParentContext(p))
 		} else if *p.Kind == resource.KindListenerSet {
-			parentRefCtx := targetedRoute.GetRouteParentContext(p)
-			if parentRefCtx == nil || parentRefCtx.GetGateway() == nil {
+			lsNamespace := targetedRoute.GetNamespace()
+			if p.Namespace != nil {
+				lsNamespace = string(*p.Namespace)
+			}
+			lsNN := types.NamespacedName{Namespace: lsNamespace, Name: string(p.Name)}
+			lsCtx, ok := listenerSetMap[lsNN]
+			if !ok {
 				continue
 			}
-			gwNN := utils.NamespacedName(parentRefCtx.GetGateway().Gateway)
+			gwNN := types.NamespacedName{
+				Name:      string(lsCtx.Spec.ParentRef.Name),
+				Namespace: NamespaceDerefOr(lsCtx.Spec.ParentRef.Namespace, lsCtx.Namespace),
+			}
 			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
-			parentRefCtxs = append(parentRefCtxs, parentRefCtx)
 
-			// Populate gatewayRouteMap with backing Gateway keys so merge lookup can still find Gateway-level policies.
-			for _, listener := range parentRefCtx.listeners {
-				mapKey := NamespacedNameWithSection{
-					NamespacedName: gwNN,
-					SectionName:    listener.Name,
+			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
+				if parentRefCtx.GetGateway() == nil {
+					// Report TargetNotFound on the Gateway ancestor when no listeners match this parent ref.
+					status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef,
+						t.GatewayControllerName,
+						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+						gwapiv1.PolicyReasonTargetNotFound,
+						"No listeners in the ListenerSet match this parent ref",
+						policy.Generation,
+					)
+				} else {
+					parentRefCtxs = append(parentRefCtxs, parentRefCtx)
+
+					// Populate gatewayRouteMap with backing Gateway keys so merge lookup can still find Gateway-level policies.
+					for _, listener := range parentRefCtx.listeners {
+						mapKey := NamespacedNameWithSection{
+							NamespacedName: gwNN,
+							SectionName:    listener.Name,
+						}
+						if _, ok := gatewayRouteMap.Routes[mapKey]; !ok {
+							gatewayRouteMap.Routes[mapKey] = make(sets.Set[string])
+						}
+						gatewayRouteMap.Routes[mapKey].Insert(utils.NamespacedName(targetedRoute).String())
+						if _, ok := gatewayRouteMap.SectionIndex[gwNN]; !ok {
+							gatewayRouteMap.SectionIndex[gwNN] = make(sets.Set[string])
+						}
+						gatewayRouteMap.SectionIndex[gwNN].Insert(string(listener.Name))
+					}
 				}
-				if _, ok := gatewayRouteMap.Routes[mapKey]; !ok {
-					gatewayRouteMap.Routes[mapKey] = make(sets.Set[string])
-				}
-				gatewayRouteMap.Routes[mapKey].Insert(utils.NamespacedName(targetedRoute).String())
-				if _, ok := gatewayRouteMap.SectionIndex[gwNN]; !ok {
-					gatewayRouteMap.SectionIndex[gwNN] = make(sets.Set[string])
-				}
-				gatewayRouteMap.SectionIndex[gwNN].Insert(string(listener.Name))
 			}
 		}
 	}
