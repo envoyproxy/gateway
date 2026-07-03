@@ -277,6 +277,19 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			}
 			gtwCtx := parentRefCtx.GetGateway()
 			if gtwCtx == nil {
+				// No listeners attached; record the backing Gateway as ancestor with TargetNotFound.
+				if backingGW := parentRefCtx.GetBackingGateway(); backingGW != nil {
+					gwNN := utils.NamespacedName(backingGW.Gateway)
+					ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+					ancestorRefs = append(ancestorRefs, &ancestorRef)
+					status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef,
+						t.GatewayControllerName,
+						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+						gwapiv1.PolicyReasonTargetNotFound,
+						"No listeners in the ListenerSet match this parent ref",
+						policy.Generation,
+					)
+				}
 				continue
 			}
 

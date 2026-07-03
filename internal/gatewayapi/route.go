@@ -2271,7 +2271,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 	var relevantRoute bool
 	ns := gwapiv1.Namespace(routeContext.GetNamespace())
 	for _, parentRef := range GetParentReferences(routeContext) {
-		isRelevantParentRef, selectedListeners := GetReferencedListeners(ns, parentRef, gateways)
+		isRelevantParentRef, selectedListeners, backingGateway := GetReferencedListeners(ns, parentRef, gateways)
 
 		// Parent ref is not to a Gateway that we control: skip it
 		if !isRelevantParentRef {
@@ -2284,6 +2284,8 @@ func (t *Translator) processAllowedListenersForParentRefs(
 		parentRefCtx.ResetConditions(routeContext)
 
 		if len(selectedListeners) == 0 {
+			// Store the backing gateway for policy status reporting.
+			parentRefCtx.backingGateway = backingGateway
 			routeStatus := GetRouteStatus(routeContext)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,
@@ -2306,6 +2308,8 @@ func (t *Translator) processAllowedListenersForParentRefs(
 		}
 
 		if len(allowedListeners) == 0 {
+			// Store the backing gateway for policy status reporting.
+			parentRefCtx.backingGateway = backingGateway
 			routeStatus := GetRouteStatus(routeContext)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,

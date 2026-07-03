@@ -1,0 +1,103 @@
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: envoy-gateway
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: gateway-1
+    listeners:
+    - name: ls-http
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      namespace: envoy-gateway
+      name: ext-listeners
+      sectionName: non-existent
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    lua:
+    - type: Inline
+      inline: |
+        function envoy_on_response(response_handle)
+          response_handle:logInfo("route policy")
+        end
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: service-1
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-service-1
+    namespace: default
+    labels:
+      kubernetes.io/service-name: service-1
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - "10.0.0.1"
