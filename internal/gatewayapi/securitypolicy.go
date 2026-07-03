@@ -485,21 +485,8 @@ func (t *Translator) processSecurityPolicyForRoute(
 			// Only process parentRefs that were handled by this translator
 			// (skip those referencing Gateways with different GatewayClasses)
 			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
-				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
-			}
-		} else if isRefToListenerSet(p) {
-			// For ListenerSet parent refs, resolve the underlying Gateway via the route parent context
-			parentRefCtx := targetedRoute.GetRouteParentContext(p)
-			if parentRefCtx == nil {
-				continue
-			}
-			gtwCtx := parentRefCtx.GetGateway()
-			if gtwCtx == nil {
-				// No listeners attached; record the backing Gateway as ancestor with TargetNotFound.
-				if backingGW := parentRefCtx.GetBackingGateway(); backingGW != nil {
-					gwNN := utils.NamespacedName(backingGW.Gateway)
-					ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
-					ancestorRefs = append(ancestorRefs, &ancestorRef)
+				if parentRefCtx.GetGateway() == nil {
+					// Report TargetNotFound on the ListenerSet ancestor when no listeners match this parentRef.
 					status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef,
 						t.GatewayControllerName,
 						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
@@ -507,32 +494,10 @@ func (t *Translator) processSecurityPolicyForRoute(
 						"No listeners in the ListenerSet match this parent ref",
 						policy.Generation,
 					)
+				} else {
+					parentRefCtxs = append(parentRefCtxs, parentRefCtx)
 				}
-				continue
 			}
-			parentRefCtxs = append(parentRefCtxs, parentRefCtx)
-
-			// Populate gatewayRouteMap using the underlying Gateway NN derived from the listeners
-			for _, listener := range parentRefCtx.listeners {
-				gwNN := utils.NamespacedName(listener.gateway.Gateway)
-				mapKey := NamespacedNameWithSection{
-					NamespacedName: gwNN,
-					SectionName:    listener.Name,
-				}
-				if _, ok := gatewayRouteMap.Routes[mapKey]; !ok {
-					gatewayRouteMap.Routes[mapKey] = make(sets.Set[string])
-				}
-				gatewayRouteMap.Routes[mapKey].Insert(utils.NamespacedName(targetedRoute).String())
-				if _, ok := gatewayRouteMap.SectionIndex[gwNN]; !ok {
-					gatewayRouteMap.SectionIndex[gwNN] = make(sets.Set[string])
-				}
-				gatewayRouteMap.SectionIndex[gwNN].Insert(string(listener.Name))
-			}
-
-			// Add one ancestor ref for the backing Gateway (used for error status reporting)
-			gwNN := utils.NamespacedName(gtwCtx.Gateway)
-			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
-			ancestorRefs = append(ancestorRefs, &ancestorRef)
 		}
 	}
 

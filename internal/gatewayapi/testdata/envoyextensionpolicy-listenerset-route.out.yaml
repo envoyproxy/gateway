@@ -19,8 +19,8 @@ envoyExtensionPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+        kind: ListenerSet
+        name: ext-listeners
         namespace: envoy-gateway
         sectionName: ls-http
       conditions:

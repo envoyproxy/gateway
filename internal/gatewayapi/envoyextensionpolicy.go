@@ -269,31 +269,33 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			// Do need a section name since the policy is targeting to a route
 			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
-		} else if isRefToListenerSet(p) {
-			// For ListenerSet parent refs, resolve the underlying Gateway via the route parent context
+		} else if *p.Kind == resource.KindListenerSet {
+			// Routes attached through a ListenerSet report policy status against the ListenerSet ancestor.
+			lsNamespace := targetedRoute.GetNamespace()
+			if p.Namespace != nil {
+				lsNamespace = string(*p.Namespace)
+			}
+			lsNN := types.NamespacedName{Namespace: lsNamespace, Name: string(p.Name)}
+			ancestorRef := getAncestorRefForListenerSetPolicy(lsNN, p.SectionName)
+			ancestorRefs = append(ancestorRefs, &ancestorRef)
+
 			parentRefCtx := targetedRoute.GetRouteParentContext(p)
 			if parentRefCtx == nil {
 				continue
 			}
-			gtwCtx := parentRefCtx.GetGateway()
-			if gtwCtx == nil {
-				// No listeners attached; record the backing Gateway as ancestor with TargetNotFound.
-				if backingGW := parentRefCtx.GetBackingGateway(); backingGW != nil {
-					gwNN := utils.NamespacedName(backingGW.Gateway)
-					ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
-					ancestorRefs = append(ancestorRefs, &ancestorRef)
-					status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						gwapiv1.PolicyReasonTargetNotFound,
-						"No listeners in the ListenerSet match this parent ref",
-						policy.Generation,
-					)
-				}
+			if parentRefCtx.GetGateway() == nil {
+				// Report TargetNotFound on the ListenerSet ancestor when no listeners match this parentRef.
+				status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef,
+					t.GatewayControllerName,
+					gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+					gwapiv1.PolicyReasonTargetNotFound,
+					"No listeners in the ListenerSet match this parent ref",
+					policy.Generation,
+				)
 				continue
 			}
 
-			// Populate gatewayRouteMap using the underlying Gateway NN derived from the listeners
+			// Populate gatewayRouteMap with backing Gateway keys so overridden-route lookup still works.
 			for _, listener := range parentRefCtx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 				key := gwNN.String()
@@ -307,11 +309,6 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 				}
 				listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
 			}
-
-			// Add one ancestor ref for the backing Gateway (used for error status reporting)
-			gwNN := utils.NamespacedName(gtwCtx.Gateway)
-			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
-			ancestorRefs = append(ancestorRefs, &ancestorRef)
 		}
 	}
 

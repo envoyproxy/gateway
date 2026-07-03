@@ -62,12 +62,12 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     namespace: envoy-gateway
-    name: policy-for-gateway
+    name: policy-for-listenerset
   spec:
     targetRefs:
     - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+      kind: ListenerSet
+      name: ext-listeners
       sectionName: ls-http
     basicAuth:
       users:
