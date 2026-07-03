@@ -209,9 +209,13 @@ func authIndependentPrefix(authorization *ir.Authorization) []*ir.AuthorizationR
 	return prefix
 }
 
-// isAuthIndependentRule returns true if the rule's principal can be fully
-// evaluated before authentication runs.
-func isAuthIndependentRule(rule *ir.AuthorizationRule) bool {
+// isPreAuthRule reports whether a rule can be evaluated before authentication.
+// Only client IP / geo principals qualify.
+//
+// NOTE: this is intentionally an exclusion check. If a NEW auth-dependent field
+// is added to ir.Principal, it MUST be added here, or such rules will be wrongly
+// enforced pre-auth. Test_isPreAuthRule pins every Principal field to force that.
+func isPreAuthRule(rule *ir.AuthorizationRule) bool {
 	return rule.Principal.JWT == nil && len(rule.Principal.Headers) == 0
 }
 
