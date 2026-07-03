@@ -77,7 +77,7 @@ func (*rbac) patchHCM(
 
 	// Add the pre-auth RBAC filter if any route needs early, pre-authentication
 	// enforcement of authentication-independent rules.
-	if listenerContainsPreAuthRBAC(irListener) && !hcmContainsFilter(mgr, rbacPreAuthFilterName) {
+	if listenerNeedsPreAuthRBAC(irListener) && !hcmContainsFilter(mgr, rbacPreAuthFilterName) {
 		preAuthFilter, err := buildHCMRBACFilterWithName(rbacPreAuthFilterName)
 		if err != nil {
 			return err
