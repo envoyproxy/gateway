@@ -484,22 +484,20 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 			// Only process parentRefs that were handled by this translator
 			// (skip those referencing Gateways with different GatewayClasses)
-			parentRefCtx := targetedRoute.GetRouteParentContext(p)
-			if parentRefCtx == nil {
-				continue
+			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
+				if parentRefCtx.GetGateway() == nil {
+					// Report TargetNotFound on the ListenerSet ancestor when no listeners match this parentRef.
+					status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef,
+						t.GatewayControllerName,
+						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+						gwapiv1.PolicyReasonTargetNotFound,
+						"No listeners in the ListenerSet match this parent ref",
+						policy.Generation,
+					)
+				} else {
+					parentRefCtxs = append(parentRefCtxs, parentRefCtx)
+				}
 			}
-			if parentRefCtx.GetGateway() == nil {
-				// Report TargetNotFound on the ListenerSet ancestor when no listeners match this parentRef.
-				status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef,
-					t.GatewayControllerName,
-					gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-					gwapiv1.PolicyReasonTargetNotFound,
-					"No listeners in the ListenerSet match this parent ref",
-					policy.Generation,
-				)
-				continue
-			}
-			parentRefCtxs = append(parentRefCtxs, parentRefCtx)
 		}
 	}
 

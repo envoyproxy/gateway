@@ -279,35 +279,32 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			ancestorRef := getAncestorRefForListenerSetPolicy(lsNN, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 
-			parentRefCtx := targetedRoute.GetRouteParentContext(p)
-			if parentRefCtx == nil {
-				continue
-			}
-			if parentRefCtx.GetGateway() == nil {
-				// Report TargetNotFound on the ListenerSet ancestor when no listeners match this parentRef.
-				status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef,
-					t.GatewayControllerName,
-					gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-					gwapiv1.PolicyReasonTargetNotFound,
-					"No listeners in the ListenerSet match this parent ref",
-					policy.Generation,
-				)
-				continue
-			}
-
-			// Populate gatewayRouteMap with backing Gateway keys so overridden-route lookup still works.
-			for _, listener := range parentRefCtx.listeners {
-				gwNN := utils.NamespacedName(listener.gateway.Gateway)
-				key := gwNN.String()
-				if _, ok := gatewayRouteMap[key]; !ok {
-					gatewayRouteMap[key] = make(map[string]sets.Set[string])
+			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
+				if parentRefCtx.GetGateway() == nil {
+					// Report TargetNotFound on the ListenerSet ancestor when no listeners match this parentRef.
+					status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef,
+						t.GatewayControllerName,
+						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+						gwapiv1.PolicyReasonTargetNotFound,
+						"No listeners in the ListenerSet match this parent ref",
+						policy.Generation,
+					)
+				} else {
+					// Populate gatewayRouteMap with backing Gateway keys so overridden-route lookup still works.
+					for _, listener := range parentRefCtx.listeners {
+						gwNN := utils.NamespacedName(listener.gateway.Gateway)
+						key := gwNN.String()
+						if _, ok := gatewayRouteMap[key]; !ok {
+							gatewayRouteMap[key] = make(map[string]sets.Set[string])
+						}
+						listenerRouteMap := gatewayRouteMap[key]
+						sectionName := string(listener.Name)
+						if _, ok := listenerRouteMap[sectionName]; !ok {
+							listenerRouteMap[sectionName] = make(sets.Set[string])
+						}
+						listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
+					}
 				}
-				listenerRouteMap := gatewayRouteMap[key]
-				sectionName := string(listener.Name)
-				if _, ok := listenerRouteMap[sectionName]; !ok {
-					listenerRouteMap[sectionName] = make(sets.Set[string])
-				}
-				listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
 			}
 		}
 	}
