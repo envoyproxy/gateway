@@ -1,0 +1,1 @@
+Fixed cross-namespace targetSelectors for BackendTrafficPolicy RoutingType by using the target resource's namespace in the index key instead of the policy's namespace.

@@ -1,0 +1,1 @@
+Lua EnvoyExtensionPolicies are now disabled by default. Use the new `enableLua` field in `extensionApis` to explicitly enable them. The `disableLua` field is deprecated and will be removed in a future release.

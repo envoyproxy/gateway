@@ -21,7 +21,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -50,8 +49,8 @@ type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext
 	ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext
 	ProcessTLSRoutes(tlsRoutes []*gwapiv1.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
-	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
-	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
+	ProcessTCPRoutes(tcpRoutes []*gwapiv1.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
+	ProcessUDPRoutes(udpRoutes []*gwapiv1.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
 }
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
@@ -542,18 +541,22 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
 	if retry.Backoff != nil {
 		backoff, err := time.ParseDuration(string(*retry.Backoff))
 		if err == nil {
-			res.PerRetry = &ir.PerRetryPolicy{
-				BackOff: &ir.BackOffPolicy{
-					BaseInterval: ir.MetaV1DurationPtr(backoff),
-				},
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
 			}
-			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
-			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
-				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
-				if err == nil {
-					res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
-				}
+			res.PerRetry.BackOff = &ir.BackOffPolicy{
+				BaseInterval: ir.MetaV1DurationPtr(backoff),
 			}
+		}
+	}
+	// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
+	if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+		backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+		if err == nil {
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
+			}
+			res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
 		}
 	}
 	if len(retry.Codes) > 0 {
@@ -577,13 +580,6 @@ func (t *Translator) processHTTPRouteRule(
 ) ([]*ir.HTTPRoute, status.Error) {
 	var sessionPersistence *ir.SessionPersistence
 	if rule.SessionPersistence != nil {
-		if rule.SessionPersistence.IdleTimeout != nil {
-			return nil, status.NewRouteStatusError(
-				fmt.Errorf("idle timeout is not supported in envoy gateway"),
-				status.RouteReasonUnsupportedSetting,
-			)
-		}
-
 		var sessionName string
 		if rule.SessionPersistence.SessionName == nil {
 			// SessionName is optional on the gateway-api, but envoy requires it
@@ -1524,7 +1520,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
+func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	relevantUDPRoutes := make([]*UDPRouteContext, 0, len(udpRoutes))
@@ -1677,7 +1673,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
+func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	relevantTCPRoutes := make([]*TCPRouteContext, 0, len(tcpRoutes))
@@ -2018,13 +2014,14 @@ func (t *Translator) processServiceImportDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
+		protocol  = defaultProtocol
 	)
 
 	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
@@ -2037,11 +2034,11 @@ func (t *Translator) processServiceImportDestinationSetting(
 	}
 
 	if servicePort.AppProtocol != nil {
-		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, false)
+		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
-	// For WebSocket services, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
 	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-	forceHTTP1Upstream := servicePort.AppProtocol != nil && isWebSocketServiceAppProtocol(*servicePort.AppProtocol)
+	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	backendIps := serviceImport.Spec.IPs
 	isHeadless := len(backendIps) == 0
@@ -2079,7 +2076,7 @@ func (t *Translator) processServiceDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
@@ -2087,6 +2084,7 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
 	)
+	protocol := defaultProtocol
 
 	service := t.GetService(backendNamespace, string(backendRef.Name))
 	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
@@ -2109,11 +2107,11 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// support HTTPRouteBackendProtocolH2C/GRPC
 	if servicePort.AppProtocol != nil {
-		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, true)
+		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
-	// For WebSocket services, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
 	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-	forceHTTP1Upstream := servicePort.AppProtocol != nil && isWebSocketServiceAppProtocol(*servicePort.AppProtocol)
+	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	isHeadless := isServiceHeadless(service)
 
@@ -2254,7 +2252,12 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 	case resource.KindGRPCRoute:
 		return ir.GRPC
 	case resource.KindTLSRoute:
-		return ir.HTTPS
+		// TLSRoute is translated into an ir.TCPRoute. The upstream protocol is
+		// plain TCP from Envoy's perspective; whether the upstream connection is
+		// secured by TLS is governed by ds.TLS (e.g. via BackendTLSPolicy), not by
+		// the AppProtocol. Returning ir.TCP keeps the IR semantically accurate and
+		// avoids emitting HTTP protocol options on a TCP proxy cluster.
+		return ir.TCP
 	}
 	return ir.TCP
 }
@@ -2490,18 +2493,19 @@ func (t *Translator) processBackendDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 ) *ir.DestinationSetting {
 	var dstAddrType *ir.DestinationAddressType
+	protocol := defaultProtocol
 	forceHTTP1Upstream := false
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
-		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
+		protocol = resolveBackendProtocol(string(ap), protocol)
 		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
 		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-		forceHTTP1Upstream = forceHTTP1Upstream || isWebSocketBackendAppProtocol(ap)
+		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
 	}
 
 	ds := &ir.DestinationSetting{Name: name}
@@ -2568,43 +2572,56 @@ func (t *Translator) processBackendDestinationSetting(
 	return ds
 }
 
-// serviceAppProtocolToIRAppProtocol translates the appProtocol string into an ir.AppProtocol.
+// resolveBackendProtocol computes the upstream ir.AppProtocol for a backend from the
+// backend's own appProtocol and the route's default (fallback) protocol. It recognizes
+// both the Kubernetes Service convention ("kubernetes.io/*") and the Envoy Gateway
+// Backend convention ("gateway.envoyproxy.io/*").
 //
-// When grpcCompatibility is enabled, `grpc` will be parsed as a valid option for HTTP2.
-// See https://github.com/envoyproxy/gateway/issues/5485#issuecomment-2731322578.
-func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol, grpcCompatibility bool) ir.AppProtocol {
+// backendAppProtocol describes an HTTP-layer protocol (h2c/ws/grpc), so it only refines
+// the upstream protocol of HTTP-based routes. For non-HTTP routes (e.g. TCPRoute, TLSRoute
+// and UDPRoute, whose default protocol is TCP/UDP), the route is a raw L4 proxy and the
+// appProtocol is irrelevant; returning the default avoids emitting HTTP protocol options
+// on an L4 cluster.
+func resolveBackendProtocol(backendAppProtocol string, defaultProtocol ir.AppProtocol) ir.AppProtocol {
+	// The backendAppProtocol is only relevant for HTTP-based routes, so if the default protocol is not HTTP, return the default.
+	if defaultProtocol != ir.HTTP {
+		return defaultProtocol
+	}
 	switch {
-	case ap == "kubernetes.io/h2c":
+	case backendAppProtocol == "kubernetes.io/h2c" || backendAppProtocol == string(egv1a1.AppProtocolTypeH2C):
 		return ir.HTTP2
-	case ap == "kubernetes.io/ws" || ap == "kubernetes.io/wss":
-		return ir.HTTP
-	case ap == "grpc" && grpcCompatibility:
+	// HTTPRoute can route to gRPC backends, returning ir.GRPC allows the IR to emit gRPC protocol options on the cluster.
+	// Kubernetes does not standardize grpc as a Kubernetes appProtocol value, but some projects like Istio uses "grpc" as a convention for gRPC backends, so we recognize it here.
+	case backendAppProtocol == "grpc":
 		return ir.GRPC
 	default:
 		return defaultProtocol
 	}
 }
 
-func isWebSocketServiceAppProtocol(ap string) bool {
-	return ap == "kubernetes.io/ws" || ap == "kubernetes.io/wss"
+// shouldForceHTTP1Upstream reports whether the upstream connection should be forced to
+// HTTP/1.1. WebSocket over HTTP/2 is not widely supported by upstreams and can lead to
+// connection failures, so a WebSocket backend on an HTTP-based route must use HTTP/1.1.
+func shouldForceHTTP1Upstream(appProtocol ir.AppProtocol, backendAppProtocol *string) bool {
+	return backendAppProtocol != nil && isHTTPProtocol(appProtocol) && isWebSocketAppProtocol(*backendAppProtocol)
 }
 
-func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtocol ir.AppProtocol) ir.AppProtocol {
-	switch ap {
-	case egv1a1.AppProtocolTypeH2C:
-		return ir.HTTP2
-	case egv1a1.AppProtocolTypeWS, egv1a1.AppProtocolTypeWSS:
-		return ir.HTTP
-	case "grpc":
-		return ir.GRPC
+func isHTTPProtocol(appProtocol ir.AppProtocol) bool {
+	switch appProtocol {
+	case ir.HTTP, ir.HTTP2, ir.GRPC:
+		return true
 	default:
-		return defaultProtocol
+		return false
 	}
 }
 
-func isWebSocketBackendAppProtocol(ap egv1a1.AppProtocolType) bool {
+// isWebSocketAppProtocol reports whether the given appProtocol denotes WebSocket
+// traffic, covering both the Kubernetes Service convention ("kubernetes.io/ws[s]")
+// and the Envoy Gateway Backend convention ("gateway.envoyproxy.io/ws[s]").
+func isWebSocketAppProtocol(ap string) bool {
 	switch ap {
-	case egv1a1.AppProtocolTypeWS, egv1a1.AppProtocolTypeWSS:
+	case "kubernetes.io/ws", "kubernetes.io/wss",
+		string(egv1a1.AppProtocolTypeWS), string(egv1a1.AppProtocolTypeWSS):
 		return true
 	default:
 		return false
@@ -2672,8 +2689,8 @@ func tlsRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.TLSRoute) []*gwapiv1.TLS
 	return copies
 }
 
-func udpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1a2.UDPRoute) []*gwapiv1a2.UDPRoute {
-	copies := make([]*gwapiv1a2.UDPRoute, len(routes))
+func udpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.UDPRoute) []*gwapiv1.UDPRoute {
+	copies := make([]*gwapiv1.UDPRoute, len(routes))
 	for i, r := range routes {
 		out := *r
 		r.Status.DeepCopyInto(&out.Status)
@@ -2682,8 +2699,8 @@ func udpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1a2.UDPRoute) []*gwapiv1a2
 	return copies
 }
 
-func tcpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1a2.TCPRoute) []*gwapiv1a2.TCPRoute {
-	copies := make([]*gwapiv1a2.TCPRoute, len(routes))
+func tcpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.TCPRoute) []*gwapiv1.TCPRoute {
+	copies := make([]*gwapiv1.TCPRoute, len(routes))
 	for i, r := range routes {
 		out := *r
 		r.Status.DeepCopyInto(&out.Status)
