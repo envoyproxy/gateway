@@ -26,6 +26,15 @@ import (
 	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
 )
 
+// applyIfOwned skips the apply when the resource would hijack an unrelated,
+// pre-existing resource in GatewayNamespace mode (see checkOwnership).
+func (i *Infra) applyIfOwned(ctx context.Context, obj client.Object) error {
+	if err := i.checkOwnership(ctx, obj); err != nil {
+		return err
+	}
+	return i.Client.ServerSideApply(ctx, obj)
+}
+
 // createOrUpdateServiceAccount creates a ServiceAccount in the kube api server based on the
 // provided ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRender) (err error) {
@@ -67,10 +76,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		return err
 	}
 
-	if err = i.checkOwnership(ctx, sa); err != nil {
-		return err
-	}
-	return i.Client.ServerSideApply(ctx, sa)
+	return i.applyIfOwned(ctx, sa)
 }
 
 // createOrUpdateConfigMap creates a ConfigMap in the Kube api server based on the provided
@@ -109,10 +115,7 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 		}
 	}()
 
-	if err = i.checkOwnership(ctx, cm); err != nil {
-		return err
-	}
-	return i.Client.ServerSideApply(ctx, cm)
+	return i.applyIfOwned(ctx, cm)
 }
 
 // createOrUpdateDeployment creates a Deployment in the kube api server based on the provided
@@ -160,16 +163,12 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		}
 	}()
 
-	if err = i.checkOwnership(ctx, deployment); err != nil {
-		return err
-	}
-
 	old := &appsv1.Deployment{}
 	err = i.Client.Get(ctx, types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}, old)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// It's the deployment creation.
-			return i.Client.ServerSideApply(ctx, deployment)
+			return i.applyIfOwned(ctx, deployment)
 		}
 		return err
 	}
@@ -203,7 +202,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		}
 	}
 
-	return i.Client.ServerSideApply(ctx, deployment)
+	return i.applyIfOwned(ctx, deployment)
 }
 
 // createOrUpdateDaemonSet creates a DaemonSet in the kube api server based on the provided
@@ -251,16 +250,12 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		}
 	}()
 
-	if err = i.checkOwnership(ctx, daemonSet); err != nil {
-		return err
-	}
-
 	old := &appsv1.DaemonSet{}
 	err = i.Client.Get(ctx, types.NamespacedName{Name: daemonSet.Name, Namespace: daemonSet.Namespace}, old)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// It's the daemonset creation.
-			return i.Client.ServerSideApply(ctx, daemonSet)
+			return i.applyIfOwned(ctx, daemonSet)
 		}
 		return err
 	}
@@ -293,7 +288,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		}
 	}
 
-	return i.Client.ServerSideApply(ctx, daemonSet)
+	return i.applyIfOwned(ctx, daemonSet)
 }
 
 func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {
@@ -339,11 +334,7 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		}
 	}()
 
-	if err = i.checkOwnership(ctx, pdb); err != nil {
-		return err
-	}
-
-	return i.Client.ServerSideApply(ctx, pdb)
+	return i.applyIfOwned(ctx, pdb)
 }
 
 // createOrUpdateHPA creates HorizontalPodAutoscaler object in the kube api server based on
@@ -392,11 +383,7 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		}
 	}()
 
-	if err = i.checkOwnership(ctx, hpa); err != nil {
-		return err
-	}
-
-	return i.Client.ServerSideApply(ctx, hpa)
+	return i.applyIfOwned(ctx, hpa)
 }
 
 // createOrUpdateRateLimitService creates a Service in the kube api server based on the provided ResourceRender,
@@ -437,11 +424,7 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 		}
 	}()
 
-	if err = i.checkOwnership(ctx, svc); err != nil {
-		return err
-	}
-
-	return i.Client.ServerSideApply(ctx, svc)
+	return i.applyIfOwned(ctx, svc)
 }
 
 // deleteServiceAccount deletes the ServiceAccount in the kube api server, if it exists.
