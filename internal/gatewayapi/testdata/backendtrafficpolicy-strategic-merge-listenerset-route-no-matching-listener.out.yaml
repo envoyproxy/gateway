@@ -14,20 +14,7 @@ backendTrafficPolicies:
       tcp:
         connectTimeout: 10s
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-        sectionName: non-existent
-      conditions:
-      - lastTransitionTime: null
-        message: No listeners in the ListenerSet match this parent ref
-        reason: TargetNotFound
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
