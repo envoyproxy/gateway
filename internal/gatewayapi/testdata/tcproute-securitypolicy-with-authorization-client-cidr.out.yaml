@@ -394,7 +394,7 @@ securityPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
-          listeners: [foo] and these routes: [default/tcpr-app-bar]'
+          gateway listeners: [envoy-gateway/gateway-tcp/foo] and these routes: [default/tcpr-app-bar]'
         reason: Overridden
         status: "True"
         type: Overridden
