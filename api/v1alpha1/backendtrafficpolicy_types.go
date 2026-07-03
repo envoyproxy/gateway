@@ -116,6 +116,7 @@ type BackendTrafficPolicySpec struct {
 	// +patchStrategy=merge
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=3
 	Compression []*Compression `json:"compression,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// The compressor config for the http streams.
@@ -126,6 +127,7 @@ type BackendTrafficPolicySpec struct {
 	// +patchStrategy=merge
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=3
 	Compressor []*Compression `json:"compressor,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// ResponseOverride defines the configuration to override specific responses with a custom one.

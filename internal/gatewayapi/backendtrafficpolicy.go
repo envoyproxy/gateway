@@ -2829,6 +2829,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 					Type:        c.Type,
 					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 				}
+				setCompressorSettings(&irCompression, c)
 				if c.MinContentLength != nil {
 					minContentLength, ok := c.MinContentLength.AsInt64()
 					if ok {
@@ -2851,6 +2852,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 			Type:        c.Type,
 			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 		}
+		setCompressorSettings(&irCompression, c)
 		if c.MinContentLength != nil {
 			minContentLength, ok := c.MinContentLength.AsInt64()
 			if ok {
@@ -2861,6 +2863,25 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 	}
 
 	return result
+}
+
+// setCompressorSettings copies the settings of the compressor library matching the compressor
+// type into the IR. Empty settings are left unset so that the Envoy defaults apply.
+func setCompressorSettings(irCompression *ir.Compression, c *egv1a1.Compression) {
+	switch c.Type {
+	case egv1a1.GzipCompressorType:
+		if c.Gzip != nil && *c.Gzip != (egv1a1.GzipCompressor{}) {
+			irCompression.Gzip = c.Gzip.DeepCopy()
+		}
+	case egv1a1.BrotliCompressorType:
+		if c.Brotli != nil && *c.Brotli != (egv1a1.BrotliCompressor{}) {
+			irCompression.Brotli = c.Brotli.DeepCopy()
+		}
+	case egv1a1.ZstdCompressorType:
+		if c.Zstd != nil && *c.Zstd != (egv1a1.ZstdCompressor{}) {
+			irCompression.Zstd = c.Zstd.DeepCopy()
+		}
+	}
 }
 
 func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.HTTPUpgradeConfig {
