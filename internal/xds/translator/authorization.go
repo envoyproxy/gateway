@@ -182,17 +182,23 @@ func hasPreRBACAuthentication(sf *ir.SecurityFeatures) bool {
 		sf.JWT != nil
 }
 
-// authIndependentPrefix returns the leading run of authorization rules whose
-// principals can be evaluated without any authentication state, i.e. they only
-// match on clientCIDRs and/or clientIPGeoLocations (operation/method matching is
-// also authentication-independent). Evaluation stops at the first rule that
-// depends on authentication (a JWT or header principal).
+// authIndependentPrefix returns the longest leading run of authorization rules
+// whose principal matches only on client IP (clientCIDRs) and/or geo location
+// (clientIPGeoLocations) — the principals that can be evaluated before any
+// authentication filter runs. It stops at the first rule whose principal needs
+// authentication state (a JWT or header principal). It is a contiguous prefix,
+// not a filter: once an auth-dependent rule is seen, later IP/geo rules are
+// excluded too.
 //
-// Returning only the leading prefix preserves the original first-match-wins
-// semantics: every rule in the prefix is evaluated in the same relative order
-// and before any authentication-dependent rule, so enforcing a Deny in the
-// prefix early is safe, and an Allow in the prefix is non-terminal (the request
-// continues to the main RBAC filter, which re-evaluates the full policy).
+// The prefix must be contiguous to preserve the policy's first-match-wins
+// semantics. Because these rules keep their original order and all precede any
+// auth-dependent rule, the pre-auth filter can only reach the same verdict the
+// main filter would at the same rule position:
+//   - a Deny in the prefix is enforced early (a 403 the main filter would also
+//     return), and
+//   - an Allow in the prefix is non-terminal — the request falls through to the
+//     authentication filters and the main RBAC filter, which re-evaluates the
+//     full policy (including the real default action).
 func authIndependentPrefix(authorization *ir.Authorization) []*ir.AuthorizationRule {
 	if authorization == nil {
 		return nil
