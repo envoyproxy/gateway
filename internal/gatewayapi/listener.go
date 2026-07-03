@@ -851,7 +851,11 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 			validExprs = append(validExprs, expr)
 		}
 		if len(errs) > 0 {
-			return nil, utilerrors.NewAggregate(errs)
+			// Per the AccessLog API, invalid CEL match expressions are ignored:
+			// only the invalid ones are dropped, the rest of the config is kept.
+			t.Logger.Info("ignoring invalid CEL match expressions in the EnvoyProxy access log configuration",
+				"namespace", envoyproxy.Namespace, "name", envoyproxy.Name,
+				"error", utilerrors.NewAggregate(errs).Error())
 		}
 
 		if len(accessLog.Sinks) == 0 {
