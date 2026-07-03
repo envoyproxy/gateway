@@ -147,7 +147,7 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 // in the given list, and if so, a list of the Listeners within that Gateway or ListenerSet that
 // are included by the parent ref (either one specific Listener, or all Listeners
 // in the Gateway or ListenerSet, depending on whether section name is specified or not).
-func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext, *GatewayContext) {
+func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
 	// The parentRef is an ListenerSet
@@ -157,7 +157,6 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 			ns = *parentRef.Namespace
 		}
 		var matchedListenerSet bool
-		var backingGateway *GatewayContext
 		for _, gateway := range gateways {
 			for _, listener := range gateway.listeners {
 				if !listener.isFromListenerSet() {
@@ -168,16 +167,13 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 					continue
 				}
 				matchedListenerSet = true
-				if backingGateway == nil {
-					backingGateway = gateway
-				}
 				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
 					(parentRef.Port == nil || *parentRef.Port == listener.Port) {
 					referencedListeners = append(referencedListeners, listener)
 				}
 			}
 		}
-		return matchedListenerSet, referencedListeners, backingGateway
+		return matchedListenerSet, referencedListeners
 	}
 
 	// The parentRef is a Gateway
@@ -192,11 +188,11 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 					referencedListeners = append(referencedListeners, listener)
 				}
 			}
-			return true, referencedListeners, gateway
+			return true, referencedListeners
 		}
 	}
 
-	return false, referencedListeners, nil
+	return false, referencedListeners
 }
 
 func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {

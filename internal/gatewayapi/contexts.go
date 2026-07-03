@@ -792,27 +792,14 @@ type RouteParentContext struct {
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
-	// backingGateway holds the gateway for ListenerSet parentRefs with no matched listeners.
-	backingGateway *GatewayContext
 }
 
-// GetGateway returns the GatewayContext if parent resource has attached listeners.
+// GetGateway returns the GatewayContext if parent resource is a gateway.
 func (r *RouteParentContext) GetGateway() *GatewayContext {
 	if r == nil || len(r.listeners) == 0 {
 		return nil
 	}
 	return r.listeners[0].gateway
-}
-
-// GetBackingGateway returns the GatewayContext regardless of whether listeners matched.
-func (r *RouteParentContext) GetBackingGateway() *GatewayContext {
-	if r == nil {
-		return nil
-	}
-	if len(r.listeners) > 0 {
-		return r.listeners[0].gateway
-	}
-	return r.backingGateway
 }
 
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
