@@ -535,7 +535,6 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		for _, parentRefCtx := range parentRefCtxs {
 			for _, listener := range parentRefCtx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
-
 				ancestorRef := getAncestorRefForPolicy(gwNN, &listener.Name)
 
 				// Find Gateway listener level policy
