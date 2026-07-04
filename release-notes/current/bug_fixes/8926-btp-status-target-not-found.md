@@ -1,0 +1,1 @@
+Fixed BackendTrafficPolicy status going stale when the policy stops attaching to any target: policies whose `targetRef`/`targetRefs` point at a nonexistent object (#8926) or whose `targetSelectors` match no objects (#8927) now report `Accepted=False` with reason `TargetNotFound` and an updated `observedGeneration`, instead of retaining a stale `Accepted=True` condition.

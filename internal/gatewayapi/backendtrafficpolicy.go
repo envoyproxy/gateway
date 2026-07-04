@@ -362,6 +362,40 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		}
 	}
 
+	// Report policies that did not attach to any target so their status does not
+	// go stale. This covers two distinct cases that both resolve to zero ancestors:
+	//   - targetRef/targetRefs pointing at an object that does not exist (#8926)
+	//   - targetSelectors that match no objects (#8927)
+	// In both cases we set Accepted=False with reason TargetNotFound and the current
+	// generation, so a policy that stops matching any target no longer keeps a stale
+	// Accepted=True condition with an out-of-date observedGeneration.
+	for i, currPolicy := range backendTrafficPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		policy, found := handledPolicies[policyName]
+		if !found {
+			// Never matched any target (e.g. targetSelectors matched nothing), so the
+			// policy was never added to res. Add it now so its status is published.
+			policy = policyCopies[i]
+			handledPolicies[policyName] = policy
+			res = append(res, policy)
+		}
+		// If the policy attached to at least one target, it already has ancestor
+		// status set by the processing loops above; leave it untouched.
+		if len(policy.Status.Ancestors) > 0 {
+			continue
+		}
+		ancestorRef := ancestorRefForUnattachedBackendTrafficPolicy(policy)
+		status.SetConditionForPolicyAncestor(&policy.Status,
+			&ancestorRef,
+			t.GatewayControllerName,
+			gwapiv1.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwapiv1.PolicyReasonTargetNotFound,
+			backendTrafficPolicyTargetNotFoundMessage(policy),
+			policy.Generation,
+		)
+	}
+
 	for _, policy := range res {
 		// Truncate Ancestor list of longer than 16
 		if len(policy.Status.Ancestors) > 16 {
@@ -369,6 +403,47 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		}
 	}
 	return res
+}
+
+// ancestorRefForUnattachedBackendTrafficPolicy builds the ancestor reference used to
+// report status for a BackendTrafficPolicy that could not be attached to any target.
+// When the policy uses an explicit targetRef/targetRefs, the (unresolved) target is
+// used as the ancestor so the status clearly points at the missing object. When the
+// policy only uses targetSelectors, which name no specific object, the policy itself
+// is used as the ancestor.
+func ancestorRefForUnattachedBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) gwapiv1.ParentReference {
+	if refs := policy.Spec.GetTargetRefs(); len(refs) > 0 {
+		ref := refs[0]
+		group := ref.Group
+		kind := ref.Kind
+		ns := gwapiv1.Namespace(policy.Namespace)
+		return gwapiv1.ParentReference{
+			Group:       &group,
+			Kind:        &kind,
+			Namespace:   &ns,
+			Name:        ref.Name,
+			SectionName: ref.SectionName,
+		}
+	}
+
+	ns := gwapiv1.Namespace(policy.Namespace)
+	return gwapiv1.ParentReference{
+		Group:     GroupPtr(egv1a1.GroupName),
+		Kind:      KindPtr(egv1a1.KindBackendTrafficPolicy),
+		Namespace: &ns,
+		Name:      gwapiv1.ObjectName(policy.Name),
+	}
+}
+
+// backendTrafficPolicyTargetNotFoundMessage returns a human-readable message explaining
+// why an unattached BackendTrafficPolicy resolved to zero targets.
+func backendTrafficPolicyTargetNotFoundMessage(policy *egv1a1.BackendTrafficPolicy) string {
+	if refs := policy.Spec.GetTargetRefs(); len(refs) > 0 {
+		ref := refs[0]
+		return fmt.Sprintf("The BackendTrafficPolicy target %s %s/%s was not found",
+			ref.Kind, policy.Namespace, ref.Name)
+	}
+	return "The BackendTrafficPolicy targetSelectors did not match any target"
 }
 
 func (t *Translator) buildGatewayPolicyMap(
