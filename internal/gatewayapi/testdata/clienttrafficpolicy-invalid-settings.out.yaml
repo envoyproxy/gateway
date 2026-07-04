@@ -932,7 +932,7 @@ infraIR:
       name: default/gateway-5
       namespace: envoy-gateway-system
 tcpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcp-route-1
@@ -964,7 +964,7 @@ tcpRoutes:
         name: gateway-1
         namespace: default
         sectionName: tcp-1
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcp-route-1
