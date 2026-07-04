@@ -35954,10 +35954,29 @@ spec:
                                 type: array
                               labels:
                                 additionalProperties:
+                                  description: |-
+                                    LabelValue is the value of a label in the Gateway API. This is used for validation
+                                    of maps such as Gateway infrastructure labels. This matches the Kubernetes
+                                    label validation rules:
+                                    * must be 63 characters or less (can be empty),
+                                    * unless empty, must begin and end with an alphanumeric character ([a-z0-9A-Z]),
+                                    * could contain dashes (-), underscores (_), dots (.), and alphanumerics between.
+
+                                    Valid values include:
+
+                                    * MyValue
+                                    * my.name
+                                    * 123-my-value
+                                  maxLength: 63
+                                  minLength: 0
+                                  pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
                                   type: string
                                 description: |-
                                   Labels are the additional labels that should be tagged to the pods.
                                   By default, no additional pod labels are tagged.
+                                  Keys must be valid label keys (optionally prefixed qualified names) and
+                                  values must satisfy the Kubernetes label value format, otherwise the
+                                  resource is rejected.
                                 type: object
                               nodeSelector:
                                 additionalProperties:
@@ -41511,10 +41530,29 @@ spec:
                                 type: array
                               labels:
                                 additionalProperties:
+                                  description: |-
+                                    LabelValue is the value of a label in the Gateway API. This is used for validation
+                                    of maps such as Gateway infrastructure labels. This matches the Kubernetes
+                                    label validation rules:
+                                    * must be 63 characters or less (can be empty),
+                                    * unless empty, must begin and end with an alphanumeric character ([a-z0-9A-Z]),
+                                    * could contain dashes (-), underscores (_), dots (.), and alphanumerics between.
+
+                                    Valid values include:
+
+                                    * MyValue
+                                    * my.name
+                                    * 123-my-value
+                                  maxLength: 63
+                                  minLength: 0
+                                  pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
                                   type: string
                                 description: |-
                                   Labels are the additional labels that should be tagged to the pods.
                                   By default, no additional pod labels are tagged.
+                                  Keys must be valid label keys (optionally prefixed qualified names) and
+                                  values must satisfy the Kubernetes label value format, otherwise the
+                                  resource is rejected.
                                 type: object
                               nodeSelector:
                                 additionalProperties:
@@ -44771,10 +44809,29 @@ spec:
                             type: string
                           labels:
                             additionalProperties:
+                              description: |-
+                                LabelValue is the value of a label in the Gateway API. This is used for validation
+                                of maps such as Gateway infrastructure labels. This matches the Kubernetes
+                                label validation rules:
+                                * must be 63 characters or less (can be empty),
+                                * unless empty, must begin and end with an alphanumeric character ([a-z0-9A-Z]),
+                                * could contain dashes (-), underscores (_), dots (.), and alphanumerics between.
+
+                                Valid values include:
+
+                                * MyValue
+                                * my.name
+                                * 123-my-value
+                              maxLength: 63
+                              minLength: 0
+                              pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
                               type: string
                             description: |-
                               Labels that should be appended to the service.
                               By default, no labels are appended.
+                              Keys must be valid label keys (optionally prefixed qualified names) and
+                              values must satisfy the Kubernetes label value format, otherwise the
+                              resource is rejected.
                             type: object
                           loadBalancerClass:
                             description: |-

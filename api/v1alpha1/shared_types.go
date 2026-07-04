@@ -173,9 +173,12 @@ type KubernetesPodSpec struct {
 
 	// Labels are the additional labels that should be tagged to the pods.
 	// By default, no additional pod labels are tagged.
+	// Keys must be valid label keys (optionally prefixed qualified names) and
+	// values must satisfy the Kubernetes label value format, otherwise the
+	// resource is rejected.
 	//
 	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels map[gwapiv1.LabelKey]gwapiv1.LabelValue `json:"labels,omitempty"`
 
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Optional: Defaults to empty.  See type description for default values of each field.
@@ -329,9 +332,12 @@ type KubernetesServiceSpec struct {
 
 	// Labels that should be appended to the service.
 	// By default, no labels are appended.
+	// Keys must be valid label keys (optionally prefixed qualified names) and
+	// values must satisfy the Kubernetes label value format, otherwise the
+	// resource is rejected.
 	//
 	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels map[gwapiv1.LabelKey]gwapiv1.LabelValue `json:"labels,omitempty"`
 
 	// Type determines how the Service is exposed. Defaults to LoadBalancer.
 	// Valid options are ClusterIP, LoadBalancer and NodePort.
