@@ -263,6 +263,10 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
 
+	// Tracks policies that were successfully attached to at least one real target
+	// during this pass, so we can report the rest (zero targets) as TargetNotFound.
+	attachedPolicies := make(map[types.NamespacedName]bool, policyMapSize)
+
 	// Translate
 	// 1. First translate Policies targeting RouteRules
 	// 2. Next translate Policies targeting xRoutes
@@ -286,8 +290,10 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
+				if t.processBackendTrafficPolicyForRoute(xdsIR,
+					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget) {
+					attachedPolicies[policyName] = true
+				}
 			}
 		}
 	}
@@ -312,8 +318,10 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
+				if t.processBackendTrafficPolicyForRoute(xdsIR,
+					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget) {
+					attachedPolicies[policyName] = true
+				}
 			}
 		}
 	}
@@ -331,8 +339,10 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBackendTrafficPolicyForGateway(xdsIR,
-					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
+				if t.processBackendTrafficPolicyForGateway(xdsIR,
+					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget) {
+					attachedPolicies[policyName] = true
+				}
 			}
 		}
 	}
@@ -356,14 +366,16 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBackendTrafficPolicyForGateway(xdsIR,
-					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
+				if t.processBackendTrafficPolicyForGateway(xdsIR,
+					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget) {
+					attachedPolicies[policyName] = true
+				}
 			}
 		}
 	}
 
 	// Report policies that did not attach to any target so their status does not
-	// go stale. This covers two distinct cases that both resolve to zero ancestors:
+	// go stale. This covers two distinct cases that both resolve to zero targets:
 	//   - targetRef/targetRefs pointing at an object that does not exist (#8926)
 	//   - targetSelectors that match no objects (#8927)
 	// In both cases we set Accepted=False with reason TargetNotFound and the current
@@ -371,6 +383,9 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Accepted=True condition with an out-of-date observedGeneration.
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
+		if attachedPolicies[policyName] {
+			continue
+		}
 		policy, found := handledPolicies[policyName]
 		if !found {
 			// Never matched any target (e.g. targetSelectors matched nothing), so the
@@ -379,11 +394,10 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			handledPolicies[policyName] = policy
 			res = append(res, policy)
 		}
-		// If the policy attached to at least one target, it already has ancestor
-		// status set by the processing loops above; leave it untouched.
-		if len(policy.Status.Ancestors) > 0 {
-			continue
-		}
+		// The policy attached to no target. Drop any ancestor status carried over from
+		// a previous generation (which would otherwise remain stale) and report
+		// TargetNotFound with the current generation.
+		policy.Status.Ancestors = nil
 		ancestorRef := ancestorRefForUnattachedBackendTrafficPolicy(policy)
 		status.SetConditionForPolicyAncestor(&policy.Status,
 			&ancestorRef,
@@ -506,7 +520,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
-) {
+) bool {
 	var (
 		targetedRoute RouteContext
 		resolveErr    *status.PolicyResolveError
@@ -518,7 +532,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// reconciled by multiple controllers. And the other controller may
 	// have the target route.
 	if targetedRoute == nil {
-		return
+		return false
 	}
 
 	// Find the Gateway that the route belongs to and add it to the
@@ -568,7 +582,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
-		return
+		return true
 	}
 
 	if policy.Spec.MergeType == nil {
@@ -670,7 +684,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	// If policy target is route rule, we can skip the check
 	if currTarget.SectionName != nil {
-		return
+		return true
 	}
 
 	key := policyTargetRouteKey{
@@ -690,6 +704,8 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			policy.Generation,
 		)
 	}
+
+	return true
 }
 
 func (t *Translator) processBackendTrafficPolicyForGateway(
@@ -699,7 +715,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
-) {
+) bool {
 	var (
 		targetedGateway *GatewayContext
 		resolveErr      *status.PolicyResolveError
@@ -708,7 +724,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	// Negative statuses have already been assigned so it's safe to skip
 	targetedGateway, resolveErr = resolveBackendTrafficPolicyGatewayTargetRef(currTarget, gatewayMap)
 	if targetedGateway == nil {
-		return
+		return false
 	}
 
 	// Find its ancestor reference by resolved gateway, even with resolve error
@@ -723,7 +739,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
-		return
+		return true
 	}
 
 	// Set conditions for translation error if it got any
@@ -769,6 +785,8 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 			policy.Generation,
 		)
 	}
+
+	return true
 }
 
 func resolveBackendTrafficPolicyGatewayTargetRef(
