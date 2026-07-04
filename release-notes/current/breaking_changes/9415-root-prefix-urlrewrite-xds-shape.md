@@ -1,0 +1,1 @@
+Root `PathPrefix "/"` `HTTPRoute` URL rewrites with `replacePrefixMatch` now generate `regexRewrite` instead of `prefixRewrite` in the translated xDS `RouteAction` so the replacement prefix preserves the original path separator. EnvoyPatchPolicies or extension servers that patch or inspect the old `prefixRewrite` field for these routes must be updated before upgrade.
