@@ -242,7 +242,7 @@ spec:
       - type: Range
         range:
           start: 421
-          end: 421
+          end: 422
     response:
       statusCode: 500
 ---
