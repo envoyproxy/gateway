@@ -261,6 +261,14 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
 
+	// Tracks policies that were successfully attached to at least one real target
+	// during this pass. Any policy that ends up in res without attaching to a
+	// target has carried-over (deep-copied) status from a previous generation that
+	// is now stale, so we drop that status below. Cleaning up the resulting
+	// detached status on the actual object is handled by the provider status
+	// updater when it observes the status delete (see internal/provider/kubernetes/status.go).
+	attachedPolicies := make(map[types.NamespacedName]bool, policyMapSize)
+
 	// Translate
 	// 1. First translate Policies targeting RouteRules
 	// 2. Next translate Policies targeting xRoutes
@@ -284,8 +292,10 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
+				if t.processBackendTrafficPolicyForRoute(xdsIR,
+					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget) {
+					attachedPolicies[policyName] = true
+				}
 			}
 		}
 	}
@@ -310,8 +320,10 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
+				if t.processBackendTrafficPolicyForRoute(xdsIR,
+					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget) {
+					attachedPolicies[policyName] = true
+				}
 			}
 		}
 	}
@@ -329,8 +341,10 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBackendTrafficPolicyForGateway(xdsIR,
-					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
+				if t.processBackendTrafficPolicyForGateway(xdsIR,
+					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget) {
+					attachedPolicies[policyName] = true
+				}
 			}
 		}
 	}
@@ -354,9 +368,27 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBackendTrafficPolicyForGateway(xdsIR,
-					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
+				if t.processBackendTrafficPolicyForGateway(xdsIR,
+					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget) {
+					attachedPolicies[policyName] = true
+				}
 			}
+		}
+	}
+
+	// Drop stale carried-over status for policies that were added to res (their
+	// targetRef/targetRefs resolved to an object reference) but did not actually
+	// attach to any target this pass because the referenced object does not exist
+	// (#8926). Without this, the deep-copied Accepted=True condition with an
+	// out-of-date observedGeneration would be republished as-is. Emptying the
+	// ancestor list makes the gatewayapi runner treat the policy as having no
+	// status, which deletes it from the status store and lets the provider status
+	// updater clean up the stale status on the object. Policies whose selectors
+	// matched nothing (#8927) are never added to res, so they are already handled
+	// by that same delete path.
+	for _, policy := range res {
+		if !attachedPolicies[utils.NamespacedName(policy)] {
+			policy.Status.Ancestors = nil
 		}
 	}
 
@@ -429,7 +461,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
-) {
+) bool {
 	var (
 		targetedRoute RouteContext
 		resolveErr    *status.PolicyResolveError
@@ -441,7 +473,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// reconciled by multiple controllers. And the other controller may
 	// have the target route.
 	if targetedRoute == nil {
-		return
+		return false
 	}
 
 	// Find the Gateway that the route belongs to and add it to the
@@ -491,7 +523,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
-		return
+		return true
 	}
 
 	if policy.Spec.MergeType == nil {
@@ -593,7 +625,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	// If policy target is route rule, we can skip the check
 	if currTarget.SectionName != nil {
-		return
+		return true
 	}
 
 	key := policyTargetRouteKey{
@@ -613,6 +645,8 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			policy.Generation,
 		)
 	}
+
+	return true
 }
 
 func (t *Translator) processBackendTrafficPolicyForGateway(
@@ -622,7 +656,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
-) {
+) bool {
 	var (
 		targetedGateway *GatewayContext
 		resolveErr      *status.PolicyResolveError
@@ -631,7 +665,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	// Negative statuses have already been assigned so it's safe to skip
 	targetedGateway, resolveErr = resolveBackendTrafficPolicyGatewayTargetRef(currTarget, gatewayMap)
 	if targetedGateway == nil {
-		return
+		return false
 	}
 
 	// Find its ancestor reference by resolved gateway, even with resolve error
@@ -646,7 +680,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
-		return
+		return true
 	}
 
 	// Set conditions for translation error if it got any
@@ -692,6 +726,8 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 			policy.Generation,
 		)
 	}
+
+	return true
 }
 
 func resolveBackendTrafficPolicyGatewayTargetRef(
