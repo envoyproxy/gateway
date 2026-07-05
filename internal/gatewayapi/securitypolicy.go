@@ -1460,17 +1460,6 @@ func gatewaySecurityPolicyTargetListeners(
 	return listeners
 }
 
-func gatewayDirectListeners(gtwCtx *GatewayContext) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if listener.isFromListenerSet() {
-			continue
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
 func listenerSetSecurityPolicyTargetListeners(
 	gtwCtx *GatewayContext,
 	listenerSet *gwapiv1.ListenerSet,
