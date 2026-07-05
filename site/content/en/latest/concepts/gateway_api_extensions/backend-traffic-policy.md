@@ -128,8 +128,6 @@ spec:
 
 In this example, the HTTPRoute `my-route` would use `maxConnections: 50` from the route-level policy, overriding the gateway-level setting of 100.
 
-The same specificity rules apply when a `ListenerSet` is involved. A section-specific `ListenerSet` policy applies only to the named ListenerSet listener, while a ListenerSet-wide policy applies to the remaining listeners in that ListenerSet. The parent Gateway-wide policy applies to Gateway-owned listeners and to ListenerSet listeners that do not have a more specific ListenerSet policy. A Gateway listener policy applies only to the listener owned directly by the Gateway and does not affect ListenerSet listeners.
-
 #### Multiple Policies at the Same Level
 
 When multiple BackendTrafficPolicies target the same resource at the same hierarchy level (e.g., multiple policies targeting the same HTTPRoute), Envoy Gateway uses the following tie-breaking rules:
@@ -242,7 +240,7 @@ In this example, the route-level policy merges with the gateway-level policy, re
 
 ### Key Constraints
 
-- The `mergeType` field can only be set on policies targeting xRoute resources (HTTPRoute, GRPCRoute, or TCPRoute), not parent resources (like Gateway or ListenerSet)
+- The `mergeType` field can only be set on policies targeting xRoute resources (like HTTPRoute), not parent resources (like Gateway or ListenerSet)
 - When `mergeType` is unset, no merging occurs - only the most specific policy takes effect
 - The merged configuration combines both policies, enabling layered protection strategies
 
