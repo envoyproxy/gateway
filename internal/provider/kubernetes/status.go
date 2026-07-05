@@ -413,12 +413,18 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendTrafficPolicyStatusMessageName},
 			r.subscriptions.backendTrafficPolicyStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
 				key := update.Key
 				val := update.Value
+
+				// A delete means the translator no longer produces status for this
+				// policy (e.g. its targetRef points at a nonexistent object, or its
+				// targetSelectors stopped matching anything). Clean up any stale
+				// status this controller previously wrote so it is not left behind.
+				if update.Delete {
+					r.statusUpdater.Send(r.backendTrafficPolicyStatusCleanupUpdate(key, errChan))
+					return
+				}
+
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.BackendTrafficPolicy),
@@ -730,6 +736,48 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 		}
 	}
 	return merged
+}
+
+// removePolicyStatusForController returns the ancestor statuses with all entries
+// owned by the given controller removed, while preserving ancestors owned by other
+// controllers. It is used to clean up stale status for a policy that this controller
+// no longer attaches to any target. A nil slice is returned when no ancestors remain
+// so the resulting status has an empty (rather than [] with residual) ancestor list.
+func removePolicyStatusForController(ancestors []gwapiv1.PolicyAncestorStatus, controller gwapiv1.GatewayController) []gwapiv1.PolicyAncestorStatus {
+	var remaining []gwapiv1.PolicyAncestorStatus
+	for _, ancestor := range ancestors {
+		if ancestor.ControllerName != controller {
+			remaining = append(remaining, ancestor)
+		}
+	}
+	return remaining
+}
+
+// backendTrafficPolicyStatusCleanupUpdate builds a status Update that strips the
+// ancestor conditions owned by this controller from a BackendTrafficPolicy, while
+// preserving ancestors owned by other controllers. It is used when the translator
+// stops producing status for a policy (its targetRef points at a nonexistent object,
+// or its targetSelectors stopped matching anything) so a stale Accepted=True condition
+// with an out-of-date observedGeneration is not left behind. If the object itself was
+// deleted, the status updater's Get returns NotFound and applying this is a no-op.
+func (r *gatewayAPIReconciler) backendTrafficPolicyStatusCleanupUpdate(key types.NamespacedName, errChan chan error) Update {
+	return Update{
+		NamespacedName: key,
+		Resource:       new(egv1a1.BackendTrafficPolicy),
+		Mutator: MutatorFunc(func(obj client.Object) client.Object {
+			t, ok := obj.(*egv1a1.BackendTrafficPolicy)
+			if !ok {
+				err := fmt.Errorf("unsupported object type %T", obj)
+				if errChan != nil {
+					errChan <- err
+				}
+				panic(err)
+			}
+			tCopy := t.DeepCopy()
+			tCopy.Status.Ancestors = removePolicyStatusForController(tCopy.Status.Ancestors, r.classController)
+			return tCopy
+		}),
+	}
 }
 
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {
