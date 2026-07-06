@@ -104,7 +104,7 @@ func BuildBTPRoutingTypeIndex(
 			kind := string(ref.Kind)
 			key := btpRoutingKey{
 				Kind:        kind,
-				Namespace:   btp.Namespace,
+				Namespace:   string(ref.Namespace),
 				Name:        string(ref.Name),
 				SectionName: string(ptr.Deref(ref.SectionName, "")),
 			}

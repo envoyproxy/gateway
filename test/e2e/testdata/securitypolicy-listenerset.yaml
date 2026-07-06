@@ -1,0 +1,270 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: sp-listenerset-policy
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18180
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: sp-listenerset-policy-ls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: sp-listenerset-policy
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: ls-http
+    port: 18181
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sp-listenerset-gateway-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: sp-listenerset-policy
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /gateway-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sp-listenerset-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: sp-listenerset-policy-ls
+    sectionName: ls-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /listenerset-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: sp-listenerset-gateway
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: sp-listenerset-policy
+  cors:
+    allowOrigins:
+    - "https://gateway.example.com"
+    allowMethods:
+    - GET
+    allowHeaders:
+    - "x-gateway-header"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: sp-listenerset-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: sp-listenerset-policy-ls
+  cors:
+    allowOrigins:
+    - "https://listenerset.example.com"
+    allowMethods:
+    - POST
+    allowHeaders:
+    - "x-listenerset-header"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: sp-route-policy-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18182
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: sp-route-policy-ls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: sp-route-policy-gateway
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: route-http
+    port: 18183
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sp-route-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: sp-route-policy-ls
+    sectionName: route-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /route-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: sp-route-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: sp-route-policy-route
+  cors:
+    allowOrigins:
+    - "https://route.example.com"
+    allowMethods:
+    - PUT
+    allowHeaders:
+    - "x-route-header"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: sp-merge-policy-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18184
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: sp-merge-policy-ls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: sp-merge-policy-gateway
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: merge-http
+    port: 18185
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sp-merge-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: sp-merge-policy-ls
+    sectionName: merge-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /merge-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: sp-merge-listenerset
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: sp-merge-policy-ls
+  cors:
+    allowOrigins:
+    - "https://merge-listenerset.example.com"
+    allowMethods:
+    - PATCH
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: sp-merge-route
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: sp-merge-policy-route
+  mergeType: StrategicMerge
+  cors:
+    allowHeaders:
+    - "x-merge-header"

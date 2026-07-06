@@ -35,10 +35,13 @@ Once Helm has been set up correctly, install the chart from dockerhub:
 ``` shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
+
+Image overrides target different components. `global.images.envoyGateway.*` configures the Envoy Gateway control plane Deployment rendered by this chart. `global.images.envoyProxy.*` configures the managed Envoy Proxy data plane through the generated `EnvoyGateway` config.
+
 This command installs both Gateway API CRDs and Envoy Gateway CRDs. If your Kubernetes provider already manages
 Gateway API CRDs for the cluster, confirm that the provider-installed Gateway API version and channel are compatible
 with the Envoy Gateway release and the Gateway API resources you plan to use. If they are compatible, install only the
-Envoy Gateway CRDs separately and use `--skip-crds` when installing this chart.
+Envoy Gateway CRDs separately and use `--set crds.enabled=false` when installing this chart.
 
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-helm/tags)
 
@@ -54,8 +57,9 @@ make kube-deploy TAG=latest
 
 ### Skip install CRDs
 
-You can install the eg chart without Gateway API CRDs and Envoy Gateway CRDs. Make sure the CRDs exist in the cluster
-before installing the chart with `--skip-crds`, otherwise Envoy Gateway may fail to start.
+You can install the eg chart without the bundled Gateway API CRDs, Envoy Gateway CRDs, and Gateway API safe upgrade
+policy resources by setting `crds.enabled=false`. Make sure these resources exist in the cluster before installing the
+chart with `--set crds.enabled=false`, otherwise Envoy Gateway may fail to start.
 
 If your Kubernetes provider manages compatible Gateway API CRDs, install only the Envoy Gateway CRDs from the
 `gateway-crds-helm` chart first:
@@ -66,14 +70,14 @@ helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm --set 'crds.g
 ```
 
 If the provider-managed Gateway API CRDs are not compatible, use a compatible Gateway API CRD installation method for
-the cluster first, then install this chart with `--skip-crds`.
+the cluster first, then install this chart with `--set crds.enabled=false`.
 
-After the required CRDs are installed, install the eg chart with `--skip-crds`. Gateway API safe upgrade policy
-resources (the safe-upgrades ValidatingAdmissionPolicy and binding shipped with the Gateway API bundle) are rendered
-from the chart templates on install by default, so disable them when these resources are managed outside this chart:
+After the required CRDs are installed, install the eg chart with `--set crds.enabled=false`. Setting `crds.enabled=false`
+also skips the Gateway API safe upgrade policy resources (the safe-upgrades ValidatingAdmissionPolicy and binding shipped
+with the Gateway API bundle), so manage them outside this chart when these resources are owned elsewhere:
 
 ``` shell
-helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds --set crds.gatewayAPI.safeUpgradePolicy.enabled=false
+helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --set crds.enabled=false
 ```
 
 To uninstall the chart:
@@ -107,6 +111,7 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.envoyGateway.securityContext.runAsNonRoot | bool | `true` |  |
 | deployment.envoyGateway.securityContext.runAsUser | int | `65532` |  |
 | deployment.envoyGateway.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
+| deployment.envoyGateway.strategy | object | `{}` |  |
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
@@ -136,12 +141,12 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.replicas | int | `1` |  |
 | global.imagePullSecrets | list | `[]` | Global override for image pull secrets |
 | global.imageRegistry | string | `""` | Global override for image registry |
-| global.images.envoyGateway.image | string | `nil` |  |
-| global.images.envoyGateway.pullPolicy | string | `nil` |  |
-| global.images.envoyGateway.pullSecrets | list | `[]` |  |
-| global.images.envoyProxy.image | string | `""` |  |
-| global.images.envoyProxy.pullPolicy | string | `""` |  |
-| global.images.envoyProxy.pullSecrets | list | `[]` |  |
+| global.images.envoyGateway.image | string | `nil` | Full image for the Envoy Gateway control plane Deployment installed by this chart. |
+| global.images.envoyGateway.pullPolicy | string | `nil` | Image pull policy for the Envoy Gateway control plane Deployment. Default behavior: latest images will be Always else IfNotPresent. |
+| global.images.envoyGateway.pullSecrets | list | `[]` | Pull secrets for the Envoy Gateway control plane Deployment. |
+| global.images.envoyProxy.image | string | `""` | Full image for the managed Envoy Proxy data plane. This updates the generated `envoyProxy` config and does not change the `envoy-gateway` control plane Deployment image. If not specified, the default image built into `envoy-gateway` is used. |
+| global.images.envoyProxy.pullPolicy | string | `""` | Image pull policy for the managed Envoy Proxy data plane. Default behavior: IfNotPresent. |
+| global.images.envoyProxy.pullSecrets | list | `[]` | Pull secrets for the managed Envoy Proxy data plane. |
 | global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
