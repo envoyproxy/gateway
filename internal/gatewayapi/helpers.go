@@ -484,6 +484,54 @@ func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
+func gatewayDirectListeners(gtwCtx *GatewayContext) []*ListenerContext {
+	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
+	for _, listener := range gtwCtx.listeners {
+		if listener.isFromListenerSet() {
+			continue
+		}
+		listeners = append(listeners, listener)
+	}
+	return listeners
+}
+
+func gatewayPolicyTargetListeners(
+	gtwCtx *GatewayContext,
+	target policyTargetReferenceWithSectionName,
+) []*ListenerContext {
+	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
+	for _, listener := range gtwCtx.listeners {
+		if target.SectionName != nil {
+			if listener.isFromListenerSet() || listener.Name != *target.SectionName {
+				continue
+			}
+		}
+		listeners = append(listeners, listener)
+	}
+	return listeners
+}
+
+func listenerSetPolicyTargetListeners(
+	gtwCtx *GatewayContext,
+	listenerSet *gwapiv1.ListenerSet,
+	target policyTargetReferenceWithSectionName,
+) []*ListenerContext {
+	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
+	for _, listener := range gtwCtx.listeners {
+		if !listener.isFromListenerSet() {
+			continue
+		}
+		if listener.listenerSet.Namespace != listenerSet.Namespace || listener.listenerSet.Name != listenerSet.Name {
+			continue
+		}
+		if target.SectionName != nil && listener.Name != *target.SectionName {
+			continue
+		}
+		listeners = append(listeners, listener)
+	}
+	return listeners
+}
+
 func irListenerPortName(proto ir.ProtocolType, port int32) string {
 	return strings.ToLower(fmt.Sprintf("%s-%d", proto, port))
 }

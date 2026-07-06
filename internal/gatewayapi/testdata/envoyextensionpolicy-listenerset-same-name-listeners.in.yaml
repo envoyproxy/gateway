@@ -1,0 +1,158 @@
+# this testfile confirms that when Gateway/ListenerSet has a same-name listener and
+# EnvoyExtensionPolicy targets the same-name listener, the policy is accepted.
+envoyextensionpolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-shared
+  spec:
+    lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(request_handle)
+          request_handle:logInfo("gateway-shared")
+        end
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+      sectionName: shared
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-listenerset-shared
+  spec:
+    lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(request_handle)
+          request_handle:logInfo("listenerset-shared")
+        end
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+      sectionName: shared
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-other-listenerset-shared
+  spec:
+    lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(request_handle)
+          request_handle:logInfo("other-listenerset-shared")
+        end
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: other-listeners
+      sectionName: shared
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-gateway
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: composite-gateway
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-listenerset
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-other-listenerset
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: other-listeners
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: shared
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: shared
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: other-listeners
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: shared
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: All
