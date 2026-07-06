@@ -173,20 +173,21 @@ func expectNoTraceCountIncrease(t *testing.T, suite *suite.ConformanceTestSuite,
 
 	httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, *expectedResponse)
 
-	observed := false
-	deadline := time.Now().Add(15 * time.Second)
-	for time.Now().Before(deadline) {
+	observedCurrentCount := false
+	err = wait.PollUntilContextTimeout(t.Context(), time.Second, 15*time.Second, true, func(_ context.Context) (bool, error) {
 		curCount, err := tracing.QueryTraceFromTempo(t, suite.Client, tags)
 		if err != nil {
 			tlog.Logf(t, "failed to get current trace count from tempo: %v", err)
-			time.Sleep(time.Second)
-			continue
+			return false, nil
 		}
-		observed = true
-		require.LessOrEqual(t, curCount, preCount, "trace count increased")
-		time.Sleep(time.Second)
-	}
-	require.True(t, observed, "failed to get current trace count from tempo")
+		observedCurrentCount = true
+		if curCount > preCount {
+			return false, fmt.Errorf("trace count increased from %d to %d", preCount, curCount)
+		}
+		return false, nil
+	})
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.True(t, observedCurrentCount, "failed to get current trace count from tempo")
 }
 
 var ZipkinTracingTest = suite.ConformanceTest{
