@@ -33,7 +33,11 @@ func init() {
 var OpenTelemetryTracingTest = suite.ConformanceTest{
 	ShortName:   "OpenTelemetryTracing",
 	Description: "Make sure OpenTelemetry tracing is working (default and custom service name)",
-	Manifests:   []string{"testdata/tracing-otel.yaml", "testdata/tracing-otel-custom-service-name.yaml"},
+	Manifests: []string{
+		"testdata/tracing-otel.yaml",
+		"testdata/tracing-otel-custom-service-name.yaml",
+		"testdata/tracing-otel-sampling-fractions.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		cases := []struct {
 			name        string
@@ -82,6 +86,55 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 			})
 		}
 
+		samplingCases := []struct {
+			name      string
+			routeName string
+			path      string
+			headers   map[string]string
+			provider  string
+		}{
+			{
+				name:      "OverallSamplingFractionZero",
+				routeName: "tracing-otel-overall-sampling-zero",
+				path:      "/otel-overall-sampling-zero",
+				provider:  "otel-overall-sampling-zero",
+			},
+			{
+				name:      "ClientSamplingFractionZero",
+				routeName: "tracing-otel-client-sampling-zero",
+				path:      "/otel-client-sampling-zero",
+				headers: map[string]string{
+					"X-Client-Trace-Id": "force-client-trace",
+				},
+				provider: "otel-client-sampling-zero",
+			},
+		}
+		for _, tc := range samplingCases {
+			t.Run(tc.name, func(t *testing.T) {
+				ns := "gateway-conformance-infra"
+				routeNN := types.NamespacedName{Name: tc.routeName, Namespace: ns}
+				gwNN := types.NamespacedName{Name: tc.routeName, Namespace: ns}
+				gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+				expectedResponse := httputils.ExpectedResponse{
+					Request: httputils.Request{
+						Path:    tc.path,
+						Headers: tc.headers,
+					},
+					Response: httputils.Response{
+						StatusCodes: []int{200},
+					},
+					Namespace: ns,
+				}
+				httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+				tags := map[string]string{
+					"component":    "proxy",
+					"provider":     tc.provider,
+					"service.name": naming.ServiceName(gwNN),
+				}
+				expectNoTraceCountIncrease(t, suite, gwAddr, &expectedResponse, tags)
+			})
+		}
+
 		t.Run("ControlPlane", func(t *testing.T) {
 			tags := map[string]string{
 				"service.name": "envoy-gateway",
@@ -101,6 +154,39 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 			require.NoError(t, err, "failed to get control-plane trace from tempo within timeout")
 		})
 	},
+}
+
+func expectNoTraceCountIncrease(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expectedResponse *httputils.ExpectedResponse, tags map[string]string) {
+	t.Helper()
+
+	var preCount int
+	err := wait.PollUntilContextTimeout(t.Context(), time.Second, 15*time.Second, true, func(_ context.Context) (done bool, err error) {
+		count, err := tracing.QueryTraceFromTempo(t, suite.Client, tags)
+		if err != nil {
+			tlog.Logf(t, "failed to get trace count from tempo: %v", err)
+			return false, nil
+		}
+		preCount = count
+		return true, nil
+	})
+	require.NoError(t, err, "failed to get initial trace count from tempo")
+
+	httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, *expectedResponse)
+
+	observed := false
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		curCount, err := tracing.QueryTraceFromTempo(t, suite.Client, tags)
+		if err != nil {
+			tlog.Logf(t, "failed to get current trace count from tempo: %v", err)
+			time.Sleep(time.Second)
+			continue
+		}
+		observed = true
+		require.LessOrEqual(t, curCount, preCount, "trace count increased")
+		time.Sleep(time.Second)
+	}
+	require.True(t, observed, "failed to get current trace count from tempo")
 }
 
 var ZipkinTracingTest = suite.ConformanceTest{
