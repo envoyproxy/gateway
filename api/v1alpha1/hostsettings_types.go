@@ -8,9 +8,11 @@ package v1alpha1
 // HostSettings provides settings that manage how the incoming Host/Authority header
 // set by clients is normalized.
 type HostSettings struct {
-	// StripPort determines whether the port is removed from the Host/Authority header
-	// before route matching. It maps to Envoy's strip_any_host_port, which strips the
-	// port unconditionally.
+	// StripPort determines whether the port is removed from the Host/Authority header.
+	// It maps to Envoy's strip_any_host_port, which strips the port unconditionally.
+	// The port is removed before route matching, and this affects the upstream host header
+	// as well: backends and access logs see the normalized Host/:authority value without
+	// the port.
 	// If not set, no port stripping is performed (Envoy default).
 	//
 	// Stripping only the port that matches the listener port (Envoy's
