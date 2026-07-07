@@ -13,7 +13,7 @@ using the [ClientTrafficPolicy][] API.
 
 Some clients include the port in the `Host` (or `:authority`) header
 (e.g. `example.com:443`). Set `headers.host.stripPort` to `true` to have Envoy strip the
-port unconditionally before route matching.
+port unconditionally from the Host/`:authority` header (this affects the upstream host header as well) before route matching.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
