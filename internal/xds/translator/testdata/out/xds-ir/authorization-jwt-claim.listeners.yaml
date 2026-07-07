@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              httproute/default/httproute-1/rule/0/match/0/www_example_com/example1:
+              jwt/provider/example1/02327216cb0dba21:
                 audiences:
                 - two.foo.com
                 forward: true
@@ -35,7 +35,7 @@
                     cluster: two_example_com_443
                     timeout: 10s
                     uri: https://two.example.com/jwt/public-key/jwks.json
-              httproute/default/httproute-2/rule/0/match/0/www_example_com/example1:
+              jwt/provider/example1/ee7c27dda4c8e01e:
                 audiences:
                 - one.foo.com
                 forward: true
@@ -53,10 +53,10 @@
                     timeout: 10s
                     uri: https://one.example.com/jwt/public-key/jwks.json
             requirementMap:
-              httproute/default/httproute-1/rule/0/match/0/www_example_com:
-                providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example1
-              httproute/default/httproute-2/rule/0/match/0/www_example_com:
-                providerName: httproute/default/httproute-2/rule/0/match/0/www_example_com/example1
+              jwt/requirement/f221fc9d2c0259f7:
+                providerName: jwt/provider/example1/02327216cb0dba21
+              jwt/requirement/fcdfd84248345c0e:
+                providerName: jwt/provider/example1/ee7c27dda4c8e01e
         - name: envoy.filters.http.rbac
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC

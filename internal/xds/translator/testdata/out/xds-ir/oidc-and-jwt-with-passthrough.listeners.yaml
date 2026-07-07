@@ -21,7 +21,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              httproute/default/httproute-1/rule/0/match/0/www_example_com/example1:
+              jwt/provider/example1/080509a58e5880a9:
                 forward: true
                 issuer: https://oauth.foo.com
                 normalizePayloadInMetadata:
@@ -36,7 +36,7 @@
                     cluster: oauth_foo_com_443
                     timeout: 10s
                     uri: https://oauth.foo.com/jwt/public-key/jwks.json
-              httproute/default/httproute-1/rule/0/match/0/www_example_com/example2:
+              jwt/provider/example2/fad2a181f4b0664e:
                 forward: true
                 fromHeaders:
                 - name: MyHeaderPrefixed
@@ -55,7 +55,7 @@
                     cluster: oauth_foo_com_443
                     timeout: 10s
                     uri: https://oauth.foo.com/jwt/public-key/jwks.json
-              httproute/default/httproute-1/rule/0/match/0/www_example_com/example3:
+              jwt/provider/example3/2c73957cd9550a84:
                 forward: true
                 fromCookies:
                 - Cookie1
@@ -73,7 +73,7 @@
                     cluster: oauth_foo_com_443
                     timeout: 10s
                     uri: https://oauth.foo.com/jwt/public-key/jwks.json
-              httproute/default/httproute-1/rule/0/match/0/www_example_com/example4:
+              jwt/provider/example4/fd3a3100036e2084:
                 forward: true
                 fromParams:
                 - Param1
@@ -92,13 +92,13 @@
                     timeout: 10s
                     uri: https://oauth.foo.com/jwt/public-key/jwks.json
             requirementMap:
-              httproute/default/httproute-1/rule/0/match/0/www_example_com:
+              jwt/requirement/db82c3fbf1d72883:
                 requiresAny:
                   requirements:
-                  - providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example1
-                  - providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example2
-                  - providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example3
-                  - providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example4
+                  - providerName: jwt/provider/example1/080509a58e5880a9
+                  - providerName: jwt/provider/example2/fad2a181f4b0664e
+                  - providerName: jwt/provider/example3/2c73957cd9550a84
+                  - providerName: jwt/provider/example4/fd3a3100036e2084
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

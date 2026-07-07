@@ -30,7 +30,7 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: httproute/default/httproute-1/rule/0/match/0/www_example_com
+          requirementName: jwt/requirement/f221fc9d2c0259f7
         envoy.filters.http.rbac:
           '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
           rbac:
@@ -147,7 +147,7 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: httproute/default/httproute-2/rule/0/match/0/www_example_com
+          requirementName: jwt/requirement/fcdfd84248345c0e
         envoy.filters.http.rbac:
           '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
           rbac:

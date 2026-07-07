@@ -15,7 +15,7 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: first-route
+          requirementName: jwt/requirement/20abdc0b14ee56f7
         envoy.filters.http.ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
           domain: first-listener

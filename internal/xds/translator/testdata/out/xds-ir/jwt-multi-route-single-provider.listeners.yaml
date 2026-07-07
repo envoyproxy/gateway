@@ -40,7 +40,24 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              first-route/example:
+              jwt/provider/example/ced70d98fe975d58:
+                audiences:
+                - foo.com
+                forward: true
+                issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                  - scp
+                payloadInMetadata: example
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 10s
+                    uri: https://localhost/jwt/public-key/jwks.json
+              jwt/provider/example/ec0cbab21272dbab:
                 audiences:
                 - foo.com
                 claimToHeaders:
@@ -60,28 +77,11 @@
                     cluster: localhost_443
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
-              second-route/example:
-                audiences:
-                - foo.com
-                forward: true
-                issuer: https://www.example.com
-                normalizePayloadInMetadata:
-                  spaceDelimitedClaims:
-                  - scope
-                  - scp
-                payloadInMetadata: example
-                remoteJwks:
-                  asyncFetch: {}
-                  cacheDuration: 300s
-                  httpUri:
-                    cluster: localhost_443
-                    timeout: 10s
-                    uri: https://localhost/jwt/public-key/jwks.json
             requirementMap:
-              first-route:
-                providerName: first-route/example
-              second-route:
-                providerName: second-route/example
+              jwt/requirement/28d048f7ae082488:
+                providerName: jwt/provider/example/ced70d98fe975d58
+              jwt/requirement/26479564a58816cb:
+                providerName: jwt/provider/example/ec0cbab21272dbab
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

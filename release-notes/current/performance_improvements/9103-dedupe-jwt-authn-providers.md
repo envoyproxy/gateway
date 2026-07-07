@@ -1,0 +1,1 @@
+Deduplicated identical JWT authentication providers and requirements in listener xDS config so adding routes that reuse an existing JWT provider no longer changes LDS solely to add duplicate `jwt_authn` entries.

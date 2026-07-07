@@ -15,7 +15,7 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: first-route
+          requirementName: jwt/requirement/26479564a58816cb
     - match:
         path: foo/baz
       name: second-route
@@ -26,4 +26,4 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: second-route
+          requirementName: jwt/requirement/28d048f7ae082488

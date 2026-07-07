@@ -6,6 +6,8 @@
 package translator
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -15,6 +17,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	gproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -109,134 +112,189 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 			jwtAuthn.RequirementMap = make(map[string]*jwtauthnv3.JwtRequirement, len(route.Security.JWT.Providers))
 		}
 
-		var reqs []*jwtauthnv3.JwtRequirement
-		for i := range route.Security.JWT.Providers {
-			var (
-				irProvider = route.Security.JWT.Providers[i]
-				err        error
-			)
-
-			claimToHeaders := make([]*jwtauthnv3.JwtClaimToHeader, 0, len(irProvider.ClaimToHeaders))
-			for _, claimToHeader := range irProvider.ClaimToHeaders {
-				claimToHeader := &jwtauthnv3.JwtClaimToHeader{
-					HeaderName: claimToHeader.Header,
-					ClaimName:  claimToHeader.Claim,
-				}
-				claimToHeaders = append(claimToHeaders, claimToHeader)
-			}
-			jwtProvider := &jwtauthnv3.JwtProvider{
-				Issuer:            irProvider.Issuer,
-				Audiences:         irProvider.Audiences,
-				PayloadInMetadata: irProvider.Name,
-				ClaimToHeaders:    claimToHeaders,
-				Forward:           true,
-				NormalizePayloadInMetadata: &jwtauthnv3.JwtProvider_NormalizePayload{
-					// Normalize the scopes to facilitate matching in Authorization.
-					SpaceDelimitedClaims: []string{"scope", "scp"},
-				},
-			}
-			if irProvider.LocalJWKS != nil {
-				local := &jwtauthnv3.JwtProvider_LocalJwks{
-					LocalJwks: &corev3.DataSource{
-						Specifier: &corev3.DataSource_InlineString{
-							InlineString: *irProvider.LocalJWKS,
-						},
-					},
-				}
-				jwtProvider.JwksSourceSpecifier = local
-			} else {
-				var jwksCluster string
-
-				jwks := irProvider.RemoteJWKS
-				if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
-					jwksCluster = jwks.Destination.Name
-				} else {
-					var cluster *urlCluster
-					if cluster, err = url2Cluster(jwks.URI); err != nil {
-						return err
-					}
-					jwksCluster = cluster.name
-				}
-
-				jwksTimeout := durationpb.New(defaultExtServiceRequestTimeout)
-				if jwks.Traffic != nil &&
-					jwks.Traffic.Timeout != nil &&
-					jwks.Traffic.Timeout.HTTP != nil &&
-					jwks.Traffic.Timeout.HTTP.RequestTimeout != nil {
-					jwksTimeout = durationpb.New(jwks.Traffic.Timeout.HTTP.RequestTimeout.Duration)
-				}
-
-				remote := &jwtauthnv3.JwtProvider_RemoteJwks{
-					RemoteJwks: &jwtauthnv3.RemoteJwks{
-						HttpUri: &corev3.HttpUri{
-							Uri: jwks.URI,
-							HttpUpstreamType: &corev3.HttpUri_Cluster{
-								Cluster: jwksCluster,
-							},
-							Timeout: jwksTimeout,
-						},
-
-						AsyncFetch: &jwtauthnv3.JwksAsyncFetch{},
-					},
-				}
-				if jwks.CacheDuration != nil {
-					remote.RemoteJwks.CacheDuration = durationpb.New(jwks.CacheDuration.Duration)
-				}
-				if jwks.FailedRefetchDuration != nil {
-					remote.RemoteJwks.AsyncFetch.FailedRefetchDuration = durationpb.New(jwks.FailedRefetchDuration.Duration)
-				}
-				// Set the retry policy if it exists.
-				if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
-					var rp *corev3.RetryPolicy
-					if rp, err = buildNonRouteRetryPolicy(jwks.Traffic.Retry); err != nil {
-						return err
-					}
-					remote.RemoteJwks.RetryPolicy = rp
-				}
-				jwtProvider.JwksSourceSpecifier = remote
-			}
-
-			if irProvider.RecomputeRoute != nil {
-				jwtProvider.ClearRouteCache = *irProvider.RecomputeRoute
-			}
-
-			if irProvider.ExtractFrom != nil {
-				jwtProvider.FromHeaders = buildJwtFromHeaders(irProvider.ExtractFrom.Headers)
-				jwtProvider.FromCookies = irProvider.ExtractFrom.Cookies
-				jwtProvider.FromParams = irProvider.ExtractFrom.Params
-			}
-
-			providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
+		providers, reqs, err := buildJWTRequirements(route.Security.JWT)
+		if err != nil {
+			return err
+		}
+		for providerKey, jwtProvider := range providers {
 			jwtAuthn.Providers[providerKey] = jwtProvider
-			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
-				RequiresType: &jwtauthnv3.JwtRequirement_ProviderName{
-					ProviderName: providerKey,
-				},
-			})
 		}
 
-		if route.Security.JWT.AllowMissing {
-			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
-				RequiresType: &jwtauthnv3.JwtRequirement_AllowMissing{
-					AllowMissing: &emptypb.Empty{},
-				},
-			})
+		requirement := buildJWTRequirement(reqs)
+		requirementName, err := jwtRequirementName(requirement)
+		if err != nil {
+			return err
 		}
-
-		if len(reqs) == 1 {
-			jwtAuthn.RequirementMap[route.Name] = reqs[0]
-		} else {
-			orListReqs := &jwtauthnv3.JwtRequirement{
-				RequiresType: &jwtauthnv3.JwtRequirement_RequiresAny{
-					RequiresAny: &jwtauthnv3.JwtRequirementOrList{
-						Requirements: reqs,
-					},
-				},
-			}
-			jwtAuthn.RequirementMap[route.Name] = orListReqs
-		}
+		jwtAuthn.RequirementMap[requirementName] = requirement
 	}
 	return nil
+}
+
+func buildJWTRequirements(jwt *ir.JWT) (map[string]*jwtauthnv3.JwtProvider, []*jwtauthnv3.JwtRequirement, error) {
+	providers := make(map[string]*jwtauthnv3.JwtProvider, len(jwt.Providers))
+	reqs := make([]*jwtauthnv3.JwtRequirement, 0, len(jwt.Providers)+1)
+
+	for i := range jwt.Providers {
+		irProvider := jwt.Providers[i]
+		jwtProvider, err := buildJWTProvider(&irProvider)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		providerKey, err := jwtProviderName(irProvider.Name, jwtProvider)
+		if err != nil {
+			return nil, nil, err
+		}
+		providers[providerKey] = jwtProvider
+		reqs = append(reqs, &jwtauthnv3.JwtRequirement{
+			RequiresType: &jwtauthnv3.JwtRequirement_ProviderName{
+				ProviderName: providerKey,
+			},
+		})
+	}
+
+	if jwt.AllowMissing {
+		reqs = append(reqs, &jwtauthnv3.JwtRequirement{
+			RequiresType: &jwtauthnv3.JwtRequirement_AllowMissing{
+				AllowMissing: &emptypb.Empty{},
+			},
+		})
+	}
+
+	return providers, reqs, nil
+}
+
+func buildJWTProvider(irProvider *ir.JWTProvider) (*jwtauthnv3.JwtProvider, error) {
+	claimToHeaders := make([]*jwtauthnv3.JwtClaimToHeader, 0, len(irProvider.ClaimToHeaders))
+	for _, claimToHeader := range irProvider.ClaimToHeaders {
+		claimToHeader := &jwtauthnv3.JwtClaimToHeader{
+			HeaderName: claimToHeader.Header,
+			ClaimName:  claimToHeader.Claim,
+		}
+		claimToHeaders = append(claimToHeaders, claimToHeader)
+	}
+	jwtProvider := &jwtauthnv3.JwtProvider{
+		Issuer:            irProvider.Issuer,
+		Audiences:         irProvider.Audiences,
+		PayloadInMetadata: irProvider.Name,
+		ClaimToHeaders:    claimToHeaders,
+		Forward:           true,
+		NormalizePayloadInMetadata: &jwtauthnv3.JwtProvider_NormalizePayload{
+			// Normalize the scopes to facilitate matching in Authorization.
+			SpaceDelimitedClaims: []string{"scope", "scp"},
+		},
+	}
+	if irProvider.LocalJWKS != nil {
+		local := &jwtauthnv3.JwtProvider_LocalJwks{
+			LocalJwks: &corev3.DataSource{
+				Specifier: &corev3.DataSource_InlineString{
+					InlineString: *irProvider.LocalJWKS,
+				},
+			},
+		}
+		jwtProvider.JwksSourceSpecifier = local
+	} else {
+		var jwksCluster string
+
+		jwks := irProvider.RemoteJWKS
+		if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
+			jwksCluster = jwks.Destination.Name
+		} else {
+			cluster, err := url2Cluster(jwks.URI)
+			if err != nil {
+				return nil, err
+			}
+			jwksCluster = cluster.name
+		}
+
+		jwksTimeout := durationpb.New(defaultExtServiceRequestTimeout)
+		if jwks.Traffic != nil &&
+			jwks.Traffic.Timeout != nil &&
+			jwks.Traffic.Timeout.HTTP != nil &&
+			jwks.Traffic.Timeout.HTTP.RequestTimeout != nil {
+			jwksTimeout = durationpb.New(jwks.Traffic.Timeout.HTTP.RequestTimeout.Duration)
+		}
+
+		remote := &jwtauthnv3.JwtProvider_RemoteJwks{
+			RemoteJwks: &jwtauthnv3.RemoteJwks{
+				HttpUri: &corev3.HttpUri{
+					Uri: jwks.URI,
+					HttpUpstreamType: &corev3.HttpUri_Cluster{
+						Cluster: jwksCluster,
+					},
+					Timeout: jwksTimeout,
+				},
+
+				AsyncFetch: &jwtauthnv3.JwksAsyncFetch{},
+			},
+		}
+		if jwks.CacheDuration != nil {
+			remote.RemoteJwks.CacheDuration = durationpb.New(jwks.CacheDuration.Duration)
+		}
+		if jwks.FailedRefetchDuration != nil {
+			remote.RemoteJwks.AsyncFetch.FailedRefetchDuration = durationpb.New(jwks.FailedRefetchDuration.Duration)
+		}
+		// Set the retry policy if it exists.
+		if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
+			rp, err := buildNonRouteRetryPolicy(jwks.Traffic.Retry)
+			if err != nil {
+				return nil, err
+			}
+			remote.RemoteJwks.RetryPolicy = rp
+		}
+		jwtProvider.JwksSourceSpecifier = remote
+	}
+
+	if irProvider.RecomputeRoute != nil {
+		jwtProvider.ClearRouteCache = *irProvider.RecomputeRoute
+	}
+
+	if irProvider.ExtractFrom != nil {
+		jwtProvider.FromHeaders = buildJwtFromHeaders(irProvider.ExtractFrom.Headers)
+		jwtProvider.FromCookies = irProvider.ExtractFrom.Cookies
+		jwtProvider.FromParams = irProvider.ExtractFrom.Params
+	}
+
+	return jwtProvider, nil
+}
+
+func buildJWTRequirement(reqs []*jwtauthnv3.JwtRequirement) *jwtauthnv3.JwtRequirement {
+	if len(reqs) == 1 {
+		return reqs[0]
+	}
+
+	return &jwtauthnv3.JwtRequirement{
+		RequiresType: &jwtauthnv3.JwtRequirement_RequiresAny{
+			RequiresAny: &jwtauthnv3.JwtRequirementOrList{
+				Requirements: reqs,
+			},
+		},
+	}
+}
+
+func jwtProviderName(providerName string, provider *jwtauthnv3.JwtProvider) (string, error) {
+	hash, err := protoHash(provider)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("jwt/provider/%s/%s", providerName, hash), nil
+}
+
+func jwtRequirementName(requirement *jwtauthnv3.JwtRequirement) (string, error) {
+	hash, err := protoHash(requirement)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("jwt/requirement/%s", hash), nil
+}
+
+func protoHash(message gproto.Message) (string, error) {
+	b, err := gproto.MarshalOptions{Deterministic: true}.Marshal(message)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:8]), nil
 }
 
 // buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses the system trust store
@@ -287,8 +345,17 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 			return nil
 		}
 
+		_, reqs, err := buildJWTRequirements(irRoute.Security.JWT)
+		if err != nil {
+			return err
+		}
+		requirementName, err := jwtRequirementName(buildJWTRequirement(reqs))
+		if err != nil {
+			return err
+		}
+
 		routeCfgProto := &jwtauthnv3.PerRouteConfig{
-			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name},
+			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: requirementName},
 		}
 
 		routeCfgAny, err := proto.ToAnyWithValidation(routeCfgProto)

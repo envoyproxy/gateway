@@ -54,7 +54,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              httproute/ns1/domain1/rule/0/match/0/domain1_example_com/jwt1:
+              jwt/provider/jwt1/cb766da7fa6f1202:
                 forward: true
                 fromCookies:
                 - AccessTokenDomain1
@@ -70,7 +70,7 @@
                     cluster: www_googleapis_com_443
                     timeout: 10s
                     uri: https://www.googleapis.com/oauth2/v3/certs
-              httproute/ns2/domain2/rule/0/match/0/domain2_example_com/jwt2:
+              jwt/provider/jwt2/d1e60459ce7ec72c:
                 forward: true
                 fromCookies:
                 - AccessTokenDomain2
@@ -87,15 +87,15 @@
                     timeout: 10s
                     uri: https://www.googleapis.com/oauth2/v3/certs
             requirementMap:
-              httproute/ns1/domain1/rule/0/match/0/domain1_example_com:
+              jwt/requirement/8aaa63102e3c7ac2:
                 requiresAny:
                   requirements:
-                  - providerName: httproute/ns1/domain1/rule/0/match/0/domain1_example_com/jwt1
+                  - providerName: jwt/provider/jwt1/cb766da7fa6f1202
                   - allowMissing: {}
-              httproute/ns2/domain2/rule/0/match/0/domain2_example_com:
+              jwt/requirement/5272fd3188a21f1b:
                 requiresAny:
                   requirements:
-                  - providerName: httproute/ns2/domain2/rule/0/match/0/domain2_example_com/jwt2
+                  - providerName: jwt/provider/jwt2/d1e60459ce7ec72c
                   - allowMissing: {}
         - name: envoy.filters.http.router
           typedConfig:
