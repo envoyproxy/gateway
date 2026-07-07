@@ -221,6 +221,75 @@ spec:
 
                   Deprecated: Use ProxyProtocol instead.
                 type: boolean
+              geoIP:
+                description: |-
+                  GeoIP configures GeoIP enrichment for requests on this listener. It
+                  derives geographic attributes from the client IP address and exposes
+                  them as request headers, which are forwarded to the backend and can also
+                  be referenced in access logs.
+
+                  The MaxMind database sources must be configured on the target's
+                  EnvoyProxy resource via spec.geoIP.provider; this field only enables the
+                  filter and selects which headers are written. The client IP that is
+                  geolocated is the one determined by ClientIPDetection.
+                properties:
+                  requestHeaders:
+                    description: |-
+                      RequestHeaders adds GeoIP-derived HTTP request headers. Only the fields
+                      set here are populated, and each requires the corresponding MaxMind
+                      database source on the provider (for example, region and city require
+                      cityDbSource). Header values are set by Envoy Gateway and overwrite any
+                      client-supplied header of the same name, so backends can treat them as
+                      trusted.
+                    properties:
+                      asn:
+                        description: |-
+                          ASN is the header name to which the autonomous system number is written.
+                          Requires asnDbSource on the provider.
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                        type: string
+                      city:
+                        description: |-
+                          City is the header name to which the city name is written.
+                          Requires cityDbSource on the provider.
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                        type: string
+                      country:
+                        description: |-
+                          Country is the header name to which the ISO 3166-1 country code is
+                          written. Requires countryDbSource or cityDbSource on the provider.
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                        type: string
+                      isp:
+                        description: |-
+                          ISP is the header name to which the ISP name is written.
+                          Requires ispDbSource on the provider.
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                        type: string
+                      region:
+                        description: |-
+                          Region is the header name to which the region/subdivision ISO code is
+                          written. Requires cityDbSource on the provider.
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: at least one GeoIP field must be set
+                      rule: has(self.country) || has(self.region) || has(self.city)
+                        || has(self.asn) || has(self.isp)
+                required:
+                - requestHeaders
+                type: object
               grpc:
                 description: GRPC provides gRPC configuration on the listener.
                 properties:

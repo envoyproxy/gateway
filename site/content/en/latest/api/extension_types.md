@@ -996,6 +996,7 @@ _Appears in:_
 | `enableProxyProtocol` | _boolean_ |  false  |  | EnableProxyProtocol interprets the ProxyProtocol header and adds the<br />Client Address into the X-Forwarded-For header.<br />Note Proxy Protocol must be present when this field is set, else the connection<br />is closed.<br />Deprecated: Use ProxyProtocol instead. |
 | `proxyProtocol` | _[ProxyProtocolSettings](#proxyprotocolsettings)_ |  false  |  | ProxyProtocol configures the Proxy Protocol settings. When configured,<br />the Proxy Protocol header will be interpreted and the Client Address<br />will be added into the X-Forwarded-For header.<br />If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence. |
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  |  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
+| `geoIP` | _[GeoIPEnrichment](#geoipenrichment)_ |  false  |  | GeoIP configures GeoIP enrichment for requests on this listener. It<br />derives geographic attributes from the client IP address and exposes<br />them as request headers, which are forwarded to the backend and can also<br />be referenced in access logs.<br />The MaxMind database sources must be configured on the target's<br />EnvoyProxy resource via spec.geoIP.provider; this field only enables the<br />filter and selects which headers are written. The client IP that is<br />geolocated is the one determined by ClientIPDetection. |
 | `tls` | _[ClientTLSSettings](#clienttlssettings)_ |  false  |  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  |  | Path enables managing how the incoming path set by clients can be normalized. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  |  | HeaderSettings provides configuration for header management. |
@@ -2774,6 +2775,28 @@ _Appears in:_
 | `local` | _[LocalGeoIPDBSource](#localgeoipdbsource)_ |  true  |  | Local is a database source from a local file. |
 
 
+#### GeoIPEnrichment
+
+
+
+GeoIPEnrichment configures request enrichment with GeoIP-derived data.
+When set, Envoy Gateway inserts the envoy.filters.http.geoip filter into the
+listener's HTTP filter chain and populates the configured request headers
+from the MaxMind provider defined on the EnvoyProxy resource.
+
+The MaxMind provider exposes GeoIP attributes only as request headers, so the
+enriched headers are both forwarded to the backend and available to access
+logs (reference them with %REQ(<header>)% in the EnvoyProxy access log
+format).
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `requestHeaders` | _[GeoIPRequestHeaders](#geoiprequestheaders)_ |  true  |  | RequestHeaders adds GeoIP-derived HTTP request headers. Only the fields<br />set here are populated, and each requires the corresponding MaxMind<br />database source on the provider (for example, region and city require<br />cityDbSource). Header values are set by Envoy Gateway and overwrite any<br />client-supplied header of the same name, so backends can treat them as<br />trusted. |
+
+
 #### GeoIPMaxMind
 
 
@@ -2820,6 +2843,25 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `MaxMind` | GeoIPProviderTypeMaxMind configures Envoy with the MaxMind provider pointing to local files.<br /> | 
+
+
+#### GeoIPRequestHeaders
+
+
+
+GeoIPRequestHeaders maps GeoIP fields to the HTTP request header names they
+are written to. Only fields that are set are populated.
+
+_Appears in:_
+- [GeoIPEnrichment](#geoipenrichment)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `country` | _[HTTPHeaderName](#httpheadername)_ |  false  |  | Country is the header name to which the ISO 3166-1 country code is<br />written. Requires countryDbSource or cityDbSource on the provider. |
+| `region` | _[HTTPHeaderName](#httpheadername)_ |  false  |  | Region is the header name to which the region/subdivision ISO code is<br />written. Requires cityDbSource on the provider. |
+| `city` | _[HTTPHeaderName](#httpheadername)_ |  false  |  | City is the header name to which the city name is written.<br />Requires cityDbSource on the provider. |
+| `asn` | _[HTTPHeaderName](#httpheadername)_ |  false  |  | ASN is the header name to which the autonomous system number is written.<br />Requires asnDbSource on the provider. |
+| `isp` | _[HTTPHeaderName](#httpheadername)_ |  false  |  | ISP is the header name to which the ISP name is written.<br />Requires ispDbSource on the provider. |
 
 
 #### GlobalRateLimit
