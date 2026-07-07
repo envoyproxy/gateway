@@ -103,7 +103,7 @@ securityPolicies:
     namespace: default
   spec:
     jwt:
-      ignoreFailure: true
+      failOpen: true
       providers:
       - issuer: https://www.example.com
         name: example

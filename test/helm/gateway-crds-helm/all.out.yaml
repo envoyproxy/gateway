@@ -54157,17 +54157,26 @@ spec:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
                 properties:
-                  ignoreFailure:
+                  failOpen:
                     description: |-
-                      IgnoreFailure allows a request to pass the JWT filter even when its JWT is
-                      missing or invalid. Supersedes Optional and maps to Envoy's  `allow_missing_or_failed`.
-                      It does not enforce authentication on its own, so pair it with an Authorization policy.
+                      FailOpen lets a request pass JWT authentication even when its JWT is
+                      missing or invalid, rather than being rejected. This helps when a header
+                      that clients use to carry a JWT may also legitimately hold a non-JWT value
+                      that the backend relies on.
+
+                      A valid JWT is still verified and its claims forwarded as usual; only the
+                      rejection of requests with a missing or invalid JWT is relaxed. Because this
+                      does not enforce authentication on its own, pair it with an Authorization
+                      policy when access needs to be restricted.
+
+                      This is broader than Optional (which tolerates a missing JWT but still
+                      rejects an invalid one) and takes precedence over it.
                     type: boolean
                   optional:
                     description: |-
                       Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
                       Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT
-                      is presented. See IgnoreFailure if this is necessary for your use case.
+                      is presented. See FailOpen if this is necessary for your use case.
                     type: boolean
                   providers:
                     description: |-
@@ -55827,6 +55836,10 @@ spec:
                 required:
                 - providers
                 type: object
+                x-kubernetes-validations:
+                - message: optional and failOpen cannot both be set; failOpen already
+                    tolerates a missing JWT
+                  rule: '!(has(self.optional) && has(self.failOpen))'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing SecurityPolicy

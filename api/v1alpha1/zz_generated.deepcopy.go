@@ -5025,8 +5025,8 @@ func (in *JWT) DeepCopyInto(out *JWT) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.IgnoreFailure != nil {
-		in, out := &in.IgnoreFailure, &out.IgnoreFailure
+	if in.FailOpen != nil {
+		in, out := &in.FailOpen, &out.FailOpen
 		*out = new(bool)
 		**out = **in
 	}

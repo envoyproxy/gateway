@@ -45,7 +45,7 @@ securityPolicies:
       kind: HTTPRoute
       name: httproute-1
     jwt:
-      ignoreFailure: true
+      failOpen: true
       providers:
       - name: example
         issuer: https://www.example.com

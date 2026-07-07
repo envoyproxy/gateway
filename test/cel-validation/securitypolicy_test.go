@@ -1181,6 +1181,37 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "jwt with both optional and failOpen",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Optional: new(true),
+						FailOpen: new(true),
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"optional and failOpen cannot both be set; failOpen already tolerates a missing JWT",
+			},
+		},
+		{
 			desc: "valueRef type of localJWKS without valueRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
