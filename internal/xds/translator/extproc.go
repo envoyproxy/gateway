@@ -14,6 +14,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extprocv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_proc/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -147,6 +148,12 @@ func extProcConfig(extProc *ir.ExtProc) (*extprocv3.ExternalProcessor, error) {
 		}
 	}
 	config.AllowModeOverride = extProc.AllowModeOverride
+
+	if extProc.StatusOnError != nil {
+		config.StatusOnError = &typev3.HttpStatus{
+			Code: typev3.StatusCode(*extProc.StatusOnError),
+		}
+	}
 	return config, nil
 }
 

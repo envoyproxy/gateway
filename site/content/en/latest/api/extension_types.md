@@ -2347,6 +2347,7 @@ _Appears in:_
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when failing to call the external processor.<br />If FailOpen is set to true, the system bypasses the ExtProc extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the ExtProc extension will also be bypassed if the configuration is invalid. |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  |  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 | `metadata` | _[ExtProcMetadata](#extprocmetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `statusOnError` | _integer_ |  false  |  | Sets the HTTP status that is returned to the client when the external processor returns an error<br />or cannot be reached. Defaults to 500 Internal Server Error.<br />Only 4xx and 5xx status codes are supported. |
 
 
 #### ExtProcBodyProcessingMode
@@ -5813,7 +5814,7 @@ Gateway.
 
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
-NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
+NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, and TCPRoute.
 When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
 (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 authentication/authorization features such as JWT, API Key, Basic Auth,
@@ -5828,7 +5829,7 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](#localpolicytargetreferencewithsectionname)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
-| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).<br />This field cannot be set when targeting a parent resource (Gateway).<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent SecurityPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `apiKeyAuth` | _[APIKeyAuth](#apikeyauth)_ |  false  |  | APIKeyAuth defines the configuration for the API Key Authentication. |
 | `cors` | _[CORS](#cors)_ |  false  |  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  |  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
