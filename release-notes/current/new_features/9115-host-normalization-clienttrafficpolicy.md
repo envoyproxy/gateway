@@ -1,1 +1,1 @@
-Added a new `host` section to `ClientTrafficPolicy` with `stripPort` and `stripTrailingHostDot` fields to normalize the Host/Authority header (port stripping and trailing dot removal) without an EnvoyPatchPolicy.
+Added a new `host` section under `ClientTrafficPolicy`'s `headers` with `stripPort` and `stripTrailingHostDot` fields to normalize the Host/Authority header (port stripping and trailing dot removal) without an EnvoyPatchPolicy.

@@ -12,7 +12,7 @@ using the [ClientTrafficPolicy][] API.
 ## Stripping Port from the Host Header
 
 Some clients include the port in the `Host` (or `:authority`) header
-(e.g. `example.com:443`). Set `host.stripPort` to `true` to have Envoy strip the
+(e.g. `example.com:443`). Set `headers.host.stripPort` to `true` to have Envoy strip the
 port unconditionally before route matching.
 
 {{< tabpane text=true >}}
@@ -30,8 +30,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
-  host:
-    stripPort: true
+  headers:
+    host:
+      stripPort: true
 EOF
 ```
 
@@ -51,8 +52,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
-  host:
-    stripPort: true
+  headers:
+    host:
+      stripPort: true
 ```
 
 {{% /tab %}}
@@ -73,7 +75,7 @@ strip-host-port    Accepted   5s
 
 Envoy does not strip trailing dots from the `Host` header by default, unlike some
 other proxies (e.g. NGINX). This means requests with `Host: example.com.` will not
-match routes with domains set to `example.com`. Use `host.stripTrailingHostDot` to
+match routes with domains set to `example.com`. Use `headers.host.stripTrailingHostDot` to
 normalize these requests.
 
 When the host includes a port (e.g. `example.com.:443`), only the trailing dot from
@@ -94,8 +96,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
-  host:
-    stripTrailingHostDot: true
+  headers:
+    host:
+      stripTrailingHostDot: true
 EOF
 ```
 
@@ -115,8 +118,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
-  host:
-    stripTrailingHostDot: true
+  headers:
+    host:
+      stripTrailingHostDot: true
 ```
 
 {{% /tab %}}

@@ -5,8 +5,9 @@ clientTrafficPolicies:
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
-    host:
-      stripPort: true
+    headers:
+      host:
+        stripPort: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -118,6 +119,8 @@ xdsIR:
     http:
     - address: 0.0.0.0
       externalPort: 80
+      headers:
+        withUnderscoresAction: RejectRequest
       host:
         stripPort: true
       hostnames:

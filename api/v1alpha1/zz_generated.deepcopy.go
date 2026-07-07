@@ -1466,11 +1466,6 @@ func (in *ClientTrafficPolicySpec) DeepCopyInto(out *ClientTrafficPolicySpec) {
 		*out = new(PathSettings)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Host != nil {
-		in, out := &in.Host, &out.Host
-		*out = new(HostSettings)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.Headers != nil {
 		in, out := &in.Headers, &out.Headers
 		*out = new(HeaderSettings)
@@ -4882,6 +4877,11 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 	if in.LateResponseHeaders != nil {
 		in, out := &in.LateResponseHeaders, &out.LateResponseHeaders
 		*out = new(HTTPHeaderFilter)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Host != nil {
+		in, out := &in.Host, &out.Host
+		*out = new(HostSettings)
 		(*in).DeepCopyInto(*out)
 	}
 }

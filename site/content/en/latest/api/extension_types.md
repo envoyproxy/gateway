@@ -1001,7 +1001,6 @@ _Appears in:_
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  |  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
 | `tls` | _[ClientTLSSettings](#clienttlssettings)_ |  false  |  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  |  | Path enables managing how the incoming path set by clients can be normalized. |
-| `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header set by clients can be normalized. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  |  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  |  | Timeout settings for the client connections. |
 | `connection` | _[ClientConnection](#clientconnection)_ |  false  |  | Connection includes client connection settings. |
@@ -3347,6 +3346,7 @@ _Appears in:_
 | `requestID` | _[RequestIDAction](#requestidaction)_ |  false  |  | RequestID configures Envoy's behavior for handling the `X-Request-ID` header.<br />When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request<br /> and ignores pre-existing values from the edge.<br />(An "edge request" refers to a request from an external client to the Envoy entrypoint.) |
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
+| `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header set by clients can be normalized. |
 
 
 #### HealthCheck
@@ -3403,7 +3403,7 @@ HostSettings provides settings that manage how the incoming Host/Authority heade
 set by clients is normalized.
 
 _Appears in:_
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+- [HeaderSettings](#headersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |

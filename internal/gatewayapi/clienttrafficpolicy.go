@@ -698,7 +698,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		translatePathSettings(policy.Spec.Path, httpIR)
 
 		// Translate Host Settings
-		translateHostSettings(policy.Spec.Host, httpIR)
+		if policy.Spec.Headers != nil {
+			translateHostSettings(policy.Spec.Headers.Host, httpIR)
+		}
 
 		// Translate HTTP1 Settings
 		if err = translateHTTP1Settings(policy.Spec.HTTP1, connection, httpIR); err != nil {

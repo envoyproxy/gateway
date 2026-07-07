@@ -5,8 +5,9 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1
   spec:
-    host:
-      stripTrailingHostDot: true
+    headers:
+      host:
+        stripTrailingHostDot: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
