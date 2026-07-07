@@ -2468,10 +2468,8 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		return fmt.Errorf("error parsing token endpoint URL: %w", err)
 	}
 
-	if ip, err := netip.ParseAddr(parsedURL.Hostname()); err == nil {
-		if ip.Unmap().Is4() {
-			return fmt.Errorf("token endpoint URL must be a domain name: %s", tokenEndpoint)
-		}
+	if _, err := netip.ParseAddr(parsedURL.Hostname()); err == nil {
+		return fmt.Errorf("token endpoint URL must be a domain name: %s", tokenEndpoint)
 	}
 
 	if parsedURL.Port() != "" {
