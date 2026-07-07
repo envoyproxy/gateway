@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              jwt/provider/example/ca5e5bd0966b6a1e:
+              jwt/provider/example/ca5e5bd0966b6a1eec2b90a8cbeb9526da88ccaca08b815c8a24643c6be07c16:
                 audiences:
                 - foo.com
                 forward: true
@@ -43,8 +43,8 @@
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
             requirementMap:
-              jwt/requirement/758e7fc5a524523b:
-                providerName: jwt/provider/example/ca5e5bd0966b6a1e
+              jwt/requirement/da693d2125cf562719cd741425cf1a5b596e4d72b691fdc982e956afa730a902:
+                providerName: jwt/provider/example/ca5e5bd0966b6a1eec2b90a8cbeb9526da88ccaca08b815c8a24643c6be07c16
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

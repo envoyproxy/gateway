@@ -21,7 +21,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              jwt/provider/example1/080509a58e5880a9:
+              jwt/provider/example1/080509a58e5880a9e565388095d618178374dfd2e6fe431baa1bbf031cecebcf:
                 forward: true
                 issuer: https://oauth.foo.com
                 normalizePayloadInMetadata:
@@ -36,7 +36,7 @@
                     cluster: oauth_foo_com_443
                     timeout: 10s
                     uri: https://oauth.foo.com/jwt/public-key/jwks.json
-              jwt/provider/example2/fad2a181f4b0664e:
+              jwt/provider/example2/fad2a181f4b0664eb241625cbf04683d9893347f6359c311a86608072da13914:
                 forward: true
                 fromHeaders:
                 - name: MyHeaderPrefixed
@@ -55,7 +55,7 @@
                     cluster: oauth_foo_com_443
                     timeout: 10s
                     uri: https://oauth.foo.com/jwt/public-key/jwks.json
-              jwt/provider/example3/2c73957cd9550a84:
+              jwt/provider/example3/2c73957cd9550a84b656d3765ea9d9c8c03637475080d2c41bd131efaa8c30f2:
                 forward: true
                 fromCookies:
                 - Cookie1
@@ -73,7 +73,7 @@
                     cluster: oauth_foo_com_443
                     timeout: 10s
                     uri: https://oauth.foo.com/jwt/public-key/jwks.json
-              jwt/provider/example4/fd3a3100036e2084:
+              jwt/provider/example4/fd3a3100036e208434ce889ed178091b86e8ae9db66d0d5383881346139aab41:
                 forward: true
                 fromParams:
                 - Param1
@@ -92,13 +92,13 @@
                     timeout: 10s
                     uri: https://oauth.foo.com/jwt/public-key/jwks.json
             requirementMap:
-              jwt/requirement/db82c3fbf1d72883:
+              jwt/requirement/48f64c1f30ef293d6ab757b230ce3ca51a62ecfb5289bc80d53fa26b95eac86c:
                 requiresAny:
                   requirements:
-                  - providerName: jwt/provider/example1/080509a58e5880a9
-                  - providerName: jwt/provider/example2/fad2a181f4b0664e
-                  - providerName: jwt/provider/example3/2c73957cd9550a84
-                  - providerName: jwt/provider/example4/fd3a3100036e2084
+                  - providerName: jwt/provider/example1/080509a58e5880a9e565388095d618178374dfd2e6fe431baa1bbf031cecebcf
+                  - providerName: jwt/provider/example2/fad2a181f4b0664eb241625cbf04683d9893347f6359c311a86608072da13914
+                  - providerName: jwt/provider/example3/2c73957cd9550a84b656d3765ea9d9c8c03637475080d2c41bd131efaa8c30f2
+                  - providerName: jwt/provider/example4/fd3a3100036e208434ce889ed178091b86e8ae9db66d0d5383881346139aab41
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

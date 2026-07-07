@@ -294,7 +294,7 @@ func protoHash(message gproto.Message) (string, error) {
 		return "", err
 	}
 	sum := sha256.Sum256(b)
-	return hex.EncodeToString(sum[:8]), nil
+	return hex.EncodeToString(sum[:]), nil
 }
 
 // buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses the system trust store

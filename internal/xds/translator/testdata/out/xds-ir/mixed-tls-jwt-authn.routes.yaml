@@ -15,4 +15,4 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: jwt/requirement/41c257725d433d33
+          requirementName: jwt/requirement/27feed2254b5708e07db172afd5f8ed3e23256ed3ab24bfe3cf737b84f3e9f2d
