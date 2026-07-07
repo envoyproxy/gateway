@@ -2305,6 +2305,20 @@ spec:
                     - Local
                     type: string
                 type: object
+              requestBodyBufferLimit:
+                allOf:
+                - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                anyOf:
+                - type: integer
+                - type: string
+                description: |-
+                  RequestBodyBufferLimit configures the maximum bytes that Envoy may buffer for a route's request body.
+                  This maps directly to Envoy route request_body_buffer_limit and does not enable the HTTP buffer filter
+                  or fully buffer requests before forwarding them upstream.
+
+                  Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+                x-kubernetes-int-or-string: true
               requestBuffer:
                 description: |-
                   RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request

@@ -15,6 +15,7 @@ import (
 
 	perr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -1072,6 +1073,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
+		rbLimit     *uint64
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
 		err, errs   error
@@ -1140,6 +1142,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		errs = errors.Join(errs, err)
 	}
 
+	if rbLimit, err = buildRequestBodyBufferLimit(policy.Spec.RequestBodyBufferLimit); err != nil {
+		err = perr.WithMessage(err, "RequestBodyBufferLimit")
+		errs = errors.Join(errs, err)
+	}
+
 	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
 		err = perr.WithMessage(err, "Telemetry")
 		errs = errors.Join(errs, err)
@@ -1156,25 +1163,26 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
-		RateLimit:         rl,
-		BandwidthLimit:    bl,
-		LoadBalancer:      lb,
-		ProxyProtocol:     pp,
-		HealthCheck:       hc,
-		CircuitBreaker:    cb,
-		FaultInjection:    fi,
-		AdmissionControl:  ac,
-		TCPKeepalive:      ka,
-		Retry:             rt,
-		BackendConnection: bc,
-		HTTP2:             h2,
-		DNS:               ds,
-		Timeout:           to,
-		ResponseOverride:  ro,
-		RequestBuffer:     rb,
-		Compression:       cp,
-		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
+		RateLimit:              rl,
+		BandwidthLimit:         bl,
+		LoadBalancer:           lb,
+		ProxyProtocol:          pp,
+		HealthCheck:            hc,
+		CircuitBreaker:         cb,
+		FaultInjection:         fi,
+		AdmissionControl:       ac,
+		TCPKeepalive:           ka,
+		Retry:                  rt,
+		BackendConnection:      bc,
+		HTTP2:                  h2,
+		DNS:                    ds,
+		Timeout:                to,
+		ResponseOverride:       ro,
+		RequestBuffer:          rb,
+		RequestBodyBufferLimit: rbLimit,
+		Compression:            cp,
+		HTTPUpgrade:            httpUpgrade,
+		Telemetry:              buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
 }
 
@@ -1904,6 +1912,23 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 	return &ir.RequestBuffer{
 		Limit: spec.Limit,
 	}, nil
+}
+
+func buildRequestBodyBufferLimit(limit *apiresource.Quantity) (*uint64, error) {
+	if limit == nil {
+		return nil, nil
+	}
+
+	bytes, ok := limit.AsInt64()
+	if !ok {
+		return nil, fmt.Errorf("limit must be convertible to an int64")
+	}
+
+	if bytes < 0 {
+		return nil, fmt.Errorf("limit value %s is out of range, must be non-negative", limit.String())
+	}
+
+	return ptr.To(uint64(bytes)), nil
 }
 
 func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) (*ir.ResponseOverride, error) {

@@ -1,0 +1,1 @@
+- Added `BackendTrafficPolicy.spec.requestBodyBufferLimit` to configure Envoy route `request_body_buffer_limit` without enabling request buffering.

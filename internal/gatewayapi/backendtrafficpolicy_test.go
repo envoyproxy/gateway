@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -245,6 +246,25 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})
+}
+
+func TestBuildTrafficFeaturesRequestBodyBufferLimit(t *testing.T) {
+	tr := &Translator{}
+	policy := &egv1a1.BackendTrafficPolicy{
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			RequestBodyBufferLimit: ptr.To(resource.MustParse("10Mi")),
+			HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+				{Type: "websocket"},
+			},
+		},
+	}
+
+	tf, err := tr.buildTrafficFeatures(policy)
+	require.NoError(t, err)
+	require.NotNil(t, tf)
+	require.NotNil(t, tf.RequestBodyBufferLimit)
+	require.Equal(t, uint64(10*1024*1024), *tf.RequestBodyBufferLimit)
+	require.Nil(t, tf.RequestBuffer)
 }
 
 func TestBuildPassiveHealthCheck(t *testing.T) {

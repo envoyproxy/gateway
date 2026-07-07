@@ -145,6 +145,10 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	// Metrics
 	router.StatPrefix = ptr.Deref(httpRoute.StatName, "")
 
+	if httpRoute.Traffic != nil && httpRoute.Traffic.RequestBodyBufferLimit != nil {
+		router.RequestBodyBufferLimit = wrapperspb.UInt64(*httpRoute.Traffic.RequestBodyBufferLimit)
+	}
+
 	// Add per route filter configs to the route, if needed.
 	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
 		return nil, err

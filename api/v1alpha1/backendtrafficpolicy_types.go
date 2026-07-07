@@ -138,6 +138,18 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
+
+	// RequestBodyBufferLimit configures the maximum bytes that Envoy may buffer for a route's request body.
+	// This maps directly to Envoy route request_body_buffer_limit and does not enable the HTTP buffer filter
+	// or fully buffer requests before forwarding them upstream.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	RequestBodyBufferLimit *resource.Quantity `json:"requestBodyBufferLimit,omitempty"`
+
 	// Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
 	// This will override the telemetry settings in the EnvoyProxy resource.
 	//

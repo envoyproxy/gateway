@@ -200,6 +200,14 @@ func TestBuildUpgradeConfig(t *testing.T) {
 			expected: nil,
 		},
 		{
+			name: "request body buffer limit preserves default websocket upgrade",
+			trafficFeature: &ir.TrafficFeatures{
+				RequestBodyBufferLimit: ptrTo(uint64(1024)),
+				HTTPUpgrade:            nil,
+			},
+			expected: defaultUpgradeConfig,
+		},
+		{
 			name: "spdy",
 			trafficFeature: &ir.TrafficFeatures{
 				HTTPUpgrade: []ir.HTTPUpgradeConfig{{Type: "spdy/3.1"}},
@@ -254,6 +262,35 @@ func TestBuildUpgradeConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildXdsRouteRequestBodyBufferLimit(t *testing.T) {
+	limit := uint64(10 * 1024 * 1024)
+	statusCode := uint32(200)
+
+	got, err := buildXdsRoute(&ir.HTTPRoute{
+		Name: "route-with-request-body-buffer-limit",
+		DirectResponse: &ir.CustomResponse{
+			StatusCode: &statusCode,
+		},
+		Traffic: &ir.TrafficFeatures{
+			RequestBodyBufferLimit: &limit,
+		},
+	}, &ir.HTTPListener{})
+	if err != nil {
+		t.Fatalf("buildXdsRoute() returned error: %v", err)
+	}
+
+	if got.GetRequestBodyBufferLimit().GetValue() != limit {
+		t.Fatalf("RequestBodyBufferLimit = %d, want %d", got.GetRequestBodyBufferLimit().GetValue(), limit)
+	}
+	if len(got.GetTypedPerFilterConfig()) != 0 {
+		t.Fatalf("TypedPerFilterConfig = %v, want empty", got.GetTypedPerFilterConfig())
+	}
+}
+
+func ptrTo[T any](v T) *T {
+	return &v
 }
 
 func TestBuildXdsURLRewriteAction_AppendXForwardedHost(t *testing.T) {
