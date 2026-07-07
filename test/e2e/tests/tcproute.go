@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -122,7 +121,7 @@ func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 		t.Fatalf("timeoutConfig cannot be nil")
 	}
 
-	tcpRoute := &gwapiv1a2.TCPRoute{}
+	tcpRoute := &gwapiv1.TCPRoute{}
 	err := c.Get(context.Background(), routeNNs[0], tcpRoute)
 	if err != nil {
 		tlog.Logf(t, "error fetching TCPRoute: %v", err)
@@ -222,7 +221,7 @@ func TCPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *
 
 	var actual []gwapiv1.RouteParentStatus
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, timeoutConfig.RouteMustHaveParents, true, func(ctx context.Context) (bool, error) {
-		route := &gwapiv1a2.TCPRoute{}
+		route := &gwapiv1.TCPRoute{}
 		err := client.Get(ctx, routeName, route)
 		if err != nil {
 			return false, fmt.Errorf("error fetching TCPRoute: %w", err)
