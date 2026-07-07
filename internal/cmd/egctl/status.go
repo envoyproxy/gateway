@@ -87,7 +87,7 @@ func newStatusCommand() *cobra.Command {
 			case len(args) > 1:
 				return fmt.Errorf("unknown args: %s", strings.Join(args[1:], ","))
 			default:
-				return fmt.Errorf("invalid args: must specific a resources type")
+				return fmt.Errorf("invalid args: must specify a resource type")
 			}
 
 			switch strings.ToLower(resourceType) {
@@ -139,7 +139,7 @@ func newStatusCommand() *cobra.Command {
 	statusCommand.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Show the first status of resources only")
 	statusCommand.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show the status of resources with details")
 	statusCommand.PersistentFlags().BoolVarP(&allNamespaces, "all-namespaces", "A", false, "Get the status of resources from all namespaces")
-	statusCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Specific a namespace to get the status of resources")
+	statusCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Specify a namespace to get the status of resources")
 
 	return statusCommand
 }

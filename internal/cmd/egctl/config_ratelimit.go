@@ -46,7 +46,7 @@ func ratelimitConfigCommand() *cobra.Command {
 		},
 	}
 
-	rlConfigCmd.Flags().StringVarP(&namespace, "namespace", "n", defaultRateLimitNamespace, "Specific a namespace to get resources")
+	rlConfigCmd.Flags().StringVarP(&namespace, "namespace", "n", defaultRateLimitNamespace, "Specify a namespace to get resources")
 	return rlConfigCmd
 }
 

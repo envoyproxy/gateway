@@ -547,6 +547,51 @@ func Test_APIKeyAuth(t *testing.T) {
 	}
 }
 
+func Test_buildAPIKeyAuthSortsCredentials(t *testing.T) {
+	policy := &egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "policy",
+			Namespace: "default",
+		},
+		Spec: egv1a1.SecurityPolicySpec{
+			APIKeyAuth: &egv1a1.APIKeyAuth{
+				CredentialRefs: []gwapiv1.SecretObjectReference{
+					{
+						Name: "api-keys",
+					},
+				},
+			},
+		},
+	}
+	resources := &resource.Resources{}
+	translator := &Translator{
+		TranslatorContext: &TranslatorContext{
+			SecretMap: map[types.NamespacedName]*corev1.Secret{
+				{Namespace: "default", Name: "api-keys"}: {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "api-keys",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"grafana":    []byte("grafana-key"),
+						"azure":      []byte("azure-key"),
+						"databricks": []byte("databricks-key"),
+					},
+				},
+			},
+		},
+	}
+
+	apiKeyAuth, err := translator.buildAPIKeyAuth(policy, resources)
+	require.NoError(t, err)
+	require.Len(t, apiKeyAuth.Credentials, 3)
+	assert.Equal(t, []ir.APIKeyCredential{
+		{Client: []byte("azure"), Key: []byte("azure-key")},
+		{Client: []byte("databricks"), Key: []byte("databricks-key")},
+		{Client: []byte("grafana"), Key: []byte("grafana-key")},
+	}, apiKeyAuth.Credentials)
+}
+
 func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 	tests := []struct {
 		name      string

@@ -85,6 +85,12 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 						hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
 					}
 				}
+				// Fall back to spec.externalIPs (e.g. set via an EnvoyProxy service patch)
+				// when no load balancer ingress has been assigned, such as on bare-metal
+				// clusters without a load balancer controller.
+				if len(addresses) == 0 && len(hostnames) == 0 {
+					addresses = append(addresses, svc.Spec.ExternalIPs...)
+				}
 			}
 
 			if svc.Spec.Type == corev1.ServiceTypeClusterIP {

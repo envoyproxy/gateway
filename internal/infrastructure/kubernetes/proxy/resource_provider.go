@@ -632,7 +632,7 @@ func (r *ResourceRender) getPodSpec(
 		AutomountServiceAccountToken:  ptr.To(false),
 		Containers:                    containers,
 		InitContainers:                initContainers,
-		ServiceAccountName:            r.Name(),
+		ServiceAccountName:            r.serviceAccountName(),
 		TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 		DNSPolicy:                     corev1.DNSClusterFirst,
 		RestartPolicy:                 corev1.RestartPolicyAlways,
