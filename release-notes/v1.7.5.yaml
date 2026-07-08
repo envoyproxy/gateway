@@ -1,4 +1,4 @@
-date: July 7, 2026
+date: July 8, 2026
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
@@ -7,6 +7,7 @@ breaking changes: |
 security updates: |
   Bump Envoy to `1.37.5` (through `1.37.4`), which includes multiple security fixes. Refer to the [Envoy 1.37.5 release notes](https://www.envoyproxy.io/docs/envoy/v1.37.5/version_history/v1.37/v1.37.5).
   Bump Envoy ratelimit image to `f2fb1577`.
+  Bumped Go to 1.26.5 and 1.25.12, which includes security fixes to the `crypto/tls` and `os` packages.
 
 # New features or capabilities added in this release.
 new features: |
