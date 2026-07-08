@@ -1,10 +1,7 @@
 # Release notes for the next release
 
-Add your release note here as a **new file**, instead of editing a shared
-`current.yaml`. Because every change is its own file, concurrent PRs no longer
-conflict on the release notes. This mirrors Envoy's
-[`changelogs/current`](https://github.com/envoyproxy/envoy/tree/main/changelogs/current)
-approach.
+This directory holds release notes for the next release. Document each change by
+adding a **new file** under the matching section directory, as described below.
 
 ## How to add an entry
 

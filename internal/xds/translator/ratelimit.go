@@ -173,25 +173,16 @@ func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain, f
 // patchRouteWithRateLimit builds rate limit actions and appends to the route.
 func patchRouteWithRateLimit(irListener *ir.HTTPListener, route *routev3.Route, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	// Return early if no rate limit config exists.
-	xdsRouteAction := route.GetRoute()
-	if !isValidGlobalRateLimit(irRoute) || xdsRouteAction == nil {
-		return nil
-	}
-	rateLimits, rateLimitsByDomain, useRouteRateLimits := buildRouteRateLimits(irListener.Name, irRoute)
-	if useRouteRateLimits {
-		// When all rules are shared and no cost is specified, put rate limits directly on the
-		// route action. Each HCM filter picks them up and sends them to the rate limit service
-		// under its own domain; the service only matches descriptors registered for that domain,
-		// so shared and non-shared counters are naturally isolated without TypedPerFilterConfig.
-		xdsRouteAction.RateLimits = rateLimits
+	if !isValidGlobalRateLimit(irRoute) || route.GetRoute() == nil {
 		return nil
 	}
 
-	// When cost is present (or for any non-shared route), TypedPerFilterConfig is required so
-	// that HitsAddend and per-domain isolation are preserved. Write one entry per domain so each
-	// rate limit filter sees only the rules that belong to it.
+	// TypedPerFilterConfig scopes each domain's rules to the matching rate limit filter, so each
+	// request triggers exactly one ShouldRateLimit call. Route-level rate_limits carry no domain
+	// and are picked up by every filter on the HCM, producing one call per listener domain with
+	// all but one discarded by the RLS.
 	listenerName := irListener.Name
-	for domain, rls := range rateLimitsByDomain {
+	for domain, rls := range buildRouteRateLimits(listenerName, irRoute) {
 		filterName := egv1a1.EnvoyFilterRateLimit.String()
 		if domain != listenerName {
 			filterName += "/" + domain
@@ -230,32 +221,21 @@ func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, filterName
 	return nil
 }
 
-// buildRouteRateLimits constructs rate limit actions for a given route based on the global rate
-// limit configuration. It returns:
-//   - rateLimits: all actions in rule order (used when useRouteRateLimits is true)
-//   - rateLimitsByDomain: actions grouped by domain (used when useRouteRateLimits is false)
-//   - useRouteRateLimits: true when all rules are shared and none specify a custom cost, meaning
-//     rate limits can be applied directly on the route action rather than per typed filter config.
-func buildRouteRateLimits(listenerName string, route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit, rateLimitsByDomain map[string][]*routev3.RateLimit, useRouteRateLimits bool) {
+// buildRouteRateLimits constructs rate limit actions for a given route grouped by domain.
+// Shared rules use their policy domain; non-shared rules use the listener domain.
+func buildRouteRateLimits(listenerName string, route *ir.HTTPRoute) map[string][]*routev3.RateLimit {
 	// Ensure route has rate limit config
 	if !isValidGlobalRateLimit(route) {
-		return nil, nil, false
+		return nil
 	}
 
 	// Get the global rate limit configuration
 	global := route.Traffic.RateLimit.Global
-	rateLimitsByDomain = make(map[string][]*routev3.RateLimit)
+	rateLimitsByDomain := make(map[string][]*routev3.RateLimit)
 
-	var hasSharedRule, costSpecified bool
 	// Iterate over each rule in the global rate limit configuration.
 	for rIdx, rule := range global.Rules {
 		ruleShared := isRuleShared(rule)
-		if ruleShared {
-			hasSharedRule = true
-		}
-		if rule.RequestCost != nil || rule.ResponseCost != nil {
-			costSpecified = true
-		}
 
 		// Domain for this rule: shared rules use their policy domain, non-shared use the listener.
 		var domain string
@@ -348,8 +328,6 @@ func buildRouteRateLimits(listenerName string, route *ir.HTTPRoute) (rateLimits 
 				// Set the hits addend for the request cost if specified.
 				rateLimit.HitsAddend = rateLimitCostToHitsAddend(c)
 			}
-			// Add the rate limit to the flat list and the per-domain map.
-			rateLimits = append(rateLimits, rateLimit)
 			rateLimitsByDomain[domain] = append(rateLimitsByDomain[domain], rateLimit)
 
 			// Handle response cost by creating a separate rate limit object.
@@ -360,12 +338,11 @@ func buildRouteRateLimits(listenerName string, route *ir.HTTPRoute) (rateLimits 
 				// Keep the limit override consistent with the request-time rule so both
 				// descriptors for this shared counter reference the same per-request limit.
 				responseRule.Limit = rateLimit.Limit
-				rateLimits = append(rateLimits, responseRule)
 				rateLimitsByDomain[domain] = append(rateLimitsByDomain[domain], responseRule)
 			}
 		}
 	}
-	return rateLimits, rateLimitsByDomain, hasSharedRule && !costSpecified
+	return rateLimitsByDomain
 }
 
 // toEnvoyXRateLimitOption maps the EG API XRateLimitHeadersOption to the Envoy
