@@ -1023,6 +1023,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				if policy.Spec.UseClientProtocol != nil {
 					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
+				applySessionPersistenceOverride(r, policy)
 				appendTrafficPolicyMetadata(r.Metadata, policy)
 			}
 		}
@@ -1322,6 +1323,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
 			}
 
+			applySessionPersistenceOverride(r, policy)
 			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
@@ -1334,6 +1336,23 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 
 	return errs
+}
+
+// applySessionPersistenceOverride applies the BackendTrafficPolicy session
+// persistence overrides to a route. It only mutates routes that already have
+// session persistence enabled via the Gateway API (x)Route sessionPersistence
+// field; it does not enable session persistence on its own.
+func applySessionPersistenceOverride(r *ir.HTTPRoute, policy *egv1a1.BackendTrafficPolicy) {
+	if r == nil || r.SessionPersistence == nil || r.SessionPersistence.Cookie == nil {
+		return
+	}
+	sp := policy.Spec.SessionPersistence
+	if sp == nil || sp.Cookie == nil {
+		return
+	}
+	if sp.Cookie.Path != nil {
+		r.SessionPersistence.Cookie.Path = sp.Cookie.Path
+	}
 }
 
 func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {
