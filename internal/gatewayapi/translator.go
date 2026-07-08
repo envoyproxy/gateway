@@ -53,7 +53,7 @@ var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
 	Translate(resources *resource.Resources) (*TranslateResult, error)
-	GetRelevantGateways(resources *resource.Resources) (acceptedGateways, failedGateways []*GatewayContext)
+	GetRelevantGateways(resources *resource.Resources) (gatewayClass *gwapiv1.GatewayClass, acceptedGateways, failedGateways []*GatewayContext)
 
 	RoutesTranslator
 	ListenersTranslator
@@ -267,7 +267,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.TranslatorContext = translatorContext
 
 	// Get Gateways belonging to our GatewayClass.
-	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
+	gatewayClass, acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
 	// Gateways are already sorted by the provider layer
 
@@ -389,7 +389,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	allGateways = append(allGateways, acceptedGateways...)
 	allGateways = append(allGateways, failedGateways...)
 
-	return newTranslateResult(resources.GatewayClass,
+	return newTranslateResult(gatewayClass,
 		resources.EnvoyProxyForGatewayClass,
 		allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
@@ -397,13 +397,19 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		envoyPatchPolicies, extServerPolicies, backends, resources.ListenerSets, xdsIR, infraIR), errs
 }
 
-// GetRelevantGateways returns GatewayContexts, containing a copy of the original
-// Gateway with the Listener statuses reset.
+// GetRelevantGateways returns a copy of the GatewayClass with a deep-copied Status field
+// and GatewayContexts, containing a copy of the original Gateway with the Listener statuses reset.
 func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
-	acceptedGateways, failedGateways []*GatewayContext,
+	gatewayClass *gwapiv1.GatewayClass, acceptedGateways, failedGateways []*GatewayContext,
 ) {
 	envoyproxyMap := make(map[types.NamespacedName]*egv1a1.EnvoyProxy, len(resources.EnvoyProxiesForGateways)+1)
 	envoyproxyValidationErrorMap := make(map[types.NamespacedName]error, len(resources.EnvoyProxiesForGateways))
+
+	// Work on a shallow copy of the GatewayClass with a deep-copied Status field.
+	// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+	if resources.GatewayClass != nil {
+		gatewayClass = gatewayClassCopyWithStatusDeepCopy(resources.GatewayClass)
+	}
 
 	for _, ep := range resources.EnvoyProxiesForGateways {
 		key := utils.NamespacedName(ep)
@@ -419,11 +425,11 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	if ep := resources.EnvoyProxyForGatewayClass; ep != nil {
 		var ancestor *gwapiv1.ParentReference
 		// TODO: remove this nil check after we update all the testdata.
-		if resources.GatewayClass != nil {
+		if gatewayClass != nil {
 			ancestor = &gwapiv1.ParentReference{
 				Group: GroupPtr(gwapiv1.GroupName),
 				Kind:  KindPtr(resource.KindGatewayClass),
-				Name:  gwapiv1.ObjectName(resources.GatewayClass.Name),
+				Name:  gwapiv1.ObjectName(gatewayClass.Name),
 			}
 		}
 
@@ -433,7 +439,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			t.Logger.Error(err, "Skipping GatewayClass because EnvoyProxy is invalid",
 				"gatewayclass", t.GatewayClassName,
 				"envoyproxy", ep.Name, "namespace", ep.Namespace)
-			status.SetGatewayClassAccepted(resources.GatewayClass,
+			status.SetGatewayClassAccepted(gatewayClass,
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
 
@@ -441,9 +447,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
 		} else {
 			// TODO: remove this nil check after we update all the testdata.
-			if resources.GatewayClass != nil {
+			if gatewayClass != nil {
 				status.SetGatewayClassAccepted(
-					resources.GatewayClass,
+					gatewayClass,
 					true,
 					string(gwapiv1.GatewayClassReasonAccepted),
 					status.MsgValidGatewayClass)
@@ -473,7 +479,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		}
 
 		gCtx := &GatewayContext{
-			Gateway: gateway,
+			Gateway: gatewayCopyWithStatusDeepCopy(gateway),
 		}
 		if err := gCtx.attachEnvoyProxy(resources, envoyproxyMap); err != nil {
 			t.Logger.Error(err, "Error attaching EnvoyProxy", logKeysAndValues...)
@@ -538,7 +544,23 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		gCtx.ResetListeners()
 		acceptedGateways = append(acceptedGateways, gCtx)
 	}
-	return acceptedGateways, failedGateways
+	return gatewayClass, acceptedGateways, failedGateways
+}
+
+// gatewayCopyWithStatusDeepCopy returns a shallow copy with a deep-copied Status field.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func gatewayCopyWithStatusDeepCopy(gateway *gwapiv1.Gateway) *gwapiv1.Gateway {
+	out := *gateway
+	gateway.Status.DeepCopyInto(&out.Status)
+	return &out
+}
+
+// gatewayClassCopyWithStatusDeepCopy returns a shallow copy with a deep-copied Status field.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func gatewayClassCopyWithStatusDeepCopy(gc *gwapiv1.GatewayClass) *gwapiv1.GatewayClass {
+	out := *gc
+	gc.Status.DeepCopyInto(&out.Status)
+	return &out
 }
 
 func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
