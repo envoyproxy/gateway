@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -273,6 +272,24 @@ func buildJWTRequirement(reqs []*jwtauthnv3.JwtRequirement) *jwtauthnv3.JwtRequi
 	}
 }
 
+// maxJWTNameLength bounds the length of generated JWT provider and requirement
+// names. The readable prefix is derived from user-controlled provider names and,
+// for requirements, grows with the number of combined providers, so without a
+// cap the generated name could become long enough to fail Envoy xDS validation.
+const maxJWTNameLength = 256
+
+// boundedJWTName joins a human-readable prefix with a content-derived hash,
+// truncating the prefix if necessary so the total length stays within
+// maxJWTNameLength. The hash suffix is always preserved, so names remain unique
+// even when the prefix is truncated.
+func boundedJWTName(prefix, hash string) string {
+	suffix := "_" + hash
+	if maxPrefix := maxJWTNameLength - len(suffix); len(prefix) > maxPrefix {
+		prefix = prefix[:maxPrefix]
+	}
+	return prefix + suffix
+}
+
 // jwtProviderName returns a deterministic name for a JWT provider that combines
 // the IR provider name with a hash of the generated Envoy provider config. The
 // hash lets identical providers share a single entry across routes, while the
@@ -282,7 +299,7 @@ func jwtProviderName(providerName string, provider *jwtauthnv3.JwtProvider) (str
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s_%s", providerName, hash), nil
+	return boundedJWTName(providerName, hash), nil
 }
 
 // jwtRequirementName returns a deterministic name for a JWT requirement. The
@@ -301,7 +318,7 @@ func jwtRequirementName(jwt *ir.JWT, requirement *jwtauthnv3.JwtRequirement) (st
 	if jwt.AllowMissing {
 		names = append(names, "missing")
 	}
-	return fmt.Sprintf("%s_%s", strings.Join(names, "-or-"), hash), nil
+	return boundedJWTName(strings.Join(names, "-or-"), hash), nil
 }
 
 // protoHash returns the first 16 hex characters of the SHA-256 digest of the

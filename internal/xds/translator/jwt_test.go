@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"strings"
 	"testing"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -65,5 +66,41 @@ func TestJWTAuthnDeduplicatesIdenticalRouteProviders(t *testing.T) {
 		var perRouteConfig jwtauthnv3.PerRouteConfig
 		require.NoError(t, xdsRoute.GetTypedPerFilterConfig()["envoy.filters.http.jwt_authn"].UnmarshalTo(&perRouteConfig))
 		require.Equal(t, requirementName, perRouteConfig.GetRequirementName())
+	}
+}
+
+func TestJWTAuthnNamesAreBounded(t *testing.T) {
+	// Build a JWT config with many long provider names so the joined,
+	// human-readable prefix would exceed the length guard if left unbounded.
+	providers := make([]ir.JWTProvider, 0, 50)
+	for i := 0; i < 50; i++ {
+		providers = append(providers, ir.JWTProvider{
+			Name:   strings.Repeat("very-long-jwt-provider-name", 3),
+			Issuer: "https://issuer.example.com/",
+			RemoteJWKS: &ir.RemoteJWKS{
+				URI: "https://issuer.example.com/keys",
+			},
+		})
+	}
+	irJWT := &ir.JWT{Providers: providers, AllowMissing: true}
+	irListener := &ir.HTTPListener{
+		Routes: []*ir.HTTPRoute{
+			{
+				Name:     "httproute/default/route-a/rule/0/match/0/example.com",
+				Security: &ir.SecurityFeatures{JWT: irJWT},
+			},
+		},
+	}
+
+	var jwtAuthn jwtauthnv3.JwtAuthentication
+	require.NoError(t, buildJWTAuthn(irListener, &jwtAuthn))
+
+	for providerName := range jwtAuthn.GetProviders() {
+		require.LessOrEqual(t, len(providerName), maxJWTNameLength)
+	}
+	for requirementName := range jwtAuthn.GetRequirementMap() {
+		require.LessOrEqual(t, len(requirementName), maxJWTNameLength)
+		// The uniqueness-guaranteeing hash suffix must survive truncation.
+		require.Contains(t, requirementName, "_")
 	}
 }
