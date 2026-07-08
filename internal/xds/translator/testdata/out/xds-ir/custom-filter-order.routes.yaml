@@ -26,7 +26,7 @@
           forwardNotMatchingPreflights: false
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: jwt/requirement/ab4233a6c948da652b54825e9813a1e2fb7324bb03188c2f64adcf2e8e76d501
+          requirementName: example1-or-example2_73a070ef6c8ee8ea
         envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/0:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}

@@ -130,7 +130,7 @@ xds:
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
                     providers:
-                      jwt/provider/example/7815c684b265ae4707ff29403025c5fc69b3ba9eaf73af78df453b153af89dd7:
+                      example_7815c684b265ae47:
                         forward: true
                         normalizePayloadInMetadata:
                           spaceDelimitedClaims:
@@ -145,8 +145,8 @@ xds:
                             timeout: 10s
                             uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
                     requirementMap:
-                      jwt/requirement/a98219faafd68054c015f3a94a4b6bf0d33b51c2b5a5ee0d4bf0d528f644444c:
-                        providerName: jwt/provider/example/7815c684b265ae4707ff29403025c5fc69b3ba9eaf73af78df453b153af89dd7
+                      example_610fd14578c340be:
+                        providerName: example_7815c684b265ae47
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

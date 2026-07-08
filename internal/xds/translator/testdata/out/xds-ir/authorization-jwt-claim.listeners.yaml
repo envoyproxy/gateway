@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              jwt/provider/example1/02327216cb0dba2135b1ac9fdc9ee8353f7469c02f72851a8d0393d44fd1e86b:
+              example1_02327216cb0dba21:
                 audiences:
                 - two.foo.com
                 forward: true
@@ -35,7 +35,7 @@
                     cluster: two_example_com_443
                     timeout: 10s
                     uri: https://two.example.com/jwt/public-key/jwks.json
-              jwt/provider/example1/ee7c27dda4c8e01e584ab8ca63089b3f6f5d6da7d8eed2720245256abbf3019d:
+              example1_ee7c27dda4c8e01e:
                 audiences:
                 - one.foo.com
                 forward: true
@@ -53,10 +53,10 @@
                     timeout: 10s
                     uri: https://one.example.com/jwt/public-key/jwks.json
             requirementMap:
-              jwt/requirement/08f241a5e0676684ca923fdce9a8efd3434f0f14a9cdd598b50cb0b470447a4e:
-                providerName: jwt/provider/example1/ee7c27dda4c8e01e584ab8ca63089b3f6f5d6da7d8eed2720245256abbf3019d
-              jwt/requirement/bd10aba78008229742963accf7aa2f3ac242f3c97e632ab6b90dc821773c7deb:
-                providerName: jwt/provider/example1/02327216cb0dba2135b1ac9fdc9ee8353f7469c02f72851a8d0393d44fd1e86b
+              example1_3b6358ed75b16e41:
+                providerName: example1_ee7c27dda4c8e01e
+              example1_128ed6e824345145:
+                providerName: example1_02327216cb0dba21
         - name: envoy.filters.http.rbac
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC

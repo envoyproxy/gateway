@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              jwt/provider/foobar/14d5b09b29e54e968c31c653f7cbc235a31a54c493a34c478f321f396942cbe3:
+              foobar_14d5b09b29e54e96:
                 audiences:
                 - foo.bar.com
                 claimToHeaders:
@@ -46,8 +46,8 @@
                       maxInterval: 5s
                     retryOn: 5xx,gateway-error,reset
             requirementMap:
-              jwt/requirement/b5609eb5c2b748e8eb4d3a072628bca7a7645001802d5e5fed11260bdddc3932:
-                providerName: jwt/provider/foobar/14d5b09b29e54e968c31c653f7cbc235a31a54c493a34c478f321f396942cbe3
+              foobar_d74de7564544aa48:
+                providerName: foobar_14d5b09b29e54e96
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

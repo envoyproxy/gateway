@@ -54,7 +54,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              jwt/provider/jwt1/cb766da7fa6f120205692a9243e7f6aa199854acd573a66fd2104147534a1b39:
+              jwt1_cb766da7fa6f1202:
                 forward: true
                 fromCookies:
                 - AccessTokenDomain1
@@ -70,7 +70,7 @@
                     cluster: www_googleapis_com_443
                     timeout: 10s
                     uri: https://www.googleapis.com/oauth2/v3/certs
-              jwt/provider/jwt2/d1e60459ce7ec72cb019553138e4034f83b39649992278581776b0929c8eae5d:
+              jwt2_d1e60459ce7ec72c:
                 forward: true
                 fromCookies:
                 - AccessTokenDomain2
@@ -87,15 +87,15 @@
                     timeout: 10s
                     uri: https://www.googleapis.com/oauth2/v3/certs
             requirementMap:
-              jwt/requirement/2e185e0ebcf2694d92db2cffbf9e32d8552a08e06d2701915c01d6eee7619603:
+              jwt1-or-missing_6f7e920fc2a0617c:
                 requiresAny:
                   requirements:
-                  - providerName: jwt/provider/jwt2/d1e60459ce7ec72cb019553138e4034f83b39649992278581776b0929c8eae5d
+                  - providerName: jwt1_cb766da7fa6f1202
                   - allowMissing: {}
-              jwt/requirement/a84799e66c64ed7c2eb8701b2c0ff3849215572c80290825ebc4c63375a581a4:
+              jwt2-or-missing_554e269f8327a7aa:
                 requiresAny:
                   requirements:
-                  - providerName: jwt/provider/jwt1/cb766da7fa6f120205692a9243e7f6aa199854acd573a66fd2104147534a1b39
+                  - providerName: jwt2_d1e60459ce7ec72c
                   - allowMissing: {}
         - name: envoy.filters.http.router
           typedConfig:

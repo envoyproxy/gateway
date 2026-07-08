@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -121,7 +122,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 		}
 
 		requirement := buildJWTRequirement(reqs)
-		requirementName, err := jwtRequirementName(requirement)
+		requirementName, err := jwtRequirementName(route.Security.JWT, requirement)
 		if err != nil {
 			return err
 		}
@@ -272,29 +273,47 @@ func buildJWTRequirement(reqs []*jwtauthnv3.JwtRequirement) *jwtauthnv3.JwtRequi
 	}
 }
 
+// jwtProviderName returns a deterministic name for a JWT provider that combines
+// the IR provider name with a hash of the generated Envoy provider config. The
+// hash lets identical providers share a single entry across routes, while the
+// prefix keeps the generated name readable.
 func jwtProviderName(providerName string, provider *jwtauthnv3.JwtProvider) (string, error) {
 	hash, err := protoHash(provider)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("jwt/provider/%s/%s", providerName, hash), nil
+	return fmt.Sprintf("%s_%s", providerName, hash), nil
 }
 
-func jwtRequirementName(requirement *jwtauthnv3.JwtRequirement) (string, error) {
+// jwtRequirementName returns a deterministic name for a JWT requirement. The
+// name combines the referenced IR provider names (plus "missing" when missing
+// tokens are allowed) with a hash of the generated Envoy requirement config, so
+// identical requirements are deduplicated while the name stays human readable.
+func jwtRequirementName(jwt *ir.JWT, requirement *jwtauthnv3.JwtRequirement) (string, error) {
 	hash, err := protoHash(requirement)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("jwt/requirement/%s", hash), nil
+	names := make([]string, 0, len(jwt.Providers)+1)
+	for i := range jwt.Providers {
+		names = append(names, jwt.Providers[i].Name)
+	}
+	if jwt.AllowMissing {
+		names = append(names, "missing")
+	}
+	return fmt.Sprintf("%s_%s", strings.Join(names, "-or-"), hash), nil
 }
 
+// protoHash returns the first 16 hex characters of the SHA-256 digest of the
+// deterministically-marshaled proto message. This follows the existing xDS
+// naming precedent set by sdsClusterNameFromURL.
 func protoHash(message gproto.Message) (string, error) {
 	b, err := gproto.MarshalOptions{Deterministic: true}.Marshal(message)
 	if err != nil {
 		return "", err
 	}
 	sum := sha256.Sum256(b)
-	return hex.EncodeToString(sum[:]), nil
+	return hex.EncodeToString(sum[:8]), nil
 }
 
 // buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses the system trust store
@@ -349,7 +368,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 		if err != nil {
 			return err
 		}
-		requirementName, err := jwtRequirementName(buildJWTRequirement(reqs))
+		requirementName, err := jwtRequirementName(irRoute.Security.JWT, buildJWTRequirement(reqs))
 		if err != nil {
 			return err
 		}

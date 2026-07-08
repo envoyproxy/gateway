@@ -40,7 +40,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              jwt/provider/example/ced70d98fe975d58db12245312161a7ed7089ea07dab4779c9b178c977369bfb:
+              example_ced70d98fe975d58:
                 audiences:
                 - foo.com
                 forward: true
@@ -57,7 +57,7 @@
                     cluster: localhost_443
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
-              jwt/provider/example/ec0cbab21272dbabdf5e90cd07bee495dda0d5c9ec624ca378edd2f13d75f242:
+              example_ec0cbab21272dbab:
                 audiences:
                 - foo.com
                 claimToHeaders:
@@ -78,10 +78,10 @@
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
             requirementMap:
-              jwt/requirement/d6849978f979611f2c5f72aacc63ab40fda64c1115227e95782f03a4a0d914cd:
-                providerName: jwt/provider/example/ec0cbab21272dbabdf5e90cd07bee495dda0d5c9ec624ca378edd2f13d75f242
-              jwt/requirement/fec9e1b50ff77cffddd9657517afbef6c00b0fb28bcc84f3ce38bfefdab173f5:
-                providerName: jwt/provider/example/ced70d98fe975d58db12245312161a7ed7089ea07dab4779c9b178c977369bfb
+              example_670bf892477997dd:
+                providerName: example_ced70d98fe975d58
+              example_c3b3e98f32dd654c:
+                providerName: example_ec0cbab21272dbab
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

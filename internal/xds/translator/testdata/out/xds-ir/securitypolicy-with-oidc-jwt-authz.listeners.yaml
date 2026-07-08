@@ -21,7 +21,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              jwt/provider/exjwt/7e856c9609a791096338a438e1d0d88ee9b6002cc9634b4a26d9e08a514b082c:
+              exjwt_7e856c9609a79109:
                 claimToHeaders:
                 - claimName: email
                   headerName: x-user-email
@@ -42,8 +42,8 @@
                     timeout: 10s
                     uri: https://oidc.example.com/auth/realms/example/protocol/openid-connect/certs
             requirementMap:
-              jwt/requirement/b81c72c87497359193233ab65f3301b0f827adab6526b49e1c06734b5b43ba44:
-                providerName: jwt/provider/exjwt/7e856c9609a791096338a438e1d0d88ee9b6002cc9634b4a26d9e08a514b082c
+              exjwt_0c84dc547de3534c:
+                providerName: exjwt_7e856c9609a79109
         - name: envoy.filters.http.rbac
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
