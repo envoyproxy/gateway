@@ -1,5 +1,9 @@
 apiVersion: v1
 kind: ServiceAccount
+# Disable token automounting on the ServiceAccount by default to satisfy
+# Kubescape control C-0034. Pods that need Kubernetes API access explicitly
+# enable automountServiceAccountToken in their pod spec.
+automountServiceAccountToken: false
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
   namespace: {{ include "eg.namespace" . }}
@@ -10,7 +14,7 @@ metadata:
   {{- end }}
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
@@ -27,7 +31,7 @@ metadata:
   {{- end }}
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
@@ -53,7 +57,7 @@ metadata:
   {{- end }}
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
@@ -78,7 +82,7 @@ metadata:
   {{- end }}
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
@@ -112,7 +116,7 @@ metadata:
   {{- end }}
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}

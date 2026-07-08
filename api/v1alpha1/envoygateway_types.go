@@ -41,6 +41,7 @@ type EnvoyGateway struct {
 }
 
 // EnvoyGatewaySpec defines the desired state of Envoy Gateway.
+// +kubebuilder:validation:XValidation:rule="!(has(self.extensionManager) && has(self.extensionManagers))",message="extensionManager and extensionManagers are mutually exclusive"
 type EnvoyGatewaySpec struct {
 	// Gateway defines desired Gateway API specific configuration. If unset,
 	// default configuration parameters will apply.
@@ -98,6 +99,19 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	ExtensionManager *ExtensionManager `json:"extensionManager,omitempty"`
 
+	// ExtensionManagers defines multiple extension managers to register for the Envoy Gateway Control Plane.
+	// Each extension's output becomes the next extension's input, enabling sequential chaining.
+	// Each entry must have a unique Name field for identification.
+	// This field is mutually exclusive with ExtensionManager.
+	//
+	// Warning: Enabling Extension Servers may lead to complete security compromise of your system.
+	// Users that control Extension Servers can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	ExtensionManagers []ExtensionManager `json:"extensionManagers,omitempty"`
+
 	// ExtensionAPIs defines the settings related to specific Gateway API Extensions
 	// implemented by Envoy Gateway
 	//
@@ -124,9 +138,10 @@ type EnvoyGatewaySpec struct {
 	// 2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)
 	// 3. This EnvoyProxy default spec
 	//
-	// Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).
-	// A future release will introduce merge semantics to allow combining configurations
-	// across multiple levels.
+	// The merge strategy for a more specific EnvoyProxy is controlled by its
+	// spec.mergeType field. If mergeType is unset, the more specific EnvoyProxy
+	// completely replaces less specific settings.
+	// Note: mergeType has no effect in this default EnvoyProxySpec.
 	//
 	// +optional
 	EnvoyProxy *EnvoyProxySpec `json:"envoyProxy,omitempty"`
@@ -291,7 +306,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass
+	//   https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gatewayclass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -311,7 +326,21 @@ type ExtensionAPISettings struct {
 	EnableBackend bool `json:"enableBackend"`
 	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
 	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
-	DisableLua bool `json:"disableLua"`
+	// This field is mutually exclusive with EnableLua.
+	//
+	// Deprecated: Use EnableLua instead. This field will be removed in a future release.
+	//
+	// +optional
+	DisableLua *bool `json:"disableLua,omitempty"`
+	// EnableLua enables the Lua EnvoyExtensionPolicy feature.
+	// If set to true, the Lua EnvoyExtensionPolicy feature will be enabled.
+	// By default, Lua policies are disabled.
+	// This field is mutually exclusive with DisableLua.
+	//
+	// +optional
+	EnableLua bool `json:"enableLua,omitempty"`
+	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds).
+	EnableSDSSecretRef bool `json:"enableSDSSecretRef"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
@@ -410,12 +439,16 @@ type KubernetesWatchMode struct {
 
 	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
 	// resources such as Gateway, HTTPRoute and Service.
+	// The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its
+	// own managed infrastructure resources.
 	// Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as
 	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set.
 	Namespaces []string `json:"namespaces,omitempty"`
 
 	// NamespaceSelector holds the label selector used to dynamically select namespaces.
 	// Envoy Gateway will watch for namespaces matching the specified label selector.
+	// The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its
+	// own managed infrastructure resources.
 	// Precisely one of Namespaces and NamespaceSelector must be set.
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
@@ -657,6 +690,12 @@ type RateLimitRedisSettings struct {
 // ExtensionManager defines the configuration for registering an extension manager to
 // the Envoy Gateway control plane.
 type ExtensionManager struct {
+	// Name is a unique identifier for this extension manager. Required when using
+	// the plural ExtensionManagers field. Used for logging, metrics, and error identification.
+	//
+	// +optional
+	Name string `json:"name,omitempty"`
+
 	// Resources defines the set of K8s resources the extension will handle as route
 	// filter resources
 	//
@@ -664,7 +703,8 @@ type ExtensionManager struct {
 	Resources []GroupVersionKind `json:"resources,omitempty"`
 
 	// PolicyResources defines the set of K8S resources the extension server will handle
-	// as directly attached GatewayAPI policies
+	// as directly attached Gateway API policies. Only policies in the same namespace as
+	// the target Gateway resources are supported. Cross-namespace attachments are not supported.
 	//
 	// +optional
 	PolicyResources []GroupVersionKind `json:"policyResources,omitempty"`

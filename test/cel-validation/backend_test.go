@@ -15,7 +15,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -92,6 +91,12 @@ func TestBackend(t *testing.T) {
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
 								Hostname: "sub.s.example.com",
+								Port:     443,
+							},
+						},
+						{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "foo.s3.eu-west-1.amazonaws.com.",
 								Port:     443,
 							},
 						},
@@ -213,10 +218,10 @@ func TestBackend(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.endpoints[0].fqdn.hostname: Invalid value: \"host name\": spec.endpoints[0].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.endpoints[1].fqdn.hostname: Invalid value: \"host_name\": spec.endpoints[1].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.endpoints[2].fqdn.hostname: Invalid value: \"hostname:443\": spec.endpoints[2].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-				"spec.endpoints[3].fqdn.hostname: Invalid value: \"host.*.name\": spec.endpoints[3].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+				"spec.endpoints[0].fqdn.hostname: Invalid value: \"host name\": spec.endpoints[0].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\\.?$'",
+				"spec.endpoints[1].fqdn.hostname: Invalid value: \"host_name\": spec.endpoints[1].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\\.?$'",
+				"spec.endpoints[2].fqdn.hostname: Invalid value: \"hostname:443\": spec.endpoints[2].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\\.?$'",
+				"spec.endpoints[3].fqdn.hostname: Invalid value: \"host.*.name\": spec.endpoints[3].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\\.?$'",
 			},
 		},
 		{
@@ -262,7 +267,7 @@ func TestBackend(t *testing.T) {
 		{
 			desc: "invalid type",
 			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{Type: ptr.To[egv1a1.BackendType]("FOO")}
+				backend.Spec = egv1a1.BackendSpec{Type: new(egv1a1.BackendType("FOO"))}
 			},
 			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver"`},
 		},
@@ -270,7 +275,7 @@ func TestBackend(t *testing.T) {
 			desc: "dynamic resolver ok",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type:         new(egv1a1.BackendTypeDynamicResolver),
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 				}
 			},
@@ -280,7 +285,7 @@ func TestBackend(t *testing.T) {
 			desc: "dynamic resolver invalid",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type: new(egv1a1.BackendTypeDynamicResolver),
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
@@ -297,7 +302,7 @@ func TestBackend(t *testing.T) {
 			desc: "Invalid Unix socket path length",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         ptr.To(egv1a1.BackendTypeEndpoints),
+					Type:         new(egv1a1.BackendTypeEndpoints),
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -317,14 +322,133 @@ func TestBackend(t *testing.T) {
 			desc: "dynamic resolver invalid WellKnownCACertificates and InsecureSkipVerify specified",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type: new(egv1a1.BackendTypeDynamicResolver),
 					TLS: &egv1a1.BackendTLSSettings{
-						InsecureSkipVerify:      ptr.To(true),
-						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+						InsecureSkipVerify:      new(true),
+						WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
 					},
 				}
 			},
 			wantErrors: []string{`must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled`},
+		},
+		{
+			desc: "autoSNIFromEndpointHostname and SNI are mutually exclusive",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeEndpoints),
+					TLS: &egv1a1.BackendTLSSettings{
+						AutoSNIFromEndpointHostname: new(true),
+						SNI:                         new(gwapiv1.PreciseHostname("example.com")),
+					},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							IP: &egv1a1.IPEndpoint{
+								Address: "192.168.1.1",
+								Port:    443,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sni and autoSNIFromEndpointHostname are mutually exclusive"},
+		},
+		{
+			desc: "autoSNIFromEndpointHostname enabled with IP endpoint without hostname",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeEndpoints),
+					TLS: &egv1a1.BackendTLSSettings{
+						AutoSNIFromEndpointHostname: new(true),
+					},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							IP: &egv1a1.IPEndpoint{
+								Address: "192.168.1.1",
+								Port:    443,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints must define a hostname"},
+		},
+		{
+			desc: "autoSNIFromEndpointHostname enabled with Unix endpoint without hostname",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeEndpoints),
+					TLS: &egv1a1.BackendTLSSettings{
+						AutoSNIFromEndpointHostname: new(true),
+					},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							Unix: &egv1a1.UnixSocket{
+								Path: "/path/to/service.sock",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints must define a hostname"},
+		},
+		{
+			desc: "autoSNIFromEndpointHostname cannot be used with DynamicResolver type",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						AutoSNIFromEndpointHostname: new(true),
+					},
+				}
+			},
+			wantErrors: []string{"DynamicResolver type cannot use autoSNIFromEndpointHostname"},
+		},
+		{
+			desc: "autoSNIFromEndpointHostname enabled with IP and Unix endpoint with hostname",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeEndpoints),
+					TLS: &egv1a1.BackendTLSSettings{
+						AutoSNIFromEndpointHostname: new(true),
+					},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							Hostname: new("example.com"),
+							IP: &egv1a1.IPEndpoint{
+								Address: "192.168.1.1",
+								Port:    443,
+							},
+						},
+						{
+							Hostname: new("example.com"),
+							Unix: &egv1a1.UnixSocket{
+								Path: "/path/to/service.sock",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "autoSNIFromEndpointHostname enabled with FQDN endpoint do not require hostname",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeEndpoints),
+					TLS: &egv1a1.BackendTLSSettings{
+						AutoSNIFromEndpointHostname: new(true),
+					},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "example.com",
+								Port:     443,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 	}
 

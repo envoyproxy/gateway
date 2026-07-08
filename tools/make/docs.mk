@@ -6,7 +6,6 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
 LINKINATOR_IGNORE := "opentelemetry.io \
 	blog.envoyproxy.io \
-	gateway-api.sigs.k8s.io/reference/1.3 \
 	ntia.gov \
 	github.com \
 	jwt.io \
@@ -148,9 +147,9 @@ gwapi-doc-remove-special-lines:
 # Update relative links
 gwapi-doc-update-relative-links:
 	@$(LOG_TARGET)
-	# Replace ../reference/spec.md to https://gateway-api.sigs.k8s.io/reference/$(GATEWAY_API_MINOR_VERSION)/spec/
+	# Replace ../reference/spec.md to https://gateway-api.sigs.k8s.io/reference/api-spec/$(GATEWAY_API_MINOR_VERSION)/spec/
 	@$(foreach file, $(SYNC_FILES), \
- 		$(SED) -e 's/\(\[.*\]\)(\(\.\.\/reference\/spec.md\))/\1(https:\/\/gateway-api.sigs.k8s.io\/reference\/$(GATEWAY_API_MINOR_VERSION)\/spec\/)/g' -e 's/\(\[.*\]: \)\(\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' -e 's/\(\[.*\]: \)\(\.\.\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' $(DOC_DEST_DIR)/$(file);)
+ 		$(SED) -e 's/\(\[.*\]\)(\(\.\.\/reference\/spec.md\))/\1(https:\/\/gateway-api.sigs.k8s.io\/reference\/api-spec\/$(GATEWAY_API_MINOR_VERSION)\/spec\/)/g' -e 's/\(\[.*\]: \)\(\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/api-spec\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' -e 's/\(\[.*\]: \)\(\.\.\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/api-spec\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' $(DOC_DEST_DIR)/$(file);)
 	@$(foreach file, $(SYNC_FILES), \
  		$(SED) -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
 	@$(foreach file, $(SYNC_FILES), \
@@ -240,3 +239,11 @@ release-notes-docs: $(tools/release-notes-docs) # Read version from Environment 
 	@for file in $(wildcard release-notes/$(RELEASE_NOTE_VERSION).yaml); do \
 		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
 	done
+
+.PHONY: release-notes-gen
+release-notes-gen: # Compile release-notes/current/ fragments into release-notes/$(RELEASE_NOTE_VERSION).yaml and clear the fragments
+	@$(LOG_TARGET)
+	$(eval RELEASE_NOTE_VERSION := $(if $(RELEASE_NOTE_VERSION),$(RELEASE_NOTE_VERSION),$(shell cat VERSION)))
+	@echo "Compiling release-notes/current/ fragments into release-notes/$(RELEASE_NOTE_VERSION).yaml"
+	@test -n "$(RELEASE_NOTE_DATE)" || (echo "ERROR: RELEASE_NOTE_DATE is required (e.g. \"June 23, 2026\")"; exit 1)
+	python3 tools/src/release-notes-docs/compile.py $(RELEASE_NOTE_VERSION) "$(RELEASE_NOTE_DATE)"

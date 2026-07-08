@@ -12,9 +12,12 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -41,8 +44,9 @@ import (
 // and defines the topology of the provider and its managed components, wiring
 // them together.
 type Provider struct {
-	client  client.Client
-	manager manager.Manager
+	client        client.Client
+	manager       manager.Manager
+	providerReady chan struct{}
 }
 
 const (
@@ -128,7 +132,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.LeaseDuration = ptr.To(ld)
+			mgrOpts.LeaseDuration = new(ld)
 		}
 
 		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod != nil {
@@ -136,7 +140,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.RetryPeriod = ptr.To(rp)
+			mgrOpts.RetryPeriod = new(rp)
 		}
 
 		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline != nil {
@@ -144,9 +148,9 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.RenewDeadline = ptr.To(rd)
+			mgrOpts.RenewDeadline = new(rd)
 		}
-		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
+		mgrOpts.Controller = config.Controller{NeedLeaderElection: new(false)}
 	}
 
 	if svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod != nil {
@@ -154,50 +158,193 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		if err != nil {
 			return nil, err
 		}
-		mgrOpts.Cache.SyncPeriod = ptr.To(csp)
+		mgrOpts.Cache.SyncPeriod = new(csp)
 	}
 
-	// Limit the cache to only Envoy proxy Pods to reduce memory and sync churn.
+	// Disable deepcopy for some read only resources to reduce CPU and memory usage.
+	// These resources are not modified by the provider, so it is safe to skip deepcopy.
+	// If any of these resources need to be modified in the future, deepcopy should be re-enabled for that resource.
 	if mgrOpts.Cache.ByObject == nil {
 		mgrOpts.Cache.ByObject = map[client.Object]cache.ByObject{
-			// Disable deepcopy for read only resources
 			&corev1.Secret{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&corev1.ConfigMap{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 				Transform:             composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData),
 			},
 			&corev1.Service{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&discoveryv1.EndpointSlice{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
-			},
-			&appsv1.Deployment{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&corev1.Node{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&gwapiv1b1.ReferenceGrant{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
-			},
-			&appsv1.DaemonSet{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 		}
 	}
+
+	// Limit the cache to only Envoy proxy Pods to reduce memory and sync churn.
 	// ProxyTopologyInjector is the only component that interacts with Pods.
 	mgrOpts.Cache.ByObject[&corev1.Pod{}] = cache.ByObject{
-		Label: labels.SelectorFromSet(proxy.EnvoyAppLabel()),
+		UnsafeDisableDeepCopy: new(true),
+		Label:                 labels.SelectorFromSet(proxy.EnvoyAppLabel()),
 	}
+
+	namesReq, err := labels.NewRequirement("app.kubernetes.io/name", selection.In,
+		[]string{"envoy", "envoy-ratelimit"})
+	if err != nil {
+		panic(err)
+	}
+	managedSelector := labels.NewSelector().Add(*namesReq)
+
+	// If GatewayNamespaceMode is enabled, we need to watch all namespaces for the envoy proxy infrastructure resources.
+	// If not, we only watch the controller namespace to avoid unnecessary RBAC permissions.
+	// A label selector is still applied in both cases to limit the cache to only the resources owned by EG to reduce memory and sync churn.
+	if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
+		// Keep ServiceAccount/Deployment unfiltered because the Envoy Gateway controller service account and deployment
+		// are needed to watch for changes, and EG controller's labels can be customized by users while installation
+		// and may not be present in the cache.
+		mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+		}
+		mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+		}
+		// Filtering these envoy proxy and ratelimit infra resources by labels to reduce the cache size and memory usage.
+		mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+		}
+		mgrOpts.Cache.ByObject[&autoscalingv2.HorizontalPodAutoscaler{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+		}
+		mgrOpts.Cache.ByObject[&policyv1.PodDisruptionBudget{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+		}
+	} else {
+		// Keep ServiceAccount/Deployment unfiltered because the Envoy Gateway controller service account and deployment
+		// are needed to watch for changes, and EG controller's labels can be customized by users while installation
+		// and may not be present in the cache.
+		mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+		mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+		// Filtering these envoy proxy and ratelimit infra resources by labels to reduce the cache size and memory usage.
+		mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+		mgrOpts.Cache.ByObject[&autoscalingv2.HorizontalPodAutoscaler{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+		mgrOpts.Cache.ByObject[&policyv1.PodDisruptionBudget{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+	}
+
 	mgrOpts.Cache.DefaultTransform = cache.TransformStripManagedFields()
 
-	if svrCfg.EnvoyGateway.NamespaceMode() {
-		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
+	// When configured with an explicit namespace watch list, scope the default
+	// cache to those namespaces and add type-specific controller namespace
+	// exceptions below.
+	if svrCfg.EnvoyGateway.WatchesNamespaces() {
+		watchedNamespaces := map[string]cache.Config{}
 		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
-			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
+			watchedNamespaces[watchNS] = cache.Config{}
+		}
+
+		watchedAndControllerNamespaces := make(map[string]cache.Config, len(watchedNamespaces)+1)
+		for ns, cfg := range watchedNamespaces {
+			watchedAndControllerNamespaces[ns] = cfg
+		}
+		watchedAndControllerNamespaces[svrCfg.ControllerNamespace] = cache.Config{}
+
+		// DefaultNamespaces applies to every namespaced informer without a
+		// ByObject namespace override, including Gateway API informers
+		// registered later. Since Gateway API resources do not get controller
+		// namespace overrides below, they only watch these configured namespaces.
+		mgrOpts.Cache.DefaultNamespaces = watchedNamespaces
+
+		// ConfigMaps and Services must cover both scopes: watched namespaces for
+		// user refs such as policy/filter ConfigMaps and Route backend Services,
+		// and the controller namespace for EG-owned proxy/ratelimit infra
+		// ConfigMaps and Services.
+		mgrOpts.Cache.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Transform:             composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData),
+			Namespaces:            watchedAndControllerNamespaces,
+		}
+		mgrOpts.Cache.ByObject[&corev1.Service{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces:            watchedAndControllerNamespaces,
+		}
+		mgrOpts.Cache.ByObject[&discoveryv1.EndpointSlice{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces:            watchedAndControllerNamespaces,
+		}
+		if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
+			// GatewayNamespaceMode still needs controller namespace access for
+			// EG controller resources and the xDS CA Secret.
+			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
+			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
+			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
+		} else {
+			// In normal mode, ServiceAccounts and Deployments are controller
+			// namespace infra, while Secrets cover watched namespaces for user
+			// refs and the controller namespace for EG-managed infra Secrets,
+			// including the OIDC HMAC Secret and Envoy's TLS Secret for
+			// connections to EG-managed control-plane services.
+			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
 		}
 	}
 	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
@@ -253,13 +400,19 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	}()
 
 	return &Provider{
-		manager: mgr,
-		client:  mgr.GetClient(),
+		manager:       mgr,
+		client:        mgr.GetClient(),
+		providerReady: svrCfg.ProviderReady,
 	}, nil
 }
 
 func (p *Provider) Type() egv1a1.ProviderType {
 	return egv1a1.ProviderTypeKubernetes
+}
+
+// GetClient returns the controller-runtime client created by the Kubernetes provider.
+func (p *Provider) GetClient() client.Client {
+	return p.client
 }
 
 // Start starts the Provider synchronously until a message is received from ctx.
@@ -268,6 +421,7 @@ func (p *Provider) Start(ctx context.Context) error {
 	go func() {
 		errChan <- p.manager.Start(ctx)
 	}()
+	go signalProviderReady(ctx, p.manager.GetCache().WaitForCacheSync, p.providerReady)
 
 	// Wait for the manager to exit or an explicit stop.
 	select {
@@ -275,5 +429,22 @@ func (p *Provider) Start(ctx context.Context) error {
 		return nil
 	case err := <-errChan:
 		return err
+	}
+}
+
+func signalProviderReady(
+	ctx context.Context,
+	waitForCacheSync func(context.Context) bool,
+	providerReady chan struct{},
+) {
+	if !waitForCacheSync(ctx) {
+		return
+	}
+
+	select {
+	case <-providerReady:
+		return
+	default:
+		close(providerReady)
 	}
 }

@@ -1,6 +1,6 @@
 # Global settings
 global:
-  # If set, these take highest precedence and change both envoyGateway and ratelimit's container registry and pull secrets.
+  # If set, these take highest precedence and change envoyGateway, envoyProxy, and ratelimit's container registry and pull secrets.
   # -- Global override for image registry
   imageRegistry: ""
   # -- Global override for image pull secrets
@@ -10,12 +10,12 @@ global:
   # Override image-specific values directly if a global override is not desired.
   images:
     envoyGateway:
-      # This is the full image name including the hub, repo, and tag.
+      # -- Full image for the Envoy Gateway control plane Deployment installed by this chart.
       image: ${GatewayImage}
-      # Specify image pull policy if default behavior isn't desired.
+      # -- Image pull policy for the Envoy Gateway control plane Deployment.
       # Default behavior: latest images will be Always else IfNotPresent.
       pullPolicy: ${GatewayImagePullPolicy}
-      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      # -- Pull secrets for the Envoy Gateway control plane Deployment.
       pullSecrets: []
     ratelimit:
       # This is the full image name including the hub, repo, and tag.
@@ -25,6 +25,22 @@ global:
       pullPolicy: IfNotPresent
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
+    envoyProxy:
+      # -- Full image for the managed Envoy Proxy data plane.
+      # This updates the generated `envoyProxy` config and does not change the `envoy-gateway`
+      # control plane Deployment image. If not specified, the default image built into
+      # `envoy-gateway` is used.
+      image: ""
+      # -- Image pull policy for the managed Envoy Proxy data plane.
+      # Default behavior: IfNotPresent.
+      pullPolicy: ""
+      # -- Pull secrets for the managed Envoy Proxy data plane.
+      pullSecrets: []
+
+# Values for CRDs dependency
+crds:
+  # -- Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately.
+  enabled: true
 
 # -- Labels to apply to all resources
 commonLabels: {}
@@ -42,6 +58,8 @@ deployment:
       tag: ""
     imagePullPolicy: ""
     imagePullSecrets: []
+    # -- Additional environment variables for the envoy-gateway container.
+    extraEnv: []
     resources:
       limits:
         memory: 1024Mi
@@ -59,6 +77,7 @@ deployment:
       runAsUser: 65532
       seccompProfile:
         type: RuntimeDefault
+    strategy: {}
   ports:
     - name: grpc
       port: 18000
@@ -83,6 +102,22 @@ deployment:
     topologySpreadConstraints: []
     tolerations: []
     nodeSelector: {}
+    # Additional volumeMounts on the deployment definition.
+    extraVolumeMounts: []
+    # - name: foo
+    #   mountPath: "/etc/foo"
+    #   readOnly: true
+    # Additional volumes on the deployment definition.
+    extraVolumes: []
+    # - name: foo
+    #   configMap:
+    #     name: myconfigmap
+    securityContext:
+      runAsNonRoot: true
+      runAsGroup: 65532
+      runAsUser: 65532
+      seccompProfile:
+        type: RuntimeDefault
 
 service:
   # If set to PreferClose, the Envoy fleet will prioritize connecting to the Envoy Gateway pods that are topologically closest to them.

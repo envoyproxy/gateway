@@ -48,7 +48,7 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "rate",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingRate: ptr.To[uint32](10),
+				SamplingRate: new(uint32(10)),
 			},
 			expected: 10.0,
 		},
@@ -69,7 +69,7 @@ func TestProxySamplingRate(t *testing.T) {
 				Tracing: egv1a1.Tracing{
 					SamplingFraction: &gwapiv1.Fraction{
 						Numerator:   1,
-						Denominator: ptr.To[int32](10),
+						Denominator: new(int32(10)),
 					},
 				},
 			},
@@ -81,7 +81,7 @@ func TestProxySamplingRate(t *testing.T) {
 				Tracing: egv1a1.Tracing{
 					SamplingFraction: &gwapiv1.Fraction{
 						Numerator:   1,
-						Denominator: ptr.To[int32](-1),
+						Denominator: new(int32(-1)),
 					},
 				},
 			},
@@ -93,7 +93,7 @@ func TestProxySamplingRate(t *testing.T) {
 				Tracing: egv1a1.Tracing{
 					SamplingFraction: &gwapiv1.Fraction{
 						Numerator:   101,
-						Denominator: ptr.To[int32](1),
+						Denominator: new(int32(1)),
 					},
 				},
 			},
@@ -105,7 +105,7 @@ func TestProxySamplingRate(t *testing.T) {
 				Tracing: egv1a1.Tracing{
 					SamplingFraction: &gwapiv1.Fraction{
 						Numerator:   1,
-						Denominator: ptr.To[int32](1000),
+						Denominator: new(int32(1000)),
 					},
 				},
 			},
@@ -132,32 +132,32 @@ func TestAreOverlappingHostnames(t *testing.T) {
 	}{
 		{
 			name:      "exact match",
-			hostname1: ptr.To(gwapiv1.Hostname("example.com")),
-			hostname2: ptr.To(gwapiv1.Hostname("example.com")),
+			hostname1: new(gwapiv1.Hostname("example.com")),
+			hostname2: new(gwapiv1.Hostname("example.com")),
 			want:      true,
 		},
 		{
 			name:      "two wildcards with same suffix",
-			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
-			hostname2: ptr.To(gwapiv1.Hostname("*.example.com")),
+			hostname1: new(gwapiv1.Hostname("*.example.com")),
+			hostname2: new(gwapiv1.Hostname("*.example.com")),
 			want:      true,
 		},
 		{
 			name:      "two wildcards with subdomain does not match",
-			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
-			hostname2: ptr.To(gwapiv1.Hostname("*.test.example.com")),
+			hostname1: new(gwapiv1.Hostname("*.example.com")),
+			hostname2: new(gwapiv1.Hostname("*.test.example.com")),
 			want:      false,
 		},
 		{
 			name:      "nil hostname matches all",
 			hostname1: nil,
-			hostname2: ptr.To(gwapiv1.Hostname("www.example.com")),
+			hostname2: new(gwapiv1.Hostname("www.example.com")),
 			want:      true,
 		},
 		{
 			name:      "nil hostname matches subdomain",
 			hostname1: nil,
-			hostname2: ptr.To(gwapiv1.Hostname("*.example.com")),
+			hostname2: new(gwapiv1.Hostname("*.example.com")),
 			want:      true,
 		},
 		{
@@ -168,50 +168,50 @@ func TestAreOverlappingHostnames(t *testing.T) {
 		},
 		{
 			name:      "wildcard matches exactly one level of subdomain",
-			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
-			hostname2: ptr.To(gwapiv1.Hostname("test.example.com")),
+			hostname1: new(gwapiv1.Hostname("*.example.com")),
+			hostname2: new(gwapiv1.Hostname("test.example.com")),
 			want:      true,
 		},
 		{
 			name:      "wildcard matches only one level of subdomain",
-			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
-			hostname2: ptr.To(gwapiv1.Hostname("sub.test.example.com")),
+			hostname1: new(gwapiv1.Hostname("*.example.com")),
+			hostname2: new(gwapiv1.Hostname("sub.test.example.com")),
 			want:      false,
 		},
 		{
 			name:      "wildcard does not match empty subdomain",
-			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
-			hostname2: ptr.To(gwapiv1.Hostname("example.com")),
+			hostname1: new(gwapiv1.Hostname("*.example.com")),
+			hostname2: new(gwapiv1.Hostname("example.com")),
 			want:      false,
 		},
 		{
 			name:      "different domains",
-			hostname1: ptr.To(gwapiv1.Hostname("example.com")),
-			hostname2: ptr.To(gwapiv1.Hostname("test.com")),
+			hostname1: new(gwapiv1.Hostname("example.com")),
+			hostname2: new(gwapiv1.Hostname("test.com")),
 			want:      false,
 		},
 		{
 			name:      "wildcard doesn't match different domain",
-			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
-			hostname2: ptr.To(gwapiv1.Hostname("test.com")),
+			hostname1: new(gwapiv1.Hostname("*.example.com")),
+			hostname2: new(gwapiv1.Hostname("test.com")),
 			want:      false,
 		},
 		{
 			name:      "different wildcard domains",
-			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
-			hostname2: ptr.To(gwapiv1.Hostname("*.test.com")),
+			hostname1: new(gwapiv1.Hostname("*.example.com")),
+			hostname2: new(gwapiv1.Hostname("*.test.com")),
 			want:      false,
 		},
 		{
 			name:      "different sub domains of same domain",
-			hostname1: ptr.To(gwapiv1.Hostname("api.foo.dev")),
-			hostname2: ptr.To(gwapiv1.Hostname("testing-api.foo.dev")),
+			hostname1: new(gwapiv1.Hostname("api.foo.dev")),
+			hostname2: new(gwapiv1.Hostname("testing-api.foo.dev")),
 			want:      false,
 		},
 		{
 			name:      "sub domain does not match with parent domain",
-			hostname1: ptr.To(gwapiv1.Hostname("api.foo.dev")),
-			hostname2: ptr.To(gwapiv1.Hostname("foo.dev")),
+			hostname1: new(gwapiv1.Hostname("api.foo.dev")),
+			hostname2: new(gwapiv1.Hostname("foo.dev")),
 			want:      false,
 		},
 	}
@@ -244,7 +244,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-1",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("example.com")),
+							Hostname: new(gwapiv1.Hostname("example.com")),
 						},
 					},
 					{
@@ -252,7 +252,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-2",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("test.com")),
+							Hostname: new(gwapiv1.Hostname("test.com")),
 						},
 					},
 				},
@@ -268,7 +268,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-1",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("*.example.com")),
+							Hostname: new(gwapiv1.Hostname("*.example.com")),
 						},
 					},
 					{
@@ -276,7 +276,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-2",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("test.example.com")),
+							Hostname: new(gwapiv1.Hostname("test.example.com")),
 						},
 					},
 				},
@@ -295,7 +295,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-1",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("*.example.com")),
+							Hostname: new(gwapiv1.Hostname("*.example.com")),
 						},
 					},
 					{
@@ -303,7 +303,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-2",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     8443,
-							Hostname: ptr.To(gwapiv1.Hostname("test.example.com")),
+							Hostname: new(gwapiv1.Hostname("test.example.com")),
 						},
 					},
 				},
@@ -319,7 +319,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-1",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("*.example.com")),
+							Hostname: new(gwapiv1.Hostname("*.example.com")),
 						},
 					},
 					{
@@ -327,7 +327,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-2",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("test.example.com")),
+							Hostname: new(gwapiv1.Hostname("test.example.com")),
 						},
 					},
 					{
@@ -335,7 +335,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-3",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("sub.test.example.com")), // sub domain does not match with parent domain
+							Hostname: new(gwapiv1.Hostname("sub.test.example.com")), // sub domain does not match with parent domain
 						},
 					},
 				},
@@ -362,7 +362,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-2",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("example.com")),
+							Hostname: new(gwapiv1.Hostname("example.com")),
 						},
 					},
 				},
@@ -385,6 +385,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			for i := range tt.gateway.listeners {
 				tt.gateway.listeners[i].listenerStatusIdx = i
 				tt.gateway.listeners[i].gateway = tt.gateway
+				tt.gateway.listeners[i].httpIR = &ir.HTTPListener{}
 				tt.gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
 					Name:       tt.gateway.listeners[i].Name,
 					Conditions: []metav1.Condition{},
@@ -419,6 +420,10 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 					// expectedHostname == "" means matching all hostnames
 					t.Errorf("expected condition for listener %d, got nil or False", idx)
 				}
+			}
+			for idx, listener := range tt.gateway.listeners {
+				require.NotNil(t, listener.httpIR)
+				assert.False(t, listener.httpIR.TLSOverlaps, "hostname overlap must not trigger ALPN downgrade for listener %d", idx)
 			}
 
 			if len(tt.expected) == 0 {
@@ -647,6 +652,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				}
 				gateway.listeners[i].listenerStatusIdx = i
 				gateway.listeners[i].gateway = gateway
+				gateway.listeners[i].httpIR = &ir.HTTPListener{}
 			}
 
 			// Process overlapping certificates
@@ -700,6 +706,15 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					}
 				}
 			}
+
+			expectedTLSOverlaps := map[string]bool{}
+			for _, expected := range tt.expectedStatus {
+				expectedTLSOverlaps[expected.listenerName] = true
+			}
+			for _, listener := range gateway.listeners {
+				require.NotNil(t, listener.httpIR)
+				assert.Equal(t, expectedTLSOverlaps[string(listener.Name)], listener.httpIR.TLSOverlaps, "unexpected TLSOverlaps for listener %s", listener.Name)
+			}
 		})
 	}
 }
@@ -752,8 +767,8 @@ func TestProcessTracingServiceName(t *testing.T) {
 										{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name:      "otel-collector",
-												Port:      ptr.To(gwapiv1.PortNumber(4317)),
-												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												Port:      new(gwapiv1.PortNumber(4317)),
+												Namespace: new(gwapiv1.Namespace("monitoring")),
 											},
 										},
 									},
@@ -788,13 +803,13 @@ func TestProcessTracingServiceName(t *testing.T) {
 										{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name:      "otel-collector",
-												Port:      ptr.To(gwapiv1.PortNumber(4317)),
-												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												Port:      new(gwapiv1.PortNumber(4317)),
+												Namespace: new(gwapiv1.Namespace("monitoring")),
 											},
 										},
 									},
 								},
-								ServiceName: ptr.To("my-custom-service"),
+								ServiceName: new("my-custom-service"),
 							},
 						},
 					},
@@ -828,13 +843,13 @@ func TestProcessTracingServiceName(t *testing.T) {
 										{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name:      "otel-collector",
-												Port:      ptr.To(gwapiv1.PortNumber(4317)),
-												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												Port:      new(gwapiv1.PortNumber(4317)),
+												Namespace: new(gwapiv1.Namespace("monitoring")),
 											},
 										},
 									},
 								},
-								ServiceName: ptr.To("custom-service"),
+								ServiceName: new("custom-service"),
 							},
 						},
 					},
@@ -869,8 +884,8 @@ func TestProcessTracingServiceName(t *testing.T) {
 										{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name:      "otel-collector",
-												Port:      ptr.To(gwapiv1.PortNumber(4317)),
-												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												Port:      new(gwapiv1.PortNumber(4317)),
+												Namespace: new(gwapiv1.Namespace("monitoring")),
 											},
 										},
 									},
@@ -906,7 +921,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 								Port:        4317,
 								TargetPort:  intstr.IntOrString{IntVal: 4317},
 								Protocol:    corev1.ProtocolTCP,
-								AppProtocol: ptr.To("grpc"),
+								AppProtocol: new("grpc"),
 							},
 						},
 					},
@@ -930,10 +945,10 @@ func TestProcessTracingServiceName(t *testing.T) {
 					},
 					Ports: []discoveryv1.EndpointPort{
 						{
-							Name:        ptr.To("grpc"),
-							Protocol:    ptr.To(corev1.ProtocolTCP),
-							Port:        ptr.To(int32(4317)),
-							AppProtocol: ptr.To("grpc"),
+							Name:        new("grpc"),
+							Protocol:    new(corev1.ProtocolTCP),
+							Port:        new(int32(4317)),
+							AppProtocol: new("grpc"),
 						},
 					},
 				},
@@ -979,7 +994,7 @@ func TestProcessAccessLog(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Text: ptr.To("[%START_TIME%]"),
+										Text: new("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
@@ -1042,8 +1057,8 @@ func TestProcessAccessLog(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
-										Text: ptr.To("[%START_TIME%]"),
+										Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+										Text: new("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
@@ -1060,7 +1075,7 @@ func TestProcessAccessLog(t *testing.T) {
 			expected: &ir.AccessLog{
 				Text: []*ir.TextAccessLog{
 					{
-						Format: ptr.To("[%START_TIME%]"),
+						Format: new("[%START_TIME%]"),
 						Path:   "/dev/stdout",
 					},
 				},
@@ -1098,7 +1113,7 @@ func TestGetAuthorityFromDestination(t *testing.T) {
 		{
 			name: "TLS with SNI",
 			input: []*ir.DestinationSetting{{
-				TLS: &ir.TLSUpstreamConfig{SNI: ptr.To("example.com")},
+				TLS: &ir.TLSUpstreamConfig{SNI: new("example.com")},
 			}},
 			expected: "example.com",
 		},
@@ -1179,11 +1194,11 @@ func TestProcessServerValidationTLSSettings(t *testing.T) {
 						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "endpoint.example.com", Port: 443}},
 					},
 					TLS: &egv1a1.BackendTLSSettings{
-						SNI: ptr.To(gwapiv1.PreciseHostname("explicit.example.com")),
+						SNI: new(gwapiv1.PreciseHostname("explicit.example.com")),
 					},
 				},
 			},
-			expected: &ir.TLSUpstreamConfig{SNI: ptr.To("explicit.example.com")},
+			expected: &ir.TLSUpstreamConfig{SNI: new("explicit.example.com")},
 		},
 		{
 			name: "multiple FQDN endpoints does not infer SNI",
@@ -1251,11 +1266,11 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 4317}},
 					},
 					TLS: &egv1a1.BackendTLSSettings{
-						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+						WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
 					},
 				},
 			},
-			expectedSNI: ptr.To("otel.example.com"),
+			expectedSNI: new("otel.example.com"),
 		},
 		{
 			name: "multiple FQDN endpoints does not infer SNI",
@@ -1270,7 +1285,7 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel-2.example.com", Port: 4317}},
 					},
 					TLS: &egv1a1.BackendTLSSettings{
-						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+						WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
 					},
 				},
 			},
@@ -1288,12 +1303,12 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 4317}},
 					},
 					TLS: &egv1a1.BackendTLSSettings{
-						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
-						SNI:                     ptr.To(gwapiv1.PreciseHostname("explicit.example.com")),
+						WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
+						SNI:                     new(gwapiv1.PreciseHostname("explicit.example.com")),
 					},
 				},
 			},
-			expectedSNI: ptr.To("explicit.example.com"),
+			expectedSNI: new("explicit.example.com"),
 		},
 	}
 
@@ -1314,10 +1329,10 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 			backendCluster := egv1a1.BackendCluster{
 				BackendRefs: []egv1a1.BackendRef{{
 					BackendObjectReference: gwapiv1.BackendObjectReference{
-						Group:     ptr.To(gwapiv1.Group("gateway.envoyproxy.io")),
-						Kind:      ptr.To(gwapiv1.Kind("Backend")),
+						Group:     new(gwapiv1.Group("gateway.envoyproxy.io")),
+						Kind:      new(gwapiv1.Kind("Backend")),
 						Name:      gwapiv1.ObjectName(tc.backend.Name),
-						Namespace: ptr.To(gwapiv1.Namespace(tc.backend.Namespace)),
+						Namespace: new(gwapiv1.Namespace(tc.backend.Namespace)),
 					},
 				}},
 			}
@@ -1346,8 +1361,8 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 
 	backendBackendCluster := egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
 		BackendObjectReference: gwapiv1.BackendObjectReference{
-			Group: ptr.To(gwapiv1.Group("gateway.envoyproxy.io")), Kind: ptr.To(gwapiv1.Kind("Backend")),
-			Name: gwapiv1.ObjectName(backendName), Namespace: ptr.To(gwapiv1.Namespace(ns)),
+			Group: new(gwapiv1.Group("gateway.envoyproxy.io")), Kind: new(gwapiv1.Kind("Backend")),
+			Name: gwapiv1.ObjectName(backendName), Namespace: new(gwapiv1.Namespace(ns)),
 		},
 	}}}
 	otelBackend := &egv1a1.Backend{
@@ -1359,8 +1374,8 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		Spec: egv1a1.BackendSpec{
 			Endpoints: []egv1a1.BackendEndpoint{{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 443}}},
 			TLS: &egv1a1.BackendTLSSettings{
-				WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
-				SNI:                     ptr.To(gwapiv1.PreciseHostname("backend-sni.example.com")),
+				WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
+				SNI:                     new(gwapiv1.PreciseHostname("backend-sni.example.com")),
 			},
 		},
 	}
@@ -1373,7 +1388,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 				},
 			}},
 			Validation: gwapiv1.BackendTLSPolicyValidation{
-				WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+				WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
 				Hostname:                "otel.example.com",
 			},
 		},
@@ -1381,14 +1396,14 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	backendEndpoints := []*ir.DestinationEndpoint{{Host: "otel.example.com", Port: 443}}
 	backendMetadata := &ir.ResourceMetadata{Name: backendName, Namespace: ns}
 	backendPolicyTLS := &ir.TLSUpstreamConfig{
-		SNI: ptr.To("otel.example.com"), UseSystemTrustStore: true,
+		SNI: new("otel.example.com"), UseSystemTrustStore: true,
 		CACertificate: &ir.TLSCACertificate{Name: "otel-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
 	}
 
 	serviceBackendCluster := egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
 		BackendObjectReference: gwapiv1.BackendObjectReference{
-			Name: gwapiv1.ObjectName(serviceName), Namespace: ptr.To(gwapiv1.Namespace(ns)),
-			Port: ptr.To(gwapiv1.PortNumber(4317)),
+			Name: gwapiv1.ObjectName(serviceName), Namespace: new(gwapiv1.Namespace(ns)),
+			Port: new(gwapiv1.PortNumber(4317)),
 		},
 	}}}
 	otelService := &corev1.Service{
@@ -1400,18 +1415,18 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	otelEndpointSlice := &discoveryv1.EndpointSlice{
 		ObjectMeta:  metav1.ObjectMeta{Namespace: ns, Name: serviceName, Labels: map[string]string{"kubernetes.io/service-name": serviceName}},
 		AddressType: discoveryv1.AddressTypeIPv4,
-		Endpoints:   []discoveryv1.Endpoint{{Addresses: []string{"7.7.7.7"}, Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)}}},
-		Ports:       []discoveryv1.EndpointPort{{Name: ptr.To("grpc"), Port: ptr.To(int32(4317)), Protocol: ptr.To(corev1.ProtocolTCP)}},
+		Endpoints:   []discoveryv1.Endpoint{{Addresses: []string{"7.7.7.7"}, Conditions: discoveryv1.EndpointConditions{Ready: new(true)}}},
+		Ports:       []discoveryv1.EndpointPort{{Name: new("grpc"), Port: new(int32(4317)), Protocol: new(corev1.ProtocolTCP)}},
 	}
 	otelServicePolicy := &gwapiv1.BackendTLSPolicy{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "otel-svc-tls"},
 		Spec: gwapiv1.BackendTLSPolicySpec{
 			TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Kind: "Service", Name: gwapiv1.ObjectName(serviceName)},
-				SectionName:                ptr.To(gwapiv1.SectionName("grpc")),
+				SectionName:                new(gwapiv1.SectionName("grpc")),
 			}},
 			Validation: gwapiv1.BackendTLSPolicyValidation{
-				WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+				WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
 				Hostname:                "otel-svc.example.com",
 			},
 		},
@@ -1419,7 +1434,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	serviceEndpoints := []*ir.DestinationEndpoint{{Host: "7.7.7.7", Port: 4317}}
 	serviceMetadata := &ir.ResourceMetadata{Name: serviceName, Namespace: ns, SectionName: "4317"}
 	servicePolicyTLS := &ir.TLSUpstreamConfig{
-		SNI: ptr.To("otel-svc.example.com"), UseSystemTrustStore: true,
+		SNI: new("otel-svc.example.com"), UseSystemTrustStore: true,
 		CACertificate: &ir.TLSCACertificate{Name: "otel-svc-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
 	}
 
@@ -1438,7 +1453,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 			resources:      &resource.Resources{Backends: []*egv1a1.Backend{otelBackend}, BackendTLSPolicies: []*gwapiv1.BackendTLSPolicy{otelBackendPolicy}},
 			expected: []*ir.DestinationSetting{{
 				Name: "test", Protocol: ir.TCP, Endpoints: backendEndpoints,
-				AddressType: ptr.To(ir.FQDN), Metadata: backendMetadata, TLS: backendPolicyTLS,
+				AddressType: new(ir.FQDN), Metadata: backendMetadata, TLS: backendPolicyTLS,
 			}},
 		},
 		{
@@ -1448,14 +1463,14 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 			resources:      &resource.Resources{Backends: []*egv1a1.Backend{otelBackend}},
 			expected: []*ir.DestinationSetting{{
 				Name: "test", Protocol: ir.TCP, Endpoints: backendEndpoints,
-				AddressType: ptr.To(ir.FQDN), Metadata: backendMetadata,
+				AddressType: new(ir.FQDN), Metadata: backendMetadata,
 			}},
 		},
 		{
 			name: "Backend ref without namespace, no TLS, no BackendTLSPolicy",
 			backendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
 				BackendObjectReference: gwapiv1.BackendObjectReference{
-					Group: ptr.To(gwapiv1.Group("gateway.envoyproxy.io")), Kind: ptr.To(gwapiv1.Kind("Backend")),
+					Group: new(gwapiv1.Group("gateway.envoyproxy.io")), Kind: new(gwapiv1.Kind("Backend")),
 					Name: gwapiv1.ObjectName(backendName),
 				},
 			}}},
@@ -1463,7 +1478,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 			resources: &resource.Resources{Backends: []*egv1a1.Backend{otelBackend}},
 			expected: []*ir.DestinationSetting{{
 				Name: "test", Protocol: ir.TCP, Endpoints: backendEndpoints,
-				AddressType: ptr.To(ir.FQDN), Metadata: backendMetadata,
+				AddressType: new(ir.FQDN), Metadata: backendMetadata,
 			}},
 		},
 		{
@@ -1473,7 +1488,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 			resources:      &resource.Resources{Backends: []*egv1a1.Backend{otelBackendWithTLS}, BackendTLSPolicies: []*gwapiv1.BackendTLSPolicy{otelBackendPolicy}},
 			expected: []*ir.DestinationSetting{{
 				Name: "test", Protocol: ir.TCP, Endpoints: backendEndpoints,
-				AddressType: ptr.To(ir.FQDN), Metadata: backendMetadata, TLS: backendPolicyTLS,
+				AddressType: new(ir.FQDN), Metadata: backendMetadata, TLS: backendPolicyTLS,
 			}},
 		},
 		{
@@ -1488,7 +1503,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 			resources: &resource.Resources{BackendTLSPolicies: []*gwapiv1.BackendTLSPolicy{otelServicePolicy}},
 			expected: []*ir.DestinationSetting{{
 				Name: "test", Protocol: ir.TCP, Endpoints: serviceEndpoints,
-				AddressType: ptr.To(ir.IP), Metadata: serviceMetadata, TLS: servicePolicyTLS,
+				AddressType: new(ir.IP), Metadata: serviceMetadata, TLS: servicePolicyTLS,
 			}},
 		},
 	}

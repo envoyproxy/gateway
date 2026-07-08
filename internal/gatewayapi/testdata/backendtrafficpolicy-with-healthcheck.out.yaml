@@ -70,8 +70,11 @@ backendTrafficPolicies:
           expectedResponse:
             text: pong
             type: Text
-          method: GET
+          method: POST
           path: /healthz
+          requestBody:
+            text: ping
+            type: Text
         interval: 5s
         timeout: 1s
         type: HTTP
@@ -885,7 +888,7 @@ xdsIR:
                 expectedStatuses:
                 - 200
                 - 300
-                host: '*'
+                host: ""
                 method: GET
                 path: /healthz
               interval: 3s
@@ -1173,9 +1176,11 @@ xdsIR:
                   text: pong
                 expectedStatuses:
                 - 200
-                host: gateway.envoyproxy.io
-                method: GET
+                host: ""
+                method: POST
                 path: /healthz
+                requestBody:
+                  text: ping
               interval: 5s
               timeout: 1s
               unhealthyThreshold: 3

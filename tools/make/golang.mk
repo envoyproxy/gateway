@@ -18,12 +18,18 @@ endif
 
 GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' ' -f2)
 
+# Set SKIP_GO_BUILD=true to skip go compilation (e.g. when using pre-built binaries from CI artifacts).
+SKIP_GO_BUILD ?= false
+
 # Build the target binary in target platform.
 # The pattern of build.% is `build.{Platform}.{Command}`.
 # If we want to build envoy-gateway in linux amd64 platform,
 # just execute make go.build.linux_amd64.envoy-gateway.
 .PHONY: go.build.%
 go.build.%:
+ifeq ($(SKIP_GO_BUILD),true)
+	@echo "Skipping go build"
+else
 	@$(LOG_TARGET)
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
 	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
@@ -31,6 +37,7 @@ go.build.%:
 	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
 	@$(call log, "Building binary $(COMMAND) with commit $(REV) for $(OS) $(ARCH)")
 	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) -ldflags "$(GO_LDFLAGS)" $(ROOT_PACKAGE)/cmd/$(COMMAND)
+endif
 
 # Build the envoy-gateway binaries in the hosted platforms.
 .PHONY: go.build

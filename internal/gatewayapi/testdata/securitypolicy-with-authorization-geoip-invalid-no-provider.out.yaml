@@ -27,6 +27,26 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: geoip-proxy
+    namespace: default
+  spec:
+    logging: {}
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
@@ -135,7 +155,18 @@ infraIR:
           namespace: default
         spec:
           logging: {}
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: default/gateway-1/http
         ports:

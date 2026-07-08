@@ -55,7 +55,7 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		return err
 	}
 
-	if err := validateEnvoyGatewayExtensionManager(eg.ExtensionManager); err != nil {
+	if err := validateEnvoyGatewayExtensionManagers(eg); err != nil {
 		return err
 	}
 
@@ -67,7 +67,23 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		return err
 	}
 
+	if eg.ExtensionAPIs != nil && eg.ExtensionAPIs.DisableLua != nil && *eg.ExtensionAPIs.DisableLua == eg.ExtensionAPIs.EnableLua {
+		return fmt.Errorf("disableLua and enableLua must not have the same value")
+	}
+
 	return nil
+}
+
+// WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.
+func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
+	if eg == nil || eg.ExtensionAPIs == nil {
+		return nil
+	}
+	var warnings []string
+	if eg.ExtensionAPIs.DisableLua != nil {
+		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
+	}
+	return warnings
 }
 
 func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKubernetesProvider) error {
@@ -183,6 +199,37 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		}
 	}
 	return nil
+}
+
+func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
+	if eg.ExtensionManager != nil && len(eg.ExtensionManagers) > 0 {
+		return fmt.Errorf("extensionManager and extensionManagers are mutually exclusive")
+	}
+
+	// Mirror +kubebuilder:validation:MinItems=1 for EnvoyGatewaySpec.ExtensionManagers:
+	// reject an explicitly-set-but-empty list. A nil slice means the field was omitted.
+	if eg.ExtensionManagers != nil && len(eg.ExtensionManagers) == 0 {
+		return fmt.Errorf("extensionManagers must contain at least one entry when specified")
+	}
+
+	if len(eg.ExtensionManagers) > 0 {
+		names := make(map[string]struct{})
+		for i, em := range eg.ExtensionManagers {
+			if em.Name == "" {
+				return fmt.Errorf("extension manager at index %d: name is required", i)
+			}
+			if _, exists := names[em.Name]; exists {
+				return fmt.Errorf("extension manager at index %d: duplicate name %q", i, em.Name)
+			}
+			names[em.Name] = struct{}{}
+			if err := validateEnvoyGatewayExtensionManager(&eg.ExtensionManagers[i]); err != nil {
+				return fmt.Errorf("extension manager %q: %w", em.Name, err)
+			}
+		}
+		return nil
+	}
+
+	return validateEnvoyGatewayExtensionManager(eg.ExtensionManager)
 }
 
 func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionManager) error {

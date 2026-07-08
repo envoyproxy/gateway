@@ -9,6 +9,8 @@ import (
 	"errors"
 	"io"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -39,10 +41,36 @@ type Server struct {
 	Logger logging.Logger
 	// Elected chan is used to signal when an EG instance is elected as leader.
 	Elected chan struct{}
+	// ProviderReady is closed once the Kubernetes provider cache is synced and the cached client is ready for consumers.
+	ProviderReady chan struct{}
 	// Stdout is the writer for standard output.
 	Stdout io.Writer
 	// Stderr is the writer for error output.
 	Stderr io.Writer
+	// KubernetesClient holds the controller-runtime client created by the Kubernetes provider.
+	// This is used by the infrastructure runner to create the envoy proxy and rate limit infra resources.
+	KubernetesClient *KubernetesClientHolder
+}
+
+type KubernetesClientHolder struct {
+	client client.Client
+}
+
+func NewKubernetesClientHolder() *KubernetesClientHolder {
+	return &KubernetesClientHolder{}
+}
+
+func (h *KubernetesClientHolder) Set(cli client.Client) {
+	if h != nil {
+		h.client = cli
+	}
+}
+
+func (h *KubernetesClientHolder) Get() client.Client {
+	if h == nil {
+		return nil
+	}
+	return h.client
 }
 
 // New returns a Server with default parameters.
@@ -55,20 +83,23 @@ func New(stdout, stderr io.Writer) (*Server, error) {
 		Stdout:              stdout,
 		Stderr:              stderr,
 		Elected:             make(chan struct{}),
+		ProviderReady:       make(chan struct{}),
+		KubernetesClient:    NewKubernetesClientHolder(),
 	}, nil
 }
 
-// Validate validates a Server config.
-func (s *Server) Validate() error {
+// Validate validates a Server config and returns any warnings.
+func (s *Server) Validate() ([]string, error) {
 	switch {
 	case s == nil:
-		return errors.New("server config is unspecified")
+		return nil, errors.New("server config is unspecified")
 	case len(s.ControllerNamespace) == 0:
-		return errors.New("namespace is empty string")
+		return nil, errors.New("namespace is empty string")
 	}
 	if err := validation.ValidateEnvoyGateway(s.EnvoyGateway); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	warnings := validation.WarnEnvoyGateway(s.EnvoyGateway)
+	return warnings, nil
 }

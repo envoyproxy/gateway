@@ -26,27 +26,30 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - version: v1.32.11
+          - version: v1.33.12
             ipFamily: ipv4
             profile: default
-          - version: v1.33.7
+          - version: v1.34.8
             ipFamily: ipv4
             profile: default
-          - version: v1.34.3
+          - version: v1.35.5
             # only run ipv6 test on this version to save time
             ipFamily: ipv6
             profile: default
           # TODO: this's IPv4 first, need a way to test IPv6 first.
-          - version: v1.35.0
+          - version: v1.36.1
             # only run dual test on latest version to save time
             ipFamily: dual
             profile: default
-          - version: v1.35.0
+          - version: v1.36.1
             # only run dual test on latest version to save time
             ipFamily: dual
             profile: gateway-namespace-mode
+          - version: v1.36.1
+            ipFamily: ipv4
+            profile: watch-namespaces
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - uses: ./tools/github-actions/setup-deps
 
       # gateway api experimental conformance
@@ -60,7 +63,7 @@ jobs:
         run: make experimental-conformance
 
       - name: Upload Conformance Report
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}
           path: ./test/conformance/conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}.yaml

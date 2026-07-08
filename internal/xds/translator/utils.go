@@ -19,7 +19,6 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -67,10 +66,8 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 
 	name := clusterName(u.Hostname(), uint32(port))
 
-	if ip, err := netip.ParseAddr(u.Hostname()); err == nil {
-		if ip.Unmap().Is4() {
-			epType = EndpointTypeStatic
-		}
+	if _, err := netip.ParseAddr(u.Hostname()); err == nil {
+		epType = EndpointTypeStatic
 	}
 
 	return &urlCluster{
@@ -181,7 +178,7 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 	}
 
 	ds = &ir.DestinationSetting{
-		Weight:    ptr.To[uint32](1),
+		Weight:    new(uint32(1)),
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, uc.hostname, uc.port, false, nil)},
 		Name:      destinationSettingName(uc.name),
 		// TODO: tracked with issue #6861
@@ -220,6 +217,7 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
 	args.backendConnection = traffic.BackendConnection
 	args.dns = traffic.DNS
 	args.http2Settings = traffic.HTTP2
+	args.admissionControl = traffic.AdmissionControl
 }
 
 // determineIPFamily determines the IP family based on multiple destination settings
@@ -250,13 +248,13 @@ func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
 
 	switch {
 	case hasDualStack:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	case hasIPv4 && hasIPv6:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	case hasIPv4:
-		return ptr.To(egv1a1.IPv4)
+		return new(egv1a1.IPv4)
 	case hasIPv6:
-		return ptr.To(egv1a1.IPv6)
+		return new(egv1a1.IPv6)
 	default:
 		return nil
 	}

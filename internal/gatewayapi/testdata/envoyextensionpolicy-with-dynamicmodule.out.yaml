@@ -80,6 +80,50 @@ envoyExtensionPolicies:
         status: "True"
         type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: proxy-config
+    namespace: envoy-gateway
+  spec:
+    dynamicModules:
+    - name: my-auth-module
+      source:
+        local:
+          path: /usr/lib/envoy/modules/my_auth.so
+        type: Local
+    - name: remote-auth-module
+      source:
+        remote:
+          sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+          url: https://modules.example.com/libremote_auth.so
+        type: Remote
+    - doNotClose: true
+      loadGlobally: true
+      name: ai-gateway-filter
+      source:
+        local:
+          path: /usr/lib/envoy/modules/ai_gateway.so
+    - name: path-loaded-module
+      source:
+        local:
+          path: /opt/modules/my_module.so
+        type: Local
+    logging: {}
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -234,7 +278,19 @@ infraIR:
                 path: /opt/modules/my_module.so
               type: Local
           logging: {}
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:

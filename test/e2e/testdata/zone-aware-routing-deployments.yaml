@@ -18,7 +18,7 @@ spec:
       containers:
         - name: zone-aware-backend
           # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
-          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           env:
             - name: POD_NAME
               valueFrom:
@@ -69,7 +69,7 @@ spec:
       containers:
         - name: zone-aware-backend
           # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
-          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           env:
             - name: POD_NAME
               valueFrom:

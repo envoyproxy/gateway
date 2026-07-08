@@ -566,8 +566,9 @@ spec:
                                       type: array
                                     hostname:
                                       description: |-
-                                        Hostname defines the HTTP host that will be requested during health checking.
-                                        Default: HTTPRoute or GRPCRoute hostname.
+                                        Hostname defines the HTTP Host header used for active HTTP health checks.
+                                        Host selection uses this order: this field, the associated Backend endpoint
+                                        hostname if available, then the effective Route hostname.
                                       maxLength: 253
                                       minLength: 1
                                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -576,6 +577,7 @@ spec:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
                                         Defaults to GET
+                                      maxLength: 16
                                       type: string
                                     path:
                                       description: Path defines the HTTP path that
@@ -583,6 +585,40 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    requestBody:
+                                      description: RequestBody defines the HTTP request
+                                        body payload sent during health checking.
+                                      properties:
+                                        binary:
+                                          description: Binary payload base64 encoded.
+                                          format: byte
+                                          type: string
+                                        text:
+                                          description: Text payload in plain text.
+                                          type: string
+                                        type:
+                                          allOf:
+                                          - enum:
+                                            - Text
+                                            - Binary
+                                          - enum:
+                                            - Text
+                                            - Binary
+                                          description: Type defines the type of the
+                                            payload.
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: If payload type is Text, text field
+                                          needs to be set.
+                                        rule: 'self.type == ''Text'' ? has(self.text)
+                                          : !has(self.text)'
+                                      - message: If payload type is Binary, binary
+                                          field needs to be set.
+                                        rule: 'self.type == ''Binary'' ? has(self.binary)
+                                          : !has(self.binary)'
                                     retriableStatuses:
                                       description: |-
                                         RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -599,6 +635,11 @@ spec:
                                   required:
                                   - path
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: The requestBody field can only be set
+                                      when method is POST or PUT.
+                                    rule: '!has(self.requestBody) || (has(self.method)
+                                      && self.method.upperAscii() in [''POST'',''PUT''])'
                                 initialJitter:
                                   description: |-
                                     InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -806,6 +847,8 @@ spec:
                                   description: MaxEjectionPercent sets the maximum
                                     percentage of hosts in a cluster that can be ejected.
                                   format: int32
+                                  maximum: 100
+                                  minimum: 0
                                   type: integer
                                 splitExternalLocalOriginErrors:
                                   default: false
@@ -1256,10 +1299,15 @@ spec:
                               instead.
                             rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                               ? !has(self.zoneAware.preferLocal) : true'
-                          - message: ZoneAware routing is not supported for BackendUtilization
-                              and DynamicModule load balancers.
-                            rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                              ? !has(self.zoneAware) : true'
+                          - message: PreferLocal zone-aware routing is not currently
+                              supported for BackendUtilization load balancers. Only
+                              WeightedZones can be used with BackendUtilization.
+                            rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                              ? !has(self.zoneAware.preferLocal) : true'
+                          - message: ZoneAware routing is not supported for DynamicModule
+                              load balancers.
+                            rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                              : true'
                           - message: ZoneAware PreferLocal and WeightedZones cannot
                               be specified together.
                             rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -1565,6 +1613,51 @@ spec:
                               type: string
                           type: object
                       type: object
+                    statusOnError:
+                      description: |-
+                        Sets the HTTP status that is returned to the client when the external processor returns an error
+                        or cannot be reached. Defaults to 500 Internal Server Error.
+                        Only 4xx and 5xx status codes are supported.
+                      enum:
+                      - 400
+                      - 401
+                      - 402
+                      - 403
+                      - 404
+                      - 405
+                      - 406
+                      - 407
+                      - 408
+                      - 409
+                      - 410
+                      - 411
+                      - 412
+                      - 413
+                      - 414
+                      - 415
+                      - 416
+                      - 417
+                      - 421
+                      - 422
+                      - 423
+                      - 424
+                      - 426
+                      - 428
+                      - 429
+                      - 431
+                      - 500
+                      - 501
+                      - 502
+                      - 503
+                      - 504
+                      - 505
+                      - 506
+                      - 507
+                      - 508
+                      - 510
+                      - 511
+                      format: int32
+                      type: integer
                   type: object
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
@@ -1597,6 +1690,13 @@ spec:
                     Lua defines a Lua extension
                     Only one of Inline or ValueRef must be set
                   properties:
+                    filterContext:
+                      description: |-
+                        FilterContext is the filter context configuration for the Lua script.
+                        This must be a JSON object (key/value pairs). The values are made available
+                        to the Lua script via request_handle:filterContext(). This allows a shared
+                        script to be parameterized differently per EnvoyExtensionPolicy/route.
+                      x-kubernetes-preserve-unknown-fields: true
                     inline:
                       description: Inline contains the source code as an inline string.
                       type: string
@@ -1811,8 +1911,86 @@ spec:
                       additionalProperties:
                         type: string
                       description: MatchLabels are the set of label selectors for
-                        identifying the targeted resource
+                        identifying the targeted resource.
                       type: object
+                    namespaces:
+                      description: |-
+                        Namespaces determines which namespaces are considered for target selection.
+
+                        If unspecified, only targets in the same namespace as this policy are considered.
+
+                        When specified, the effective set of namespaces is always constrained to the
+                        namespaces watched by Envoy Gateway.
+
+                        Selecting targets across namespaces requires a ReferenceGrant in the target
+                        namespace that allows this policy kind to reference the selected target kind.
+                        Cross-namespace targets without a matching ReferenceGrant are ignored.
+                      properties:
+                        from:
+                          default: Same
+                          description: |-
+                            From indicates how namespaces are selected for this target selector.
+
+                            All means all namespaces watched by Envoy Gateway.
+                            Selector means namespaces watched by Envoy Gateway that match Selector.
+                          enum:
+                          - Same
+                          - All
+                          - Selector
+                          type: string
+                        selector:
+                          description: Selector selects namespaces when From is set
+                            to Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - from
+                      type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object

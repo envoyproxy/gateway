@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: grpc-infra-backend-v1
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20240412-v1.0.0-394-g40c666fd
+        image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
         env:
         - name: POD_NAME
           valueFrom:

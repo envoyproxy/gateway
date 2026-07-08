@@ -20,6 +20,7 @@ import (
 	ratelimitfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
@@ -170,30 +171,37 @@ func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain, f
 }
 
 // patchRouteWithRateLimit builds rate limit actions and appends to the route.
-func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error { //nolint:unparam
+func patchRouteWithRateLimit(irListener *ir.HTTPListener, route *routev3.Route, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	// Return early if no rate limit config exists.
-	xdsRouteAction := route.GetRoute()
-	if !isValidGlobalRateLimit(irRoute) || xdsRouteAction == nil {
+	if !isValidGlobalRateLimit(irRoute) || route.GetRoute() == nil {
 		return nil
 	}
-	rateLimits, costSpecified := buildRouteRateLimits(irRoute)
-	if costSpecified {
-		return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits, irRoute)
+
+	// TypedPerFilterConfig scopes each domain's rules to the matching rate limit filter, so each
+	// request triggers exactly one ShouldRateLimit call. Route-level rate_limits carry no domain
+	// and are picked up by every filter on the HCM, producing one call per listener domain with
+	// all but one discarded by the RLS.
+	listenerName := irListener.Name
+	for domain, rls := range buildRouteRateLimits(listenerName, irRoute) {
+		filterName := egv1a1.EnvoyFilterRateLimit.String()
+		if domain != listenerName {
+			filterName += "/" + domain
+		}
+		if err := patchRouteWithRateLimitOnTypedFilterConfig(route, filterName, domain, rls); err != nil {
+			return err
+		}
 	}
-	xdsRouteAction.RateLimits = rateLimits
 	return nil
 }
 
-// patchRouteWithRateLimitOnTypedFilterConfig builds rate limit actions and appends to the route via
-// the TypedPerFilterConfig field.
-func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits []*routev3.RateLimit, irRoute *ir.HTTPRoute) error { //nolint:unparam
+// patchRouteWithRateLimitOnTypedFilterConfig appends a RateLimitPerRoute entry for the given
+// filter name and domain to the route's TypedPerFilterConfig map.
+func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, filterName, domain string, rateLimits []*routev3.RateLimit) error {
 	filterCfg := route.TypedPerFilterConfig
 	if filterCfg == nil {
 		filterCfg = make(map[string]*anypb.Any)
 		route.TypedPerFilterConfig = filterCfg
 	}
-
-	filterName := getRateLimitFilterName(irRoute)
 
 	if _, ok := filterCfg[filterName]; ok {
 		// This should not happen since this is the only place where the filter
@@ -202,26 +210,41 @@ func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits
 			"route already contains global rate limit filter config: %s", route.Name)
 	}
 
-	g, err := anypb.New(&ratelimitfilterv3.RateLimitPerRoute{RateLimits: rateLimits})
+	perRouteCfg, err := anypb.New(&ratelimitfilterv3.RateLimitPerRoute{
+		Domain:     domain,
+		RateLimits: rateLimits,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to marshal per-route ratelimit filter config: %w", err)
 	}
-	filterCfg[filterName] = g
+	filterCfg[filterName] = perRouteCfg
 	return nil
 }
 
-// buildRouteRateLimits constructs rate limit actions for a given route based on the global rate limit configuration.
-func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit, costSpecified bool) {
+// buildRouteRateLimits constructs rate limit actions for a given route grouped by domain.
+// Shared rules use their policy domain; non-shared rules use the listener domain.
+func buildRouteRateLimits(listenerName string, route *ir.HTTPRoute) map[string][]*routev3.RateLimit {
 	// Ensure route has rate limit config
 	if !isValidGlobalRateLimit(route) {
-		return nil, false
+		return nil
 	}
 
 	// Get the global rate limit configuration
 	global := route.Traffic.RateLimit.Global
+	rateLimitsByDomain := make(map[string][]*routev3.RateLimit)
 
 	// Iterate over each rule in the global rate limit configuration.
 	for rIdx, rule := range global.Rules {
+		ruleShared := isRuleShared(rule)
+
+		// Domain for this rule: shared rules use their policy domain, non-shared use the listener.
+		var domain string
+		if ruleShared {
+			domain = stripRuleIndexSuffix(rule.Name)
+		} else {
+			domain = listenerName
+		}
+
 		// If method matches specified, create one rate limit rule per method (OR behavior),
 		// these rules share the same limit counter, so they share the same descriptor.
 		methodMatches := rule.MethodMatches
@@ -236,7 +259,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 
 			// Create the route descriptor using the rule's shared attribute
 			var descriptorKey, descriptorValue string
-			if isRuleShared(rule) {
+			if ruleShared {
 				// For shared rule, use full rule name
 				descriptorKey = rule.Name
 				descriptorValue = rule.Name
@@ -260,8 +283,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			rlActions = append(rlActions, routeDescriptor)
 
 			// Calculate the domain-specific rule index (0-based for each domain)
-			ruleIsShared := isRuleShared(rule)
-			domainRuleIdx := getDomainRuleIndex(global.Rules, rIdx, ruleIsShared)
+			domainRuleIdx := getDomainRuleIndex(global.Rules, rIdx, ruleShared)
 
 			// Process each header match in the rule.
 			buildHeaderMatchRateLimitActions(&rlActions, domainRuleIdx, rule.HeaderMatches)
@@ -293,24 +315,51 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			// Create a rate limit object for the current rule.
 			rateLimit := &routev3.RateLimit{Actions: rlActions}
 
+			// Set the per-rule XRateLimitOption if specified, overriding the filter-level setting.
+			rateLimit.XRatelimitOption = toEnvoyXRateLimitOption(rule.XRateLimitOption)
+
+			// Source the limit value from dynamic metadata if specified, overriding the static
+			// limit per request when the metadata value is present.
+			if md := rule.Limit.FromMetadata; md != nil {
+				rateLimit.Limit = buildRateLimitOverride(md)
+			}
+
 			if c := rule.RequestCost; c != nil {
 				// Set the hits addend for the request cost if specified.
 				rateLimit.HitsAddend = rateLimitCostToHitsAddend(c)
-				costSpecified = true
 			}
-			// Add the rate limit to the list of rate limits.
-			rateLimits = append(rateLimits, rateLimit)
+			rateLimitsByDomain[domain] = append(rateLimitsByDomain[domain], rateLimit)
 
 			// Handle response cost by creating a separate rate limit object.
 			if c := rule.ResponseCost; c != nil {
 				responseRule := &routev3.RateLimit{Actions: rlActions, ApplyOnStreamDone: true}
+				responseRule.XRatelimitOption = rateLimit.XRatelimitOption
 				responseRule.HitsAddend = rateLimitCostToHitsAddend(c)
-				rateLimits = append(rateLimits, responseRule)
-				costSpecified = true
+				// Keep the limit override consistent with the request-time rule so both
+				// descriptors for this shared counter reference the same per-request limit.
+				responseRule.Limit = rateLimit.Limit
+				rateLimitsByDomain[domain] = append(rateLimitsByDomain[domain], responseRule)
 			}
 		}
 	}
-	return rateLimits, costSpecified
+	return rateLimitsByDomain
+}
+
+// toEnvoyXRateLimitOption maps the EG API XRateLimitHeadersOption to the Envoy
+// per-descriptor XRateLimitOption. When nil (unset), UNSPECIFIED is returned,
+// meaning the rule inherits the listener-level setting.
+func toEnvoyXRateLimitOption(opt *egv1a1.XRateLimitHeadersOption) routev3.RateLimit_XRateLimitOption {
+	if opt == nil {
+		return routev3.RateLimit_UNSPECIFIED
+	}
+	switch *opt {
+	case egv1a1.XRateLimitHeadersOptionDisabled:
+		return routev3.RateLimit_OFF
+	case egv1a1.XRateLimitHeadersOptionDraftVersion03:
+		return routev3.RateLimit_DRAFT_VERSION_03
+	default:
+		return routev3.RateLimit_UNSPECIFIED
+	}
 }
 
 func buildHeaderMatchRateLimitActions(
@@ -570,6 +619,24 @@ func rateLimitCostToHitsAddend(c *ir.RateLimitCost) *routev3.RateLimit_HitsAdden
 	return ret
 }
 
+// buildRateLimitOverride builds an Envoy rate limit override that sources the limit value from
+// per-request dynamic metadata. The referenced metadata value must be a struct containing
+// "requests_per_unit" and "unit" properties.
+func buildRateLimitOverride(md *ir.RateLimitValueMetadata) *routev3.RateLimit_Override {
+	return &routev3.RateLimit_Override{
+		OverrideSpecifier: &routev3.RateLimit_Override_DynamicMetadata_{
+			DynamicMetadata: &routev3.RateLimit_Override_DynamicMetadata{
+				MetadataKey: &metadatav3.MetadataKey{
+					Key: md.Namespace,
+					Path: []*metadatav3.MetadataKey_PathSegment{
+						{Segment: &metadatav3.MetadataKey_PathSegment_Key{Key: md.Key}},
+					},
+				},
+			},
+		},
+	}
+}
+
 // GetRateLimitServiceConfigStr returns the PB string for the rate limit service configuration.
 func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, error) {
 	var buf bytes.Buffer
@@ -724,29 +791,6 @@ func addRateLimitDescriptor(
 	}
 }
 
-// isSharedRateLimit checks if a route has at least one shared rate limit rule.
-// It returns true if any rule in the global rate limit configuration is marked as shared.
-// If no rules are shared or there's no global rate limit configuration, it returns false.
-func isSharedRateLimit(route *ir.HTTPRoute) bool {
-	if !isValidGlobalRateLimit(route) {
-		return false
-	}
-
-	global := route.Traffic.RateLimit.Global
-	if len(global.Rules) == 0 {
-		return false
-	}
-
-	// Check if any rule has shared=true
-	for _, rule := range global.Rules {
-		if isRuleShared(rule) {
-			return true
-		}
-	}
-
-	return false
-}
-
 // Helper function to check if a specific rule is shared
 func isRuleShared(rule *ir.RateLimitRule) bool {
 	return rule != nil && rule.Shared != nil && *rule.Shared
@@ -796,7 +840,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 
 	for rIdx, rule := range global.Rules {
 		rateLimitPolicy := &rlsconfv3.RateLimitPolicy{
-			RequestsPerUnit: uint32(rule.Limit.Requests),
+			RequestsPerUnit: rule.Limit.Requests,
 			Unit: rlsconfv3.RateLimitUnit(
 				rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 		}
@@ -1003,25 +1047,6 @@ func (t *Translator) getRateLimitServiceGrpcHostPort() (string, uint32) {
 		panic(err)
 	}
 	return u.Hostname(), uint32(p)
-}
-
-// getRateLimitFilterName gets the filter name for rate limits.
-// If any rule in the route is shared, it appends the rule name to the base filter name.
-// For non-shared rate limits, it returns just the base filter name.
-// Note: This function is primarily used for route-level filter configuration, not for HTTP filters at the listener level.
-func getRateLimitFilterName(route *ir.HTTPRoute) string {
-	filterName := egv1a1.EnvoyFilterRateLimit.String()
-	// If any rule is shared, include the rule name in the filter name
-	if isSharedRateLimit(route) {
-		// Find the first shared rule to use its name
-		for _, rule := range route.Traffic.RateLimit.Global.Rules {
-			if isRuleShared(rule) {
-				filterName = fmt.Sprintf("%s/%s", filterName, stripRuleIndexSuffix(rule.Name))
-				break
-			}
-		}
-	}
-	return filterName
 }
 
 // Helper to strip /rule/<index> from a rule name in order to use shared http filter

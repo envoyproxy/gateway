@@ -24,6 +24,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
+var extAuthRouteMetadataContextNamespaces = []string{envoyGatewayXdsMetadataNamespace}
+
 func init() {
 	registerHTTPFilter(&extAuth{})
 }
@@ -108,6 +110,10 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 		config.ClearRouteCache = *extAuth.RecomputeRoute
 	}
 
+	if extAuth.IncludeRouteMetadata != nil && *extAuth.IncludeRouteMetadata {
+		config.RouteMetadataContextNamespaces = extAuthRouteMetadataContextNamespaces
+	}
+
 	headersToExtAuth := make([]*matcherv3.StringMatcher, 0, len(extAuth.HeadersToExtAuth))
 	for _, header := range extAuth.HeadersToExtAuth {
 		headersToExtAuth = append(headersToExtAuth, &matcherv3.StringMatcher{
@@ -181,7 +187,8 @@ func httpService(http *ir.HTTPExtAuthService, timeout *durationpb.Duration) *ext
 	)
 
 	service = &extauthv3.HttpService{
-		PathPrefix: http.Path,
+		PathPrefix:   http.Path,
+		PathOverride: http.PathOverride,
 	}
 
 	u := url.URL{
@@ -190,7 +197,11 @@ func httpService(http *ir.HTTPExtAuthService, timeout *durationpb.Duration) *ext
 		// uri to make the request. It only uses the cluster.
 		Scheme: "http",
 		Host:   http.Authority,
-		Path:   http.Path,
+	}
+	if http.PathOverride != "" {
+		u.Path = http.PathOverride
+	} else {
+		u.Path = http.Path
 	}
 	uri = u.String()
 

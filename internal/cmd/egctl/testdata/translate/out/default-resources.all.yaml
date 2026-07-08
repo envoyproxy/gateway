@@ -23,6 +23,8 @@ envoyProxyForGatewayClass:
         node:
           locality:
             zone: $(ENVOY_SERVICE_ZONE)
+        deferredStatOptions:
+          enableDeferredCreationStats: true
         stats_config:
           use_all_default_tags: true
           stats_tags:
@@ -172,7 +174,18 @@ envoyProxyForGatewayClass:
               "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
               max_active_downstream_connections: 50000
     logging: {}
-  status: {}
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: eg
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
@@ -436,7 +449,7 @@ httpRoutes:
         kind: Gateway
         name: eg
 tcpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: backend
@@ -514,7 +527,7 @@ tlsRoutes:
         name: eg
         sectionName: tls-passthrough
 udpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: UDPRoute
   metadata:
     name: backend
@@ -568,6 +581,8 @@ xds:
               portValue: 19000
         clusterManager:
           localClusterName: local_cluster
+        deferredStatOptions:
+          enableDeferredCreationStats: true
         dynamicResources:
           adsConfig:
             apiType: DELTA_GRPC

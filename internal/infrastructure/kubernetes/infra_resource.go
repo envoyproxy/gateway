@@ -20,10 +20,20 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/metrics"
 	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
 )
+
+// applyIfOwned skips the apply when the resource would hijack an unrelated,
+// pre-existing resource in GatewayNamespace mode (see checkOwnership).
+func (i *Infra) applyIfOwned(ctx context.Context, obj client.Object) error {
+	if err := i.checkOwnership(ctx, obj); err != nil {
+		return err
+	}
+	return i.Client.ServerSideApply(ctx, obj)
+}
 
 // createOrUpdateServiceAccount creates a ServiceAccount in the kube api server based on the
 // provided ResourceRender, if it doesn't exist and updates it if it does.
@@ -66,7 +76,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		return err
 	}
 
-	return i.Client.ServerSideApply(ctx, sa)
+	return i.applyIfOwned(ctx, sa)
 }
 
 // createOrUpdateConfigMap creates a ConfigMap in the Kube api server based on the provided
@@ -105,7 +115,7 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 		}
 	}()
 
-	return i.Client.ServerSideApply(ctx, cm)
+	return i.applyIfOwned(ctx, cm)
 }
 
 // createOrUpdateDeployment creates a Deployment in the kube api server based on the provided
@@ -158,7 +168,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// It's the deployment creation.
-			return i.Client.ServerSideApply(ctx, deployment)
+			return i.applyIfOwned(ctx, deployment)
 		}
 		return err
 	}
@@ -192,7 +202,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		}
 	}
 
-	return i.Client.ServerSideApply(ctx, deployment)
+	return i.applyIfOwned(ctx, deployment)
 }
 
 // createOrUpdateDaemonSet creates a DaemonSet in the kube api server based on the provided
@@ -245,7 +255,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// It's the daemonset creation.
-			return i.Client.ServerSideApply(ctx, daemonSet)
+			return i.applyIfOwned(ctx, daemonSet)
 		}
 		return err
 	}
@@ -278,7 +288,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		}
 	}
 
-	return i.Client.ServerSideApply(ctx, daemonSet)
+	return i.applyIfOwned(ctx, daemonSet)
 }
 
 func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {
@@ -324,7 +334,7 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		}
 	}()
 
-	return i.Client.ServerSideApply(ctx, pdb)
+	return i.applyIfOwned(ctx, pdb)
 }
 
 // createOrUpdateHPA creates HorizontalPodAutoscaler object in the kube api server based on
@@ -373,7 +383,7 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		}
 	}()
 
-	return i.Client.ServerSideApply(ctx, hpa)
+	return i.applyIfOwned(ctx, hpa)
 }
 
 // createOrUpdateRateLimitService creates a Service in the kube api server based on the provided ResourceRender,
@@ -414,7 +424,7 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 		}
 	}()
 
-	return i.Client.ServerSideApply(ctx, svc)
+	return i.applyIfOwned(ctx, svc)
 }
 
 // deleteServiceAccount deletes the ServiceAccount in the kube api server, if it exists.
@@ -455,8 +465,9 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
 func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns   = r.Name(), r.Namespace()
-		deployment = &appsv1.Deployment{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		deployment         = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -470,25 +481,22 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 		}
 	)
 
-	// Check if any Deployments exist before attempting deletion to avoid
-	// incrementing delete metrics on no-op reconciles.
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
 	deployList := &appsv1.DeploymentList{}
-	if err = i.Client.List(ctx, deployList, &client.ListOptions{
+	if listErr := i.Client.List(ctx, deployList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
-	}); err != nil {
-		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-	if len(deployList.Items) == 0 {
-		return nil
+	}); listErr == nil && len(deployList.Items) == 0 {
+		recordDeleteMetric = false
 	}
 
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -504,8 +512,9 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 // deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
 func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns  = r.Name(), r.Namespace()
-		daemonSet = &appsv1.DaemonSet{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		daemonSet          = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -519,25 +528,22 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 		}
 	)
 
-	// Check if any DaemonSets exist before attempting deletion to avoid
-	// incrementing delete metrics on no-op reconciles.
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
 	dsList := &appsv1.DaemonSetList{}
-	if err = i.Client.List(ctx, dsList, &client.ListOptions{
+	if listErr := i.Client.List(ctx, dsList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
-	}); err != nil {
-		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-	if len(dsList.Items) == 0 {
-		return nil
+	}); listErr == nil && len(dsList.Items) == 0 {
+		recordDeleteMetric = false
 	}
 
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -623,8 +629,9 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 // deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
 func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), r.Namespace()
-		hpa      = &autoscalingv2.HorizontalPodAutoscaler{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		hpa                = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -638,25 +645,22 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 		}
 	)
 
-	// Check if any HPAs exist before attempting deletion to avoid
-	// incrementing delete metrics on no-op reconciles.
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
 	hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
-	if err = i.Client.List(ctx, hpaList, &client.ListOptions{
+	if listErr := i.Client.List(ctx, hpaList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
-	}); err != nil {
-		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-	if len(hpaList.Items) == 0 {
-		return nil
+	}); listErr == nil && len(hpaList.Items) == 0 {
+		recordDeleteMetric = false
 	}
 
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -672,8 +676,9 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 // deletePDB deletes the PodDistribution budget associated to its renderer, if it exists.
 func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), r.Namespace()
-		pdb      = &policyv1.PodDisruptionBudget{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		pdb                = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -687,25 +692,22 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 		}
 	)
 
-	// Check if any PDBs exist before attempting deletion to avoid
-	// incrementing delete metrics on no-op reconciles.
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
 	pdbList := &policyv1.PodDisruptionBudgetList{}
-	if err = i.Client.List(ctx, pdbList, &client.ListOptions{
+	if listErr := i.Client.List(ctx, pdbList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
-	}); err != nil {
-		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-	if len(pdbList.Items) == 0 {
-		return nil
+	}); listErr == nil && len(pdbList.Items) == 0 {
+		recordDeleteMetric = false
 	}
 
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -728,4 +730,71 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 		return ""
 	}
 	return string(secret.Data[proxy.XdsTLSCaFileName])
+}
+
+// noGatewayIdentityLabels reports whether labels carry none of the three
+// gateway ownership identity labels. Resources in GatewayNamespace mode
+// with no identity labels (such as ratelimit resources) are controller-scoped
+// and need no collision guard.
+func noGatewayIdentityLabels(labels map[string]string) bool {
+	return labels[gatewayapi.OwningGatewayNameLabel] == "" &&
+		labels[gatewayapi.OwningGatewayNamespaceLabel] == "" &&
+		labels[gatewayapi.OwningGatewayClassLabel] == ""
+}
+
+// checkOwnership guards against adopting a pre-existing resource that shares a
+// name with a Gateway-owned resource in GatewayNamespace mode. If a resource
+// with the same name/namespace already exists and is not labeled as owned by
+// this Gateway, the apply is skipped to avoid hijacking (and later garbage-
+// collecting) an unrelated resource.
+//
+// This uses the cached client, so it is best-effort: there is a small window
+// where a same-named resource created just before this reconcile may not yet be
+// reflected in the cache and could be adopted. This is considered an acceptable
+// edge case — it does not cause EG to fail, and using the cache avoids extra
+// uncached API reads on every reconcile (see #8764).
+func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
+	if !i.EnvoyGateway.GatewayNamespaceMode() || noGatewayIdentityLabels(obj.GetLabels()) {
+		return nil
+	}
+
+	existing := obj.DeepCopyObject().(client.Object)
+	err := i.Client.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	if !ownedByGateway(existing.GetLabels(), obj.GetLabels()) {
+		ownershipErr := fmt.Errorf("%s %s/%s already exists and is not owned by this Gateway",
+			obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
+		i.logger.Error(ownershipErr, "resource already exists and is not owned by this Gateway, skipping",
+			"kind", obj.GetObjectKind().GroupVersionKind().Kind,
+			"name", obj.GetName(), "namespace", obj.GetNamespace())
+		return ownershipErr
+	}
+	return nil
+}
+
+func ownedByGateway(existingLabels, desiredLabels map[string]string) bool {
+	if existingLabels["app.kubernetes.io/managed-by"] != "envoy-gateway" {
+		return false
+	}
+
+	gwName := desiredLabels[gatewayapi.OwningGatewayNameLabel]
+	gwNS := desiredLabels[gatewayapi.OwningGatewayNamespaceLabel]
+	if gwName != "" || gwNS != "" {
+		return existingLabels[gatewayapi.OwningGatewayNameLabel] == gwName &&
+			existingLabels[gatewayapi.OwningGatewayNamespaceLabel] == gwNS
+	}
+
+	gwClass := desiredLabels[gatewayapi.OwningGatewayClassLabel]
+	if gwClass != "" {
+		return existingLabels[gatewayapi.OwningGatewayClassLabel] == gwClass
+	}
+
+	// no identity labels present.
+	return false
 }

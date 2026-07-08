@@ -93,11 +93,15 @@ func (t *Translator) processListenerSet(ls *gwapiv1.ListenerSet, gatewayMap map[
 		}
 		gatewayCtx.listeners = append(gatewayCtx.listeners, listenerCtx)
 	}
-	gatewayCtx.IncreaseAttachedListenerSets()
 }
 
 // ProcessListenerSetStatus computes the status of ListenerSets after their listeners have been processed.
-func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSet) {
+func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSet, gateways []*GatewayContext) {
+	gatewayMap := make(map[types.NamespacedName]*GatewayContext, len(gateways))
+	for _, gw := range gateways {
+		gatewayMap[types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}] = gw
+	}
+
 	for _, ls := range listenerSets {
 		// If Accepted condition is already set to False, it means it failed during attachment (parent not found/accepted or not allowed).
 		// We skip re-processing.
@@ -113,48 +117,78 @@ func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSe
 		}
 
 		// Calculate status based on listeners
-		allListenersValid := true
-		anyListenerValid := false
+		allListenersAccepted := true
+		anyListenerAccepted := false
+		allListenersProgrammed := true
+		anyListenerProgrammed := false
 
 		for _, lStatus := range ls.Status.Listeners {
 			accepted := false
+			programmed := false
 			for _, cond := range lStatus.Conditions {
 				if cond.Type == string(gwapiv1.ListenerEntryConditionAccepted) && cond.Status == metav1.ConditionTrue {
 					accepted = true
-					break
+				}
+				if cond.Type == string(gwapiv1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionTrue {
+					programmed = true
 				}
 			}
-			anyListenerValid = anyListenerValid || accepted
-			allListenersValid = allListenersValid && accepted
+			anyListenerAccepted = anyListenerAccepted || accepted
+			allListenersAccepted = allListenersAccepted && accepted
+			anyListenerProgrammed = anyListenerProgrammed || programmed
+			allListenersProgrammed = allListenersProgrammed && programmed
 		}
 
 		var (
 			lsAccepted         bool
-			lsReason           gwapiv1.ListenerSetConditionReason
+			lsAcceptedReason   gwapiv1.ListenerSetConditionReason
+			lsAcceptedMsg      string
+			lsProgrammed       bool
 			lsProgrammedReason gwapiv1.ListenerSetConditionReason
-			lsMsg              string
+			lsProgrammedMsg    string
 		)
 
 		switch {
-		case allListenersValid:
+		case allListenersAccepted:
 			lsAccepted = true
-			lsReason = gwapiv1.ListenerSetReasonAccepted
-			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
-			lsMsg = "All listeners are valid"
-		case anyListenerValid: // TODO: implement PartiallyInvalid conditions when Gateway API supports it
+			lsAcceptedReason = gwapiv1.ListenerSetReasonAccepted
+			lsAcceptedMsg = "All listeners are accepted"
+		case anyListenerAccepted: // TODO: implement PartiallyInvalid conditions when Gateway API supports it
 			lsAccepted = true
-			lsReason = gwapiv1.ListenerSetReasonListenersNotValid
-			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
-			lsMsg = "Some listeners are invalid"
+			lsAcceptedReason = gwapiv1.ListenerSetReasonListenersNotValid
+			lsAcceptedMsg = "Some listeners are invalid"
 		default:
 			lsAccepted = false
-			lsReason = gwapiv1.ListenerSetReasonListenersNotValid
-			lsProgrammedReason = gwapiv1.ListenerSetReasonListenersNotValid
-			lsMsg = "All listeners are invalid"
+			lsAcceptedReason = gwapiv1.ListenerSetReasonListenersNotValid
+			lsAcceptedMsg = "No listeners are accepted"
 		}
 
-		status.UpdateListenerSetStatusAccepted(ls, lsAccepted, lsReason, lsMsg)
-		status.UpdateListenerSetStatusProgrammed(ls, lsAccepted, lsProgrammedReason, lsMsg)
+		switch {
+		case allListenersProgrammed:
+			lsProgrammed = true
+			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
+			lsProgrammedMsg = "All listeners are programmed"
+		case anyListenerProgrammed:
+			lsProgrammed = true
+			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
+			lsProgrammedMsg = "Some listeners are not programmed"
+		default:
+			lsProgrammed = false
+			lsProgrammedReason = gwapiv1.ListenerSetReasonListenersNotValid
+			lsProgrammedMsg = "No listeners are programmed"
+		}
+
+		status.UpdateListenerSetStatusAccepted(ls, lsAccepted, lsAcceptedReason, lsAcceptedMsg)
+		status.UpdateListenerSetStatusProgrammed(ls, lsProgrammed, lsProgrammedReason, lsProgrammedMsg)
+
+		// Only count the ListenerSet as attached if it is accepted (has at least one valid listener).
+		if lsAccepted {
+			parentNamespace := NamespaceDerefOr(ls.Spec.ParentRef.Namespace, ls.Namespace)
+			gatewayKey := types.NamespacedName{Namespace: parentNamespace, Name: string(ls.Spec.ParentRef.Name)}
+			if gw, ok := gatewayMap[gatewayKey]; ok {
+				gw.IncreaseAttachedListenerSets()
+			}
+		}
 	}
 }
 

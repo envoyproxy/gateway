@@ -21,7 +21,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -50,20 +49,21 @@ type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext
 	ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext
 	ProcessTLSRoutes(tlsRoutes []*gwapiv1.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
-	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
-	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
+	ProcessTCPRoutes(tcpRoutes []*gwapiv1.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
+	ProcessUDPRoutes(udpRoutes []*gwapiv1.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
 }
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	relevantHTTPRoutes := make([]*HTTPRouteContext, 0, len(httpRoutes))
+	httpRouteCopies := httpRouteCopiesWithStatusDeepCopy(httpRoutes)
 
 	// HTTPRoutes are already sorted by the provider layer
 
-	for _, h := range httpRoutes {
+	for i, h := range httpRoutes {
 		if h == nil {
 			panic("received nil httproute")
 		}
-		httpRoute := &HTTPRouteContext{HTTPRoute: h}
+		httpRoute := &HTTPRouteContext{HTTPRoute: httpRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -83,14 +83,15 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 
 func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
 	relevantGRPCRoutes := make([]*GRPCRouteContext, 0, len(grpcRoutes))
+	grpcRouteCopies := grpcRouteCopiesWithStatusDeepCopy(grpcRoutes)
 
 	// GRPCRoutes are already sorted by the provider layer
 
-	for _, g := range grpcRoutes {
+	for i, g := range grpcRoutes {
 		if g == nil {
 			panic("received nil grpcroute")
 		}
-		grpcRoute := &GRPCRouteContext{GRPCRoute: g}
+		grpcRoute := &GRPCRouteContext{GRPCRoute: grpcRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -323,7 +324,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -345,7 +346,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -367,7 +368,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(503)),
+					StatusCode: new(uint32(503)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -385,7 +386,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -404,7 +405,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -443,7 +444,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 			// set the stat name for this route
 			if irRoute.Destination != nil && pattern != "" {
-				irRoute.Destination.StatName = ptr.To(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
+				irRoute.Destination.StatName = new(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
 
@@ -535,23 +536,27 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
 	retry := rule.Retry
 	res := &ir.Retry{}
 	if retry.Attempts != nil {
-		res.NumRetries = ptr.To(uint32(*retry.Attempts))
+		res.NumRetries = new(uint32(*retry.Attempts))
 	}
 	if retry.Backoff != nil {
 		backoff, err := time.ParseDuration(string(*retry.Backoff))
 		if err == nil {
-			res.PerRetry = &ir.PerRetryPolicy{
-				BackOff: &ir.BackOffPolicy{
-					BaseInterval: ir.MetaV1DurationPtr(backoff),
-				},
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
 			}
-			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
-			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
-				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
-				if err == nil {
-					res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
-				}
+			res.PerRetry.BackOff = &ir.BackOffPolicy{
+				BaseInterval: ir.MetaV1DurationPtr(backoff),
 			}
+		}
+	}
+	// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
+	if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+		backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+		if err == nil {
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
+			}
+			res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
 		}
 	}
 	if len(retry.Codes) > 0 {
@@ -575,13 +580,6 @@ func (t *Translator) processHTTPRouteRule(
 ) ([]*ir.HTTPRoute, status.Error) {
 	var sessionPersistence *ir.SessionPersistence
 	if rule.SessionPersistence != nil {
-		if rule.SessionPersistence.IdleTimeout != nil {
-			return nil, status.NewRouteStatusError(
-				fmt.Errorf("idle timeout is not supported in envoy gateway"),
-				status.RouteReasonUnsupportedSetting,
-			)
-		}
-
 		var sessionName string
 		if rule.SessionPersistence.SessionName == nil {
 			// SessionName is optional on the gateway-api, but envoy requires it
@@ -683,7 +681,7 @@ func (t *Translator) processHTTPRouteRule(
 			case gwapiv1.HeaderMatchExact:
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:  string(headerMatch.Name),
-					Exact: ptr.To(headerMatch.Value),
+					Exact: new(headerMatch.Value),
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
 				if err := regex.Validate(headerMatch.Value); err != nil {
@@ -691,7 +689,7 @@ func (t *Translator) processHTTPRouteRule(
 				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
-					SafeRegex: ptr.To(headerMatch.Value),
+					SafeRegex: new(headerMatch.Value),
 				})
 			}
 		}
@@ -700,7 +698,7 @@ func (t *Translator) processHTTPRouteRule(
 			case gwapiv1.QueryParamMatchExact:
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:  string(queryParamMatch.Name),
-					Exact: ptr.To(queryParamMatch.Value),
+					Exact: new(queryParamMatch.Value),
 				})
 			case gwapiv1.QueryParamMatchRegularExpression:
 				if err := regex.Validate(queryParamMatch.Value); err != nil {
@@ -708,7 +706,7 @@ func (t *Translator) processHTTPRouteRule(
 				}
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:      string(queryParamMatch.Name),
-					SafeRegex: ptr.To(queryParamMatch.Value),
+					SafeRegex: new(queryParamMatch.Value),
 				})
 			}
 		}
@@ -716,7 +714,7 @@ func (t *Translator) processHTTPRouteRule(
 		if match.Method != nil {
 			irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 				Name:  ":method",
-				Exact: ptr.To(string(*match.Method)),
+				Exact: new(string(*match.Method)),
 			})
 		}
 		for _, cookieMatch := range match.cookies {
@@ -729,12 +727,12 @@ func (t *Translator) processHTTPRouteRule(
 			}
 			switch matchType {
 			case egv1a1.CookieMatchExact:
-				sm.Exact = ptr.To(cookieMatch.Value)
+				sm.Exact = new(cookieMatch.Value)
 			case egv1a1.CookieMatchRegularExpression:
 				if err := regex.Validate(cookieMatch.Value); err != nil {
 					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
-				sm.SafeRegex = ptr.To(cookieMatch.Value)
+				sm.SafeRegex = new(cookieMatch.Value)
 			default:
 				return nil, status.NewRouteStatusError(
 					fmt.Errorf("unsupported cookie match type %q", matchType),
@@ -778,15 +776,15 @@ func (t *Translator) processHTTPRouteRule(
 			corsHeaders := []*ir.StringMatch{
 				{
 					Name:  ":method",
-					Exact: ptr.To("OPTIONS"),
+					Exact: new("OPTIONS"),
 				},
 				{
 					Name:      "origin",
-					SafeRegex: ptr.To(".*"),
+					SafeRegex: new(".*"),
 				},
 				{
 					Name:      "access-control-request-method",
-					SafeRegex: ptr.To(".*"),
+					SafeRegex: new(".*"),
 				},
 			}
 			headerMatches = append(headerMatches, corsHeaders...)
@@ -1045,7 +1043,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -1066,7 +1064,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -1087,7 +1085,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(503)),
+					StatusCode: new(uint32(503)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -1105,7 +1103,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -1136,7 +1134,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 			// set the stat name for this route
 			if irRoute.Destination != nil && pattern != "" {
-				irRoute.Destination.StatName = ptr.To(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
+				irRoute.Destination.StatName = new(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
 
@@ -1180,7 +1178,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 			case gwapiv1.GRPCHeaderMatchExact:
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:  string(headerMatch.Name),
-					Exact: ptr.To(headerMatch.Value),
+					Exact: new(headerMatch.Value),
 				})
 			case gwapiv1.GRPCHeaderMatchRegularExpression:
 				if err := regex.Validate(headerMatch.Value); err != nil {
@@ -1188,7 +1186,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
-					SafeRegex: ptr.To(headerMatch.Value),
+					SafeRegex: new(headerMatch.Value),
 				})
 			}
 		}
@@ -1223,17 +1221,17 @@ func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1.GRPCMethodMatch
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			Exact: ptr.To(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
+			Exact: new(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
 		}
 	case method.Method != nil:
 		// Use a header match since the PathMatch doesn't support Suffix matching
 		irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 			Name:   ":path",
-			Suffix: ptr.To(fmt.Sprintf("/%s", *method.Method)),
+			Suffix: new(fmt.Sprintf("/%s", *method.Method)),
 		})
 	case method.Service != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			Prefix: ptr.To(fmt.Sprintf("/%s", *method.Service)),
+			Prefix: new(fmt.Sprintf("/%s", *method.Service)),
 		}
 	}
 }
@@ -1242,15 +1240,15 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: ptr.To(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
+			SafeRegex: new(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
 		}
 	case method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: ptr.To(fmt.Sprintf("/%s/%s", validServiceName, *method.Method)),
+			SafeRegex: new(fmt.Sprintf("/%s/%s", validServiceName, *method.Method)),
 		}
 	case method.Service != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: ptr.To(fmt.Sprintf("/%s/%s", *method.Service, validMethodName)),
+			SafeRegex: new(fmt.Sprintf("/%s/%s", *method.Service, validMethodName)),
 		}
 	}
 }
@@ -1312,9 +1310,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				// only default it when unset. gRPC-Web is also enabled by default here,
 				// but any explicit ClientTrafficPolicy setting is translated later and
 				// will override this value.
-				irListener.GRPC.EnableGRPCWeb = ptr.To(true)
+				irListener.GRPC.EnableGRPCWeb = new(true)
 				if irListener.GRPC.EnableGRPCStats == nil {
-					irListener.GRPC.EnableGRPCStats = ptr.To(true)
+					irListener.GRPC.EnableGRPCStats = new(true)
 				}
 			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
@@ -1356,13 +1354,14 @@ func filterEGPrefix(in map[string]string) map[string]string {
 
 func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	relevantTLSRoutes := make([]*TLSRouteContext, 0, len(tlsRoutes))
+	tlsRouteCopies := tlsRouteCopiesWithStatusDeepCopy(tlsRoutes)
 	// TLSRoutes are already sorted by the provider layer
 
-	for _, tls := range tlsRoutes {
+	for i, tls := range tlsRoutes {
 		if tls == nil {
 			panic("received nil tlsroute")
 		}
-		tlsRoute := &TLSRouteContext{TLSRoute: tls}
+		tlsRoute := &TLSRouteContext{TLSRoute: tlsRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -1521,17 +1520,18 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
+func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	relevantUDPRoutes := make([]*UDPRouteContext, 0, len(udpRoutes))
+	udpRouteCopies := udpRouteCopiesWithStatusDeepCopy(udpRoutes)
 	// UDPRoutes are already sorted by the provider layer
 
-	for _, u := range udpRoutes {
+	for i, u := range udpRoutes {
 		if u == nil {
 			panic("received nil udproute")
 		}
-		udpRoute := &UDPRouteContext{UDPRoute: u}
+		udpRoute := &UDPRouteContext{UDPRoute: udpRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -1621,11 +1621,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
+			accepted = true
 			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
-			accepted = true
 
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
@@ -1673,17 +1673,18 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
+func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	relevantTCPRoutes := make([]*TCPRouteContext, 0, len(tcpRoutes))
+	tcpRouteCopies := tcpRouteCopiesWithStatusDeepCopy(tcpRoutes)
 	// TCPRoutes are already sorted by the provider layer
 
-	for _, tcp := range tcpRoutes {
+	for i, tcp := range tcpRoutes {
 		if tcp == nil {
 			panic("received nil tcproute")
 		}
-		tcpRoute := &TCPRouteContext{TCPRoute: tcp}
+		tcpRoute := &TCPRouteContext{TCPRoute: tcpRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -1772,12 +1773,11 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
+			accepted = true
+			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
-			listener.IncrementAttachedRoutes()
-
-			accepted = true
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
@@ -1863,6 +1863,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			if err != nil {
 				return emptyDS, nil, err
 			}
+		}
+	} else {
+		// Custom backend resources still require ReferenceGrant for cross-namespace references.
+		if err = t.validateBackendNamespace(backendRef, route, resources, routeType); err != nil {
+			return emptyDS, nil, err
 		}
 	}
 
@@ -1998,17 +2003,25 @@ func isServiceHeadless(service *corev1.Service) bool {
 	return false
 }
 
+// isServiceExternalName reports true when a Kubernetes Service is of type ExternalName.
+// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
+// translated into a valid backend and are not supported.
+func isServiceExternalName(service *corev1.Service) bool {
+	return service != nil && service.Spec.Type == corev1.ServiceTypeExternalName
+}
+
 func (t *Translator) processServiceImportDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
+		protocol  = defaultProtocol
 	)
 
 	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
@@ -2021,8 +2034,11 @@ func (t *Translator) processServiceImportDestinationSetting(
 	}
 
 	if servicePort.AppProtocol != nil {
-		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, false)
+		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
+	// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	backendIps := serviceImport.Spec.IPs
 	isHeadless := len(backendIps) == 0
@@ -2047,11 +2063,12 @@ func (t *Translator) processServiceImportDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:        name,
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
-		Metadata:    buildResourceMetadata(serviceImport, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:               name,
+		Protocol:           protocol,
+		ForceHTTP1Upstream: forceHTTP1Upstream,
+		Endpoints:          endpoints,
+		AddressType:        addrType,
+		Metadata:           buildResourceMetadata(serviceImport, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
 }
 
@@ -2059,7 +2076,7 @@ func (t *Translator) processServiceDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
@@ -2067,8 +2084,19 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
 	)
+	protocol := defaultProtocol
 
 	service := t.GetService(backendNamespace, string(backendRef.Name))
+	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
+	// translated into a valid backend.
+	// Backend with FQDN endpoint should be used instead of ExternalName Service to route to external services.
+	if isServiceExternalName(service) {
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("Service %s/%s is of type ExternalName, which is not supported as a backend; "+
+				"use an Envoy Gateway Backend resource with an FQDN endpoint instead",
+				backendNamespace, string(backendRef.Name)),
+			gwapiv1.RouteReasonUnsupportedValue)
+	}
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -2079,8 +2107,11 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// support HTTPRouteBackendProtocolH2C/GRPC
 	if servicePort.AppProtocol != nil {
-		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, true)
+		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
+	// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	isHeadless := isServiceHeadless(service)
 
@@ -2102,12 +2133,13 @@ func (t *Translator) processServiceDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:        name,
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
-		PreferLocal: processPreferLocalZone(service),
-		Metadata:    buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:               name,
+		Protocol:           protocol,
+		ForceHTTP1Upstream: forceHTTP1Upstream,
+		Endpoints:          endpoints,
+		AddressType:        addrType,
+		PreferLocal:        processPreferLocalZone(service),
+		Metadata:           buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
 }
 
@@ -2137,9 +2169,9 @@ func processPreferLocalZone(svc *corev1.Service) *ir.PreferLocalZone {
 
 	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
 		return &ir.PreferLocalZone{
-			MinEndpointsThreshold: ptr.To[uint64](1),
+			MinEndpointsThreshold: new(uint64(1)),
 			Force: &ir.ForceLocalZone{
-				MinEndpointsInZoneThreshold: ptr.To[uint32](1),
+				MinEndpointsInZoneThreshold: new(uint32(1)),
 			},
 		}
 	}
@@ -2150,9 +2182,9 @@ func processPreferLocalZone(svc *corev1.Service) *ir.PreferLocalZone {
 	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
 	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok && val == "Auto" || val == "auto" {
 		return &ir.PreferLocalZone{
-			MinEndpointsThreshold: ptr.To[uint64](3),
+			MinEndpointsThreshold: new(uint64(3)),
 			Force: &ir.ForceLocalZone{
-				MinEndpointsInZoneThreshold: ptr.To[uint32](3),
+				MinEndpointsInZoneThreshold: new(uint32(3)),
 			},
 		}
 	}
@@ -2220,7 +2252,12 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 	case resource.KindGRPCRoute:
 		return ir.GRPC
 	case resource.KindTLSRoute:
-		return ir.HTTPS
+		// TLSRoute is translated into an ir.TCPRoute. The upstream protocol is
+		// plain TCP from Envoy's perspective; whether the upstream connection is
+		// secured by TLS is governed by ds.TLS (e.g. via BackendTLSPolicy), not by
+		// the AppProtocol. Returning ir.TCP keeps the IR semantically accurate and
+		// avoids emitting HTTP protocol options on a TCP proxy cluster.
+		return ir.TCP
 	}
 	return ir.TCP
 }
@@ -2282,19 +2319,6 @@ func (t *Translator) processAllowedListenersForParentRefs(
 		}
 		parentRefCtx.SetListeners(allowedListeners...)
 
-		if !HasReadyListener(selectedListeners) {
-			routeStatus := GetRouteStatus(routeContext)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRefCtx.routeParentStatusIdx,
-				routeContext.GetGeneration(),
-				gwapiv1.RouteConditionAccepted,
-				metav1.ConditionFalse,
-				"NoReadyListeners",
-				"There are no ready listeners for this parent ref",
-			)
-			continue
-		}
-
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRefCtx.routeParentStatusIdx,
@@ -2327,13 +2351,13 @@ func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlic
 
 	for addrTypeState, addrTypeCounts := range addrTypeMap {
 		if addrTypeCounts == len(endpointSlices) {
-			dstAddrType = ptr.To(addrTypeState)
+			dstAddrType = new(addrTypeState)
 			break
 		}
 	}
 
 	if len(addrTypeMap) > 0 && dstAddrType == nil {
-		dstAddrType = ptr.To(ir.MIXED)
+		dstAddrType = new(ir.MIXED)
 	}
 
 	return dstEndpoints, dstAddrType
@@ -2469,14 +2493,19 @@ func (t *Translator) processBackendDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 ) *ir.DestinationSetting {
 	var dstAddrType *ir.DestinationAddressType
+	protocol := defaultProtocol
+	forceHTTP1Upstream := false
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
-		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
+		protocol = resolveBackendProtocol(string(ap), protocol)
+		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
 	}
 
 	ds := &ir.DestinationSetting{Name: name}
@@ -2485,6 +2514,7 @@ func (t *Translator) processBackendDestinationSetting(
 	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 		ds.IsDynamicResolver = true
 		ds.Protocol = protocol
+		ds.ForceHTTP1Upstream = forceHTTP1Upstream
 		return ds
 	}
 
@@ -2505,8 +2535,9 @@ func (t *Translator) processBackendDestinationSetting(
 		case bep.Unix != nil:
 			addrTypeMap[ir.UDS]++
 			irde = &ir.DestinationEndpoint{
-				Path: ptr.To(bep.Unix.Path),
-				Zone: bep.Zone,
+				Hostname: bep.Hostname,
+				Path:     new(bep.Unix.Path),
+				Zone:     bep.Zone,
 			}
 		}
 
@@ -2515,23 +2546,24 @@ func (t *Translator) processBackendDestinationSetting(
 
 	for addrTypeState, addrTypeCounts := range addrTypeMap {
 		if addrTypeCounts == len(backend.Spec.Endpoints) {
-			dstAddrType = ptr.To(addrTypeState)
+			dstAddrType = new(addrTypeState)
 			break
 		}
 	}
 
 	if len(addrTypeMap) > 0 && dstAddrType == nil {
-		dstAddrType = ptr.To(ir.MIXED)
+		dstAddrType = new(ir.MIXED)
 	}
 
 	ds.Endpoints = dstEndpoints
 	ds.AddressType = dstAddrType
 	ds.Protocol = protocol
+	ds.ForceHTTP1Upstream = forceHTTP1Upstream
 
 	if backend.Spec.Fallback != nil {
 		// set only the secondary priority, the backend defaults to a primary priority if unset.
 		if ptr.Deref(backend.Spec.Fallback, false) {
-			ds.Priority = ptr.To(uint32(1))
+			ds.Priority = new(uint32(1))
 		}
 	}
 
@@ -2540,29 +2572,59 @@ func (t *Translator) processBackendDestinationSetting(
 	return ds
 }
 
-// serviceAppProtocolToIRAppProtocol translates the appProtocol string into an ir.AppProtocol.
+// resolveBackendProtocol computes the upstream ir.AppProtocol for a backend from the
+// backend's own appProtocol and the route's default (fallback) protocol. It recognizes
+// both the Kubernetes Service convention ("kubernetes.io/*") and the Envoy Gateway
+// Backend convention ("gateway.envoyproxy.io/*").
 //
-// When grpcCompatibility is enabled, `grpc` will be parsed as a valid option for HTTP2.
-// See https://github.com/envoyproxy/gateway/issues/5485#issuecomment-2731322578.
-func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol, grpcCompatibility bool) ir.AppProtocol {
+// backendAppProtocol describes an HTTP-layer protocol (h2c/ws/grpc), so it only refines
+// the upstream protocol of HTTP-based routes. For non-HTTP routes (e.g. TCPRoute, TLSRoute
+// and UDPRoute, whose default protocol is TCP/UDP), the route is a raw L4 proxy and the
+// appProtocol is irrelevant; returning the default avoids emitting HTTP protocol options
+// on an L4 cluster.
+func resolveBackendProtocol(backendAppProtocol string, defaultProtocol ir.AppProtocol) ir.AppProtocol {
+	// The backendAppProtocol is only relevant for HTTP-based routes, so if the default protocol is not HTTP, return the default.
+	if defaultProtocol != ir.HTTP {
+		return defaultProtocol
+	}
 	switch {
-	case ap == "kubernetes.io/h2c":
+	case backendAppProtocol == "kubernetes.io/h2c" || backendAppProtocol == string(egv1a1.AppProtocolTypeH2C):
 		return ir.HTTP2
-	case ap == "grpc" && grpcCompatibility:
+	// HTTPRoute can route to gRPC backends, returning ir.GRPC allows the IR to emit gRPC protocol options on the cluster.
+	// Kubernetes does not standardize grpc as a Kubernetes appProtocol value, but some projects like Istio uses "grpc" as a convention for gRPC backends, so we recognize it here.
+	case backendAppProtocol == "grpc":
 		return ir.GRPC
 	default:
 		return defaultProtocol
 	}
 }
 
-func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtocol ir.AppProtocol) ir.AppProtocol {
-	switch ap {
-	case egv1a1.AppProtocolTypeH2C:
-		return ir.HTTP2
-	case "grpc":
-		return ir.GRPC
+// shouldForceHTTP1Upstream reports whether the upstream connection should be forced to
+// HTTP/1.1. WebSocket over HTTP/2 is not widely supported by upstreams and can lead to
+// connection failures, so a WebSocket backend on an HTTP-based route must use HTTP/1.1.
+func shouldForceHTTP1Upstream(appProtocol ir.AppProtocol, backendAppProtocol *string) bool {
+	return backendAppProtocol != nil && isHTTPProtocol(appProtocol) && isWebSocketAppProtocol(*backendAppProtocol)
+}
+
+func isHTTPProtocol(appProtocol ir.AppProtocol) bool {
+	switch appProtocol {
+	case ir.HTTP, ir.HTTP2, ir.GRPC:
+		return true
 	default:
-		return defaultProtocol
+		return false
+	}
+}
+
+// isWebSocketAppProtocol reports whether the given appProtocol denotes WebSocket
+// traffic, covering both the Kubernetes Service convention ("kubernetes.io/ws[s]")
+// and the Envoy Gateway Backend convention ("gateway.envoyproxy.io/ws[s]").
+func isWebSocketAppProtocol(ap string) bool {
+	switch ap {
+	case "kubernetes.io/ws", "kubernetes.io/wss",
+		string(egv1a1.AppProtocolTypeWS), string(egv1a1.AppProtocolTypeWSS):
+		return true
+	default:
+		return false
 	}
 }
 
@@ -2592,4 +2654,57 @@ func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.Section
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", idx))
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterBackendRefs, strings.Join(refs, "|"))
 	return statName
+}
+
+// Shallow-copy helpers that deep-copy only the Status field.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+
+func httpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.HTTPRoute) []*gwapiv1.HTTPRoute {
+	copies := make([]*gwapiv1.HTTPRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
+}
+
+func grpcRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.GRPCRoute) []*gwapiv1.GRPCRoute {
+	copies := make([]*gwapiv1.GRPCRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
+}
+
+func tlsRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.TLSRoute) []*gwapiv1.TLSRoute {
+	copies := make([]*gwapiv1.TLSRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
+}
+
+func udpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.UDPRoute) []*gwapiv1.UDPRoute {
+	copies := make([]*gwapiv1.UDPRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
+}
+
+func tcpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.TCPRoute) []*gwapiv1.TCPRoute {
+	copies := make([]*gwapiv1.TCPRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

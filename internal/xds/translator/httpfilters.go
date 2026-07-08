@@ -139,10 +139,12 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 302
 	case isFilterType(filter, egv1a1.EnvoyFilterRateLimit):
 		order = 303
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
+	case isFilterType(filter, egv1a1.EnvoyFilterBandwidthLimit):
 		order = 304
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
 		order = 305
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
+		order = 306
 	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 307
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
@@ -329,7 +331,8 @@ func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, h
 
 	// RateLimit filter is handled separately because it relies on the global
 	// rate limit server configuration if costs are not provided.
-	if err := patchRouteWithRateLimit(route, irRoute); err != nil {
+	// TODO: merge this into filter.PatchRoute
+	if err := patchRouteWithRateLimit(httpListener, route, irRoute); err != nil {
 		return nil
 	}
 

@@ -1,15 +1,14 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= 1.35.0
+ENVTEST_K8S_VERSION ?= 1.36.0
 # Need run cel validation across multiple versions of k8s
-# TODO: update kubebuilder assets to 1.35.0 when available
-ENVTEST_K8S_VERSIONS ?= 1.32.0 1.33.0 1.34.1 1.35.0
+ENVTEST_K8S_VERSIONS ?= 1.33.0 1.34.1 1.35.0 1.36.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
-GATEWAY_API_MINOR_VERSION ?= 1.5
-GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).1
+GATEWAY_API_MINOR_VERSION ?= 1.6
+GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -39,7 +38,7 @@ E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 # If E2E_DEBUG is not explicitly defined, set it based on the ACTIONS_STEP_DEBUG environment variable.
 E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
-E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG)
+E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG) --cleanup-test-resources=$(E2E_CLEANUP)
 
 # Define the Gateway API channel used in tests
 E2E_GATEWAY_API_CHANNEL ?= experimental
@@ -107,7 +106,11 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 	@curl -sLo $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml ${EXPERIMENTAL_GATEWAY_API_RELEASE_URL}
 	@curl -sLo $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml ${STANDARD_GATEWAY_API_RELEASE_URL}
 	@mkdir -p charts/gateway-helm/charts/crds/crds
-	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml
+	@mkdir -p charts/gateway-helm/charts/crds/templates
+	@sh tools/hack/split-gateway-api-bundle.sh \
+		$(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml \
+		charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml \
+		charts/gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
 	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
@@ -261,7 +264,7 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: resilience
-resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
+resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server enable-multiple-extension-managers run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
 
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
@@ -282,6 +285,15 @@ enable-simple-extension-server:
 	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-simple-extension-server" "envoy-gateway-system"
 	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+
+.PHONY: enable-multiple-extension-managers
+enable-multiple-extension-managers:
+	@$(LOG_TARGET)
+	kubectl apply -f examples/simple-extension-server/multiple-extension-managers.yaml
+	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-ext-server-a" "envoy-gateway-system"
+	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-ext-server-b" "envoy-gateway-system"
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/gateway-ext-server-a --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/gateway-ext-server-b --for=condition=Available
 
 .PHONY: e2e-prepare
 e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
@@ -379,10 +391,11 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+	$(eval CONFORMANCE_STATIC_ADDR_ARGS := $(shell tools/hack/get-static-address-args.sh $(IP_FAMILY)))
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(E2E_REDIRECT)
+	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(CONFORMANCE_STATIC_ADDR_ARGS) $(E2E_REDIRECT)
 else
-	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
+	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(CONFORMANCE_STATIC_ADDR_ARGS) --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 CONFORMANCE_REPORT_PATH ?=
@@ -392,12 +405,13 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+	$(eval CONFORMANCE_STATIC_ADDR_ARGS := $(shell tools/hack/get-static-address-args.sh $(IP_FAMILY)))
 ifeq ($(CONFORMANCE_RUN_TEST),)
 	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
 		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG) \
-		--cleanup-base-resources=$(E2E_CLEANUP)
+		--cleanup-base-resources=$(E2E_CLEANUP) $(CONFORMANCE_STATIC_ADDR_ARGS)
 else
     # we didn't care about output when running single test
 	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \
@@ -419,7 +433,7 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 		--set crds.gatewayAPI.enabled=true \
 		--set crds.envoyGateway.enabled=true \
 		> $(OUTPUT_DIR)/install.yaml
-	$(GO_TOOL) helm template --set createNamespace=true eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
+	$(GO_TOOL) helm template --set createNamespace=true --set crds.gatewayAPI.safeUpgradePolicy.enabled=false eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
@@ -427,6 +441,24 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 		--set crds.envoyGateway.enabled=true \
 		> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/envoy-gateway-crds.yaml")
+	$(MAKE) verify-install-manifests
+
+# Generated release manifests are concatenations/renders of multiple Helm templates,
+# so a resource can end up duplicated across them. kustomize rejects duplicate resource
+# ids, which breaks users referencing these files as kustomize resources. Build each one
+# with kustomize to catch a duplicate or invalid resource before it ships again.
+# See https://github.com/envoyproxy/gateway/issues/9191.
+VERIFY_MANIFESTS := install.yaml envoy-gateway-crds.yaml
+
+.PHONY: verify-install-manifests
+verify-install-manifests: ## Verify generated release manifests have no duplicate or invalid resources (run after generate-manifests).
+	@$(LOG_TARGET)
+	@for manifest in $(VERIFY_MANIFESTS); do \
+		$(call log, Verifying $(OUTPUT_DIR)/$$manifest is consumable by kustomize); \
+		printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n- %s\n' "$$manifest" > $(OUTPUT_DIR)/kustomization.yaml; \
+		$(GO_TOOL) kustomize build $(OUTPUT_DIR) > /dev/null || { rm -f $(OUTPUT_DIR)/kustomization.yaml; $(call errorlog, $(OUTPUT_DIR)/$$manifest has duplicate or invalid resources - kustomize build failed); exit 1; }; \
+		rm -f $(OUTPUT_DIR)/kustomization.yaml; \
+	done
 
 .PHONY: generate-artifacts
 generate-artifacts: generate-manifests ## Generate release artifacts.

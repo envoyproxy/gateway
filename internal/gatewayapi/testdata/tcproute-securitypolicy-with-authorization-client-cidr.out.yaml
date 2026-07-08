@@ -321,6 +321,11 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -389,10 +394,15 @@ securityPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
-          listeners: [foo] and these routes: [default/tcpr-app-bar]'
+          gateway listeners: [envoy-gateway/gateway-tcp/foo] and these routes: [default/tcpr-app-bar]'
         reason: Overridden
         status: "True"
         type: Overridden
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -432,7 +442,7 @@ securityPolicies:
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 tcpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcpr-app-foo
@@ -464,7 +474,7 @@ tcpRoutes:
         name: gateway-tcp
         namespace: envoy-gateway
         sectionName: foo
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcpr-app-bar
@@ -496,7 +506,7 @@ tcpRoutes:
         name: gateway-tcp
         namespace: envoy-gateway
         sectionName: bar
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcpr-app-mixed

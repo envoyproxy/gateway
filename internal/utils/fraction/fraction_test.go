@@ -8,7 +8,6 @@ package fraction
 import (
 	"testing"
 
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -37,7 +36,7 @@ func TestDeref(t *testing.T) {
 			name: "fraction with explicit denominator",
 			fraction: &gwapiv1.Fraction{
 				Numerator:   1,
-				Denominator: ptr.To(int32(10)),
+				Denominator: new(int32(10)),
 			},
 			defaultValue: 0.1,
 			expected:     0.1, // 1/10

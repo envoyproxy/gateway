@@ -68,8 +68,26 @@ type LocalRateLimit struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.limit.fromMetadata))", message="limit fromMetadata is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
+
+// XRateLimitHeadersOption controls whether X-RateLimit response headers are sent for a rate limit rule.
+// Valid values are "Off" and "DraftVersion03".
+// This allows per-rule override of the global X-RateLimit header setting in ClientTrafficPolicy.
+//
+// +kubebuilder:validation:Enum=Off;DraftVersion03
+type XRateLimitHeadersOption string
+
+const (
+	// XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,
+	// regardless of the global ClientTrafficPolicy setting.
+	XRateLimitHeadersOptionDisabled XRateLimitHeadersOption = "Off"
+
+	// XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03
+	// for this rate limit rule, regardless of the global ClientTrafficPolicy setting.
+	XRateLimitHeadersOptionDraftVersion03 XRateLimitHeadersOption = "DraftVersion03"
+)
 
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
@@ -119,6 +137,12 @@ type RateLimitRule struct {
 	//
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty"`
+	// XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
+	// When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+	// If not set, the rule inherits the listener-level setting (default behavior).
+	//
+	// +optional
+	XRateLimitHeaders *XRateLimitHeadersOption `json:"xRateLimitHeaders,omitempty"`
 }
 
 type RateLimitCost struct {
@@ -205,7 +229,7 @@ type RateLimitSelectCondition struct {
 	// meaning, a request MUST match all the specified headers.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:MaxItems=64
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
 	// Methods is a list of request methods to match. Multiple method values are ORed together,
@@ -409,8 +433,44 @@ type PathMatch struct {
 
 // RateLimitValue defines the limits for rate limiting.
 type RateLimitValue struct {
-	Requests uint          `json:"requests"`
+	// Requests intentionally sets Format=int64. Controller-gen renders uint32 as
+	// format int32, whose range is below Maximum=4294967295 and would be rejected
+	// in Kubernetes 1.36+
+
+	// Requests is the number of requests (or cost units, when used with
+	// cost-based rate limiting) allowed per Unit.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:validation:Format=int64
+	Requests uint32        `json:"requests"`
 	Unit     RateLimitUnit `json:"unit"`
+	// FromMetadata sources the limit value from per-request dynamic metadata.
+	// When the referenced metadata value is present, it overrides Requests/Unit for that
+	// request; otherwise Requests/Unit are used as the default.
+	//
+	// The referenced metadata value must be a struct containing an integer "requests_per_unit"
+	// property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+	// filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+	//
+	// Only supported for Global Rate Limits.
+	//
+	// +optional
+	FromMetadata *RateLimitValueMetadata `json:"fromMetadata,omitempty"`
+}
+
+// RateLimitValueMetadata specifies the dynamic metadata to retrieve the limit value from.
+type RateLimitValueMetadata struct {
+	// Namespace is the namespace of the dynamic metadata.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Namespace string `json:"namespace"`
+	// Key is the key to retrieve the limit value from within the namespaced filter metadata.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Key string `json:"key"`
 }
 
 // RateLimitUnit specifies the intervals for setting rate limits.

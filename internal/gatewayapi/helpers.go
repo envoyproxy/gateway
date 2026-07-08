@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -198,17 +199,6 @@ func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
 	if parentRef.Kind != nil && string(*parentRef.Kind) == resource.KindListenerSet &&
 		parentRef.Group != nil && string(*parentRef.Group) == gwapiv1.GroupVersion.Group {
 		return true
-	}
-	return false
-}
-
-// HasReadyListener returns true if at least one Listener in the
-// provided list has a condition of "Ready: true", and false otherwise.
-func HasReadyListener(listeners []*ListenerContext) bool {
-	for _, listener := range listeners {
-		if listener.IsReady() {
-			return true
-		}
 	}
 	return false
 }
@@ -475,6 +465,18 @@ func extractGatewayNameFromListener(listenerName string) string {
 	return listenerName
 }
 
+func extractListenerSetPrefixFromListener(listenerName string) string {
+	parts := strings.Split(listenerName, "/")
+	if len(parts) >= 4 {
+		// Trailing slash is intentional: prevents a ListenerSet name from falsely
+		// matching another whose name shares the same string prefix (e.g. "ext" matching "ext-b")
+		// when used as a prefix in strings.Index comparisons.
+		return fmt.Sprintf("%s/%s/%s/%s/", parts[0], parts[1], parts[2], parts[3])
+	}
+	// should never happen
+	return listenerName
+}
+
 func irListenerName(listener *ListenerContext) string {
 	if listener.isFromListenerSet() {
 		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.listenerSet.Namespace, listener.listenerSet.Name, listener.Name)
@@ -654,6 +656,19 @@ func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv
 	}
 }
 
+// getAncestorRefForListenerSetPolicy returns a ListenerSet as an ancestor reference for policy.
+// Used when a policy directly targets a ListenerSet, since the ListenerSet is the relevant
+// ancestor at which acceptance status meaningfully differs.
+func getAncestorRefForListenerSetPolicy(lsNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1.ParentReference {
+	return gwapiv1.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(resource.KindListenerSet),
+		Namespace:   NamespacePtr(lsNN.Namespace),
+		Name:        gwapiv1.ObjectName(lsNN.Name),
+		SectionName: sectionName,
+	}
+}
+
 type policyTargetRouteKey struct {
 	Kind      string
 	Namespace string
@@ -664,6 +679,12 @@ type policyRouteTargetContext struct {
 	RouteContext
 	attached             bool
 	attachedToRouteRules sets.Set[string]
+}
+
+type policyListenerSetTargetContext struct {
+	*gwapiv1.ListenerSet
+	attached            bool
+	attachedToListeners sets.Set[string]
 }
 
 type policyGatewayTargetContext struct {
@@ -681,6 +702,221 @@ type GatewayPolicyRouteMap struct {
 	// Maintains a list of all section names (listeners) per Gateway including "" (empty string) for Gateway-level entries
 	// for efficient lookup without full Routes map iteration
 	SectionIndex map[types.NamespacedName]sets.Set[string]
+}
+
+type policyScopeKind string
+
+const (
+	policyScopeKindGateway             policyScopeKind = "Gateway"
+	policyScopeKindGatewayListener     policyScopeKind = "GatewayListener"
+	policyScopeKindListenerSet         policyScopeKind = "ListenerSet"
+	policyScopeKindListenerSetListener policyScopeKind = "ListenerSetListener"
+	policyScopeKindRoute               policyScopeKind = "Route"
+	policyScopeKindRouteRule           policyScopeKind = "RouteRule"
+)
+
+// policyScope identifies a policy attachment point.
+type policyScope struct {
+	Kind           policyScopeKind
+	NamespacedName types.NamespacedName
+	SectionName    gwapiv1.SectionName
+}
+
+// resourceScope returns the whole-resource scope corresponding to this scope.
+//   - GatewayListener     -> Gateway
+//   - ListenerSetListener -> ListenerSet
+//   - RouteRule           -> Route
+//
+// Whole-resource kinds return themselves.
+func (s policyScope) resourceScope() policyScope {
+	switch s.Kind {
+	case policyScopeKindGatewayListener:
+		return policyScope{Kind: policyScopeKindGateway, NamespacedName: s.NamespacedName}
+	case policyScopeKindListenerSetListener:
+		return policyScope{Kind: policyScopeKindListenerSet, NamespacedName: s.NamespacedName}
+	case policyScopeKindRouteRule:
+		return policyScope{Kind: policyScopeKindRoute, NamespacedName: s.NamespacedName}
+	}
+	return s
+}
+
+func gatewayScope(nn types.NamespacedName) policyScope {
+	return policyScope{Kind: policyScopeKindGateway, NamespacedName: nn}
+}
+
+func gatewayListenerScope(nn types.NamespacedName, section gwapiv1.SectionName) policyScope {
+	return policyScope{Kind: policyScopeKindGatewayListener, NamespacedName: nn, SectionName: section}
+}
+
+func listenerSetScope(nn types.NamespacedName) policyScope {
+	return policyScope{Kind: policyScopeKindListenerSet, NamespacedName: nn}
+}
+
+func listenerSetListenerScope(nn types.NamespacedName, section gwapiv1.SectionName) policyScope {
+	return policyScope{Kind: policyScopeKindListenerSetListener, NamespacedName: nn, SectionName: section}
+}
+
+func routeScope(nn types.NamespacedName) policyScope {
+	return policyScope{Kind: policyScopeKindRoute, NamespacedName: nn}
+}
+
+// policyScopeGraph records policy scope relationships used for both override
+// and merge status calculations.
+//
+// The graph keeps two separate views:
+//   - childrenByParent records policy relationship edges, such as a Route
+//     policy overriding or merging into a Gateway listener policy.
+//   - containmentIndex records structural containment between scopes, such as
+//     GatewayListener under Gateway or ListenerSet under Gateway. It lets
+//     resource-level lookups find policies attached to more specific scopes
+//     without treating containment as a policy relationship.
+type policyScopeGraph struct {
+	// childrenByParent maps a parent policy scope to the directly related child
+	// scopes recorded under it.
+	childrenByParent map[policyScope]sets.Set[policyScope]
+
+	// containmentIndex maps a resource scope to structurally contained scopes.
+	// It is an index for traversal only; entries here do not mean a child policy
+	// overrides or merges into the resource policy.
+	containmentIndex map[policyScope]sets.Set[policyScope]
+}
+
+func newPolicyScopeGraph() policyScopeGraph {
+	return policyScopeGraph{
+		childrenByParent: map[policyScope]sets.Set[policyScope]{},
+		containmentIndex: map[policyScope]sets.Set[policyScope]{},
+	}
+}
+
+// Add records a parent -> child edge.
+//
+// If parent is a section/rule scope, index it under its whole-resource scope so
+// resource-level lookups can reach relationships attached to more specific
+// scopes. For example:
+//   - GatewayListener -> Gateway
+//   - ListenerSetListener -> ListenerSet
+//   - RouteRule -> Route
+func (g policyScopeGraph) Add(parent, child policyScope) {
+	if g.childrenByParent[parent] == nil {
+		g.childrenByParent[parent] = sets.New[policyScope]()
+	}
+	g.childrenByParent[parent].Insert(child)
+
+	switch parent.Kind {
+	case policyScopeKindGatewayListener,
+		policyScopeKindListenerSetListener,
+		policyScopeKindRouteRule:
+		g.indexContainment(parent.resourceScope(), parent)
+	}
+}
+
+// RegisterListenerSet records ListenerSet containment under its parent Gateway.
+// This cross-kind relationship cannot be derived from a ListenerSet scope alone,
+// so callers provide the parent Gateway explicitly.
+func (g policyScopeGraph) RegisterListenerSet(lsNN, gwNN types.NamespacedName) {
+	g.indexContainment(gatewayScope(gwNN), listenerSetScope(lsNN))
+}
+
+// indexContainment records a structural containment edge used only for
+// descendant traversal.
+func (g policyScopeGraph) indexContainment(containingScope, containedScope policyScope) {
+	if g.containmentIndex[containingScope] == nil {
+		g.containmentIndex[containingScope] = sets.New[policyScope]()
+	}
+	g.containmentIndex[containingScope].Insert(containedScope)
+}
+
+// GetDirectChildren returns scopes recorded directly under parent. No traversal.
+func (g policyScopeGraph) GetDirectChildren(parent policyScope) sets.Set[policyScope] {
+	result := sets.New[policyScope]()
+	if items, ok := g.childrenByParent[parent]; ok {
+		result.Insert(items.UnsortedList()...)
+	}
+	return result
+}
+
+// GetWithDescendants returns the scopes directly related to parent, plus scopes
+// related to structurally contained descendants of parent.
+//
+//   - Resource-level kind (Gateway / ListenerSet / Route): walks every scope under
+//     containmentIndex[parent]; for nested containers (Gateway containing
+//     ListenerSet), descends one more level into the LS's own containmentIndex.
+//   - Section-level kind (GatewayListener / ListenerSetListener): includes Route
+//     entries recorded on the Resource-level, because a Resource-level Route attachment applies through each listener.
+func (g policyScopeGraph) GetWithDescendants(parent policyScope) sets.Set[policyScope] {
+	result := g.GetDirectChildren(parent)
+
+	switch parent.Kind {
+	case policyScopeKindGateway, policyScopeKindListenerSet, policyScopeKindRoute:
+		// Resource-level scope: walk descendants.
+		for desc := range g.containmentIndex[parent] {
+			for child := range g.childrenByParent[desc] {
+				result.Insert(child)
+			}
+			// Nested container (e.g. ListenerSet under Gateway): descend into
+			// the nested container's own containment index to gather
+			// listener-level entries beneath it.
+			if desc.Kind == policyScopeKindListenerSet {
+				for sub := range g.containmentIndex[desc] {
+					for child := range g.childrenByParent[sub] {
+						result.Insert(child)
+					}
+				}
+			}
+		}
+	case policyScopeKindGatewayListener, policyScopeKindListenerSetListener:
+		// Section-level scope: inherit Route entries from the Resource-level.
+		for child := range g.childrenByParent[parent.resourceScope()] {
+			if child.Kind == policyScopeKindRoute {
+				result.Insert(child)
+			}
+		}
+	}
+	return result
+}
+
+// formatPolicyScopes builds a status message describing a set of scopes,
+// grouping entries by kind.
+//
+// Output: "these gateway listeners: [...] and these listener sets: [...] and
+// these listener set listeners: [...] and these routes: [...] and these route rules: [...]".
+//
+// Returns "" when scopes is empty.
+func formatPolicyScopes(scopes sets.Set[policyScope]) string {
+	if scopes.Len() == 0 {
+		return ""
+	}
+
+	byKind := map[policyScopeKind][]string{}
+	for sc := range scopes {
+		entry := sc.NamespacedName.String()
+		if sc.SectionName != "" {
+			entry = fmt.Sprintf("%s/%s", entry, sc.SectionName)
+		}
+		byKind[sc.Kind] = append(byKind[sc.Kind], entry)
+	}
+	for k := range byKind {
+		sort.Strings(byKind[k])
+	}
+
+	order := []struct {
+		Kind  policyScopeKind
+		Label string
+	}{
+		{policyScopeKindGatewayListener, "these gateway listeners"},
+		{policyScopeKindListenerSet, "these listenersets"},
+		{policyScopeKindListenerSetListener, "these listenerset listeners"},
+		{policyScopeKindRoute, "these routes"},
+		{policyScopeKindRouteRule, "these route rules"},
+	}
+
+	parts := make([]string, 0, len(order))
+	for _, o := range order {
+		if list, ok := byKind[o.Kind]; ok {
+			parts = append(parts, fmt.Sprintf("%s: %v", o.Label, list))
+		}
+	}
+	return strings.Join(parts, " and ")
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
@@ -727,8 +963,72 @@ func irConfigName(policy client.Object) string {
 }
 
 type targetRefWithTimestamp struct {
-	gwapiv1.LocalPolicyTargetReferenceWithSectionName
+	policyTargetReferenceWithSectionName
 	CreationTimestamp metav1.Time
+}
+
+// policyTargetReferenceWithSectionName extends the Gateway API's LocalPolicyTargetReference to include a Namespace field.
+// This is necessary because policies may reference targets in other namespaces.
+type policyTargetReferenceWithSectionName struct {
+	// Group is the group of the target resource.
+	// +required
+	Group gwapiv1.Group `json:"group"`
+
+	// Kind is kind of the target resource.
+	// +required
+	Kind gwapiv1.Kind `json:"kind"`
+
+	// Name is the name of the target resource.
+	// +required
+	Name gwapiv1.ObjectName `json:"name"`
+
+	// Namespace is the namespace of the target resource. When unspecified, it is assumed to be in the same namespace as the policy.
+	Namespace gwapiv1.Namespace `json:"namespace"`
+
+	// SectionName is the name of a section within the target resource. When
+	// unspecified, this targetRef targets the entire resource. In the following
+	// resources, SectionName is interpreted as the following:
+	//
+	// * Gateway: Listener name
+	// * HTTPRoute: HTTPRouteRule name
+	// * Service: Port name
+	//
+	// If a SectionName is specified, but does not exist on the targeted object,
+	// the Policy must fail to attach, and the policy implementation should record
+	// a `ResolvedRefs` or similar Condition in the Policy's status.
+	//
+	// +optional
+	SectionName *gwapiv1.SectionName `json:"sectionName,omitempty"`
+}
+
+func isRouteRule(target policyTargetReferenceWithSectionName) bool {
+	// If the target is not a gateway and the section name is not nil, then it's a route rule.
+	return target.Kind != resource.KindGateway && target.SectionName != nil
+}
+
+func isRoute(target policyTargetReferenceWithSectionName) bool {
+	// If the target is not a gateway and the section name is nil, then it's a route.
+	return target.Kind != resource.KindGateway && target.SectionName == nil
+}
+
+func isGateway(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a gateway and the section name is nil, then it's a gateway.
+	return target.Kind == resource.KindGateway && target.SectionName == nil
+}
+
+func isListener(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a gateway and the section name is not nil, then it's a listener.
+	return target.Kind == resource.KindGateway && target.SectionName != nil
+}
+
+func isListenerSet(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a ListenerSet and the section name is nil, then it targets the whole ListenerSet.
+	return target.Kind == resource.KindListenerSet && target.SectionName == nil
+}
+
+func isListenerSetListener(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a ListenerSet and the section name is not nil, then it targets a ListenerSet listener.
+	return target.Kind == resource.KindListenerSet && target.SectionName != nil
 }
 
 func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector {
@@ -743,6 +1043,286 @@ func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector 
 	return l
 }
 
+func targetNamespaceLabelSelector(namespaces *egv1a1.TargetSelectorNamespaces) labels.Selector {
+	if namespaces == nil || namespaces.Selector == nil {
+		return labels.Nothing()
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(namespaces.Selector)
+	if err != nil {
+		return labels.Nothing()
+	}
+
+	return selector
+}
+
+func targetSelectorNamespacesMatch(
+	namespaces *egv1a1.TargetSelectorNamespaces,
+	policyNamespace,
+	targetNamespace string,
+	targetNamespaceLabels map[string]string,
+) bool {
+	if namespaces == nil {
+		return targetNamespace == policyNamespace
+	}
+
+	switch namespaces.From {
+	case "", egv1a1.TargetNamespaceFromSame:
+		return targetNamespace == policyNamespace
+	case egv1a1.TargetNamespaceFromAll:
+		return true
+	case egv1a1.TargetNamespaceFromSelector:
+		if targetNamespaceLabels == nil {
+			return false
+		}
+		return targetNamespaceLabelSelector(namespaces).Matches(labels.Set(targetNamespaceLabels))
+	default:
+		return false
+	}
+}
+
+func targetNamespaceMatches(
+	selector egv1a1.TargetSelector,
+	policyNamespace,
+	targetNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) bool {
+	var targetNamespaceLabels map[string]string
+	if namespaceLookup != nil {
+		if ns := namespaceLookup(targetNamespace); ns != nil {
+			targetNamespaceLabels = ns.GetLabels()
+		}
+	}
+
+	return targetSelectorNamespacesMatch(selector.Namespaces, policyNamespace, targetNamespace, targetNamespaceLabels)
+}
+
+// isCrossNamespaceReferencePermitted checks if a cross-namespace reference from a policy in one namespace to a target
+// in another namespace is allowed by a ReferenceGrant in the target namespace.
+func isCrossNamespaceReferencePermitted(
+	from crossNamespaceFrom,
+	to crossNamespaceTo,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+) bool {
+	if from.namespace == to.namespace {
+		return true
+	}
+
+	for _, referenceGrant := range referenceGrants {
+		if referenceGrant.Namespace != to.namespace {
+			continue
+		}
+
+		var fromAllowed bool
+		for _, refGrantFrom := range referenceGrant.Spec.From {
+			if string(refGrantFrom.Namespace) == from.namespace &&
+				string(refGrantFrom.Group) == from.group &&
+				string(refGrantFrom.Kind) == from.kind {
+				fromAllowed = true
+				break
+			}
+		}
+		if !fromAllowed {
+			continue
+		}
+
+		for _, refGrantTo := range referenceGrant.Spec.To {
+			if string(refGrantTo.Group) == to.group &&
+				string(refGrantTo.Kind) == to.kind &&
+				(refGrantTo.Name == nil || *refGrantTo.Name == "" || string(*refGrantTo.Name) == to.name) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// resolvePolicyTargetsFromSelectors returns policy target refs allowed by the policy's TargetSelectors.
+func resolvePolicyTargetsFromSelectors[T client.Object](
+	targetSelectors []egv1a1.TargetSelector,
+	potentialTargets []T,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyGroup string,
+	policyKind string,
+	policyNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) []targetRefWithTimestamp {
+	allowedDedup := sets.New[targetRefWithTimestamp]()
+	targetRefs := make([]targetRefWithTimestamp, 0)
+	for _, currSelector := range targetSelectors {
+		labelSelector := selectorFromTargetSelector(currSelector)
+		for _, obj := range potentialTargets {
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			if gvk.Kind != string(currSelector.Kind) ||
+				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1.GroupName)) {
+				continue
+			}
+
+			// Check if the target object's namespace matches the selector's namespace criteria.
+			if !targetNamespaceMatches(currSelector, policyNamespace, obj.GetNamespace(), namespaceLookup) {
+				continue
+			}
+
+			ref := policyTargetReferenceWithSectionName{
+				Group:     gwapiv1.Group(gvk.Group),
+				Kind:      gwapiv1.Kind(gvk.Kind),
+				Name:      gwapiv1.ObjectName(obj.GetName()),
+				Namespace: gwapiv1.Namespace(obj.GetNamespace()),
+			}
+
+			// Check if the target object's labels match the selector's label criteria.
+			if !labelSelector.Matches(labels.Set(obj.GetLabels())) {
+				continue
+			}
+
+			// Check if cross-namespace reference is allowed if the policy and target are in different namespaces.
+			if !isCrossNamespaceReferencePermitted(
+				crossNamespaceFrom{
+					group:     policyGroup,
+					kind:      policyKind,
+					namespace: policyNamespace,
+				},
+				crossNamespaceTo{
+					group:     gvk.Group,
+					kind:      gvk.Kind,
+					namespace: obj.GetNamespace(),
+					name:      obj.GetName(),
+				},
+				referenceGrants,
+			) {
+				continue
+			}
+
+			targetRef := targetRefWithTimestamp{
+				CreationTimestamp:                    obj.GetCreationTimestamp(),
+				policyTargetReferenceWithSectionName: ref,
+			}
+			if allowedDedup.Has(targetRef) {
+				continue
+			}
+			allowedDedup.Insert(targetRef)
+			targetRefs = append(targetRefs, targetRef)
+		}
+	}
+
+	return targetRefs
+}
+
+// resolvePolicyTargetsFromReferences returns a list of policy target refs specified in the policy's TargetRefs, with the namespace field populated.
+func resolvePolicyTargetsFromReferences(
+	targetRefs egv1a1.PolicyTargetReferences,
+	policyNamespace string,
+) []policyTargetReferenceWithSectionName {
+	refs := targetRefs.GetTargetRefs()
+	ret := make([]policyTargetReferenceWithSectionName, 0, len(refs))
+	var emptyTargetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName
+	for _, v := range refs {
+		if v == emptyTargetRef {
+			// This can happen when the targetRef structure is read from extension server policies
+			continue
+		}
+		ret = append(ret, policyTargetReferenceWithSectionName{
+			Group:       v.Group,
+			Kind:        v.Kind,
+			Name:        v.Name,
+			Namespace:   gwapiv1.Namespace(policyNamespace),
+			SectionName: v.SectionName,
+		})
+	}
+
+	return ret
+}
+
+// composePolicyTargetRefs combines the allowed target refs derived from the selectors and the plain target refs specified in the policy.
+func composePolicyTargetRefs(
+	selectorTargetRefs []targetRefWithTimestamp,
+	plainTargetRefs []policyTargetReferenceWithSectionName,
+) []policyTargetReferenceWithSectionName {
+	// First add the target refs derived from the selectors, sorted by the creation timestamp of the matched objects.
+	slices.SortFunc(selectorTargetRefs, func(i, j targetRefWithTimestamp) int {
+		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
+	})
+	ret := make([]policyTargetReferenceWithSectionName, len(selectorTargetRefs))
+	for i, v := range selectorTargetRefs {
+		ret[i] = v.policyTargetReferenceWithSectionName
+	}
+
+	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
+	// to targets that were already found via the selectors. Only add them to the returned list if
+	// they are not yet there. Always add them at the end.
+	fastLookup := sets.New(ret...)
+	for _, targetRef := range plainTargetRefs {
+		if !fastLookup.Has(targetRef) {
+			ret = append(ret, targetRef)
+		}
+	}
+
+	return ret
+}
+
+// resolvePolicyTargets returns a list of policy target refs that are allowed by the policy's TargetSelectors.
+// The list includes both target refs derived from the selectors and plain target refs specified in the policy.
+func resolvePolicyTargets[T client.Object](
+	targetRefs egv1a1.PolicyTargetReferences,
+	potentialTargets []T,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyGroup string,
+	policyKind string,
+	policyNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) []policyTargetReferenceWithSectionName {
+	selectorTargetRefs := resolvePolicyTargetsFromSelectors(
+		targetRefs.TargetSelectors,
+		potentialTargets,
+		referenceGrants,
+		policyGroup,
+		policyKind,
+		policyNamespace,
+		namespaceLookup)
+	plainTargetRefs := resolvePolicyTargetsFromReferences(targetRefs, policyNamespace)
+	return composePolicyTargetRefs(selectorTargetRefs, plainTargetRefs)
+}
+
+// resolvePolicyTargetsForGatewayAndListenerSet is like resolvePolicyTargets but runs selector
+// resolution against both Gateways and ListenerSets, merging the results before combining with
+// plain targetRefs. Use this for policy types that support both kinds as targets.
+func resolvePolicyTargetsForGatewayAndListenerSet(
+	targetRefs egv1a1.PolicyTargetReferences,
+	gateways []*GatewayContext,
+	listenerSets []*gwapiv1.ListenerSet,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyGroup string,
+	policyKind string,
+	policyNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) []policyTargetReferenceWithSectionName {
+	selectorTargetRefsGateways := resolvePolicyTargetsFromSelectors(
+		targetRefs.TargetSelectors,
+		gateways,
+		referenceGrants,
+		policyGroup,
+		policyKind,
+		policyNamespace,
+		namespaceLookup,
+	)
+	selectorTargetRefsLS := resolvePolicyTargetsFromSelectors(
+		targetRefs.TargetSelectors,
+		listenerSets,
+		referenceGrants,
+		policyGroup,
+		policyKind,
+		policyNamespace,
+		namespaceLookup,
+	)
+	plainTargetRefs := resolvePolicyTargetsFromReferences(targetRefs, policyNamespace)
+	selectorTargetRefsGateways = append(selectorTargetRefsGateways, selectorTargetRefsLS...)
+	return composePolicyTargetRefs(selectorTargetRefsGateways, plainTargetRefs)
+}
+
+// legacy function to get policy target refs without considering cross-namespace policy attachment.
+// This is only used for extension server policies.
+// TODO: add cross-namesapce policy attachment to extension server if needed, and remove this function.
 func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T, policyNamespace string) []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
@@ -762,12 +1342,10 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 			if labelSelector.Matches(labels.Set(obj.GetLabels())) {
 				dedup.Insert(targetRefWithTimestamp{
 					CreationTimestamp: obj.GetCreationTimestamp(),
-					LocalPolicyTargetReferenceWithSectionName: gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Group: gwapiv1.Group(gvk.Group),
-							Kind:  gwapiv1.Kind(gvk.Kind),
-							Name:  gwapiv1.ObjectName(obj.GetName()),
-						},
+					policyTargetReferenceWithSectionName: policyTargetReferenceWithSectionName{
+						Group: gwapiv1.Group(gvk.Group),
+						Kind:  gwapiv1.Kind(gvk.Kind),
+						Name:  gwapiv1.ObjectName(obj.GetName()),
 					},
 				})
 			}
@@ -779,7 +1357,14 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	})
 	ret := make([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, len(selectorsList))
 	for i, v := range selectorsList {
-		ret[i] = v.LocalPolicyTargetReferenceWithSectionName
+		ret[i] = gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+				Group: v.Group,
+				Kind:  v.Kind,
+				Name:  v.Name,
+			},
+			SectionName: v.SectionName,
+		}
 	}
 	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
 	// to targets that were already found via the selectors. Only add them to the returned list if
@@ -831,19 +1416,19 @@ func getServiceIPFamily(service *corev1.Service) *egv1a1.IPFamily {
 	// If ipFamilyPolicy is RequireDualStack, return DualStack
 	if service.Spec.IPFamilyPolicy != nil &&
 		*service.Spec.IPFamilyPolicy == corev1.IPFamilyPolicyRequireDualStack {
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	}
 
 	// Check ipFamilies array
 	if len(service.Spec.IPFamilies) > 0 {
 		if len(service.Spec.IPFamilies) > 1 {
-			return ptr.To(egv1a1.DualStack)
+			return new(egv1a1.DualStack)
 		}
 		switch service.Spec.IPFamilies[0] {
 		case corev1.IPv4Protocol:
-			return ptr.To(egv1a1.IPv4)
+			return new(egv1a1.IPv4)
 		case corev1.IPv6Protocol:
-			return ptr.To(egv1a1.IPv6)
+			return new(egv1a1.IPv6)
 		}
 	}
 
@@ -858,11 +1443,11 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 
 	switch *envoyProxy.Spec.IPFamily {
 	case egv1a1.IPv4:
-		return ptr.To(egv1a1.IPv4)
+		return new(egv1a1.IPv4)
 	case egv1a1.IPv6:
-		return ptr.To(egv1a1.IPv6)
+		return new(egv1a1.IPv6)
 	case egv1a1.DualStack:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	default:
 		return nil
 	}

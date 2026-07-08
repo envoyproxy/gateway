@@ -149,9 +149,9 @@ Here is a list of features that can be included in this API
   significant investment by users to build and operate an extension manager alongside Envoy Gateway.
   
 [extension points]: https://www.envoyproxy.io/docs/envoy/latest/extending/extending
-[Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment
+[Policy Attachment]: https://gateway-api.sigs.k8s.io/reference/policy-attachment/
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[Gateway API Route Filters]: https://gateway-api.sigs.k8s.io/api-types/httproute/#filters-optional
+[Gateway API Route Filters]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/#filters-optional
 [Envoy Patch Policy]: ../../latest/api/extension_types#envoypatchpolicy
 [Envoy Extension Manager]: ./extending-envoy-gateway
 [Alternatives]: #Alternatives

@@ -27,6 +27,8 @@ var (
 	standaloneConfig string
 	//go:embed testdata/standalone-enable-extension-server.yaml
 	standaloneConfigWithExtensionServer string
+	//go:embed testdata/minimal.yaml
+	minimalConfig string
 )
 
 func TestConfigLoader(t *testing.T) {
@@ -47,9 +49,15 @@ func TestConfigLoader(t *testing.T) {
 	}()
 
 	changed := 0
-	loader := New(cfgPath, s, func(_ context.Context, _ *config.Server) error {
+	loader := New(cfgPath, s, func(hookCtx context.Context, _ *config.Server) error {
 		changed++
-		t.Logf("config changed %d times", changed)
+		// Only log if the hook context is still active to avoid panic
+		select {
+		case <-hookCtx.Done():
+			return nil
+		default:
+			t.Logf("config changed %d times", changed)
+		}
 		if changed > 1 {
 			cancel()
 		}
@@ -88,7 +96,13 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 	resultChannel := make(chan testResult, 1)
 
 	var changed int32
-	loader := New(cfgPath, s, func(_ context.Context, cfg *config.Server) error {
+	loader := New(cfgPath, s, func(hookCtx context.Context, cfg *config.Server) error {
+		// Check if the hook context is canceled before incrementing
+		select {
+		case <-hookCtx.Done():
+			return nil
+		default:
+		}
 		c := atomic.AddInt32(&changed, 1)
 		t.Logf("config changed %d times", c)
 		if c > 1 {
@@ -115,4 +129,61 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 	require.Equal(t, "gateway.example.io", res.extMgr.PolicyResources[0].Group)
 	require.Equal(t, "v1alpha1", res.extMgr.PolicyResources[0].Version)
 	require.Equal(t, "ExampleExtPolicy", res.extMgr.PolicyResources[0].Kind)
+}
+
+// TestConfigLoaderDefaultsBeforeValidate ensures the hot-reload path applies defaults
+// before validation. A config that omits `gateway` and `provider` fails validation
+// outright (`gateway is unspecified`) but is valid once defaults populate those fields.
+// Reloading to such a config must therefore succeed and surface the defaulted values
+// to the hook.
+func TestConfigLoaderDefaultsBeforeValidate(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "envoy-gateway-configloader-test")
+	require.NoError(t, err)
+	defer func(path string) {
+		_ = os.RemoveAll(path)
+	}(tmpDir)
+
+	cfgPath := tmpDir + "/config.yaml"
+	require.NoError(t, os.WriteFile(cfgPath, []byte(defaultConfig), 0o600))
+	s, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	type testResult struct {
+		changed int32
+		eg      *egv1a1.EnvoyGateway
+	}
+	resultChannel := make(chan testResult, 1)
+
+	var changed int32
+	loader := New(cfgPath, s, func(hookCtx context.Context, cfg *config.Server) error {
+		select {
+		case <-hookCtx.Done():
+			return nil
+		default:
+		}
+		c := atomic.AddInt32(&changed, 1)
+		if c > 1 {
+			resultChannel <- testResult{changed: c, eg: cfg.EnvoyGateway}
+			cancel()
+		}
+		return nil
+	})
+
+	require.NoError(t, loader.Start(ctx, os.Stdout))
+	go func() {
+		_ = os.WriteFile(cfgPath, []byte(minimalConfig), 0o600)
+	}()
+
+	<-ctx.Done()
+	res := <-resultChannel
+	require.Equal(t, int32(2), res.changed)
+	require.NotNil(t, res.eg)
+	require.NotNil(t, res.eg.Gateway)
+	require.Equal(t, egv1a1.GatewayControllerName, res.eg.Gateway.ControllerName)
+	require.NotNil(t, res.eg.Provider)
+	require.Equal(t, egv1a1.ProviderTypeKubernetes, res.eg.Provider.Type)
+	require.NotNil(t, res.eg.Logging)
 }

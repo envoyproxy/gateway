@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/kubectl/pkg/cmd/util"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -48,13 +47,13 @@ var EGUpgradeTest = suite.ConformanceTest{
 			chartPath := "../../../charts/gateway-helm"
 			relName := "eg"
 			depNS := "envoy-gateway-system"
-			lastVersionTag := "1.7.1" //  the latest prior release
+			lastVersionTag := "1.8.0" //  the latest prior release
 
 			t.Logf("Upgrading from version: %s", lastVersionTag)
 
 			// Uninstall the current version of EG
 			relNamespace := "envoy-gateway-system"
-			options.DefaultConfigFlags.Namespace = ptr.To(relNamespace)
+			options.DefaultConfigFlags.Namespace = new(relNamespace)
 
 			// use values file for e2e test
 			valuesFile := "../../config/helm/default.yaml"

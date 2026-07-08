@@ -14,6 +14,10 @@ spec:
 {{- if not .Values.hpa.enabled }}
   replicas: {{ .Values.deployment.replicas }}
 {{- end }}
+{{- with .Values.deployment.envoyGateway.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+{{- end }}
   selector:
     matchLabels:
       control-plane: envoy-gateway
@@ -31,6 +35,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      automountServiceAccountToken: true
       {{- with .Values.deployment.pod.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -47,6 +52,10 @@ spec:
       tolerations:
         {{- toYaml . | nindent 6 }}
       {{- end }}
+      {{- with .Values.deployment.pod.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - args:
         - server
@@ -59,6 +68,9 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
+        {{- with .Values.deployment.envoyGateway.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         image: {{ include "eg.image" . }}
         imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
         livenessProbe:
@@ -94,6 +106,9 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+        {{- with .Values.deployment.pod.extraVolumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}
@@ -108,3 +123,6 @@ spec:
       - name: certs
         secret:
           secretName: envoy-gateway
+      {{- with .Values.deployment.pod.extraVolumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}

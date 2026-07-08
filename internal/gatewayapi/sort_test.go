@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -28,22 +27,22 @@ func TestPathMatchCount(t *testing.T) {
 		},
 		{
 			name:     "exact match returns length",
-			match:    &ir.StringMatch{Exact: ptr.To("/foo/bar")},
+			match:    &ir.StringMatch{Exact: new("/foo/bar")},
 			expected: 8,
 		},
 		{
 			name:     "regex match returns length",
-			match:    &ir.StringMatch{SafeRegex: ptr.To("/foo/.+")},
+			match:    &ir.StringMatch{SafeRegex: new("/foo/.+")},
 			expected: 7,
 		},
 		{
 			name:     "prefix match returns length",
-			match:    &ir.StringMatch{Prefix: ptr.To("/api")},
+			match:    &ir.StringMatch{Prefix: new("/api")},
 			expected: 4,
 		},
 		{
 			name:     "root prefix returns 0",
-			match:    &ir.StringMatch{Prefix: ptr.To("/")},
+			match:    &ir.StringMatch{Prefix: new("/")},
 			expected: 0,
 		},
 	}
@@ -69,9 +68,9 @@ func TestNumberOfExactMatches(t *testing.T) {
 		{
 			name: "counts only exact matches",
 			matches: []*ir.StringMatch{
-				{Exact: ptr.To("val1")},
-				{Prefix: ptr.To("val2")},
-				{Exact: ptr.To("val3")},
+				{Exact: new("val1")},
+				{Prefix: new("val2")},
+				{Exact: new("val3")},
 			},
 			expected: 2,
 		},
@@ -79,7 +78,7 @@ func TestNumberOfExactMatches(t *testing.T) {
 			name: "nil element skipped",
 			matches: []*ir.StringMatch{
 				nil,
-				{Exact: ptr.To("val1")},
+				{Exact: new("val1")},
 			},
 			expected: 1,
 		},
@@ -101,25 +100,25 @@ func TestXdsIRRoutesSort(t *testing.T) {
 		{
 			name: "exact before regex before prefix",
 			routes: []*ir.HTTPRoute{
-				{Name: "prefix", PathMatch: &ir.StringMatch{Prefix: ptr.To("/foo")}},
-				{Name: "exact", PathMatch: &ir.StringMatch{Exact: ptr.To("/foo")}},
-				{Name: "regex", PathMatch: &ir.StringMatch{SafeRegex: ptr.To("/foo")}},
+				{Name: "prefix", PathMatch: &ir.StringMatch{Prefix: new("/foo")}},
+				{Name: "exact", PathMatch: &ir.StringMatch{Exact: new("/foo")}},
+				{Name: "regex", PathMatch: &ir.StringMatch{SafeRegex: new("/foo")}},
 			},
 			expectedOrder: []string{"exact", "regex", "prefix"},
 		},
 		{
 			name: "longer path wins within same type",
 			routes: []*ir.HTTPRoute{
-				{Name: "short", PathMatch: &ir.StringMatch{Prefix: ptr.To("/a")}},
-				{Name: "long", PathMatch: &ir.StringMatch{Prefix: ptr.To("/api/v1")}},
+				{Name: "short", PathMatch: &ir.StringMatch{Prefix: new("/a")}},
+				{Name: "long", PathMatch: &ir.StringMatch{Prefix: new("/api/v1")}},
 			},
 			expectedOrder: []string{"long", "short"},
 		},
 		{
 			name: "root prefix treated as zero length",
 			routes: []*ir.HTTPRoute{
-				{Name: "root", PathMatch: &ir.StringMatch{Prefix: ptr.To("/")}},
-				{Name: "api", PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")}},
+				{Name: "root", PathMatch: &ir.StringMatch{Prefix: new("/")}},
+				{Name: "api", PathMatch: &ir.StringMatch{Prefix: new("/api")}},
 			},
 			expectedOrder: []string{"api", "root"},
 		},
@@ -128,17 +127,17 @@ func TestXdsIRRoutesSort(t *testing.T) {
 			routes: []*ir.HTTPRoute{
 				{
 					Name:      "one-header",
-					PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
+					PathMatch: &ir.StringMatch{Prefix: new("/api")},
 					HeaderMatches: []*ir.StringMatch{
-						{Name: "h1", Exact: ptr.To("v1")},
+						{Name: "h1", Exact: new("v1")},
 					},
 				},
 				{
 					Name:      "two-headers",
-					PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
+					PathMatch: &ir.StringMatch{Prefix: new("/api")},
 					HeaderMatches: []*ir.StringMatch{
-						{Name: "h1", Exact: ptr.To("v1")},
-						{Name: "h2", Exact: ptr.To("v2")},
+						{Name: "h1", Exact: new("v1")},
+						{Name: "h2", Exact: new("v2")},
 					},
 				},
 			},
@@ -149,18 +148,18 @@ func TestXdsIRRoutesSort(t *testing.T) {
 			routes: []*ir.HTTPRoute{
 				{
 					Name:      "prefix-headers",
-					PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
+					PathMatch: &ir.StringMatch{Prefix: new("/api")},
 					HeaderMatches: []*ir.StringMatch{
-						{Name: "h1", Prefix: ptr.To("v1")},
-						{Name: "h2", Prefix: ptr.To("v2")},
+						{Name: "h1", Prefix: new("v1")},
+						{Name: "h2", Prefix: new("v2")},
 					},
 				},
 				{
 					Name:      "exact-headers",
-					PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
+					PathMatch: &ir.StringMatch{Prefix: new("/api")},
 					HeaderMatches: []*ir.StringMatch{
-						{Name: "h1", Exact: ptr.To("v1")},
-						{Name: "h2", Exact: ptr.To("v2")},
+						{Name: "h1", Exact: new("v1")},
+						{Name: "h2", Exact: new("v2")},
 					},
 				},
 			},
@@ -171,13 +170,13 @@ func TestXdsIRRoutesSort(t *testing.T) {
 			routes: []*ir.HTTPRoute{
 				{
 					Name:      "no-cookies",
-					PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
+					PathMatch: &ir.StringMatch{Prefix: new("/api")},
 				},
 				{
 					Name:      "with-cookies",
-					PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
+					PathMatch: &ir.StringMatch{Prefix: new("/api")},
 					CookieMatches: []*ir.StringMatch{
-						{Name: "c1", Exact: ptr.To("v1")},
+						{Name: "c1", Exact: new("v1")},
 					},
 				},
 			},
@@ -188,13 +187,13 @@ func TestXdsIRRoutesSort(t *testing.T) {
 			routes: []*ir.HTTPRoute{
 				{
 					Name:      "no-query",
-					PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
+					PathMatch: &ir.StringMatch{Prefix: new("/api")},
 				},
 				{
 					Name:      "with-query",
-					PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
+					PathMatch: &ir.StringMatch{Prefix: new("/api")},
 					QueryParamMatches: []*ir.StringMatch{
-						{Name: "q1", Exact: ptr.To("v1")},
+						{Name: "q1", Exact: new("v1")},
 					},
 				},
 			},

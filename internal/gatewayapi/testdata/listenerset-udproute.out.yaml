@@ -92,12 +92,12 @@ listenerSets:
   status:
     conditions:
     - lastTransitionTime: null
-      message: All listeners are valid
+      message: All listeners are accepted
       reason: Accepted
       status: "True"
       type: Accepted
     - lastTransitionTime: null
-      message: All listeners are valid
+      message: All listeners are programmed
       reason: Programmed
       status: "True"
       type: Programmed
@@ -129,7 +129,7 @@ listenerSets:
       - group: gateway.networking.k8s.io
         kind: UDPRoute
 udpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: UDPRoute
   metadata:
     name: udp-app-1

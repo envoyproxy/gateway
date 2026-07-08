@@ -17,11 +17,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -135,6 +133,39 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 			require.Equal(t, tc.expect, res)
 		})
 	}
+}
+
+func TestHasMatchingNamespaceLabelsControllerNamespaceBypass(t *testing.T) {
+	controllerNamespace := "envoy-gateway-system"
+	namespaceSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{"gateway": "enabled"},
+	}
+
+	r := gatewayAPIReconciler{
+		namespace:      controllerNamespace,
+		namespaceLabel: namespaceSelector,
+		log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace},
+			}).
+			Build(),
+	}
+
+	gateway := test.GetGateway(types.NamespacedName{
+		Namespace: controllerNamespace,
+		Name:      "gateway",
+	}, "gatewayclass", 80)
+	require.False(t, r.hasMatchingNamespaceLabels(gateway))
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: controllerNamespace,
+			Name:      "envoy-default-gateway",
+		},
+	}
+	require.True(t, r.hasMatchingNamespaceLabels(svc))
 }
 
 // TestValidateGatewayForReconcile tests the validateGatewayForReconcile
@@ -259,6 +290,60 @@ func TestFindOwningGateway(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEnvoyServiceForGatewayIncludesControllerNamespace(t *testing.T) {
+	ctx := context.Background()
+	gatewayNamespace := "watched"
+	controllerNamespace := "envoy-gateway-system"
+	gatewayClassName := "gc-name"
+	namespaceSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{"gateway": "enabled"},
+	}
+	gtw := test.GetGateway(types.NamespacedName{
+		Namespace: gatewayNamespace,
+		Name:      "gateway",
+	}, gatewayClassName, 80)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: controllerNamespace,
+			Name:      "envoy-default-gateway",
+			Labels:    gatewayapi.OwnerLabels(gtw, false),
+		},
+	}
+
+	baseClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   gatewayNamespace,
+					Labels: namespaceSelector.MatchLabels,
+				},
+			},
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace},
+			},
+			svc,
+		).
+		Build()
+	r := &gatewayAPIReconciler{
+		namespace:       controllerNamespace,
+		classController: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
+		mergeGateways:   sets.New[string](),
+	}
+
+	r.client = newNamespaceSelectorClient(baseClient, namespaceSelector, "")
+	got, err := r.envoyServiceForGateway(ctx, gtw)
+	require.NoError(t, err)
+	require.Nil(t, got)
+
+	r.client = newNamespaceSelectorClient(baseClient, namespaceSelector, controllerNamespace)
+	got, err = r.envoyServiceForGateway(ctx, gtw)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	require.Equal(t, svc.Name, got.Name)
+	require.Equal(t, controllerNamespace, got.Namespace)
 }
 
 // TestValidateConfigMapForReconcile tests the validateConfigMapForReconcile
@@ -576,10 +661,10 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						OIDC: &egv1a1.OIDC{
 							Provider: egv1a1.OIDCProvider{
 								Issuer:                "https://accounts.google.com",
-								AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
-								TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
+								AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+								TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
 							},
-							ClientID: ptr.To("client-id"),
+							ClientID: new("client-id"),
 							ClientSecret: gwapiv1.SecretObjectReference{
 								Name: "secret",
 							},
@@ -709,8 +794,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						},
 						Wasm: []egv1a1.Wasm{
 							{
-								Name:   ptr.To("wasm-filter"),
-								RootID: ptr.To("my_root_id"),
+								Name:   new("wasm-filter"),
+								RootID: new("my_root_id"),
 								Code: egv1a1.WasmCodeSource{
 									Type: egv1a1.ImageWasmCodeSourceType,
 									Image: &egv1a1.ImageWasmCodeSource{
@@ -892,7 +977,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 										BackendRef: gwapiv1.BackendRef{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name: gwapiv1.ObjectName("service"),
-												Port: ptr.To(gwapiv1.PortNumber(80)),
+												Port: new(gwapiv1.PortNumber(80)),
 											},
 										},
 									},
@@ -903,7 +988,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 										RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
 											BackendRef: gwapiv1.BackendObjectReference{
 												Name: "mirror-service",
-												Port: ptr.To(gwapiv1.PortNumber(80)),
+												Port: new(gwapiv1.PortNumber(80)),
 											},
 										},
 									},
@@ -933,8 +1018,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
+			WithIndex(&gwapiv1.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+			WithIndex(&gwapiv1.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateEndpointSliceForReconcile(tc.endpointSlice)
@@ -967,8 +1052,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 												{
 													BackendObjectReference: gwapiv1.BackendObjectReference{
 														Name:      "otel-collector",
-														Namespace: ptr.To(gwapiv1.Namespace("default")),
-														Port:      ptr.To(gwapiv1.PortNumber(4317)),
+														Namespace: new(gwapiv1.Namespace("default")),
+														Port:      new(gwapiv1.PortNumber(4317)),
 													},
 												},
 											},
@@ -989,8 +1074,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 										{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name:      "otel-collector",
-												Namespace: ptr.To(gwapiv1.Namespace("default")),
-												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+												Namespace: new(gwapiv1.Namespace("default")),
+												Port:      new(gwapiv1.PortNumber(4317)),
 											},
 										},
 									},
@@ -1007,8 +1092,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 								{
 									BackendObjectReference: gwapiv1.BackendObjectReference{
 										Name:      "otel-collector",
-										Namespace: ptr.To(gwapiv1.Namespace("default")),
-										Port:      ptr.To(gwapiv1.PortNumber(4317)),
+										Namespace: new(gwapiv1.Namespace("default")),
+										Port:      new(gwapiv1.PortNumber(4317)),
 									},
 								},
 							},
@@ -1369,8 +1454,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
+			WithIndex(&gwapiv1.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+			WithIndex(&gwapiv1.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
@@ -1775,7 +1860,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: egv1a1.BackendSpec{
-			Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+			Type: new(egv1a1.BackendTypeDynamicResolver),
 			TLS: &egv1a1.BackendTLSSettings{
 				CACertificateRefs: []gwapiv1.LocalObjectReference{
 					{
@@ -1808,7 +1893,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			ClientValidation: &egv1a1.ClientValidationContext{
 				CACertificateRefs: []gwapiv1.SecretObjectReference{
 					{
-						Kind: ptr.To[gwapiv1.Kind]("ClusterTrustBundle"),
+						Kind: new(gwapiv1.Kind("ClusterTrustBundle")),
 						Name: gwapiv1.ObjectName(ctb.Name),
 					},
 				},
