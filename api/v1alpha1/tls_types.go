@@ -185,6 +185,8 @@ const (
 // ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection
 // to the Gateway.
 // By default, no client specific configuration is validated.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate || !has(self.mode) || self.mode in ['VerifyIfGiven', 'RequireAndVerify']",message="allowExpiredCertificate can only be set when mode is VerifyIfGiven or RequireAndVerify"
 type ClientValidationContext struct {
 	// Optional set to true accepts connections even when a client doesn't present a certificate.
 	// Defaults to false, which rejects connections without a valid client certificate.

@@ -1740,6 +1740,11 @@ spec:
                             type: array
                         type: object
                     type: object
+                    x-kubernetes-validations:
+                    - message: allowExpiredCertificate can only be set when mode is
+                        VerifyIfGiven or RequireAndVerify
+                      rule: '!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate
+                        || !has(self.mode) || self.mode in [''VerifyIfGiven'', ''RequireAndVerify'']'
                   ecdhCurves:
                     description: |-
                       ECDHCurves specifies the set of supported ECDH curves.

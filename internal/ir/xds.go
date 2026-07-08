@@ -439,7 +439,8 @@ type TLSConfig struct {
 	// This maps to Envoy CertificateValidationContext.trust_chain_verification=ACCEPT_UNTRUSTED.
 	AcceptUntrusted bool `json:"acceptUntrusted,omitempty" yaml:"acceptUntrusted,omitempty"`
 	// AllowExpiredCertificate permits client certificates that have expired but are otherwise valid.
-	// This maps to Envoy CertificateValidationContext.allow_expired_certificate.
+	//
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#envoy-v3-api-field-extensions-transport-sockets-tls-v3-certificatevalidationcontext-allow-expired-certificate
 	AllowExpiredCertificate bool `json:"allowExpiredCertificate,omitempty" yaml:"allowExpiredCertificate,omitempty"`
 	// A list of allowed base64-encoded SHA-256 hashes of the DER-encoded Subject Public Key Information (SPKI)
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
