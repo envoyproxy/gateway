@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -141,10 +140,17 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("ListenerSet index", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1.ListenerSetList{}, client.MatchingFields{gatewayListenerSetIndex: "any"})
+		require.NoError(t, err)
+	})
+
 	t.Run("HTTPRoute indices", func(t *testing.T) {
 		err := cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{gatewayHTTPRouteIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{backendHTTPRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{listenerSetHTTPRouteIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{httpRouteFilterHTTPRouteIndex: "any"})
 		require.NoError(t, err)
@@ -155,19 +161,25 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.GRPCRouteList{}, client.MatchingFields{backendGRPCRouteIndex: "any"})
 		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.GRPCRouteList{}, client.MatchingFields{listenerSetGRPCRouteIndex: "any"})
+		require.NoError(t, err)
 	})
 
 	t.Run("TCPRoute indices", func(t *testing.T) {
-		err := cli.List(context.Background(), &gwapiv1a2.TCPRouteList{}, client.MatchingFields{gatewayTCPRouteIndex: "any"})
+		err := cli.List(context.Background(), &gwapiv1.TCPRouteList{}, client.MatchingFields{gatewayTCPRouteIndex: "any"})
 		require.NoError(t, err)
-		err = cli.List(context.Background(), &gwapiv1a2.TCPRouteList{}, client.MatchingFields{backendTCPRouteIndex: "any"})
+		err = cli.List(context.Background(), &gwapiv1.TCPRouteList{}, client.MatchingFields{backendTCPRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.TCPRouteList{}, client.MatchingFields{listenerSetTCPRouteIndex: "any"})
 		require.NoError(t, err)
 	})
 
 	t.Run("UDPRoute indices", func(t *testing.T) {
-		err := cli.List(context.Background(), &gwapiv1a2.UDPRouteList{}, client.MatchingFields{gatewayUDPRouteIndex: "any"})
+		err := cli.List(context.Background(), &gwapiv1.UDPRouteList{}, client.MatchingFields{gatewayUDPRouteIndex: "any"})
 		require.NoError(t, err)
-		err = cli.List(context.Background(), &gwapiv1a2.UDPRouteList{}, client.MatchingFields{backendUDPRouteIndex: "any"})
+		err = cli.List(context.Background(), &gwapiv1.UDPRouteList{}, client.MatchingFields{backendUDPRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.UDPRouteList{}, client.MatchingFields{listenerSetUDPRouteIndex: "any"})
 		require.NoError(t, err)
 	})
 
@@ -175,6 +187,8 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		err := cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{gatewayTLSRouteIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{backendTLSRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{listenerSetTLSRouteIndex: "any"})
 		require.NoError(t, err)
 	})
 
@@ -214,6 +228,8 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		err = cli.List(context.Background(), &egv1a1.EnvoyExtensionPolicyList{}, client.MatchingFields{secretEnvoyExtensionPolicyIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &egv1a1.EnvoyExtensionPolicyList{}, client.MatchingFields{configMapEepIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.EnvoyExtensionPolicyList{}, client.MatchingFields{clusterTrustBundleEepIndex: "any"})
 		require.NoError(t, err)
 	})
 

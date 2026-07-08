@@ -18,9 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -717,6 +715,48 @@ func ToPointer[T any](v T) *T {
 	return &v
 }
 
+func TestBuildAuthorizationCEL(t *testing.T) {
+	tr := &Translator{}
+
+	t.Run("valid cel is translated to string pointer", func(t *testing.T) {
+		celExpression := egv1a1.CELExpression("request.path.startsWith('/admin')")
+		policy := sp("default", "authz-cel")
+		policy.Spec.Authorization = &egv1a1.Authorization{
+			Rules: []egv1a1.AuthorizationRule{
+				{
+					Action: egv1a1.AuthorizationActionAllow,
+					CEL:    &celExpression,
+				},
+			},
+		}
+
+		authorization, err := tr.buildAuthorization(policy, &securityPolicyOwners{})
+
+		require.NoError(t, err)
+		require.Len(t, authorization.Rules, 1)
+		require.NotNil(t, authorization.Rules[0].CEL)
+		require.Equal(t, string(celExpression), *authorization.Rules[0].CEL)
+	})
+
+	t.Run("invalid cel returns translation error", func(t *testing.T) {
+		celExpression := egv1a1.CELExpression(")++++")
+		policy := sp("test", "authz-cel-invalid")
+		policy.Spec.Authorization = &egv1a1.Authorization{
+			Rules: []egv1a1.AuthorizationRule{
+				{
+					Action: egv1a1.AuthorizationActionAllow,
+					CEL:    &celExpression,
+				},
+			},
+		}
+
+		authorization, err := tr.buildAuthorization(policy, &securityPolicyOwners{})
+
+		require.ErrorContains(t, err, "invalid CEL expression: )++++")
+		require.Nil(t, authorization)
+	})
+}
+
 func Test_validateHtpasswdFormat(t *testing.T) {
 	// #nosec G101 - These are test htpasswd hashes, not real credentials
 	tests := []struct {
@@ -962,26 +1002,26 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 
 	// Create a mock TCP route
 	tcpRoute := &TCPRouteContext{
-		TCPRoute: &gwapiv1a2.TCPRoute{
+		TCPRoute: &gwapiv1.TCPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "tcp-route",
 			},
-			Spec: gwapiv1a2.TCPRouteSpec{
-				CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-					ParentRefs: []gwapiv1a2.ParentReference{
+			Spec: gwapiv1.TCPRouteSpec{
+				CommonRouteSpec: gwapiv1.CommonRouteSpec{
+					ParentRefs: []gwapiv1.ParentReference{
 						{
 							Name: "test-gateway",
 						},
 					},
 				},
-				Rules: []gwapiv1a2.TCPRouteRule{
+				Rules: []gwapiv1.TCPRouteRule{
 					{
-						BackendRefs: []gwapiv1a2.BackendRef{
+						BackendRefs: []gwapiv1.BackendRef{
 							{
-								BackendObjectReference: gwapiv1a2.BackendObjectReference{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
 									Name: "test-service",
-									Port: new(gwapiv1a2.PortNumber(80)),
+									Port: new(gwapiv1.PortNumber(80)),
 								},
 							},
 						},
@@ -1009,10 +1049,6 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: tcpRoute}
 
-	gatewayRouteMap := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
@@ -1020,11 +1056,9 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 
 	// Process the policy - this should set error status
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
-	gatewayPolicyMerged := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
+	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1039,7 +1073,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	policy := sp("default", "bad-http")
 	policy.Spec.Authorization = &egv1a1.Authorization{
 		Rules: []egv1a1.AuthorizationRule{
-			{Principal: egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"not-a-cidr"}}},
+			{Principal: &egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"not-a-cidr"}}},
 		},
 	}
 
@@ -1051,7 +1085,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 				Name:      "http-route",
 			},
 			Spec: gwapiv1.HTTPRouteSpec{
-				CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+				CommonRouteSpec: gwapiv1.CommonRouteSpec{
 					ParentRefs: []gwapiv1.ParentReference{
 						{
 							Name: "test-gateway",
@@ -1094,10 +1128,6 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: httpRoute}
 
-	gatewayRouteMap := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
@@ -1105,11 +1135,9 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 
 	// Process the policy - this should set error status
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
-	gatewayPolicyMerged := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
+	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1153,7 +1181,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
 							},
 						},
@@ -1169,7 +1197,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
 							},
 						},
@@ -1185,7 +1213,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionDeny,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
 							},
 						},
@@ -1201,7 +1229,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
 								JWT:         &egv1a1.JWTPrincipal{},
 							},
@@ -1218,7 +1246,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
 								Headers:     []egv1a1.AuthorizationHeaderMatch{{}},
 							},
@@ -1235,11 +1263,25 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{
 									{Country: new("US")},
 								},
 							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "cel not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							CEL:    new(egv1a1.CELExpression("request.path.startsWith('/admin')")),
 						},
 					},
 				},
@@ -1253,13 +1295,13 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					Rules: []egv1a1.AuthorizationRule{
 						{
 							Action: egv1a1.AuthorizationActionAllow,
-							Principal: egv1a1.Principal{
+							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"192.168.0.0/16"},
 							},
 						},
 						{
 							Action:    egv1a1.AuthorizationActionDeny,
-							Principal: egv1a1.Principal{},
+							Principal: &egv1a1.Principal{},
 						},
 					},
 				},
@@ -1352,6 +1394,38 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 				CountryDBSource: countryDB,
 			}),
 			wantErr: "requires ClientTrafficPolicy.spec.clientIPDetection to be configured",
+		},
+		{
+			name:          "empty client ip detection rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{},
+			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}",
+		},
+		{
+			name:          "multiple client ip detection modes rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				CustomHeader:   &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
+				DirectSourceIP: &egv1a1.DirectSourceIPSettings{},
+			},
+			wantErr: "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}",
+		},
+		{
+			name:          "direct source ip accepted",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				DirectSourceIP: &egv1a1.DirectSourceIPSettings{},
+			},
+			wantProvider: true,
 		},
 		{
 			name:          "trusted cidrs rejected",

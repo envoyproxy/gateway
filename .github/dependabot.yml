@@ -115,7 +115,11 @@ updates:
     ignore:
       - dependency-name: "github.com/google/cel-go"
       - dependency-name: "github.com/google/go-containerregistry"
-      - dependency-name: "k8s.io/apimachinery"
+      - dependency-name: "github.com/envoyproxy/go-control-plane*"
+      # Ignore all k8s.io packages on release branches to avoid unintended k8s version bumps
+      - dependency-name: "k8s.io/*"
+      # Ignore sigs.k8s.io/gateway-api on release branches to avoid unintended Gateway API version bumps
+      - dependency-name: "sigs.k8s.io/gateway-api"
     groups:
       gomod:
         patterns:
@@ -129,20 +133,6 @@ updates:
           - "gopkg.in*"
           - "helm.sh*"
           - "gomodules.xyz*"
-        exclude-patterns:
-          - "github.com/envoyproxy/go-control-plane*"
-      k8s.io:
-        patterns:
-          - "k8s.io/*"
-  - package-ecosystem: pip
-    target-branch: "release/v1.8"
-    directories:
-      - /tools/src/codespell
-      - /tools/src/yamllint
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: "[release-1.8]"
   # release/v1.7 branch updates — remove when release/v1.7 reaches EOL
   - package-ecosystem: docker
     target-branch: "release/v1.7"
@@ -178,7 +168,11 @@ updates:
     ignore:
       - dependency-name: "github.com/google/cel-go"
       - dependency-name: "github.com/google/go-containerregistry"
-      - dependency-name: "k8s.io/apimachinery"
+      - dependency-name: "github.com/envoyproxy/go-control-plane*"
+      # Ignore all k8s.io packages on release branches to avoid unintended k8s version bumps
+      - dependency-name: "k8s.io/*"
+      # Ignore sigs.k8s.io/gateway-api on release branches to avoid unintended Gateway API version bumps
+      - dependency-name: "sigs.k8s.io/gateway-api"
     groups:
       gomod:
         patterns:
@@ -192,17 +186,3 @@ updates:
           - "gopkg.in*"
           - "helm.sh*"
           - "gomodules.xyz*"
-        exclude-patterns:
-          - "github.com/envoyproxy/go-control-plane*"
-      k8s.io:
-        patterns:
-          - "k8s.io/*"
-  - package-ecosystem: pip
-    target-branch: "release/v1.7"
-    directories:
-      - /tools/src/codespell
-      - /tools/src/yamllint
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: "[release-1.7]"

@@ -1,0 +1,1 @@
+Added a `xdsNACKTotal` metric to track the number of NACKs received from Envoy, labeled by node ID and resource type URL. A NACK is a DiscoveryRequest carrying an ErrorDetail, indicating that Envoy rejected the last config update. This metric can be used to alert on config issues causing xDS rejections.

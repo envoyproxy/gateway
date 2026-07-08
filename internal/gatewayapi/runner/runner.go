@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -516,7 +515,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 			for key, entry := range aggregatedStatuses.TCPRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
-				s := gwapiv1a2.TCPRouteStatus{RouteStatus: *entry.status}
+				s := gwapiv1.TCPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.TCPRouteStatuses.Store(key, &s)
 				tcpRouteStatusCount++
 				delete(keysToDelete.TCPRouteStatus, key)
@@ -524,7 +523,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 			for key, entry := range aggregatedStatuses.UDPRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
-				s := gwapiv1a2.UDPRouteStatus{RouteStatus: *entry.status}
+				s := gwapiv1.UDPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.UDPRouteStatuses.Store(key, &s)
 				udpRouteStatusCount++
 				delete(keysToDelete.UDPRouteStatus, key)
