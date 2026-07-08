@@ -157,8 +157,8 @@ type BackendTrafficPolicySpec struct {
 	// the session cookie Path.
 	//
 	// This only affects routes that already enable session persistence via the
-	// Gateway API HTTPRoute (or GRPCRoute) sessionPersistence field. It does not
-	// enable session persistence on its own.
+	// Gateway API HTTPRoute sessionPersistence field. It does not enable session
+	// persistence on its own.
 	//
 	// +optional
 	SessionPersistence *SessionPersistenceOverride `json:"sessionPersistence,omitempty"`

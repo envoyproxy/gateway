@@ -1340,7 +1340,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 
 // applySessionPersistenceOverride applies the BackendTrafficPolicy session
 // persistence overrides to a route. It only mutates routes that already have
-// session persistence enabled via the Gateway API (x)Route sessionPersistence
+// session persistence enabled via the Gateway API HTTPRoute sessionPersistence
 // field; it does not enable session persistence on its own.
 func applySessionPersistenceOverride(r *ir.HTTPRoute, policy *egv1a1.BackendTrafficPolicy) {
 	if r == nil || r.SessionPersistence == nil || r.SessionPersistence.Cookie == nil {
