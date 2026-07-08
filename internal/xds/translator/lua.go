@@ -12,7 +12,10 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	luafilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -120,11 +123,30 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 
 	for _, ep := range irRoute.EnvoyExtensions.Luas {
 		filterName := luaFilterName(ep)
-		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
-			Config: &anypb.Any{},
-		}); err != nil {
+		routeCfg, err := buildLuaRouteFilterConfig(ep)
+		if err != nil {
+			return err
+		}
+		if err := enableFilterOnRoute(route, filterName, routeCfg); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func buildLuaRouteFilterConfig(lua ir.Lua) (proto.Message, error) {
+	if lua.FilterContext == nil || lua.FilterContext.Raw == nil {
+		return &routev3.FilterConfig{
+			Config: &anypb.Any{},
+		}, nil
+	}
+
+	filterCtx := &structpb.Struct{}
+	if err := protojson.Unmarshal(lua.FilterContext.Raw, filterCtx); err != nil {
+		return nil, err
+	}
+
+	return &luafilterv3.LuaPerRoute{
+		FilterContext: filterCtx,
+	}, nil
 }
