@@ -598,9 +598,6 @@ type PathSettings struct {
 // HostSettings holds configuration for Host/Authority header normalization
 // +k8s:deepcopy-gen=true
 type HostSettings struct {
-	// StripPort strips the port from the Host/Authority header unconditionally
-	// (Envoy's strip_any_host_port). A false value means no port stripping is performed.
-	StripPort bool `json:"stripPort,omitempty" yaml:"stripPort,omitempty"`
 	// StripTrailingHostDot strips the trailing dot from the Host/Authority header before processing.
 	StripTrailingHostDot bool `json:"stripTrailingHostDot,omitempty" yaml:"stripTrailingHostDot,omitempty"`
 }

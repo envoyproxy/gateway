@@ -26,7 +26,6 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8081
-        stripAnyHostPort: true
         stripTrailingHostDot: true
         useRemoteAddress: true
     name: first-listener
@@ -61,7 +60,6 @@
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8082
-        stripAnyHostPort: true
         useRemoteAddress: true
     name: second-listener
   maxConnectionsToAcceptPerSocketEvent: 1
