@@ -117,33 +117,45 @@ spec:
                     items:
                       description: |-
                         ExtractFrom is where to fetch the key from the coming request.
-                        Only one of header, param or cookie is supposed to be specified.
+                        Only one of headers, params or cookies must be specified.
                       properties:
                         cookies:
                           description: |-
                             Cookies is the names of the cookie to fetch the key from.
                             If multiple cookies are specified, envoy will look for the api key in the order of the list.
-                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                            This field is optional, but only one of headers, params or cookies must be specified.
                           items:
+                            minLength: 1
                             type: string
+                          minItems: 1
                           type: array
                         headers:
                           description: |-
                             Headers is the names of the header to fetch the key from.
                             If multiple headers are specified, envoy will look for the api key in the order of the list.
-                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                            This field is optional, but only one of headers, params or cookies must be specified.
                           items:
+                            minLength: 1
                             type: string
+                          minItems: 1
                           type: array
                         params:
                           description: |-
                             Params is the names of the query parameter to fetch the key from.
                             If multiple params are specified, envoy will look for the api key in the order of the list.
-                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                            This field is optional, but only one of headers, params or cookies must be specified.
                           items:
+                            minLength: 1
                             type: string
+                          minItems: 1
                           type: array
                       type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of headers, params, or cookies must be
+                          specified
+                        rule: '(has(self.headers) ? 1 : 0) + (has(self.params) ? 1
+                          : 0) + (has(self.cookies) ? 1 : 0) == 1'
+                    minItems: 1
                     type: array
                   forwardClientIDHeader:
                     description: |-
@@ -187,6 +199,35 @@ spec:
                           enum:
                           - Allow
                           - Deny
+                          type: string
+                        cel:
+                          description: |-
+                            CEL specifies a Common Expression Language expression to evaluate for the
+                            request. If specified, the expression must evaluate to true for the rule to match.
+
+                            The expression can use Envoy attributes exposed to the CEL runtime.
+                            Request attributes, such as request.path, request.url_path, request.host,
+                            request.scheme, request.method, request.headers, and request.query, are
+                            generally available during authorization. Connection attributes, such as
+                            source.address, source.port, destination.address, destination.port,
+                            connection.mtls, and connection.requested_server_name, may also be used.
+                            Dynamic metadata and filter state produced by earlier filters may also be
+                            available through attributes such as metadata and filter_state.
+                            Response attributes are only available after the request completes and
+                            should not be used for authorization decisions.
+
+                            For more details, see:
+                            https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
+
+                            The rule matches only when the expression evaluates to a boolean true.
+                            Non-boolean results, false, null, and CEL evaluation errors are treated as
+                            no match.
+
+                            Examples:
+                            `request.headers['x-tenant'] == 'team-a'`
+                            `request.method == 'POST' && request.path.startsWith('/admin')`
+                          maxLength: 4096
+                          minLength: 1
                           type: string
                         name:
                           description: |-
@@ -509,8 +550,10 @@ spec:
                               || has(self.clientIPGeoLocations))
                       required:
                       - action
-                      - principal
                       type: object
+                      x-kubernetes-validations:
+                      - message: at least one of principal or cel must be specified
+                        rule: has(self.principal) || has(self.cel)
                     type: array
                 type: object
               basicAuth:
@@ -5368,6 +5411,15 @@ spec:
                                 in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                               type: string
+                            failedRefetchDuration:
+                              description: |-
+                                FailedRefetchDuration is the duration Envoy waits before re-fetching the JWKS
+                                after a failed fetch.
+                                This does not control retries within a single fetch attempt (see BackendSettings.Retry),
+                                only the interval between fetch attempts after a failure.
+                                If not specified, Envoy's default of 1 second is used.
+                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                              type: string
                             uri:
                               description: |-
                                 URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
@@ -5409,8 +5461,10 @@ spec:
                 description: |-
                   MergeType determines how this configuration is merged with existing SecurityPolicy
                   configurations targeting a parent resource. When set, this configuration will be merged
-                  into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).
-                  This field cannot be set when targeting a parent resource (Gateway).
+                  into the closest parent SecurityPolicy in the route's attachment hierarchy (for
+                  example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet
+                  listener).
+                  Currently, this field can only be set when targeting xRoute resources.
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
                 x-kubernetes-validations:
@@ -7426,19 +7480,25 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
-              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
-                ''GRPCRoute'', ''TCPRoute''] : true'
+            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute
+              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'',
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''] : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
+                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
+            - message: mergeType can only be used with xRoute targets
+              rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) && (!has(self.targetRefs)
+                || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'', ''GRPCRoute'',
+                ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
+                sel.kind in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''])))'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
-                self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)
-                : true'
+                self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
+                : false)) ? has(self.jwt) : true'
           status:
             description: Status defines the current status of SecurityPolicy.
             properties:

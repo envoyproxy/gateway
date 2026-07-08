@@ -10,12 +10,12 @@ global:
   # Override image-specific values directly if a global override is not desired.
   images:
     envoyGateway:
-      # This is the full image name including the hub, repo, and tag.
+      # -- Full image for the Envoy Gateway control plane Deployment installed by this chart.
       image: ${GatewayImage}
-      # Specify image pull policy if default behavior isn't desired.
+      # -- Image pull policy for the Envoy Gateway control plane Deployment.
       # Default behavior: latest images will be Always else IfNotPresent.
       pullPolicy: ${GatewayImagePullPolicy}
-      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      # -- Pull secrets for the Envoy Gateway control plane Deployment.
       pullSecrets: []
     ratelimit:
       # This is the full image name including the hub, repo, and tag.
@@ -26,14 +26,21 @@ global:
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
     envoyProxy:
-      # This is the full image name including the hub, repo, and tag for the Envoy Proxy data plane.
-      # If not specified, uses the default image built into envoy-gateway.
+      # -- Full image for the managed Envoy Proxy data plane.
+      # This updates the generated `envoyProxy` config and does not change the `envoy-gateway`
+      # control plane Deployment image. If not specified, the default image built into
+      # `envoy-gateway` is used.
       image: ""
-      # Specify image pull policy if default behavior isn't desired.
+      # -- Image pull policy for the managed Envoy Proxy data plane.
       # Default behavior: IfNotPresent.
       pullPolicy: ""
-      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      # -- Pull secrets for the managed Envoy Proxy data plane.
       pullSecrets: []
+
+# Values for CRDs dependency
+crds:
+  # -- Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately.
+  enabled: true
 
 # -- Labels to apply to all resources
 commonLabels: {}
@@ -70,6 +77,7 @@ deployment:
       runAsUser: 65532
       seccompProfile:
         type: RuntimeDefault
+    strategy: {}
   ports:
     - name: grpc
       port: 18000

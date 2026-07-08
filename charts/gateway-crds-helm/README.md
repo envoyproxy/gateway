@@ -23,7 +23,7 @@ A Helm chart for Envoy Gateway CRDs
 Please refer to Helm's [documentation](https://helm.sh/docs) to get started.
 
 If you want to manage the CRDs outside of the Envoy Gateway Helm chart, you can use this chart to install the CRDs separately.
-If you do, make sure that you don't install the CRDs again when installing the Envoy Gateway Helm chart, by using `--skip-crds` flag.
+If you do, make sure that you don't install the CRDs again when installing the Envoy Gateway Helm chart, by using `--set crds.enabled=false`.
 If your Kubernetes provider already manages Gateway API CRDs for the cluster, compare the provider-installed Gateway API
 version and channel with the [Envoy Gateway compatibility matrix](https://gateway.envoyproxy.io/news/releases/matrix/)
 and the Gateway API resources you plan to use. If they are compatible, leave those CRDs disabled in this chart and

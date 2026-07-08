@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -207,14 +206,14 @@ func newTranslateResult(
 	}
 
 	if n := len(tcpRoutes); n > 0 {
-		translateResult.TCPRoutes = make([]*gwapiv1a2.TCPRoute, n)
+		translateResult.TCPRoutes = make([]*gwapiv1.TCPRoute, n)
 		for i, tcpRoute := range tcpRoutes {
 			translateResult.TCPRoutes[i] = tcpRoute.TCPRoute
 		}
 	}
 
 	if n := len(udpRoutes); n > 0 {
-		translateResult.UDPRoutes = make([]*gwapiv1a2.UDPRoute, n)
+		translateResult.UDPRoutes = make([]*gwapiv1.UDPRoute, n)
 		for i, udpRoute := range udpRoutes {
 			translateResult.UDPRoutes[i] = udpRoute.UDPRoute
 		}
@@ -297,7 +296,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 
 	// Compute ListenerSet status based on listener processing results
 	// This should be done after ProcessListeners because ListenerSet status depends on listener processing results
-	t.ProcessListenerSetStatus(resources.ListenerSets)
+	t.ProcessListenerSetStatus(resources.ListenerSets, acceptedGateways)
 
 	// Process EnvoyPatchPolicies
 	envoyPatchPolicies := t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)

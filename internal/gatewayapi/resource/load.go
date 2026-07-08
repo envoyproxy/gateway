@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -207,7 +206,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 			resources.Gateways = append(resources.Gateways, gateway)
 		case KindTCPRoute:
 			typedSpec := spec.Interface()
-			tcpRoute := &gwapiv1a2.TCPRoute{
+			tcpRoute := &gwapiv1.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindTCPRoute,
 					APIVersion: gv,
@@ -216,12 +215,12 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a2.TCPRouteSpec),
+				Spec: typedSpec.(gwapiv1.TCPRouteSpec),
 			}
 			resources.TCPRoutes = append(resources.TCPRoutes, tcpRoute)
 		case KindUDPRoute:
 			typedSpec := spec.Interface()
-			udpRoute := &gwapiv1a2.UDPRoute{
+			udpRoute := &gwapiv1.UDPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindUDPRoute,
 					APIVersion: gv,
@@ -230,7 +229,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a2.UDPRouteSpec),
+				Spec: typedSpec.(gwapiv1.UDPRouteSpec),
 			}
 			resources.UDPRoutes = append(resources.UDPRoutes, udpRoute)
 		case KindTLSRoute:
@@ -600,12 +599,12 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)
 		}
-	case *gwapiv1a2.TCPRoute:
+	case *gwapiv1.TCPRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)
 		}
-	case *gwapiv1a2.UDPRoute:
+	case *gwapiv1.UDPRoute:
 		protocol = ir.UDPProtocolType
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
