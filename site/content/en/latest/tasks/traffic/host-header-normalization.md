@@ -13,7 +13,7 @@ using the [ClientTrafficPolicy][] API.
 
 Envoy does not strip trailing dots from the `Host` header by default, unlike some
 other proxies (e.g. NGINX). This means requests with `Host: example.com.` will not
-match routes with domains set to `example.com`. Use `headers.host.stripTrailingHostDot` to
+match routes with domains set to `example.com`. Use `spec.headers.host.stripTrailingHostDot` to
 normalize these requests.
 
 When the host includes a port (e.g. `example.com.:443`), only the trailing dot from
