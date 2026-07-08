@@ -116,7 +116,9 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 
 	return &hcm.HttpConnectionManager_Tracing{
 		ClientSampling: &xdstype.Percent{
-			Value: ptr.Deref(tracing.ClientSamplingRate, 100),
+			// Default to 0 so Envoy Gateway does not honor client-forced tracing
+			// unless users explicitly opt in with clientSamplingFraction.
+			Value: ptr.Deref(tracing.ClientSamplingRate, 0),
 		},
 		OverallSampling: &xdstype.Percent{
 			Value: ptr.Deref(tracing.OverallSamplingRate, 100),

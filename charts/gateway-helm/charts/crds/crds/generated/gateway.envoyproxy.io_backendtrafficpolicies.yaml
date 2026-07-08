@@ -3155,6 +3155,8 @@ spec:
                         description: |-
                           ClientSamplingFraction represents the fraction of requests that should be
                           selected for tracing when requested by the client.
+                          If unspecified, client-forced tracing is disabled by default and users must
+                          set this field to opt in.
                         properties:
                           denominator:
                             default: 100

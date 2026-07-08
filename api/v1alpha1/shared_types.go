@@ -943,6 +943,8 @@ type Tracing struct {
 	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
 	// ClientSamplingFraction represents the fraction of requests that should be
 	// selected for tracing when requested by the client.
+	// If unspecified, client-forced tracing is disabled by default and users must
+	// set this field to opt in.
 	//
 	// +optional
 	ClientSamplingFraction *gwapiv1.Fraction `json:"clientSamplingFraction,omitempty"`
