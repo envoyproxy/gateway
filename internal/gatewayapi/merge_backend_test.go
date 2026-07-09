@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -235,7 +237,7 @@ func TestResolveBackendClusterName(t *testing.T) {
 
 	t.Run("nil gatewayCtx never merges", func(t *testing.T) {
 		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: true}}
-		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, nil, nil, false)
+		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, nil, nil, false, true)
 		require.False(t, merge)
 		require.Equal(t, "route-scoped-name", name)
 		require.Equal(t, BackendClusterKey{Name: "route-scoped-name"}, key)
@@ -244,7 +246,7 @@ func TestResolveBackendClusterName(t *testing.T) {
 	t.Run("merge disabled falls back to route-scoped name", func(t *testing.T) {
 		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: false}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
-		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, false)
+		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, false, true)
 		require.False(t, merge)
 		require.Equal(t, "route-scoped-name", name)
 		require.Equal(t, BackendClusterKey{Name: "route-scoped-name"}, key)
@@ -253,7 +255,7 @@ func TestResolveBackendClusterName(t *testing.T) {
 	t.Run("merge enabled resolves to backend-identity name", func(t *testing.T) {
 		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: true}, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
-		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, false)
+		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, false, true)
 		require.True(t, merge)
 		require.Equal(t, "backend/service/default/service-1/8080", name)
 		require.Equal(t, identity.Kind, key.Kind)
@@ -263,11 +265,83 @@ func TestResolveBackendClusterName(t *testing.T) {
 	t.Run("route-level cluster settings excludes even when routing type matches", func(t *testing.T) {
 		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: true}, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
-		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, true)
+		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, true, true)
 		require.False(t, merge)
 		require.Equal(t, "route-scoped-name", name)
 		require.Equal(t, BackendClusterKey{Name: "route-scoped-name"}, key)
 	})
+
+	t.Run("dynamic resolver backend never merges", func(t *testing.T) {
+		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: true}, TranslatorContext: &TranslatorContext{}}
+		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, false, false)
+		require.False(t, merge)
+		require.Equal(t, "route-scoped-name", name)
+		require.Equal(t, BackendClusterKey{Name: "route-scoped-name"}, key)
+	})
+}
+
+func TestIsMergeableBackendKind(t *testing.T) {
+	dynamicResolverType := egv1a1.BackendTypeDynamicResolver
+	tests := []struct {
+		name                string
+		backendRef          gwapiv1.BackendObjectReference
+		backend             *egv1a1.Backend
+		extensionGroupKinds []schema.GroupKind
+		want                bool
+	}{
+		{
+			name:       "service is mergeable",
+			backendRef: gwapiv1.BackendObjectReference{Name: "service-1"},
+			want:       true,
+		},
+		{
+			name: "backend CR is mergeable",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr(egv1a1.GroupName),
+				Kind:  KindPtr(egv1a1.KindBackend),
+				Name:  "be-1",
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{Name: "be-1", Namespace: "default"},
+			},
+			want: true,
+		},
+		{
+			name: "dynamic resolver backend is never mergeable",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr(egv1a1.GroupName),
+				Kind:  KindPtr(egv1a1.KindBackend),
+				Name:  "be-dynamic",
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default"},
+				Spec:       egv1a1.BackendSpec{Type: &dynamicResolverType},
+			},
+			want: false,
+		},
+		{
+			name: "custom backend is never mergeable",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr("example.io"),
+				Kind:  KindPtr("Foo"),
+				Name:  "custom-1",
+			},
+			extensionGroupKinds: []schema.GroupKind{{Group: "example.io", Kind: "Foo"}},
+			want:                false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{ExtensionGroupKinds: tc.extensionGroupKinds}
+			backendMap := map[types.NamespacedName]*egv1a1.Backend{}
+			if tc.backend != nil {
+				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
+			}
+			tr.TranslatorContext = &TranslatorContext{BackendMap: backendMap}
+			require.Equal(t, tc.want, tr.isMergeableBackendKind(tc.backendRef, "default"))
+		})
+	}
 }
 
 func TestGetOrCreateBackendCluster(t *testing.T) {
