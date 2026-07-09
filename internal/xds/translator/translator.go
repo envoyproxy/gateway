@@ -70,6 +70,10 @@ type Translator struct {
 	RuntimeFlags *egv1a1.RuntimeFlags
 
 	Logger logging.Logger
+
+	// backendIndex resolves BackendClusterRef.Name against the current Translate() call's
+	// xdsIR.Backends registry. Rebuilt at the start of every Translate() call.
+	backendIndex backendClusterIndex
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -98,6 +102,8 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	if xdsIR == nil {
 		return nil, errors.New("ir is nil")
 	}
+
+	t.backendIndex = newBackendClusterIndex(xdsIR)
 
 	tCtx := new(types.ResourceVersionTable)
 
