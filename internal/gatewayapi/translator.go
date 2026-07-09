@@ -88,9 +88,9 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
-	// MergeBackends controls cluster deduplication for backends that share the same
-	// destination (routes referencing the same backend reuse a single BackendCluster).
-	MergeBackends MergeBackendsConfig
+	// MergeBackends is true when cluster deduplication is enabled: routes referencing the same
+	// backend reuse a single BackendCluster instead of each getting their own.
+	MergeBackends bool
 
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
@@ -135,15 +135,6 @@ type Translator struct {
 	Logger logging.Logger
 }
 
-// MergeBackendsConfig controls backend cluster deduplication for routes sharing the same backend.
-// TODO: extend with a selector to opt individual backends in/out, and a Strict mode that rejects
-// (rather than forks around) a listener/route/route-rule BTP that would diverge from a shared
-// backend's cluster-level config.
-type MergeBackendsConfig struct {
-	// Enabled toggles whether cluster deduplication is considered at all.
-	Enabled bool
-}
-
 // shouldMergeBackend decides whether a specific backend participates in cluster deduplication.
 //
 // Today this reflects the global Enabled flag, refined by a loose-mode routing-type check: a
@@ -161,7 +152,7 @@ func (t *Translator) shouldMergeBackend(
 	btpRoutingType *egv1a1.RoutingType,
 	hasRouteLevelClusterSettings bool,
 ) bool {
-	if !t.MergeBackends.Enabled {
+	if !t.MergeBackends {
 		return false
 	}
 	if hasRouteLevelClusterSettings {

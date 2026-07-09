@@ -130,11 +130,6 @@ func TestTranslate(t *testing.T) {
 				}
 			}
 
-			// The "mergebackends-" testdata prefix exercises MergeBackends (cluster deduplication) with
-			// MergeBackends.Enabled forced on, since there is no API/CRD surface to set it from the
-			// testdata YAML itself yet.
-			mergeBackendsEnabled := strings.HasPrefix(strings.Split(filepath.Base(inputFile), ".")[0], "mergebackends-")
-
 			translator := &Translator{
 				GatewayControllerName:           egv1a1.GatewayControllerName,
 				GatewayClassName:                "envoy-gateway-class",
@@ -144,7 +139,7 @@ func TestTranslate(t *testing.T) {
 				SDSSecretRefEnabled:             sdsEnabled,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
-				MergeBackends:                   MergeBackendsConfig{Enabled: mergeBackendsEnabled},
+				MergeBackends:                   IsMergeBackendsEnabled(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
@@ -491,7 +486,7 @@ func TestTranslate(t *testing.T) {
 			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 
-			if mergeBackendsEnabled {
+			if IsMergeBackendsEnabled(resources) {
 				assertMergedBackendClusterCount(t, testName(inputFile), got)
 			}
 
@@ -523,7 +518,7 @@ func TestTranslate(t *testing.T) {
 			}
 			// mergebackends- testdata cases exist specifically to verify Backends (cluster
 			// deduplication), so unlike every other case it must NOT be ignored here.
-			if !mergeBackendsEnabled {
+			if !IsMergeBackendsEnabled(resources) {
 				// TODO: remove once Xds.Backends is validated/consumed by later BackendCluster dedup tasks.
 				// This must match the anonymous struct type produced by xdsWithoutEqual, not ir.Xds itself,
 				// since the ClearXdsEqual transformer below runs first.

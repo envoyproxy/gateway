@@ -229,7 +229,7 @@ func TestShouldMergeBackend(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tr := &Translator{
-				MergeBackends: MergeBackendsConfig{Enabled: tc.mergeEnabled},
+				MergeBackends: tc.mergeEnabled,
 				TranslatorContext: &TranslatorContext{
 					BTPRoutingTypeIndex: &BTPRoutingTypeIndex{
 						gatewayLevel: map[btpRoutingKey]*egv1a1.RoutingType{
@@ -248,7 +248,7 @@ func TestResolveBackendClusterName(t *testing.T) {
 	identity := BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
 
 	t.Run("nil gatewayCtx never merges", func(t *testing.T) {
-		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: true}}
+		tr := &Translator{MergeBackends: true}
 		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, nil, nil, false, true)
 		require.False(t, merge)
 		require.Equal(t, "route-scoped-name", name)
@@ -256,7 +256,7 @@ func TestResolveBackendClusterName(t *testing.T) {
 	})
 
 	t.Run("merge disabled falls back to route-scoped name", func(t *testing.T) {
-		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: false}}
+		tr := &Translator{MergeBackends: false}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
 		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, false, true)
 		require.False(t, merge)
@@ -265,7 +265,7 @@ func TestResolveBackendClusterName(t *testing.T) {
 	})
 
 	t.Run("merge enabled resolves to backend-identity name", func(t *testing.T) {
-		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: true}, TranslatorContext: &TranslatorContext{}}
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
 		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, false, true)
 		require.True(t, merge)
@@ -275,7 +275,7 @@ func TestResolveBackendClusterName(t *testing.T) {
 	})
 
 	t.Run("route-level cluster settings excludes even when routing type matches", func(t *testing.T) {
-		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: true}, TranslatorContext: &TranslatorContext{}}
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
 		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, true, true)
 		require.False(t, merge)
@@ -284,7 +284,7 @@ func TestResolveBackendClusterName(t *testing.T) {
 	})
 
 	t.Run("dynamic resolver backend never merges", func(t *testing.T) {
-		tr := &Translator{MergeBackends: MergeBackendsConfig{Enabled: true}, TranslatorContext: &TranslatorContext{}}
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
 		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, false, false)
 		require.False(t, merge)

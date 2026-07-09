@@ -68,6 +68,18 @@ gateways:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          mergeBackends:
+            enabled: true
+            mode: Fallback
+        status: {}
       listeners:
       - name: envoy-gateway/gateway-1/tcp-1
         ports:

@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -2484,6 +2485,37 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"If type is Remote, local field must not be set"},
+		},
+		{
+			desc: "mergeBackends with everything unset defaults to disabled/Fallback and is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeBackends enabled with Fallback mode is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				mode := egv1a1.MergeBackendsModeFallback
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: ptr.To(true), Mode: &mode}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeBackends enabled false with Fallback mode is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				mode := egv1a1.MergeBackendsModeFallback
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: ptr.To(false), Mode: &mode}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeBackends Force mode is rejected even when enabled",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				mode := egv1a1.MergeBackendsModeForce
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: ptr.To(true), Mode: &mode}
+			},
+			wantErrors: []string{"Force mode is not supported yet"},
 		},
 	}
 
