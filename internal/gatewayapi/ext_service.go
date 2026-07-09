@@ -31,14 +31,15 @@ func (t *Translator) translateExtServiceBackendRefs(
 	configType string,
 	index int, // index is used to differentiate between multiple external services in the same policy
 	xdsIR resource.XdsIRMap,
-) (*ir.RouteDestination, error) {
+) (*ir.RouteDestination, *ir.BackendCluster, error) {
 	var (
 		rs  *ir.RouteDestination
+		bc  *ir.BackendCluster
 		err error
 	)
 
 	if len(backendRefs) == 0 {
-		return nil, errors.New("no backendRefs found for external service")
+		return nil, nil, errors.New("no backendRefs found for external service")
 	}
 
 	ds := make([]*ir.DestinationSetting, 0, len(backendRefs))
@@ -51,7 +52,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 			policy.GetNamespace(),
 			policy.GetObjectKind().GroupVersionKind().Kind,
 			resources); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// don't process backends with weight 0
@@ -70,7 +71,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 			resources,
 			gtwCtx,
 		); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		ds = append(ds, extServiceDest)
 	}
@@ -81,23 +82,23 @@ func (t *Translator) translateExtServiceBackendRefs(
 		Metadata: buildResourceMetadata(policy, nil),
 	}
 	if len(ds) > 0 {
-		bc := &ir.BackendCluster{
+		bc = &ir.BackendCluster{
 			Name:     destName,
 			Settings: ds,
 			Metadata: buildResourceMetadata(policy, nil),
 		}
 		// TODO: Support mixed destinations for ext service
 		if bc.HasMixedEndpoints() {
-			return nil, errors.New("external service destinations having multiple endpoint types are not supported")
+			return nil, nil, errors.New("external service destinations having multiple endpoint types are not supported")
 		}
 		rs.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(t.gatewayXdsIR(gtwCtx, xdsIR), bc, nil, nil)}
 	}
 
 	if validationErr := rs.Validate(); validationErr != nil {
-		return nil, validationErr
+		return nil, nil, validationErr
 	}
 
-	return rs, nil
+	return rs, bc, nil
 }
 
 func (t *Translator) processExtServiceDestination(
