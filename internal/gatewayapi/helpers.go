@@ -505,6 +505,14 @@ func irTCPRouteName(route RouteContext) string {
 	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
+// replacedRouteKey identifies a TCP/UDP IR route within an IR listener. It is
+// used to record routes claimed by a route-scoped policy with mergeType Replace
+// so that parent Gateway/Listener policies skip them entirely instead of
+// back-filling fields the replacing policy intentionally omitted.
+func replacedRouteKey(listenerName, destinationName string) string {
+	return fmt.Sprintf("%s/%s", listenerName, destinationName)
+}
+
 func irUDPRouteName(route RouteContext) string {
 	return irTCPRouteName(route)
 }

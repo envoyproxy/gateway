@@ -127,6 +127,17 @@ type Translator struct {
 	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
 	oidcDiscoveryCache *oidcDiscoveryCache
 
+	// replacedTrafficPolicyRoutes tracks TCP/UDP IR routes claimed by a route-scoped
+	// BackendTrafficPolicy using mergeType Replace, keyed by replacedRouteKey.
+	// Parent Gateway/Listener policies skip these routes instead of back-filling
+	// fields the replacing policy intentionally omitted.
+	replacedTrafficPolicyRoutes sets.Set[string]
+
+	// replacedSecurityPolicyRoutes is the SecurityPolicy analog of
+	// replacedTrafficPolicyRoutes, tracking TCP IR routes whose authorization is
+	// claimed by a route-scoped SecurityPolicy using mergeType Replace.
+	replacedSecurityPolicyRoutes sets.Set[string]
+
 	// Logger is the logger used by the translator.
 	Logger logging.Logger
 }
