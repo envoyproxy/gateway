@@ -112,23 +112,27 @@ func TestDetermineIPFamily(t *testing.T) {
 
 func TestCreateExtServiceXDSCluster(t *testing.T) {
 	tests := []struct {
-		name string
-		rd   *ir.RouteDestination
-		want error
+		name         string
+		rd           *ir.RouteDestination
+		backendIndex map[string]*ir.BackendCluster
+		want         error
 	}{
 		{
 			name: "success with single backend cluster",
 			rd: &ir.RouteDestination{
 				Name: "ext-svc",
 				BackendClusterRefs: []*ir.BackendClusterRef{{
-					Backend: &ir.BackendCluster{
-						Name: "ext-svc",
-						Settings: []*ir.DestinationSetting{{
-							Endpoints:   []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
-							AddressType: new(ir.IP),
-						}},
-					},
+					Name: "ext-svc",
 				}},
+			},
+			backendIndex: map[string]*ir.BackendCluster{
+				"ext-svc": {
+					Name: "ext-svc",
+					Settings: []*ir.DestinationSetting{{
+						Endpoints:   []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
+						AddressType: new(ir.IP),
+					}},
+				},
 			},
 			want: nil,
 		},
@@ -137,9 +141,13 @@ func TestCreateExtServiceXDSCluster(t *testing.T) {
 			rd: &ir.RouteDestination{
 				Name: "ext-svc",
 				BackendClusterRefs: []*ir.BackendClusterRef{
-					{Backend: &ir.BackendCluster{Name: "bc-1", Settings: []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}}}},
-					{Backend: &ir.BackendCluster{Name: "bc-2", Settings: []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}}}}},
+					{Name: "bc-1"},
+					{Name: "bc-2"},
 				},
+			},
+			backendIndex: map[string]*ir.BackendCluster{
+				"bc-1": {Name: "bc-1", Settings: []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}}},
+				"bc-2": {Name: "bc-2", Settings: []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}}}},
 			},
 			want: fmt.Errorf("ext service destination ext-svc must have exactly one backend cluster, got 2"),
 		},
@@ -147,7 +155,7 @@ func TestCreateExtServiceXDSCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tCtx := &types.ResourceVersionTable{}
+			tCtx := &types.ResourceVersionTable{BackendIndex: tt.backendIndex}
 			err := createExtServiceXDSCluster(tt.rd, nil, tCtx)
 			if tt.want == nil {
 				require.NoError(t, err)

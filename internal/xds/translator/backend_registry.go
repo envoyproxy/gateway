@@ -21,9 +21,9 @@ func newBackendClusterIndex(xdsIR *ir.Xds) backendClusterIndex {
 	return idx
 }
 
-// resolve returns the BackendCluster for each ref, in order. A ref whose Name isn't found
-// in the index falls back to its (deprecated) embedded Backend field, for refs built by
-// code that hasn't migrated to registering into Xds.Backends yet.
+// resolve returns the BackendCluster for each ref, in order, by looking up its Name in the
+// index. A ref whose Name isn't found in the index (e.g. it was pruned from Xds.Backends) is
+// silently dropped.
 func (idx backendClusterIndex) resolve(refs []*ir.BackendClusterRef) []*ir.BackendCluster {
 	return ir.ResolveBackendClusterRefs(idx, refs)
 }

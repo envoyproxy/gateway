@@ -30,8 +30,7 @@ type ResourceVersionTable struct {
 	// shared from Translator.backendIndex at the start of Translate(). It lets httpFilter
 	// implementations (patchHCM/patchRoute/patchResources), which only receive a
 	// *ResourceVersionTable and not a *Translator, resolve BackendClusterRefs via the shared
-	// registry instead of each ref's embedded (deprecated) Backend field. See
-	// GetBackendClusters.
+	// registry. See GetBackendClusters.
 	BackendIndex map[string]*ir.BackendCluster
 }
 

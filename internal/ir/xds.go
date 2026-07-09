@@ -983,24 +983,15 @@ func (h *HTTPRoute) GetRetry() *Retry {
 }
 
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
-	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR
+	// translation. RouteDestination.Settings is populated unconditionally at construction time
+	// (internal/gatewayapi/route.go), from the same per-rule backendRef loop that produces
+	// BackendClusterRefs, so for the single-backendRef case dynamic-resolver routes are constrained
+	// to, it already holds the same data a resolved BackendClusterRef would.
 	if h.Destination == nil {
 		return false
 	}
-	// Inlines the old GetBackendClusters() fallback behavior (BackendClusterRefs when
-	// populated, else the legacy Settings field) without calling the now-removed method.
-	// This runs both from internal/ir itself and, via the httpFilter implementations in
-	// internal/xds/translator (e.g. dynamicForwardProxy), from call sites that have no
-	// *Translator in scope and thus no access to the registry-backed getBackendClusters.
-	var settings []*DestinationSetting
-	switch {
-	case len(h.Destination.BackendClusterRefs) == 1:
-		settings = h.Destination.BackendClusterRefs[0].Backend.Settings
-	case len(h.Destination.BackendClusterRefs) == 0:
-		settings = h.Destination.Settings
-	default:
-		return false
-	}
+	settings := h.Destination.Settings
 	return len(settings) == 1 && settings[0].IsDynamicResolver
 }
 
@@ -2091,15 +2082,14 @@ func (b *BackendCluster) ToBackendWeights() *BackendWeights {
 	return w
 }
 
-// BackendClusterRef is a reference from a route rule to a BackendCluster.
+// BackendClusterRef is a reference from a route rule (or other destination owner) to a
+// backend cluster, identified by name. The referenced BackendCluster's data (Settings,
+// Metadata) lives exclusively in the owning Xds's Backends registry — see Xds.Backends —
+// never here, so that per-route/per-hostname DeepCopy can't duplicate or desync it.
 // +kubebuilder:object:generate=true
 type BackendClusterRef struct {
 	// Name identifies the referenced BackendCluster in the owning Xds's Backends registry.
-	// TODO: remove Backend once all consumers resolve by Name against Xds.Backends.
-	Name string `json:"name,omitempty" yaml:"name,omitempty"`
-	// Backend points to the shared BackendCluster.
-	// TODO: deprecated in favor of Name — do not add new readers of this field.
-	Backend *BackendCluster `json:"backend" yaml:"backend"`
+	Name string `json:"name" yaml:"name"`
 	// Weight for weighted routing across multiple BackendRefs.
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 	// Filters are per-backendRef filters (header modification, credential injection, etc.)
@@ -2107,8 +2097,7 @@ type BackendClusterRef struct {
 }
 
 // ResolveBackendClusterRefs resolves each ref's Name against idx (a name-keyed index of
-// BackendClusters, typically built from Xds.Backends), falling back to the ref's embedded
-// (deprecated) Backend field if not found in the index. Shared by the xds/translator and
+// BackendClusters, typically built from Xds.Backends). Shared by the xds/translator and
 // xds/types packages so both the Translator-level and ResourceVersionTable-level indices
 // resolve refs identically without duplicating the lookup logic.
 func ResolveBackendClusterRefs(idx map[string]*BackendCluster, refs []*BackendClusterRef) []*BackendCluster {
@@ -2116,10 +2105,6 @@ func ResolveBackendClusterRefs(idx map[string]*BackendCluster, refs []*BackendCl
 	for _, ref := range refs {
 		if bc, ok := idx[ref.Name]; ok {
 			bcs = append(bcs, bc)
-			continue
-		}
-		if ref.Backend != nil {
-			bcs = append(bcs, ref.Backend)
 		}
 	}
 	return bcs

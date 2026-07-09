@@ -1384,10 +1384,6 @@ func TestValidateRouteDestination(t *testing.T) {
 				Name: "single-bc",
 				BackendClusterRefs: []*BackendClusterRef{{
 					Name: "bc-1",
-					Backend: &BackendCluster{
-						Name:     "bc-1",
-						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
-					},
 				}},
 			},
 			want: nil,
@@ -1397,14 +1393,8 @@ func TestValidateRouteDestination(t *testing.T) {
 			input: RouteDestination{
 				Name: "multi-bc",
 				BackendClusterRefs: []*BackendClusterRef{
-					{Name: "bc-1", Backend: &BackendCluster{
-						Name:     "bc-1",
-						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
-					}},
-					{Name: "bc-2", Backend: &BackendCluster{
-						Name:     "bc-2",
-						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}}},
-					}},
+					{Name: "bc-1"},
+					{Name: "bc-2"},
 				},
 			},
 			want: nil,
@@ -1420,17 +1410,8 @@ func TestValidateRouteDestination(t *testing.T) {
 			input: RouteDestination{
 				Name: "multi-bc-multi-settings",
 				BackendClusterRefs: []*BackendClusterRef{
-					{Name: "bc-1", Backend: &BackendCluster{
-						Name: "bc-1",
-						Settings: []*DestinationSetting{
-							{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}},
-							{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}},
-						},
-					}},
-					{Name: "bc-2", Backend: &BackendCluster{
-						Name:     "bc-2",
-						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.3", Port: 8080}}}},
-					}},
+					{Name: "bc-1"},
+					{Name: "bc-2"},
 				},
 			},
 			want: nil,
