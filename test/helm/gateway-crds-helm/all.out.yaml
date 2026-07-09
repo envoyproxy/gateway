@@ -32122,7 +32122,6 @@ spec:
                               type: string
                           type: object
                       type: object
-<<<<<<< HEAD
                     shadowMode:
                       description: |-
                         ShadowMode sets if envoy gateway should treat this external processor as "send and go".
@@ -32131,7 +32130,6 @@ spec:
                         on the ext_proc filter.
                         Defaults to false.
                       type: boolean
-=======
                     statusOnError:
                       description: |-
                         Sets the HTTP status that is returned to the client when the external processor returns an error
@@ -32177,7 +32175,6 @@ spec:
                       - 511
                       format: int32
                       type: integer
->>>>>>> 69e072f40907f1533241861bb1d881b08ea0662b
                   type: object
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
