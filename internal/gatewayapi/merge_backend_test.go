@@ -80,10 +80,9 @@ var mergeBackendsAssertions = map[string]func(t *testing.T, got *TranslateResult
 			"dynamic-resolver backends must never be merged, even across routes referencing the identical Backend CR")
 	},
 	// KNOWN, CONFIRMED GAP: the per-backendRef merge loop in route.go has no check for
-	// ConsistentHash load balancing (or SessionPersistence) before merging a multi-backend
-	// weighted rule's individual backends into shared clusters - splitting them onto separate,
-	// independently-named clusters can break the hash's intended "same client -> same backend"
-	// guarantee. Kept red on purpose.
+	// ConsistentHash load balancing before merging a multi-backend weighted rule's individual
+	// backends into shared clusters - splitting them onto separate, independently-named clusters
+	// can break the hash's intended "same client -> same backend" guarantee. Kept red on purpose.
 	"mergebackends-http-demerge-consistent-hash": func(t *testing.T, got *TranslateResult) {
 		t.Helper()
 		names := destSettingNames(t, got, "http-route-1")
@@ -91,6 +90,19 @@ var mergeBackendsAssertions = map[string]func(t *testing.T, got *TranslateResult
 		for _, n := range names {
 			require.False(t, strings.HasPrefix(n, "backend/"),
 				"backends split across a ConsistentHash-load-balanced rule must not be identity-merged: got %q", n)
+		}
+	},
+	// Gateway API-native SessionPersistence on a multi-backend HTTP rule has the same split-
+	// incompatibility as ConsistentHash above. Unlike that one, this gap is fixed within this
+	// task: processHTTPRouteRules now excludes a rule's backends from merging whenever the rule
+	// has more than one backendRef and a non-nil SessionPersistence, so this assertion is green.
+	"mergebackends-http-demerge-session-persistence": func(t *testing.T, got *TranslateResult) {
+		t.Helper()
+		names := destSettingNames(t, got, "http-route-1")
+		require.Len(t, names, 2)
+		for _, n := range names {
+			require.False(t, strings.HasPrefix(n, "backend/"),
+				"backends split across a SessionPersistence rule must not be identity-merged: got %q", n)
 		}
 	},
 }

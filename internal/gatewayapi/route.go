@@ -273,11 +273,22 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(httpRoute, parentRef, rule.Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 
+		// A multi-backend rule with SessionPersistence must not have its backends independently
+		// merged into shared clusters: splitting a single hash/cookie-routed weighted set across
+		// clusters that may also be shared with other routes can break the intended
+		// "same client -> same backend" stickiness guarantee. A single-backend rule has no split
+		// to preserve, so it is unaffected. GRPCRoute has no SessionPersistence field in the
+		// Gateway API and this codebase does not process one for GRPC, so this check is HTTP-only.
+		splitIncompatible := len(rule.BackendRefs) > 1 && rule.SessionPersistence != nil
+
 		for i := range rule.BackendRefs {
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())
 			backendClusterIdentity := backendClusterIdentity(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
 			mergeableKind := t.isMergeableBackendKind(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
 			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind)
+			if splitIncompatible {
+				backendClusterKey, backendClusterName, merge = BackendClusterKey{Name: destName}, destName, false
+			}
 			settingName := backendClusterSettingName(destName, i, backendClusterName, merge)
 
 			backendRefCtx := BackendRefWithFilters{
