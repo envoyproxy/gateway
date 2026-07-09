@@ -85,6 +85,7 @@ http:
             - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
               failOpen: false
               shadowMode: true
+              statusOnError: 503
               messageTimeout: 15s
               requestAttributes:
                 - xds.route_metadata

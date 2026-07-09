@@ -774,8 +774,9 @@ func (t *Translator) buildLua(
 		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
 	}
 	return &ir.Lua{
-		Name: name,
-		Code: luaCode,
+		Name:          name,
+		Code:          luaCode,
+		FilterContext: lua.FilterContext,
 	}, nil
 }
 
@@ -895,6 +896,10 @@ func (t *Translator) buildExtProc(
 
 	if extProc.FailOpen != nil {
 		extProcIR.FailOpen = extProc.FailOpen
+	}
+
+	if extProc.StatusOnError != nil {
+		extProcIR.StatusOnError = extProc.StatusOnError
 	}
 
 	if extProc.ProcessingMode != nil {

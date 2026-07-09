@@ -182,6 +182,9 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 				if jwks.CacheDuration != nil {
 					remote.RemoteJwks.CacheDuration = durationpb.New(jwks.CacheDuration.Duration)
 				}
+				if jwks.FailedRefetchDuration != nil {
+					remote.RemoteJwks.AsyncFetch.FailedRefetchDuration = durationpb.New(jwks.FailedRefetchDuration.Duration)
+				}
 				// Set the retry policy if it exists.
 				if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
 					var rp *corev3.RetryPolicy

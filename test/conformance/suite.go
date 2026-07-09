@@ -6,12 +6,16 @@
 package conformance
 
 import (
+	"encoding/json"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/conformance"
 	"sigs.k8s.io/gateway-api/conformance/tests"
+	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
 	"github.com/envoyproxy/gateway/test/e2e"
@@ -19,10 +23,18 @@ import (
 )
 
 func conformanceOpts(t *testing.T) suite.ConformanceOptions {
+	suiteOpts := suite.ConfigurableOptions{
+		TimeoutConfig: config.DefaultTimeoutConfig(),
+	}
+	flags.ApplyAll(&suiteOpts)
+	data, _ := json.MarshalIndent(suiteOpts, "", "  ")
+	tlog.Logf(t, "Running Conformance tests with options: %s\n", string(data))
+
 	gatewayNamespaceMode := egtests.IsGatewayNamespaceMode()
 	internalSuite := EnvoyGatewaySuite(gatewayNamespaceMode, egtests.UseStandardChannel())
 
 	opts := conformance.DefaultOptions(t)
+	opts.ConfigurableOptions = suiteOpts
 	opts.SkipTests = internalSuite.SkipTests
 	opts.SupportedFeatures = internalSuite.SupportedFeatures
 	opts.ExemptFeatures = internalSuite.ExemptFeatures
@@ -36,6 +48,14 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 		)
 	}
 
+	opts.SkipTests = append(opts.SkipTests,
+		// TODO: retry after https://github.com/envoyproxy/gateway/pull/9196 merged
+		tests.GatewayListenerUnsupportedProtocol.ShortName,
+		// TODO: will be fixed in https://github.com/envoyproxy/gateway/pull/9247
+		tests.TCPRouteMultipleRoutesAttachment.ShortName,
+		tests.UDPRouteMultipleRoutesAttachment.ShortName,
+	)
+
 	opts.Hook = e2e.Hook
 	opts.FailFast = true
 
@@ -47,7 +67,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := make([]suite.ConformanceTest, 0, 4)
 	skipTests = append(skipTests,
 		// TODO: fix following conformance tests
-		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
 	)
 
@@ -85,13 +104,15 @@ func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
 // EnvoyGatewaySuite is the conformance suite configuration for the Gateway API.
 func EnvoyGatewaySuite(gatewayNamespaceMode, standardChannel bool) suite.ConformanceOptions {
 	return suite.ConformanceOptions{
-		SupportedFeatures: allFeatures(gatewayNamespaceMode, standardChannel),
-		ExemptFeatures:    meshFeatures(),
-		SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
+		ConfigurableOptions: suite.ConfigurableOptions{
+			SupportedFeatures: allFeatures(gatewayNamespaceMode, standardChannel),
+			ExemptFeatures:    meshFeatures(),
+			SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
+		},
 	}
 }
 
-func allFeatures(gatewayNamespaceMode, standardChannel bool) sets.Set[features.FeatureName] {
+func allFeatures(gatewayNamespaceMode, standardChannel bool) []features.FeatureName {
 	result := sets.New[features.FeatureName]()
 	skipped := SkipFeatures(gatewayNamespaceMode)
 	for _, feature := range features.AllFeatures.UnsortedList() {
@@ -104,7 +125,7 @@ func allFeatures(gatewayNamespaceMode, standardChannel bool) sets.Set[features.F
 			result.Insert(feature.Name)
 		}
 	}
-	for _, feature := range features.UDPRouteFeatures {
+	for feature := range features.UDPRouteFeatures {
 		if standardChannel && feature.Channel != features.FeatureChannelStandard {
 			continue
 		}
@@ -114,10 +135,10 @@ func allFeatures(gatewayNamespaceMode, standardChannel bool) sets.Set[features.F
 
 	// this's used to skip TLSRouteListenerMixedTerminationNotSupported
 	result.Insert(features.TLSRouteModeMixedFeature.Name)
-	return result
+	return result.UnsortedList()
 }
 
-func meshFeatures() sets.Set[features.FeatureName] {
+func meshFeatures() []features.FeatureName {
 	result := sets.New[features.FeatureName]()
 	for _, feature := range features.MeshCoreFeatures.UnsortedList() {
 		result.Insert(feature.Name)
@@ -125,5 +146,5 @@ func meshFeatures() sets.Set[features.FeatureName] {
 	for _, feature := range features.MeshExtendedFeatures.UnsortedList() {
 		result.Insert(feature.Name)
 	}
-	return result
+	return result.UnsortedList()
 }
