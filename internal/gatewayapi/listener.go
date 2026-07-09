@@ -705,14 +705,14 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 	var err error
 	envoyProxy := proxyInfra.Config
 
-	xdsIR.AccessLog, err = t.processAccessLog(gwCtx, envoyProxy, resources)
+	xdsIR.AccessLog, err = t.processAccessLog(gwCtx, envoyProxy, resources, xdsIR)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid access log backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
-	xdsIR.Tracing, err = t.processTracing(gwCtx, envoyProxy, t.MergeGateways, resources)
+	xdsIR.Tracing, err = t.processTracing(gwCtx, envoyProxy, t.MergeGateways, resources, xdsIR)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid tracing backendRefs in the referenced EnvoyProxy: %v", err))
@@ -720,7 +720,7 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 	}
 
 	var resolvedSinks []ir.ResolvedMetricSink
-	xdsIR.Metrics, resolvedSinks, err = t.processMetrics(gwCtx, envoyProxy, resources)
+	xdsIR.Metrics, resolvedSinks, err = t.processMetrics(gwCtx, envoyProxy, resources, xdsIR)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid metrics backendRefs in the referenced EnvoyProxy: %v", err))
@@ -759,7 +759,7 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR r
 	infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
 }
 
-func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.AccessLog, error) {
+func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources, gwIR *ir.Xds) (*ir.AccessLog, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
@@ -888,7 +888,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					Destination: ir.RouteDestination{
 						Name:               destName,
 						Settings:           ds,
-						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: alBC}},
+						BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, alBC, nil, nil)},
 						Metadata:           buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic:    traffic,
@@ -930,6 +930,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					d.Protocol = ir.GRPC
 				}
 
+				otelBC := &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches:         validExprs,
 					ResourceAttributes: ir.MapToSlice(sink.OpenTelemetry.GetResourceAttributes()),
@@ -938,7 +939,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					Destination: ir.RouteDestination{
 						Name:               destName,
 						Settings:           ds,
-						BackendClusterRefs: []*ir.BackendClusterRef{{Backend: &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}}},
+						BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, otelBC, nil, nil)},
 						Metadata:           buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic: traffic,
@@ -953,7 +954,8 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
 					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
-					al.Destination.BackendClusterRefs = []*ir.BackendClusterRef{{Backend: &ir.BackendCluster{Name: destName, Settings: al.Destination.Settings}}}
+					fallbackBC := &ir.BackendCluster{Name: destName, Settings: al.Destination.Settings}
+					al.Destination.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(gwIR, fallbackBC, nil, nil)}
 					al.Authority = host
 				}
 
@@ -974,7 +976,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 }
 
 func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy,
-	mergeGateways bool, resources *resource.Resources,
+	mergeGateways bool, resources *resource.Resources, gwIR *ir.Xds,
 ) (*ir.Tracing, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
@@ -1022,6 +1024,7 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		serviceName = *tracing.Provider.ServiceName
 	}
 
+	tracingBC := &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}
 	return &ir.Tracing{
 		Authority:           authority,
 		ServiceName:         serviceName,
@@ -1034,7 +1037,7 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		Destination: ir.RouteDestination{
 			Name:               destName,
 			Settings:           ds,
-			BackendClusterRefs: []*ir.BackendClusterRef{{Backend: &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}}},
+			BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, tracingBC, nil, nil)},
 			Metadata:           buildResourceMetadata(envoyproxy, nil),
 		},
 		Provider: tracing.Provider,
@@ -1119,7 +1122,7 @@ func getOpenTelemetryTracingResourceAttributes(provider *egv1a1.TracingProvider)
 	return nil
 }
 
-func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, []ir.ResolvedMetricSink, error) {
+func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources, gwIR *ir.Xds) (*ir.Metrics, []ir.ResolvedMetricSink, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Metrics == nil {
@@ -1162,11 +1165,12 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 			}
 			seen.Insert(addr)
 
+			metricsBC := &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}
 			resolvedSinks = append(resolvedSinks, ir.ResolvedMetricSink{
 				Destination: ir.RouteDestination{
 					Name:               destName,
 					Settings:           ds,
-					BackendClusterRefs: []*ir.BackendClusterRef{{Backend: &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}}},
+					BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, metricsBC, nil, nil)},
 					Metadata:           buildResourceMetadata(envoyproxy, nil),
 				},
 				Authority:                authority,

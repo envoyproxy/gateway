@@ -30,6 +30,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 	gtwCtx *GatewayContext,
 	configType string,
 	index int, // index is used to differentiate between multiple external services in the same policy
+	xdsIR resource.XdsIRMap,
 ) (*ir.RouteDestination, error) {
 	var (
 		rs  *ir.RouteDestination
@@ -89,7 +90,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 		if bc.HasMixedEndpoints() {
 			return nil, errors.New("external service destinations having multiple endpoint types are not supported")
 		}
-		rs.BackendClusterRefs = []*ir.BackendClusterRef{{Backend: bc}}
+		rs.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(t.gatewayXdsIR(gtwCtx, xdsIR), bc, nil, nil)}
 	}
 
 	if validationErr := rs.Validate(); validationErr != nil {

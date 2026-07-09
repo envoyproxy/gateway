@@ -33,7 +33,7 @@ type HTTPFiltersTranslator interface {
 	processRedirectFilter(redirect *gwapiv1.HTTPRequestRedirectFilter, filterContext *HTTPFiltersContext) status.Error
 	processRequestHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext) status.Error
 	processResponseHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext) status.Error
-	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error
+	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources, xdsIR resource.XdsIRMap) status.Error
 	processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext) status.Error
 }
 
@@ -86,6 +86,7 @@ func (t *Translator) ProcessHTTPFilters(
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
 	resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
 ) (*HTTPFiltersContext, []status.Error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
@@ -124,7 +125,7 @@ func (t *Translator) ProcessHTTPFilters(
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestMirror:
-			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources); err != nil {
+			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterCORS:
@@ -169,6 +170,7 @@ func (t *Translator) ProcessGRPCFilters(
 	route RouteContext,
 	filters []gwapiv1.GRPCRouteFilter,
 	resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
 ) (*HTTPFiltersContext, []status.Error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
@@ -199,7 +201,7 @@ func (t *Translator) ProcessGRPCFilters(
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterRequestMirror:
-			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources); err != nil {
+			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
@@ -1043,6 +1045,7 @@ func (t *Translator) processRequestMirrorFilter(
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
 	resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
 ) (err status.Error) {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
@@ -1075,7 +1078,7 @@ func (t *Translator) processRequestMirrorFilter(
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
 	gatewayCtx, btpRoutingType := t.resolveRoutingContext(filterContext.Route, filterContext.ParentRef, nil)
-	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, gatewayCtx, btpRoutingType)
+	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, gatewayCtx, btpRoutingType, xdsIR)
 	if err != nil {
 		// Gateway API conformance: When backendRef Service exists but has no endpoints,
 		// the ResolvedRefs condition should NOT be set to False.
@@ -1091,10 +1094,11 @@ func (t *Translator) processRequestMirrorFilter(
 		Name:     destName,
 		Settings: []*ir.DestinationSetting{ds},
 	}
+	gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 	routeDst := &ir.RouteDestination{
 		Name:               destName,
 		Settings:           []*ir.DestinationSetting{ds},
-		BackendClusterRefs: []*ir.BackendClusterRef{{Backend: bc}},
+		BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, bc, nil, nil)},
 	}
 
 	var percent *float32
