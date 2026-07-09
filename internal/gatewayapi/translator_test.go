@@ -824,8 +824,9 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"), // TODO: remove once Settings is dropped and BackendClusterRefs is serialized
-				cmpopts.IgnoreFields(ir.Xds{}, "Backends"),                        // TODO: remove once Xds.Backends is validated/consumed by later BackendCluster dedup tasks
+				// BackendClusterRefs is tagged yaml:"-" and can never round-trip through a golden
+				// .out.yaml file - see the identical comment in TestTranslate.
+				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"),
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
