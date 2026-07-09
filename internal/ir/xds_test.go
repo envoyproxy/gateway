@@ -7,7 +7,6 @@ package ir
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -987,15 +986,15 @@ func TestValidateTCPRoute(t *testing.T) {
 	}
 }
 
-func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
+func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    RouteDestination
+		input    BackendCluster
 		expected bool
 	}{
 		{
 			name: "single cluster",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1012,7 +1011,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting mixed endpoints",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1039,7 +1038,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting has zone aware routing more than one setting",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1069,7 +1068,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting has zone aware routing one setting",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1090,7 +1089,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting has filters",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1109,7 +1108,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting mixed upstream protocol requirements",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1139,7 +1138,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "single cluster compatible websocket and http backends",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1169,7 +1168,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "single cluster compatible http2 and grpc backends",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1198,7 +1197,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting mixed auto sni",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1229,7 +1228,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "single cluster all auto sni from upstream host",
-			input: RouteDestination{
+			input: BackendCluster{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1384,6 +1383,7 @@ func TestValidateRouteDestination(t *testing.T) {
 			input: RouteDestination{
 				Name: "single-bc",
 				BackendClusterRefs: []*BackendClusterRef{{
+					Name: "bc-1",
 					Backend: &BackendCluster{
 						Name:     "bc-1",
 						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
@@ -1397,11 +1397,11 @@ func TestValidateRouteDestination(t *testing.T) {
 			input: RouteDestination{
 				Name: "multi-bc",
 				BackendClusterRefs: []*BackendClusterRef{
-					{Backend: &BackendCluster{
+					{Name: "bc-1", Backend: &BackendCluster{
 						Name:     "bc-1",
 						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}},
 					}},
-					{Backend: &BackendCluster{
+					{Name: "bc-2", Backend: &BackendCluster{
 						Name:     "bc-2",
 						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}}},
 					}},
@@ -1410,24 +1410,30 @@ func TestValidateRouteDestination(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "invalid multiple backend cluster refs with multiple settings",
+			// Note: the "exactly one setting when multiple BackendClusterRefs exist" invariant
+			// used to be re-checked here, but that invariant is guaranteed by construction
+			// (getOrCreateBackendCluster/registerBackendCluster in internal/gatewayapi) and is
+			// now validated once per distinct cluster via Xds.Validate() walking Xds.Backends,
+			// not per-ref in RouteDestination.Validate(). A ref with a multi-setting Backend is
+			// therefore no longer flagged at this layer.
+			name: "multiple backend cluster refs with multiple settings no longer flagged here",
 			input: RouteDestination{
 				Name: "multi-bc-multi-settings",
 				BackendClusterRefs: []*BackendClusterRef{
-					{Backend: &BackendCluster{
+					{Name: "bc-1", Backend: &BackendCluster{
 						Name: "bc-1",
 						Settings: []*DestinationSetting{
 							{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}},
 							{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}},
 						},
 					}},
-					{Backend: &BackendCluster{
+					{Name: "bc-2", Backend: &BackendCluster{
 						Name:     "bc-2",
 						Settings: []*DestinationSetting{{Endpoints: []*DestinationEndpoint{{Host: "10.0.0.3", Port: 8080}}}},
 					}},
 				},
 			},
-			want: fmt.Errorf("BackendCluster bc-1 must have exactly one setting when multiple BackendClusterRefs exist"),
+			want: nil,
 		},
 	}
 	for _, test := range tests {

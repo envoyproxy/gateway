@@ -202,6 +202,11 @@ func (x *Xds) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
+	for _, bc := range x.Backends {
+		if err := bc.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 	return errs
 }
 
@@ -977,22 +982,26 @@ func (h *HTTPRoute) GetRetry() *Retry {
 	return nil
 }
 
-func (h *HTTPRoute) NeedsClusterPerSetting() bool {
-	if h.Traffic != nil &&
-		h.Traffic.LoadBalancer != nil &&
-		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
-		return true
-	}
-	return h.Destination.NeedsClusterPerSetting()
-}
-
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
 	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
 	if h.Destination == nil {
 		return false
 	}
-	bcs := h.Destination.GetBackendClusters()
-	return len(bcs) == 1 && len(bcs[0].Settings) == 1 && bcs[0].Settings[0].IsDynamicResolver
+	// Inlines the old GetBackendClusters() fallback behavior (BackendClusterRefs when
+	// populated, else the legacy Settings field) without calling the now-removed method.
+	// This runs both from internal/ir itself and, via the httpFilter implementations in
+	// internal/xds/translator (e.g. dynamicForwardProxy), from call sites that have no
+	// *Translator in scope and thus no access to the registry-backed getBackendClusters.
+	var settings []*DestinationSetting
+	switch {
+	case len(h.Destination.BackendClusterRefs) == 1:
+		settings = h.Destination.BackendClusterRefs[0].Backend.Settings
+	case len(h.Destination.BackendClusterRefs) == 0:
+		settings = h.Destination.Settings
+	default:
+		return false
+	}
+	return len(settings) == 1 && settings[0].IsDynamicResolver
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -1924,7 +1933,11 @@ type RouteDestination struct {
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
-// Validate the fields within the RouteDestination structure
+// Validate the fields within the RouteDestination structure. BackendCluster-level
+// validation (Settings well-formed, single-setting-per-shared-cluster invariant) happens
+// once per distinct cluster via Xds.Validate() walking Xds.Backends, not here per-ref —
+// that invariant is guaranteed by construction in getOrCreateBackendCluster/
+// registerBackendCluster (internal/gatewayapi), not re-checked at this layer.
 func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
@@ -1936,59 +1949,11 @@ func (r *RouteDestination) Validate() error {
 		}
 	}
 	for _, ref := range r.BackendClusterRefs {
-		if err := ref.Backend.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	if len(r.BackendClusterRefs) > 1 {
-		for _, ref := range r.BackendClusterRefs {
-			if len(ref.Backend.Settings) != 1 {
-				errs = errors.Join(errs, fmt.Errorf("BackendCluster %s must have exactly one setting when multiple BackendClusterRefs exist", ref.Backend.Name))
-			}
+		if len(ref.Name) == 0 {
+			errs = errors.Join(errs, ErrDestinationNameEmpty)
 		}
 	}
 	return errs
-}
-
-// GetBackendClusters returns the BackendClusters for this destination.
-// TODO: remove Settings fallback once BackendClusterRefs is always populated.
-func (r *RouteDestination) GetBackendClusters() []*BackendCluster {
-	if len(r.BackendClusterRefs) > 0 {
-		bcs := make([]*BackendCluster, len(r.BackendClusterRefs))
-		for i, ref := range r.BackendClusterRefs {
-			bcs[i] = ref.Backend
-		}
-		return bcs
-	}
-	return []*BackendCluster{{Name: r.Name, Settings: r.Settings, Metadata: r.Metadata}}
-}
-
-func (r *RouteDestination) NeedsClusterPerSetting() bool {
-	if len(r.BackendClusterRefs) > 1 {
-		return true
-	}
-	if len(r.BackendClusterRefs) == 1 {
-		return r.BackendClusterRefs[0].Backend.NeedsClusterPerSetting()
-	}
-	// TODO: remove Settings fallback once BackendClusterRefs is always populated.
-	bc := &BackendCluster{Settings: r.Settings}
-	return bc.NeedsClusterPerSetting()
-}
-
-func (r *RouteDestination) ToBackendWeights() *BackendWeights {
-	if len(r.BackendClusterRefs) > 0 {
-		w := &BackendWeights{Name: r.Name}
-		for _, ref := range r.BackendClusterRefs {
-			bw := ref.Backend.ToBackendWeights()
-			w.Valid += bw.Valid
-			w.Invalid += bw.Invalid
-			w.NoEndpoints += bw.NoEndpoints
-		}
-		return w
-	}
-	// TODO: remove Settings fallback once BackendClusterRefs is always populated.
-	bc := &BackendCluster{Name: r.Name, Settings: r.Settings}
-	return bc.ToBackendWeights()
 }
 
 // BackendCluster represents a single backend (Service, ServiceImport, or Backend resource)
