@@ -76,6 +76,79 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid mergeType with xRoute targetRef",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("HTTPRoute"),
+								Name:  gwapiv1.ObjectName("httpbin-route"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.Replace),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeType rejected on Gateway targetRef",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.Replace),
+				}
+			},
+			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+		},
+		{
+			desc: "mergeType rejected on Gateway targetRefs",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+		},
+		{
+			desc: "mergeType rejected on Gateway targetSelector",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Kind:        gwapiv1.Kind("Gateway"),
+								MatchLabels: map[string]string{"app": "foo"},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+		},
+		{
 			desc: "valid admissionControl percentage bounds",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

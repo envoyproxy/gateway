@@ -3384,6 +3384,13 @@ spec:
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
                 : true '
+            - message: mergeType can only be used with xRoute targets
+              rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
+                && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in
+                [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'']))
+                && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind
+                in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])))'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
             - message: requestBuffer cannot be used together with httpUpgrade
