@@ -1,0 +1,77 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    rateLimit:
+      type: Global
+      global:
+        rules:
+        # Named shared rule -> key uses the name: default/policy-for-route/rule/by-ip
+        - name: by-ip
+          clientSelectors:
+          - sourceCIDR:
+              type: "Distinct"
+              value: "0.0.0.0/0"
+          limit:
+            requests: 20
+            unit: Hour
+          shared: true
+        # Named non-shared rule -> key uses the name: default/policy-for-route/rule/by-org
+        - name: by-org
+          clientSelectors:
+          - headers:
+            - name: x-org-id
+              type: Distinct
+          limit:
+            requests: 30
+            unit: Hour
+        # Unnamed rule -> key falls back to the index: default/policy-for-route/rule/2
+        - clientSelectors:
+          - headers:
+            - name: x-team
+              value: blue
+          limit:
+            requests: 40
+            unit: Hour

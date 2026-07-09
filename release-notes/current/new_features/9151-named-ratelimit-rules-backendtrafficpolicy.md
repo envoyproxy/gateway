@@ -1,0 +1,1 @@
+Added an optional `name` field to `RateLimitRule` in BackendTrafficPolicy. When set, the global rate-limit metric key uses the provided name (e.g. `<policy-namespace>/<policy-name>/rule/<name>`) instead of the array index (e.g. `.../rule/0`), making rate-limit metrics easier to identify and stable across rule reordering. Unset `name` preserves the existing index-based behavior.
