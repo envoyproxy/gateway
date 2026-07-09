@@ -1296,10 +1296,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				// Remove dots from the hostname before appending it to the IR Route name
 				// since dots are special chars used in stats tag extraction in Envoy
 				underscoredHost := strings.ReplaceAll(host, ".", "_")
-				hostRoute := routeRoute.DeepCopy()
-				hostRoute.Name = fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost)
-				hostRoute.Hostname = host
-				perHostRoutes = append(perHostRoutes, hostRoute)
+				routeRoute.Name = fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost)
+				routeRoute.Hostname = host
+				perHostRoutes = append(perHostRoutes, routeRoute)
 			}
 		}
 		irKey := t.getIRKey(listener.gateway.Gateway)
