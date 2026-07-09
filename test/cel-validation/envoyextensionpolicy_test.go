@@ -15,7 +15,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -1344,20 +1343,20 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
 							ProcessingMode: &egv1a1.ExtProcProcessingMode{
 								Request: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
 								},
 								Response: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
 								},
 							},
-							ShadowMode: ptr.To(true),
+							ShadowMode: new(true),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
