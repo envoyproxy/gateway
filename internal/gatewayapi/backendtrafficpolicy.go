@@ -426,6 +426,9 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	backendTrafficPolicies := resources.BackendTrafficPolicies
 	// BackendTrafficPolicies are already sorted by the provider layer
 
+	// Tracking is only valid during one translation across multiple routes and gateways.
+	t.replacedTrafficPolicyRoutes = sets.New[string]()
+
 	routeMapSize := len(routes)
 	gatewayMapSize := len(gateways)
 	policyMapSize := len(backendTrafficPolicies)
@@ -1475,6 +1478,14 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
 	}
 
+	// A policy with mergeType Replace discards the parent policy configuration
+	// entirely, so claim the matched TCP/UDP routes to prevent the parent
+	// Gateway/Listener policy from back-filling fields this policy omitted.
+	replaceClaimsRoutes := policy.Spec.MergeType != nil && *policy.Spec.MergeType == egv1a1.Replace
+	if replaceClaimsRoutes && t.replacedTrafficPolicyRoutes == nil {
+		t.replacedTrafficPolicyRoutes = sets.New[string]()
+	}
+
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
 		// if listenerName is not nil, only apply to the specific listener
@@ -1488,6 +1499,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				continue
 			}
 			if strings.HasPrefix(r.Destination.Name, prefix) {
+				if replaceClaimsRoutes {
+					t.replacedTrafficPolicyRoutes.Insert(replacedRouteKey(tcp.Name, r.Destination.Name))
+				}
 				// only set attributes which weren't already set by a more
 				// specific policy
 				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
@@ -1517,6 +1531,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				continue
 			}
 			if strings.HasPrefix(r.Destination.Name, prefix) {
+				if replaceClaimsRoutes {
+					t.replacedTrafficPolicyRoutes.Insert(replacedRouteKey(udp.Name, r.Destination.Name))
+				}
 				// only set attributes which weren't already set by a more
 				// specific policy
 				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
@@ -1834,6 +1851,11 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		}
 
 		for _, r := range tcp.Routes {
+			// Skip routes claimed by a route-scoped policy with mergeType Replace,
+			// which discards the parent policy configuration entirely.
+			if t.replacedTrafficPolicyRoutes.Has(replacedRouteKey(tcp.Name, r.Destination.Name)) {
+				continue
+			}
 			// only set attributes which weren't already set by a more
 			// specific policy
 			setIfNil(&r.LoadBalancer, tf.LoadBalancer)
@@ -1858,6 +1880,12 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		}
 
 		route := udp.Route
+
+		// Skip routes claimed by a route-scoped policy with mergeType Replace,
+		// which discards the parent policy configuration entirely.
+		if t.replacedTrafficPolicyRoutes.Has(replacedRouteKey(udp.Name, route.Destination.Name)) {
+			continue
+		}
 
 		// only set attributes which weren't already set by a more
 		// specific policy
