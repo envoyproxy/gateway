@@ -34,3 +34,15 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
+- clusterName: extauth/primary_foo_com/b634dd9426421450
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: primary.foo.com
+            portValue: 3000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: extauth/primary_foo_com/b634dd9426421450/backend/0

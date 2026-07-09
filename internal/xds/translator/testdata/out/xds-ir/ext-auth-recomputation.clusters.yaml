@@ -76,7 +76,7 @@
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
-    clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+    clusterName: extauth/primary_foo_com/ed4f112fa58e8396
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -87,7 +87,7 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
+        region: extauth/primary_foo_com/ed4f112fa58e8396/backend/0
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -96,7 +96,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+  name: extauth/primary_foo_com/ed4f112fa58e8396
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -113,10 +113,40 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: extauth/primary_foo_com/b634dd9426421450
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: extauth/primary_foo_com/b634dd9426421450
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
-    clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+    clusterName: extauth/primary_foo_com/905844741a578221
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -127,7 +157,7 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
+        region: extauth/primary_foo_com/905844741a578221/backend/0
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -136,7 +166,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  name: extauth/primary_foo_com/905844741a578221
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

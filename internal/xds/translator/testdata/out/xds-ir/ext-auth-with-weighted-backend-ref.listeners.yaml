@@ -29,7 +29,7 @@
                     ignoreCase: true
               pathPrefix: /auth
               serverUri:
-                cluster: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+                cluster: extauth/http-backend_envoy-gateway_80/7de1db878b2bb33b
                 timeout: 10s
                 uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
@@ -46,7 +46,7 @@
             grpcService:
               envoyGrpc:
                 authority: grpc-backend.default:9000
-                clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+                clusterName: extauth/grpc-backend_default_9000/4e1643eb21fa14f1
               timeout: 10s
             transportApiVersion: V3
         - name: envoy.filters.http.router

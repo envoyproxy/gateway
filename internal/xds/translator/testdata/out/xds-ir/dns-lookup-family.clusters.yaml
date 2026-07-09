@@ -76,7 +76,7 @@
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
-    clusterName: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
+    clusterName: extauth/backend-v3_gateway-conformance-infra_svc_cluster_local_8080/3a23c36149ecaed4
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -86,7 +86,8 @@
               portValue: 8080
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: extauth/backend-v3_gateway-conformance-infra_svc_cluster_local_8080/3a23c36149ecaed4/backend/0
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -95,7 +96,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
+  name: extauth/backend-v3_gateway-conformance-infra_svc_cluster_local_8080/3a23c36149ecaed4
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

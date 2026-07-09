@@ -34,7 +34,7 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
-- clusterName: securitypolicy/default/policy-for-http-route-1/default/http-backend
+- clusterName: extauth/http-backend_default_9000/462f038d58debfc1
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -45,7 +45,7 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: securitypolicy/default/policy-for-http-route-1/default/http-backend/backend/0
+      region: extauth/http-backend_default_9000/462f038d58debfc1/backend/0
   - lbEndpoints:
     - endpoint:
         address:
@@ -55,8 +55,20 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: securitypolicy/default/policy-for-http-route-1/default/http-backend/backend/1
-- clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+      region: extauth/http-backend_default_9000/462f038d58debfc1/backend/1
+- clusterName: extauth/http-backend_default_9000/6b4606a57206589b
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 8.8.8.8
+            portValue: 9000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: extauth/http-backend_default_9000/6b4606a57206589b/backend/0
+- clusterName: extauth/http-backend_envoy-gateway_80/931d7530e49b7d84
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -67,4 +79,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
+      region: extauth/http-backend_envoy-gateway_80/931d7530e49b7d84/backend/0

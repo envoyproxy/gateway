@@ -9,13 +9,18 @@ import (
 	"testing"
 	"time"
 
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
+	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/durationpb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 func TestExtAuthConfigWithTimeout(t *testing.T) {
@@ -29,8 +34,14 @@ func TestExtAuthConfigWithTimeout(t *testing.T) {
 			extAuth: &ir.ExtAuth{
 				Name: "test-extauth",
 				GRPC: &ir.GRPCExtAuthService{
-					Destination: ir.RouteDestination{Name: "test-cluster"},
-					Authority:   "test-authority",
+					Destination: ir.RouteDestination{
+						Name: "test-cluster",
+						Settings: []*ir.DestinationSetting{{
+							Weight:    ptr.To[uint32](1),
+							Endpoints: []*ir.DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}},
+						}},
+					},
+					Authority: "test-authority",
 				},
 			},
 			expectedTimeout: durationpb.New(defaultExtServiceRequestTimeout),
@@ -40,8 +51,14 @@ func TestExtAuthConfigWithTimeout(t *testing.T) {
 			extAuth: &ir.ExtAuth{
 				Name: "test-extauth",
 				GRPC: &ir.GRPCExtAuthService{
-					Destination: ir.RouteDestination{Name: "test-cluster"},
-					Authority:   "test-authority",
+					Destination: ir.RouteDestination{
+						Name: "test-cluster",
+						Settings: []*ir.DestinationSetting{{
+							Weight:    ptr.To[uint32](1),
+							Endpoints: []*ir.DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}},
+						}},
+					},
+					Authority: "test-authority",
 				},
 				Timeout: &metav1.Duration{Duration: 500 * time.Millisecond},
 			},
@@ -52,8 +69,14 @@ func TestExtAuthConfigWithTimeout(t *testing.T) {
 			extAuth: &ir.ExtAuth{
 				Name: "test-extauth",
 				GRPC: &ir.GRPCExtAuthService{
-					Destination: ir.RouteDestination{Name: "test-cluster"},
-					Authority:   "test-authority",
+					Destination: ir.RouteDestination{
+						Name: "test-cluster",
+						Settings: []*ir.DestinationSetting{{
+							Weight:    ptr.To[uint32](1),
+							Endpoints: []*ir.DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}},
+						}},
+					},
+					Authority: "test-authority",
 				},
 				Timeout: &metav1.Duration{Duration: 2 * time.Second},
 			},
@@ -64,9 +87,15 @@ func TestExtAuthConfigWithTimeout(t *testing.T) {
 			extAuth: &ir.ExtAuth{
 				Name: "test-extauth",
 				HTTP: &ir.HTTPExtAuthService{
-					Destination: ir.RouteDestination{Name: "test-cluster"},
-					Authority:   "test-authority",
-					Path:        "/auth",
+					Destination: ir.RouteDestination{
+						Name: "test-cluster",
+						Settings: []*ir.DestinationSetting{{
+							Weight:    ptr.To[uint32](1),
+							Endpoints: []*ir.DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}},
+						}},
+					},
+					Authority: "test-authority",
+					Path:      "/auth",
 				},
 				Timeout: &metav1.Duration{Duration: 1 * time.Second},
 			},
@@ -116,10 +145,93 @@ func TestHttpServiceWithTimeout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service := httpService(tt.httpService, tt.timeout)
+			service := httpService(tt.httpService, "test-cluster", tt.timeout)
 			require.NotNil(t, service)
 			assert.Equal(t, tt.expectedTimeout.Seconds, service.ServerUri.Timeout.Seconds)
 			assert.Equal(t, tt.expectedTimeout.Nanos, service.ServerUri.Timeout.Nanos)
 		})
+	}
+}
+
+// extAuthForBackend builds an ExtAuth pointing at the given backend host/port,
+// with a policy-derived name and context extensions that vary per policy but
+// must not affect deduplication (they are applied as a per-route override).
+func extAuthForBackend(policyName, host string, port uint32, ctxExtVal string) *ir.ExtAuth {
+	authority := host
+	return &ir.ExtAuth{
+		Name: policyName,
+		HTTP: &ir.HTTPExtAuthService{
+			Destination: ir.RouteDestination{
+				// Name is policy-derived today; the dedup must not depend on it.
+				Name: policyName + "/extauth/0",
+				Settings: []*ir.DestinationSetting{{
+					Weight:    ptr.To[uint32](1),
+					Endpoints: []*ir.DestinationEndpoint{{Host: host, Port: port}},
+				}},
+			},
+			Authority: authority,
+			Path:      "/auth",
+		},
+		ContextExtensions: []*ir.ContextExtention{{Name: "k", Value: ir.PrivateBytes(ctxExtVal)}},
+	}
+}
+
+// clusterRefOf returns the upstream cluster name referenced by the built
+// ext_authz filter config for the given ExtAuth.
+func clusterRefOf(t *testing.T, extAuth *ir.ExtAuth) string {
+	t.Helper()
+	cfg, err := extAuthConfig(extAuth)
+	require.NoError(t, err)
+	return cfg.Services.(*extauthv3.ExtAuthz_HttpService).HttpService.ServerUri.GetCluster()
+}
+
+// TestExtAuthDeduplicatesIdenticalClusters verifies that two SecurityPolicies
+// pointing at the same ext auth backend collapse onto a single upstream cluster
+// (named by a content hash), even though each policy keeps its own ext_authz
+// filter. A policy with a different backend must not be collapsed.
+func TestExtAuthDeduplicatesIdenticalClusters(t *testing.T) {
+	f := &extAuth{}
+
+	// Two distinct policies, identical backend, different context extensions.
+	routeA := &ir.HTTPRoute{Name: "route-a", Security: &ir.SecurityFeatures{
+		ExtAuth: extAuthForBackend("securitypolicy/ns/a", "auth.example.com", 443, "a"),
+	}}
+	routeB := &ir.HTTPRoute{Name: "route-b", Security: &ir.SecurityFeatures{
+		ExtAuth: extAuthForBackend("securitypolicy/ns/b", "auth.example.com", 443, "b"),
+	}}
+	// A third policy pointing at a different backend must stay separate.
+	routeC := &ir.HTTPRoute{Name: "route-c", Security: &ir.SecurityFeatures{
+		ExtAuth: extAuthForBackend("securitypolicy/ns/c", "other.example.com", 443, "c"),
+	}}
+
+	// Filters stay per-policy (dedup is by policy-derived name): three policies ⇒ three filters.
+	mgr := &hcmv3.HttpConnectionManager{}
+	require.NoError(t, f.patchHCM(mgr, &ir.HTTPListener{Routes: []*ir.HTTPRoute{routeA, routeB, routeC}}))
+	require.Len(t, mgr.HttpFilters, 3, "filters remain per-policy")
+
+	// Clusters dedup by backend content: A and B share one; C is distinct ⇒ two clusters.
+	tCtx := &types.ResourceVersionTable{XdsResources: types.XdsResources{}}
+	require.NoError(t, f.patchResources(tCtx, []*ir.HTTPRoute{routeA, routeB, routeC}))
+	require.Len(t, tCtx.XdsResources[resourcev3.ClusterType], 2, "identical backends should collapse to one cluster")
+
+	// Both A and B filters reference the same shared cluster; C references a different one.
+	refA := clusterRefOf(t, routeA.Security.ExtAuth)
+	refB := clusterRefOf(t, routeB.Security.ExtAuth)
+	refC := clusterRefOf(t, routeC.Security.ExtAuth)
+	require.Equal(t, refA, refB, "identical backends must reference the same cluster")
+	require.NotEqual(t, refA, refC, "distinct backends must reference distinct clusters")
+
+	// Each policy keeps its own filter and its own context extensions.
+	for _, tc := range []struct {
+		route  *ir.HTTPRoute
+		expect string
+	}{{routeA, "a"}, {routeB, "b"}} {
+		filterName := extAuthFilterName(tc.route.Security.ExtAuth)
+		xdsRoute := &routev3.Route{}
+		require.NoError(t, f.patchRoute(xdsRoute, tc.route, nil))
+		require.Contains(t, xdsRoute.TypedPerFilterConfig, filterName)
+		perRoute := &extauthv3.ExtAuthzPerRoute{}
+		require.NoError(t, xdsRoute.TypedPerFilterConfig[filterName].UnmarshalTo(perRoute))
+		assert.Equal(t, tc.expect, perRoute.GetCheckSettings().GetContextExtensions()["k"])
 	}
 }

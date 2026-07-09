@@ -132,7 +132,7 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
             httpService:
               serverUri:
-                cluster: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
+                cluster: extauth/backend-v3_gateway-conformance-infra_svc_cluster_local_8080/3a23c36149ecaed4
                 timeout: 10s
                 uri: http://backend-v3.gateway-conformance-infra.svc.cluster.local:8080
             transportApiVersion: V3

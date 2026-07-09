@@ -10,18 +10,6 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-1/rule/0/backend/0
-- clusterName: httproute/default/httproute-1/rule/1
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 7.7.7.7
-            portValue: 8080
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-1/rule/1/backend/0
 - clusterName: httproute/default/httproute-2/rule/0
   endpoints:
   - lbEndpoints:
@@ -34,15 +22,15 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
-- clusterName: extauth/primary_foo_com/b634dd9426421450
+- clusterName: extauth/grpc-backend_default_9000/3e181fae39c9068b
   endpoints:
   - lbEndpoints:
     - endpoint:
         address:
           socketAddress:
-            address: primary.foo.com
-            portValue: 3000
+            address: 8.8.8.8
+            portValue: 9000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: extauth/primary_foo_com/b634dd9426421450/backend/0
+      region: extauth/grpc-backend_default_9000/3e181fae39c9068b/backend/0

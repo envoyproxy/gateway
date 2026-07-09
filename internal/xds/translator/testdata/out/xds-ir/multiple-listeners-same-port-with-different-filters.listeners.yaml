@@ -29,7 +29,7 @@
                     ignoreCase: true
               pathPrefix: /auth
               serverUri:
-                cluster: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
+                cluster: extauth/http-backend_envoy-gateway_80/931d7530e49b7d84
                 timeout: 10s
                 uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3

@@ -6,6 +6,8 @@
 package translator
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/netip"
@@ -132,11 +134,30 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 	return false
 }
 
-func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
-	var (
-		endpointType EndpointType
-		tSocket      *corev3.TransportSocket
-	)
+// protoHash returns a hex-encoded SHA-256 over the deterministic protobuf
+// marshaling of the provided messages. It is used to derive content-addressed,
+// deduplicated resource names: messages that marshal to identical bytes produce
+// identical hashes.
+func protoHash(messages ...proto.Message) (string, error) {
+	h := sha256.New()
+	opts := proto.MarshalOptions{Deterministic: true}
+	for _, m := range messages {
+		b, err := opts.Marshal(m)
+		if err != nil {
+			return "", err
+		}
+		h.Write(b)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// extServiceClusterArgs assembles the xdsClusterArgs used to build the upstream
+// cluster for an external service (extAuth, ext-proc, oidc, ...). It is shared
+// between the real cluster-creation path (createExtServiceXDSCluster) and the
+// content-hashing path used to derive deduplicated cluster names, so both build
+// identical args.
+func extServiceClusterArgs(rd *ir.RouteDestination, traffic *ir.TrafficFeatures) *xdsClusterArgs {
+	var endpointType EndpointType
 
 	// Make sure that there are safe defaults for the traffic
 	if traffic == nil {
@@ -154,14 +175,17 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 	args := &xdsClusterArgs{
 		name:         rd.Name,
 		settings:     rd.Settings,
-		tSocket:      tSocket,
 		endpointType: endpointType,
 		metadata:     rd.Metadata,
 	}
 
 	applyTraffic(args, traffic)
 
-	return addXdsCluster(tCtx, args)
+	return args
+}
+
+func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
+	return addXdsCluster(tCtx, extServiceClusterArgs(rd, traffic))
 }
 
 // addClusterFromURL adds a cluster to the resource version table from the provided URL.
