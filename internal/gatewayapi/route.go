@@ -534,12 +534,19 @@ func registerBackendCluster(gwIR *ir.Xds, bc *ir.BackendCluster) *ir.BackendClus
 // resolveBackendClusterName decides whether the backend identified by identity participates in
 // cluster deduplication, and resolves the find-or-create key and target cluster name accordingly.
 //
-// When cluster deduplication is disabled for this backend, ruleDestName is returned as both the
-// key and the cluster name, so every backendRef in the same route rule collapses onto the same
-// cluster (matching today's one-cluster-per-rule behavior). When enabled, the backend's own
-// identity (plus the owning gateway) is used instead, so that routes referencing the same backend
-// share a single cluster. A backendRef whose kind is never mergeable (dynamic resolver, custom
-// backend - see isMergeableBackendKind) also always resolves to the route-scoped name.
+// When cluster deduplication is disabled for this backend, ruleDestName is returned as the
+// cluster name, and the find-or-create key is scoped to the owning gateway (when known) plus
+// ruleDestName, so every backendRef in the same route rule collapses onto the same cluster
+// (matching today's one-cluster-per-rule behavior) - but a route attached to multiple gateways
+// (multiple parentRefs) still gets an independent cluster per gateway, since ruleDestName alone
+// depends only on the route/rule, not on which parent gateway is processing it, and
+// t.BackendClusterMap is shared across every gateway translated in this call. Without the
+// gateway-scoping, two gateways sharing a route-scoped cache hit would leave the second gateway's
+// own Xds.Backends silently missing an entry its own route still references by name. When
+// deduplication is enabled, the backend's own identity (plus the owning gateway) is used instead,
+// so that routes referencing the same backend share a single cluster. A backendRef whose kind is
+// never mergeable (dynamic resolver, custom backend - see isMergeableBackendKind) also always
+// resolves to the route-scoped name.
 func (t *Translator) resolveBackendClusterName(
 	ruleDestName string,
 	identity BackendClusterKey,
@@ -548,18 +555,24 @@ func (t *Translator) resolveBackendClusterName(
 	hasRouteLevelClusterSettings bool,
 	mergeableKind bool,
 ) (key BackendClusterKey, clusterName string, merge bool) {
-	if gatewayCtx == nil || !mergeableKind {
+	if gatewayCtx == nil {
 		return BackendClusterKey{Name: ruleDestName}, ruleDestName, false
+	}
+
+	gwIRKey := t.getIRKey(gatewayCtx.Gateway)
+
+	if !mergeableKind {
+		return BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName}, ruleDestName, false
 	}
 
 	gwNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
 	if !t.shouldMergeBackend(gwNN, gatewayCtx.envoyProxy, btpRoutingType, hasRouteLevelClusterSettings) {
 		// Kind is left empty here, which can never collide with a merged backend's key
 		// (always non-empty Kind), so route-scoped and backend-scoped keys never clash.
-		return BackendClusterKey{Name: ruleDestName}, ruleDestName, false
+		return BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName}, ruleDestName, false
 	}
 
-	identity.GatewayIRKey = t.getIRKey(gatewayCtx.Gateway)
+	identity.GatewayIRKey = gwIRKey
 	return identity, irBackendClusterName(identity.Kind, identity.Namespace, identity.Name, identity.Port), true
 }
 

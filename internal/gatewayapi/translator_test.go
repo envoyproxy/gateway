@@ -510,32 +510,12 @@ func TestTranslate(t *testing.T) {
 				// BackendClusterRefs is tagged yaml:"-" and can never round-trip through a golden
 				// .out.yaml file (want's copy is always nil), regardless of whether the field's
 				// actual content is correct - so it must always be ignored here, for every test
-				// case. Backends verification (below) is the mergebackends- cases' actual signal.
+				// case. Backends (verified below, unignored) is the mergebackends- cases' actual
+				// signal, and every other case's Backends is empty since MergeBackends defaults off.
 				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"),
 				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
 				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
-			}
-			// mergebackends- testdata cases exist specifically to verify Backends (cluster
-			// deduplication), so unlike every other case it must NOT be ignored here.
-			if !IsMergeBackendsEnabled(resources) {
-				// TODO: remove once Xds.Backends is validated/consumed by later BackendCluster dedup tasks.
-				// This must match the anonymous struct type produced by xdsWithoutEqual, not ir.Xds itself,
-				// since the ClearXdsEqual transformer below runs first.
-				opts = append(opts, cmpopts.IgnoreFields(struct {
-					ReadyListener           *ir.ReadyListener
-					AccessLog               *ir.AccessLog
-					Tracing                 *ir.Tracing
-					Metrics                 *ir.Metrics
-					HTTP                    []*ir.HTTPListener
-					TCP                     []*ir.TCPListener
-					UDP                     []*ir.UDPListener
-					EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
-					FilterOrder             []egv1a1.FilterPosition
-					GlobalResources         *ir.GlobalResources
-					ExtensionServerPolicies []*ir.UnstructuredRef
-					Backends                []*ir.BackendCluster
-				}{}, "Backends"))
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
