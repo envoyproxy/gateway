@@ -503,6 +503,23 @@ func TestTranslate(t *testing.T) {
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
 				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"), // TODO: remove once Settings is dropped and BackendClusterRefs is serialized
+				// TODO: remove once Xds.Backends is validated/consumed by later BackendCluster dedup tasks.
+				// This must match the anonymous struct type produced by xdsWithoutEqual, not ir.Xds itself,
+				// since the ClearXdsEqual transformer below runs first.
+				cmpopts.IgnoreFields(struct {
+					ReadyListener           *ir.ReadyListener
+					AccessLog               *ir.AccessLog
+					Tracing                 *ir.Tracing
+					Metrics                 *ir.Metrics
+					HTTP                    []*ir.HTTPListener
+					TCP                     []*ir.TCPListener
+					UDP                     []*ir.UDPListener
+					EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
+					FilterOrder             []egv1a1.FilterPosition
+					GlobalResources         *ir.GlobalResources
+					ExtensionServerPolicies []*ir.UnstructuredRef
+					Backends                []*ir.BackendCluster
+				}{}, "Backends"),
 				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
 				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
@@ -815,6 +832,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
 				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"), // TODO: remove once Settings is dropped and BackendClusterRefs is serialized
+				cmpopts.IgnoreFields(ir.Xds{}, "Backends"),                        // TODO: remove once Xds.Backends is validated/consumed by later BackendCluster dedup tasks
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
