@@ -175,6 +175,13 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
+	// Backends holds every distinct BackendCluster referenced by this gateway's routes and
+	// other destinations (ext-auth, access log sinks, tracing, OIDC, JWT, mirrors, the proxy
+	// service cluster), keyed by Name. This is the single source of truth for a backend
+	// cluster's Settings/Metadata — BackendClusterRef only ever holds a Name (see BackendClusterRef.Name),
+	// never embeds the cluster itself, so that per-route/per-hostname copies can't drift from
+	// or duplicate it.
+	Backends []*BackendCluster `json:"backends,omitempty" yaml:"backends,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -2122,7 +2129,11 @@ func (b *BackendCluster) ToBackendWeights() *BackendWeights {
 // BackendClusterRef is a reference from a route rule to a BackendCluster.
 // +kubebuilder:object:generate=true
 type BackendClusterRef struct {
+	// Name identifies the referenced BackendCluster in the owning Xds's Backends registry.
+	// TODO: remove Backend once all consumers resolve by Name against Xds.Backends.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Backend points to the shared BackendCluster.
+	// TODO: deprecated in favor of Name — do not add new readers of this field.
 	Backend *BackendCluster `json:"backend" yaml:"backend"`
 	// Weight for weighted routing across multiple BackendRefs.
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
