@@ -2141,6 +2141,25 @@ type BackendClusterRef struct {
 	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
+// ResolveBackendClusterRefs resolves each ref's Name against idx (a name-keyed index of
+// BackendClusters, typically built from Xds.Backends), falling back to the ref's embedded
+// (deprecated) Backend field if not found in the index. Shared by the xds/translator and
+// xds/types packages so both the Translator-level and ResourceVersionTable-level indices
+// resolve refs identically without duplicating the lookup logic.
+func ResolveBackendClusterRefs(idx map[string]*BackendCluster, refs []*BackendClusterRef) []*BackendCluster {
+	bcs := make([]*BackendCluster, 0, len(refs))
+	for _, ref := range refs {
+		if bc, ok := idx[ref.Name]; ok {
+			bcs = append(bcs, bc)
+			continue
+		}
+		if ref.Backend != nil {
+			bcs = append(bcs, ref.Backend)
+		}
+	}
+	return bcs
+}
+
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {

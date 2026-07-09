@@ -157,12 +157,12 @@ func buildTracingOperation(span *egv1a1.TracingSpanName) (string, string) {
 	return span.Client, span.Server
 }
 
-func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics) error {
+func (t *Translator) processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics) error {
 	if tracing == nil {
 		return nil
 	}
 
-	for _, bc := range tracing.Destination.GetBackendClusters() {
+	for _, bc := range t.getBackendClusters(&tracing.Destination) {
 		args := &xdsClusterArgs{
 			backendCluster: bc,
 			tSocket:        nil,

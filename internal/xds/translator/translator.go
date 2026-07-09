@@ -106,6 +106,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 
 	tCtx := new(types.ResourceVersionTable)
+	// Share the same index with the ResourceVersionTable so httpFilter implementations
+	// (which only receive tCtx, not t) can resolve BackendClusterRefs identically, without
+	// rebuilding a second copy from xdsIR.Backends.
+	tCtx.BackendIndex = t.backendIndex
 
 	// xDS translation is done in a best-effort manner, so we collect all errors
 	// and return them at the end.
@@ -139,19 +143,19 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+	if err := t.processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processSDSClusters(tCtx, xdsIR); err != nil {
+	if err := t.processSDSClusters(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
+	if err := t.processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processServiceCluster(tCtx, xdsIR); err != nil {
+	if err := t.processServiceCluster(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -439,7 +443,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// add http route client certs
 		for _, route := range httpListener.Routes {
 			if route.Destination != nil {
-				if err = processClientCertificates(tCtx, route.Destination.GetBackendClusters()); err != nil {
+				if err = processClientCertificates(tCtx, t.getBackendClusters(route.Destination)); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -556,7 +560,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener)
+		xdsRoute, err = buildXdsRoute(t, httpRoute, httpListener)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
@@ -597,7 +601,7 @@ func (t *Translator) addRouteToRouteConfig(
 			ea := &ExtraArgs{
 				metrics:          metrics,
 				http1Settings:    httpListener.HTTP1,
-				ipFamily:         determineIPFamily(httpRoute.Destination.GetBackendClusters()),
+				ipFamily:         determineIPFamily(t.getBackendClusters(httpRoute.Destination)),
 				statName:         httpRoute.Destination.StatName,
 				unstructuredRefs: extensionResources,
 				extensionMgr:     t.ExtensionManager,
@@ -615,8 +619,8 @@ func (t *Translator) addRouteToRouteConfig(
 			// * There are filters in the destination settings
 			// * There are multiple Address Type of destination settings(IP, FQDN, UDC, etc.)
 			// * There are invalid/empty settings in the destination settings
-			if !httpRoute.NeedsClusterPerSetting() {
-				for _, bc := range httpRoute.Destination.GetBackendClusters() {
+			if !t.httpRouteNeedsClusterPerSetting(httpRoute) {
+				for _, bc := range t.getBackendClusters(httpRoute.Destination) {
 					err = processXdsCluster(tCtx,
 						bc,
 						&HTTPRouteTranslator{httpRoute},
@@ -626,7 +630,7 @@ func (t *Translator) addRouteToRouteConfig(
 					}
 				}
 			} else {
-				for _, bc := range httpRoute.Destination.GetBackendClusters() {
+				for _, bc := range t.getBackendClusters(httpRoute.Destination) {
 					for _, setting := range bc.Settings {
 						settingBC := &ir.BackendCluster{Name: setting.Name, Settings: []*ir.DestinationSetting{setting}, Metadata: bc.Metadata}
 						err = processXdsCluster(tCtx,
@@ -645,7 +649,7 @@ func (t *Translator) addRouteToRouteConfig(
 		if httpRoute.Mirrors != nil {
 			for _, mrr := range httpRoute.Mirrors {
 				if mrr.Destination != nil {
-					for _, bc := range mrr.Destination.GetBackendClusters() {
+					for _, bc := range t.getBackendClusters(mrr.Destination) {
 						if err = addXdsCluster(tCtx, &xdsClusterArgs{
 							backendCluster: bc,
 							tSocket:        nil,
@@ -798,7 +802,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.ProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
-			for _, bc := range route.Destination.GetBackendClusters() {
+			for _, bc := range t.getBackendClusters(route.Destination) {
 				if err := processXdsCluster(tCtx,
 					bc,
 					&TCPRouteTranslator{route},
@@ -836,7 +840,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			} else if route.Destination != nil {
 				// TCPRoute with BackendTLSPolicy
 				// add tcp route client certs
-				if err = processClientCertificates(tCtx, route.Destination.GetBackendClusters()); err != nil {
+				if err = processClientCertificates(tCtx, t.getBackendClusters(route.Destination)); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -908,7 +912,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
 		if udpListener.Route != nil {
-			for _, bc := range udpListener.Route.Destination.GetBackendClusters() {
+			for _, bc := range t.getBackendClusters(udpListener.Route.Destination) {
 				if err := processXdsCluster(tCtx,
 					bc,
 					&UDPRouteTranslator{udpListener.Route},
@@ -952,14 +956,14 @@ func (t *Translator) processUDPListenerXdsTranslation(
 	return errs
 }
 
-func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
+func (t *Translator) processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 	if xdsIR == nil || xdsIR.GlobalResources == nil {
 		return nil
 	}
 
 	svcCluster := xdsIR.GlobalResources.ProxyServiceCluster
 	if svcCluster != nil {
-		for _, bc := range svcCluster.GetBackendClusters() {
+		for _, bc := range t.getBackendClusters(svcCluster) {
 			if err := addXdsCluster(tCtx, &xdsClusterArgs{
 				backendCluster: bc,
 				endpointType:   EndpointTypeStatic,

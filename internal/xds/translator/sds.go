@@ -115,7 +115,7 @@ func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
 }
 
 // processSDSClusters scans the IR for SDS URLs and creates clusters for them
-func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
+func (t *Translator) processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 	sdsURLs := make(map[string]bool)
 
 	// Collect SDS URLs from HTTP listeners
@@ -124,7 +124,7 @@ func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 			if route.Destination == nil {
 				continue
 			}
-			for _, bc := range route.Destination.GetBackendClusters() {
+			for _, bc := range t.getBackendClusters(route.Destination) {
 				for _, dest := range bc.Settings {
 					if dest.TLS != nil {
 						// Check CA certificate
@@ -151,7 +151,7 @@ func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 			if route.Destination == nil {
 				continue
 			}
-			for _, bc := range route.Destination.GetBackendClusters() {
+			for _, bc := range t.getBackendClusters(route.Destination) {
 				for _, dest := range bc.Settings {
 					if dest.TLS != nil {
 						// Check CA certificate

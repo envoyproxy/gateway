@@ -523,13 +523,13 @@ func convertToKeyValueList(attributes []ir.MapEntry, additionalLabels bool) *otl
 	return keyValueList
 }
 
-func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog, metrics *ir.Metrics) error {
+func (t *Translator) processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog, metrics *ir.Metrics) error {
 	if al == nil {
 		return nil
 	}
 	// add clusters for ALS access logs
 	for _, als := range al.ALS {
-		for _, bc := range als.Destination.GetBackendClusters() {
+		for _, bc := range t.getBackendClusters(&als.Destination) {
 			args := &xdsClusterArgs{
 				backendCluster: bc,
 				tSocket:        nil,
@@ -544,7 +544,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 
 	// add clusters for Open Telemetry access logs
 	for _, otel := range al.OpenTelemetry {
-		for _, bc := range otel.Destination.GetBackendClusters() {
+		for _, bc := range t.getBackendClusters(&otel.Destination) {
 			args := &xdsClusterArgs{
 				backendCluster: bc,
 				tSocket:        nil,

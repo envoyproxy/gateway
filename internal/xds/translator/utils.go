@@ -133,7 +133,7 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 }
 
 func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
-	backends := rd.GetBackendClusters()
+	backends := tCtx.GetBackendClusters(rd)
 	if len(backends) != 1 {
 		return fmt.Errorf("ext service destination %s must have exactly one backend cluster, got %d", rd.Name, len(backends))
 	}

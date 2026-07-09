@@ -25,17 +25,7 @@ func newBackendClusterIndex(xdsIR *ir.Xds) backendClusterIndex {
 // in the index falls back to its (deprecated) embedded Backend field, for refs built by
 // code that hasn't migrated to registering into Xds.Backends yet.
 func (idx backendClusterIndex) resolve(refs []*ir.BackendClusterRef) []*ir.BackendCluster {
-	bcs := make([]*ir.BackendCluster, 0, len(refs))
-	for _, ref := range refs {
-		if bc, ok := idx[ref.Name]; ok {
-			bcs = append(bcs, bc)
-			continue
-		}
-		if ref.Backend != nil {
-			bcs = append(bcs, ref.Backend)
-		}
-	}
-	return bcs
+	return ir.ResolveBackendClusterRefs(idx, refs)
 }
 
 // getBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data via

@@ -45,7 +45,7 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*routev3.Route, error) {
+func buildXdsRoute(t *Translator, httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*routev3.Route, error) {
 	connectMatch := trafficUpgradeConnect(httpRoute.Traffic)
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
@@ -74,7 +74,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction := buildXdsURLRewriteAction(t, httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch)
 		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
@@ -86,7 +86,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		routeAction := buildXdsRouteAction(httpRoute)
+		routeAction := buildXdsRouteAction(t, httpRoute)
 		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 
 		if httpRoute.Mirrors != nil {
@@ -324,10 +324,10 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
-	backendWeights := route.Destination.ToBackendWeights()
-	if route.NeedsClusterPerSetting() {
-		return buildXdsWeightedRouteAction(backendWeights, route.Destination.GetBackendClusters())
+func buildXdsRouteAction(t *Translator, route *ir.HTTPRoute) *routev3.RouteAction {
+	backendWeights := t.backendWeights(route.Destination)
+	if t.httpRouteNeedsClusterPerSetting(route) {
+		return buildXdsWeightedRouteAction(backendWeights, t.getBackendClusters(route.Destination))
 	}
 
 	return &routev3.RouteAction{
@@ -533,12 +533,12 @@ func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
 	}
 }
 
-func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
-	backendWeights := route.Destination.ToBackendWeights()
+func buildXdsURLRewriteAction(t *Translator, route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
+	backendWeights := t.backendWeights(route.Destination)
 	// only use weighted cluster when there are invalid weights
 	var routeAction *routev3.RouteAction
-	if route.NeedsClusterPerSetting() {
-		routeAction = buildXdsWeightedRouteAction(backendWeights, route.Destination.GetBackendClusters())
+	if t.httpRouteNeedsClusterPerSetting(route) {
+		routeAction = buildXdsWeightedRouteAction(backendWeights, t.getBackendClusters(route.Destination))
 	} else {
 		routeAction = &routev3.RouteAction{
 			ClusterSpecifier: &routev3.RouteAction_Cluster{
