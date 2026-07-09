@@ -499,15 +499,15 @@ func (t *Translator) gatewayXdsIR(gatewayCtx *GatewayContext, xdsIR resource.Xds
 }
 
 // registerBackendCluster appends bc to gwIR's Backends registry (if gwIR is non-nil) and
-// returns a BackendClusterRef naming it, carrying weight/filters. Used by destination
-// owners that build a single, dedicated BackendCluster (never shared via
-// getOrCreateBackendCluster/BackendClusterMap) — ext-auth, access log sinks, tracing,
-// OIDC, JWT, mirrors, and the proxy service cluster.
-func registerBackendCluster(gwIR *ir.Xds, bc *ir.BackendCluster, weight *uint32, filters *ir.DestinationFilters) *ir.BackendClusterRef {
+// returns a BackendClusterRef naming it. Used by destination owners that build a single,
+// dedicated BackendCluster (never shared via getOrCreateBackendCluster/BackendClusterMap)
+// — ext-auth, access log sinks, tracing, OIDC, JWT, mirrors, and the proxy service cluster;
+// none of these carry a weight or per-backendRef filters.
+func registerBackendCluster(gwIR *ir.Xds, bc *ir.BackendCluster) *ir.BackendClusterRef {
 	if gwIR != nil {
 		gwIR.Backends = append(gwIR.Backends, bc)
 	}
-	return &ir.BackendClusterRef{Name: bc.Name, Weight: weight, Filters: filters}
+	return &ir.BackendClusterRef{Name: bc.Name}
 }
 
 // resolveBackendClusterName decides whether the backend identified by identity participates in

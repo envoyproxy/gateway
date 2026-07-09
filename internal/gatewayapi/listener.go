@@ -888,7 +888,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					Destination: ir.RouteDestination{
 						Name:               destName,
 						Settings:           ds,
-						BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, alBC, nil, nil)},
+						BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, alBC)},
 						Metadata:           buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic:    traffic,
@@ -939,7 +939,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					Destination: ir.RouteDestination{
 						Name:               destName,
 						Settings:           ds,
-						BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, otelBC, nil, nil)},
+						BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, otelBC)},
 						Metadata:           buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic: traffic,
@@ -955,7 +955,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					}
 					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
 					fallbackBC := &ir.BackendCluster{Name: destName, Settings: al.Destination.Settings}
-					al.Destination.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(gwIR, fallbackBC, nil, nil)}
+					al.Destination.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(gwIR, fallbackBC)}
 					al.Authority = host
 				}
 
@@ -1037,7 +1037,7 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		Destination: ir.RouteDestination{
 			Name:               destName,
 			Settings:           ds,
-			BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, tracingBC, nil, nil)},
+			BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, tracingBC)},
 			Metadata:           buildResourceMetadata(envoyproxy, nil),
 		},
 		Provider: tracing.Provider,
@@ -1170,7 +1170,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 				Destination: ir.RouteDestination{
 					Name:               destName,
 					Settings:           ds,
-					BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, metricsBC, nil, nil)},
+					BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, metricsBC)},
 					Metadata:           buildResourceMetadata(envoyproxy, nil),
 				},
 				Authority:                authority,

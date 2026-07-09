@@ -91,7 +91,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 		if bc.HasMixedEndpoints() {
 			return nil, nil, errors.New("external service destinations having multiple endpoint types are not supported")
 		}
-		rs.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(t.gatewayXdsIR(gtwCtx, xdsIR), bc, nil, nil)}
+		rs.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(t.gatewayXdsIR(gtwCtx, xdsIR), bc)}
 	}
 
 	if validationErr := rs.Validate(); validationErr != nil {
