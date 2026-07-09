@@ -147,9 +147,10 @@ envoyProxiesForGateways:
     name: ep-merge-default
     namespace: envoy-gateway
   spec:
-    backendTrafficPolicy:
-      defaultMergeType: StrategicMerge
     logging: {}
+    policyDefaults:
+      backendTrafficPolicy:
+        mergeType: StrategicMerge
   status:
     ancestors:
     - ancestorRef:
@@ -314,9 +315,10 @@ infraIR:
           name: ep-merge-default
           namespace: envoy-gateway
         spec:
-          backendTrafficPolicy:
-            defaultMergeType: StrategicMerge
           logging: {}
+          policyDefaults:
+            backendTrafficPolicy:
+              mergeType: StrategicMerge
         status:
           ancestors:
           - ancestorRef:

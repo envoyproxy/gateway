@@ -6,8 +6,9 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
   spec:
     mergeGateways: true
-    backendTrafficPolicy:
-      defaultMergeType: StrategicMerge
+    policyDefaults:
+      backendTrafficPolicy:
+        mergeType: StrategicMerge
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway

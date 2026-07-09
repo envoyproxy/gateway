@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -22,11 +22,11 @@ func TestEffectiveMergeType(t *testing.T) {
 	jsonMerge := egv1a1.JSONMerge
 
 	ep := func(mt *egv1a1.MergeType, label string) *egv1a1.EnvoyProxy {
-		d := &egv1a1.PolicyDefaults{DefaultMergeType: mt}
+		d := &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{MergeType: mt}}
 		if label != "" {
-			d.ExcludeLabel = new(label)
+			d.MergeExcludeLabel = new(label)
 		}
-		return &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{BackendTrafficPolicy: d}}
+		return &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{PolicyDefaults: &egv1a1.PolicyDefaults{BackendTrafficPolicy: d}}}
 	}
 	btp := func(ns string, labels map[string]string, mt *egv1a1.MergeType) *egv1a1.BackendTrafficPolicy {
 		return &egv1a1.BackendTrafficPolicy{
@@ -79,8 +79,8 @@ func TestEffectiveMergeType_AdditionalBranches(t *testing.T) {
 		want *egv1a1.MergeType
 	}{
 		{
-			// ep != nil but ep.Spec.BackendTrafficPolicy == nil -> nil.
-			name: "envoyproxy without backendTrafficPolicy stays nil",
+			// ep != nil but ep.Spec.PolicyDefaults == nil -> nil.
+			name: "envoyproxy without policyDefaults stays nil",
 			pol: &egv1a1.BackendTrafficPolicy{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "app"},
 			},
@@ -94,9 +94,11 @@ func TestEffectiveMergeType_AdditionalBranches(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "app", Labels: map[string]string{"other": "x"}},
 			},
 			ep: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
-				BackendTrafficPolicy: &egv1a1.PolicyDefaults{
-					DefaultMergeType: &strategic,
-					ExcludeLabel:     new("skip"),
+				PolicyDefaults: &egv1a1.PolicyDefaults{
+					BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{
+						MergeType:         &strategic,
+						MergeExcludeLabel: new("skip"),
+					}},
 				},
 			}},
 			want: &strategic,
@@ -108,9 +110,11 @@ func TestEffectiveMergeType_AdditionalBranches(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "app"},
 			},
 			ep: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
-				BackendTrafficPolicy: &egv1a1.PolicyDefaults{
-					DefaultMergeType: &strategic,
-					ExcludeLabel:     new("skip"),
+				PolicyDefaults: &egv1a1.PolicyDefaults{
+					BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{
+						MergeType:         &strategic,
+						MergeExcludeLabel: new("skip"),
+					}},
 				},
 			}},
 			want: &strategic,
@@ -124,8 +128,10 @@ func TestEffectiveMergeType_AdditionalBranches(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "app"},
 			},
 			ep: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
-				BackendTrafficPolicy: &egv1a1.PolicyDefaults{
-					DefaultMergeType: new(egv1a1.Replace),
+				PolicyDefaults: &egv1a1.PolicyDefaults{
+					BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{
+						MergeType: new(egv1a1.Replace),
+					}},
 				},
 			}},
 			want: nil,
@@ -151,7 +157,7 @@ func TestAnyGatewayMergeDefault(t *testing.T) {
 	strategic := egv1a1.StrategicMerge
 
 	epWithDefault := &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
-		BackendTrafficPolicy: &egv1a1.PolicyDefaults{DefaultMergeType: &strategic},
+		PolicyDefaults: &egv1a1.PolicyDefaults{BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{MergeType: &strategic}}},
 	}}
 	epNoDefault := &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{}}
 
@@ -213,7 +219,7 @@ func TestApplyTrafficFeatureToRoute_MergeGatewayScoping(t *testing.T) {
 	target := policyTargetReferenceWithSectionName{}
 
 	t.Run("tcp listener of another gateway is skipped", func(t *testing.T) {
-		route := &TCPRouteContext{TCPRoute: &gwapiv1a2.TCPRoute{
+		route := &TCPRouteContext{TCPRoute: &gwapiv1.TCPRoute{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "tcproute-1"},
 		}}
 		sibling := &ir.TCPRoute{Destination: &ir.RouteDestination{Name: irRoutePrefix(route) + "rule/0"}}
@@ -227,7 +233,7 @@ func TestApplyTrafficFeatureToRoute_MergeGatewayScoping(t *testing.T) {
 	})
 
 	t.Run("udp listener of another gateway is skipped", func(t *testing.T) {
-		route := &UDPRouteContext{UDPRoute: &gwapiv1a2.UDPRoute{
+		route := &UDPRouteContext{UDPRoute: &gwapiv1.UDPRoute{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "udproute-1"},
 		}}
 		sibling := &ir.UDPRoute{Destination: &ir.RouteDestination{Name: irRoutePrefix(route) + "rule/0"}}

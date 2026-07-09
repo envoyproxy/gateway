@@ -82,15 +82,16 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 // enforced by CRD validation for EnvoyProxy resources but not when the spec is provided inline as
 // the EnvoyGateway default, since that path does not go through CRD admission.
 func validateEnvoyGatewayDefaultEnvoyProxy(spec *egv1a1.EnvoyProxySpec) error {
-	if spec == nil || spec.BackendTrafficPolicy == nil || spec.BackendTrafficPolicy.DefaultMergeType == nil {
+	if spec == nil || spec.PolicyDefaults == nil || spec.PolicyDefaults.BackendTrafficPolicy == nil ||
+		spec.PolicyDefaults.BackendTrafficPolicy.MergeType == nil {
 		return nil
 	}
-	switch *spec.BackendTrafficPolicy.DefaultMergeType {
+	switch *spec.PolicyDefaults.BackendTrafficPolicy.MergeType {
 	case egv1a1.StrategicMerge, egv1a1.JSONMerge:
 		return nil
 	default:
-		return fmt.Errorf("envoyProxy.backendTrafficPolicy.defaultMergeType must be one of StrategicMerge or JSONMerge, got %q",
-			*spec.BackendTrafficPolicy.DefaultMergeType)
+		return fmt.Errorf("envoyProxy.policyDefaults.backendTrafficPolicy.mergeType must be one of StrategicMerge or JSONMerge, got %q",
+			*spec.PolicyDefaults.BackendTrafficPolicy.MergeType)
 	}
 }
 

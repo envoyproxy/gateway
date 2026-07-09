@@ -279,10 +279,11 @@ infraIR:
           name: test
           namespace: envoy-gateway-system
         spec:
-          backendTrafficPolicy:
-            defaultMergeType: StrategicMerge
           logging: {}
           mergeGateways: true
+          policyDefaults:
+            backendTrafficPolicy:
+              mergeType: StrategicMerge
         status: {}
       listeners:
       - name: envoy-gateway/gateway-1/http

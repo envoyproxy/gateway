@@ -5,9 +5,10 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
     name: test
   spec:
-    backendTrafficPolicy:
-      defaultMergeType: StrategicMerge
-      excludeLabel: gateway.envoyproxy.io/skip-merge-default
+    policyDefaults:
+      backendTrafficPolicy:
+        mergeType: StrategicMerge
+        mergeExcludeLabel: gateway.envoyproxy.io/skip-merge-default
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -62,8 +63,8 @@ backendTrafficPolicies:
           maxConnectionDuration: 17s
       httpUpgrade:
         - type: websocket
-  # Route-level policy carries the EnvoyProxy excludeLabel, so it opts out of the
-  # defaultMergeType and replaces (rather than merges into) the gateway-level policy.
+  # Route-level policy carries the EnvoyProxy mergeExcludeLabel, so it opts out of the
+  # mergeType and replaces (rather than merges into) the gateway-level policy.
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:

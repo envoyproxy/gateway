@@ -217,24 +217,35 @@ type EnvoyProxySpec struct {
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
 
-	// BackendTrafficPolicy defines defaults applied to BackendTrafficPolicy resources
-	// attached to Gateways that use this EnvoyProxy.
+	// PolicyDefaults defines defaults applied to Envoy Gateway policies attached to
+	// Gateways that use this EnvoyProxy.
 	// +optional
-	BackendTrafficPolicy *PolicyDefaults `json:"backendTrafficPolicy,omitempty"`
+	PolicyDefaults *PolicyDefaults `json:"policyDefaults,omitempty"`
 }
 
-// PolicyDefaults defines default settings shared by Envoy Gateway xPolicies (e.g. BackendTrafficPolicy)
-// attached to Gateways that use this EnvoyProxy.
+// PolicyDefaults defines defaults applied to Envoy Gateway policies, keyed by policy kind.
 type PolicyDefaults struct {
-	// DefaultMergeType is the mergeType used for a policy that does not set one,
+	// BackendTrafficPolicy defines defaults applied to BackendTrafficPolicy resources.
+	// +optional
+	BackendTrafficPolicy *BackendTrafficPolicyDefaults `json:"backendTrafficPolicy,omitempty"`
+}
+
+// BackendTrafficPolicyDefaults defines defaults applied to BackendTrafficPolicy resources.
+type BackendTrafficPolicyDefaults struct {
+	MergeSettings `json:",inline"`
+}
+
+// MergeSettings defines how an Envoy Gateway policy that does not set a mergeType is merged by default.
+type MergeSettings struct {
+	// MergeType is the mergeType applied to a policy that does not set one,
 	// so a route-level policy merges into its parent instead of replacing it.
 	// +kubebuilder:validation:Enum=StrategicMerge;JSONMerge
 	// +optional
-	DefaultMergeType *MergeType `json:"defaultMergeType,omitempty"`
+	MergeType *MergeType `json:"mergeType,omitempty"`
 
-	// ExcludeLabel, when present on a policy, opts that policy out of DefaultMergeType.
+	// MergeExcludeLabel, when present on a policy, opts that policy out of the default MergeType.
 	// +optional
-	ExcludeLabel *string `json:"excludeLabel,omitempty"`
+	MergeExcludeLabel *string `json:"mergeExcludeLabel,omitempty"`
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.

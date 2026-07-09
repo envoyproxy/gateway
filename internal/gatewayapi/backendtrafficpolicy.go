@@ -1080,26 +1080,27 @@ func (t *Translator) effectiveMergeType(policy *egv1a1.BackendTrafficPolicy, ep 
 	if policy.Spec.MergeType != nil {
 		return policy.Spec.MergeType
 	}
-	if ep == nil || ep.Spec.BackendTrafficPolicy == nil || ep.Spec.BackendTrafficPolicy.DefaultMergeType == nil {
+	if ep == nil || ep.Spec.PolicyDefaults == nil || ep.Spec.PolicyDefaults.BackendTrafficPolicy == nil ||
+		ep.Spec.PolicyDefaults.BackendTrafficPolicy.MergeType == nil {
 		return nil
 	}
 	if policy.Namespace == t.ControllerNamespace {
 		return nil
 	}
-	d := ep.Spec.BackendTrafficPolicy
-	if label := ptr.Deref(d.ExcludeLabel, ""); label != "" {
+	d := ep.Spec.PolicyDefaults.BackendTrafficPolicy
+	if label := ptr.Deref(d.MergeExcludeLabel, ""); label != "" {
 		if _, ok := policy.Labels[label]; ok {
 			return nil
 		}
 	}
-	// Defense in depth: the CRD enum restricts DefaultMergeType to StrategicMerge/JSONMerge, but the
+	// Defense in depth: the CRD enum restricts MergeType to StrategicMerge/JSONMerge, but the
 	// EnvoyGateway default EnvoyProxySpec is not subject to CRD validation. Ignore anything that is
 	// not a real merge so a stray value (e.g. Replace) can never produce a "merged" status while
 	// actually replacing the parent.
-	if *d.DefaultMergeType != egv1a1.StrategicMerge && *d.DefaultMergeType != egv1a1.JSONMerge {
+	if *d.MergeType != egv1a1.StrategicMerge && *d.MergeType != egv1a1.JSONMerge {
 		return nil
 	}
-	return d.DefaultMergeType
+	return d.MergeType
 }
 
 // anyGatewayMergeDefault reports whether any of the route's parent gateways supplies a default

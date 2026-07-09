@@ -10,8 +10,9 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
     name: test
   spec:
-    backendTrafficPolicy:
-      defaultMergeType: StrategicMerge
+    policyDefaults:
+      backendTrafficPolicy:
+        mergeType: StrategicMerge
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -67,7 +68,7 @@ backendTrafficPolicies:
       httpUpgrade:
         - type: websocket
   # Route-level policy lives in the control-plane (controller) namespace, so the EnvoyProxy
-  # defaultMergeType does not apply and the policy replaces the gateway-level policy.
+  # mergeType does not apply and the policy replaces the gateway-level policy.
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:

@@ -559,6 +559,21 @@ between the Envoy Proxy listener and the backend service.
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#policystatus)_ |  true  |  | status defines the current status of BackendTrafficPolicy. |
 
 
+#### BackendTrafficPolicyDefaults
+
+
+
+BackendTrafficPolicyDefaults defines defaults applied to BackendTrafficPolicy resources.
+
+_Appears in:_
+- [PolicyDefaults](#policydefaults)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType is the mergeType applied to a policy that does not set one,<br />so a route-level policy merges into its parent instead of replacing it. |
+| `mergeExcludeLabel` | _string_ |  false  |  | MergeExcludeLabel, when present on a policy, opts that policy out of the default MergeType. |
+
+
 #### BackendTrafficPolicySpec
 
 
@@ -2241,7 +2256,7 @@ _Appears in:_
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
-| `backendTrafficPolicy` | _[PolicyDefaults](#policydefaults)_ |  false  |  | BackendTrafficPolicy defines defaults applied to BackendTrafficPolicy resources<br />attached to Gateways that use this EnvoyProxy. |
+| `policyDefaults` | _[PolicyDefaults](#policydefaults)_ |  false  |  | PolicyDefaults defines defaults applied to Envoy Gateway policies attached to<br />Gateways that use this EnvoyProxy. |
 
 
 #### EnvoyProxyStatus
@@ -4156,6 +4171,21 @@ _Appears in:_
 | `ValueRef` | LuaValueTypeValueRef defines the "ValueRef" Lua type.<br /> | 
 
 
+#### MergeSettings
+
+
+
+MergeSettings defines how an Envoy Gateway policy that does not set a mergeType is merged by default.
+
+_Appears in:_
+- [BackendTrafficPolicyDefaults](#backendtrafficpolicydefaults)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType is the mergeType applied to a policy that does not set one,<br />so a route-level policy merges into its parent instead of replacing it. |
+| `mergeExcludeLabel` | _string_ |  false  |  | MergeExcludeLabel, when present on a policy, opts that policy out of the default MergeType. |
+
+
 #### MergeType
 
 _Underlying type:_ _string_
@@ -4163,10 +4193,11 @@ _Underlying type:_ _string_
 MergeType defines the type of merge operation
 
 _Appears in:_
+- [BackendTrafficPolicyDefaults](#backendtrafficpolicydefaults)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [EnvoyProxySpec](#envoyproxyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)
-- [PolicyDefaults](#policydefaults)
+- [MergeSettings](#mergesettings)
 - [SecurityPolicySpec](#securitypolicyspec)
 
 | Value | Description |
@@ -4572,16 +4603,14 @@ _Appears in:_
 
 
 
-PolicyDefaults defines default settings shared by Envoy Gateway xPolicies (e.g. BackendTrafficPolicy)
-attached to Gateways that use this EnvoyProxy.
+PolicyDefaults defines defaults applied to Envoy Gateway policies, keyed by policy kind.
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `defaultMergeType` | _[MergeType](#mergetype)_ |  false  |  | DefaultMergeType is the mergeType used for a policy that does not set one,<br />so a route-level policy merges into its parent instead of replacing it. |
-| `excludeLabel` | _string_ |  false  |  | ExcludeLabel, when present on a policy, opts that policy out of DefaultMergeType. |
+| `backendTrafficPolicy` | _[BackendTrafficPolicyDefaults](#backendtrafficpolicydefaults)_ |  false  |  | BackendTrafficPolicy defines defaults applied to BackendTrafficPolicy resources. |
 
 
 #### PolicyTargetReferences

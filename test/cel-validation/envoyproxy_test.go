@@ -2486,34 +2486,40 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
 		{
-			desc: "backendTrafficPolicy defaultMergeType StrategicMerge is valid",
+			desc: "policyDefaults backendTrafficPolicy mergeType StrategicMerge is valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					BackendTrafficPolicy: &egv1a1.PolicyDefaults{
-						DefaultMergeType: new(egv1a1.StrategicMerge),
+					PolicyDefaults: &egv1a1.PolicyDefaults{
+						BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{
+							MergeType: new(egv1a1.StrategicMerge),
+						}},
 					},
 				}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: "backendTrafficPolicy defaultMergeType JSONMerge with excludeLabel is valid",
+			desc: "policyDefaults backendTrafficPolicy mergeType JSONMerge with mergeExcludeLabel is valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					BackendTrafficPolicy: &egv1a1.PolicyDefaults{
-						DefaultMergeType: new(egv1a1.JSONMerge),
-						ExcludeLabel:     new("gateway.envoyproxy.io/skip-merge-default"),
+					PolicyDefaults: &egv1a1.PolicyDefaults{
+						BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{
+							MergeType:         new(egv1a1.JSONMerge),
+							MergeExcludeLabel: new("gateway.envoyproxy.io/skip-merge-default"),
+						}},
 					},
 				}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: "backendTrafficPolicy defaultMergeType Replace is rejected",
+			desc: "policyDefaults backendTrafficPolicy mergeType Replace is rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					BackendTrafficPolicy: &egv1a1.PolicyDefaults{
-						DefaultMergeType: new(egv1a1.MergeType("Replace")),
+					PolicyDefaults: &egv1a1.PolicyDefaults{
+						BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{
+							MergeType: new(egv1a1.MergeType("Replace")),
+						}},
 					},
 				}
 			},

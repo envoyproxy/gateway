@@ -167,10 +167,11 @@ infraIR:
           name: test
           namespace: envoy-gateway-system
         spec:
-          backendTrafficPolicy:
-            defaultMergeType: StrategicMerge
-            excludeLabel: gateway.envoyproxy.io/skip-merge-default
           logging: {}
+          policyDefaults:
+            backendTrafficPolicy:
+              mergeExcludeLabel: gateway.envoyproxy.io/skip-merge-default
+              mergeType: StrategicMerge
         status: {}
       listeners:
       - name: envoy-gateway/gateway-1/http
