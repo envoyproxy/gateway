@@ -1,0 +1,6 @@
+config:
+  envoyGateway:
+    # Set a global default EnvoyProxy spec that enables backend cluster deduplication
+    # (MergeBackends) for all GatewayClasses, so the conformance suite runs against it.
+    envoyProxy:
+      mergeBackends: BestEffort

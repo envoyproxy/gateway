@@ -1,0 +1,21 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /route-1
+      name: route-1
+      route:
+        cluster: backend/service/default/service-1/8080
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /route-2
+      name: route-2
+      route:
+        cluster: backend/service/default/service-1/8080
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -795,8 +795,9 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.ProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
+			clusterName := tcpUDPClusterName(route.Destination)
 			if err := processXdsCluster(tCtx,
-				route.Destination.Name,
+				clusterName,
 				route.Destination.Settings,
 				&TCPRouteTranslator{route},
 				&ExtraArgs{metrics: metrics},
@@ -840,7 +841,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
 				route,
-				route.Destination.Name,
+				clusterName,
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
@@ -905,9 +906,9 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
 		if udpListener.Route != nil {
-			// 1:1 between IR UDPRoute and xDS Cluster
+			// 1:1 between IR UDPRoute and xDS Cluster (or N:1 when MergeBackends shares a cluster)
 			if err := processXdsCluster(tCtx,
-				udpListener.Route.Destination.Name,
+				tcpUDPClusterName(udpListener.Route.Destination),
 				udpListener.Route.Destination.Settings,
 				&UDPRouteTranslator{udpListener.Route},
 				&ExtraArgs{metrics: metrics},
@@ -931,7 +932,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		}
 
 		xdsListener, err := buildXdsUDPListener(
-			udpListener.Route.Destination.Name,
+			tcpUDPClusterName(udpListener.Route.Destination),
 			udpListener,
 			accesslog,
 			t.xdsNameSchemeV2(),
@@ -1068,6 +1069,17 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 	metadata *ir.ResourceMetadata,
 ) error {
 	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras, metadata))
+}
+
+// tcpUDPClusterName returns the Envoy cluster name for a TCP/UDP route destination. When the
+// destination has been merged onto a shared, backend-identity cluster (MergeBackends), the
+// single backend's name is used so routes referencing the same backend collapse onto one cluster;
+// otherwise the route-scoped destination name is used.
+func tcpUDPClusterName(d *ir.RouteDestination) string {
+	if d != nil && len(d.Settings) == 1 && d.Settings[0] != nil && d.Settings[0].Merged {
+		return d.Settings[0].Name
+	}
+	return d.Name
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.

@@ -2248,6 +2248,7 @@ _Appears in:_
 | `routingType` | _[RoutingType](#routingtype)_ |  false  |  | RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,<br />or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint". |
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
+| `mergeBackends` | _[MergeBackendsMode](#mergebackendsmode)_ |  false  |  | MergeBackends enables cluster deduplication: routes that reference the same backend<br />(identified by kind/namespace/name/port) share a single Envoy cluster instead of Envoy<br />Gateway generating one cluster per route rule. This reduces xDS size, active health-check<br />traffic and stats cardinality, and improves upstream connection pooling.<br />The merge behavior is controlled by the selected mode:<br />  - BestEffort: a backendRef is merged into a shared cluster only when it is safe to do so.<br />    A backendRef that carries backend-cluster-scoped settings (e.g. a route-targeted<br />    BackendTrafficPolicy configuring healthCheck, circuitBreaker, loadBalancer, etc.) or that<br />    uses features incompatible with weighted clusters falls back to a dedicated per-route<br />    cluster.<br />  - Force: the backend is always merged into a single shared cluster, even when a<br />    route-targeted BackendTrafficPolicy configures backend-cluster-scoped settings (those<br />    settings are ignored for the shared cluster).<br />This is an experimental optimization and is disabled when unset. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.bandwidth_limit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
@@ -4169,6 +4170,22 @@ _Appears in:_
 | ----- | ----------- |
 | `Inline` | LuaValueTypeInline defines the "Inline" Lua type.<br /> | 
 | `ValueRef` | LuaValueTypeValueRef defines the "ValueRef" Lua type.<br /> | 
+
+
+#### MergeBackendsMode
+
+_Underlying type:_ _string_
+
+MergeBackendsMode determines how aggressively Envoy Gateway deduplicates clusters when
+MergeBackends is enabled.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `BestEffort` | MergeBackendsModeBestEffort merges a backend's cluster across routes only when it is safe to<br />share the resulting cluster. Routes carrying backend-cluster-scoped settings, or using features<br />incompatible with weighted clusters, fall back to a dedicated per-route cluster.<br /> | 
+| `Force` | MergeBackendsModeForce always merges a backend's cluster across routes, even when a<br />route-targeted BackendTrafficPolicy configures backend-cluster-scoped settings for it (those<br />settings are ignored for the shared cluster).<br /> | 
 
 
 #### MergeType

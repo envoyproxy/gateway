@@ -904,6 +904,25 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	return nil
 }
 
+// trafficFeaturesHaveClusterSettings reports whether the TrafficFeatures populate any
+// backend-cluster-scoped (CDS) setting. These settings are baked into the Envoy cluster, so a
+// route-targeted policy that sets any of them prevents the backend's cluster from being safely
+// shared with other routes when MergeBackends is enabled.
+func trafficFeaturesHaveClusterSettings(tf *ir.TrafficFeatures) bool {
+	if tf == nil {
+		return false
+	}
+	return tf.LoadBalancer != nil ||
+		tf.ProxyProtocol != nil ||
+		tf.HealthCheck != nil ||
+		tf.CircuitBreaker != nil ||
+		tf.Timeout != nil ||
+		tf.TCPKeepalive != nil ||
+		tf.BackendConnection != nil ||
+		tf.HTTP2 != nil ||
+		tf.DNS != nil
+}
+
 func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	tf *ir.TrafficFeatures, errs error,
 	policy *egv1a1.BackendTrafficPolicy,
@@ -915,6 +934,12 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
 		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
 	}
+
+	// This function only applies route- (or route-rule-) targeted BackendTrafficPolicies; the
+	// Gateway-targeted floor is applied elsewhere. When MergeBackends is enabled and this
+	// route-targeted policy contributes backend-cluster-scoped (CDS) settings, the affected
+	// destinations must opt out of cluster sharing so their route-specific settings are preserved.
+	markRouteLevelClusterSettings := t.MergeBackends && trafficFeaturesHaveClusterSettings(tf)
 
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
@@ -941,6 +966,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				setIfNil(&r.DNS, tf.DNS)
 				setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
 				appendTrafficPolicyMetadata(r.Metadata, policy)
+				if markRouteLevelClusterSettings && r.Destination != nil {
+					r.Destination.RouteLevelClusterSettings = true
+				}
 			}
 		}
 	}
@@ -962,6 +990,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				// specific policy
 				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
 				setIfNil(&r.DNS, tf.DNS)
+				if markRouteLevelClusterSettings && r.Destination != nil {
+					r.Destination.RouteLevelClusterSettings = true
+				}
 			}
 		}
 	}
@@ -997,6 +1028,10 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				}
 
 				r.Traffic = tf.DeepCopy()
+
+				if markRouteLevelClusterSettings && r.Destination != nil {
+					r.Destination.RouteLevelClusterSettings = true
+				}
 
 				if r.Traffic != nil && r.Traffic.LoadBalancer != nil &&
 					r.Traffic.LoadBalancer.BackendUtilization != nil &&

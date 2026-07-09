@@ -1,0 +1,12 @@
+- clusterName: backend/service/default/service-1/8080
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: backend/service/default/service-1/8080

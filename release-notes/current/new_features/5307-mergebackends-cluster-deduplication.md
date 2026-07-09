@@ -1,0 +1,1 @@
+Added an experimental `mergeBackends` field to EnvoyProxy that deduplicates Envoy clusters so routes referencing the same backend (kind/namespace/name/port) share a single cluster instead of Envoy Gateway generating one cluster per route rule, reducing xDS size, active health-check traffic and stats cardinality.

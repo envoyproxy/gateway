@@ -1898,6 +1898,11 @@ type RouteDestination struct {
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
 	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// RouteLevelClusterSettings is true when a route- or route-rule-targeted BackendTrafficPolicy
+	// populates backend-cluster-scoped (CDS) settings for this destination. When MergeBackends is
+	// enabled, such destinations opt out of cluster sharing so their route-specific cluster settings
+	// are preserved.
+	RouteLevelClusterSettings bool `json:"routeLevelClusterSettings,omitempty" yaml:"routeLevelClusterSettings,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -1916,11 +1921,24 @@ func (r *RouteDestination) Validate() error {
 }
 
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
-	return r.HasMixedEndpoints() ||
+	return r.HasMergedSettings() ||
+		r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
 		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
 		r.HasMixedUpstreamProtocolRequirements() ||
 		r.HasMixedAutoSNISettings()
+}
+
+// HasMergedSettings returns true if any setting is a shared per-backend cluster (MergeBackends).
+// Merged settings are always translated as one cluster per setting, named by backend identity,
+// so that routes referencing the same backend collapse onto a single Envoy cluster.
+func (r *RouteDestination) HasMergedSettings() bool {
+	for _, s := range r.Settings {
+		if s != nil && s.Merged {
+			return true
+		}
+	}
+	return false
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -2067,6 +2085,9 @@ type DestinationSetting struct {
 	// * invalid 500
 	// * without endpoints 503
 	Invalid bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
+	// Merged is true when this setting's cluster is shared across routes referencing the same backend
+	// (MergeBackends). When set, Name holds the backend-identity cluster name.
+	Merged bool `json:"merged,omitempty" yaml:"merged,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure

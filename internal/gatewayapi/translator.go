@@ -88,6 +88,10 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// MergeBackends is true when routes referencing the same backend
+	// should share a single Envoy cluster (CDS deduplication).
+	MergeBackends bool
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 
@@ -371,6 +375,13 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 
 	// Update status of Backend TLS Policies after translating all resources
 	t.ProcessBackendTLSPolicyStatus(resources.BackendTLSPolicies)
+
+	// Deduplicate clusters across routes that reference the same backend (CDS deduplication).
+	// This must run after all routes and BackendTrafficPolicies have been processed so that
+	// route-targeted cluster-scoped settings are known.
+	if t.MergeBackends {
+		t.mergeBackendClusters(xdsIR)
+	}
 
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)

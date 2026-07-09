@@ -3252,6 +3252,11 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.MergeBackends != nil {
+		in, out := &in.MergeBackends, &out.MergeBackends
+		*out = new(MergeBackendsMode)
+		**out = **in
+	}
 	if in.Shutdown != nil {
 		in, out := &in.Shutdown, &out.Shutdown
 		*out = new(ShutdownConfig)

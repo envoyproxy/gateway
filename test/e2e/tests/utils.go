@@ -973,6 +973,12 @@ func XDSNameSchemeV2() bool {
 	return DeployProfile == "xds-name-scheme-v2"
 }
 
+// IsMergeBackends returns true when Envoy Gateway is deployed with the merge-backends profile,
+// which sets a global default EnvoyProxy spec enabling MergeBackends (cluster deduplication).
+func IsMergeBackends() bool {
+	return DeployProfile == "merge-backends"
+}
+
 func GetGatewayResourceNamespace() string {
 	if IsGatewayNamespaceMode() {
 		return "gateway-conformance-infra"

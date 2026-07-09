@@ -92,6 +92,26 @@ type EnvoyProxySpec struct {
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
 
+	// MergeBackends enables cluster deduplication: routes that reference the same backend
+	// (identified by kind/namespace/name/port) share a single Envoy cluster instead of Envoy
+	// Gateway generating one cluster per route rule. This reduces xDS size, active health-check
+	// traffic and stats cardinality, and improves upstream connection pooling.
+	//
+	// The merge behavior is controlled by the selected mode:
+	//   - BestEffort: a backendRef is merged into a shared cluster only when it is safe to do so.
+	//     A backendRef that carries backend-cluster-scoped settings (e.g. a route-targeted
+	//     BackendTrafficPolicy configuring healthCheck, circuitBreaker, loadBalancer, etc.) or that
+	//     uses features incompatible with weighted clusters falls back to a dedicated per-route
+	//     cluster.
+	//   - Force: the backend is always merged into a single shared cluster, even when a
+	//     route-targeted BackendTrafficPolicy configures backend-cluster-scoped settings (those
+	//     settings are ignored for the shared cluster).
+	//
+	// This is an experimental optimization and is disabled when unset.
+	//
+	// +optional
+	MergeBackends *MergeBackendsMode `json:"mergeBackends,omitempty"`
+
 	// Shutdown defines configuration for graceful envoy shutdown process.
 	//
 	// +optional
@@ -217,6 +237,23 @@ type EnvoyProxySpec struct {
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
 }
+
+// MergeBackendsMode determines how aggressively Envoy Gateway deduplicates clusters when
+// MergeBackends is enabled.
+// +kubebuilder:validation:Enum=BestEffort;Force
+type MergeBackendsMode string
+
+const (
+	// MergeBackendsModeBestEffort merges a backend's cluster across routes only when it is safe to
+	// share the resulting cluster. Routes carrying backend-cluster-scoped settings, or using features
+	// incompatible with weighted clusters, fall back to a dedicated per-route cluster.
+	MergeBackendsModeBestEffort MergeBackendsMode = "BestEffort"
+
+	// MergeBackendsModeForce always merges a backend's cluster across routes, even when a
+	// route-targeted BackendTrafficPolicy configures backend-cluster-scoped settings for it (those
+	// settings are ignored for the shared cluster).
+	MergeBackendsModeForce MergeBackendsMode = "Force"
+)
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
 type EnvoyProxyGeoIP struct {

@@ -1,0 +1,62 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends: BestEffort
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tcp-1
+          protocol: TCP
+          port: 8080
+          allowedRoutes:
+            namespaces:
+              from: All
+            kinds:
+              - kind: TCPRoute
+        - name: tcp-2
+          protocol: TCP
+          port: 8081
+          allowedRoutes:
+            namespaces:
+              from: All
+            kinds:
+              - kind: TCPRoute
+tcpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TCPRoute
+    metadata:
+      namespace: default
+      name: tcproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: tcp-1
+      rules:
+        - backendRefs:
+            - name: service-3
+              port: 8163
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TCPRoute
+    metadata:
+      namespace: default
+      name: tcproute-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: tcp-2
+      rules:
+        - backendRefs:
+            - name: service-3
+              port: 8163

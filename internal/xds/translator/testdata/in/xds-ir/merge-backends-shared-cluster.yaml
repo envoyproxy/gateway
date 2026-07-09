@@ -1,0 +1,36 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "route-1"
+    hostname: "*"
+    pathMatch:
+      prefix: "/route-1"
+    destination:
+      name: "httproute/default/route-1/rule/0"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "backend/service/default/service-1/8080"
+        merged: true
+        weight: 1
+  - name: "route-2"
+    hostname: "*"
+    pathMatch:
+      prefix: "/route-2"
+    destination:
+      name: "httproute/default/route-2/rule/0"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "backend/service/default/service-1/8080"
+        merged: true
+        weight: 1

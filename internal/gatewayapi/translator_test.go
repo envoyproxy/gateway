@@ -139,6 +139,7 @@ func TestTranslate(t *testing.T) {
 				SDSSecretRefEnabled:             sdsEnabled,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
+				MergeBackends:                   IsMergeBackendsEnabled(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
