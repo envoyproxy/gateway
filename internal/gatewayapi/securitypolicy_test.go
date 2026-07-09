@@ -1326,7 +1326,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			p := &egv1a1.SecurityPolicy{Spec: tc.spec}
-			err := validateSecurityPolicyForTCP(p)
+			err := validateSecurityPolicyForTCPAndTLS(p)
 			if tc.wantErr {
 				require.Error(t, err)
 			} else {

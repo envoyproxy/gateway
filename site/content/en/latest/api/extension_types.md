@@ -5781,12 +5781,12 @@ Gateway.
 
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
-NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
-When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
+NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, TCPRoute, and TLSRoute.
+When a SecurityPolicy targets a TCPRoute or TLSRoute, only client-IP CIDR based authorization
 (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 authentication/authorization features such as JWT, API Key, Basic Auth,
 OIDC, External Authorization, or GeoIP based authorization are not applicable
-to TCPRoute targets.
+to TCPRoute or TLSRoute targets.
 
 _Appears in:_
 - [SecurityPolicy](#securitypolicy)

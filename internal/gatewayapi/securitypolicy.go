@@ -374,9 +374,9 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// then run it once to keep the flow linear and easier to read.
 	validator := validateSecurityPolicy
 	errMsg := "invalid SecurityPolicy"
-	if currTarget.Kind == resource.KindTCPRoute {
-		validator = validateSecurityPolicyForTCP
-		errMsg = "invalid SecurityPolicy for TCP route"
+	if currTarget.Kind == resource.KindTCPRoute || currTarget.Kind == resource.KindTLSRoute {
+		validator = validateSecurityPolicyForTCPAndTLS
+		errMsg = "invalid SecurityPolicy for TCP/TLS route"
 	}
 	if err := validator(policy); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
@@ -660,16 +660,16 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
+// validateSecurityPolicyForTCPAndTLS ensures SecurityPolicy usage on TCP/TLS is compatible.
 //
-// TCP supports Authorization with ClientCIDRs ONLY.
+// TCP and TLS support Authorization with ClientCIDRs ONLY.
 // - Principals.JWT      => invalid (HTTP-only)
 // - Principals.Headers  => invalid (HTTP-only)
-// - Empty/no Authorization is allowed and results in no-op on TCP.
+// - Empty/no Authorization is allowed and results in no-op on TCP/TLS.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
-func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
+func validateSecurityPolicyForTCPAndTLS(p *egv1a1.SecurityPolicy) error {
 	if p.Spec.CORS != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
-		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
+		return fmt.Errorf("only authorization is supported for TCP/TLS (routes/listeners)")
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
 		return nil
@@ -683,13 +683,13 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 			continue
 		}
 		if rule.Principal.JWT != nil {
-			return fmt.Errorf("rule %d: JWT not supported for TCP", i)
+			return fmt.Errorf("rule %d: JWT not supported for TCP/TLS", i)
 		}
 		if len(rule.Principal.Headers) > 0 {
-			return fmt.Errorf("rule %d: headers not supported for TCP", i)
+			return fmt.Errorf("rule %d: headers not supported for TCP/TLS", i)
 		}
 		if len(rule.Principal.ClientIPGeoLocations) > 0 {
-			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP", i)
+			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP/TLS", i)
 		}
 		if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
 			return fmt.Errorf("rule %d: %w", i, err)
@@ -991,16 +991,26 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		switch route.GetRouteType() {
-		case resource.KindTCPRoute:
+		case resource.KindTCPRoute, resource.KindTLSRoute:
 			for _, listener := range parentRefCtx.listeners {
 				// If policyTargetListener is set, only apply to the specific listener
 				if policyTargetListener != nil && *policyTargetListener != listener.Name {
 					continue
 				}
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+
 				for _, r := range tl.Routes {
+					// For TLSRoute: filter by route metadata to handle multiple routes per listener
+					if target.Kind == resource.KindTLSRoute {
+						if r.Metadata == nil ||
+							r.Metadata.Namespace != string(target.Namespace) ||
+							r.Metadata.Name != string(target.Name) {
+							continue
+						}
+					}
+
 					// If target.SectionName is specified it must match the route-rule section name
-					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
+					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP/TLS
 					// routes the section name is currently stored on r.Destination.Metadata.SectionName.
 					if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
 						continue
@@ -1009,7 +1019,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					if r.Authorization != nil {
 						continue
 					}
-					// Only authorization for TCP
+					// Only authorization for TCP/TLS
 					if authorization != nil {
 						authCopy := *authorization
 						r.Authorization = &authCopy
@@ -1278,7 +1288,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		tcpAuthorization = &authCopy
 	}
 
-	// Apply to TCP listeners (Authorization only).
+	// Apply to TCP/TLS listeners (Authorization only).
+	// Both TCPRoute and TLSRoute translate to TCP listeners in the IR.
 	if tcpAuthorization != nil {
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {

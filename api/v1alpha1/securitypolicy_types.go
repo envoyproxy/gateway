@@ -37,18 +37,18 @@ type SecurityPolicy struct {
 
 // SecurityPolicySpec defines the desired state of SecurityPolicy.
 //
-// NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
-// When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
+// NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, TCPRoute, and TLSRoute.
+// When a SecurityPolicy targets a TCPRoute or TLSRoute, only client-IP CIDR based authorization
 // (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 // authentication/authorization features such as JWT, API Key, Basic Auth,
 // OIDC, External Authorization, or GeoIP based authorization are not applicable
-// to TCPRoute targets.
+// to TCPRoute or TLSRoute targets.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'TCPRoute'] : true", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute"
+// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'TCPRoute', 'TLSRoute'] : true", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true ", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'TCPRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute"
+// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="(has(self.authorization) && has(self.authorization.rules) && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt) : false)) ? has(self.jwt) : true", message="if authorization.rules.principal.jwt is used, jwt must be defined"
 type SecurityPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
