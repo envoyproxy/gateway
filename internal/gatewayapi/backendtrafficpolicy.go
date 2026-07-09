@@ -213,6 +213,162 @@ func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.Names
 	return nil
 }
 
+// btpClusterSettingsHasSettings reports whether cs sets any backend-cluster-scoped (CDS) field.
+// These settings are baked into the Envoy cluster, so a route-rule/route/listener-targeted BTP
+// that sets any of them makes that target's backend ineligible for cluster deduplication:
+// sharing the cluster with another route would either silently apply this target's settings to
+// that route too, or silently drop them for this route - the same class of bug already fixed for
+// RoutingType divergence.
+func btpClusterSettingsHasSettings(cs *egv1a1.ClusterSettings) bool {
+	if cs == nil {
+		return false
+	}
+	return cs.LoadBalancer != nil ||
+		cs.ProxyProtocol != nil ||
+		cs.HealthCheck != nil ||
+		cs.CircuitBreaker != nil ||
+		cs.Timeout != nil ||
+		cs.TCPKeepalive != nil ||
+		cs.Connection != nil ||
+		cs.HTTP2 != nil ||
+		cs.DNS != nil
+}
+
+func hasBTPClusterSettings(btps []*egv1a1.BackendTrafficPolicy) bool {
+	for _, btp := range btps {
+		if btpClusterSettingsHasSettings(&btp.Spec.ClusterSettings) {
+			return true
+		}
+	}
+	return false
+}
+
+// BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
+// BackendTrafficPolicy contributes backend-cluster-scoped (CDS) settings. Unlike
+// BTPRoutingTypeIndex, a gateway-level match is deliberately NOT tracked here: a gateway-level
+// BTP's cluster settings apply uniformly to every route under that gateway, so - mirroring
+// RoutingType's baseline treatment - they never block merging. Only route-rule/route/listener
+// level policies do, since those apply narrowly to a subset of routes sharing the backend.
+type BTPClusterSettingsIndex struct {
+	routeRuleLevel map[btpRoutingKey]bool
+	routeLevel     map[btpRoutingKey]bool
+	listenerLevel  map[btpRoutingKey]bool
+}
+
+// BuildBTPClusterSettingsIndex builds a pre-computed index of which route-rule/route/listener
+// targets have a BackendTrafficPolicy contributing backend-cluster-scoped settings, mirroring
+// BuildBTPRoutingTypeIndex's target-resolution approach.
+func BuildBTPClusterSettingsIndex(
+	btps []*egv1a1.BackendTrafficPolicy,
+	routes []client.Object,
+	gateways []*GatewayContext,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	namespaceLookup func(string) *corev1.Namespace,
+) *BTPClusterSettingsIndex {
+	idx := &BTPClusterSettingsIndex{
+		routeRuleLevel: make(map[btpRoutingKey]bool),
+		routeLevel:     make(map[btpRoutingKey]bool),
+		listenerLevel:  make(map[btpRoutingKey]bool),
+	}
+
+	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
+	allTargets = append(allTargets, routes...)
+	for _, gw := range gateways {
+		allTargets = append(allTargets, gw)
+	}
+
+	for _, btp := range btps {
+		if !btpClusterSettingsHasSettings(&btp.Spec.ClusterSettings) {
+			continue
+		}
+		refs := resolvePolicyTargets(
+			btp.Spec.PolicyTargetReferences,
+			allTargets,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
+			btp.Namespace,
+			namespaceLookup,
+		)
+		for _, ref := range refs {
+			kind := string(ref.Kind)
+			key := btpRoutingKey{
+				Kind:        kind,
+				Namespace:   btp.Namespace,
+				Name:        string(ref.Name),
+				SectionName: string(ptr.Deref(ref.SectionName, "")),
+			}
+
+			if kind == resource.KindGateway {
+				if ref.SectionName != nil {
+					idx.listenerLevel[key] = true
+				}
+				// A gateway-level match (no SectionName) is deliberately not recorded - see the
+				// type doc comment.
+			} else {
+				if ref.SectionName != nil {
+					idx.routeRuleLevel[key] = true
+				} else {
+					idx.routeLevel[key] = true
+				}
+			}
+		}
+	}
+
+	return idx
+}
+
+// HasRouteLevelClusterSettings reports whether a route-rule, route, or listener-level
+// BackendTrafficPolicy (in that priority order) contributes backend-cluster-scoped settings for
+// the given target. Unlike LookupBTPRoutingType, this deliberately does not fall through to a
+// gateway-level match - see BTPClusterSettingsIndex's doc comment.
+func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
+	routeKind gwapiv1.Kind,
+	routeNN types.NamespacedName,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	routeRuleName *gwapiv1.SectionName,
+) bool {
+	if idx == nil {
+		return false
+	}
+
+	if routeRuleName != nil {
+		key := btpRoutingKey{
+			Kind:        string(routeKind),
+			Namespace:   routeNN.Namespace,
+			Name:        routeNN.Name,
+			SectionName: string(*routeRuleName),
+		}
+		if idx.routeRuleLevel[key] {
+			return true
+		}
+	}
+
+	routeKey := btpRoutingKey{
+		Kind:      string(routeKind),
+		Namespace: routeNN.Namespace,
+		Name:      routeNN.Name,
+	}
+	if idx.routeLevel[routeKey] {
+		return true
+	}
+
+	if listenerName != nil {
+		listenerKey := btpRoutingKey{
+			Kind:        resource.KindGateway,
+			Namespace:   gatewayNN.Namespace,
+			Name:        gatewayNN.Name,
+			SectionName: string(*listenerName),
+		}
+		if idx.listenerLevel[listenerKey] {
+			return true
+		}
+	}
+
+	return false
+}
+
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)

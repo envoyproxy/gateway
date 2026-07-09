@@ -154,12 +154,17 @@ type MergeBackendsConfig struct {
 // route-rule-scoped cluster instead — otherwise the divergent override would silently leak into (or
 // be silently overridden by) a cluster shared with other rules/routes.
 // TODO: once a selector is added, this also becomes a per-backend identity match.
+// A route-rule/route/listener-targeted BackendTrafficPolicy that sets any backend-cluster-scoped (CDS) setting also skips merging for this backendRef, for the same reason.
 func (t *Translator) shouldMergeBackend(
 	gwNN types.NamespacedName,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
+	hasRouteLevelClusterSettings bool,
 ) bool {
 	if !t.MergeBackends.Enabled {
+		return false
+	}
+	if hasRouteLevelClusterSettings {
 		return false
 	}
 
@@ -323,6 +328,18 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.BTPRoutingTypeIndex = nil
 	if hasBTPRoutingType(resources.BackendTrafficPolicies) {
 		t.BTPRoutingTypeIndex = BuildBTPRoutingTypeIndex(
+			resources.BackendTrafficPolicies,
+			routesToObjects(resources),
+			acceptedGateways,
+			resources.ReferenceGrants,
+			t.GetNamespace,
+		)
+	}
+
+	// Build pre-computed BTP ClusterSettings index for O(1) merge-eligibility lookups.
+	t.BTPClusterSettingsIndex = nil
+	if hasBTPClusterSettings(resources.BackendTrafficPolicies) {
+		t.BTPClusterSettingsIndex = BuildBTPClusterSettingsIndex(
 			resources.BackendTrafficPolicies,
 			routesToObjects(resources),
 			acceptedGateways,

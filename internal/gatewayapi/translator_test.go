@@ -130,6 +130,11 @@ func TestTranslate(t *testing.T) {
 				}
 			}
 
+			// The "mergebackends-" testdata prefix exercises MergeBackends (cluster deduplication) with
+			// MergeBackends.Enabled forced on, since there is no API/CRD surface to set it from the
+			// testdata YAML itself yet.
+			mergeBackendsEnabled := strings.HasPrefix(strings.Split(filepath.Base(inputFile), ".")[0], "mergebackends-")
+
 			translator := &Translator{
 				GatewayControllerName:           egv1a1.GatewayControllerName,
 				GatewayClassName:                "envoy-gateway-class",
@@ -139,6 +144,7 @@ func TestTranslate(t *testing.T) {
 				SDSSecretRefEnabled:             sdsEnabled,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
+				MergeBackends:                   MergeBackendsConfig{Enabled: mergeBackendsEnabled},
 				GatewayNamespaceMode:            gatewayNamespaceMode,
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
@@ -485,6 +491,10 @@ func TestTranslate(t *testing.T) {
 			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 
+			if mergeBackendsEnabled {
+				assertMergedBackendClusterCount(t, testName(inputFile), got)
+			}
+
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
@@ -502,11 +512,22 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"), // TODO: remove once Settings is dropped and BackendClusterRefs is serialized
+				// BackendClusterRefs is tagged yaml:"-" and can never round-trip through a golden
+				// .out.yaml file (want's copy is always nil), regardless of whether the field's
+				// actual content is correct - so it must always be ignored here, for every test
+				// case. Backends verification (below) is the mergebackends- cases' actual signal.
+				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"),
+				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
+				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
+				cmpopts.EquateEmpty(),
+			}
+			// mergebackends- testdata cases exist specifically to verify Backends (cluster
+			// deduplication), so unlike every other case it must NOT be ignored here.
+			if !mergeBackendsEnabled {
 				// TODO: remove once Xds.Backends is validated/consumed by later BackendCluster dedup tasks.
 				// This must match the anonymous struct type produced by xdsWithoutEqual, not ir.Xds itself,
 				// since the ClearXdsEqual transformer below runs first.
-				cmpopts.IgnoreFields(struct {
+				opts = append(opts, cmpopts.IgnoreFields(struct {
 					ReadyListener           *ir.ReadyListener
 					AccessLog               *ir.AccessLog
 					Tracing                 *ir.Tracing
@@ -519,10 +540,7 @@ func TestTranslate(t *testing.T) {
 					GlobalResources         *ir.GlobalResources
 					ExtensionServerPolicies []*ir.UnstructuredRef
 					Backends                []*ir.BackendCluster
-				}{}, "Backends"),
-				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
-				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
-				cmpopts.EquateEmpty(),
+				}{}, "Backends"))
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})

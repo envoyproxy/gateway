@@ -1077,7 +1077,7 @@ func (t *Translator) processRequestMirrorFilter(
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
-	gatewayCtx, btpRoutingType := t.resolveRoutingContext(filterContext.Route, filterContext.ParentRef, nil)
+	gatewayCtx, btpRoutingType, _ := t.resolveRoutingContext(filterContext.Route, filterContext.ParentRef, nil)
 	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, gatewayCtx, btpRoutingType, xdsIR)
 	if err != nil {
 		// Gateway API conformance: When backendRef Service exists but has no endpoints,
