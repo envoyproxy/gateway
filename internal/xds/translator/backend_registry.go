@@ -30,7 +30,12 @@ func (idx backendClusterIndex) resolve(refs []*ir.BackendClusterRef) []*ir.Backe
 
 // getBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data via
 // the registry. Falls back to rd.Settings (pre-BackendClusterRefs legacy shape) if rd has
-// no refs at all.
+// no refs at all. The fallback's returned BackendCluster is non-empty even when rd.Settings
+// is empty (e.g. a route destination with zero healthy endpoints still needs an EDS cluster
+// built) — callers that must distinguish "no backend configured at all" (e.g. ext-service/
+// JWT/OIDC provider destinations, where an empty Settings means no backendRef was actually
+// selected) need to check rd.Settings directly rather than relying on this method's slice
+// length.
 func (t *Translator) getBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
 	if rd == nil {
 		return nil

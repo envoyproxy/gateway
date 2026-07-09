@@ -36,7 +36,11 @@ type ResourceVersionTable struct {
 
 // GetBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data via
 // BackendIndex, mirroring xds/translator's Translator.getBackendClusters. Falls back to
-// rd.Settings (pre-BackendClusterRefs legacy shape) if rd has no refs at all.
+// rd.Settings (pre-BackendClusterRefs legacy shape) if rd has no refs at all. The fallback's
+// returned BackendCluster is non-empty even when rd.Settings is empty (e.g. a route
+// destination with zero healthy endpoints still needs an EDS cluster built) — callers that
+// must distinguish "no backend configured at all" need to check rd.Settings directly rather
+// than relying on this method's slice length.
 func (t *ResourceVersionTable) GetBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
 	if rd == nil {
 		return nil

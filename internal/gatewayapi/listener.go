@@ -930,17 +930,15 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					d.Protocol = ir.GRPC
 				}
 
-				otelBC := &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches:         validExprs,
 					ResourceAttributes: ir.MapToSlice(sink.OpenTelemetry.GetResourceAttributes()),
 					Headers:            sink.OpenTelemetry.Headers,
 					Authority:          getAuthorityFromDestination(ds),
 					Destination: ir.RouteDestination{
-						Name:               destName,
-						Settings:           ds,
-						BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, otelBC)},
-						Metadata:           buildResourceMetadata(envoyproxy, nil),
+						Name:     destName,
+						Settings: ds,
+						Metadata: buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic: traffic,
 					LogType: accessLogType,
@@ -957,6 +955,9 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					fallbackBC := &ir.BackendCluster{Name: destName, Settings: al.Destination.Settings}
 					al.Destination.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(gwIR, fallbackBC)}
 					al.Authority = host
+				} else {
+					otelBC := &ir.BackendCluster{Name: destName, Settings: ds, Metadata: buildResourceMetadata(envoyproxy, nil)}
+					al.Destination.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(gwIR, otelBC)}
 				}
 
 				// For OpenTelemetry, text (body) and attributes can be used together.
