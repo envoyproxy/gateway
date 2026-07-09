@@ -16,6 +16,8 @@ type JWT struct {
 	// Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
 	// Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT
 	// is presented. See FailOpen if this is necessary for your use case.
+	//
+	// +optional
 	Optional *bool `json:"optional,omitempty"`
 
 	// FailOpen lets a request pass JWT authentication even when its JWT is
@@ -30,6 +32,8 @@ type JWT struct {
 	//
 	// This is broader than Optional (which tolerates a missing JWT but still
 	// rejects an invalid one) and takes precedence over it.
+	//
+	// +optional
 	FailOpen *bool `json:"failOpen,omitempty"`
 
 	// Providers defines the JSON Web Token (JWT) authentication provider type.
