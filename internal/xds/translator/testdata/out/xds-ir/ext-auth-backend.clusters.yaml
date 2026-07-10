@@ -144,36 +144,6 @@
           initialStreamWindowSize: 65536
 - circuitBreakers:
     thresholds:
-    - maxRetries: 1024
-  commonLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: extauth/primary_foo_com/0318cc711210500a
-  ignoreHealthOnHostRemoval: true
-  loadBalancingPolicy:
-    policies:
-    - typedExtensionConfig:
-        name: envoy.load_balancing_policies.least_request
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
-          localityLbConfig:
-            localityWeightedLbConfig: {}
-  name: extauth/primary_foo_com/0318cc711210500a
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-  typedExtensionProtocolOptions:
-    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-- circuitBreakers:
-    thresholds:
     - maxConnections: 30001
       maxPendingRequests: 1024
       maxRequests: 1022
