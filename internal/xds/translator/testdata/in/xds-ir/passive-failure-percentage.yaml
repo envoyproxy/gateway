@@ -12,12 +12,8 @@ http:
     hostname: "*"
     destination:
       name: "dest-1"
-      settings:
-      - endpoints:
-        - host: "7.7.7.7"
-          port: 8080
-        name: "dest-1/backend/0"
-        protocol: HTTP
+      backendClusterRefs:
+      - name: "dest-1"
     traffic:
       healthCheck:
         passive:
@@ -30,3 +26,11 @@ http:
           splitExternalLocalOriginErrors: false
           failurePercentageThreshold: 90
           alwaysEjectOneEndpoint: true
+backends:
+- name: "dest-1"
+  settings:
+  - endpoints:
+    - host: "7.7.7.7"
+      port: 8080
+    name: "dest-1/backend/0"
+    protocol: HTTP

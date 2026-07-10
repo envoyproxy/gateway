@@ -24,12 +24,8 @@ http:
       exact: "yes"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        protocol: GRPC
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
     traffic:
       http2:
         initialConnectionWindowSize: 1048576
@@ -48,12 +44,8 @@ http:
       exact: "bar/foo"
     destination:
       name: "second-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        protocol: GRPC
-        name: "second-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "second-route-dest"
     traffic:
       http2: {}
   - name: "third-route-use-client"
@@ -63,12 +55,8 @@ http:
       exact: "bar/bar"
     destination:
       name: "third-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        protocol: HTTP
-        name: "third-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "third-route-dest"
     useClientProtocol: true
     traffic:
       http2:
@@ -83,14 +71,39 @@ http:
       exact: "foo/foo"
     destination:
       name: "fourth-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "fourth-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "fourth-route-dest"
     traffic:
       http2:
         initialConnectionWindowSize: 1048576
         initialStreamWindowSize: 524288000
         maxConcurrentStreams: 200
         resetStreamOnError: true
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    protocol: GRPC
+    name: "first-route-dest/backend/0"
+- name: "second-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    protocol: GRPC
+    name: "second-route-dest/backend/0"
+- name: "third-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    protocol: HTTP
+    name: "third-route-dest/backend/0"
+- name: "fourth-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "fourth-route-dest/backend/0"

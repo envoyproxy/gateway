@@ -19,27 +19,8 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.1.1.1"
-          port: 50001
-        weight: 20
-        name: "first-route-dest/backend/0"
-      - endpoints:
-        - host: "2.2.2.2"
-          port: 50002
-        weight: 40
-        name: "first-route-dest/backend/1"
-      - endpoints:
-        - host: "3.3.3.3"
-          port: 50003
-        weight: 20
-        name: "first-route-dest/backend/2"
-      - endpoints:
-        - host: "4.4.4.4"
-          port: 50004
-        weight: 20
-        name: "first-route-dest/backend/3"
+      backendClusterRefs:
+      - name: "first-route-dest"
   - name: "second-route"
     hostname: "*"
     metadata:
@@ -51,24 +32,50 @@ http:
     statName: "route=/second,kind=HTTPRoute,ns=default,name=httproute-2"
     destination:
       name: "second-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.1.1.1"
-          port: 50001
-        weight: 20
-        name: "second-route-dest/backend/0"
-      - endpoints:
-        - host: "2.2.2.2"
-          port: 50002
-        weight: 40
-        name: "second-route-dest/backend/1"
-      - endpoints:
-        - host: "3.3.3.3"
-          port: 50003
-        weight: 20
-        name: "second-route-dest/backend/2"
-      - endpoints:
-        - host: "4.4.4.4"
-          port: 50004
-        weight: 20
-        name: "second-route-dest/backend/3"
+      backendClusterRefs:
+      - name: "second-route-dest"
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.1.1.1"
+      port: 50001
+    weight: 20
+    name: "first-route-dest/backend/0"
+  - endpoints:
+    - host: "2.2.2.2"
+      port: 50002
+    weight: 40
+    name: "first-route-dest/backend/1"
+  - endpoints:
+    - host: "3.3.3.3"
+      port: 50003
+    weight: 20
+    name: "first-route-dest/backend/2"
+  - endpoints:
+    - host: "4.4.4.4"
+      port: 50004
+    weight: 20
+    name: "first-route-dest/backend/3"
+- name: "second-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.1.1.1"
+      port: 50001
+    weight: 20
+    name: "second-route-dest/backend/0"
+  - endpoints:
+    - host: "2.2.2.2"
+      port: 50002
+    weight: 40
+    name: "second-route-dest/backend/1"
+  - endpoints:
+    - host: "3.3.3.3"
+      port: 50003
+    weight: 20
+    name: "second-route-dest/backend/2"
+  - endpoints:
+    - host: "4.4.4.4"
+      port: 50004
+    weight: 20
+    name: "second-route-dest/backend/3"

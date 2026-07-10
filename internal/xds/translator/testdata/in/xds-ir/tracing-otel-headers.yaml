@@ -16,13 +16,8 @@ tracing:
     value: test
   destination:
     name: "tracing-0"
-    settings:
-    - endpoints:
-      - host: "otel-collector.default.svc.cluster.local"
-        port: 4317
-      protocol: "GRPC"
-      addressType: FQDN
-      name: "tracing-0/backend/0"
+    backendClusterRefs:
+    - name: "tracing-0"
   provider:
     host: otel-collector.monitoring.svc.cluster.local
     port: 4317
@@ -41,8 +36,20 @@ http:
     hostname: "*"
     destination:
       name: "direct-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "direct-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "direct-route-dest"
+backends:
+- name: "tracing-0"
+  settings:
+  - endpoints:
+    - host: "otel-collector.default.svc.cluster.local"
+      port: 4317
+    protocol: "GRPC"
+    addressType: FQDN
+    name: "tracing-0/backend/0"
+- name: "direct-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "direct-route-dest/backend/0"

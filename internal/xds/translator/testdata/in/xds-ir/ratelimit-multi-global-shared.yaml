@@ -33,12 +33,8 @@ http:
           exact: "foo/bar"
         destination:
           name: "first-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "first-route-dest/backend/0"
-
+          backendClusterRefs:
+            - name: "first-route-dest"
       - name: "second-route"
         hostname: "*"
         traffic:
@@ -57,12 +53,8 @@ http:
           exact: "foo/baz"
         destination:
           name: "second-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "second-route-dest/backend/0"
-
+          backendClusterRefs:
+            - name: "second-route-dest"
       - name: "third-route"
         hostname: "*"
         traffic:
@@ -89,8 +81,26 @@ http:
           exact: "test"
         destination:
           name: "third-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "third-route-dest/backend/0"
+          backendClusterRefs:
+            - name: "third-route-dest"
+backends:
+  - name: "first-route-dest"
+    settings:
+      - endpoints:
+          - host: "1.2.3.4"
+            port: 50000
+        name: "first-route-dest/backend/0"
+
+  - name: "second-route-dest"
+    settings:
+      - endpoints:
+          - host: "1.2.3.4"
+            port: 50000
+        name: "second-route-dest/backend/0"
+
+  - name: "third-route-dest"
+    settings:
+      - endpoints:
+          - host: "1.2.3.4"
+            port: 50000
+        name: "third-route-dest/backend/0"

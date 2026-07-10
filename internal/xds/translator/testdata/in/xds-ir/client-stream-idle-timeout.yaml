@@ -12,11 +12,8 @@ http:
         hostname: "*"
         destination:
           name: "first-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "first-route-dest/backend/0"
+          backendClusterRefs:
+            - name: "first-route-dest"
     timeout:
       http:
         requestReceivedTimeout: "5s"
@@ -30,11 +27,21 @@ tcp:
       - name: "second-route"
         destination:
           name: "second-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "second-route-dest/backend/0"
+          backendClusterRefs:
+            - name: "second-route-dest"
     timeout:
       tcp:
         idleTimeout: "1200s"
+backends:
+  - name: "first-route-dest"
+    settings:
+      - endpoints:
+          - host: "1.2.3.4"
+            port: 50000
+        name: "first-route-dest/backend/0"
+  - name: "second-route-dest"
+    settings:
+      - endpoints:
+          - host: "1.2.3.4"
+            port: 50000
+        name: "second-route-dest/backend/0"

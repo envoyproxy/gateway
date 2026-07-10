@@ -159,11 +159,8 @@ http:
       exact: "jason"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
   - name: "second-route"
     hostname: "*"
     headerMatches:
@@ -173,11 +170,8 @@ http:
       exact: "US"
     destination:
       name: "second-route-dest"
-      settings:
-      - endpoints:
-        - host: "4.5.6.7"
-          port: 60000
-        name: "second-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "second-route-dest"
 - address: 0.0.0.0
   hostnames:
   - '*'
@@ -189,14 +183,8 @@ http:
   routes:
   - destination:
       name: httproute/default/httproute-1/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-1/rule/0/backend/0
+      backendClusterRefs:
+      - name: httproute/default/httproute-1/rule/0
     hostname: www.example.com
     isHTTP2: false
     name: httproute/default/httproute-1/rule/0/match/0/www_example_com
@@ -221,14 +209,8 @@ http:
         wasmName: wasm-filter-4
   - destination:
       name: httproute/default/httproute-1/rule/1
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-1/rule/1/backend/0
+      backendClusterRefs:
+      - name: httproute/default/httproute-1/rule/1
     hostname: www.example.com
     isHTTP2: false
     name: httproute/default/httproute-1/rule/1/match/0/www_example_com
@@ -236,3 +218,34 @@ http:
       distinct: false
       name: ""
       prefix: /
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "first-route-dest/backend/0"
+- name: "second-route-dest"
+  settings:
+  - endpoints:
+    - host: "4.5.6.7"
+      port: 60000
+    name: "second-route-dest/backend/0"
+- name: httproute/default/httproute-1/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+    name: httproute/default/httproute-1/rule/0/backend/0
+- name: httproute/default/httproute-1/rule/1
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+    name: httproute/default/httproute-1/rule/1/backend/0

@@ -27,12 +27,8 @@ http:
       prefix: /
     destination:
       name: "post-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "post-dest/backend/0"
-  # Test 2: GET method match
+      backendClusterRefs:
+      - name: "post-dest"
   - name: "route-method-get"
     hostname: "*"
     traffic:
@@ -51,12 +47,8 @@ http:
       prefix: /data
     destination:
       name: "get-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "get-dest/backend/0"
-  # Test 3: PUT method match
+      backendClusterRefs:
+      - name: "get-dest"
   - name: "route-method-put"
     hostname: "*"
     traffic:
@@ -75,12 +67,8 @@ http:
       prefix: /update
     destination:
       name: "put-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "put-dest/backend/0"
-  # Test 4: DELETE method match
+      backendClusterRefs:
+      - name: "put-dest"
   - name: "route-method-delete"
     hostname: "*"
     traffic:
@@ -99,12 +87,8 @@ http:
       prefix: /delete
     destination:
       name: "delete-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "delete-dest/backend/0"
-  # Test 5: Multiple method rules
+      backendClusterRefs:
+      - name: "delete-dest"
   - name: "route-multiple-methods"
     hostname: "*"
     traffic:
@@ -133,12 +117,8 @@ http:
       prefix: /api/
     destination:
       name: "multi-method-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "multi-method-dest/backend/0"
-  # Test 6: Method with header match combination
+      backendClusterRefs:
+      - name: "multi-method-dest"
   - name: "route-method-and-header"
     hostname: "*"
     traffic:
@@ -160,8 +140,47 @@ http:
       prefix: /premium/
     destination:
       name: "premium-post-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "premium-post-dest/backend/0"
+      backendClusterRefs:
+      - name: "premium-post-dest"
+backends:
+- name: "post-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "post-dest/backend/0"
+  # Test 2: GET method match
+- name: "get-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "get-dest/backend/0"
+  # Test 3: PUT method match
+- name: "put-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "put-dest/backend/0"
+  # Test 4: DELETE method match
+- name: "delete-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "delete-dest/backend/0"
+  # Test 5: Multiple method rules
+- name: "multi-method-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "multi-method-dest/backend/0"
+  # Test 6: Method with header match combination
+- name: "premium-post-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "premium-post-dest/backend/0"

@@ -16,11 +16,8 @@ http:
           prefix: /
         destination:
           name: httproute/default/httproute-1/rule/0
-          settings:
-            - endpoints:
-                - host: 7.7.7.7
-                  port: 8080
-              name: httproute/default/httproute-1/rule/0/backend/0
+          backendClusterRefs:
+            - name: httproute/default/httproute-1/rule/0
         security:
           jwt:
             providers:
@@ -73,3 +70,10 @@ http:
             refreshToken: true
             scopes:
               - openid
+backends:
+  - name: httproute/default/httproute-1/rule/0
+    settings:
+      - endpoints:
+          - host: 7.7.7.7
+            port: 8080
+        name: httproute/default/httproute-1/rule/0/backend/0

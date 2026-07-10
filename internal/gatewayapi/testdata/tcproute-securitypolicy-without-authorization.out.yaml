@@ -124,27 +124,54 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: TCPRoute
+        name: tcpr-app
+        namespace: default
+      name: tcproute/default/tcpr-app/rule/-1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8163
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8163"
+        name: tcproute/default/tcpr-app/rule/-1/backend/0
+        protocol: TCP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-gateway-tcp-093cb215
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/gateway-tcp
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-tcp-093cb215
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-tcp
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-gateway-tcp-093cb215
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-tcp
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/gateway-tcp
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-tcp-093cb215
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-tcp
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -162,24 +189,14 @@ xdsIR:
       port: 8088
       routes:
       - destination:
+          backendClusterRefs:
+          - name: tcproute/default/tcpr-app/rule/-1
+            weight: 1
           metadata:
             kind: TCPRoute
             name: tcpr-app
             namespace: default
           name: tcproute/default/tcpr-app/rule/-1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8163
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8163"
-            name: tcproute/default/tcpr-app/rule/-1/backend/0
-            protocol: TCP
-            weight: 1
         metadata:
           kind: TCPRoute
           name: tcpr-app

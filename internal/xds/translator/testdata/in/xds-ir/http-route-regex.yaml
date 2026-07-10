@@ -20,8 +20,12 @@ http:
       safeRegex: ".*"
     destination:
       name: "regex-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "regex-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "regex-route-dest"
+backends:
+- name: "regex-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "regex-route-dest/backend/0"

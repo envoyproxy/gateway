@@ -12,11 +12,8 @@ http:
     hostname: "*"
     destination:
       name: "request-header-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "request-header-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "request-header-route-dest"
     addRequestHeaders:
     - name: "some-header-multi-value"
       value:
@@ -45,3 +42,10 @@ http:
     removeRequestHeaders:
     - "some-header5"
     - "some-header6"
+backends:
+- name: "request-header-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "request-header-route-dest/backend/0"

@@ -598,27 +598,54 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: GRPCRoute
+        name: grpcroute-1
+        namespace: default
+      name: grpcroute/default/grpcroute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: grpcroute/default/grpcroute-1/rule/0/backend/0
+        protocol: GRPC
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-gateway-1-196ae069
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/gateway-1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-gateway-1-196ae069
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-1
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/gateway-1
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -639,24 +666,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: grpcroute/default/grpcroute-1/rule/0
+            weight: 1
           metadata:
             kind: GRPCRoute
             name: grpcroute-1
             namespace: default
           name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: grpcroute/default/grpcroute-1/rule/0/backend/0
-            protocol: GRPC
-            weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:
@@ -680,27 +697,126 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-1
+        namespace: default
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-2
+        namespace: default
+      name: httproute/default/httproute-2/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-2/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-3
+        namespace: default
+      name: httproute/default/httproute-3/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-3/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-4
+        namespace: default
+      name: httproute/default/httproute-4/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-4/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-5
+        namespace: default
+      name: httproute/default/httproute-5/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-5/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/gateway-2
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-2-4a0e4eb9
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-2
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-gateway-2-4a0e4eb9
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-2
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/gateway-2
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-2
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -718,24 +834,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-2/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-2
             namespace: default
           name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -757,24 +863,14 @@ xdsIR:
               slowStart:
                 window: 5m0s
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-3/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-3
             namespace: default
           name: httproute/default/httproute-3/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-3/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -796,24 +892,14 @@ xdsIR:
               cookie:
                 name: test
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-4/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-4
             namespace: default
           name: httproute/default/httproute-4/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-4/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -835,24 +921,14 @@ xdsIR:
               queryParams:
               - name: test
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-5/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-5
             namespace: default
           name: httproute/default/httproute-5/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-5/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -884,24 +960,14 @@ xdsIR:
               weightExpirationPeriod: 1m0s
               weightUpdatePeriod: 10s
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

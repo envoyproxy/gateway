@@ -20,13 +20,8 @@ accesslog:
   - name: als
     destination:
       name: accesslog/monitoring/envoy-als/port/9000
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 1.1.1.1
-          port: 9000
-        protocol: GRPC
-        weight: 1
+      backendClusterRefs:
+      - name: accesslog/monitoring/envoy-als/port/9000
     http:
       requestHeaders:
       - x-client-ip-address
@@ -47,12 +42,8 @@ accesslog:
     authority: "otel-collector.default.svc.cluster.local"
     destination:
       name: "accesslog-0"
-      settings:
-      - endpoints:
-        - host: "otel-collector.default.svc.cluster.local"
-          port: 4317
-        addressType: FQDN
-        protocol: "GRPC"
+      backendClusterRefs:
+      - name: "accesslog-0"
 http:
 - name: "first-listener"
   address: "::"
@@ -67,7 +58,26 @@ http:
     hostname: "*"
     destination:
       name: "direct-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
+      backendClusterRefs:
+      - name: "direct-route-dest"
+backends:
+- name: accesslog/monitoring/envoy-als/port/9000
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 1.1.1.1
+      port: 9000
+    protocol: GRPC
+    weight: 1
+- name: "accesslog-0"
+  settings:
+  - endpoints:
+    - host: "otel-collector.default.svc.cluster.local"
+      port: 4317
+    addressType: FQDN
+    protocol: "GRPC"
+- name: "direct-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000

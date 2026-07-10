@@ -13,11 +13,8 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
 - name: "second-listener"
   address: "::"
   port: 10081
@@ -35,11 +32,8 @@ http:
     hostname: "*"
     destination:
       name: "second-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "second-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "second-route-dest"
 tcp:
 - name: "third-listener"
   address: "::"
@@ -52,11 +46,8 @@ tcp:
         - bar.com
     destination:
       name: "tls-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "tls-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "tls-route-dest"
 - name: "fourth-listener"
   address: "::"
   tcpKeepalive:
@@ -65,8 +56,30 @@ tcp:
   routes:
   - destination:
       name: "tcp-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "tcp-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "tcp-route-dest"
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "first-route-dest/backend/0"
+- name: "second-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "second-route-dest/backend/0"
+- name: "tls-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "tls-route-dest/backend/0"
+- name: "tcp-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "tcp-route-dest/backend/0"

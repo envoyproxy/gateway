@@ -16,16 +16,20 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        addressType: "IP"
-        weight: 1
-        name: "first-route-dest/backend/0"
-      - endpoints:
-        - host: "example.com"
-          port: 50000
-        addressType: "FQDN"
-        weight: 1
-        name: "first-route-dest/backend/1"
+      backendClusterRefs:
+      - name: "first-route-dest"
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    addressType: "IP"
+    weight: 1
+    name: "first-route-dest/backend/0"
+  - endpoints:
+    - host: "example.com"
+      port: 50000
+    addressType: "FQDN"
+    weight: 1
+    name: "first-route-dest/backend/1"

@@ -17,14 +17,8 @@ http:
           prefix: /foo1
         destination:
           name: httproute/default/httproute-1/rule/0
-          settings:
-            - addressType: IP
-              endpoints:
-                - host: 7.7.7.7
-                  port: 8080
-              protocol: HTTP
-              weight: 1
-              name: httproute/default/httproute-1/rule/0/backend/0
+          backendClusterRefs:
+            - name: httproute/default/httproute-1/rule/0
         security:
           apiKeyAuth:
             credentials:
@@ -43,14 +37,8 @@ http:
           prefix: /foo2
         destination:
           name: httproute/default/httproute-1/rule/1
-          settings:
-            - addressType: IP
-              endpoints:
-                - host: 7.7.7.7
-                  port: 8080
-              protocol: HTTP
-              weight: 1
-              name: httproute/default/httproute-1/rule/1/backend/0
+          backendClusterRefs:
+            - name: httproute/default/httproute-1/rule/1
         security:
           apiKeyAuth:
             credentials:
@@ -67,14 +55,8 @@ http:
           prefix: /bar
         destination:
           name: httproute/default/httproute-2/rule/0
-          settings:
-            - addressType: IP
-              endpoints:
-                - host: 7.7.7.7
-                  port: 8080
-              protocol: HTTP
-              weight: 1
-              name: httproute/default/httproute-2/rule/0/backend/0
+          backendClusterRefs:
+            - name: httproute/default/httproute-2/rule/0
         security:
           apiKeyAuth:
             credentials:
@@ -91,14 +73,8 @@ http:
           prefix: /bar2
         destination:
           name: httproute/default/httproute-2/rule/0
-          settings:
-            - addressType: IP
-              endpoints:
-                - host: 7.7.7.7
-                  port: 8080
-              protocol: HTTP
-              weight: 1
-              name: httproute/default/httproute-2/rule/0/backend/0
+          backendClusterRefs:
+            - name: httproute/default/httproute-2/rule/0
         security:
           apiKeyAuth:
             credentials:
@@ -109,3 +85,31 @@ http:
               - cookies: ["X-API-KEY", "X-API-KEY-2"]
               - headers: ["X-API-KEY", "X-API-KEY-2"]
               - params: ["X-API-KEY", "X-API-KEY-2"]
+backends:
+  - name: httproute/default/httproute-1/rule/0
+    settings:
+      - addressType: IP
+        endpoints:
+          - host: 7.7.7.7
+            port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
+  - name: httproute/default/httproute-1/rule/1
+    settings:
+      - addressType: IP
+        endpoints:
+          - host: 7.7.7.7
+            port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/1/backend/0
+  - name: httproute/default/httproute-2/rule/0
+    settings:
+      - addressType: IP
+        endpoints:
+          - host: 7.7.7.7
+            port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-2/rule/0/backend/0

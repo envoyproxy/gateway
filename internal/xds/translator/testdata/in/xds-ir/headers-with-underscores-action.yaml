@@ -9,11 +9,8 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.1.1.1"
-          port: 8081
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
 - name: "second-listener"
   address: "::"
   port: 8082
@@ -24,11 +21,8 @@ http:
     hostname: "*"
     destination:
       name: "second-route-dest"
-      settings:
-      - endpoints:
-        - host: "2.2.2.2"
-          port: 8082
-        name: "second-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "second-route-dest"
   headers:
     withUnderscoresAction: Allow
 - name: "third-listener"
@@ -41,11 +35,8 @@ http:
     hostname: "*"
     destination:
       name: "third-route-dest"
-      settings:
-      - endpoints:
-        - host: "3.3.3.3"
-          port: 8083
-        name: "third-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "third-route-dest"
   headers:
     withUnderscoresAction: RejectRequest
 - name: "fourth-listener"
@@ -58,11 +49,33 @@ http:
     hostname: "*"
     destination:
       name: "fourth-route-dest"
-      settings:
-      - endpoints:
-        - host: "4.4.4.4"
-          port: 8084
-        name: "fourth-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "fourth-route-dest"
   headers:
     withUnderscoresAction: DropHeader
 
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.1.1.1"
+      port: 8081
+    name: "first-route-dest/backend/0"
+- name: "second-route-dest"
+  settings:
+  - endpoints:
+    - host: "2.2.2.2"
+      port: 8082
+    name: "second-route-dest/backend/0"
+- name: "third-route-dest"
+  settings:
+  - endpoints:
+    - host: "3.3.3.3"
+      port: 8083
+    name: "third-route-dest/backend/0"
+- name: "fourth-route-dest"
+  settings:
+  - endpoints:
+    - host: "4.4.4.4"
+      port: 8084
+    name: "fourth-route-dest/backend/0"

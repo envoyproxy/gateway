@@ -365,27 +365,108 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-with-overrides
+        namespace: default
+      name: httproute/default/httproute-with-overrides/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: http-backend
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-with-overrides/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-with-no-overrides
+        namespace: default
+      name: httproute/default/httproute-with-no-overrides/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: http-backend
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-with-no-overrides/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: GRPCRoute
+        name: grpcroute-with-overrides
+        namespace: default
+      name: grpcroute/default/grpcroute-with-overrides/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 8.8.8.8
+          port: 50051
+        metadata:
+          kind: Service
+          name: grpc-backend
+          namespace: default
+          sectionName: "50051"
+        name: grpcroute/default/grpcroute-with-overrides/rule/0/backend/0
+        protocol: GRPC
+        weight: 1
+    - metadata:
+        kind: GRPCRoute
+        name: grpcroute-with-no-overrides
+        namespace: default
+      name: grpcroute/default/grpcroute-with-no-overrides/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 8.8.8.8
+          port: 50051
+        metadata:
+          kind: Service
+          name: grpc-backend
+          namespace: default
+          sectionName: "50051"
+        name: grpcroute/default/grpcroute-with-no-overrides/rule/0/backend/0
+        protocol: GRPC
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-gateway-966d2c13
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/gateway
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-966d2c13
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-gateway-966d2c13
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/gateway
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-966d2c13
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -406,24 +487,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-with-no-overrides/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-with-no-overrides
             namespace: default
           name: httproute/default/httproute-with-no-overrides/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: http-backend
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-with-no-overrides/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -453,24 +524,14 @@ xdsIR:
               timeout: 1s
               unhealthyThreshold: 3
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-with-overrides/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-with-overrides
             namespace: default
           name: httproute/default/httproute-with-overrides/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: http-backend
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-with-overrides/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -502,24 +563,14 @@ xdsIR:
               timeout: 1s
               unhealthyThreshold: 3
       - destination:
+          backendClusterRefs:
+          - name: grpcroute/default/grpcroute-with-overrides/rule/0
+            weight: 1
           metadata:
             kind: GRPCRoute
             name: grpcroute-with-overrides
             namespace: default
           name: grpcroute/default/grpcroute-with-overrides/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 8.8.8.8
-              port: 50051
-            metadata:
-              kind: Service
-              name: grpc-backend
-              namespace: default
-              sectionName: "50051"
-            name: grpcroute/default/grpcroute-with-overrides/rule/0/backend/0
-            protocol: GRPC
-            weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:
@@ -543,24 +594,14 @@ xdsIR:
               timeout: 1s
               unhealthyThreshold: 3
       - destination:
+          backendClusterRefs:
+          - name: grpcroute/default/grpcroute-with-no-overrides/rule/0
+            weight: 1
           metadata:
             kind: GRPCRoute
             name: grpcroute-with-no-overrides
             namespace: default
           name: grpcroute/default/grpcroute-with-no-overrides/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 8.8.8.8
-              port: 50051
-            metadata:
-              kind: Service
-              name: grpc-backend
-              namespace: default
-              sectionName: "50051"
-            name: grpcroute/default/grpcroute-with-no-overrides/rule/0/backend/0
-            protocol: GRPC
-            weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:

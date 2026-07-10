@@ -307,27 +307,54 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-1
+        namespace: default
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-gateway-1-196ae069
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/gateway-1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-gateway-1-196ae069
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-1
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/gateway-1
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -345,24 +372,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: foo.com
         isHTTP2: false
         metadata:
@@ -390,24 +407,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: bar.com
         isHTTP2: false
         metadata:
@@ -435,24 +442,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: foo1.com
         isHTTP2: false
         metadata:
@@ -480,24 +477,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: bar1.com
         isHTTP2: false
         metadata:
@@ -525,24 +512,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: foo2.com
         isHTTP2: false
         metadata:
@@ -570,24 +547,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: bar2.com
         isHTTP2: false
         metadata:
@@ -615,24 +582,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: foo3.com
         isHTTP2: false
         metadata:
@@ -660,24 +617,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: bar3.com
         isHTTP2: false
         metadata:

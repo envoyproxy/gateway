@@ -45,11 +45,8 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
 tcp:
 - name: "second-listener"
   address: "::"
@@ -118,10 +115,20 @@ tcp:
           privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     destination:
       name: "tls-terminate-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        - host: "5.6.7.8"
-          port: 50001
-        name: "tls-terminate-dest/backend/0"
+      backendClusterRefs:
+      - name: "tls-terminate-dest"
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "first-route-dest/backend/0"
+- name: "tls-terminate-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    - host: "5.6.7.8"
+      port: 50001
+    name: "tls-terminate-dest/backend/0"

@@ -27,11 +27,8 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
 tcp:
 - name: "second-listener"
   address: "::"
@@ -42,8 +39,18 @@ tcp:
   - name: "tcp-route-dest"
     destination:
       name: "tls-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "tls-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "tls-route-dest"
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "first-route-dest/backend/0"
+- name: "tls-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "tls-route-dest/backend/0"

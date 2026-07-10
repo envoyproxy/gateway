@@ -279,27 +279,54 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-1
+        namespace: default
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: gateway-1
+        namespace: default
+        sectionName: "8080"
+      name: default/gateway-1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: gateway-1
           namespace: default
           sectionName: "8080"
         name: default/gateway-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: gateway-1
-            namespace: default
-            sectionName: "8080"
-          name: default/gateway-1
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: default/gateway-1
+        metadata:
+          kind: Service
+          name: gateway-1
+          namespace: default
+          sectionName: "8080"
+        name: default/gateway-1
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -317,24 +344,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-1/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -355,27 +372,54 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-2
+        namespace: default
+      name: httproute/default/httproute-2/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-2/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: gateway-2
+        namespace: default
+        sectionName: "8080"
+      name: default/gateway-2
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: gateway-2
           namespace: default
           sectionName: "8080"
         name: default/gateway-2
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: gateway-2
-            namespace: default
-            sectionName: "8080"
-          name: default/gateway-2
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: default/gateway-2
+        metadata:
+          kind: Service
+          name: gateway-2
+          namespace: default
+          sectionName: "8080"
+        name: default/gateway-2
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -393,24 +437,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/httproute-2/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-2
             namespace: default
           name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -431,27 +465,54 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-3
+        namespace: test-ns
+      name: httproute/test-ns/httproute-3/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-3
+          namespace: test-ns
+          sectionName: "8080"
+        name: httproute/test-ns/httproute-3/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: gateway-3
+        namespace: test-ns
+        sectionName: "8080"
+      name: test-ns/gateway-3
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: gateway-3
           namespace: test-ns
           sectionName: "8080"
         name: test-ns/gateway-3
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: gateway-3
-            namespace: test-ns
-            sectionName: "8080"
-          name: test-ns/gateway-3
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: test-ns/gateway-3
+        metadata:
+          kind: Service
+          name: gateway-3
+          namespace: test-ns
+          sectionName: "8080"
+        name: test-ns/gateway-3
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -469,24 +530,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/test-ns/httproute-3/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-3
             namespace: test-ns
           name: httproute/test-ns/httproute-3/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-3
-              namespace: test-ns
-              sectionName: "8080"
-            name: httproute/test-ns/httproute-3/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:

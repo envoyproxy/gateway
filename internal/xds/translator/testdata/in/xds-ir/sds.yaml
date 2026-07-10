@@ -20,31 +20,8 @@ http:
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-            - addressType: IP
-              endpoints:
-                - host: 7.7.7.7
-                  port: 8080
-              metadata:
-                kind: Service
-                name: service-1
-                namespace: default
-                sectionName: "8080"
-              name: httproute/default/httproute-1/rule/0/backend/0
-              protocol: HTTP
-              tls:
-                alpnProtocols:
-                  - istio
-                caCertificate:
-                  sds:
-                    secretName: ROOTCA
-                    url: /var/run/secrets/workload-spiffe-uds/socket
-                clientCertificates:
-                  - sds:
-                      secretName: default
-                      url: /var/run/secrets/workload-spiffe-uds/socket
-                sni: example.com
-              weight: 1
+          backendClusterRefs:
+            - name: httproute/default/httproute-1/rule/0
         hostname: "*"
         isHTTP2: false
         metadata:
@@ -56,3 +33,34 @@ http:
           distinct: false
           exact: /exact
           name: ""
+backends:
+  - name: httproute/default/httproute-1/rule/0
+    settings:
+      - addressType: IP
+        endpoints:
+          - host: 7.7.7.7
+            port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP
+        tls:
+          alpnProtocols:
+            - istio
+          caCertificate:
+            sds:
+              secretName: ROOTCA
+              url: /var/run/secrets/workload-spiffe-uds/socket
+          clientCertificates:
+            - sds:
+                secretName: default
+                url: /var/run/secrets/workload-spiffe-uds/socket
+          sni: example.com
+        weight: 1
+    metadata:
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default

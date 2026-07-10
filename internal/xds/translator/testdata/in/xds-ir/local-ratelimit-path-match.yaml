@@ -27,12 +27,8 @@ http:
       prefix: /api/
     destination:
       name: "api-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "api-dest/backend/0"
-  # Test 2: Path exact match
+      backendClusterRefs:
+      - name: "api-dest"
   - name: "route-path-exact-admin"
     hostname: "*"
     traffic:
@@ -51,12 +47,8 @@ http:
       exact: /admin
     destination:
       name: "admin-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "admin-dest/backend/0"
-  # Test 3: Multiple path rules
+      backendClusterRefs:
+      - name: "admin-dest"
   - name: "route-multiple-path-rules"
     hostname: "*"
     traffic:
@@ -85,12 +77,8 @@ http:
       prefix: /
     destination:
       name: "versioned-api-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "versioned-api-dest/backend/0"
-  # Test 4: Path match with header match combination
+      backendClusterRefs:
+      - name: "versioned-api-dest"
   - name: "route-path-and-header"
     hostname: "*"
     traffic:
@@ -112,8 +100,33 @@ http:
       prefix: /premium/
     destination:
       name: "premium-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 8080
-        name: "premium-dest/backend/0"
+      backendClusterRefs:
+      - name: "premium-dest"
+backends:
+- name: "api-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "api-dest/backend/0"
+  # Test 2: Path exact match
+- name: "admin-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "admin-dest/backend/0"
+  # Test 3: Multiple path rules
+- name: "versioned-api-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "versioned-api-dest/backend/0"
+  # Test 4: Path match with header match combination
+- name: "premium-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 8080
+    name: "premium-dest/backend/0"

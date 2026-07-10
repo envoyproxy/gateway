@@ -17,13 +17,8 @@ http:
       prefix: /foo1
     destination:
       name: httproute/default/httproute-1/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
+      backendClusterRefs:
+      - name: httproute/default/httproute-1/rule/0
     security:
       basicAuth:
         name: securitypolicy/default/policy-for-http-route-1
@@ -38,13 +33,8 @@ http:
       prefix: /foo2
     destination:
       name: httproute/default/httproute-1/rule/1
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
+      backendClusterRefs:
+      - name: httproute/default/httproute-1/rule/1
     security:
       basicAuth:
         name: securitypolicy/default/policy-for-http-route-1
@@ -58,15 +48,35 @@ http:
       prefix: /bar
     destination:
       name: httproute/default/httproute-2/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
+      backendClusterRefs:
+      - name: httproute/default/httproute-2/rule/0
     security:
       basicAuth:
         name: securitypolicy/default/policy-for-gateway-1
         users: Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo=
         forwardUsernameHeader: x-user-id
+backends:
+- name: httproute/default/httproute-1/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+- name: httproute/default/httproute-1/rule/1
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+- name: httproute/default/httproute-2/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1

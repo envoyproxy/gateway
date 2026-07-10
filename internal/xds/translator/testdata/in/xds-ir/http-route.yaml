@@ -27,11 +27,15 @@ http:
       safeRegex: foo.*
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        - host: "1.2.3.5"
-          port: 50000
-          draining: true
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    - host: "1.2.3.5"
+      port: 50000
+      draining: true
+    name: "first-route-dest/backend/0"

@@ -258,27 +258,72 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: TLSRoute
+        name: tls-app-passthrough
+        namespace: default
+      name: tlsroute/default/tls-app-passthrough/rule/-1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: tlsroute/default/tls-app-passthrough/rule/-1/backend/0
+        protocol: TCP
+        weight: 1
+    - metadata:
+        kind: TLSRoute
+        name: tls-app-terminate
+        namespace: default
+      name: tlsroute/default/tls-app-terminate/rule/-1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: tlsroute/default/tls-app-terminate/rule/-1/backend/0
+        protocol: TCP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-gateway-xls-composite-gateway-e1ee602f
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: gateway-xls/composite-gateway
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-gateway-xls-composite-gateway-e1ee602f
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: gateway-xls/composite-gateway
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-gateway-xls-composite-gateway-e1ee602f
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: gateway-xls/composite-gateway
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: gateway-xls/composite-gateway
+        metadata:
+          kind: Service
+          name: envoy-gateway-xls-composite-gateway-e1ee602f
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: gateway-xls/composite-gateway
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -311,24 +356,14 @@ xdsIR:
       port: 8443
       routes:
       - destination:
+          backendClusterRefs:
+          - name: tlsroute/default/tls-app-passthrough/rule/-1
+            weight: 1
           metadata:
             kind: TLSRoute
             name: tls-app-passthrough
             namespace: default
           name: tlsroute/default/tls-app-passthrough/rule/-1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: tlsroute/default/tls-app-passthrough/rule/-1/backend/0
-            protocol: TCP
-            weight: 1
         metadata:
           kind: TLSRoute
           name: tls-app-passthrough
@@ -349,24 +384,14 @@ xdsIR:
       port: 9443
       routes:
       - destination:
+          backendClusterRefs:
+          - name: tlsroute/default/tls-app-terminate/rule/-1
+            weight: 1
           metadata:
             kind: TLSRoute
             name: tls-app-terminate
             namespace: default
           name: tlsroute/default/tls-app-terminate/rule/-1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: tlsroute/default/tls-app-terminate/rule/-1/backend/0
-            protocol: TCP
-            weight: 1
         metadata:
           kind: TLSRoute
           name: tls-app-terminate

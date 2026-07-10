@@ -10,13 +10,8 @@ tcp:
         - foo.com
     destination:
       name: "tls-passthrough-foo-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        - host: "5.6.7.8"
-          port: 50001
-        name: "tls-passthrough-foo-dest/backend/0"
+      backendClusterRefs:
+      - name: "tls-passthrough-foo-dest"
 - name: "tls-passthrough-bar"
   address: "::"
   port: 10081
@@ -28,9 +23,21 @@ tcp:
         - bar.com
     destination:
       name: "tls-passthrough-bar-dest"
-      settings:
-      - endpoints:
-        - host: "bar"
-          port: 50000
-        addressType: FQDN
-        name: "tls-passthrough-bar-dest/backend/0"
+      backendClusterRefs:
+      - name: "tls-passthrough-bar-dest"
+backends:
+- name: "tls-passthrough-foo-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    - host: "5.6.7.8"
+      port: 50001
+    name: "tls-passthrough-foo-dest/backend/0"
+- name: "tls-passthrough-bar-dest"
+  settings:
+  - endpoints:
+    - host: "bar"
+      port: 50000
+    addressType: FQDN
+    name: "tls-passthrough-bar-dest/backend/0"

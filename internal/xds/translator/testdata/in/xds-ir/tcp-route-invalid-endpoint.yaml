@@ -6,8 +6,12 @@ tcp:
   - name: "tcp-route-simple"
     destination:
       name: "tcp-route-simple-dest"
-      settings:
-      - endpoints:
-        - port: 50000
-        - host: "5.6.7.8"
-          port: 50001
+      backendClusterRefs:
+      - name: "tcp-route-simple-dest"
+backends:
+- name: "tcp-route-simple-dest"
+  settings:
+  - endpoints:
+    - port: 50000
+    - host: "5.6.7.8"
+      port: 50001

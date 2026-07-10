@@ -22,11 +22,8 @@ http:
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
-          settings:
-            - isDynamicResolver: true
-              name: httproute/default/httproute-1/rule/0/backend/0
-              protocol: HTTP
-              weight: 1
+          backendClusterRefs:
+            - name: httproute/default/httproute-1/rule/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -49,16 +46,8 @@ http:
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/1
-          settings:
-            - isDynamicResolver: true
-              name: httproute/default/httproute-1/rule/1/backend/0
-              protocol: HTTP
-              tls:
-                alpnProtocols: null
-                caCertificate:
-                  name: backend-with-system-ca/default-ca
-                useSystemTrustStore: true
-              weight: 1
+          backendClusterRefs:
+            - name: httproute/default/httproute-1/rule/1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -81,11 +70,8 @@ http:
             name: httproute-2
             namespace: default
           name: httproute/default/httproute-2/rule/0
-          settings:
-            - isDynamicResolver: true
-              name: httproute/default/httproute-2/rule/0/backend/0
-              protocol: HTTP
-              weight: 1
+          backendClusterRefs:
+            - name: httproute/default/httproute-2/rule/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -125,11 +111,8 @@ http:
             name: httproute-2
             namespace: default
           name: httproute/default/httproute-2/rule/1
-          settings:
-            - isDynamicResolver: true
-              name: httproute/default/httproute-2/rule/1/backend/0
-              protocol: HTTP
-              weight: 1
+          backendClusterRefs:
+            - name: httproute/default/httproute-2/rule/1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -149,3 +132,49 @@ http:
         urlRewrite:
           host:
             name: rewrite.com
+backends:
+  - name: httproute/default/httproute-1/rule/0
+    settings:
+      - isDynamicResolver: true
+        name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    metadata:
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+  - name: httproute/default/httproute-1/rule/1
+    settings:
+      - isDynamicResolver: true
+        name: httproute/default/httproute-1/rule/1/backend/0
+        protocol: HTTP
+        tls:
+          alpnProtocols:
+          caCertificate:
+            name: backend-with-system-ca/default-ca
+          useSystemTrustStore: true
+        weight: 1
+    metadata:
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+  - name: httproute/default/httproute-2/rule/0
+    settings:
+      - isDynamicResolver: true
+        name: httproute/default/httproute-2/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    metadata:
+      kind: HTTPRoute
+      name: httproute-2
+      namespace: default
+  - name: httproute/default/httproute-2/rule/1
+    settings:
+      - isDynamicResolver: true
+        name: httproute/default/httproute-2/rule/1/backend/0
+        protocol: HTTP
+        weight: 1
+    metadata:
+      kind: HTTPRoute
+      name: httproute-2
+      namespace: default

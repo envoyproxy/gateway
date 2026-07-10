@@ -14,8 +14,12 @@ http:
       prefix: "/"
     destination:
       name: "fail-close-error"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "fail-close-error/backend/0"
+      backendClusterRefs:
+      - name: "fail-close-error"
+backends:
+- name: "fail-close-error"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "fail-close-error/backend/0"

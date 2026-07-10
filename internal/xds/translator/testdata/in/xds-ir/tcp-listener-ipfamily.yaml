@@ -7,8 +7,12 @@ tcp:
       - name: tcp-route-dual
         destination:
           name: tcp-route-dual-dest
-          settings:
-            - endpoints:
-                - host: 192.168.1.2
-                - host: '2001:db8::2'
-              name: tcp-route-dual-dest/backend/0
+          backendClusterRefs:
+            - name: tcp-route-dual-dest
+backends:
+  - name: tcp-route-dual-dest
+    settings:
+      - endpoints:
+          - host: 192.168.1.2
+          - host: '2001:db8::2'
+        name: tcp-route-dual-dest/backend/0

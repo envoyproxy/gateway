@@ -15,11 +15,8 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
 - name: "sample-request-id-extension-listener"
   address: "::"
   port: 10081
@@ -31,11 +28,8 @@ http:
     hostname: "*"
     destination:
       name: "second-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.5"
-          port: 50000
-        name: "second-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "second-route-dest"
 - name: "pack-request-id-extension-listener"
   address: "::"
   port: 10082
@@ -47,11 +41,8 @@ http:
     hostname: "*"
     destination:
       name: "third-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.5"
-          port: 50000
-        name: "third-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "third-route-dest"
 - name: "pack-and-sample-request-id-extension-listener"
   address: "::"
   port: 10083
@@ -63,8 +54,30 @@ http:
     hostname: "*"
     destination:
       name: "fourth-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.5"
-          port: 50000
-        name: "fourth-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "fourth-route-dest"
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "first-route-dest/backend/0"
+- name: "second-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.5"
+      port: 50000
+    name: "second-route-dest/backend/0"
+- name: "third-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.5"
+      port: 50000
+    name: "third-route-dest/backend/0"
+- name: "fourth-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.5"
+      port: 50000
+    name: "fourth-route-dest/backend/0"

@@ -2,13 +2,8 @@ accessLog:
   openTelemetry:
     - destination:
         name: "accesslog_otel_0_1"
-        settings:
-          - endpoints:
-              - host: "otel-collector.default.svc.cluster.local"
-                port: 4317
-            protocol: "GRPC"
-            addressType: FQDN
-            name: "accesslog-0/backend/0"
+        backendClusterRefs:
+          - name: "accesslog_otel_0_1"
       resourceAttributes:
         - key: k8s.cluster.name
           value: cluster-1
@@ -42,25 +37,15 @@ http:
     routes:
       - destination:
           name: httproute/default/httproute-1/rule/0
-          settings:
-            - addressType: FQDN
-              endpoints:
-                - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
-                  port: 8080
-              protocol: HTTP
-              weight: 1
+          backendClusterRefs:
+            - name: httproute/default/httproute-1/rule/0
         envoyExtensions:
           extProcs:
             - authority: backend-fqdn2.default:9090
               destination:
                 name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
-                settings:
-                  - addressType: FQDN
-                    endpoints:
-                      - host: backend-v2.gateway-conformance-infra.svc.cluster.local
-                        port: 9090
-                    protocol: GRPC
-                    weight: 1
+                backendClusterRefs:
+                  - name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
               name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
               traffic:
                 dns:
@@ -86,13 +71,8 @@ http:
               authority: backend-v3.gateway-conformance-infra.svc.cluster.local:8080
               destination:
                 name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
-                settings:
-                  - addressType: FQDN
-                    endpoints:
-                      - host: backend-v3.gateway-conformance-infra.svc.cluster.local
-                        port: 8080
-                    protocol: HTTP
-                    weight: 1
+                backendClusterRefs:
+                  - name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
               path: ""
             name: securitypolicy/envoy-gateway/policy-for-gateway-1
         traffic:
@@ -102,13 +82,8 @@ http:
             respectDnsTtl: false
       - destination:
           name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-            - addressType: FQDN
-              endpoints:
-                - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
-                  port: 8080
-              protocol: GRPC
-              weight: 1
+          backendClusterRefs:
+            - name: grpcroute/default/grpcroute-1/rule/0
         hostname: "*"
         isHTTP2: true
         metadata:
@@ -125,13 +100,8 @@ http:
               authority: backend-v3.gateway-conformance-infra.svc.cluster.local:8080
               destination:
                 name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
-                settings:
-                  - addressType: FQDN
-                    endpoints:
-                      - host: backend-v3.gateway-conformance-infra.svc.cluster.local
-                        port: 8080
-                    protocol: HTTP
-                    weight: 1
+                backendClusterRefs:
+                  - name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
               path: ""
             name: securitypolicy/envoy-gateway/policy-for-gateway-1
         traffic:
@@ -144,3 +114,44 @@ readyListener:
   ipFamily: IPv4
   path: /ready
   port: 19003
+backends:
+  - name: "accesslog_otel_0_1"
+    settings:
+      - endpoints:
+          - host: "otel-collector.default.svc.cluster.local"
+            port: 4317
+        protocol: "GRPC"
+        addressType: FQDN
+        name: "accesslog-0/backend/0"
+  - name: httproute/default/httproute-1/rule/0
+    settings:
+      - addressType: FQDN
+        endpoints:
+          - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
+            port: 8080
+        protocol: HTTP
+        weight: 1
+  - name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
+    settings:
+      - addressType: FQDN
+        endpoints:
+          - host: backend-v2.gateway-conformance-infra.svc.cluster.local
+            port: 9090
+        protocol: GRPC
+        weight: 1
+  - name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
+    settings:
+      - addressType: FQDN
+        endpoints:
+          - host: backend-v3.gateway-conformance-infra.svc.cluster.local
+            port: 8080
+        protocol: HTTP
+        weight: 1
+  - name: grpcroute/default/grpcroute-1/rule/0
+    settings:
+      - addressType: FQDN
+        endpoints:
+          - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
+            port: 8080
+        protocol: GRPC
+        weight: 1

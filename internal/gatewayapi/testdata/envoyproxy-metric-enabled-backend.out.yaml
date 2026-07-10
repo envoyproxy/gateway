@@ -147,23 +147,13 @@ infraIR:
             name: metrics_otel_0/backend/-1
             protocol: GRPC
         destination:
+          backendClusterRefs:
+          - name: metrics_otel_0
           metadata:
             kind: EnvoyProxy
             name: test
             namespace: envoy-gateway-system
           name: metrics_otel_0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 8.7.6.5
-              port: 4317
-            metadata:
-              kind: Service
-              name: otel-collector
-              namespace: monitoring
-              sectionName: "4317"
-            name: metrics_otel_0/backend/-1
-            protocol: GRPC
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -208,25 +198,14 @@ xdsIR:
         protocol: TCP
     globalResources:
       proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/gateway-1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-gateway-1-196ae069
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-1
-          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80

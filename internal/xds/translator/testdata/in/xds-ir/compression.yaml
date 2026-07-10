@@ -15,14 +15,8 @@ http:
   routes:
   - destination:
       name: httproute/default/httproute-1/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-1/rule/0/backend/0
+      backendClusterRefs:
+      - name: httproute/default/httproute-1/rule/0
     hostname: gateway.envoyproxy.io
     isHTTP2: false
     metadata:
@@ -39,3 +33,13 @@ http:
       - type: Brotli
       - type: Gzip
       - type: Zstd
+backends:
+- name: httproute/default/httproute-1/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+    name: httproute/default/httproute-1/rule/0/backend/0

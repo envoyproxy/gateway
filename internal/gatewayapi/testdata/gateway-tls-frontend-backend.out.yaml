@@ -1275,27 +1275,36 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-client-validation-default-bdf5c506
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/client-validation-default
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-client-validation-default-bdf5c506
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/client-validation-default
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-client-validation-default-bdf5c506
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/client-validation-default
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/client-validation-default
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-client-validation-default-bdf5c506
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/client-validation-default
     http:
     - address: 0.0.0.0
       externalPort: 443
@@ -1356,27 +1365,36 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-client-validation-insecure-fallbac-f8b62f40
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/client-validation-insecure-fallback
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-client-validation-insecure-fallbac-f8b62f40
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/client-validation-insecure-fallback
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-client-validation-insecure-fallbac-f8b62f40
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/client-validation-insecure-fallback
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/client-validation-insecure-fallback
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-client-validation-insecure-fallbac-f8b62f40
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/client-validation-insecure-fallback
     http:
     - address: 0.0.0.0
       externalPort: 443
@@ -1437,27 +1455,36 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-client-validation-per-port-disable-19e503c4
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/client-validation-per-port-disable-default
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-client-validation-per-port-disable-19e503c4
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/client-validation-per-port-disable-default
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-client-validation-per-port-disable-19e503c4
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/client-validation-per-port-disable-default
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/client-validation-per-port-disable-default
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-client-validation-per-port-disable-19e503c4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/client-validation-per-port-disable-default
     http:
     - address: 0.0.0.0
       externalPort: 443
@@ -1513,27 +1540,36 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-client-validation-per-port-disable-b23bcc99
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/client-validation-per-port-disable-invalid-default
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-client-validation-per-port-disable-b23bcc99
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/client-validation-per-port-disable-invalid-default
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-client-validation-per-port-disable-b23bcc99
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/client-validation-per-port-disable-invalid-default
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/client-validation-per-port-disable-invalid-default
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-client-validation-per-port-disable-b23bcc99
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/client-validation-per-port-disable-invalid-default
     http:
     - address: 0.0.0.0
       externalPort: 8443
@@ -1564,27 +1600,54 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: gateway-tls-frontend-backend
+        namespace: default
+      name: httproute/default/gateway-tls-frontend-backend/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/gateway-tls-frontend-backend/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-gateway-tls-frontend-backend-44beb3e6
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/gateway-tls-frontend-backend
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-tls-frontend-backend-44beb3e6
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-tls-frontend-backend
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-gateway-tls-frontend-backend-44beb3e6
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-tls-frontend-backend
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/gateway-tls-frontend-backend
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-tls-frontend-backend-44beb3e6
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-tls-frontend-backend
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -1602,24 +1665,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/gateway-tls-frontend-backend/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: gateway-tls-frontend-backend
             namespace: default
           name: httproute/default/gateway-tls-frontend-backend/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/gateway-tls-frontend-backend/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: example.org
         isHTTP2: false
         metadata:
@@ -1661,27 +1714,36 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-gateway-with-invalid-client-cert-v-54999a0f
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/gateway-with-invalid-client-cert-validation
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-with-invalid-client-cert-v-54999a0f
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-with-invalid-client-cert-validation
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-gateway-with-invalid-client-cert-v-54999a0f
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-with-invalid-client-cert-validation
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/gateway-with-invalid-client-cert-validation
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-with-invalid-client-cert-v-54999a0f
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-with-invalid-client-cert-validation
     http:
     - address: 0.0.0.0
       externalPort: 443
@@ -1717,27 +1779,54 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: invalid-default-client-validation-config
+        namespace: default
+      name: httproute/default/invalid-default-client-validation-config/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/invalid-default-client-validation-config/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-invalid-default-client-validation-33ce46ef
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/invalid-default-client-validation-config
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-invalid-default-client-validation-33ce46ef
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/invalid-default-client-validation-config
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-invalid-default-client-validation-33ce46ef
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/invalid-default-client-validation-config
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/invalid-default-client-validation-config
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-invalid-default-client-validation-33ce46ef
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/invalid-default-client-validation-config
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -1755,24 +1844,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/invalid-default-client-validation-config/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: invalid-default-client-validation-config
             namespace: default
           name: httproute/default/invalid-default-client-validation-config/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/invalid-default-client-validation-config/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: example.org
         isHTTP2: false
         metadata:
@@ -1789,27 +1868,62 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: invalid-gateway-backend-client-cert-no-fallback
+        namespace: default
+      name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 10.244.0.22
+          port: 443
+        metadata:
+          kind: Service
+          name: tls-backend
+          namespace: default
+          sectionName: "443"
+        name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0/backend/0
+        protocol: HTTP
+        tls:
+          alpnProtocols: null
+          caCertificate:
+            name: tls-backend-policy/default-ca
+          maxVersion: "1.3"
+          minVersion: "1.2"
+          sni: backend.example.org
+          useSystemTrustStore: true
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-invalid-gateway-backend-client-cer-6dc6606f
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-invalid-gateway-backend-client-cer-6dc6606f
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-invalid-gateway-backend-client-cer-6dc6606f
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-invalid-gateway-backend-client-cer-6dc6606f
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback
     http:
     - address: 0.0.0.0
       externalPort: 8080
@@ -1827,32 +1941,14 @@ xdsIR:
       port: 8080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: invalid-gateway-backend-client-cert-no-fallback
             namespace: default
           name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 10.244.0.22
-              port: 443
-            metadata:
-              kind: Service
-              name: tls-backend
-              namespace: default
-              sectionName: "443"
-            name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0/backend/0
-            protocol: HTTP
-            tls:
-              alpnProtocols: null
-              caCertificate:
-                name: tls-backend-policy/default-ca
-              maxVersion: "1.3"
-              minVersion: "1.2"
-              sni: backend.example.org
-              useSystemTrustStore: true
-            weight: 1
         hostname: mTLS.example.org
         isHTTP2: false
         metadata:

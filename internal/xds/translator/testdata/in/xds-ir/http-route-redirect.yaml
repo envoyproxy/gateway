@@ -12,11 +12,8 @@ http:
     hostname: "*"
     destination:
       name: "redirect-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "redirect-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "redirect-route-dest"
     redirect:
       scheme: https
       statusCode: 302
@@ -30,11 +27,8 @@ http:
       prefix: "/redirect"
     destination:
       name: "redirect-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "redirect-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "redirect-route-dest"
     redirect:
       path:
         prefixMatchReplace: /
@@ -44,11 +38,8 @@ http:
       prefix: "/redirect/"
     destination:
       name: "redirect-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "redirect-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "redirect-route-dest"
     redirect:
       path:
         prefixMatchReplace: /
@@ -56,11 +47,8 @@ http:
     hostname: "*"
     destination:
       name: "redirect-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "redirect-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "redirect-route-dest"
     redirect:
       scheme: https
       statusCode: 302
@@ -71,11 +59,8 @@ http:
     hostname: "*"
     destination:
       name: "redirect-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "redirect-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "redirect-route-dest"
     redirect:
       scheme: https
       statusCode: 302
@@ -83,3 +68,10 @@ http:
       hostname: "redirected.com"
       path:
         prefixMatchReplace: /redirected
+backends:
+- name: "redirect-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "redirect-route-dest/backend/0"

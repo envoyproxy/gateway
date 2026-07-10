@@ -440,27 +440,72 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: route-on-gw
+        namespace: default
+      name: httproute/default/route-on-gw/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/route-on-gw/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: HTTPRoute
+        name: route-on-ls
+        namespace: default
+      name: httproute/default/route-on-ls/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/route-on-ls/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-composite-gateway-5ac11688
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/composite-gateway
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-composite-gateway-5ac11688
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/composite-gateway
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-composite-gateway-5ac11688
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/composite-gateway
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/composite-gateway
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-composite-gateway-5ac11688
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/composite-gateway
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -478,24 +523,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/route-on-gw/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: route-on-gw
             namespace: default
           name: httproute/default/route-on-gw/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/route-on-gw/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -529,24 +564,14 @@ xdsIR:
       port: 8080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/route-on-gw/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: route-on-gw
             namespace: default
           name: httproute/default/route-on-gw/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/route-on-gw/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -580,24 +605,14 @@ xdsIR:
       port: 8081
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/route-on-ls/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: route-on-ls
             namespace: default
           name: httproute/default/route-on-ls/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/route-on-ls/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -631,24 +646,14 @@ xdsIR:
       port: 8082
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/default/route-on-ls/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: route-on-ls
             namespace: default
           name: httproute/default/route-on-ls/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/route-on-ls/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:

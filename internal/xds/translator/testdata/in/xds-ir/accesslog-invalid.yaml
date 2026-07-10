@@ -27,10 +27,8 @@ accesslog:
       value: "cluster1"
     destination:
       name: "accesslog-0"
-      settings:
-      - endpoints:
-        - host: ""
-          port: 4317
+      backendClusterRefs:
+      - name: "accesslog-0"
 http:
 - name: "first-listener"
   address: "::"
@@ -44,11 +42,20 @@ http:
   - name: "direct-route"
     destination:
       name: "direct-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "direct-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "direct-route-dest"
     directResponse:
       body: VW5rbm93biBjdXN0b20gZmlsdGVyIHR5cGU6IFVuc3VwcG9ydGVkVHlwZQ==
       statusCode: 500
+backends:
+- name: "accesslog-0"
+  settings:
+  - endpoints:
+    - host: ""
+      port: 4317
+- name: "direct-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "direct-route-dest/backend/0"

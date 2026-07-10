@@ -14,11 +14,8 @@ http:
       exact: "foo/bar"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
     security:
       cors:
         allowOrigins:
@@ -38,3 +35,10 @@ http:
         - "x-header-4"
         allowCredentials: true
         maxAge: 1000s
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "first-route-dest/backend/0"

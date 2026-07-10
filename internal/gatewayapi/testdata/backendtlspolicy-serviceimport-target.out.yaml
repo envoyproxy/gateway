@@ -144,27 +144,82 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: HTTPRoute
+        name: httproute-btls
+        namespace: envoy-gateway
+      name: httproute/envoy-gateway/httproute-btls/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 10.244.0.11
+          port: 8080
+        metadata:
+          kind: ServiceImport
+          name: service-import-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
+        protocol: HTTP2
+        tls:
+          alpnProtocols: null
+          caCertificate:
+            name: policy-btls/default-ca
+          maxVersion: "1.3"
+          minVersion: "1.2"
+          sni: example.com
+          useSystemTrustStore: true
+        weight: 1
+      - addressType: IP
+        endpoints:
+        - host: 10.244.0.11
+          port: 9000
+        metadata:
+          kind: ServiceImport
+          name: service-import-1
+          namespace: default
+          sectionName: "9000"
+        name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
+        protocol: GRPC
+        tls:
+          alpnProtocols: null
+          caCertificate:
+            name: policy-btls/default-ca
+          maxVersion: "1.3"
+          minVersion: "1.2"
+          sni: example.com
+          useSystemTrustStore: true
+        weight: 1
+    - metadata:
+        kind: Service
+        name: envoy-envoy-gateway-gateway-btls-a945b5bb
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: envoy-gateway/gateway-btls
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-btls-a945b5bb
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-btls
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-envoy-gateway-gateway-btls-a945b5bb
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-btls
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: envoy-gateway/gateway-btls
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-btls-a945b5bb
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-btls
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -182,52 +237,14 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          backendClusterRefs:
+          - name: httproute/envoy-gateway/httproute-btls/rule/0
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-btls
             namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-btls/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 10.244.0.11
-              port: 8080
-            metadata:
-              kind: ServiceImport
-              name: service-import-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
-            protocol: HTTP2
-            tls:
-              alpnProtocols: null
-              caCertificate:
-                name: policy-btls/default-ca
-              maxVersion: "1.3"
-              minVersion: "1.2"
-              sni: example.com
-              useSystemTrustStore: true
-            weight: 1
-          - addressType: IP
-            endpoints:
-            - host: 10.244.0.11
-              port: 9000
-            metadata:
-              kind: ServiceImport
-              name: service-import-1
-              namespace: default
-              sectionName: "9000"
-            name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
-            protocol: GRPC
-            tls:
-              alpnProtocols: null
-              caCertificate:
-                name: policy-btls/default-ca
-              maxVersion: "1.3"
-              minVersion: "1.2"
-              sni: example.com
-              useSystemTrustStore: true
-            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:

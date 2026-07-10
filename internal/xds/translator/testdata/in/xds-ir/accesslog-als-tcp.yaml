@@ -14,14 +14,8 @@ accesslog:
   als:
   - destination:
       name: accesslog/monitoring/envoy-als/port/9000
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 1.1.1.1
-          port: 9000
-        protocol: GRPC
-        weight: 1
-        name: accesslog/monitoring/envoy-als/port/9000/backend/0
+      backendClusterRefs:
+      - name: accesslog/monitoring/envoy-als/port/9000
     traffic:
       backendConnection:
         bufferLimit: 20971520
@@ -47,3 +41,13 @@ accesslog:
     - key: attr2
       value: value2
     type: TCP
+backends:
+- name: accesslog/monitoring/envoy-als/port/9000
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 1.1.1.1
+      port: 9000
+    protocol: GRPC
+    weight: 1
+    name: accesslog/monitoring/envoy-als/port/9000/backend/0

@@ -15,14 +15,8 @@ http:
   routes:
   - destination:
       name: httproute/default/httproute-1/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-1/rule/0/backend/0
+      backendClusterRefs:
+      - name: httproute/default/httproute-1/rule/0
     hostname: www.example.com
     isHTTP2: false
     metadata:
@@ -57,14 +51,8 @@ http:
             cacheDuration: 300s
   - destination:
       name: httproute/default/httproute-2/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-2/rule/0/backend/0
+      backendClusterRefs:
+      - name: httproute/default/httproute-2/rule/0
     hostname: www.example.com
     isHTTP2: false
     metadata:
@@ -97,3 +85,22 @@ http:
             uri: https://one.example.com/jwt/public-key/jwks.json
             cacheDuration: 300s
 
+backends:
+- name: httproute/default/httproute-1/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+    name: httproute/default/httproute-1/rule/0/backend/0
+- name: httproute/default/httproute-2/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+    name: httproute/default/httproute-2/rule/0/backend/0

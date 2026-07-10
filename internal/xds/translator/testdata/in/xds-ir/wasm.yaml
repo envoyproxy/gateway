@@ -15,14 +15,8 @@ http:
   routes:
   - destination:
       name: httproute/default/httproute-1/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-1/rule/0/backend/0
+      backendClusterRefs:
+      - name: httproute/default/httproute-1/rule/0
     hostname: www.example.com
     isHTTP2: false
     name: httproute/default/httproute-1/rule/0/match/0/www_example_com
@@ -47,14 +41,8 @@ http:
         wasmName: wasm-filter-4
   - destination:
       name: httproute/default/httproute-2/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-2/rule/0/backend/0
+      backendClusterRefs:
+      - name: httproute/default/httproute-2/rule/0
     hostname: www.example.com
     isHTTP2: false
     name: httproute/default/httproute-2/rule/0/match/0/www_example_com
@@ -87,7 +75,7 @@ http:
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
         wasmName: wasm-filter-2
         rootID: my-root-id
-      - config: null
+      - config:
         failOpen: false
         httpWasmCode:
           servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
@@ -98,3 +86,22 @@ http:
         hostKeys:
         - SOME_KEY
         - ANOTHER_KEY
+backends:
+- name: httproute/default/httproute-1/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+    name: httproute/default/httproute-1/rule/0/backend/0
+- name: httproute/default/httproute-2/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+    name: httproute/default/httproute-2/rule/0/backend/0

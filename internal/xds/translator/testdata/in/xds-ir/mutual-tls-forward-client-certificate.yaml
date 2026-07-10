@@ -31,11 +31,8 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "10.0.0.1"
-          port: 10001
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
 - name: "second-listener"
   address: "::"
   port: 10002
@@ -68,11 +65,8 @@ http:
     hostname: "*"
     destination:
       name: "second-route-dest"
-      settings:
-      - endpoints:
-        - host: "10.0.0.1"
-          port: 10002
-        name: "second-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "second-route-dest"
 - name: "third-listener"
   address: "::"
   port: 10003
@@ -105,11 +99,8 @@ http:
     hostname: "*"
     destination:
       name: "third-route-dest"
-      settings:
-      - endpoints:
-        - host: "10.0.0.1"
-          port: 10003
-        name: "third-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "third-route-dest"
 - name: "fourth-listener"
   address: "::"
   port: 10004
@@ -142,11 +133,8 @@ http:
     hostname: "*"
     destination:
       name: "fourth-route-dest"
-      settings:
-      - endpoints:
-        - host: "10.0.0.1"
-          port: 10004
-        name: "fourth-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "fourth-route-dest"
 - name: "fifth-listener"
   address: "::"
   port: 10005
@@ -179,8 +167,36 @@ http:
     hostname: "*"
     destination:
       name: "fifth-route-dest"
-      settings:
-      - endpoints:
-        - host: "10.0.0.1"
-          port: 10005
-        name: "fifth-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "fifth-route-dest"
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "10.0.0.1"
+      port: 10001
+    name: "first-route-dest/backend/0"
+- name: "second-route-dest"
+  settings:
+  - endpoints:
+    - host: "10.0.0.1"
+      port: 10002
+    name: "second-route-dest/backend/0"
+- name: "third-route-dest"
+  settings:
+  - endpoints:
+    - host: "10.0.0.1"
+      port: 10003
+    name: "third-route-dest/backend/0"
+- name: "fourth-route-dest"
+  settings:
+  - endpoints:
+    - host: "10.0.0.1"
+      port: 10004
+    name: "fourth-route-dest/backend/0"
+- name: "fifth-route-dest"
+  settings:
+  - endpoints:
+    - host: "10.0.0.1"
+      port: 10005
+    name: "fifth-route-dest/backend/0"

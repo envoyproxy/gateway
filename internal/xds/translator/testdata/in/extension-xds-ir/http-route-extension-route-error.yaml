@@ -14,11 +14,8 @@ http:
       prefix: "/"
     destination:
       name: "extension-post-xdsroute-hook-error-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "extension-post-xdsroute-hook-error-dest/backend/0"
+      backendClusterRefs:
+      - name: "extension-post-xdsroute-hook-error-dest"
     extensionRefs:
     - object:
         apiVersion: foo.example.io/v1alpha1
@@ -28,3 +25,10 @@ http:
           namespace: extensions
         spec:
           foo: bar
+backends:
+- name: "extension-post-xdsroute-hook-error-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "extension-post-xdsroute-hook-error-dest/backend/0"

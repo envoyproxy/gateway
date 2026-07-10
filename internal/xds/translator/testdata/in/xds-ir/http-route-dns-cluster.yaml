@@ -17,11 +17,15 @@ http:
       name: debug
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "foo.bar"
-          port: 50000
-        - host: "bar.foo"
-          port: 50001
-        addressType: FQDN
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "foo.bar"
+      port: 50000
+    - host: "bar.foo"
+      port: 50001
+    addressType: FQDN
+    name: "first-route-dest/backend/0"

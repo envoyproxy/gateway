@@ -6,13 +6,8 @@ tcp:
   - name: "tcp-route-simple"
     destination:
       name: "tcp-route-simple-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        - host: "5.6.7.8"
-          port: 50001
-        name: "tcp-route-simple-dest/backend/0"
+      backendClusterRefs:
+      - name: "tcp-route-simple-dest"
 - name: "tcp-listener-simple-1"
   address: "::"
   port: 10080
@@ -20,13 +15,8 @@ tcp:
   - name: "tcp-route-simple-1"
     destination:
       name: "tcp-route-simple-1-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        - host: "5.6.7.8"
-          port: 50001
-        name: "tcp-route-simple-1-dest/backend/0"
+      backendClusterRefs:
+      - name: "tcp-route-simple-1-dest"
 - name: "tcp-listener-simple-2"
   address: "::"
   port: 10080
@@ -34,13 +24,8 @@ tcp:
   - name: "tcp-route-simple-2"
     destination:
       name: "tcp-route-simple-2-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        - host: "5.6.7.8"
-          port: 50001
-        name: "tcp-route-simple-2-dest/backend/0"
+      backendClusterRefs:
+      - name: "tcp-route-simple-2-dest"
 - name: "tcp-listener-simple-3"
   address: "::"
   port: 10080
@@ -48,13 +33,8 @@ tcp:
   - name: "tcp-route-simple-3"
     destination:
       name: "tcp-route-simple-3-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        - host: "5.6.7.8"
-          port: 50001
-        name: "tcp-route-simple-3-dest/backend/0"
+      backendClusterRefs:
+      - name: "tcp-route-simple-3-dest"
 - name: "tcp-listener-simple-4"
   address: "::"
   port: 10080
@@ -62,10 +42,46 @@ tcp:
   - name: "tcp-route-simple-4"
     destination:
       name: "tcp-route-simple-4-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        - host: "5.6.7.8"
-          port: 50001
-        name: "tcp-route-simple-4-dest/backend/0"
+      backendClusterRefs:
+      - name: "tcp-route-simple-4-dest"
+backends:
+- name: "tcp-route-simple-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    - host: "5.6.7.8"
+      port: 50001
+    name: "tcp-route-simple-dest/backend/0"
+- name: "tcp-route-simple-1-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    - host: "5.6.7.8"
+      port: 50001
+    name: "tcp-route-simple-1-dest/backend/0"
+- name: "tcp-route-simple-2-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    - host: "5.6.7.8"
+      port: 50001
+    name: "tcp-route-simple-2-dest/backend/0"
+- name: "tcp-route-simple-3-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    - host: "5.6.7.8"
+      port: 50001
+    name: "tcp-route-simple-3-dest/backend/0"
+- name: "tcp-route-simple-4-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    - host: "5.6.7.8"
+      port: 50001
+    name: "tcp-route-simple-4-dest/backend/0"

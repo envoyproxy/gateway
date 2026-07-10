@@ -14,11 +14,8 @@ http:
       prefix: "/"
     destination:
       name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "first-route-dest/backend/0"
+      backendClusterRefs:
+      - name: "first-route-dest"
     extensionRefs:
     - object:
         apiVersion: foo.example.io/v1alpha1
@@ -28,3 +25,10 @@ http:
           namespace: extensions
         spec:
           foo: bar
+backends:
+- name: "first-route-dest"
+  settings:
+  - endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    name: "first-route-dest/backend/0"
