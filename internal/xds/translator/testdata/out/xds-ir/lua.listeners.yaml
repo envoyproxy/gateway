@@ -15,11 +15,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.lua.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
@@ -59,11 +59,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.lua.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
@@ -102,11 +102,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.lua.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
@@ -145,11 +145,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.lua.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
@@ -202,11 +202,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.lua.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
@@ -245,11 +245,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.lua.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
@@ -302,11 +302,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.lua.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.lua
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router

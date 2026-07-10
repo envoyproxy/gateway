@@ -134,11 +134,11 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
 		order = 12
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		if strings.Contains(filter.Name, "/listener/") {
-			// Listener-level Lua runs before route-level Lua (12+idx vs 62+idx).
-			order = 13 + mustGetFilterIndex(filter.Name)
+		if strings.Contains(filter.Name, "listener") {
+			// Listener-level Lua runs before route-level Lua.
+			order = 13
 		} else {
-			order = 63 + mustGetFilterIndex(filter.Name)
+			order = 63
 		}
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
@@ -369,7 +369,16 @@ func isFilterType(filter *hcmv3.HttpFilter, filterType egv1a1.EnvoyFilter) bool 
 	// Multiple filters of the same types are added to the HCM filter chain, one for each
 	// route. The filter name is prefixed with the filter type, for example:
 	// "envoy.filters.http.oauth2_first-route".
-	return strings.HasPrefix(filter.Name, string(filterType))
+	if strings.HasPrefix(filter.Name, string(filterType)) {
+		return true
+	}
+	// Lua is delivered via envoy.filters.http.filter_chain placeholder filters
+	// (luaFCFilterName/luaListenerFCFilterName) rather than under the envoy.filters.http.lua
+	// prefix, so FilterOrder entries that reference EnvoyFilterLua need to match those names too.
+	if filterType == egv1a1.EnvoyFilterLua {
+		return filter.Name == luaFCFilterName() || filter.Name == luaListenerFCFilterName()
+	}
+	return false
 }
 
 // mustGetFilterIndex returns the index of the filter in its filter type.

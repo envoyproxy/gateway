@@ -186,3 +186,8 @@ func complementFraction(fraction *gwapiv1.Fraction) *gwapiv1.Fraction {
 		Denominator: new(denominator),
 	}
 }
+
+// patchResources patches the cluster resources for the CSRF filter.
+func (*csrf) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}
