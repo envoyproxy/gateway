@@ -29375,6 +29375,10 @@ spec:
                       rule: '(has(self.httpsDestinationPorts) ? self.httpsDestinationPorts.size()
                         : 0) + (has(self.httpDestinationPorts) ? self.httpDestinationPorts.size()
                         : 0) >= 1'
+                    - message: httpsDestinationPorts and httpDestinationPorts must
+                        be disjoint
+                      rule: '!(has(self.httpsDestinationPorts) && has(self.httpDestinationPorts)
+                        && self.httpsDestinationPorts.exists(p, p in self.httpDestinationPorts))'
                   optional:
                     description: |-
                       Optional allows requests without a Proxy Protocol header to be proxied.
