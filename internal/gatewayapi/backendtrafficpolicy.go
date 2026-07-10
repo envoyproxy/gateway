@@ -497,24 +497,24 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	}
 
 	if policy.Spec.MergeType == nil {
-		// Follow the same pattern as route.go: use the package-level GetRouteParentContext
-		// (which uses IsParentRefEqual fuzzy matching) to get the GatewayContext.
-		var gtwCtx *GatewayContext
-		for _, p := range parentRefs {
-			if ctx := GetRouteParentContext(targetedRoute, p, t.GatewayControllerName); ctx != nil {
-				if gtwCtx = ctx.GetGateway(); gtwCtx != nil {
-					break
-				}
+		// Iterate per parent gateway so each gateway's clusters get the correct
+		// telemetry (e.g. HC event logger) from its own EnvoyProxy.
+		for i, parentRefCtx := range parentRefCtxs {
+			gtwCtx := parentRefCtx.GetGateway()
+			if gtwCtx == nil {
+				continue
 			}
-		}
-		// Set conditions for translation error if it got any
-		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil, nil, gtwCtx); err != nil {
-			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
-				t.GatewayControllerName,
-				policy.Generation,
-				status.Error2ConditionMsg(err),
-			)
+			gwNN := utils.NamespacedName(gtwCtx.Gateway)
+			if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, nil, gtwCtx); err != nil {
+				status.SetConditionForPolicyAncestor(&policy.Status,
+					ancestorRefs[i],
+					t.GatewayControllerName,
+					gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+					egv1a1.PolicyReasonInvalid,
+					status.Error2ConditionMsg(err),
+					policy.Generation,
+				)
+			}
 		}
 	} else {
 		for _, parentRefCtx := range parentRefCtxs {
