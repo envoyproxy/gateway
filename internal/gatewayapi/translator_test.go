@@ -507,12 +507,6 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				// BackendClusterRefs is tagged yaml:"-" and can never round-trip through a golden
-				// .out.yaml file (want's copy is always nil), regardless of whether the field's
-				// actual content is correct - so it must always be ignored here, for every test
-				// case. Backends (verified below, unignored) is the mergebackends- cases' actual
-				// signal, and every other case's Backends is empty since MergeBackends defaults off.
-				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"),
 				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
 				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
@@ -824,9 +818,6 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				// BackendClusterRefs is tagged yaml:"-" and can never round-trip through a golden
-				// .out.yaml file - see the identical comment in TestTranslate.
-				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"),
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
