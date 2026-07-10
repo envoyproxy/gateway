@@ -4134,6 +4134,17 @@ func (in *RequestBuffer) DeepCopy() *RequestBuffer {
 func (in *ResolvedMetricSink) DeepCopyInto(out *ResolvedMetricSink) {
 	*out = *in
 	in.Destination.DeepCopyInto(&out.Destination)
+	if in.Backends != nil {
+		in, out := &in.Backends, &out.Backends
+		*out = make([]*BackendCluster, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(BackendCluster)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.Headers != nil {
 		in, out := &in.Headers, &out.Headers
 		*out = make([]v1.HTTPHeader, len(*in))

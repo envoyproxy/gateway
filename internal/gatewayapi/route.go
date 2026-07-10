@@ -451,6 +451,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					Name:               destName,
 					Settings:           allDs,
 					BackendClusterRefs: backendClusterRefs,
+					IsDynamicResolver:  len(allDs) == 1 && allDs[0].IsDynamicResolver,
 					Metadata:           routeRuleMetadata,
 				}
 			}
@@ -1334,6 +1335,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					Name:               destName,
 					Settings:           allDs,
 					BackendClusterRefs: backendClusterRefs,
+					IsDynamicResolver:  len(allDs) == 1 && allDs[0].IsDynamicResolver,
 					Metadata:           routeRuleMetadata,
 				}
 			}

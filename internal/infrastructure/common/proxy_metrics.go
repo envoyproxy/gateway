@@ -14,11 +14,11 @@ import (
 func ConvertResolvedMetricSinks(irSinks []ir.ResolvedMetricSink) []bootstrap.MetricSink {
 	result := make([]bootstrap.MetricSink, 0, len(irSinks))
 	for _, sink := range irSinks {
-		if len(sink.Destination.Settings) == 0 || len(sink.Destination.Settings[0].Endpoints) == 0 {
+		if len(sink.Backends) == 0 || len(sink.Backends[0].Settings) == 0 || len(sink.Backends[0].Settings[0].Endpoints) == 0 {
 			continue
 		}
 		// Metrics are aggregated locally in Envoy and exported to one collector.
-		ep := sink.Destination.Settings[0].Endpoints[0]
+		ep := sink.Backends[0].Settings[0].Endpoints[0]
 		ms := bootstrap.MetricSink{
 			Address:                  ep.Host,
 			Port:                     ep.Port,
@@ -28,7 +28,7 @@ func ConvertResolvedMetricSinks(irSinks []ir.ResolvedMetricSink) []bootstrap.Met
 			Headers:                  sink.Headers,
 			ResourceAttributes:       sink.ResourceAttributes,
 		}
-		if tls := sink.Destination.Settings[0].TLS; tls != nil {
+		if tls := sink.Backends[0].Settings[0].TLS; tls != nil {
 			ms.TLS = &bootstrap.MetricSinkTLS{
 				UseSystemTrustStore: tls.UseSystemTrustStore,
 			}

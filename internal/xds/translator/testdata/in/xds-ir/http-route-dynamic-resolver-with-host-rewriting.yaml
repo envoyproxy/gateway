@@ -16,6 +16,7 @@ http:
     routes:
       # test DynamicResolver backend with host rewriting filter with default DNS cache config, rewrite from header x-dynamic-host-header-1
       - destination:
+          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-1
@@ -42,6 +43,7 @@ http:
             header: x-dynamic-host-header-1
       # test DynamicResolver backend with host rewriting filter with default DNS cache config, rewrite from header x-dynamic-host-header-2
       - destination:
+          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-1
@@ -73,6 +75,7 @@ http:
             header: x-dynamic-host-header-2
       # test DynamicResolver backend with host rewriting filter with custom DNS cache config
       - destination:
+          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-2
@@ -116,6 +119,7 @@ http:
                         - forbidden.com
       # test DynamicResolver backend with host rewriting filter with custom DNS cache config, rewrite to literal name
       - destination:
+          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-2

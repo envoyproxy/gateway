@@ -983,16 +983,7 @@ func (h *HTTPRoute) GetRetry() *Retry {
 }
 
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
-	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR
-	// translation. RouteDestination.Settings is populated unconditionally at construction time
-	// (internal/gatewayapi/route.go), from the same per-rule backendRef loop that produces
-	// BackendClusterRefs, so for the single-backendRef case dynamic-resolver routes are constrained
-	// to, it already holds the same data a resolved BackendClusterRef would.
-	if h.Destination == nil {
-		return false
-	}
-	settings := h.Destination.Settings
-	return len(settings) == 1 && settings[0].IsDynamicResolver
+	return h.Destination != nil && h.Destination.IsDynamicResolver
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -1912,12 +1903,19 @@ type RouteDestination struct {
 	// Name of the destination. This field allows the xds layer
 	// to check if this route destination already exists and can be
 	// reused
-	Name     string                `json:"name" yaml:"name"`
-	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
+	Name     string  `json:"name" yaml:"name"`
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
+	// TODO: remove once all consumers resolve backend data via BackendClusterRefs and Settings is
+	// dropped from this struct (tracked in docs/superpowers/plans/2026-07-09-drop-routedestination-settings.md).
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// BackendClusterRefs holds references to backend clusters for this route rule.
 	// TODO: remove json/yaml skip tags once Settings is removed and consumers read from BackendClusterRefs.
 	BackendClusterRefs []*BackendClusterRef `json:"-" yaml:"-"`
+	// IsDynamicResolver denormalizes whether this destination's (single) backend is a dynamic
+	// resolver, so IsDynamicResolverRoute can answer without resolving BackendClusterRefs against
+	// the registry - internal/xds/translator/dynamic_forward_proxy.go's patchRoute (an httpFilter
+	// interface method, 22 implementers) has no registry access at all, unlike patchResources.
+	IsDynamicResolver bool `json:"isDynamicResolver,omitempty" yaml:"isDynamicResolver,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
 	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.

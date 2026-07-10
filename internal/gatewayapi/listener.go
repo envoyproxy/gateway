@@ -1174,6 +1174,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 					BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, metricsBC)},
 					Metadata:           buildResourceMetadata(envoyproxy, nil),
 				},
+				Backends:                 []*ir.BackendCluster{metricsBC},
 				Authority:                authority,
 				Headers:                  sink.OpenTelemetry.Headers,
 				ResourceAttributes:       sink.OpenTelemetry.ResourceAttributes,

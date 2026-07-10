@@ -39,6 +39,9 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 						Name:     "metrics_otel_0",
 						Settings: []*ir.DestinationSetting{{}},
 					},
+					Backends: []*ir.BackendCluster{
+						{Settings: []*ir.DestinationSetting{{}}},
+					},
 				},
 			},
 			expected: []bootstrap.MetricSink{},
@@ -53,6 +56,17 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 							{
 								Endpoints: []*ir.DestinationEndpoint{
 									{Host: "otel-collector.example.com", Port: 4317},
+								},
+							},
+						},
+					},
+					Backends: []*ir.BackendCluster{
+						{
+							Settings: []*ir.DestinationSetting{
+								{
+									Endpoints: []*ir.DestinationEndpoint{
+										{Host: "otel-collector.example.com", Port: 4317},
+									},
 								},
 							},
 						},
@@ -79,6 +93,20 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 								},
 								TLS: &ir.TLSUpstreamConfig{
 									SNI: &sni,
+								},
+							},
+						},
+					},
+					Backends: []*ir.BackendCluster{
+						{
+							Settings: []*ir.DestinationSetting{
+								{
+									Endpoints: []*ir.DestinationEndpoint{
+										{Host: "otel-collector.example.com", Port: 443},
+									},
+									TLS: &ir.TLSUpstreamConfig{
+										SNI: &sni,
+									},
 								},
 							},
 						},
@@ -118,6 +146,24 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 							},
 						},
 					},
+					Backends: []*ir.BackendCluster{
+						{
+							Settings: []*ir.DestinationSetting{
+								{
+									Endpoints: []*ir.DestinationEndpoint{
+										{Host: "otel-collector.example.com", Port: 443},
+									},
+									TLS: &ir.TLSUpstreamConfig{
+										SNI: &sni,
+										CACertificate: &ir.TLSCACertificate{
+											Name:        "custom-ca",
+											Certificate: test.TestCACertificate,
+										},
+									},
+								},
+							},
+						},
+					},
 					Authority: "otel-collector.example.com",
 				},
 			},
@@ -143,6 +189,17 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 							{
 								Endpoints: []*ir.DestinationEndpoint{
 									{Host: "otel-collector.example.com", Port: 4317},
+								},
+							},
+						},
+					},
+					Backends: []*ir.BackendCluster{
+						{
+							Settings: []*ir.DestinationSetting{
+								{
+									Endpoints: []*ir.DestinationEndpoint{
+										{Host: "otel-collector.example.com", Port: 4317},
+									},
 								},
 							},
 						},
@@ -176,6 +233,17 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 							{
 								Endpoints: []*ir.DestinationEndpoint{
 									{Host: "otel-collector.example.com", Port: 4317},
+								},
+							},
+						},
+					},
+					Backends: []*ir.BackendCluster{
+						{
+							Settings: []*ir.DestinationSetting{
+								{
+									Endpoints: []*ir.DestinationEndpoint{
+										{Host: "otel-collector.example.com", Port: 4317},
+									},
 								},
 							},
 						},
