@@ -1724,3 +1724,41 @@ func buildFallbackLoadBalancingPolicy(fallbackType ir.LoadBalancerType) (*cluste
 		return nil, fmt.Errorf("unsupported fallback policy: %s", fallbackType)
 	}
 }
+
+// routeDestinationNeedsClusterPerSetting reports whether rd's backends must each get their
+// own Envoy cluster (ZoneAware routing, per-setting filters, mixed address types, or
+// invalid/empty settings) rather than being combined into one cluster.
+func (t *Translator) routeDestinationNeedsClusterPerSetting(rd *ir.RouteDestination) bool {
+	if len(rd.BackendClusterRefs) > 1 {
+		return true
+	}
+	bcs := t.getBackendClusters(rd)
+	if len(bcs) != 1 {
+		return false
+	}
+	return bcs[0].NeedsClusterPerSetting()
+}
+
+// httpRouteNeedsClusterPerSetting reports whether h's backends must each get their own
+// Envoy cluster, additionally accounting for HTTPRoute-level zone-aware routing config.
+func (t *Translator) httpRouteNeedsClusterPerSetting(h *ir.HTTPRoute) bool {
+	if h.Traffic != nil &&
+		h.Traffic.LoadBalancer != nil &&
+		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
+		return true
+	}
+	return t.routeDestinationNeedsClusterPerSetting(h.Destination)
+}
+
+// backendWeights sums the valid/invalid/no-endpoints weight across rd's resolved backends.
+func (t *Translator) backendWeights(rd *ir.RouteDestination) *ir.BackendWeights {
+	bcs := t.getBackendClusters(rd)
+	w := &ir.BackendWeights{Name: rd.Name}
+	for _, bc := range bcs {
+		bw := bc.ToBackendWeights()
+		w.Valid += bw.Valid
+		w.Invalid += bw.Invalid
+		w.NoEndpoints += bw.NoEndpoints
+	}
+	return w
+}
