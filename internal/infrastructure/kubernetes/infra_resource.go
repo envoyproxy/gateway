@@ -173,6 +173,16 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		return err
 	}
 
+	// A same-named Deployment that already exists may be an unrelated, unmanaged
+	// resource in GatewayNamespace mode (where the Gateway name is reused for the
+	// managed infra). Check ownership before the selector-migration workaround
+	// below, otherwise a pre-existing unmanaged Deployment with a different
+	// selector surfaces the misleading "illegal change in a custom label" error
+	// instead of a clear ownership-conflict error (see #9132).
+	if err := i.checkOwnership(ctx, deployment); err != nil {
+		return err
+	}
+
 	if !equality.Semantic.DeepEqual(old.Spec.Selector, deployment.Spec.Selector) {
 		// Note: Deployment created by the old gateway controller may have a different selector generated based on a custom label feature,
 		// and it caused the issue that the gateway controller cannot update the deployment when users change the custom labels.
@@ -257,6 +267,15 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 			// It's the daemonset creation.
 			return i.applyIfOwned(ctx, daemonSet)
 		}
+		return err
+	}
+
+	// A same-named DaemonSet that already exists may be an unrelated, unmanaged
+	// resource in GatewayNamespace mode. Check ownership before the
+	// selector-migration workaround below to surface a clear ownership-conflict
+	// error instead of the misleading "illegal change in a custom label" error
+	// (see #9132).
+	if err := i.checkOwnership(ctx, daemonSet); err != nil {
 		return err
 	}
 

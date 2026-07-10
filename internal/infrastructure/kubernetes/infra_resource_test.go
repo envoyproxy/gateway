@@ -30,7 +30,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/message"
 	egmetrics "github.com/envoyproxy/gateway/internal/metrics"
 )
 
@@ -612,4 +614,126 @@ func TestCheckOwnership_UnownedHPA(t *testing.T) {
 	err := kube.checkOwnership(ctx, desired)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCreateOrUpdateDeployment_UnmanagedSameNameReturnsOwnershipError is a regression test
+// for #9132: in GatewayNamespace mode, when a pre-existing, unmanaged Deployment shares the
+// Gateway's name (e.g. an unrelated nginx Deployment), the reconcile must surface a clear
+// ownership-conflict error rather than the misleading "illegal change in a custom label"
+// selector-migration error. The latter fired because the unmanaged Deployment has a different
+// selector, and the ownership check ran after the selector-migration block.
+func TestCreateOrUpdateDeployment_UnmanagedSameNameReturnsOwnershipError(t *testing.T) {
+	ctx := context.Background()
+
+	_, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDeployment(t, true)
+	require.NoError(t, err)
+
+	// An unrelated, unmanaged Deployment with a different selector and no envoy-gateway
+	// labels — the nginx scenario from the issue. In GatewayNamespace mode the managed
+	// Deployment is named after the Gateway (gateway-1) in its namespace (ns1).
+	unmanaged := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns1", Name: "gateway-1"},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "nginx"}},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "nginx"}},
+				Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}}},
+			},
+		},
+	}
+	cli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(unmanaged).
+		WithInterceptorFuncs(interceptorFunc).
+		Build()
+	errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	kube := NewInfra(cli, gwCfg, errorNotifier)
+	require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
+
+	r, err := proxy.NewResourceRender(ctx, kube, gwInfra)
+	require.NoError(t, err)
+
+	err = kube.createOrUpdateDeployment(ctx, r)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+	assert.NotContains(t, err.Error(), "illegal change in a custom label",
+		"unmanaged same-name Deployment must not surface the selector-migration error")
+
+	// The unmanaged Deployment must be left untouched: no envoy-gateway labels applied.
+	got := &appsv1.Deployment{}
+	require.NoError(t, kube.Client.Get(ctx, client.ObjectKey{Namespace: "ns1", Name: "gateway-1"}, got))
+	assert.NotContains(t, got.Labels, "app.kubernetes.io/managed-by",
+		"unmanaged Deployment must not be adopted")
+}
+
+// TestCreateOrUpdateDaemonSet_UnmanagedSameNameReturnsOwnershipError is the DaemonSet-mode
+// counterpart of the Deployment regression test above for #9132.
+func TestCreateOrUpdateDaemonSet_UnmanagedSameNameReturnsOwnershipError(t *testing.T) {
+	ctx := context.Background()
+
+	// Build a DaemonSet-mode infra in GatewayNamespace mode.
+	deploy, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDaemonSet(t, true)
+	require.NoError(t, err)
+	require.NotNil(t, deploy)
+
+	unmanaged := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns1", Name: "gateway-1"},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "nginx"}},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "nginx"}},
+				Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}}},
+			},
+		},
+	}
+	cli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(unmanaged).
+		WithInterceptorFuncs(interceptorFunc).
+		Build()
+	errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	kube := NewInfra(cli, gwCfg, errorNotifier)
+	require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
+
+	r, err := proxy.NewResourceRender(ctx, kube, gwInfra)
+	require.NoError(t, err)
+
+	err = kube.createOrUpdateDaemonSet(ctx, r)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+	assert.NotContains(t, err.Error(), "illegal change in a custom label",
+		"unmanaged same-name DaemonSet must not surface the selector-migration error")
+
+	got := &appsv1.DaemonSet{}
+	require.NoError(t, kube.Client.Get(ctx, client.ObjectKey{Namespace: "ns1", Name: "gateway-1"}, got))
+	assert.NotContains(t, got.Labels, "app.kubernetes.io/managed-by",
+		"unmanaged DaemonSet must not be adopted")
+}
+
+// TestCreateOrUpdateDeployment_OwnedSameNameStillApplies confirms that an EG-managed
+// Deployment sharing the Gateway name is still updated normally in GatewayNamespace mode —
+// i.e. the ownership check added for #9132 does not block the legitimate reconcile path.
+func TestCreateOrUpdateDeployment_OwnedSameNameStillApplies(t *testing.T) {
+	ctx := context.Background()
+
+	_, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDeployment(t, true)
+	require.NoError(t, err)
+
+	cli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithInterceptorFuncs(interceptorFunc).
+		Build()
+	errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	kube := NewInfra(cli, gwCfg, errorNotifier)
+	require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
+
+	// First reconcile creates the managed Deployment (no pre-existing object).
+	r, err := proxy.NewResourceRender(ctx, kube, gwInfra)
+	require.NoError(t, err)
+	require.NoError(t, kube.createOrUpdateDeployment(ctx, r))
+
+	// Second reconcile over the now-existing, EG-owned Deployment must succeed.
+	r2, err := proxy.NewResourceRender(ctx, kube, gwInfra)
+	require.NoError(t, err)
+	require.NoError(t, kube.createOrUpdateDeployment(ctx, r2))
 }

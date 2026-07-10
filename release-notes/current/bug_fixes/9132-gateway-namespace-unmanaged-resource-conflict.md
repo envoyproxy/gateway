@@ -1,0 +1,1 @@
+Fixed GatewayNamespace mode surfacing a misleading "illegal change in a custom label" error when a pre-existing, unmanaged Deployment or DaemonSet shares the Gateway's name; it now reports a clear ownership-conflict error instead.
