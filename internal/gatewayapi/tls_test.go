@@ -177,6 +177,26 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			ExpectedCertsCount: 1,
 		},
 		{
+			Name:               "valid-rsa-duplicate-san-domain",
+			CertFiles:          []string{"rsa-cert-dup-san.pem"},
+			KeyFiles:           []string{"rsa-pkcs8-dup-san.key"},
+			ExpectedErrMsg:     "",
+			ExpectedErrReason:  "",
+			ExpectedValidCount: 1,
+			ExpectedCertsCount: 1,
+		},
+		{
+			// Two distinct secrets legitimately claiming the same domain with the
+			// same public key algorithm must still be rejected.
+			Name:               "conflicting-rsa-algorithm-same-domain-different-secrets",
+			CertFiles:          []string{"rsa-cert.pem", "rsa-cert.pem"},
+			KeyFiles:           []string{"rsa-pkcs1.key", "rsa-pkcs1.key"},
+			ExpectedErrMsg:     "test/secret public key algorithm must be unique, certificate domain foo.bar.com has a conflicting algorithm [RSA]",
+			ExpectedErrReason:  status.ListenerReasonPartiallyInvalidCertificateRef,
+			ExpectedValidCount: 1,
+			ExpectedCertsCount: 1,
+		},
+		{
 			Name:               "valid-ecdsa-p256",
 			CertFiles:          []string{"ecdsa-p256-cert.pem"},
 			KeyFiles:           []string{"ecdsa-p256.key"},

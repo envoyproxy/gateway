@@ -126,7 +126,7 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 
 		// Check uniqueness for each domain in the certificate with this algorithm
 		hasConflictDomainAlgorithm := false
-		for _, domain := range certDomains {
+		for domain := range sets.New(certDomains...) {
 			pkaSecretKey := fmt.Sprintf("%s/%s", publicKeyAlgorithm, domain)
 
 			// Check whether the public key algorithm and certificate domain are unique
