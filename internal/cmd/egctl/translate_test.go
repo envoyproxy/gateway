@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/utils/test"
@@ -368,6 +369,10 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				// BackendClusterRefs is never present in golden fixture files (want), only in
+				// freshly-generated output (got), so it must stay ignored here - same structural
+				// reason as the identical ignore in internal/gatewayapi/translator_test.go.
+				cmpopts.IgnoreFields(ir.RouteDestination{}, "BackendClusterRefs"),
 			}
 
 			require.Empty(t, cmp.Diff(want, got, opts...))

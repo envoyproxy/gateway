@@ -1909,8 +1909,7 @@ type RouteDestination struct {
 	// dropped from this struct (tracked in docs/superpowers/plans/2026-07-09-drop-routedestination-settings.md).
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// BackendClusterRefs holds references to backend clusters for this route rule.
-	// TODO: remove json/yaml skip tags once Settings is removed and consumers read from BackendClusterRefs.
-	BackendClusterRefs []*BackendClusterRef `json:"-" yaml:"-"`
+	BackendClusterRefs []*BackendClusterRef `json:"backendClusterRefs,omitempty" yaml:"backendClusterRefs,omitempty"`
 	// IsDynamicResolver denormalizes whether this destination's (single) backend is a dynamic
 	// resolver, so IsDynamicResolverRoute can answer without resolving BackendClusterRefs against
 	// the registry - internal/xds/translator/dynamic_forward_proxy.go's patchRoute (an httpFilter
