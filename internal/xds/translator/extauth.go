@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -24,6 +23,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/str"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -147,16 +147,14 @@ func extServiceClusterName(prefix, authority string, rd *ir.RouteDestination, tr
 		return "", err
 	}
 	hash := utils.Digest256(string(b))[:extServiceNameHashLength]
-	return fmt.Sprintf("%s/%s/%s", prefix, sanitizeStatName(authority), hash), nil
+	return fmt.Sprintf("%s/%s/%s", prefix, str.SanitizeLabelName(authority), hash), nil
 }
 
 // rewriteSettingNames returns copies of settings with the policy-derived setting
-// Name rewritten to a "<destName>/backend/<i>" form (or cleared when destName is
-// empty). The setting Name embeds the SecurityPolicy and surfaces as
-// locality.Region, so rewriting it off the (content-hashed) cluster name is what
-// lets a deduplicated ext service cluster depend only on the backend content —
-// two policies pointing at the same backend then produce byte-identical clusters,
-// satisfying addXdsCluster's "same name => same args" contract.
+// Name rewritten to "<destName>/backend/<i>" (or cleared when destName is empty).
+// The Name embeds the SecurityPolicy and surfaces as locality.Region, so rebasing
+// it off the content-hashed cluster name lets policies sharing a backend produce
+// byte-identical clusters.
 func rewriteSettingNames(settings []*ir.DestinationSetting, destName string) []*ir.DestinationSetting {
 	out := make([]*ir.DestinationSetting, len(settings))
 	for i, ds := range settings {
@@ -169,13 +167,6 @@ func rewriteSettingNames(settings []*ir.DestinationSetting, destName string) []*
 		out[i] = &cp
 	}
 	return out
-}
-
-// sanitizeStatName replaces the characters Envoy uses as stat-path separators
-// (".", ":") so an authority (host:port) embedded in a resource name does not
-// fragment the resulting Prometheus stat labels.
-func sanitizeStatName(name string) string {
-	return strings.NewReplacer(".", "_", ":", "_").Replace(name)
 }
 
 func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
@@ -391,8 +382,7 @@ func createDedupedExtServiceCluster(prefix, authority string, rd *ir.RouteDestin
 	// as-is: when the same backend is referenced by multiple policies they dedup
 	// to a single cluster (addXdsCluster keeps the first-encountered), so the
 	// cluster carries attribution from only one of the referencing policies. That
-	// is acceptable — the metadata is informational and not used for routing. The
-	// shared IR destination is not mutated.
+	// is acceptable — the metadata is informational and not used for routing.
 	named := *rd
 	named.Name = name
 	named.Settings = rewriteSettingNames(rd.Settings, name)

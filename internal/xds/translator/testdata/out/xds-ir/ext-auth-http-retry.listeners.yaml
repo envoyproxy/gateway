@@ -35,7 +35,7 @@
                   maxInterval: 3s
                 retryOn: 5xx,deadline-exceeded,internal,unavailable
               serverUri:
-                cluster: extauth/http-backend_envoy-gateway_80/c0623df677ea7a9e
+                cluster: extauth/http_backend_envoy_gateway_80/c0623df677ea7a9e
                 timeout: 10s
                 uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
@@ -57,7 +57,7 @@
                   maxInterval: 3s
                 retryOn: 5xx,deadline-exceeded,internal,unavailable
               serverUri:
-                cluster: extauth/http-backend_default_9000/d34570b380a68dea
+                cluster: extauth/http_backend_default_9000/d34570b380a68dea
                 timeout: 10s
                 uri: http://http-backend.default:9000
             transportApiVersion: V3

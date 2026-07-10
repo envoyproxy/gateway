@@ -132,13 +132,11 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 	return false
 }
 
-// extServiceClusterArgs assembles the xdsClusterArgs used to build the upstream
-// cluster for an external service (extAuth, ext-proc, oidc, ...). It is shared
-// between the real cluster-creation path (createExtServiceXDSCluster) and the
-// content-hashing path used to derive deduplicated cluster names, so both build
-// identical args.
-func extServiceClusterArgs(rd *ir.RouteDestination, traffic *ir.TrafficFeatures) *xdsClusterArgs {
-	var endpointType EndpointType
+func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
+	var (
+		endpointType EndpointType
+		tSocket      *corev3.TransportSocket
+	)
 
 	// Make sure that there are safe defaults for the traffic
 	if traffic == nil {
@@ -156,17 +154,14 @@ func extServiceClusterArgs(rd *ir.RouteDestination, traffic *ir.TrafficFeatures)
 	args := &xdsClusterArgs{
 		name:         rd.Name,
 		settings:     rd.Settings,
+		tSocket:      tSocket,
 		endpointType: endpointType,
 		metadata:     rd.Metadata,
 	}
 
 	applyTraffic(args, traffic)
 
-	return args
-}
-
-func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
-	return addXdsCluster(tCtx, extServiceClusterArgs(rd, traffic))
+	return addXdsCluster(tCtx, args)
 }
 
 // addClusterFromURL adds a cluster to the resource version table from the provided URL.

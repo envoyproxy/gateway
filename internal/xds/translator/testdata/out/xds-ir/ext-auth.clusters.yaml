@@ -77,7 +77,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/grpc-backend_default_9000/4dc733c52ce2b387
+    serviceName: extauth/grpc_backend_default_9000/4dc733c52ce2b387
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -87,7 +87,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/grpc-backend_default_9000/4dc733c52ce2b387
+  name: extauth/grpc_backend_default_9000/4dc733c52ce2b387
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -107,7 +107,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/grpc-backend_default_9000/0318cc711210500a
+    serviceName: extauth/grpc_backend_default_9000/0318cc711210500a
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -117,7 +117,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/grpc-backend_default_9000/0318cc711210500a
+  name: extauth/grpc_backend_default_9000/0318cc711210500a
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -137,7 +137,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/http-backend_envoy-gateway_80/17058a1371bd9042
+    serviceName: extauth/http_backend_envoy_gateway_80/17058a1371bd9042
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -147,6 +147,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/http-backend_envoy-gateway_80/17058a1371bd9042
+  name: extauth/http_backend_envoy_gateway_80/17058a1371bd9042
   perConnectionBufferLimitBytes: 32768
   type: EDS

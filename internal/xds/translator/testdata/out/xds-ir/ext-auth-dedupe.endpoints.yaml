@@ -22,7 +22,7 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
-- clusterName: extauth/grpc-backend_default_9000/0318cc711210500a
+- clusterName: extauth/grpc_backend_default_9000/0318cc711210500a
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -33,4 +33,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: extauth/grpc-backend_default_9000/0318cc711210500a/backend/0
+      region: extauth/grpc_backend_default_9000/0318cc711210500a/backend/0

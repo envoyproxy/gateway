@@ -29,7 +29,7 @@
                     ignoreCase: true
               pathPrefix: /auth
               serverUri:
-                cluster: extauth/http-backend_envoy-gateway_80/17058a1371bd9042
+                cluster: extauth/http_backend_envoy_gateway_80/17058a1371bd9042
                 timeout: 10s
                 uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
@@ -46,7 +46,7 @@
             grpcService:
               envoyGrpc:
                 authority: grpc-backend.default:9000
-                clusterName: extauth/grpc-backend_default_9000/4dc733c52ce2b387
+                clusterName: extauth/grpc_backend_default_9000/4dc733c52ce2b387
               timeout: 10s
             routeMetadataContextNamespaces:
             - envoy-gateway

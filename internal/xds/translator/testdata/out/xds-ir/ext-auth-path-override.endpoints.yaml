@@ -10,7 +10,7 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
-- clusterName: extauth/http-backend_envoy-gateway_80/17058a1371bd9042
+- clusterName: extauth/http_backend_envoy_gateway_80/17058a1371bd9042
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -21,4 +21,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: extauth/http-backend_envoy-gateway_80/17058a1371bd9042/backend/0
+      region: extauth/http_backend_envoy_gateway_80/17058a1371bd9042/backend/0
