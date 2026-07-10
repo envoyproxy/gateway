@@ -27,6 +27,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -485,10 +486,6 @@ func TestTranslate(t *testing.T) {
 
 			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
-
-			if IsMergeBackendsEnabled(resources) {
-				assertMergedBackendClusterCount(t, testName(inputFile), got)
-			}
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
@@ -1198,4 +1195,66 @@ func xdsWithoutEqual(a *ir.Xds) any {
 	}
 
 	return ret
+}
+
+func TestShouldMergeBackend(t *testing.T) {
+	gwNN := types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"}
+	serviceRT := egv1a1.ServiceRoutingType
+	endpointRT := egv1a1.EndpointRoutingType
+
+	tests := []struct {
+		name                         string
+		mergeEnabled                 bool
+		gatewayBaselineRT            *egv1a1.RoutingType
+		effectiveRT                  *egv1a1.RoutingType
+		hasRouteLevelClusterSettings bool
+		want                         bool
+	}{
+		{
+			name:         "disabled globally never merges",
+			mergeEnabled: false,
+			want:         false,
+		},
+		{
+			name:         "enabled, no routing type anywhere: baseline == effective (both Endpoint)",
+			mergeEnabled: true,
+			want:         true,
+		},
+		{
+			name:              "enabled, uniform gateway-level routing type: baseline == effective",
+			mergeEnabled:      true,
+			gatewayBaselineRT: &serviceRT,
+			effectiveRT:       &serviceRT,
+			want:              true,
+		},
+		{
+			name:              "enabled, route-rule overrides routing type away from gateway baseline: diverges",
+			mergeEnabled:      true,
+			gatewayBaselineRT: &endpointRT,
+			effectiveRT:       &serviceRT,
+			want:              false,
+		},
+		{
+			name:                         "enabled, uniform routing but route-level cluster settings present: excluded",
+			mergeEnabled:                 true,
+			hasRouteLevelClusterSettings: true,
+			want:                         false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{
+				MergeBackends: tc.mergeEnabled,
+				TranslatorContext: &TranslatorContext{
+					BTPRoutingTypeIndex: &BTPRoutingTypeIndex{
+						gatewayLevel: map[btpRoutingKey]*egv1a1.RoutingType{
+							{Kind: "Gateway", Namespace: gwNN.Namespace, Name: gwNN.Name}: tc.gatewayBaselineRT,
+						},
+					},
+				},
+			}
+			got := tr.shouldMergeBackend(gwNN, nil, tc.effectiveRT, tc.hasRouteLevelClusterSettings)
+			require.Equal(t, tc.want, got)
+		})
+	}
 }

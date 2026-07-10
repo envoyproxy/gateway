@@ -1574,3 +1574,35 @@ func requirePolicyScopesEqual(t *testing.T, actual sets.Set[policyScope], expect
 		require.True(t, actual.Has(scope), "expected scope %v", scope)
 	}
 }
+func TestIrBackendClusterName(t *testing.T) {
+	tests := []struct {
+		name      string
+		kind      string
+		namespace string
+		bcName    string
+		port      int32
+		want      string
+	}{
+		{
+			name:      "service with port",
+			kind:      "Service",
+			namespace: "default",
+			bcName:    "service-1",
+			port:      8080,
+			want:      "backend/service/default/service-1/8080",
+		},
+		{
+			name:      "backend kind",
+			kind:      "Backend",
+			namespace: "ns",
+			bcName:    "be",
+			port:      443,
+			want:      "backend/backend/ns/be/443",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, irBackendClusterName(tc.kind, tc.namespace, tc.bcName, tc.port))
+		})
+	}
+}
