@@ -36,6 +36,24 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
+# A listener with a listener-scoped policy that carries only a route-level extension (Wasm,
+# no Lua), plus a Gateway-wide policy with Lua. The Gateway-wide Lua must not leak onto this
+# listener since it's already fully governed by the more-specific listener policy.
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-3
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "gw3.example.com"
+      allowedRoutes:
+        namespaces:
+          from: All
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -115,6 +133,26 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-gw3
+  spec:
+    hostnames:
+    - gw3.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-3
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
 envoyextensionpolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -184,4 +222,38 @@ envoyextensionpolicies:
     - type: Inline
       inline: "function envoy_on_request(request_handle)
       request_handle:logInfo('tenant-B script.')
+      end"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-listener-wasm  # listener-scoped, Wasm only, no Lua
+    generation: 40
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+      sectionName: http
+    wasm:
+    - name: wasm-filter-gw3
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/wasm-filter-gw3.wasm
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-3  # Gateway-wide, must not leak Lua onto gateway-3/http
+    generation: 40
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+    lua:
+    - type: Inline
+      inline: "function envoy_on_request(request_handle)
+      request_handle:logInfo('should not run on gateway-3 listener.')
       end"
