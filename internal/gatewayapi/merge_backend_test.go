@@ -21,8 +21,10 @@ import (
 
 // mergeBackendsAssertions maps each mergebackends- testdata scenario to a scenario-specific
 // assertion, checked directly against the live, in-memory *TranslateResult right after
-// Translate() returns (i.e. before any YAML marshal/unmarshal round-trip, since
-// RouteDestination.BackendClusterRefs is tagged yaml:"-" and can never survive one).
+// Translate() returns, rather than via TestTranslate's own golden-file comparison: these
+// assertions need to inspect which specific cluster name each route's BackendClusterRefs
+// resolved to (same name across routes means merged, different means not), which is more
+// directly and readably expressed against the live result than by asserting on golden YAML.
 //
 // Each assertion compares the resolved Settings[0].Name of two routes' destinations directly,
 // rather than counting "backend/..."-prefixed entries in Xds.Backends: a route that is
