@@ -152,10 +152,10 @@ func TestHttpServiceWithTimeout(t *testing.T) {
 	}
 }
 
-// extAuthForBackend builds an ExtAuth pointing at the given backend host/port,
-// with a policy-derived name and context extensions that vary per policy but
-// must not affect deduplication (they are applied as a per-route override).
-func extAuthForBackend(policyName, host string, port uint32, ctxExtVal string) *ir.ExtAuth {
+// extAuthForBackend builds an ExtAuth pointing at the given backend host (port
+// 443), with a policy-derived name and context extensions that vary per policy
+// but must not affect deduplication (they are applied as a per-route override).
+func extAuthForBackend(policyName, host, ctxExtVal string) *ir.ExtAuth {
 	authority := host
 	return &ir.ExtAuth{
 		Name: policyName,
@@ -165,7 +165,7 @@ func extAuthForBackend(policyName, host string, port uint32, ctxExtVal string) *
 				Name: policyName + "/extauth/0",
 				Settings: []*ir.DestinationSetting{{
 					Weight:    new(uint32(1)),
-					Endpoints: []*ir.DestinationEndpoint{{Host: host, Port: port}},
+					Endpoints: []*ir.DestinationEndpoint{{Host: host, Port: 443}},
 				}},
 			},
 			Authority: authority,
@@ -193,14 +193,14 @@ func TestExtAuthDeduplicatesIdenticalClusters(t *testing.T) {
 
 	// Two distinct policies, identical backend, different context extensions.
 	routeA := &ir.HTTPRoute{Name: "route-a", Security: &ir.SecurityFeatures{
-		ExtAuth: extAuthForBackend("securitypolicy/ns/a", "auth.example.com", 443, "a"),
+		ExtAuth: extAuthForBackend("securitypolicy/ns/a", "auth.example.com", "a"),
 	}}
 	routeB := &ir.HTTPRoute{Name: "route-b", Security: &ir.SecurityFeatures{
-		ExtAuth: extAuthForBackend("securitypolicy/ns/b", "auth.example.com", 443, "b"),
+		ExtAuth: extAuthForBackend("securitypolicy/ns/b", "auth.example.com", "b"),
 	}}
 	// A third policy pointing at a different backend must stay separate.
 	routeC := &ir.HTTPRoute{Name: "route-c", Security: &ir.SecurityFeatures{
-		ExtAuth: extAuthForBackend("securitypolicy/ns/c", "other.example.com", 443, "c"),
+		ExtAuth: extAuthForBackend("securitypolicy/ns/c", "other.example.com", "c"),
 	}}
 
 	// Filters stay per-policy (dedup is by policy-derived name): three policies ⇒ three filters.
@@ -241,10 +241,10 @@ func TestExtAuthDeduplicatesIdenticalClusters(t *testing.T) {
 // rollout) must keep the same cluster name so Envoy applies an EDS update instead
 // of recreating the cluster (which would reset stats and connection pools).
 func TestExtAuthClusterNameStableAcrossEndpointChurn(t *testing.T) {
-	base := extAuthForBackend("securitypolicy/ns/a", "auth.example.com", 443, "a")
+	base := extAuthForBackend("securitypolicy/ns/a", "auth.example.com", "a")
 
 	// Same backend/authority/settings, but different resolved endpoints.
-	churned := extAuthForBackend("securitypolicy/ns/a", "auth.example.com", 443, "a")
+	churned := extAuthForBackend("securitypolicy/ns/a", "auth.example.com", "a")
 	churned.HTTP.Destination.Settings[0].Endpoints = []*ir.DestinationEndpoint{
 		{Host: "10.0.0.9", Port: 443},
 		{Host: "10.0.0.10", Port: 443},
@@ -257,7 +257,7 @@ func TestExtAuthClusterNameStableAcrossEndpointChurn(t *testing.T) {
 	require.Equal(t, nameBase, nameChurned, "cluster name must not change when only the endpoints change")
 
 	// A genuinely different setting (protocol) must still produce a different name.
-	differentSettings := extAuthForBackend("securitypolicy/ns/a", "auth.example.com", 443, "a")
+	differentSettings := extAuthForBackend("securitypolicy/ns/a", "auth.example.com", "a")
 	differentSettings.HTTP.Destination.Settings[0].Protocol = ir.HTTP2
 	nameDifferent, err := extServiceClusterName(extAuthClusterPrefix, differentSettings.HTTP.Authority, &differentSettings.HTTP.Destination, differentSettings.Traffic)
 	require.NoError(t, err)
