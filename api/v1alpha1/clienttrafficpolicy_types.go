@@ -473,6 +473,7 @@ type ProxyProtocolSettings struct {
 // At least one of httpsDestinationPorts or httpDestinationPorts must be set.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.httpsDestinationPorts) ? self.httpsDestinationPorts.size() : 0) + (has(self.httpDestinationPorts) ? self.httpDestinationPorts.size() : 0) >= 1",message="at least one of httpsDestinationPorts or httpDestinationPorts must be set"
+// +kubebuilder:validation:XValidation:rule="!(has(self.httpsDestinationPorts) && has(self.httpDestinationPorts) && self.httpsDestinationPorts.exists(p, p in self.httpDestinationPorts))",message="httpsDestinationPorts and httpDestinationPorts must be disjoint"
 type ForwardProtoConfig struct {
 	// HTTPSDestinationPorts are the destination ports treated as HTTPS.
 	// When the PROXY protocol destination port matches one of these, the
