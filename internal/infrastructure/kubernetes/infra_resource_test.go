@@ -21,6 +21,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -736,4 +737,77 @@ func TestCreateOrUpdateDeployment_OwnedSameNameStillApplies(t *testing.T) {
 	r2, err := proxy.NewResourceRender(ctx, kube, gwInfra)
 	require.NoError(t, err)
 	require.NoError(t, kube.createOrUpdateDeployment(ctx, r2))
+}
+
+// TestCheckOwnership_UsesAPIReaderWhenCacheMisses covers the production cache
+// behavior called out in the #9132 review: DaemonSets (and HPA/PDB) are cached
+// behind the envoy managed-label selector, so an unmanaged same-name DaemonSet
+// is absent from the cache. The cached Get returns NotFound, but the conflict
+// check must still see the resource via the uncached API reader and surface the
+// ownership error rather than proceeding to adopt it.
+func TestCheckOwnership_UsesAPIReaderWhenCacheMisses(t *testing.T) {
+	ctx := context.Background()
+
+	unmanaged := &appsv1.DaemonSet{
+		TypeMeta:   metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns1", Name: "gateway-1"},
+	}
+
+	// Cached client: simulates the label-filtered cache missing the unmanaged
+	// DaemonSet by returning NotFound for its Get.
+	cachedCli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*appsv1.DaemonSet); ok {
+					return apierrors.NewNotFound(appsv1.Resource("daemonsets"), key.Name)
+				}
+				return c.Get(ctx, key, obj, opts...)
+			},
+		}).
+		Build()
+	// API reader: sees the unmanaged resource live.
+	apiReader := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(unmanaged).
+		Build()
+
+	kube := newGatewayNamespaceInfra(t, cachedCli)
+	kube.apiReader = apiReader
+
+	desired := &appsv1.DaemonSet{
+		TypeMeta:   metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns1", Name: "gateway-1", Labels: owningLabels("ns1", "gateway-1")},
+	}
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway",
+		"ownership check must read through the cache miss via the API reader")
+}
+
+// TestCheckOwnership_FallsBackToCachedClientWhenNoAPIReader confirms the
+// ownership check still works against the cached client when no API reader is
+// configured (the unit-test default), preserving the pre-existing behavior.
+func TestCheckOwnership_FallsBackToCachedClientWhenNoAPIReader(t *testing.T) {
+	ctx := context.Background()
+	existing := &appsv1.Deployment{
+		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns1", Name: "gateway-1"},
+	}
+	cachedCli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(existing).
+		Build()
+	kube := newGatewayNamespaceInfra(t, cachedCli)
+	require.Nil(t, kube.apiReader, "no API reader configured by default in tests")
+
+	desired := &appsv1.Deployment{
+		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns1", Name: "gateway-1", Labels: owningLabels("ns1", "gateway-1")},
+	}
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
 }
