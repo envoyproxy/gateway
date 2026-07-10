@@ -30,7 +30,7 @@
                     ignoreCase: true
               pathPrefix: /auth
               serverUri:
-                cluster: extauth/primary_foo_com/815cbc99d4329969
+                cluster: extauth/primary_foo_com/3d04d56467b23acc
                 timeout: 10s
                 uri: http://primary.foo.com/auth
             transportApiVersion: V3
@@ -47,7 +47,7 @@
             grpcService:
               envoyGrpc:
                 authority: primary.foo.com
-                clusterName: extauth/primary_foo_com/9f2c955307629a1a
+                clusterName: extauth/primary_foo_com/139324435ccbedee
               timeout: 10s
             transportApiVersion: V3
         - name: envoy.filters.http.router

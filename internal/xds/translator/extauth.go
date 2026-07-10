@@ -111,22 +111,35 @@ func extAuthFilterName(extAuth *ir.ExtAuth) string {
 
 // extServiceClusterName derives a deduplicated upstream cluster name for an
 // external-service backend (ext auth, ext proc, oidc, ...) from a hash of the
-// backend identity in the IR. The name is "<prefix>/<sanitized-authority>/<hash>":
-// the prefix namespaces the consumer, the authority keeps it human-readable, and
-// the content hash makes two policies referencing the same backend+settings
-// collapse onto one cluster via addXdsCluster's name-based dedup.
+// backend identity in the IR.
 //
-// The identity is the destination Settings plus the traffic features. Only the
-// policy-derived setting Name is normalized out (it embeds the SecurityPolicy and
-// surfaces as locality.Region); the RouteDestination Name/StatName/Metadata are
-// policy-derived and excluded entirely. Together these fully determine the built
-// cluster, satisfying addXdsCluster's "same name => same args" contract.
+// The identity is the destination Settings plus the traffic features, with two
+// deliberate exclusions per setting:
+//   - the policy-derived Name (it embeds the SecurityPolicy and surfaces as
+//     locality.Region), and
+//   - the resolved Endpoints.
+//
+// Endpoints are runtime membership, not backend identity: for a Service/
+// ServiceImport (EDS) backend they change on every scale or rollout. Folding them
+// into the name would rename the cluster on routine endpoint churn, forcing Envoy
+// to recreate the cluster (CDS/LDS churn, resetting cluster stats and connection
+// pools) instead of applying a plain EDS update.
+//
+// The hash covers the cluster-shaping settings (TLS, protocol, ...) and traffic features.
+// The RouteDestination Name/StatName/Metadata are policy-derived and excluded entirely.
 func extServiceClusterName(prefix, authority string, rd *ir.RouteDestination, traffic *ir.TrafficFeatures) (string, error) {
+	// rewriteSettingNames returns copies (safe to further mutate) with the
+	// policy-derived Name cleared; drop the endpoints too so the name is stable
+	// across endpoint churn.
+	settings := rewriteSettingNames(rd.Settings, "")
+	for _, ds := range settings {
+		ds.Endpoints = nil
+	}
 	identity := struct {
 		Settings []*ir.DestinationSetting `json:"settings,omitempty"`
 		Traffic  *ir.TrafficFeatures      `json:"traffic,omitempty"`
 	}{
-		Settings: normalizeExtServiceSettings(rd.Settings, ""),
+		Settings: settings,
 		Traffic:  traffic,
 	}
 	b, err := json.Marshal(identity)
@@ -137,21 +150,17 @@ func extServiceClusterName(prefix, authority string, rd *ir.RouteDestination, tr
 	return fmt.Sprintf("%s/%s/%s", prefix, sanitizeStatName(authority), hash), nil
 }
 
-// normalizeExtServiceSettings returns copies of settings with the policy-derived
-// setting Name replaced by an identifier derived from destName (or cleared when
-// destName is empty). This makes a deduplicated ext service cluster depend only
-// on the backend content, so two SecurityPolicies pointing at the same backend
-// produce byte-identical clusters — satisfying addXdsCluster's "same name ⇒
-// same args" contract.
-func normalizeExtServiceSettings(settings []*ir.DestinationSetting, destName string) []*ir.DestinationSetting {
+// rewriteSettingNames returns copies of settings with the policy-derived setting
+// Name rewritten to a "<destName>/backend/<i>" form (or cleared when destName is
+// empty). The setting Name embeds the SecurityPolicy and surfaces as
+// locality.Region, so rewriting it off the (content-hashed) cluster name is what
+// lets a deduplicated ext service cluster depend only on the backend content —
+// two policies pointing at the same backend then produce byte-identical clusters,
+// satisfying addXdsCluster's "same name => same args" contract.
+func rewriteSettingNames(settings []*ir.DestinationSetting, destName string) []*ir.DestinationSetting {
 	out := make([]*ir.DestinationSetting, len(settings))
 	for i, ds := range settings {
 		cp := *ds
-		// Only the setting Name is policy-derived (it embeds the SecurityPolicy
-		// namespace/name and surfaces as locality.Region), so it must be
-		// normalized for dedup. Backend-derived fields such as Metadata are
-		// identical across policies referencing the same backend, so they are
-		// left intact and remain part of the hashed content.
 		if destName == "" {
 			cp.Name = ""
 		} else {
@@ -386,7 +395,7 @@ func createDedupedExtServiceCluster(prefix, authority string, rd *ir.RouteDestin
 	// shared IR destination is not mutated.
 	named := *rd
 	named.Name = name
-	named.Settings = normalizeExtServiceSettings(rd.Settings, name)
+	named.Settings = rewriteSettingNames(rd.Settings, name)
 	return createExtServiceXDSCluster(&named, traffic, tCtx)
 }
 

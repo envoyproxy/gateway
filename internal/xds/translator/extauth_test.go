@@ -234,3 +234,32 @@ func TestExtAuthDeduplicatesIdenticalClusters(t *testing.T) {
 		assert.Equal(t, tc.expect, perRoute.GetCheckSettings().GetContextExtensions()["k"])
 	}
 }
+
+// TestExtAuthClusterNameStableAcrossEndpointChurn verifies that the deduplicated
+// cluster name is derived from the backend identity and settings, not the
+// resolved endpoint membership. An EDS backend whose endpoints change (scale or
+// rollout) must keep the same cluster name so Envoy applies an EDS update instead
+// of recreating the cluster (which would reset stats and connection pools).
+func TestExtAuthClusterNameStableAcrossEndpointChurn(t *testing.T) {
+	base := extAuthForBackend("securitypolicy/ns/a", "auth.example.com", 443, "a")
+
+	// Same backend/authority/settings, but different resolved endpoints.
+	churned := extAuthForBackend("securitypolicy/ns/a", "auth.example.com", 443, "a")
+	churned.HTTP.Destination.Settings[0].Endpoints = []*ir.DestinationEndpoint{
+		{Host: "10.0.0.9", Port: 443},
+		{Host: "10.0.0.10", Port: 443},
+	}
+
+	nameBase, err := extServiceClusterName(extAuthClusterPrefix, base.HTTP.Authority, &base.HTTP.Destination, base.Traffic)
+	require.NoError(t, err)
+	nameChurned, err := extServiceClusterName(extAuthClusterPrefix, churned.HTTP.Authority, &churned.HTTP.Destination, churned.Traffic)
+	require.NoError(t, err)
+	require.Equal(t, nameBase, nameChurned, "cluster name must not change when only the endpoints change")
+
+	// A genuinely different setting (protocol) must still produce a different name.
+	differentSettings := extAuthForBackend("securitypolicy/ns/a", "auth.example.com", 443, "a")
+	differentSettings.HTTP.Destination.Settings[0].Protocol = ir.HTTP2
+	nameDifferent, err := extServiceClusterName(extAuthClusterPrefix, differentSettings.HTTP.Authority, &differentSettings.HTTP.Destination, differentSettings.Traffic)
+	require.NoError(t, err)
+	require.NotEqual(t, nameBase, nameDifferent, "cluster name must change when cluster settings change")
+}

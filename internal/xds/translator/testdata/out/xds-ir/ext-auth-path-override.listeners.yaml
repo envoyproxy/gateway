@@ -29,7 +29,7 @@
                     ignoreCase: true
               pathOverride: /auth/hello
               serverUri:
-                cluster: extauth/http-backend_envoy-gateway_80/69357a0b7e71181f
+                cluster: extauth/http-backend_envoy-gateway_80/17058a1371bd9042
                 timeout: 10s
                 uri: http://http-backend.envoy-gateway:80/auth/hello
             transportApiVersion: V3

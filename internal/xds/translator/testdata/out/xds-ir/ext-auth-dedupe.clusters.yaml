@@ -54,7 +54,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/grpc-backend_default_9000/f939162bb27d720c
+    serviceName: extauth/grpc-backend_default_9000/0318cc711210500a
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -71,7 +71,7 @@
         - kind: SecurityPolicy
           name: policy-a
           namespace: default
-  name: extauth/grpc-backend_default_9000/f939162bb27d720c
+  name: extauth/grpc-backend_default_9000/0318cc711210500a
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:

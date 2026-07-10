@@ -21,7 +21,7 @@
             grpcService:
               envoyGrpc:
                 authority: grpc-backend.default:9000
-                clusterName: extauth/grpc-backend_default_9000/f939162bb27d720c
+                clusterName: extauth/grpc-backend_default_9000/0318cc711210500a
               timeout: 10s
             transportApiVersion: V3
         - disabled: true
@@ -32,7 +32,7 @@
             grpcService:
               envoyGrpc:
                 authority: grpc-backend.default:9000
-                clusterName: extauth/grpc-backend_default_9000/f939162bb27d720c
+                clusterName: extauth/grpc-backend_default_9000/0318cc711210500a
               timeout: 10s
             transportApiVersion: V3
         - name: envoy.filters.http.router
