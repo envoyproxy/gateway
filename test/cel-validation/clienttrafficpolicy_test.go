@@ -795,6 +795,78 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				": preserveXRequestID and requestID cannot both be set.",
 			},
 		},
+		{
+			desc: "proxyProtocol forwardProtoConfig with both port lists",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-forward-proto"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
+						ForwardProtoConfig: &egv1a1.ForwardProtoConfig{
+							HTTPSDestinationPorts: []int32{443, 8443},
+							HTTPDestinationPorts:  []int32{80, 8080},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "proxyProtocol forwardProtoConfig with only https ports",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-forward-proto-https"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
+						ForwardProtoConfig: &egv1a1.ForwardProtoConfig{
+							HTTPSDestinationPorts: []int32{443},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "proxyProtocol forwardProtoConfig with no ports",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-forward-proto-empty"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
+						ForwardProtoConfig: &egv1a1.ForwardProtoConfig{},
+					},
+				}
+			},
+			wantErrors: []string{
+				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-forward-proto-empty\" is invalid:",
+				"spec.proxyProtocol.forwardProtoConfig: Invalid value:",
+				": at least one of httpsDestinationPorts or httpDestinationPorts must be set",
+			},
+		},
 	}
 
 	for _, tc := range cases {

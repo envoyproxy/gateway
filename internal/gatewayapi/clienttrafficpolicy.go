@@ -665,7 +665,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// ProxyProtocol field takes precedence when configured
 		// Even if it's an empty object {}, we should enable proxy protocol with default settings
 		proxyProtocol = &ir.ProxyProtocolSettings{
-			Optional: ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
+			Optional:           ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
+			ForwardProtoConfig: buildIRForwardProtoConfig(policy.Spec.ProxyProtocol.ForwardProtoConfig),
 		}
 	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
 		// Fallback to legacy EnableProxyProtocol field
@@ -792,6 +793,41 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 	}
 
 	return nil
+}
+
+// buildIRForwardProtoConfig translates the ProxyProtocol ForwardProtoConfig API type into the IR
+// type, converting the int32 port lists to uint32 to match the Envoy proto field types.
+func buildIRForwardProtoConfig(cfg *egv1a1.ForwardProtoConfig) *ir.ForwardProtoConfig {
+	// Return early if not set.
+	if cfg == nil {
+		return nil
+	}
+
+	// Defensive guard: CEL validation requires at least one port list to be set, but return nil
+	// for an effectively-empty config so the IR omits the field instead of carrying empty slices.
+	if len(cfg.HTTPSDestinationPorts) == 0 && len(cfg.HTTPDestinationPorts) == 0 {
+		return nil
+	}
+
+	irCfg := &ir.ForwardProtoConfig{}
+
+	// Only allocate/copy when the corresponding list is non-empty, so an unset list stays nil in
+	// the IR rather than becoming an explicitly-empty slice.
+	if len(cfg.HTTPSDestinationPorts) > 0 {
+		irCfg.HTTPSDestinationPorts = make([]uint32, len(cfg.HTTPSDestinationPorts))
+		for i, p := range cfg.HTTPSDestinationPorts {
+			irCfg.HTTPSDestinationPorts[i] = uint32(p)
+		}
+	}
+
+	if len(cfg.HTTPDestinationPorts) > 0 {
+		irCfg.HTTPDestinationPorts = make([]uint32, len(cfg.HTTPDestinationPorts))
+		for i, p := range cfg.HTTPDestinationPorts {
+			irCfg.HTTPDestinationPorts[i] = uint32(p)
+		}
+	}
+
+	return irCfg
 }
 
 func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error) {
