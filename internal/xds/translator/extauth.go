@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -19,10 +20,10 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -31,6 +32,11 @@ var extAuthRouteMetadataContextNamespaces = []string{envoyGatewayXdsMetadataName
 // extAuthClusterPrefix namespaces the deduplicated ext auth cluster names
 // produced by extServiceClusterName.
 const extAuthClusterPrefix = "extauth"
+
+// extServiceNameHashLength is the number of hex characters kept from the content
+// hash in a deduplicated ext service cluster name (64-bit, matching the JWT
+// provider dedup width).
+const extServiceNameHashLength = 16
 
 func init() {
 	registerHTTPFilter(&extAuth{})
@@ -105,36 +111,29 @@ func extAuthFilterName(extAuth *ir.ExtAuth) string {
 
 // extServiceClusterName derives a deduplicated upstream cluster name for an
 // external-service backend (ext auth, ext proc, oidc, ...) from a hash of the
-// built cluster with the policy-derived identifiers normalized out. The name is
-// "<prefix>/<sanitized-authority>/<hash>": the prefix namespaces the consumer,
-// the authority keeps it human-readable, and the content hash makes two policies
-// referencing the same backend+settings collapse onto one cluster via
-// addXdsCluster's name-based dedup.
+// backend identity in the IR. The name is "<prefix>/<sanitized-authority>/<hash>":
+// the prefix namespaces the consumer, the authority keeps it human-readable, and
+// the content hash makes two policies referencing the same backend+settings
+// collapse onto one cluster via addXdsCluster's name-based dedup.
+//
+// The identity is the destination Settings plus the traffic features. Only the
+// policy-derived setting Name is normalized out (it embeds the SecurityPolicy and
+// surfaces as locality.Region); the RouteDestination Name/StatName/Metadata are
+// policy-derived and excluded entirely. Together these fully determine the built
+// cluster, satisfying addXdsCluster's "same name => same args" contract.
 func extServiceClusterName(prefix, authority string, rd *ir.RouteDestination, traffic *ir.TrafficFeatures) (string, error) {
-	args := extServiceClusterArgs(rd, traffic)
-	// Normalize every policy-derived identifier so the hash reflects only the
-	// backend/config content, not the owning policy. Clearing the cluster name
-	// also normalizes the derived TransportSocketMatch names ("<name>/tls/<i>"),
-	// and clearing the per-setting names normalizes the locality Region
-	// (buildWeightedLocalities sets Region = setting name).
-	args.name = ""
-	args.metadata = nil
-	args.settings = normalizeExtServiceSettings(args.settings, "")
-
-	result, err := buildXdsCluster(args)
+	identity := struct {
+		Settings []*ir.DestinationSetting `json:"settings,omitempty"`
+		Traffic  *ir.TrafficFeatures      `json:"traffic,omitempty"`
+	}{
+		Settings: normalizeExtServiceSettings(rd.Settings, ""),
+		Traffic:  traffic,
+	}
+	b, err := json.Marshal(identity)
 	if err != nil {
 		return "", err
 	}
-	// Fold the endpoints into the cluster proto so a single hash covers both the
-	// cluster and its load assignment. protoHash is the shared helper (also used
-	// by JWT provider dedup) and already truncates to a short, stable prefix.
-	lb := ptr.Deref(args.loadBalancer, ir.LoadBalancer{})
-	result.cluster.LoadAssignment = buildXdsClusterLoadAssignment("", args.settings, args.healthCheck, lb.PreferLocal, lb.WeightedZones)
-
-	hash, err := protoHash(result.cluster)
-	if err != nil {
-		return "", err
-	}
+	hash := utils.Digest256(string(b))[:extServiceNameHashLength]
 	return fmt.Sprintf("%s/%s/%s", prefix, sanitizeStatName(authority), hash), nil
 }
 
@@ -379,12 +378,14 @@ func createDedupedExtServiceCluster(prefix, authority string, rd *ir.RouteDestin
 		return err
 	}
 	// Build the real cluster with the hashed name and content-derived setting
-	// names, clearing the policy-derived route-destination metadata, so two
-	// policies pointing at the same backend produce byte-identical clusters that
-	// dedup cleanly. The shared IR destination is not mutated.
+	// names. The route-destination Metadata (SecurityPolicy attribution) is kept
+	// as-is: when the same backend is referenced by multiple policies they dedup
+	// to a single cluster (addXdsCluster keeps the first-encountered), so the
+	// cluster carries attribution from only one of the referencing policies. That
+	// is acceptable — the metadata is informational and not used for routing. The
+	// shared IR destination is not mutated.
 	named := *rd
 	named.Name = name
-	named.Metadata = nil
 	named.Settings = normalizeExtServiceSettings(rd.Settings, name)
 	return createExtServiceXDSCluster(&named, traffic, tCtx)
 }

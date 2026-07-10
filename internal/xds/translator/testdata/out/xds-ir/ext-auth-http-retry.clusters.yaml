@@ -77,7 +77,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/http-backend_default_9000/40eae5929d4725aa
+    serviceName: extauth/http-backend_default_9000/72190090771723ee
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -87,7 +87,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/http-backend_default_9000/40eae5929d4725aa
+  name: extauth/http-backend_default_9000/72190090771723ee
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -100,7 +100,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/http-backend_default_9000/226b880df87893b4
+    serviceName: extauth/http-backend_default_9000/fe86e30193fd7526
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -110,7 +110,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/http-backend_default_9000/226b880df87893b4
+  name: extauth/http-backend_default_9000/fe86e30193fd7526
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -123,7 +123,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/http-backend_envoy-gateway_80/a4ababdd14a29770
+    serviceName: extauth/http-backend_envoy-gateway_80/f80aabf124229e69
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -133,6 +133,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/http-backend_envoy-gateway_80/a4ababdd14a29770
+  name: extauth/http-backend_envoy-gateway_80/f80aabf124229e69
   perConnectionBufferLimitBytes: 32768
   type: EDS

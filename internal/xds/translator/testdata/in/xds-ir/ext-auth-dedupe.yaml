@@ -37,6 +37,10 @@ http:
               authority: grpc-backend.default:9000
               destination:
                 name: securitypolicy/default/policy-a/default/grpc-backend
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-a
+                  namespace: default
                 settings:
                   - addressType: IP
                     endpoints:
@@ -73,6 +77,10 @@ http:
               authority: grpc-backend.default:9000
               destination:
                 name: securitypolicy/default/policy-b/default/grpc-backend
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-b
+                  namespace: default
                 settings:
                   - addressType: IP
                     endpoints:

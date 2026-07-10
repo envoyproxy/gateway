@@ -54,7 +54,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/grpc-backend_default_9000/17b3fd449a35a96b
+    serviceName: extauth/grpc-backend_default_9000/f939162bb27d720c
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -64,7 +64,14 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/grpc-backend_default_9000/17b3fd449a35a96b
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: SecurityPolicy
+          name: policy-a
+          namespace: default
+  name: extauth/grpc-backend_default_9000/f939162bb27d720c
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
