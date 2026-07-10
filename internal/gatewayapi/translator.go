@@ -136,16 +136,10 @@ type Translator struct {
 }
 
 // shouldMergeBackend decides whether a specific backend participates in cluster deduplication.
-//
-// Today this reflects the global Enabled flag, refined by a loose-mode routing-type check: a
-// gateway-level BTP RoutingType (or EnvoyProxy default) applies uniformly to every listener under
-// that gateway, so it's safe to treat as the shared baseline. A listener, route, or route-rule
-// level RoutingType override only applies narrowly, so if this rule's effective RoutingType
-// diverges from that baseline, merging is skipped for this backendRef and it falls back to a
-// route-rule-scoped cluster instead — otherwise the divergent override would silently leak into (or
-// be silently overridden by) a cluster shared with other rules/routes.
+// It reflects the global Enabled flag, refined by a routing-type check: merging is skipped for a
+// backendRef if this rule's effective RoutingType diverges from the gateway's baseline, or a
+// targeted BackendTrafficPolicy sets any backend-cluster-scoped setting.
 // TODO: once a selector is added, this also becomes a per-backend identity match.
-// A route-rule/route/listener-targeted BackendTrafficPolicy that sets any backend-cluster-scoped (CDS) setting also skips merging for this backendRef, for the same reason.
 func (t *Translator) shouldMergeBackend(
 	gwNN types.NamespacedName,
 	envoyProxy *egv1a1.EnvoyProxy,

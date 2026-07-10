@@ -273,12 +273,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(httpRoute, parentRef, rule.Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 
-		// A multi-backend rule with SessionPersistence must not have its backends independently
-		// merged into shared clusters: splitting a single hash/cookie-routed weighted set across
-		// clusters that may also be shared with other routes can break the intended
-		// "same client -> same backend" stickiness guarantee. A single-backend rule has no split
-		// to preserve, so it is unaffected. GRPCRoute has no SessionPersistence field in the
-		// Gateway API and this codebase does not process one for GRPC, so this check is HTTP-only.
 		splitIncompatible := len(rule.BackendRefs) > 1 && rule.SessionPersistence != nil
 
 		for i := range rule.BackendRefs {
@@ -336,8 +330,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			backendClusterRefs.add(merge, backendCluster, ds.Weight)
 		}
 
-		// backendWeights is computed from the rule's own backendRefs, independent of whichever
-		// BackendCluster(s) each ds ended up attached to via getOrCreateBackendCluster.
 		backendWeights := (&ir.BackendCluster{Settings: allDs}).ToBackendWeights()
 		switch {
 		// return 500 if any filter processing error occurred
@@ -479,9 +471,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 }
 
 // resolveRoutingContext resolves the gateway and effective BTP RoutingType override (if any) for a
-// route rule, mirroring the resolution processDestination performs internally. It's kept separate
-// (rather than reused from processDestination) since it's only needed here for the merge decision,
-// and processDestination is shared by every route type, not just HTTP.
+// route rule.
 func (t *Translator) resolveRoutingContext(
 	route RouteContext,
 	parentRef *RouteParentContext,
@@ -519,11 +509,8 @@ func (t *Translator) gatewayXdsIR(gatewayCtx *GatewayContext, xdsIR resource.Xds
 	return xdsIR[t.getIRKey(gatewayCtx.Gateway)]
 }
 
-// registerBackendCluster appends bc to gwIR's Backends registry (if gwIR is non-nil) and
-// returns a BackendClusterRef naming it. Used by destination owners that build a single,
-// dedicated BackendCluster (never shared via getOrCreateBackendCluster/BackendClusterMap)
-// — ext-auth, access log sinks, tracing, OIDC, JWT, mirrors, and the proxy service cluster;
-// none of these carry a weight or per-backendRef filters.
+// registerBackendCluster appends bc to gwIR's Backends registry and returns a BackendClusterRef
+// naming it.
 func registerBackendCluster(gwIR *ir.Xds, bc *ir.BackendCluster) *ir.BackendClusterRef {
 	if gwIR != nil {
 		gwIR.Backends = append(gwIR.Backends, bc)
@@ -531,17 +518,10 @@ func registerBackendCluster(gwIR *ir.Xds, bc *ir.BackendCluster) *ir.BackendClus
 	return &ir.BackendClusterRef{Name: bc.Name}
 }
 
-// backendClusterRefBuilder accumulates a RouteDestination's BackendClusterRefs across its
-// per-backendRef loop (shared by HTTP/GRPC/TLS/UDP/TCP route processing). Every backendRef that
-// resolves with merge=false collapses onto the identical route-scoped cluster name for the whole
-// rule (resolveBackendClusterName's own contract: the route-scoped key/name is derived purely
-// from ruleDestName, not from backendRef identity), so only the first such backendRef needs its
-// own ref - appending one per merge=false backendRef would duplicate it once per backendRef,
-// inflating len(BackendClusterRefs) past the actual distinct-cluster count consumers rely on
-// (see routeDestinationNeedsClusterPerSetting) and multiplying buildXdsWeightedRouteAction's
-// per-setting route entries by that same duplicate count. merge=true backendRefs are always
-// distinct clusters by design (or, on a repeat identity, a legitimate cache hit against a
-// different rule/route entirely) and always get their own ref.
+// backendClusterRefBuilder accumulates a RouteDestination's BackendClusterRefs across a rule's
+// backendRefs. A merge=false backendRef always resolves to the same route-scoped cluster for the
+// whole rule, so only the first one gets a ref; merge=true backendRefs are always distinct and
+// each get their own ref.
 type backendClusterRefBuilder struct {
 	refs             []*ir.BackendClusterRef
 	routeScopedAdded bool
@@ -560,17 +540,11 @@ func (b *backendClusterRefBuilder) add(merge bool, backendCluster *ir.BackendClu
 // resolveBackendClusterName decides whether the backend identified by identity participates in
 // cluster deduplication, and resolves the find-or-create key and target cluster name accordingly.
 //
-// When cluster deduplication is disabled for this backend, ruleDestName is returned as the
-// cluster name, and the find-or-create key is scoped to the owning gateway (when known) plus
-// ruleDestName plus sectionName/parentPort, so every backendRef in the same route rule for the
-// same parentRef/listener collapses onto the same cluster (matching today's one-cluster-per-rule
-// behavior) - but a route attached to multiple gateways, or to multiple listeners of the same
-// gateway via separate parentRefs, gets an independent cluster per listener instead of
-// recomputing and re-accumulating into the same one. When deduplication is enabled, the
-// backend's own identity (plus the owning gateway) is used instead, so that routes referencing
-// the same backend share a single cluster regardless of listener. A backendRef whose kind is
-// never mergeable (dynamic resolver, custom backend - see isMergeableBackendKind) also always
-// resolves to the route-scoped name.
+// When disabled, the key is scoped to the owning gateway plus ruleDestName plus
+// sectionName/parentPort, so each route rule gets one cluster per listener. When enabled, the
+// backend's own identity (plus gateway) is used instead, so routes referencing the same backend
+// share one cluster regardless of listener. Backends that are never mergeable always resolve to
+// the route-scoped name.
 func (t *Translator) resolveBackendClusterName(
 	ruleDestName string,
 	identity BackendClusterKey,
@@ -593,8 +567,7 @@ func (t *Translator) resolveBackendClusterName(
 
 	gwNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
 	if !t.shouldMergeBackend(gwNN, gatewayCtx.envoyProxy, btpRoutingType, hasRouteLevelClusterSettings) {
-		// Kind is left empty here, which can never collide with a merged backend's key
-		// (always non-empty Kind), so route-scoped and backend-scoped keys never clash.
+		// Kind is left empty here since it never collides with a merged key's (always non-empty) Kind.
 		return BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName, SectionName: sectionName, ParentPort: parentPort}, ruleDestName, false
 	}
 
@@ -613,12 +586,8 @@ func backendClusterIdentity(backendRef gwapiv1.BackendObjectReference, backendNa
 }
 
 // isMergeableBackendKind reports whether backendRef could ever safely share an identity-merged
-// BackendCluster with another route. Dynamic-resolver Backends and custom (extension-provided)
-// backends are excluded: each carries call-specific behavior (a dynamic resolver's cluster is
-// configured for per-request address resolution; a custom backend's cluster is built by the
-// extension server, outside this translator's control) that must never be silently shared
-// across routes just because two backendRefs happen to reference the same object. Both are
-// determinable directly from backendRef, with no dependency on processDestination's output.
+// BackendCluster with another route. Dynamic-resolver and custom (extension-provided) backends
+// are excluded.
 func (t *Translator) isMergeableBackendKind(backendRef gwapiv1.BackendObjectReference, backendNamespace string) bool {
 	kind := KindDerefOr(backendRef.Kind, resource.KindService)
 	if t.isCustomBackendResource(backendRef.Group, kind) {
@@ -633,9 +602,9 @@ func (t *Translator) isMergeableBackendKind(backendRef gwapiv1.BackendObjectRefe
 	return true
 }
 
-// backendClusterSettingName derives the DestinationSetting name to pass into processDestination
-// for a backendRef: a merged cluster shares its setting's name with the cluster (since it holds
-// exactly one setting); a route-scoped cluster keeps today's per-backendRef setting name.
+// backendClusterSettingName derives the DestinationSetting name for a backendRef: a merged
+// cluster shares its setting's name with the cluster; a route-scoped cluster keeps a
+// per-backendRef setting name.
 func backendClusterSettingName(destName string, backendIdx int, backendClusterName string, merge bool) string {
 	if merge {
 		return backendClusterName
@@ -644,11 +613,7 @@ func backendClusterSettingName(destName string, backendIdx int, backendClusterNa
 }
 
 // getOrCreateBackendCluster finds or creates the BackendCluster for key, using t.BackendClusterMap
-// as a find-or-create cache. On a cache hit while merge is true, ds is not appended to the existing
-// cluster's settings, since that cluster already holds this exact backend's endpoints. On a cache
-// hit while merge is false (multiple backendRefs in the same rule sharing the same route-scoped
-// key), ds is appended so the cluster accumulates every backendRef's setting, matching today's
-// one-cluster-per-rule behavior.
+// as a find-or-create cache. On a cache hit, ds is appended only when merge is false.
 func (t *Translator) getOrCreateBackendCluster(
 	gwIR *ir.Xds,
 	key BackendClusterKey,
@@ -1267,8 +1232,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			backendClusterRefs.add(merge, backendCluster, ds.Weight)
 		}
 
-		// backendWeights is computed from the rule's own backendRefs, independent of whichever
-		// BackendCluster(s) each ds ended up attached to via getOrCreateBackendCluster.
 		backendWeights := (&ir.BackendCluster{Settings: allDs}).ToBackendWeights()
 		switch {
 		// return 500 if any filter processing error occurred
@@ -2162,10 +2125,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // processDestination translates a backendRef into a destination settings.
 // If an error occurs during this conversion, an error is returned, and the associated routes are expected to become inactive.
 // This will result in a direct 500 response for HTTP-based requests.
-//
-// gatewayCtx and btpRoutingType are resolved once per route rule by the caller via
-// resolveRoutingContext, rather than re-derived here, since they're identical across every
-// backendRef in the same rule.
 func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 	gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType, xdsIR resource.XdsIRMap,

@@ -557,11 +557,6 @@ func TestResolveBackendClusterName(t *testing.T) {
 	})
 
 	t.Run("route-scoped key differs across gateways for the same rule (multi-parent route)", func(t *testing.T) {
-		// Regression test: ruleDestName alone (e.g. "httproute/default/httproute-1/rule/0") is
-		// identical regardless of which of a route's multiple parent gateways is being processed.
-		// Without gateway-scoping, a route attached to two gateways would collide in
-		// t.BackendClusterMap - the second gateway processed would silently reuse the first
-		// gateway's cache entry without ever registering it into its OWN Xds.Backends.
 		tr := &Translator{MergeBackends: false}
 		gwCtx1 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
 		gwCtx2 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-2"}}}
@@ -571,11 +566,6 @@ func TestResolveBackendClusterName(t *testing.T) {
 	})
 
 	t.Run("route-scoped key differs across parentRefs on the same gateway (multi-listener route)", func(t *testing.T) {
-		// Regression test: "compute backends" for a rule reruns once per parentRef (each needs
-		// its own RouteParentStatus) - if a route attaches to two listeners on the SAME gateway,
-		// ruleDestName and the gateway are identical on both passes. Without sectionName/
-		// parentPort in the key, the second pass would hit the first pass's cache entry and
-		// accumulate a duplicate copy of the same backendRef's setting into it.
 		tr := &Translator{MergeBackends: false}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
 		key1, _, _ := tr.resolveBackendClusterName("httproute/default/httproute-1/rule/0", identity, gwCtx, nil, false, true, "http-a", 0)
@@ -584,9 +574,7 @@ func TestResolveBackendClusterName(t *testing.T) {
 	})
 
 	t.Run("route-scoped key across all combinations of sectionName/parentPort presence", func(t *testing.T) {
-		// Gateway API allows a parentRef to specify SectionName only, Port only, both, or
-		// neither. Exhaustively check that two parentRef passes produce the same key only when
-		// both sectionName and parentPort match, and a different key if either differs.
+		// A parentRef can specify SectionName only, Port only, both, or neither.
 		tests := []struct {
 			name      string
 			section1  string

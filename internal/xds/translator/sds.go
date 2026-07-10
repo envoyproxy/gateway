@@ -127,13 +127,11 @@ func (t *Translator) processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR 
 			for _, bc := range t.getBackendClusters(route.Destination) {
 				for _, dest := range bc.Settings {
 					if dest.TLS != nil {
-						// Check CA certificate
 						if caCert := dest.TLS.CACertificate; caCert != nil {
 							if caCert.SDS != nil && caCert.SDS.URL != "" {
 								sdsURLs[caCert.SDS.URL] = true
 							}
 						}
-						// Check client certificates
 						for _, cert := range dest.TLS.ClientCertificates {
 							if cert.SDS != nil && cert.SDS.URL != "" {
 								sdsURLs[cert.SDS.URL] = true
@@ -154,13 +152,11 @@ func (t *Translator) processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR 
 			for _, bc := range t.getBackendClusters(route.Destination) {
 				for _, dest := range bc.Settings {
 					if dest.TLS != nil {
-						// Check CA certificate
 						if caCert := dest.TLS.CACertificate; caCert != nil {
 							if caCert.SDS != nil && caCert.SDS.URL != "" {
 								sdsURLs[caCert.SDS.URL] = true
 							}
 						}
-						// Check client certificates
 						for _, cert := range dest.TLS.ClientCertificates {
 							if cert.SDS != nil && cert.SDS.URL != "" {
 								sdsURLs[cert.SDS.URL] = true

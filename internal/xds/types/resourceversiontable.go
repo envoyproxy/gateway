@@ -26,18 +26,13 @@ type ResourceVersionTable struct {
 	XdsResources
 	EnvoyPatchPolicyStatuses
 
-	// BackendIndex is a name-keyed index of resolved BackendClusters (ir.Xds.Backends),
-	// shared from Translator.backendIndex at the start of Translate(). It lets httpFilter
-	// implementations (patchHCM/patchRoute/patchResources), which only receive a
-	// *ResourceVersionTable and not a *Translator, resolve BackendClusterRefs via the shared
-	// registry. See GetBackendClusters.
+	// BackendIndex is a name-keyed index of resolved BackendClusters (ir.Xds.Backends).
 	BackendIndex map[string]*ir.BackendCluster
 }
 
 // GetBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data via
-// BackendIndex, mirroring xds/translator's Translator.getBackendClusters - including its
-// placeholder-synthesis behavior when rd has a Name but no refs resolve to anything. See that
-// function's doc comment for why.
+// BackendIndex. If rd has a Name but no refs resolve to anything, a placeholder BackendCluster
+// with no Settings is synthesized instead of returning empty.
 func (t *ResourceVersionTable) GetBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
 	if rd == nil {
 		return nil

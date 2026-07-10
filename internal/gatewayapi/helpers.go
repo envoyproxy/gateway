@@ -518,8 +518,7 @@ func irDestinationSettingName(destName string, backendIdx int) string {
 }
 
 // irBackendClusterName names a BackendCluster shared across routes that reference the same
-// backend. Kind is included to avoid collisions between differently-kinded backends that share the
-// same namespace/name/port (e.g. a Service and a Backend both named "foo" on the same port).
+// backend.
 func irBackendClusterName(kind, namespace, name string, port int32) string {
 	return fmt.Sprintf("backend/%s/%s/%s/%d", strings.ToLower(kind), namespace, name, port)
 }
@@ -651,13 +650,11 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 // enabled for the GatewayClass, giving precedence to the GatewayClass-level EnvoyProxy over the
 // default EnvoyProxySpec from the EnvoyGateway configuration.
 func IsMergeBackendsEnabled(resources *resource.Resources) bool {
-	// Check GatewayClass-level EnvoyProxy first (higher priority)
 	if resources.EnvoyProxyForGatewayClass != nil &&
 		resources.EnvoyProxyForGatewayClass.Spec.MergeBackends != nil {
 		return ptr.Deref(resources.EnvoyProxyForGatewayClass.Spec.MergeBackends.Enabled, false)
 	}
 
-	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
 	if resources.EnvoyProxyDefaultSpec != nil &&
 		resources.EnvoyProxyDefaultSpec.MergeBackends != nil {
 		return ptr.Deref(resources.EnvoyProxyDefaultSpec.MergeBackends.Enabled, false)

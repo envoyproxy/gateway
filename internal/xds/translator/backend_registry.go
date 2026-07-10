@@ -28,15 +28,10 @@ func (idx backendClusterIndex) resolve(refs []*ir.BackendClusterRef) []*ir.Backe
 	return ir.ResolveBackendClusterRefs(idx, refs)
 }
 
-// getBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data via the
-// registry. If rd has a Name but no refs resolve to anything (e.g. the Gateway API translator
-// failed to resolve every backendRef, or all backendRefs were weight-0), a single placeholder
-// BackendCluster with no Settings is synthesized instead of returning empty: TCP/UDP/TLS routes
-// have no per-request fallback (unlike HTTP/GRPC's direct-response mechanism), so Envoy still
-// needs an EDS cluster to route to - one with zero endpoints, so it can return connection errors
-// rather than reference a nonexistent cluster. Callers that must distinguish "no backend
-// configured at all" (ext-service/JWT/OIDC provider destinations) check rd.BackendClusterRefs
-// directly before ever calling this, so they never observe the placeholder.
+// getBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data. If rd has a
+// Name but no refs resolve to anything, a single placeholder BackendCluster with no Settings is
+// synthesized instead of returning empty: TCP/UDP/TLS routes have no per-request fallback, so
+// Envoy still needs an EDS cluster to route to, even one with zero endpoints.
 func (t *Translator) getBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
 	if rd == nil {
 		return nil

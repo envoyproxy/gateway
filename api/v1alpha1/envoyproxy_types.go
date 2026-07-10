@@ -93,9 +93,9 @@ type EnvoyProxySpec struct {
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
 
 	// MergeBackends configures cluster deduplication: routes that reference the same backend
-	// (identified by kind/namespace/name/port) share a single Envoy cluster instead of Envoy
-	// Gateway generating one cluster per route rule. This reduces xDS size, active health-check
-	// traffic and stats cardinality, and improves upstream connection pooling.
+	// share a single Envoy cluster instead of Envoy Gateway generating one cluster per route
+	// rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
+	// improves upstream connection pooling.
 	//
 	// This is an experimental optimization and is disabled when unset.
 	//
@@ -237,17 +237,12 @@ type MergeBackendsConfig struct {
 	Enabled *bool `json:"enabled,omitempty"`
 
 	// Mode determines how backend cluster deduplication behaves when a route-targeted
-	// BackendTrafficPolicy (or other per-route override) would diverge from a shared backend's
-	// cluster-level configuration.
+	// BackendTrafficPolicy would diverge from a shared backend's cluster-level configuration.
 	//
-	//   - Fallback: a backendRef is merged into a shared cluster only when it is safe to do so.
-	//     A backendRef that carries backend-cluster-scoped settings (e.g. a route-targeted
-	//     BackendTrafficPolicy configuring healthCheck, circuitBreaker, loadBalancer, etc.), uses
-	//     a dynamic resolver or custom backend, or uses a feature incompatible with weighted
-	//     clusters (e.g. session persistence across a multi-backend split), falls back to a
-	//     dedicated per-route cluster instead of being merged.
-	//   - Force: always merges the backend into a single shared cluster. Not supported yet -
-	//     selecting this value is rejected.
+	//   - Fallback: a backendRef is merged into a shared cluster only when safe to do so;
+	//     otherwise it falls back to a dedicated per-route cluster.
+	//   - Force: always merges into a single shared cluster. Not supported yet - selecting this
+	//     value is rejected.
 	//
 	// Defaults to Fallback.
 	//
@@ -255,9 +250,6 @@ type MergeBackendsConfig struct {
 	// +kubebuilder:default=Fallback
 	// +kubebuilder:validation:XValidation:rule="self != 'Force'",message="Force mode is not supported yet"
 	Mode *MergeBackendsMode `json:"mode,omitempty"`
-
-	// TODO: Backends will let individual backends opt in or out of deduplication via a selector,
-	// for cases where Mode's blanket behavior isn't precise enough. Not yet implemented.
 }
 
 // MergeBackendsMode determines how aggressively Envoy Gateway deduplicates clusters when
@@ -266,10 +258,7 @@ type MergeBackendsConfig struct {
 type MergeBackendsMode string
 
 const (
-	// MergeBackendsModeFallback merges a backend's cluster across routes only when it is safe to
-	// share the resulting cluster. Routes carrying backend-cluster-scoped settings that diverge,
-	// dynamic-resolver/custom backends, or features incompatible with weighted clusters, fall
-	// back to a dedicated per-route cluster.
+	// MergeBackendsModeFallback merges a backend's cluster across routes only when safe to do so.
 	MergeBackendsModeFallback MergeBackendsMode = "Fallback"
 
 	// MergeBackendsModeForce always merges a backend's cluster across routes. Not supported yet.

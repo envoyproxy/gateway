@@ -1270,14 +1270,6 @@ func TestValidateRouteDestination(t *testing.T) {
 			want:  nil,
 		},
 		{
-			// Endpoint host/port validation (previously exercised here via a per-Settings
-			// loop in RouteDestination.Validate()) no longer happens at this layer - it's
-			// validated once per distinct cluster via Xds.Validate() walking Xds.Backends
-			// (see BackendCluster.Validate()/DestinationSetting.Validate()), not per-ref
-			// here. The dedicated "valid hostname"/"valid ip"/"invalid address"/"missing
-			// ip"/"missing port" cases that used to live here tested that now-removed loop
-			// and were deleted rather than rewritten, since RouteDestination.Validate() has
-			// no way to reach a BackendCluster's Settings to re-trigger those errors.
 			name: "missing name",
 			input: RouteDestination{
 				BackendClusterRefs: []*BackendClusterRef{{Name: "bc-1"}},
@@ -1306,12 +1298,6 @@ func TestValidateRouteDestination(t *testing.T) {
 			want: nil,
 		},
 		{
-			// Note: the "exactly one setting when multiple BackendClusterRefs exist" invariant
-			// used to be re-checked here, but that invariant is guaranteed by construction
-			// (getOrCreateBackendCluster/registerBackendCluster in internal/gatewayapi) and is
-			// now validated once per distinct cluster via Xds.Validate() walking Xds.Backends,
-			// not per-ref in RouteDestination.Validate(). A ref with a multi-setting Backend is
-			// therefore no longer flagged at this layer.
 			name: "multiple backend cluster refs with multiple settings no longer flagged here",
 			input: RouteDestination{
 				Name: "multi-bc-multi-settings",

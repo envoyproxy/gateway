@@ -175,12 +175,8 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
-	// Backends holds every distinct BackendCluster referenced by this gateway's routes and
-	// other destinations (ext-auth, access log sinks, tracing, OIDC, JWT, mirrors, the proxy
-	// service cluster), keyed by Name. This is the single source of truth for a backend
-	// cluster's Settings/Metadata — BackendClusterRef only ever holds a Name (see BackendClusterRef.Name),
-	// never embeds the cluster itself, so that per-route/per-hostname copies can't drift from
-	// or duplicate it.
+	// Backends holds every distinct BackendCluster referenced by this gateway, keyed by Name -
+	// the single source of truth for a cluster's Settings/Metadata.
 	Backends []*BackendCluster `json:"backends,omitempty" yaml:"backends,omitempty"`
 }
 
@@ -1906,14 +1902,10 @@ type RouteDestination struct {
 	Name     string  `json:"name" yaml:"name"`
 	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// BackendClusterRefs holds references to backend clusters for this route rule. The
-	// referenced BackendCluster's data (Settings, Metadata) lives exclusively in the owning
-	// Xds's Backends registry - see Xds.Backends - never here, so per-route/per-hostname
-	// DeepCopy can't duplicate or desync it.
+	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
+	// never here.
 	BackendClusterRefs []*BackendClusterRef `json:"backendClusterRefs,omitempty" yaml:"backendClusterRefs,omitempty"`
-	// IsDynamicResolver denormalizes whether this destination's (single) backend is a dynamic
-	// resolver, so IsDynamicResolverRoute can answer without resolving BackendClusterRefs against
-	// the registry - internal/xds/translator/dynamic_forward_proxy.go's patchRoute (an httpFilter
-	// interface method, 22 implementers) has no registry access at all, unlike patchResources.
+	// IsDynamicResolver denormalizes whether this destination's backend is a dynamic resolver.
 	IsDynamicResolver bool `json:"isDynamicResolver,omitempty" yaml:"isDynamicResolver,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
@@ -1921,11 +1913,8 @@ type RouteDestination struct {
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
-// Validate the fields within the RouteDestination structure. BackendCluster-level
-// validation (Settings well-formed, single-setting-per-shared-cluster invariant) happens
-// once per distinct cluster via Xds.Validate() walking Xds.Backends, not here per-ref —
-// that invariant is guaranteed by construction in getOrCreateBackendCluster/
-// registerBackendCluster (internal/gatewayapi), not re-checked at this layer.
+// Validate the fields within the RouteDestination structure. BackendCluster-level validation
+// happens once per distinct cluster via Xds.Validate(), not here per-ref.
 func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
@@ -1940,8 +1929,8 @@ func (r *RouteDestination) Validate() error {
 }
 
 // BackendCluster represents a single backend (Service, ServiceImport, or Backend resource)
-// and its endpoint configuration. In Step 2 (MergeBackends=true), multiple routes sharing the
-// same backend will reference a shared BackendCluster, enabling cluster deduplication.
+// and its endpoint configuration. Multiple routes sharing the same backend can reference the
+// same BackendCluster.
 // +kubebuilder:object:generate=true
 type BackendCluster struct {
 	// Name uniquely identifies this backend cluster.
@@ -1972,8 +1961,8 @@ func (b *BackendCluster) NeedsClusterPerSetting() bool {
 		(len(b.Settings) > 1 && b.HasPreferLocalZone()) ||
 		b.HasMixedUpstreamProtocolRequirements() ||
 		b.HasMixedAutoSNISettings() ||
-		// When the cluster has both valid and invalid backend weights, we use weighted clusters to distribute between
-		// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
+		// Mixed valid/invalid backend weights need a cluster per setting, so weighted traffic can
+		// still reach the invalid-backend-cluster's 500/503 response.
 		w.Invalid > 0 || w.NoEndpoints > 0
 }
 
@@ -2074,10 +2063,9 @@ func (b *BackendCluster) ToBackendWeights() *BackendWeights {
 	return w
 }
 
-// BackendClusterRef is a reference from a route rule (or other destination owner) to a
-// backend cluster, identified by name. The referenced BackendCluster's data (Settings,
-// Metadata) lives exclusively in the owning Xds's Backends registry — see Xds.Backends —
-// never here, so that per-route/per-hostname DeepCopy can't duplicate or desync it.
+// BackendClusterRef is a reference from a route rule to a backend cluster, identified by name.
+// The referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
+// never here.
 // +kubebuilder:object:generate=true
 type BackendClusterRef struct {
 	// Name identifies the referenced BackendCluster in the owning Xds's Backends registry.
@@ -2088,10 +2076,8 @@ type BackendClusterRef struct {
 	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
-// ResolveBackendClusterRefs resolves each ref's Name against idx (a name-keyed index of
-// BackendClusters, typically built from Xds.Backends). Shared by the xds/translator and
-// xds/types packages so both the Translator-level and ResourceVersionTable-level indices
-// resolve refs identically without duplicating the lookup logic.
+// ResolveBackendClusterRefs resolves each ref's Name against idx, a name-keyed index of
+// BackendClusters.
 func ResolveBackendClusterRefs(idx map[string]*BackendCluster, refs []*BackendClusterRef) []*BackendCluster {
 	bcs := make([]*BackendCluster, 0, len(refs))
 	for _, ref := range refs {

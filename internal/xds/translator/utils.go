@@ -227,7 +227,6 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
 	args.admissionControl = traffic.AdmissionControl
 }
 
-// determineIPFamily determines the IP family based on backend cluster settings
 func determineIPFamily(backends []*ir.BackendCluster) *egv1a1.IPFamily {
 	hasIPv4 := false
 	hasIPv6 := false

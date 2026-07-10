@@ -110,13 +110,6 @@ func TestTranslateXds(t *testing.T) {
 			errMsg: "text.Format is nil",
 		},
 		"tracing-invalid": {
-			// Prior to the BackendClusterRefs/Settings migration, this fixture's zero-value
-			// tracing.Destination (no destination configured at all) hit an empty-Settings
-			// placeholder cluster whose empty Name failed xDS proto validation - masking the
-			// fixture's actual intent (an unset/invalid tracing provider type). Now that
-			// getBackendClusters returns no clusters for a nameless destination, the real
-			// "unknown tracing provider type" check (tracing.go) fires instead - the same
-			// error "tracing-unknown-provider-type" below exercises deliberately.
 			errMsg: "unknown tracing provider type: ",
 		},
 		"tracing-unknown-provider-type": {

@@ -192,10 +192,8 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 }
 
 // LookupGatewayBTRoutingType resolves the RoutingType from a gateway-level BTP only, ignoring any
-// listener/route/route-rule level override. Unlike listener/route/route-rule overrides (which
-// apply narrowly), a gateway-level BTP applies uniformly to every listener under that gateway, so
-// it's safe to treat as the gateway's baseline routing type.
-// Returns nil if no matching BTP RoutingType is found, or if the index is nil.
+// listener/route/route-rule level override. Returns nil if no matching BTP RoutingType is found,
+// or if the index is nil.
 func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.NamespacedName) *egv1a1.RoutingType {
 	if idx == nil {
 		return nil
@@ -214,11 +212,6 @@ func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.Names
 }
 
 // btpClusterSettingsHasSettings reports whether cs sets any backend-cluster-scoped (CDS) field.
-// These settings are baked into the Envoy cluster, so a route-rule/route/listener-targeted BTP
-// that sets any of them makes that target's backend ineligible for cluster deduplication:
-// sharing the cluster with another route would either silently apply this target's settings to
-// that route too, or silently drop them for this route - the same class of bug already fixed for
-// RoutingType divergence.
 func btpClusterSettingsHasSettings(cs *egv1a1.ClusterSettings) bool {
 	if cs == nil {
 		return false
@@ -244,11 +237,7 @@ func hasBTPClusterSettings(btps []*egv1a1.BackendTrafficPolicy) bool {
 }
 
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
-// BackendTrafficPolicy contributes backend-cluster-scoped (CDS) settings. Unlike
-// BTPRoutingTypeIndex, a gateway-level match is deliberately NOT tracked here: a gateway-level
-// BTP's cluster settings apply uniformly to every route under that gateway, so - mirroring
-// RoutingType's baseline treatment - they never block merging. Only route-rule/route/listener
-// level policies do, since those apply narrowly to a subset of routes sharing the backend.
+// BackendTrafficPolicy contributes backend-cluster-scoped (CDS) settings.
 type BTPClusterSettingsIndex struct {
 	routeRuleLevel map[btpRoutingKey]bool
 	routeLevel     map[btpRoutingKey]bool
@@ -256,8 +245,7 @@ type BTPClusterSettingsIndex struct {
 }
 
 // BuildBTPClusterSettingsIndex builds a pre-computed index of which route-rule/route/listener
-// targets have a BackendTrafficPolicy contributing backend-cluster-scoped settings, mirroring
-// BuildBTPRoutingTypeIndex's target-resolution approach.
+// targets have a BackendTrafficPolicy contributing backend-cluster-scoped settings.
 func BuildBTPClusterSettingsIndex(
 	btps []*egv1a1.BackendTrafficPolicy,
 	routes []client.Object,
@@ -303,8 +291,6 @@ func BuildBTPClusterSettingsIndex(
 				if ref.SectionName != nil {
 					idx.listenerLevel[key] = true
 				}
-				// A gateway-level match (no SectionName) is deliberately not recorded - see the
-				// type doc comment.
 			} else {
 				if ref.SectionName != nil {
 					idx.routeRuleLevel[key] = true
@@ -320,8 +306,7 @@ func BuildBTPClusterSettingsIndex(
 
 // HasRouteLevelClusterSettings reports whether a route-rule, route, or listener-level
 // BackendTrafficPolicy (in that priority order) contributes backend-cluster-scoped settings for
-// the given target. Unlike LookupBTPRoutingType, this deliberately does not fall through to a
-// gateway-level match - see BTPClusterSettingsIndex's doc comment.
+// the given target. This does not fall through to a gateway-level match.
 func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
 	routeKind gwapiv1.Kind,
 	routeNN types.NamespacedName,

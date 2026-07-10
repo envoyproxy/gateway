@@ -106,9 +106,6 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 
 	tCtx := new(types.ResourceVersionTable)
-	// Share the same index with the ResourceVersionTable so httpFilter implementations
-	// (which only receive tCtx, not t) can resolve BackendClusterRefs identically, without
-	// rebuilding a second copy from xdsIR.Backends.
 	tCtx.BackendIndex = t.backendIndex
 
 	// xDS translation is done in a best-effort manner, so we collect all errors
