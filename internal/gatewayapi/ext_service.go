@@ -78,7 +78,6 @@ func (t *Translator) translateExtServiceBackendRefs(
 
 	rs = &ir.RouteDestination{
 		Name:     destName,
-		Settings: ds,
 		Metadata: buildResourceMetadata(policy, nil),
 	}
 	if len(ds) > 0 {

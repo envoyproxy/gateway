@@ -526,16 +526,6 @@ var (
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
 		Name: "happy-dest",
-		Settings: []*DestinationSetting{
-			{
-				Endpoints: []*DestinationEndpoint{
-					{
-						Host: "10.11.12.13",
-						Port: 8080,
-					},
-				},
-			},
-		},
 	}
 )
 
@@ -1280,101 +1270,17 @@ func TestValidateRouteDestination(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name: "valid hostname",
-			input: RouteDestination{
-				Name: "valid hostname",
-				Settings: []*DestinationSetting{
-					{
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "example.com",
-								Port: 8080,
-							},
-						},
-					},
-				},
-			},
-			want: nil,
-		},
-		{
-			name: "valid ip",
-			input: RouteDestination{
-				Name: "valid ip",
-				Settings: []*DestinationSetting{
-					{
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "1.2.3.4",
-								Port: 8080,
-							},
-						},
-					},
-				},
-			},
-			want: nil,
-		},
-		{
-			name: "invalid address",
-			input: RouteDestination{
-				Name: "invalid address",
-				Settings: []*DestinationSetting{
-					{
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "example.com::foo.bar",
-								Port: 8080,
-							},
-						},
-					},
-				},
-			},
-			want: ErrDestEndpointHostInvalid,
-		},
-		{
-			name: "missing ip",
-			input: RouteDestination{
-				Name: "missing ip",
-				Settings: []*DestinationSetting{
-					{
-						Endpoints: []*DestinationEndpoint{
-							{
-								Port: 8080,
-							},
-						},
-					},
-				},
-			},
-			want: ErrDestEndpointHostInvalid,
-		},
-		{
-			name: "missing port",
-			input: RouteDestination{
-				Name: "missing port",
-				Settings: []*DestinationSetting{
-					{
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "10.11.12.13",
-							},
-						},
-					},
-				},
-			},
-			want: ErrDestEndpointPortInvalid,
-		},
-		{
+			// Endpoint host/port validation (previously exercised here via a per-Settings
+			// loop in RouteDestination.Validate()) no longer happens at this layer - it's
+			// validated once per distinct cluster via Xds.Validate() walking Xds.Backends
+			// (see BackendCluster.Validate()/DestinationSetting.Validate()), not per-ref
+			// here. The dedicated "valid hostname"/"valid ip"/"invalid address"/"missing
+			// ip"/"missing port" cases that used to live here tested that now-removed loop
+			// and were deleted rather than rewritten, since RouteDestination.Validate() has
+			// no way to reach a BackendCluster's Settings to re-trigger those errors.
 			name: "missing name",
 			input: RouteDestination{
-				Settings: []*DestinationSetting{
-					{
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "10.11.12.13",
-								Port: 8080,
-							},
-						},
-					},
-				},
+				BackendClusterRefs: []*BackendClusterRef{{Name: "bc-1"}},
 			},
 			want: ErrDestinationNameEmpty,
 		},

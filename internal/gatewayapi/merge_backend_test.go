@@ -113,25 +113,39 @@ var mergeBackendsAssertions = map[string]func(t *testing.T, got *TranslateResult
 func destSettingNames(t *testing.T, got *TranslateResult, routeNameSubstr string) []string {
 	t.Helper()
 	for _, x := range got.XdsIR {
+		backendIndex := make(map[string]*ir.BackendCluster, len(x.Backends))
+		for _, bc := range x.Backends {
+			backendIndex[bc.Name] = bc
+		}
+		settingNames := func(rd *ir.RouteDestination) []string {
+			var names []string
+			seen := make(map[string]bool, len(rd.BackendClusterRefs))
+			for _, bc := range ir.ResolveBackendClusterRefs(backendIndex, rd.BackendClusterRefs) {
+				// Multiple BackendClusterRefs (one per backendRef) can resolve to the identical
+				// BackendCluster when backendRefs share a route-scoped cluster (the default,
+				// non-demerged case) - visit each distinct cluster's Settings only once, or a
+				// shared cluster's settings get double-counted, one copy per ref pointing at it.
+				if seen[bc.Name] {
+					continue
+				}
+				seen[bc.Name] = true
+				for _, s := range bc.Settings {
+					names = append(names, s.Name)
+				}
+			}
+			return names
+		}
 		for _, l := range x.HTTP {
 			for _, r := range l.Routes {
 				if strings.Contains(r.Name, routeNameSubstr) && r.Destination != nil {
-					names := make([]string, len(r.Destination.Settings))
-					for i, s := range r.Destination.Settings {
-						names[i] = s.Name
-					}
-					return names
+					return settingNames(r.Destination)
 				}
 			}
 		}
 		for _, l := range x.TCP {
 			for _, r := range l.Routes {
 				if strings.Contains(r.Name, routeNameSubstr) && r.Destination != nil {
-					names := make([]string, len(r.Destination.Settings))
-					for i, s := range r.Destination.Settings {
-						names[i] = s.Name
-					}
-					return names
+					return settingNames(r.Destination)
 				}
 			}
 		}

@@ -97,7 +97,6 @@ func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, re
 	}
 	return irKey, &ir.RouteDestination{
 		Name:               dst.Name,
-		Settings:           []*ir.DestinationSetting{dst},
 		BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(xdsIRs[irKey], bc)},
 		Metadata:           dst.Metadata,
 	}

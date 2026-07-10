@@ -887,7 +887,6 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					LogName: logName,
 					Destination: ir.RouteDestination{
 						Name:               destName,
-						Settings:           ds,
 						BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, alBC)},
 						Metadata:           buildResourceMetadata(envoyproxy, nil),
 					},
@@ -937,7 +936,6 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					Authority:          getAuthorityFromDestination(ds),
 					Destination: ir.RouteDestination{
 						Name:     destName,
-						Settings: ds,
 						Metadata: buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic: traffic,
@@ -951,8 +949,8 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					if sink.OpenTelemetry.Host != nil {
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
-					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
-					fallbackBC := &ir.BackendCluster{Name: destName, Settings: al.Destination.Settings}
+					fallbackDS := destinationSettingFromHostAndPort(settingName, host, port)
+					fallbackBC := &ir.BackendCluster{Name: destName, Settings: fallbackDS}
 					al.Destination.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(gwIR, fallbackBC)}
 					al.Authority = host
 				} else {
@@ -1037,7 +1035,6 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		ResourceAttributes:  ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
 		Destination: ir.RouteDestination{
 			Name:               destName,
-			Settings:           ds,
 			BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, tracingBC)},
 			Metadata:           buildResourceMetadata(envoyproxy, nil),
 		},
@@ -1170,7 +1167,6 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 			resolvedSinks = append(resolvedSinks, ir.ResolvedMetricSink{
 				Destination: ir.RouteDestination{
 					Name:               destName,
-					Settings:           ds,
 					BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, metricsBC)},
 					Metadata:           buildResourceMetadata(envoyproxy, nil),
 				},

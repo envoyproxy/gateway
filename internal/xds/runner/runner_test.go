@@ -289,6 +289,21 @@ func TestRunner(t *testing.T) {
 	// test translation
 	path := "example"
 	res := ir.Xds{
+		Backends: []*ir.BackendCluster{
+			{
+				Name: "test-dest",
+				Settings: []*ir.DestinationSetting{
+					{
+						Endpoints: []*ir.DestinationEndpoint{
+							{
+								Host: "10.11.12.13",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+		},
 		HTTP: []*ir.HTTPListener{
 			{
 				CoreListenerDetails: ir.CoreListenerDetails{
@@ -304,17 +319,8 @@ func TestRunner(t *testing.T) {
 							Exact: &path,
 						},
 						Destination: &ir.RouteDestination{
-							Name: "test-dest",
-							Settings: []*ir.DestinationSetting{
-								{
-									Endpoints: []*ir.DestinationEndpoint{
-										{
-											Host: "10.11.12.13",
-											Port: 8080,
-										},
-									},
-								},
-							},
+							Name:               "test-dest",
+							BackendClusterRefs: []*ir.BackendClusterRef{{Name: "test-dest"}},
 						},
 					},
 				},
@@ -382,6 +388,21 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	// test translation
 	path := "example"
 	res := ir.Xds{
+		Backends: []*ir.BackendCluster{
+			{
+				Name: "test-dest",
+				Settings: []*ir.DestinationSetting{
+					{
+						Endpoints: []*ir.DestinationEndpoint{
+							{
+								Host: "10.11.12.13",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+		},
 		HTTP: []*ir.HTTPListener{
 			{
 				CoreListenerDetails: ir.CoreListenerDetails{
@@ -397,17 +418,8 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 							Exact: &path,
 						},
 						Destination: &ir.RouteDestination{
-							Name: "test-dest",
-							Settings: []*ir.DestinationSetting{
-								{
-									Endpoints: []*ir.DestinationEndpoint{
-										{
-											Host: "10.11.12.13",
-											Port: 8080,
-										},
-									},
-								},
-							},
+							Name:               "test-dest",
+							BackendClusterRefs: []*ir.BackendClusterRef{{Name: "test-dest"}},
 						},
 					},
 				},
@@ -468,6 +480,21 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	// test translation
 	path := "example"
 	res := ir.Xds{
+		Backends: []*ir.BackendCluster{
+			{
+				Name: "test-dest",
+				Settings: []*ir.DestinationSetting{
+					{
+						Endpoints: []*ir.DestinationEndpoint{
+							{
+								Host: "10.11.12.13",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+		},
 		HTTP: []*ir.HTTPListener{
 			{
 				CoreListenerDetails: ir.CoreListenerDetails{
@@ -483,17 +510,8 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 							Exact: &path,
 						},
 						Destination: &ir.RouteDestination{
-							Name: "test-dest",
-							Settings: []*ir.DestinationSetting{
-								{
-									Endpoints: []*ir.DestinationEndpoint{
-										{
-											Host: "10.11.12.13",
-											Port: 8080,
-										},
-									},
-								},
-							},
+							Name:               "test-dest",
+							BackendClusterRefs: []*ir.BackendClusterRef{{Name: "test-dest"}},
 						},
 					},
 				},

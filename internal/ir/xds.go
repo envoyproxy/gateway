@@ -1905,10 +1905,10 @@ type RouteDestination struct {
 	// reused
 	Name     string  `json:"name" yaml:"name"`
 	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
-	// TODO: remove once all consumers resolve backend data via BackendClusterRefs and Settings is
-	// dropped from this struct (tracked in docs/superpowers/plans/2026-07-09-drop-routedestination-settings.md).
-	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
-	// BackendClusterRefs holds references to backend clusters for this route rule.
+	// BackendClusterRefs holds references to backend clusters for this route rule. The
+	// referenced BackendCluster's data (Settings, Metadata) lives exclusively in the owning
+	// Xds's Backends registry - see Xds.Backends - never here, so per-route/per-hostname
+	// DeepCopy can't duplicate or desync it.
 	BackendClusterRefs []*BackendClusterRef `json:"backendClusterRefs,omitempty" yaml:"backendClusterRefs,omitempty"`
 	// IsDynamicResolver denormalizes whether this destination's (single) backend is a dynamic
 	// resolver, so IsDynamicResolverRoute can answer without resolving BackendClusterRefs against
@@ -1930,11 +1930,6 @@ func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
-	}
-	for _, s := range r.Settings {
-		if err := s.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
 	}
 	for _, ref := range r.BackendClusterRefs {
 		if len(ref.Name) == 0 {

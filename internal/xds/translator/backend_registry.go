@@ -28,22 +28,26 @@ func (idx backendClusterIndex) resolve(refs []*ir.BackendClusterRef) []*ir.Backe
 	return ir.ResolveBackendClusterRefs(idx, refs)
 }
 
-// getBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data via
-// the registry. Falls back to rd.Settings (pre-BackendClusterRefs legacy shape) if rd has
-// no refs at all. The fallback's returned BackendCluster is non-empty even when rd.Settings
-// is empty (e.g. a route destination with zero healthy endpoints still needs an EDS cluster
-// built) — callers that must distinguish "no backend configured at all" (e.g. ext-service/
-// JWT/OIDC provider destinations, where an empty Settings means no backendRef was actually
-// selected) need to check rd.Settings directly rather than relying on this method's slice
-// length.
+// getBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data via the
+// registry. If rd has a Name but no refs resolve to anything (e.g. the Gateway API translator
+// failed to resolve every backendRef, or all backendRefs were weight-0), a single placeholder
+// BackendCluster with no Settings is synthesized instead of returning empty: TCP/UDP/TLS routes
+// have no per-request fallback (unlike HTTP/GRPC's direct-response mechanism), so Envoy still
+// needs an EDS cluster to route to - one with zero endpoints, so it can return connection errors
+// rather than reference a nonexistent cluster. Callers that must distinguish "no backend
+// configured at all" (ext-service/JWT/OIDC provider destinations) check rd.BackendClusterRefs
+// directly before ever calling this, so they never observe the placeholder.
 func (t *Translator) getBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
 	if rd == nil {
 		return nil
 	}
-	if len(rd.BackendClusterRefs) > 0 {
-		return t.backendIndex.resolve(rd.BackendClusterRefs)
+	if clusters := t.backendIndex.resolve(rd.BackendClusterRefs); len(clusters) > 0 {
+		return clusters
 	}
-	return []*ir.BackendCluster{{Name: rd.Name, Settings: rd.Settings, Metadata: rd.Metadata}}
+	if rd.Name == "" {
+		return nil
+	}
+	return []*ir.BackendCluster{{Name: rd.Name, Metadata: rd.Metadata}}
 }
 
 // routeDestinationNeedsClusterPerSetting reports whether rd's backends must each get their

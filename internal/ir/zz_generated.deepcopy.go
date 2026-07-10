@@ -4351,17 +4351,6 @@ func (in *RouteDestination) DeepCopyInto(out *RouteDestination) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Settings != nil {
-		in, out := &in.Settings, &out.Settings
-		*out = make([]*DestinationSetting, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(DestinationSetting)
-				(*in).DeepCopyInto(*out)
-			}
-		}
-	}
 	if in.BackendClusterRefs != nil {
 		in, out := &in.BackendClusterRefs, &out.BackendClusterRefs
 		*out = make([]*BackendClusterRef, len(*in))

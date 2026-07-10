@@ -35,20 +35,20 @@ type ResourceVersionTable struct {
 }
 
 // GetBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data via
-// BackendIndex, mirroring xds/translator's Translator.getBackendClusters. Falls back to
-// rd.Settings (pre-BackendClusterRefs legacy shape) if rd has no refs at all. The fallback's
-// returned BackendCluster is non-empty even when rd.Settings is empty (e.g. a route
-// destination with zero healthy endpoints still needs an EDS cluster built) — callers that
-// must distinguish "no backend configured at all" need to check rd.Settings directly rather
-// than relying on this method's slice length.
+// BackendIndex, mirroring xds/translator's Translator.getBackendClusters - including its
+// placeholder-synthesis behavior when rd has a Name but no refs resolve to anything. See that
+// function's doc comment for why.
 func (t *ResourceVersionTable) GetBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
 	if rd == nil {
 		return nil
 	}
-	if len(rd.BackendClusterRefs) > 0 {
-		return ir.ResolveBackendClusterRefs(t.BackendIndex, rd.BackendClusterRefs)
+	if clusters := ir.ResolveBackendClusterRefs(t.BackendIndex, rd.BackendClusterRefs); len(clusters) > 0 {
+		return clusters
 	}
-	return []*ir.BackendCluster{{Name: rd.Name, Settings: rd.Settings, Metadata: rd.Metadata}}
+	if rd.Name == "" {
+		return nil
+	}
+	return []*ir.BackendCluster{{Name: rd.Name, Metadata: rd.Metadata}}
 }
 
 // GetXdsResources retrieves the translated xds resources saved in the translator context.
