@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -180,7 +179,7 @@ var GatewayNamespaceOwnership = suite.ConformanceTest{
 					Labels:    map[string]string{"app": "pre-existing"},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: ptr.To[int32](0),
+					Replicas: new(int32),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "pre-existing"}},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "pre-existing"}},
