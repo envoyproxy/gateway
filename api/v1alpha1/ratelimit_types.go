@@ -433,6 +433,10 @@ type PathMatch struct {
 
 // RateLimitValue defines the limits for rate limiting.
 type RateLimitValue struct {
+	// Requests intentionally sets Format=int64. Controller-gen renders uint32 as
+	// format int32, whose range is below Maximum=4294967295 and would be rejected
+	// in Kubernetes 1.36+
+
 	// Requests is the number of requests (or cost units, when used with
 	// cost-based rate limiting) allowed per Unit.
 	//
