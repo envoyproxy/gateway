@@ -1351,7 +1351,10 @@ func processClientCertificates(tCtx *types.ResourceVersionTable, settings []*ir.
 			for _, c := range st.TLS.ClientCertificates {
 				secret := buildXdsTLSCertSecret(&c)
 				if secret != nil {
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					// addXdsSecret deduplicates by name, so the same client
+					// certificate referenced by multiple routes/backends is only
+					// emitted once instead of once per route.
+					if err := addXdsSecret(tCtx, secret); err != nil {
 						errs = errors.Join(errs, err)
 					}
 				}
