@@ -51,9 +51,6 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 	opts.SkipTests = append(opts.SkipTests,
 		// TODO: retry after https://github.com/envoyproxy/gateway/pull/9196 merged
 		tests.GatewayListenerUnsupportedProtocol.ShortName,
-		// TODO: will be fixed in https://github.com/envoyproxy/gateway/pull/9247
-		tests.TCPRouteMultipleRoutesAttachment.ShortName,
-		tests.UDPRouteMultipleRoutesAttachment.ShortName,
 	)
 
 	opts.Hook = e2e.Hook
