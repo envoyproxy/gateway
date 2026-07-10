@@ -18,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1050,10 +1049,6 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: tcpRoute}
 
-	gatewayRouteMap := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
@@ -1061,11 +1056,9 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 
 	// Process the policy - this should set error status
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
-	gatewayPolicyMerged := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
+	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1135,10 +1128,6 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: httpRoute}
 
-	gatewayRouteMap := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
@@ -1146,11 +1135,9 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 
 	// Process the policy - this should set error status
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
-	gatewayPolicyMerged := &GatewayPolicyRouteMap{
-		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
-		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
-	}
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
+	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1407,6 +1394,38 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 				CountryDBSource: countryDB,
 			}),
 			wantErr: "requires ClientTrafficPolicy.spec.clientIPDetection to be configured",
+		},
+		{
+			name:          "empty client ip detection rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{},
+			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}",
+		},
+		{
+			name:          "multiple client ip detection modes rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				CustomHeader:   &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
+				DirectSourceIP: &egv1a1.DirectSourceIPSettings{},
+			},
+			wantErr: "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}",
+		},
+		{
+			name:          "direct source ip accepted",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				DirectSourceIP: &egv1a1.DirectSourceIPSettings{},
+			},
+			wantProvider: true,
 		},
 		{
 			name:          "trusted cidrs rejected",
