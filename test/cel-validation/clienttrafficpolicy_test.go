@@ -867,6 +867,34 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				": at least one of httpsDestinationPorts or httpDestinationPorts must be set",
 			},
 		},
+		{
+			desc: "proxyProtocol forwardProtoConfig with overlapping port lists",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-forward-proto-overlap"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
+						ForwardProtoConfig: &egv1a1.ForwardProtoConfig{
+							HTTPSDestinationPorts: []int32{443, 8443},
+							HTTPDestinationPorts:  []int32{8443, 80},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-forward-proto-overlap\" is invalid:",
+				"spec.proxyProtocol.forwardProtoConfig: Invalid value:",
+				": httpsDestinationPorts and httpDestinationPorts must be disjoint",
+			},
+		},
 	}
 
 	for _, tc := range cases {
