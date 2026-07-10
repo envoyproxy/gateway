@@ -18,13 +18,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: HTTPRoute
-          name: httproute-geo
-          namespace: default
   name: httproute/default/httproute-geo/rule/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
