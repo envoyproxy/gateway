@@ -128,13 +128,11 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 10
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
 		order = 11
-	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		if strings.Contains(filter.Name, "/listener/") {
-			// Listener-level Lua runs before route-level Lua (12+idx vs 62+idx).
-			order = 12 + mustGetFilterIndex(filter.Name)
-		} else {
-			order = 62 + mustGetFilterIndex(filter.Name)
-		}
+	case filter.Name == luaListenerFCFilterName():
+		// Listener-level (per-connection) Lua runs before route-level Lua.
+		order = 12
+	case filter.Name == luaFCFilterName():
+		order = 13
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
