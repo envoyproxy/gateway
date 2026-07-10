@@ -53,7 +53,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: envoy/gateway:abcdef
+          image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -463,8 +463,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: envoy/gateway:abcdef
-        imagePullPolicy: IfNotPresent
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /healthz
@@ -530,7 +530,8 @@ spec:
       # Writable cache for Wasm modules; required because the controller's
       # root filesystem is read-only by default (readOnlyRootFilesystem).
       - name: wasm-cache
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: envoy-gateway-wasm-cache
 ---
 # Source: gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
 #
@@ -754,8 +755,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: envoy/gateway:abcdef
-        imagePullPolicy: IfNotPresent
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
         name: envoy-gateway-certgen
         securityContext:
           allowPrivilegeEscalation: false
