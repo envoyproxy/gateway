@@ -105,7 +105,8 @@ type EnvoyProxySpec struct {
 	//     cluster.
 	//   - Force: the backend is always merged into a single shared cluster, even when a
 	//     route-targeted BackendTrafficPolicy configures backend-cluster-scoped settings (those
-	//     settings are ignored for the shared cluster).
+	//     settings are ignored for the shared cluster). Not implemented yet; currently behaves the
+	//     same as BestEffort.
 	//
 	// This is an experimental optimization and is disabled when unset.
 	//
@@ -252,6 +253,8 @@ const (
 	// MergeBackendsModeForce always merges a backend's cluster across routes, even when a
 	// route-targeted BackendTrafficPolicy configures backend-cluster-scoped settings for it (those
 	// settings are ignored for the shared cluster).
+	//
+	// NOTE: Force mode is not implemented yet and currently behaves the same as BestEffort.
 	MergeBackendsModeForce MergeBackendsMode = "Force"
 )
 

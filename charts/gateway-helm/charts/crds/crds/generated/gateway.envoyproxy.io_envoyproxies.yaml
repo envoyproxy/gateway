@@ -790,7 +790,8 @@ spec:
                       cluster.
                     - Force: the backend is always merged into a single shared cluster, even when a
                       route-targeted BackendTrafficPolicy configures backend-cluster-scoped settings (those
-                      settings are ignored for the shared cluster).
+                      settings are ignored for the shared cluster). Not implemented yet; currently behaves the
+                      same as BestEffort.
 
                   This is an experimental optimization and is disabled when unset.
                 enum:

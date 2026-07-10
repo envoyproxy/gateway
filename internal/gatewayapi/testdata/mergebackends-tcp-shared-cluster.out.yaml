@@ -224,7 +224,7 @@ xdsIR:
               name: service-3
               namespace: default
               sectionName: "8163"
-            name: backend/service/default/service-3/8163
+            name: backend/service/default/service-3/8163/tcp
             protocol: TCP
             weight: 1
         metadata:
@@ -259,7 +259,7 @@ xdsIR:
               name: service-3
               namespace: default
               sectionName: "8163"
-            name: backend/service/default/service-3/8163
+            name: backend/service/default/service-3/8163/tcp
             protocol: TCP
             weight: 1
         metadata:

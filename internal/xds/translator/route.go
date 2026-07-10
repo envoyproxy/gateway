@@ -348,8 +348,10 @@ func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
 
 // singleMergedClusterName returns the shared cluster name of a merged destination that resolves to
 // exactly one valid backend with no unavailable weight, so the route can target the shared cluster
-// directly. It returns ok=false otherwise (e.g. multiple backends, or invalid/empty settings that
-// require the weighted-cluster path to preserve 500/503 semantics).
+// directly. It returns ok=false otherwise — multiple backends, invalid/empty settings that require
+// the weighted-cluster path to preserve 500/503 semantics, or a backendRef carrying filters (header
+// mutations / host rewrites) which are applied on the weighted-cluster entry and would otherwise be
+// dropped by a plain cluster action.
 func singleMergedClusterName(d *ir.RouteDestination) (string, bool) {
 	if d == nil || d.ToBackendWeights().UnavailableWeight() > 0 {
 		return "", false
@@ -365,7 +367,7 @@ func singleMergedClusterName(d *ir.RouteDestination) (string, bool) {
 			valid = s
 		}
 	}
-	if count == 1 && valid.Merged {
+	if count == 1 && valid.Merged && valid.Filters == nil {
 		return valid.Name, true
 	}
 	return "", false

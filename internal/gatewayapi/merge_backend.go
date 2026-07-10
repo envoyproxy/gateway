@@ -69,7 +69,11 @@ func mergeRouteDestination(d *ir.RouteDestination, splitIncompatible, allowWeigh
 	if d.RouteLevelClusterSettings {
 		return
 	}
-	if len(d.Settings) > 1 && (splitIncompatible || !allowWeightedMerge) {
+	// A multi-backend rule is not merged when splitting across per-backend weighted clusters would
+	// change behavior: the route type can't express weighted clusters (TCP/UDP), a split-incompatible
+	// feature is in use (consistent-hash LB / session persistence), or the rule relies on priority
+	// failover between backends (which is expressed as prioritized localities within a single cluster).
+	if len(d.Settings) > 1 && (splitIncompatible || !allowWeightedMerge || hasPriorityFailover(d.Settings)) {
 		return
 	}
 	for _, s := range d.Settings {
@@ -91,6 +95,12 @@ func mergedBackendClusterName(s *ir.DestinationSetting) (string, bool) {
 	if s == nil || s.IsDynamicResolver || s.IsCustomBackend {
 		return "", false
 	}
+	// A per-backendRef CredentialInjection filter is baked into the cluster (unlike header
+	// mutations / URL rewrites, which are applied on the route's weighted-cluster entry), so a
+	// backendRef carrying one cannot share a cluster with other routes.
+	if s.Filters != nil && s.Filters.CredentialInjection != nil {
+		return "", false
+	}
 	md := s.Metadata
 	if md == nil || md.Kind == "" || md.Name == "" {
 		return "", false
@@ -99,7 +109,30 @@ func mergedBackendClusterName(s *ir.DestinationSetting) (string, bool) {
 	if md.SectionName != "" {
 		name += "/" + md.SectionName
 	}
+	// The upstream protocol is baked into the cluster (e.g. HTTP/2 options), so routes resolving
+	// different protocols for the same backend (an HTTPRoute and a GRPCRoute to the same Service)
+	// must resolve to distinct clusters.
+	if s.Protocol != "" {
+		name += "/" + strings.ToLower(string(s.Protocol))
+	}
+	// Service ClusterIP routing and endpoint routing produce different cluster endpoints for the
+	// same backend, so they must resolve to distinct clusters and never be merged together.
+	if s.ServiceRouting {
+		name += "/serviceip"
+	}
 	return name, true
+}
+
+// hasPriorityFailover reports whether any setting carries a non-default priority, which indicates
+// a fallback backend. Such rules rely on prioritized localities within a single cluster and must
+// not be split across per-backend weighted clusters.
+func hasPriorityFailover(settings []*ir.DestinationSetting) bool {
+	for _, s := range settings {
+		if s != nil && s.Priority != nil && *s.Priority > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // httpRouteSplitIncompatibleWithMerge reports whether an HTTPRoute uses a traffic-splitting feature

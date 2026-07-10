@@ -2088,6 +2088,11 @@ type DestinationSetting struct {
 	// Merged is true when this setting's cluster is shared across routes referencing the same backend
 	// (MergeBackends). When set, Name holds the backend-identity cluster name.
 	Merged bool `json:"merged,omitempty" yaml:"merged,omitempty"`
+	// ServiceRouting is true when the destination routes to a Service ClusterIP instead of to
+	// individual endpoints. It participates in the MergeBackends cluster identity so that routes
+	// resolving different routing modes for the same backend are not collapsed onto one cluster.
+	// It is only populated when MergeBackends is enabled.
+	ServiceRouting bool `json:"serviceRouting,omitempty" yaml:"serviceRouting,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure

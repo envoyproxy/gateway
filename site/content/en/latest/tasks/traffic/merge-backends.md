@@ -50,8 +50,10 @@ spec:
 ```
 
 With this configuration, two HTTPRoutes that both forward to `Service` `foo` on port `80` produce a
-single Envoy cluster named `backend/service/<namespace>/foo/80`, referenced by both routes, instead
-of two separate clusters.
+single Envoy cluster named `backend/service/<namespace>/foo/80/http`, referenced by both routes,
+instead of two separate clusters. The cluster identity includes the backend kind, namespace, name,
+port, and the resolved upstream protocol and routing mode, so backends that genuinely differ (for
+example an HTTPRoute and a GRPCRoute to the same Service) still resolve to distinct clusters.
 
 `mergeBackends` can also be set as a **global default** for every GatewayClass through the
 EnvoyGateway configuration's default EnvoyProxy spec:
@@ -67,8 +69,14 @@ envoyProxy:
 ## Caveats
 
 - Merging is scoped to a single Envoy Proxy configuration. When [merged Gateways][] serve multiple
-  Gateways with different Gateway-targeted BackendTrafficPolicy floors from one xDS snapshot, the
-  first-written shared cluster configuration wins for a given backend.
+  Gateways from one xDS snapshot, a Gateway-scoped BackendTrafficPolicy applies only to its own
+  Gateway's routes; if routes on different Gateways reference the same backend, the first-written
+  shared cluster configuration wins for that backend. Set backend-cluster settings on a
+  backend-targeted (or GatewayClass-wide) policy to keep them consistent across Gateways.
+- Listener-scoped upstream HTTP/1 options derived from a ClientTrafficPolicy (e.g.
+  `preserveHeaderCase`, trailers, HTTP/1.0) are baked into the cluster. If routes on different
+  listeners with different such settings reference the same backend, the first-written shared
+  cluster wins; keep these settings consistent across listeners that share a backend.
 - In `BestEffort` mode, a route that keeps a dedicated cluster (because it carries route-level
   cluster settings) does not benefit from deduplication.
 

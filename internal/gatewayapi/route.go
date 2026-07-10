@@ -2069,6 +2069,9 @@ func (t *Translator) processServiceImportDestinationSetting(
 		Endpoints:          endpoints,
 		AddressType:        addrType,
 		Metadata:           buildResourceMetadata(serviceImport, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		// Record the routing mode so MergeBackends does not collapse routes that resolve different
+		// routing modes (ServiceImport IPs vs endpoints) for the same ServiceImport onto one cluster.
+		ServiceRouting: t.MergeBackends && !useEndpointRouting,
 	}, nil
 }
 
@@ -2140,6 +2143,9 @@ func (t *Translator) processServiceDestinationSetting(
 		AddressType:        addrType,
 		PreferLocal:        processPreferLocalZone(service),
 		Metadata:           buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		// Record the routing mode so MergeBackends does not collapse routes that resolve different
+		// routing modes (Service ClusterIP vs endpoints) for the same Service onto one cluster.
+		ServiceRouting: t.MergeBackends && !useEndpointRouting,
 	}, nil
 }
 

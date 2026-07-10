@@ -204,6 +204,10 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 	return addXdsCluster(tCtx, clusterArgs)
 }
 
+// applyTraffic writes the backend-cluster-scoped (CDS) TrafficFeatures onto the xDS cluster args.
+// The set of fields written here is authoritative; keep trafficFeaturesHaveClusterSettings in
+// internal/gatewayapi/backendtrafficpolicy.go in sync so MergeBackends de-merges routes whose
+// route-targeted policy sets any of them.
 func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
 	if traffic == nil {
 		return

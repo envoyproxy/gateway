@@ -1,0 +1,31 @@
+http:
+  - name: "first-listener"
+    address: "::"
+    hostnames:
+      - '*'
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      - destination:
+          name: "httproute/default/route-1/rule/0"
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 1.2.3.4
+                  port: 50000
+              name: "backend/service/default/service-1/8080"
+              merged: true
+              filters:
+                addRequestHeaders:
+                  - append: false
+                    name: add-header-1
+                    value:
+                      - some-value
+              protocol: HTTP
+              weight: 1
+        hostname: '*'
+        name: "route-1"
+        pathMatch:
+          prefix: /route-1

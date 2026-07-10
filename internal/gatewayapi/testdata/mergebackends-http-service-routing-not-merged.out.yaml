@@ -2,15 +2,14 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-gateway
-    namespace: envoy-gateway
+    name: btp-route-2
+    namespace: default
   spec:
-    circuitBreaker:
-      maxConnections: 2048
+    routingType: Service
     targetRefs:
     - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+      kind: HTTPRoute
+      name: http-route-2
   status:
     ancestors:
     - ancestorRef:
@@ -81,7 +80,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /route-1
+          value: /endpoint-routed
   status:
     parents:
     - conditions:
@@ -114,7 +113,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /route-2
+          value: /service-routed
   status:
     parents:
     - conditions:
@@ -229,18 +228,11 @@ xdsIR:
           kind: HTTPRoute
           name: http-route-1
           namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: btp-gateway
-            namespace: envoy-gateway
         name: httproute/default/http-route-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route-1
-        traffic:
-          circuitBreaker:
-            maxConnections: 2048
+          prefix: /endpoint-routed
       - destination:
           metadata:
             kind: HTTPRoute
@@ -248,9 +240,8 @@ xdsIR:
             namespace: default
           name: httproute/default/http-route-2/rule/0
           settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
+          - endpoints:
+            - host: 1.1.1.1
               port: 8080
             merged: true
             metadata:
@@ -258,8 +249,9 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: backend/service/default/service-1/8080/http
+            name: backend/service/default/service-1/8080/http/serviceip
             protocol: HTTP
+            serviceRouting: true
             weight: 1
         hostname: '*'
         isHTTP2: false
@@ -269,16 +261,14 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-gateway
-            namespace: envoy-gateway
+            name: btp-route-2
+            namespace: default
         name: httproute/default/http-route-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route-2
-        traffic:
-          circuitBreaker:
-            maxConnections: 2048
+          prefix: /service-routed
+        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

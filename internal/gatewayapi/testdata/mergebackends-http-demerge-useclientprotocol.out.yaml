@@ -2,15 +2,14 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-gateway
-    namespace: envoy-gateway
+    name: btp-route-2
+    namespace: default
   spec:
-    circuitBreaker:
-      maxConnections: 2048
     targetRefs:
     - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+      kind: HTTPRoute
+      name: http-route-2
+    useClientProtocol: true
   status:
     ancestors:
     - ancestorRef:
@@ -229,36 +228,29 @@ xdsIR:
           kind: HTTPRoute
           name: http-route-1
           namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: btp-gateway
-            namespace: envoy-gateway
         name: httproute/default/http-route-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
           prefix: /route-1
-        traffic:
-          circuitBreaker:
-            maxConnections: 2048
       - destination:
           metadata:
             kind: HTTPRoute
             name: http-route-2
             namespace: default
           name: httproute/default/http-route-2/rule/0
+          routeLevelClusterSettings: true
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            merged: true
             metadata:
               kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: backend/service/default/service-1/8080/http
+            name: httproute/default/http-route-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
@@ -269,16 +261,15 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-gateway
-            namespace: envoy-gateway
+            name: btp-route-2
+            namespace: default
         name: httproute/default/http-route-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic:
-          circuitBreaker:
-            maxConnections: 2048
+        traffic: {}
+        useClientProtocol: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

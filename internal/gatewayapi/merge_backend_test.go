@@ -15,15 +15,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func svcSetting(name string, port string, endpoints int) *ir.DestinationSetting {
-	eps := make([]*ir.DestinationEndpoint, 0, endpoints)
-	for range endpoints {
-		eps = append(eps, &ir.DestinationEndpoint{Host: "1.2.3.4", Port: 8080})
-	}
+func svcSetting(name, port string) *ir.DestinationSetting {
 	return &ir.DestinationSetting{
 		Name:      name,
 		Weight:    new(uint32(1)),
-		Endpoints: eps,
+		Endpoints: []*ir.DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}},
 		Metadata: &ir.ResourceMetadata{
 			Kind:        "Service",
 			Namespace:   "default",
@@ -42,7 +38,42 @@ func TestMergedBackendClusterName(t *testing.T) {
 	}{
 		{
 			name: "service with port",
-			s:    svcSetting("route-scoped", "8080", 1),
+			s:    svcSetting("route-scoped", "8080"),
+			want: "backend/service/default/service-1/8080",
+			ok:   true,
+		},
+		{
+			name: "protocol is part of the identity",
+			s: &ir.DestinationSetting{
+				Protocol: ir.GRPC,
+				Metadata: &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "service-1", SectionName: "8080"},
+			},
+			want: "backend/service/default/service-1/8080/grpc",
+			ok:   true,
+		},
+		{
+			name: "service routing is part of the identity",
+			s: &ir.DestinationSetting{
+				ServiceRouting: true,
+				Metadata:       &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "service-1", SectionName: "8080"},
+			},
+			want: "backend/service/default/service-1/8080/serviceip",
+			ok:   true,
+		},
+		{
+			name: "credential injection filter not mergeable",
+			s: &ir.DestinationSetting{
+				Filters:  &ir.DestinationFilters{CredentialInjection: &ir.CredentialInjection{}},
+				Metadata: &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "service-1", SectionName: "8080"},
+			},
+			ok: false,
+		},
+		{
+			name: "header filters remain mergeable",
+			s: &ir.DestinationSetting{
+				Filters:  &ir.DestinationFilters{RemoveRequestHeaders: []string{"x-foo"}},
+				Metadata: &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "service-1", SectionName: "8080"},
+			},
 			want: "backend/service/default/service-1/8080",
 			ok:   true,
 		},
@@ -85,7 +116,7 @@ func TestMergeRouteDestination(t *testing.T) {
 	sharedName := "backend/service/default/service-1/8080"
 
 	t.Run("single backend merges", func(t *testing.T) {
-		d := &ir.RouteDestination{Name: "httproute/default/r/rule/0", Settings: []*ir.DestinationSetting{svcSetting("s0", "8080", 1)}}
+		d := &ir.RouteDestination{Name: "httproute/default/r/rule/0", Settings: []*ir.DestinationSetting{svcSetting("s0", "8080")}}
 		mergeRouteDestination(d, false, true)
 		require.True(t, d.Settings[0].Merged)
 		require.Equal(t, sharedName, d.Settings[0].Name)
@@ -95,7 +126,7 @@ func TestMergeRouteDestination(t *testing.T) {
 		d := &ir.RouteDestination{
 			Name:                      "httproute/default/r/rule/0",
 			RouteLevelClusterSettings: true,
-			Settings:                  []*ir.DestinationSetting{svcSetting("s0", "8080", 1)},
+			Settings:                  []*ir.DestinationSetting{svcSetting("s0", "8080")},
 		}
 		mergeRouteDestination(d, false, true)
 		require.False(t, d.Settings[0].Merged)
@@ -104,8 +135,8 @@ func TestMergeRouteDestination(t *testing.T) {
 
 	t.Run("multi-backend weighted merges each backend", func(t *testing.T) {
 		d := &ir.RouteDestination{Settings: []*ir.DestinationSetting{
-			svcSetting("s0", "8080", 1),
-			svcSetting("s1", "8443", 1),
+			svcSetting("s0", "8080"),
+			svcSetting("s1", "8443"),
 		}}
 		d.Settings[1].Metadata.Name = "service-2"
 		mergeRouteDestination(d, false, true)
@@ -115,8 +146,8 @@ func TestMergeRouteDestination(t *testing.T) {
 
 	t.Run("multi-backend split-incompatible does not merge", func(t *testing.T) {
 		d := &ir.RouteDestination{Settings: []*ir.DestinationSetting{
-			svcSetting("s0", "8080", 1),
-			svcSetting("s1", "8443", 1),
+			svcSetting("s0", "8080"),
+			svcSetting("s1", "8443"),
 		}}
 		mergeRouteDestination(d, true /* splitIncompatible */, true)
 		require.False(t, d.Settings[0].Merged)
@@ -125,11 +156,23 @@ func TestMergeRouteDestination(t *testing.T) {
 
 	t.Run("multi-backend not merged for tcp/udp (no weighted)", func(t *testing.T) {
 		d := &ir.RouteDestination{Settings: []*ir.DestinationSetting{
-			svcSetting("s0", "8080", 1),
-			svcSetting("s1", "8443", 1),
+			svcSetting("s0", "8080"),
+			svcSetting("s1", "8443"),
 		}}
 		mergeRouteDestination(d, false, false /* allowWeightedMerge */)
 		require.False(t, d.Settings[0].Merged)
+	})
+
+	t.Run("multi-backend with priority failover not merged", func(t *testing.T) {
+		d := &ir.RouteDestination{Settings: []*ir.DestinationSetting{
+			svcSetting("s0", "8080"),
+			svcSetting("s1", "8443"),
+		}}
+		d.Settings[1].Metadata.Name = "service-2"
+		d.Settings[1].Priority = new(uint32(1)) // fallback backend
+		mergeRouteDestination(d, false, true)
+		require.False(t, d.Settings[0].Merged)
+		require.False(t, d.Settings[1].Merged)
 	})
 }
 

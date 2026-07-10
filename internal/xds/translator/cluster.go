@@ -459,7 +459,14 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
-		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname)
+		// A merged cluster (MergeBackends) is shared across routes that may have different
+		// hostnames, so the per-route hostname must not leak into the shared active health check;
+		// only an explicitly configured health-check Host is used.
+		routeHostname := args.routeHostname
+		if len(args.settings) > 0 && args.settings[0] != nil && args.settings[0].Merged {
+			routeHostname = ""
+		}
+		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active, routeHostname)
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {

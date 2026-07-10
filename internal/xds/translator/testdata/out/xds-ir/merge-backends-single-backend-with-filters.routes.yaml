@@ -1,0 +1,23 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /route-1
+      name: route-1
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: backend/service/default/service-1/8080
+            requestHeadersToAdd:
+            - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+              header:
+                key: add-header-1
+                value: some-value
+            weight: 1

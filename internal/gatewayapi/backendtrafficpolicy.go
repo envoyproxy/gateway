@@ -908,6 +908,9 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 // backend-cluster-scoped (CDS) setting. These settings are baked into the Envoy cluster, so a
 // route-targeted policy that sets any of them prevents the backend's cluster from being safely
 // shared with other routes when MergeBackends is enabled.
+//
+// This must stay in sync with applyTraffic in internal/xds/translator/utils.go, which is the
+// authoritative list of TrafficFeatures fields written onto the xDS cluster.
 func trafficFeaturesHaveClusterSettings(tf *ir.TrafficFeatures) bool {
 	if tf == nil {
 		return false
@@ -920,7 +923,8 @@ func trafficFeaturesHaveClusterSettings(tf *ir.TrafficFeatures) bool {
 		tf.TCPKeepalive != nil ||
 		tf.BackendConnection != nil ||
 		tf.HTTP2 != nil ||
-		tf.DNS != nil
+		tf.DNS != nil ||
+		tf.AdmissionControl != nil
 }
 
 func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
@@ -939,7 +943,10 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	// Gateway-targeted floor is applied elsewhere. When MergeBackends is enabled and this
 	// route-targeted policy contributes backend-cluster-scoped (CDS) settings, the affected
 	// destinations must opt out of cluster sharing so their route-specific settings are preserved.
-	markRouteLevelClusterSettings := t.MergeBackends && trafficFeaturesHaveClusterSettings(tf)
+	// UseClientProtocol is tracked separately from TrafficFeatures but is also baked into the
+	// cluster (it forces the upstream HTTP protocol), so it counts as a cluster-scoped setting.
+	markRouteLevelClusterSettings := t.MergeBackends &&
+		(trafficFeaturesHaveClusterSettings(tf) || (policy != nil && policy.Spec.UseClientProtocol != nil))
 
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
@@ -1259,6 +1266,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
 	}
 
+	// A listener-scoped (sectionName) Gateway policy applies cluster-scoped settings to only a
+	// subset of the gateway's routes, so routes on other listeners referencing the same backend must
+	// opt out of MergeBackends cluster sharing. A gateway-wide policy is uniform across the gateway
+	// and remains safe to share.
+	markRouteLevelClusterSettings := t.MergeBackends && target.SectionName != nil &&
+		(trafficFeaturesHaveClusterSettings(tf) || policy.Spec.UseClientProtocol != nil)
+
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must have
 	// set by a policy attaching to the route
@@ -1291,6 +1305,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			setIfNil(&r.DNS, tf.DNS)
 			setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
 			appendTrafficPolicyMetadata(r.Metadata, policy)
+			if markRouteLevelClusterSettings && r.Destination != nil {
+				r.Destination.RouteLevelClusterSettings = true
+			}
 		}
 	}
 
@@ -1315,6 +1332,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		// specific policy
 		setIfNil(&route.LoadBalancer, tf.LoadBalancer)
 		setIfNil(&route.DNS, tf.DNS)
+		if markRouteLevelClusterSettings && route.Destination != nil {
+			route.Destination.RouteLevelClusterSettings = true
+		}
 	}
 
 	routesWithDirectResponse := sets.New[string]()
@@ -1355,6 +1375,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 
 			if policy.Spec.UseClientProtocol != nil {
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
+			}
+
+			if markRouteLevelClusterSettings && r.Destination != nil {
+				r.Destination.RouteLevelClusterSettings = true
 			}
 
 			appendTrafficPolicyMetadata(r.Metadata, policy)
