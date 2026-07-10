@@ -138,6 +138,7 @@ envoyExtensionPolicies:
           - xds.route_metadata
           - connection.requested_server_name
           body: Streamed
+      statusOnError: 503
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -409,6 +410,7 @@ xdsIR:
             - connection.requested_server_name
             responseBodyProcessingMode: Streamed
             responseHeaderProcessing: true
+            statusOnError: 503
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -484,6 +486,7 @@ xdsIR:
             - connection.requested_server_name
             responseBodyProcessingMode: Streamed
             responseHeaderProcessing: true
+            statusOnError: 503
         hostname: www.bar.com
         isHTTP2: false
         metadata:

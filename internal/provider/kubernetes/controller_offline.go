@@ -159,17 +159,23 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind, ena
 		WithScheme(scheme).
 		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
 		WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
+		WithIndex(&gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc).
 		WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
 		WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+		WithIndex(&gwapiv1.HTTPRoute{}, listenerSetHTTPRouteIndex, listenerSetHTTPRouteIndexFunc).
 		WithIndex(&gwapiv1.HTTPRoute{}, httpRouteFilterHTTPRouteIndex, httpRouteFilterHTTPRouteIndexFunc).
 		WithIndex(&gwapiv1.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc).
 		WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+		WithIndex(&gwapiv1.GRPCRoute{}, listenerSetGRPCRouteIndex, listenerSetGRPCRouteIndexFunc).
 		WithIndex(&gwapiv1.TCPRoute{}, gatewayTCPRouteIndex, gatewayTCPRouteIndexFunc).
 		WithIndex(&gwapiv1.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+		WithIndex(&gwapiv1.TCPRoute{}, listenerSetTCPRouteIndex, listenerSetTCPRouteIndexFunc).
 		WithIndex(&gwapiv1.UDPRoute{}, gatewayUDPRouteIndex, gatewayUDPRouteIndexFunc).
 		WithIndex(&gwapiv1.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
+		WithIndex(&gwapiv1.UDPRoute{}, listenerSetUDPRouteIndex, listenerSetUDPRouteIndexFunc).
 		WithIndex(&gwapiv1.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc).
-		WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc)
+		WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+		WithIndex(&gwapiv1.TLSRoute{}, listenerSetTLSRouteIndex, listenerSetTLSRouteIndexFunc)
 	if enableEndpointSliceIndex {
 		builder = builder.
 			WithIndex(&discoveryv1.EndpointSlice{}, serviceEndpointSliceIndex, serviceEndpointSliceIndexFunc).
@@ -188,6 +194,7 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind, ena
 		WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
 		WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
 		WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
+		WithIndex(&egv1a1.EnvoyExtensionPolicy{}, clusterTrustBundleEepIndex, clusterTrustBundleEepIndexFunc).
 		WithIndex(&gwapiv1.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc).
 		WithIndex(&gwapiv1.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc).
 		WithIndex(&gwapiv1.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
