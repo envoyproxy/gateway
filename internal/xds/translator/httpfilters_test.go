@@ -427,6 +427,29 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 			},
 		},
+		{
+			name: "custom filter order-lua-filter-chain-placeholder",
+			filters: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				httpFilterForTest(egv1a1.EnvoyFilterExtProc + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
+				httpFilterForTest(egv1a1.EnvoyFilter(luaFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilter(luaListenerFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilterWasm + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
+			},
+			filterOrder: []egv1a1.FilterPosition{
+				{
+					Name:  egv1a1.EnvoyFilterLua,
+					After: new(egv1a1.EnvoyFilterWasm),
+				},
+			},
+			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterExtProc + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
+				httpFilterForTest(egv1a1.EnvoyFilterWasm + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
+				httpFilterForTest(egv1a1.EnvoyFilter(luaListenerFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilter(luaFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
