@@ -54,7 +54,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/grpc-backend_default_9000/4e1643eb21fa14f1
+    serviceName: extauth/grpc-backend_default_9000/bd685b9079ede6a1
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -64,7 +64,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/grpc-backend_default_9000/4e1643eb21fa14f1
+  name: extauth/grpc-backend_default_9000/bd685b9079ede6a1
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -84,7 +84,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/http-backend_envoy-gateway_80/7de1db878b2bb33b
+    serviceName: extauth/http-backend_envoy-gateway_80/7de2ba7d2806fa3f
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -94,6 +94,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/http-backend_envoy-gateway_80/7de1db878b2bb33b
+  name: extauth/http-backend_envoy-gateway_80/7de2ba7d2806fa3f
   perConnectionBufferLimitBytes: 32768
   type: EDS

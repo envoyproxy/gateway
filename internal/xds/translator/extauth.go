@@ -28,6 +28,10 @@ import (
 
 var extAuthRouteMetadataContextNamespaces = []string{envoyGatewayXdsMetadataNamespace}
 
+// extAuthClusterPrefix namespaces the deduplicated ext auth cluster names
+// produced by extServiceClusterName.
+const extAuthClusterPrefix = "extauth"
+
 func init() {
 	registerHTTPFilter(&extAuth{})
 }
@@ -99,17 +103,14 @@ func extAuthFilterName(extAuth *ir.ExtAuth) string {
 	return perRouteFilterName(egv1a1.EnvoyFilterExtAuthz, extAuth.Name)
 }
 
-// extServiceNameHashLength is the number of hex characters (8 bytes) kept from
-// the content hash used to name deduplicated ext service clusters. This mirrors
-// the truncation used by sdsClusterNameFromURL.
-const extServiceNameHashLength = 16
-
-// extAuthClusterName derives the upstream cluster name for an ext auth service
-// from a hash of the built cluster (with the policy-derived name and metadata
-// normalized out), prefixed with the sanitized backend authority for
-// readability. Two SecurityPolicies referencing the same backend+settings
-// therefore produce the same cluster name and are deduplicated by addXdsCluster.
-func extAuthClusterName(authority string, rd *ir.RouteDestination, traffic *ir.TrafficFeatures) (string, error) {
+// extServiceClusterName derives a deduplicated upstream cluster name for an
+// external-service backend (ext auth, ext proc, oidc, ...) from a hash of the
+// built cluster with the policy-derived identifiers normalized out. The name is
+// "<prefix>/<sanitized-authority>/<hash>": the prefix namespaces the consumer,
+// the authority keeps it human-readable, and the content hash makes two policies
+// referencing the same backend+settings collapse onto one cluster via
+// addXdsCluster's name-based dedup.
+func extServiceClusterName(prefix, authority string, rd *ir.RouteDestination, traffic *ir.TrafficFeatures) (string, error) {
 	args := extServiceClusterArgs(rd, traffic)
 	// Normalize every policy-derived identifier so the hash reflects only the
 	// backend/config content, not the owning policy. Clearing the cluster name
@@ -124,18 +125,21 @@ func extAuthClusterName(authority string, rd *ir.RouteDestination, traffic *ir.T
 	if err != nil {
 		return "", err
 	}
+	// Fold the endpoints into the cluster proto so a single hash covers both the
+	// cluster and its load assignment. protoHash is the shared helper (also used
+	// by JWT provider dedup) and already truncates to a short, stable prefix.
 	lb := ptr.Deref(args.loadBalancer, ir.LoadBalancer{})
-	endpoints := buildXdsClusterLoadAssignment("", args.settings, args.healthCheck, lb.PreferLocal, lb.WeightedZones)
+	result.cluster.LoadAssignment = buildXdsClusterLoadAssignment("", args.settings, args.healthCheck, lb.PreferLocal, lb.WeightedZones)
 
-	hash, err := protoHash(result.cluster, endpoints)
+	hash, err := protoHash(result.cluster)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("extauth/%s/%s", sanitizeStatName(authority), hash[:extServiceNameHashLength]), nil
+	return fmt.Sprintf("%s/%s/%s", prefix, sanitizeStatName(authority), hash), nil
 }
 
-// normalizeExtServiceSettings returns copies of settings with policy-derived
-// names/metadata replaced by identifiers derived from destName (or cleared when
+// normalizeExtServiceSettings returns copies of settings with the policy-derived
+// setting Name replaced by an identifier derived from destName (or cleared when
 // destName is empty). This makes a deduplicated ext service cluster depend only
 // on the backend content, so two SecurityPolicies pointing at the same backend
 // produce byte-identical clusters — satisfying addXdsCluster's "same name ⇒
@@ -144,7 +148,11 @@ func normalizeExtServiceSettings(settings []*ir.DestinationSetting, destName str
 	out := make([]*ir.DestinationSetting, len(settings))
 	for i, ds := range settings {
 		cp := *ds
-		cp.Metadata = nil
+		// Only the setting Name is policy-derived (it embeds the SecurityPolicy
+		// namespace/name and surfaces as locality.Region), so it must be
+		// normalized for dedup. Backend-derived fields such as Metadata are
+		// identical across policies referencing the same backend, so they are
+		// left intact and remain part of the hashed content.
 		if destName == "" {
 			cp.Name = ""
 		} else {
@@ -217,7 +225,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 	}
 
 	if extAuth.HTTP != nil {
-		clusterName, err := extAuthClusterName(extAuth.HTTP.Authority, &extAuth.HTTP.Destination, extAuth.Traffic)
+		clusterName, err := extServiceClusterName(extAuthClusterPrefix, extAuth.HTTP.Authority, &extAuth.HTTP.Destination, extAuth.Traffic)
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +236,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 			HttpService: hs,
 		}
 	} else if extAuth.GRPC != nil {
-		clusterName, err := extAuthClusterName(extAuth.GRPC.Authority, &extAuth.GRPC.Destination, extAuth.Traffic)
+		clusterName, err := extServiceClusterName(extAuthClusterPrefix, extAuth.GRPC.Authority, &extAuth.GRPC.Destination, extAuth.Traffic)
 		if err != nil {
 			return nil, err
 		}
@@ -338,8 +346,8 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 			continue
 		}
 		if http := route.Security.ExtAuth.HTTP; http != nil {
-			if err := createExtAuthXDSCluster(
-				http.Authority, &http.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+			if err := createDedupedExtServiceCluster(
+				extAuthClusterPrefix, http.Authority, &http.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			if err := processClientCertificates(tCtx, http.Destination.Settings); err != nil {
@@ -347,8 +355,8 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 			}
 		} else {
 			grpc := route.Security.ExtAuth.GRPC
-			if err := createExtAuthXDSCluster(
-				grpc.Authority, &grpc.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+			if err := createDedupedExtServiceCluster(
+				extAuthClusterPrefix, grpc.Authority, &grpc.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			if err := processClientCertificates(tCtx, grpc.Destination.Settings); err != nil {
@@ -360,18 +368,20 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 	return errs
 }
 
-// createExtAuthXDSCluster creates the upstream cluster for an ext auth service
-// using the content-hashed cluster name (extAuthClusterName), so that identical
-// backends across SecurityPolicies collapse onto a single cluster via
-// addXdsCluster's name-based dedup. The IR destination is not mutated.
-func createExtAuthXDSCluster(authority string, rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
-	name, err := extAuthClusterName(authority, rd, traffic)
+// createDedupedExtServiceCluster creates the upstream cluster for an
+// external-service backend using the content-hashed cluster name
+// (extServiceClusterName), so that identical backends across policies collapse
+// onto a single cluster via addXdsCluster's name-based dedup. The IR destination
+// is not mutated.
+func createDedupedExtServiceCluster(prefix, authority string, rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
+	name, err := extServiceClusterName(prefix, authority, rd, traffic)
 	if err != nil {
 		return err
 	}
 	// Build the real cluster with the hashed name and content-derived setting
-	// names/metadata (not the shared IR destination) so two policies pointing at
-	// the same backend produce byte-identical clusters that dedup cleanly.
+	// names, clearing the policy-derived route-destination metadata, so two
+	// policies pointing at the same backend produce byte-identical clusters that
+	// dedup cleanly. The shared IR destination is not mutated.
 	named := *rd
 	named.Name = name
 	named.Metadata = nil

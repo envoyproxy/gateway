@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/durationpb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -37,7 +36,7 @@ func TestExtAuthConfigWithTimeout(t *testing.T) {
 					Destination: ir.RouteDestination{
 						Name: "test-cluster",
 						Settings: []*ir.DestinationSetting{{
-							Weight:    ptr.To[uint32](1),
+							Weight:    new(uint32(1)),
 							Endpoints: []*ir.DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}},
 						}},
 					},
@@ -54,7 +53,7 @@ func TestExtAuthConfigWithTimeout(t *testing.T) {
 					Destination: ir.RouteDestination{
 						Name: "test-cluster",
 						Settings: []*ir.DestinationSetting{{
-							Weight:    ptr.To[uint32](1),
+							Weight:    new(uint32(1)),
 							Endpoints: []*ir.DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}},
 						}},
 					},
@@ -72,7 +71,7 @@ func TestExtAuthConfigWithTimeout(t *testing.T) {
 					Destination: ir.RouteDestination{
 						Name: "test-cluster",
 						Settings: []*ir.DestinationSetting{{
-							Weight:    ptr.To[uint32](1),
+							Weight:    new(uint32(1)),
 							Endpoints: []*ir.DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}},
 						}},
 					},
@@ -90,7 +89,7 @@ func TestExtAuthConfigWithTimeout(t *testing.T) {
 					Destination: ir.RouteDestination{
 						Name: "test-cluster",
 						Settings: []*ir.DestinationSetting{{
-							Weight:    ptr.To[uint32](1),
+							Weight:    new(uint32(1)),
 							Endpoints: []*ir.DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}},
 						}},
 					},
@@ -165,7 +164,7 @@ func extAuthForBackend(policyName, host string, port uint32, ctxExtVal string) *
 				// Name is policy-derived today; the dedup must not depend on it.
 				Name: policyName + "/extauth/0",
 				Settings: []*ir.DestinationSetting{{
-					Weight:    ptr.To[uint32](1),
+					Weight:    new(uint32(1)),
 					Endpoints: []*ir.DestinationEndpoint{{Host: host, Port: port}},
 				}},
 			},

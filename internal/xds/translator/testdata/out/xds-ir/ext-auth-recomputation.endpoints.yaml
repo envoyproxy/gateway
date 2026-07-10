@@ -34,7 +34,7 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
-- clusterName: extauth/primary_foo_com/b634dd9426421450
+- clusterName: extauth/primary_foo_com/45a4744fab873393
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -45,4 +45,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: extauth/primary_foo_com/b634dd9426421450/backend/0
+      region: extauth/primary_foo_com/45a4744fab873393/backend/0

@@ -68,7 +68,7 @@ http:
         security:
           extAuth:
             name: securitypolicy/default/policy-b
-            failOpen: false
+            failOpen: true
             grpc:
               authority: grpc-backend.default:9000
               destination:

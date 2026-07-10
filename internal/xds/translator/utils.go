@@ -6,8 +6,6 @@
 package translator
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/netip"
@@ -132,23 +130,6 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 		}
 	}
 	return false
-}
-
-// protoHash returns a hex-encoded SHA-256 over the deterministic protobuf
-// marshaling of the provided messages. It is used to derive content-addressed,
-// deduplicated resource names: messages that marshal to identical bytes produce
-// identical hashes.
-func protoHash(messages ...proto.Message) (string, error) {
-	h := sha256.New()
-	opts := proto.MarshalOptions{Deterministic: true}
-	for _, m := range messages {
-		b, err := opts.Marshal(m)
-		if err != nil {
-			return "", err
-		}
-		h.Write(b)
-	}
-	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // extServiceClusterArgs assembles the xdsClusterArgs used to build the upstream

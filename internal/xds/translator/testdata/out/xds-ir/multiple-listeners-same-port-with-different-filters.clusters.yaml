@@ -54,7 +54,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/http-backend_envoy-gateway_80/931d7530e49b7d84
+    serviceName: extauth/http-backend_envoy-gateway_80/a4ababdd14a29770
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -64,7 +64,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/http-backend_envoy-gateway_80/931d7530e49b7d84
+  name: extauth/http-backend_envoy-gateway_80/a4ababdd14a29770
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:

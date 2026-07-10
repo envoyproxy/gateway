@@ -21,17 +21,18 @@
             grpcService:
               envoyGrpc:
                 authority: grpc-backend.default:9000
-                clusterName: extauth/grpc-backend_default_9000/3e181fae39c9068b
+                clusterName: extauth/grpc-backend_default_9000/17b3fd449a35a96b
               timeout: 10s
             transportApiVersion: V3
         - disabled: true
           name: envoy.filters.http.ext_authz/securitypolicy/default/policy-b
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            failureModeAllow: true
             grpcService:
               envoyGrpc:
                 authority: grpc-backend.default:9000
-                clusterName: extauth/grpc-backend_default_9000/3e181fae39c9068b
+                clusterName: extauth/grpc-backend_default_9000/17b3fd449a35a96b
               timeout: 10s
             transportApiVersion: V3
         - name: envoy.filters.http.router

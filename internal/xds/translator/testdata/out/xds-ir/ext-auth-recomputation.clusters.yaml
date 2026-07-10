@@ -76,7 +76,7 @@
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
-    clusterName: extauth/primary_foo_com/ed4f112fa58e8396
+    clusterName: extauth/primary_foo_com/559226db8b190afa
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -87,7 +87,7 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: extauth/primary_foo_com/ed4f112fa58e8396/backend/0
+        region: extauth/primary_foo_com/559226db8b190afa/backend/0
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -96,7 +96,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/primary_foo_com/ed4f112fa58e8396
+  name: extauth/primary_foo_com/559226db8b190afa
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -117,7 +117,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extauth/primary_foo_com/b634dd9426421450
+    serviceName: extauth/primary_foo_com/45a4744fab873393
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -127,7 +127,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/primary_foo_com/b634dd9426421450
+  name: extauth/primary_foo_com/45a4744fab873393
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -146,7 +146,7 @@
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
-    clusterName: extauth/primary_foo_com/905844741a578221
+    clusterName: extauth/primary_foo_com/de9e6d6ef29978a3
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -157,7 +157,7 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: extauth/primary_foo_com/905844741a578221/backend/0
+        region: extauth/primary_foo_com/de9e6d6ef29978a3/backend/0
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -166,7 +166,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: extauth/primary_foo_com/905844741a578221
+  name: extauth/primary_foo_com/de9e6d6ef29978a3
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

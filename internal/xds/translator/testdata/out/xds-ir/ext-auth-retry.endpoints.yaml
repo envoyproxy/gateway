@@ -34,7 +34,7 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
-- clusterName: extauth/grpc-backend_default_9000/7fe8c9728cd9b61c
+- clusterName: extauth/grpc-backend_default_9000/fe9ab613b323a048
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -45,7 +45,7 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: extauth/grpc-backend_default_9000/7fe8c9728cd9b61c/backend/0
+      region: extauth/grpc-backend_default_9000/fe9ab613b323a048/backend/0
   - lbEndpoints:
     - endpoint:
         address:
@@ -55,8 +55,8 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: extauth/grpc-backend_default_9000/7fe8c9728cd9b61c/backend/1
-- clusterName: extauth/grpc-backend_default_9000/3e181fae39c9068b
+      region: extauth/grpc-backend_default_9000/fe9ab613b323a048/backend/1
+- clusterName: extauth/grpc-backend_default_9000/17b3fd449a35a96b
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -67,8 +67,8 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: extauth/grpc-backend_default_9000/3e181fae39c9068b/backend/0
-- clusterName: extauth/http-backend_envoy-gateway_80/931d7530e49b7d84
+      region: extauth/grpc-backend_default_9000/17b3fd449a35a96b/backend/0
+- clusterName: extauth/http-backend_envoy-gateway_80/a4ababdd14a29770
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -79,4 +79,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: extauth/http-backend_envoy-gateway_80/931d7530e49b7d84/backend/0
+      region: extauth/http-backend_envoy-gateway_80/a4ababdd14a29770/backend/0
