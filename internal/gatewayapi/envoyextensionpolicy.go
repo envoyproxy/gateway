@@ -360,7 +360,7 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, xdsIR, resources); err != nil {
+	if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, gatewayMap[gatewayNN].attachedToListeners, xdsIR, resources); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -631,6 +631,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	target policyTargetReferenceWithSectionName,
 	gateway *GatewayContext,
+	attachedToListeners sets.Set[string],
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
 ) error {
@@ -685,6 +686,14 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		}
 		// If specified the sectionName must match listenerName from ir listener metadata.
 		if target.SectionName != nil && string(*target.SectionName) != http.Metadata.SectionName {
+			continue
+		}
+
+		// A Gateway-wide policy must not apply to a listener that already has its own,
+		// more-specific listener policy attached — even when that listener policy carries no
+		// Lua of its own. Otherwise a Gateway-wide Lua policy could still be installed on the
+		// listener's HCM and run on routes that the listener policy is meant to fully govern.
+		if target.SectionName == nil && attachedToListeners.Has(http.Metadata.SectionName) {
 			continue
 		}
 
