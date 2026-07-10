@@ -17,12 +17,18 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ptr "k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
+
+// ptrString returns a pointer to the given string. Used in place of the
+// forbidden k8s.io/utils/ptr.To for *string literal values in test cases.
+func ptrString(s string) *string {
+	v := s
+	return &v
+}
 
 func TestBackendTrafficPolicyTarget(t *testing.T) {
 	ctx := context.Background()
@@ -3744,7 +3750,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{
-									Name: ptr.To("by-ip"),
+									Name: ptrString("by-ip"),
 									Limit: egv1a1.RateLimitValue{
 										Requests: 10,
 										Unit:     "Minute",
@@ -3774,14 +3780,14 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{
-									Name: ptr.To("dup"),
+									Name: ptrString("dup"),
 									Limit: egv1a1.RateLimitValue{
 										Requests: 10,
 										Unit:     "Minute",
 									},
 								},
 								{
-									Name: ptr.To("dup"),
+									Name: ptrString("dup"),
 									Limit: egv1a1.RateLimitValue{
 										Requests: 20,
 										Unit:     "Minute",
@@ -3813,14 +3819,14 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						Local: &egv1a1.LocalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{
-									Name: ptr.To("dup"),
+									Name: ptrString("dup"),
 									Limit: egv1a1.RateLimitValue{
 										Requests: 10,
 										Unit:     "Minute",
 									},
 								},
 								{
-									Name: ptr.To("dup"),
+									Name: ptrString("dup"),
 									Limit: egv1a1.RateLimitValue{
 										Requests: 20,
 										Unit:     "Minute",
@@ -3852,7 +3858,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{
-									Name: ptr.To("0"),
+									Name: ptrString("0"),
 									Limit: egv1a1.RateLimitValue{
 										Requests: 10,
 										Unit:     "Minute",
@@ -3884,7 +3890,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{
-									Name: ptr.To("a/b"),
+									Name: ptrString("a/b"),
 									Limit: egv1a1.RateLimitValue{
 										Requests: 10,
 										Unit:     "Minute",
