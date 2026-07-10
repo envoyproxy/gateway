@@ -875,6 +875,12 @@ type BackendClusterKey struct {
 	Namespace    string
 	Name         string
 	Port         int32
+	// SectionName and ParentPort scope route-scoped (non-merged) keys to a parentRef's
+	// listener (Gateway API allows a parentRef to specify either, both, or neither), so a
+	// route attached to multiple listeners on the same Gateway gets an independent cluster
+	// per listener instead of colliding. Both left empty for identity-based (merge=true) keys.
+	SectionName string
+	ParentPort  int32
 }
 
 type TranslatorContext struct {

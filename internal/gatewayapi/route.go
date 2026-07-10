@@ -285,7 +285,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())
 			backendClusterIdentity := backendClusterIdentity(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
 			mergeableKind := t.isMergeableBackendKind(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
-			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind)
+			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind, string(ptr.Deref(parentRef.SectionName, "")), int32(ptr.Deref(parentRef.Port, 0)))
 			if splitIncompatible {
 				backendClusterKey, backendClusterName, merge = BackendClusterKey{Name: destName}, destName, false
 			}
@@ -562,15 +562,13 @@ func (b *backendClusterRefBuilder) add(merge bool, backendCluster *ir.BackendClu
 //
 // When cluster deduplication is disabled for this backend, ruleDestName is returned as the
 // cluster name, and the find-or-create key is scoped to the owning gateway (when known) plus
-// ruleDestName, so every backendRef in the same route rule collapses onto the same cluster
-// (matching today's one-cluster-per-rule behavior) - but a route attached to multiple gateways
-// (multiple parentRefs) still gets an independent cluster per gateway, since ruleDestName alone
-// depends only on the route/rule, not on which parent gateway is processing it, and
-// t.BackendClusterMap is shared across every gateway translated in this call. Without the
-// gateway-scoping, two gateways sharing a route-scoped cache hit would leave the second gateway's
-// own Xds.Backends silently missing an entry its own route still references by name. When
-// deduplication is enabled, the backend's own identity (plus the owning gateway) is used instead,
-// so that routes referencing the same backend share a single cluster. A backendRef whose kind is
+// ruleDestName plus sectionName/parentPort, so every backendRef in the same route rule for the
+// same parentRef/listener collapses onto the same cluster (matching today's one-cluster-per-rule
+// behavior) - but a route attached to multiple gateways, or to multiple listeners of the same
+// gateway via separate parentRefs, gets an independent cluster per listener instead of
+// recomputing and re-accumulating into the same one. When deduplication is enabled, the
+// backend's own identity (plus the owning gateway) is used instead, so that routes referencing
+// the same backend share a single cluster regardless of listener. A backendRef whose kind is
 // never mergeable (dynamic resolver, custom backend - see isMergeableBackendKind) also always
 // resolves to the route-scoped name.
 func (t *Translator) resolveBackendClusterName(
@@ -580,22 +578,24 @@ func (t *Translator) resolveBackendClusterName(
 	btpRoutingType *egv1a1.RoutingType,
 	hasRouteLevelClusterSettings bool,
 	mergeableKind bool,
+	sectionName string,
+	parentPort int32,
 ) (key BackendClusterKey, clusterName string, merge bool) {
 	if gatewayCtx == nil {
-		return BackendClusterKey{Name: ruleDestName}, ruleDestName, false
+		return BackendClusterKey{Name: ruleDestName, SectionName: sectionName, ParentPort: parentPort}, ruleDestName, false
 	}
 
 	gwIRKey := t.getIRKey(gatewayCtx.Gateway)
 
 	if !mergeableKind {
-		return BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName}, ruleDestName, false
+		return BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName, SectionName: sectionName, ParentPort: parentPort}, ruleDestName, false
 	}
 
 	gwNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
 	if !t.shouldMergeBackend(gwNN, gatewayCtx.envoyProxy, btpRoutingType, hasRouteLevelClusterSettings) {
 		// Kind is left empty here, which can never collide with a merged backend's key
 		// (always non-empty Kind), so route-scoped and backend-scoped keys never clash.
-		return BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName}, ruleDestName, false
+		return BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName, SectionName: sectionName, ParentPort: parentPort}, ruleDestName, false
 	}
 
 	identity.GatewayIRKey = gwIRKey
@@ -1229,7 +1229,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, grpcRoute.GetNamespace())
 			backendClusterIdentity := backendClusterIdentity(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
 			mergeableKind := t.isMergeableBackendKind(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
-			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind)
+			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind, string(ptr.Deref(parentRef.SectionName, "")), int32(ptr.Deref(parentRef.Port, 0)))
 			settingName := backendClusterSettingName(destName, i, backendClusterName, merge)
 
 			backendRefCtx := BackendRefWithFilters{
@@ -1701,7 +1701,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, tlsRoute.GetNamespace())
 				backendClusterIdentity := backendClusterIdentity(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
 				mergeableKind := t.isMergeableBackendKind(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
-				backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind)
+				backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind, string(ptr.Deref(parentRef.SectionName, "")), int32(ptr.Deref(parentRef.Port, 0)))
 				settingName := backendClusterSettingName(destName, i, backendClusterName, merge)
 
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
@@ -1890,7 +1890,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			backendNamespace := NamespaceDerefOr(udpRoute.Spec.Rules[0].BackendRefs[i].Namespace, udpRoute.GetNamespace())
 			backendClusterIdentity := backendClusterIdentity(udpRoute.Spec.Rules[0].BackendRefs[i].BackendObjectReference, backendNamespace)
 			mergeableKind := t.isMergeableBackendKind(udpRoute.Spec.Rules[0].BackendRefs[i].BackendObjectReference, backendNamespace)
-			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind)
+			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind, string(ptr.Deref(parentRef.SectionName, "")), int32(ptr.Deref(parentRef.Port, 0)))
 			settingName := backendClusterSettingName(destName, i, backendClusterName, merge)
 
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
@@ -2050,7 +2050,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			backendNamespace := NamespaceDerefOr(tcpRoute.Spec.Rules[0].BackendRefs[i].Namespace, tcpRoute.GetNamespace())
 			backendClusterIdentity := backendClusterIdentity(tcpRoute.Spec.Rules[0].BackendRefs[i].BackendObjectReference, backendNamespace)
 			mergeableKind := t.isMergeableBackendKind(tcpRoute.Spec.Rules[0].BackendRefs[i].BackendObjectReference, backendNamespace)
-			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind)
+			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind, string(ptr.Deref(parentRef.SectionName, "")), int32(ptr.Deref(parentRef.Port, 0)))
 			settingName := backendClusterSettingName(destName, i, backendClusterName, merge)
 
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
