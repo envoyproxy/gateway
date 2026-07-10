@@ -1627,8 +1627,9 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
-			// When there's multiple UDPRoutes attached to same listener,
-			// the oldest one win.
+			// When multiple UDPRoutes target the same Gateway listener, all of must report Accepted=True.
+			// Only the oldest route is attached to the listener, and the listener's AttachedRoutes count must reflect this.
+			// https://github.com/kubernetes-sigs/gateway-api/blob/cf34ac933d068c6008598cce945819ce9cee16be/conformance/tests/udproute-multiple-routes-attachment.go#L107
 			if irListener != nil && irListener.Route == nil {
 				irRoute := &ir.UDPRoute{
 					Name: irUDPRouteName(udpRoute),
@@ -1776,8 +1777,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
-			// When there's multiple TCPRoutes attached to same listener,
-			// the oldest one win.
+			// When multiple TCPRoutes target the same Gateway listener, all of must report Accepted=True.
+			// Only the oldest route is attached to the listener, and the listener's AttachedRoutes count must reflect this.
+			// https://github.com/kubernetes-sigs/gateway-api/blob/cf34ac933d068c6008598cce945819ce9cee16be/conformance/tests/tcproute-multiple-routes-attachment.go#L104
 			if irListener != nil && len(irListener.Routes) == 0 {
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tcpRoute),
