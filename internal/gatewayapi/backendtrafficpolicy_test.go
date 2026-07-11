@@ -1927,6 +1927,55 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
 			want:      false,
 		},
+		{
+			name: "route-rule-level RoundRobin overrides gateway-level ConsistentHash",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "btp-gateway"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+										Group: "gateway.networking.k8s.io",
+										Kind:  "Gateway",
+										Name:  "gateway-1",
+									},
+								},
+							},
+						},
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route-rule"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+										Group: "gateway.networking.k8s.io",
+										Kind:  "HTTPRoute",
+										Name:  "route-1",
+									},
+									SectionName: SectionNamePtr("rule-1"),
+								},
+							},
+						},
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{Type: roundRobinType},
+						},
+					},
+				},
+			},
+			routeKind:     "HTTPRoute",
+			routeNN:       types.NamespacedName{Namespace: "default", Name: "route-1"},
+			gatewayNN:     types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
+			routeRuleName: SectionNamePtr("rule-1"),
+			want:          false,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

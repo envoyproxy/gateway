@@ -360,10 +360,10 @@ func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
 // ConsistentHash poses to MergeBackends is splitting one rule's weighted backends across
 // clusters, not divergence between routes, so it applies regardless of which level set it.
 type BTPLoadBalancerIndex struct {
-	routeRuleLevel map[btpRoutingKey]bool
-	routeLevel     map[btpRoutingKey]bool
-	listenerLevel  map[btpRoutingKey]bool
-	gatewayLevel   map[btpRoutingKey]bool
+	routeRuleLevel map[btpRoutingKey]*egv1a1.LoadBalancer
+	routeLevel     map[btpRoutingKey]*egv1a1.LoadBalancer
+	listenerLevel  map[btpRoutingKey]*egv1a1.LoadBalancer
+	gatewayLevel   map[btpRoutingKey]*egv1a1.LoadBalancer
 }
 
 func hasBTPConsistentHash(btps []*egv1a1.BackendTrafficPolicy) bool {
@@ -375,8 +375,10 @@ func hasBTPConsistentHash(btps []*egv1a1.BackendTrafficPolicy) bool {
 	return false
 }
 
-// BuildBTPLoadBalancerIndex builds a pre-computed index of which route-rule/route/listener/
-// gateway targets have a BackendTrafficPolicy setting LoadBalancer to ConsistentHash.
+// BuildBTPLoadBalancerIndex builds a pre-computed index of the effective LoadBalancer setting
+// for each route-rule/route/listener/gateway target that has a BackendTrafficPolicy setting
+// LoadBalancer, so that a more-specific level's override (to any type, not just ConsistentHash)
+// correctly stops precedence fallthrough to a coarser level.
 func BuildBTPLoadBalancerIndex(
 	btps []*egv1a1.BackendTrafficPolicy,
 	routes []client.Object,
@@ -385,10 +387,10 @@ func BuildBTPLoadBalancerIndex(
 	namespaceLookup func(string) *corev1.Namespace,
 ) *BTPLoadBalancerIndex {
 	idx := &BTPLoadBalancerIndex{
-		routeRuleLevel: make(map[btpRoutingKey]bool),
-		routeLevel:     make(map[btpRoutingKey]bool),
-		listenerLevel:  make(map[btpRoutingKey]bool),
-		gatewayLevel:   make(map[btpRoutingKey]bool),
+		routeRuleLevel: make(map[btpRoutingKey]*egv1a1.LoadBalancer),
+		routeLevel:     make(map[btpRoutingKey]*egv1a1.LoadBalancer),
+		listenerLevel:  make(map[btpRoutingKey]*egv1a1.LoadBalancer),
+		gatewayLevel:   make(map[btpRoutingKey]*egv1a1.LoadBalancer),
 	}
 
 	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
@@ -398,7 +400,7 @@ func BuildBTPLoadBalancerIndex(
 	}
 
 	for _, btp := range btps {
-		if btp.Spec.LoadBalancer == nil || btp.Spec.LoadBalancer.Type != egv1a1.ConsistentHashLoadBalancerType {
+		if btp.Spec.LoadBalancer == nil {
 			continue
 		}
 		refs := resolvePolicyTargets(
@@ -420,15 +422,15 @@ func BuildBTPLoadBalancerIndex(
 			}
 			if kind == resource.KindGateway {
 				if ref.SectionName != nil {
-					idx.listenerLevel[key] = true
+					idx.listenerLevel[key] = btp.Spec.LoadBalancer
 				} else {
-					idx.gatewayLevel[key] = true
+					idx.gatewayLevel[key] = btp.Spec.LoadBalancer
 				}
 			} else {
 				if ref.SectionName != nil {
-					idx.routeRuleLevel[key] = true
+					idx.routeRuleLevel[key] = btp.Spec.LoadBalancer
 				} else {
-					idx.routeLevel[key] = true
+					idx.routeLevel[key] = btp.Spec.LoadBalancer
 				}
 			}
 		}
@@ -452,25 +454,28 @@ func (idx *BTPLoadBalancerIndex) IsConsistentHash(
 
 	if routeRuleName != nil {
 		key := btpRoutingKey{Kind: string(routeKind), Namespace: routeNN.Namespace, Name: routeNN.Name, SectionName: string(*routeRuleName)}
-		if idx.routeRuleLevel[key] {
-			return true
+		if lb, ok := idx.routeRuleLevel[key]; ok {
+			return lb.Type == egv1a1.ConsistentHashLoadBalancerType
 		}
 	}
 
 	routeKey := btpRoutingKey{Kind: string(routeKind), Namespace: routeNN.Namespace, Name: routeNN.Name}
-	if idx.routeLevel[routeKey] {
-		return true
+	if lb, ok := idx.routeLevel[routeKey]; ok {
+		return lb.Type == egv1a1.ConsistentHashLoadBalancerType
 	}
 
 	if listenerName != nil {
 		listenerKey := btpRoutingKey{Kind: resource.KindGateway, Namespace: gatewayNN.Namespace, Name: gatewayNN.Name, SectionName: string(*listenerName)}
-		if idx.listenerLevel[listenerKey] {
-			return true
+		if lb, ok := idx.listenerLevel[listenerKey]; ok {
+			return lb.Type == egv1a1.ConsistentHashLoadBalancerType
 		}
 	}
 
 	gatewayKey := btpRoutingKey{Kind: resource.KindGateway, Namespace: gatewayNN.Namespace, Name: gatewayNN.Name}
-	return idx.gatewayLevel[gatewayKey]
+	if lb, ok := idx.gatewayLevel[gatewayKey]; ok {
+		return lb.Type == egv1a1.ConsistentHashLoadBalancerType
+	}
+	return false
 }
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
