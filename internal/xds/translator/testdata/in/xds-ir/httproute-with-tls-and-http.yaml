@@ -34,7 +34,7 @@ http:
         tls:
           alpnProtocols: null
           caCertificate:
-            name: policy-btls-for-backend-1/default-ca
+            name: system_ca_certificates
           sni: example.com
           subjectAltNames:
           - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1

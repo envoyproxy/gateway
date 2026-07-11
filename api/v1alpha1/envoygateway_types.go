@@ -161,13 +161,18 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;DeduplicateSystemTrustStore
 type RuntimeFlag string
 
 const (
 	// XDSNameSchemeV2 indicates that the xds name scheme v2 is used.
 	// * The listener name will be generated using the protocol and port of the listener.
 	XDSNameSchemeV2 RuntimeFlag = "XDSNameSchemeV2"
+
+	// DeduplicateSystemTrustStore consolidates per-policy system CA SDS secrets into a single
+	// shared system_ca_certificates secret, reducing inotify watchers.
+	// Enabled by default.
+	DeduplicateSystemTrustStore RuntimeFlag = "DeduplicateSystemTrustStore"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.

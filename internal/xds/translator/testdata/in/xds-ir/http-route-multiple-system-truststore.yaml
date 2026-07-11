@@ -18,7 +18,7 @@ http:
               protocol: HTTP
               tls:
                 CACertificate:
-                  name: policy-btls-1/policies-ca
+                  name: system_ca_certificates
                 sni: backend-1.example.com
                 useSystemTrustStore: true
               weight: 1
@@ -39,7 +39,7 @@ http:
               protocol: HTTP
               tls:
                 CACertificate:
-                  name: policy-btls-2/policies-ca
+                  name: system_ca_certificates
                 sni: backend-2.example.com
                 useSystemTrustStore: true
               weight: 1
@@ -60,7 +60,7 @@ http:
               protocol: HTTP
               tls:
                 CACertificate:
-                  name: policy-btls-3/policies-ca
+                  name: system_ca_certificates
                 sni: backend-3.example.com
                 useSystemTrustStore: true
               weight: 1

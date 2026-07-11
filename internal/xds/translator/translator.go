@@ -1071,7 +1071,8 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 	extras *ExtraArgs,
 	metadata *ir.ResourceMetadata,
 ) error {
-	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras, metadata))
+	args := route.asClusterArgs(name, settings, extras, metadata)
+	return addXdsCluster(tCtx, args)
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
@@ -1126,7 +1127,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
 		if shouldValidateTLS {
 			if ds.TLS.UseSystemTrustStore {
-				// Lazily create the shared secret; content is validated once at end of Translate().
+				// Lazily emit the shared secret; its name is already set correctly in CACertificate.Name.
 				if err := ensureSystemTrustStoreSecret(tCtx); err != nil {
 					return err
 				}
@@ -1195,7 +1196,7 @@ const (
 
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
 	if tlsConfig.UseSystemTrustStore {
-		// No per-cluster secret needed — all clusters share SystemTrustStoreSecretName.
+		// No per-cluster secret needed — the shared secret is emitted by ensureSystemTrustStoreSecret.
 		return nil
 	}
 
@@ -1217,10 +1218,8 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 }
 
 func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsContext_CombinedValidationContext, bool) {
+	// CACertificate.Name already holds the correct secret name set during gatewayapi→IR translation.
 	secretName := tlsConfig.CACertificate.Name
-	if tlsConfig.UseSystemTrustStore {
-		secretName = SystemTrustStoreSecretName
-	}
 
 	validationContext := &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
 		ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{

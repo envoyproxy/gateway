@@ -89,6 +89,10 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// DeduplicateSystemTrustStore is true when backend clusters using the system CA trust store
+	// should share a single SDS secret (system_ca_certificates) instead of per-policy secrets.
+	DeduplicateSystemTrustStore bool
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 

@@ -56,6 +56,7 @@ func TestTranslate(t *testing.T) {
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
+		DeduplicateSystemTrustStore     bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -93,6 +94,20 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled: true,
 			SDSEnabled:     true,
 		},
+		{
+			name:                        "envoyproxy-otel-backend-tls-dedup",
+			BackendEnabled:              true,
+			DeduplicateSystemTrustStore: true,
+		},
+		{
+			name:                        "envoyproxy-otel-backend-tls-dedup-disabled",
+			BackendEnabled:              true,
+			DeduplicateSystemTrustStore: false,
+		},
+		{
+			name:                        "envoyextensionpolicy-with-extproc-with-backendtlspolicy-dedup",
+			DeduplicateSystemTrustStore: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -118,6 +133,7 @@ func TestTranslate(t *testing.T) {
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
+			deduplicateSystemTrustStore := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -127,6 +143,7 @@ func TestTranslate(t *testing.T) {
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
+					deduplicateSystemTrustStore = config.DeduplicateSystemTrustStore
 				}
 			}
 
@@ -137,6 +154,7 @@ func TestTranslate(t *testing.T) {
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
+				DeduplicateSystemTrustStore:     deduplicateSystemTrustStore,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,

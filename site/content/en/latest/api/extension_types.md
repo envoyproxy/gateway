@@ -5693,6 +5693,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
+| `DeduplicateSystemTrustStore` | DeduplicateSystemTrustStore consolidates per-policy system CA SDS secrets into a single<br />shared system_ca_certificates secret, reducing inotify watchers.<br />Enabled by default.<br /> | 
 
 
 #### RuntimeFlags

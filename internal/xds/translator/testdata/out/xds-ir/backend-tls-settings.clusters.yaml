@@ -51,7 +51,7 @@
                   exact: subdomain.secondexample.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: system_ca_certificates
+              name: policy-btls-for-backend-1/default-ca
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -210,7 +210,7 @@
                   exact: example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: system_ca_certificates
+              name: policy-btls-for-backend-3/default-ca
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -289,7 +289,7 @@
                   exact: example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: system_ca_certificates
+              name: policy-btls-for-backend-4/default-ca
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3

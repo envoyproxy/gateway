@@ -26,10 +26,10 @@ const (
 	wasmHTTPServiceClusterName       = "wasm_cluster"
 	wasmHTTPServiceHost              = "envoy-gateway"
 	wasmHTTPServicePort              = 18002
-
-	// SystemTrustStoreSecretName is the shared SDS secret name for the system CA trust store.
-	SystemTrustStoreSecretName = "system_ca_certificates" //nolint:gosec // not a credential
 )
+
+// SystemTrustStoreSecretName is re-exported from ir for use within the xDS translator package.
+const SystemTrustStoreSecretName = ir.SystemTrustStoreSecretName
 
 // patchGlobalResources builds and appends global resources shared across listeners and routes.
 func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXds *ir.Xds) error {
@@ -74,7 +74,7 @@ func ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
 	if findXdsSecret(tCtx, SystemTrustStoreSecretName) != nil {
 		return nil
 	}
-	return tCtx.AddXdsResource(resourcev3.SecretType, &tlsv3.Secret{
+	if err := tCtx.AddXdsResource(resourcev3.SecretType, &tlsv3.Secret{
 		Name: SystemTrustStoreSecretName,
 		Type: &tlsv3.Secret_ValidationContext{
 			ValidationContext: &tlsv3.CertificateValidationContext{
@@ -83,21 +83,37 @@ func ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
 				},
 			},
 		},
-	})
+	}); err != nil {
+		return err
+	}
+	tCtx.SystemTrustStore = true
+	return nil
 }
 
-// validateSystemTrustStoreSecret verifies system_ca_certificates has expected content if present.
-// Called once at end of Translate() to catch conflicts from EnvoyPatchPolicy or extensions.
+// validateSystemTrustStoreSecret verifies system_ca_certificates is present and unmodified
+// if it was emitted during translation. A no-op if the secret was never emitted.
 func validateSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
-	existing := findXdsSecret(tCtx, SystemTrustStoreSecretName)
-	if existing == nil {
+	if !tCtx.SystemTrustStore {
 		return nil
 	}
-	vc := existing.GetValidationContext()
-	if vc == nil || vc.GetTrustedCa().GetFilename() != cert.SystemCertPath {
-		return fmt.Errorf("secret name %q is reserved for the system trust store and cannot be used by other resources", SystemTrustStoreSecretName)
+	var matches []*tlsv3.Secret
+	for _, r := range tCtx.XdsResources[resourcev3.SecretType] {
+		if s, ok := r.(*tlsv3.Secret); ok && s.Name == SystemTrustStoreSecretName {
+			matches = append(matches, s)
+		}
 	}
-	return nil
+	switch len(matches) {
+	case 0:
+		return fmt.Errorf("secret %q was removed by a patch or extension but is still referenced by clusters", SystemTrustStoreSecretName)
+	case 1:
+		vc := matches[0].GetValidationContext()
+		if vc == nil || vc.GetTrustedCa().GetFilename() != cert.SystemCertPath {
+			return fmt.Errorf("secret name %q is reserved for the system trust store and cannot be used by other resources", SystemTrustStoreSecretName)
+		}
+		return nil
+	default:
+		return fmt.Errorf("secret name %q appears %d times; at most one is allowed", SystemTrustStoreSecretName, len(matches))
+	}
 }
 
 func createEnvoyClientTLSCertSecret(tCtx *types.ResourceVersionTable, globalResources *ir.GlobalResources) error {

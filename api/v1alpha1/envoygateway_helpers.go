@@ -148,7 +148,8 @@ func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {
 
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
-	XDSNameSchemeV2: false,
+	XDSNameSchemeV2:             false,
+	DeduplicateSystemTrustStore: true,
 }
 
 // IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
