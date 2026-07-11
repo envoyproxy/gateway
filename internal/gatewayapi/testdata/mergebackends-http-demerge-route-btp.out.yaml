@@ -173,7 +173,7 @@ xdsIR:
         kind: HTTPRoute
         name: http-route-1
         namespace: default
-      name: backend/service/default/service-1/8080
+      name: backend/service/default/service-1/8080/http
       settings:
       - addressType: IP
         endpoints:
@@ -252,7 +252,7 @@ xdsIR:
       routes:
       - destination:
           backendClusterRefs:
-          - name: backend/service/default/service-1/8080
+          - name: backend/service/default/service-1/8080/http
             weight: 1
           metadata:
             kind: HTTPRoute

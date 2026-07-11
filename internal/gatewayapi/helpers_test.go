@@ -1582,10 +1582,11 @@ func TestIrBackendClusterName(t *testing.T) {
 		namespace string
 		bcName    string
 		port      int32
+		protocol  ir.AppProtocol
 		want      string
 	}{
 		{
-			name:      "service with port",
+			name:      "service with port, no protocol",
 			kind:      "Service",
 			namespace: "default",
 			bcName:    "service-1",
@@ -1593,17 +1594,27 @@ func TestIrBackendClusterName(t *testing.T) {
 			want:      "backend/service/default/service-1/8080",
 		},
 		{
-			name:      "backend kind",
+			name:      "backend kind, http protocol",
 			kind:      "Backend",
 			namespace: "ns",
 			bcName:    "be",
 			port:      443,
-			want:      "backend/backend/ns/be/443",
+			protocol:  ir.HTTP,
+			want:      "backend/backend/ns/be/443/http",
+		},
+		{
+			name:      "service with grpc protocol differs from http",
+			kind:      "Service",
+			namespace: "default",
+			bcName:    "service-1",
+			port:      8080,
+			protocol:  ir.GRPC,
+			want:      "backend/service/default/service-1/8080/grpc",
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, irBackendClusterName(tc.kind, tc.namespace, tc.bcName, tc.port))
+			require.Equal(t, tc.want, irBackendClusterName(tc.kind, tc.namespace, tc.bcName, tc.port, tc.protocol))
 		})
 	}
 }

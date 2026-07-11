@@ -877,6 +877,7 @@ type BackendClusterKey struct {
 	Port         int32
 	SectionName  string
 	ParentPort   int32
+	Protocol     ir.AppProtocol
 }
 
 type TranslatorContext struct {

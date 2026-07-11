@@ -313,6 +313,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			if unstructuredRef != nil {
 				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
 			}
+			if merge {
+				backendClusterKey.Protocol = ds.Protocol
+				backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
+			}
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
@@ -572,7 +576,7 @@ func (t *Translator) resolveBackendClusterName(
 	}
 
 	identity.GatewayIRKey = gwIRKey
-	return identity, irBackendClusterName(identity.Kind, identity.Namespace, identity.Name, identity.Port), true
+	return identity, irBackendClusterName(identity.Kind, identity.Namespace, identity.Name, identity.Port, identity.Protocol), true
 }
 
 // backendClusterIdentity builds the BackendClusterKey identifying a backendRef's target backend.
@@ -1221,6 +1225,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				}
 			}
 
+			if merge {
+				backendClusterKey.Protocol = ds.Protocol
+				backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
+			}
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
@@ -1674,6 +1682,10 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					resolveErrs.Add(err)
 					continue
 				}
+				if merge {
+					backendClusterKey.Protocol = ds.Protocol
+					backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
+				}
 				// skip backendRefs with weight 0 as they do not affect the traffic distribution
 				if ds.Weight != nil && *ds.Weight > 0 {
 					backendCluster := t.getOrCreateBackendCluster(gwIR, backendClusterKey, backendClusterName, merge, ds, routeRuleMetadata)
@@ -1863,6 +1875,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				resolveErrs.Add(err)
 				continue
 			}
+			if merge {
+				backendClusterKey.Protocol = ds.Protocol
+				backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
+			}
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
@@ -2022,6 +2038,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
+			}
+			if merge {
+				backendClusterKey.Protocol = ds.Protocol
+				backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
 			}
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {

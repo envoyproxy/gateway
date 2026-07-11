@@ -177,7 +177,7 @@ xdsIR:
         kind: TCPRoute
         name: tcproute-1
         namespace: default
-      name: backend/service/default/service-3/8163
+      name: backend/service/default/service-3/8163/tcp
       settings:
       - addressType: IP
         endpoints:
@@ -238,7 +238,7 @@ xdsIR:
       routes:
       - destination:
           backendClusterRefs:
-          - name: backend/service/default/service-3/8163
+          - name: backend/service/default/service-3/8163/tcp
             weight: 1
           metadata:
             kind: TCPRoute
@@ -262,7 +262,7 @@ xdsIR:
       routes:
       - destination:
           backendClusterRefs:
-          - name: backend/service/default/service-3/8163
+          - name: backend/service/default/service-3/8163/tcp
             weight: 1
           metadata:
             kind: TCPRoute

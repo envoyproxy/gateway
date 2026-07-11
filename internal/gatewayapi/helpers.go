@@ -519,8 +519,12 @@ func irDestinationSettingName(destName string, backendIdx int) string {
 
 // irBackendClusterName names a BackendCluster shared across routes that reference the same
 // backend.
-func irBackendClusterName(kind, namespace, name string, port int32) string {
-	return fmt.Sprintf("backend/%s/%s/%s/%d", strings.ToLower(kind), namespace, name, port)
+func irBackendClusterName(kind, namespace, name string, port int32, protocol ir.AppProtocol) string {
+	base := fmt.Sprintf("backend/%s/%s/%s/%d", strings.ToLower(kind), namespace, name, port)
+	if protocol == "" {
+		return base
+	}
+	return base + "/" + strings.ToLower(string(protocol))
 }
 
 func irRuleName(policyNamespace, policyName string, ruleIndex int) string {

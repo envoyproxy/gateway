@@ -740,3 +740,23 @@ func TestGetOrCreateBackendCluster(t *testing.T) {
 		require.Equal(t, []*ir.DestinationSetting{ds1, ds2}, second.Settings)
 	})
 }
+
+func TestBackendClusterKeyProtocolDivergence(t *testing.T) {
+	tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
+	gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+	identity := &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
+
+	key1, name1, merge1 := tr.resolveBackendClusterName("httproute-dest", identity, gwCtx, nil, false, true, "", 0)
+	require.True(t, merge1)
+	key1.Protocol = ir.HTTP
+	name1 = irBackendClusterName(key1.Kind, key1.Namespace, key1.Name, key1.Port, ir.HTTP)
+
+	identity2 := &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
+	key2, name2, merge2 := tr.resolveBackendClusterName("grpcroute-dest", identity2, gwCtx, nil, false, true, "", 0)
+	require.True(t, merge2)
+	key2.Protocol = ir.GRPC
+	name2 = irBackendClusterName(key2.Kind, key2.Namespace, key2.Name, key2.Port, ir.GRPC)
+
+	require.NotEqual(t, *key1, *key2, "an HTTPRoute and a GRPCRoute targeting the same backend must not share a BackendClusterKey")
+	require.NotEqual(t, name1, name2, "an HTTPRoute and a GRPCRoute targeting the same backend must not resolve to the same cluster name")
+}
