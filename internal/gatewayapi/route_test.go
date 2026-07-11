@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -549,7 +548,7 @@ func TestResolveBackendCluster(t *testing.T) {
 			pr.SectionName = SectionNamePtr(sectionName)
 		}
 		if port != 0 {
-			pr.Port = ptr.To(gwapiv1.PortNumber(port))
+			pr.Port = new(port)
 		}
 		return pr
 	}
