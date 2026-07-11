@@ -454,7 +454,7 @@ func TestFilterValidCertificates_ExpiredLeafWithValidChain(t *testing.T) {
 	expiredCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: expiredCertDER})
 
 	// Chain: expired leaf + valid intermediate
-	chainData = append(expiredCertPEM, validCertPEM...)
+	chainData := append(expiredCertPEM, validCertPEM...)
 
 	// The entire chain should be rejected because the leaf is expired
 	result, listenerErr := filterValidCertificates(chainData)
