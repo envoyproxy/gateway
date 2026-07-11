@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"slices"
 
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -70,7 +71,7 @@ func NewOfflineGatewayAPIController(
 	}
 	allExtensions := slices.Concat(extGVKs, extServerPoliciesGVKs, extBackendPoliciesGVKs)
 
-	cli := newOfflineGatewayAPIClient(allExtensions)
+	cli := newOfflineGatewayAPIClient(allExtensions, cfg.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EndpointSliceIndex))
 
 	// Seed the fake client with the secrets that the CertGen job would create
 	// in Kubernetes mode. This prevents spurious errors during reconciliation
@@ -140,7 +141,7 @@ func (r *OfflineGatewayAPIReconciler) Reconcile(ctx context.Context) error {
 // newOfflineGatewayAPIClient returns an in-memory Kubernetes client that
 // understands Envoy-Gateway, Gateway-API resources and any extension-server
 // policy kinds supplied by an extension.
-func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind) client.Client {
+func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind, enableEndpointSliceIndex bool) client.Client {
 	// Base scheme already holds Envoy-Gateway and Gateway-API types.
 	scheme := envoygateway.GetScheme()
 	// Register extension-server GVKs as Unstructured so the client can handle them.
@@ -154,7 +155,7 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind) cli
 		scheme.AddKnownTypeWithName(listGVK, &unstructured.UnstructuredList{})
 	}
 
-	return fake.NewClientBuilder().
+	builder := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
 		WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
@@ -174,7 +175,13 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind) cli
 		WithIndex(&gwapiv1.UDPRoute{}, listenerSetUDPRouteIndex, listenerSetUDPRouteIndexFunc).
 		WithIndex(&gwapiv1.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc).
 		WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
-		WithIndex(&gwapiv1.TLSRoute{}, listenerSetTLSRouteIndex, listenerSetTLSRouteIndexFunc).
+		WithIndex(&gwapiv1.TLSRoute{}, listenerSetTLSRouteIndex, listenerSetTLSRouteIndexFunc)
+	if enableEndpointSliceIndex {
+		builder = builder.
+			WithIndex(&discoveryv1.EndpointSlice{}, serviceEndpointSliceIndex, serviceEndpointSliceIndexFunc).
+			WithIndex(&discoveryv1.EndpointSlice{}, serviceImportEndpointSliceIndex, serviceImportEndpointSliceIndexFunc)
+	}
+	return builder.
 		WithIndex(&egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
 		WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 		WithIndex(&egv1a1.BackendTrafficPolicy{}, configMapBtpIndex, configMapBtpIndexFunc).
