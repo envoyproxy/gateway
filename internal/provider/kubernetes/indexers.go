@@ -8,13 +8,14 @@ package kubernetes
 import (
 	"context"
 
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -41,6 +42,8 @@ const (
 	backendTLSRouteIndex             = "backendTLSRouteIndex"
 	backendTCPRouteIndex             = "backendTCPRouteIndex"
 	backendUDPRouteIndex             = "backendUDPRouteIndex"
+	serviceEndpointSliceIndex        = "serviceEndpointSliceIndex"
+	serviceImportEndpointSliceIndex  = "serviceImportEndpointSliceIndex"
 	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
 	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
@@ -80,6 +83,33 @@ func getReferenceGrantIndexerFunc(rawObj client.Object) []string {
 		referredServices = append(referredServices, string(target.Kind))
 	}
 	return referredServices
+}
+
+func addEndpointSliceIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &discoveryv1.EndpointSlice{}, serviceEndpointSliceIndex, serviceEndpointSliceIndexFunc); err != nil {
+		return err
+	}
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &discoveryv1.EndpointSlice{}, serviceImportEndpointSliceIndex, serviceImportEndpointSliceIndexFunc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func serviceEndpointSliceIndexFunc(rawObj client.Object) []string {
+	return backendEndpointSliceIndexFunc(rawObj, discoveryv1.LabelServiceName)
+}
+
+func serviceImportEndpointSliceIndexFunc(rawObj client.Object) []string {
+	return backendEndpointSliceIndexFunc(rawObj, mcsapiv1a1.LabelServiceName)
+}
+
+func backendEndpointSliceIndexFunc(rawObj client.Object, label string) []string {
+	endpointSlice := rawObj.(*discoveryv1.EndpointSlice)
+	name := endpointSlice.GetLabels()[label]
+	if name == "" {
+		return nil
+	}
+	return []string{name}
 }
 
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
@@ -399,7 +429,7 @@ func listenerSetTLSRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func listenerSetTCPRouteIndexFunc(rawObj client.Object) []string {
-	tcpRoute := rawObj.(*gwapiv1a2.TCPRoute)
+	tcpRoute := rawObj.(*gwapiv1.TCPRoute)
 	listenerSets := make([]string, 0, len(tcpRoute.Spec.ParentRefs))
 	for _, parent := range tcpRoute.Spec.ParentRefs {
 		if parent.Group != nil && string(*parent.Group) == gwapiv1.GroupVersion.Group &&
@@ -416,7 +446,7 @@ func listenerSetTCPRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func listenerSetUDPRouteIndexFunc(rawObj client.Object) []string {
-	udpRoute := rawObj.(*gwapiv1a2.UDPRoute)
+	udpRoute := rawObj.(*gwapiv1.UDPRoute)
 	listenerSets := make([]string, 0, len(udpRoute.Spec.ParentRefs))
 	for _, parent := range udpRoute.Spec.ParentRefs {
 		if parent.Group != nil && string(*parent.Group) == gwapiv1.GroupVersion.Group &&
@@ -544,21 +574,21 @@ func backendTLSRouteIndexFunc(rawObj client.Object) []string {
 // referenced in TCPRoute objects via `.spec.rules.backendRefs`. This helps in
 // querying for TCPRoutes that are affected by a particular Service CRUD.
 func addTCPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TCPRoute{}, gatewayTCPRouteIndex, gatewayTCPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.TCPRoute{}, gatewayTCPRouteIndex, gatewayTCPRouteIndexFunc); err != nil {
 		return err
 	}
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TCPRoute{}, listenerSetTCPRouteIndex, listenerSetTCPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.TCPRoute{}, listenerSetTCPRouteIndex, listenerSetTCPRouteIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
 func gatewayTCPRouteIndexFunc(rawObj client.Object) []string {
-	tcpRoute := rawObj.(*gwapiv1a2.TCPRoute)
+	tcpRoute := rawObj.(*gwapiv1.TCPRoute)
 	var gateways []string
 	for _, parent := range tcpRoute.Spec.ParentRefs {
 		if string(*parent.Kind) == resource.KindGateway {
@@ -576,7 +606,7 @@ func gatewayTCPRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func backendTCPRouteIndexFunc(rawObj client.Object) []string {
-	tcpRoute := rawObj.(*gwapiv1a2.TCPRoute)
+	tcpRoute := rawObj.(*gwapiv1.TCPRoute)
 	var backendRefs []string
 	for _, rule := range tcpRoute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
@@ -601,21 +631,21 @@ func backendTCPRouteIndexFunc(rawObj client.Object) []string {
 //   - For Service objects that are referenced in UDPRoute objects via `.spec.rules.backendRefs`. This helps in
 //     querying for UDPRoutes that are affected by a particular Service CRUD.
 func addUDPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{}, gatewayUDPRouteIndex, gatewayUDPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.UDPRoute{}, gatewayUDPRouteIndex, gatewayUDPRouteIndexFunc); err != nil {
 		return err
 	}
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{}, listenerSetUDPRouteIndex, listenerSetUDPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.UDPRoute{}, listenerSetUDPRouteIndex, listenerSetUDPRouteIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
 func gatewayUDPRouteIndexFunc(rawObj client.Object) []string {
-	udpRoute := rawObj.(*gwapiv1a2.UDPRoute)
+	udpRoute := rawObj.(*gwapiv1.UDPRoute)
 	var gateways []string
 	for _, parent := range udpRoute.Spec.ParentRefs {
 		if string(*parent.Kind) == resource.KindGateway {
@@ -633,7 +663,7 @@ func gatewayUDPRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func backendUDPRouteIndexFunc(rawObj client.Object) []string {
-	udproute := rawObj.(*gwapiv1a2.UDPRoute)
+	udproute := rawObj.(*gwapiv1.UDPRoute)
 	var backendRefs []string
 	for _, rule := range udproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {

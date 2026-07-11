@@ -1658,6 +1658,9 @@ type AuthorizationRule struct {
 
 	// Principal defines the principal to be matched.
 	Principal Principal `json:"principal"`
+
+	// CEL defines a CEL expression to be matched.
+	CEL *string `json:"cel,omitempty"`
 }
 
 // Principal defines the schema for the principal.
@@ -3709,12 +3712,18 @@ type ExtProc struct {
 
 	// AllowModeOverride allows the external processor to modify the processing mode.
 	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
+
+	// Sets the HTTP status that is returned when the external processor returns an error
+	// or cannot be reached. Defaults to 500 Internal Server Error.
+	// +optional
+	StatusOnError *int32 `json:"statusOnError,omitempty" yaml:"statusOnError,omitempty"`
 }
 
 // Lua holds the information associated with Lua extensions
 // +k8s:deepcopy-gen=true
 type Lua struct {
-	// Name is a unique name for the Lua configuration.
+	// Name is a unique name for the LUa configuration.
+	// The xds translator only generates one Lua filter for each unique name
 	Name string
 	// Code is the Lua source code
 	Code *string
