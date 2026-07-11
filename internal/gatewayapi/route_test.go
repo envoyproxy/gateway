@@ -730,6 +730,58 @@ func TestIsMergeableBackendKind(t *testing.T) {
 	}
 }
 
+func TestIsFallbackBackend(t *testing.T) {
+	fallbackTrue := true
+	tests := []struct {
+		name       string
+		backendRef gwapiv1.BackendObjectReference
+		backend    *egv1a1.Backend
+		want       bool
+	}{
+		{
+			name:       "service backendRef is never a fallback backend",
+			backendRef: gwapiv1.BackendObjectReference{Name: "service-1"},
+			want:       false,
+		},
+		{
+			name: "backend CR with Fallback true",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr(egv1a1.GroupName),
+				Kind:  KindPtr(egv1a1.KindBackend),
+				Name:  "be-fallback",
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{Name: "be-fallback", Namespace: "default"},
+				Spec:       egv1a1.BackendSpec{Fallback: &fallbackTrue},
+			},
+			want: true,
+		},
+		{
+			name: "backend CR without Fallback set",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr(egv1a1.GroupName),
+				Kind:  KindPtr(egv1a1.KindBackend),
+				Name:  "be-plain",
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{Name: "be-plain", Namespace: "default"},
+			},
+			want: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			backendMap := map[types.NamespacedName]*egv1a1.Backend{}
+			if tc.backend != nil {
+				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
+			}
+			tr := &Translator{TranslatorContext: &TranslatorContext{BackendMap: backendMap}}
+			got := tr.isFallbackBackend(tc.backendRef, "default")
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestGetOrCreateBackendCluster(t *testing.T) {
 	key := BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
 	ds1 := &ir.DestinationSetting{Name: "ds-1"}
