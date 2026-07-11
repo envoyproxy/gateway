@@ -1224,6 +1224,7 @@ func TestShouldMergeBackend(t *testing.T) {
 		mergeIncompatible bool
 		backendRef        gwapiv1.BackendObjectReference
 		backend           *egv1a1.Backend
+		filters           *ir.DestinationFilters
 		want              bool
 	}{
 		{
@@ -1268,6 +1269,13 @@ func TestShouldMergeBackend(t *testing.T) {
 			backend:      dynamicResolverBackend,
 			want:         false,
 		},
+		{
+			name:         "CredentialInjection-filtered backendRef never merges even when otherwise eligible",
+			mergeEnabled: true,
+			backendRef:   serviceBackendRef,
+			filters:      &ir.DestinationFilters{CredentialInjection: &ir.CredentialInjection{}},
+			want:         false,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1286,7 +1294,7 @@ func TestShouldMergeBackend(t *testing.T) {
 					},
 				},
 			}
-			got := tr.shouldMergeBackend(gwCtx, tc.effectiveRT, tc.mergeIncompatible, tc.backendRef, "default", &ir.DestinationSetting{})
+			got := tr.shouldMergeBackend(gwCtx, tc.effectiveRT, tc.mergeIncompatible, tc.backendRef, "default", &ir.DestinationSetting{Filters: tc.filters})
 			require.Equal(t, tc.want, got)
 		})
 	}

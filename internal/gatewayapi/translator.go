@@ -150,6 +150,11 @@ func (t *Translator) shouldMergeBackend(
 	if mergeIncompatible {
 		return false
 	}
+	// CredentialInjection is baked into the shared cluster (CDS), not the per-route destination, so
+	// a backendRef carrying it must never share a cluster with another differently-configured one.
+	if ds.Filters != nil && ds.Filters.CredentialInjection != nil {
+		return false
+	}
 	if !t.MergeBackends {
 		return false
 	}
