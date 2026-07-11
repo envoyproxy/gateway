@@ -782,6 +782,96 @@ func TestIsFallbackBackend(t *testing.T) {
 	}
 }
 
+func TestMergeIncompatibleForRule(t *testing.T) {
+	fallbackTrue := true
+	fallbackBackend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{Name: "be-fallback", Namespace: "default"},
+		Spec:       egv1a1.BackendSpec{Fallback: &fallbackTrue},
+	}
+	fallbackRef := gwapiv1.BackendObjectReference{
+		Group: GroupPtr(egv1a1.GroupName),
+		Kind:  KindPtr(egv1a1.KindBackend),
+		Name:  "be-fallback",
+	}
+	serviceRef1 := gwapiv1.BackendObjectReference{Name: "service-1"}
+	serviceRef2 := gwapiv1.BackendObjectReference{Name: "service-2"}
+
+	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route-1"}}}
+	parentRef := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{}}
+	ruleName := SectionNamePtr("rule-1")
+	gatewayCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
+
+	// consistentHashIdx forces IsConsistentHash to return true for route-1/rule-1, regardless of gatewayCtx.
+	consistentHashIdx := &BTPLoadBalancerIndex{
+		routeRuleLevel: map[btpRoutingKey]*egv1a1.LoadBalancer{
+			{Kind: "HTTPRoute", Namespace: "default", Name: "route-1", SectionName: "rule-1"}: {Type: egv1a1.ConsistentHashLoadBalancerType},
+		},
+	}
+
+	tests := []struct {
+		name                         string
+		backendRefs                  []gwapiv1.BackendObjectReference
+		hasRouteLevelClusterSettings bool
+		sessionPersistent            bool
+		gatewayCtx                   *GatewayContext
+		lbIndex                      *BTPLoadBalancerIndex
+		want                         bool
+	}{
+		{
+			name:                         "route-level cluster settings short-circuits regardless of backendRefs",
+			backendRefs:                  []gwapiv1.BackendObjectReference{serviceRef1},
+			hasRouteLevelClusterSettings: true,
+			want:                         true,
+		},
+		{
+			name:        "single backendRef is always compatible",
+			backendRefs: []gwapiv1.BackendObjectReference{fallbackRef},
+			want:        false,
+		},
+		{
+			name:              "multiple backendRefs with session persistence",
+			backendRefs:       []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
+			sessionPersistent: true,
+			want:              true,
+		},
+		{
+			name:        "multiple backendRefs with a fallback backend",
+			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, fallbackRef},
+			want:        true,
+		},
+		{
+			name:        "multiple plain backendRefs with ConsistentHash",
+			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
+			gatewayCtx:  gatewayCtx,
+			lbIndex:     consistentHashIdx,
+			want:        true,
+		},
+		{
+			name:        "multiple plain backendRefs with ConsistentHash but nil gatewayCtx",
+			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
+			gatewayCtx:  nil,
+			lbIndex:     consistentHashIdx,
+			want:        false,
+		},
+		{
+			name:        "multiple plain backendRefs, no incompatibility",
+			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
+			gatewayCtx:  gatewayCtx,
+			want:        false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{TranslatorContext: &TranslatorContext{
+				BackendMap:           map[types.NamespacedName]*egv1a1.Backend{{Namespace: "default", Name: "be-fallback"}: fallbackBackend},
+				BTPLoadBalancerIndex: tc.lbIndex,
+			}}
+			got := tr.mergeIncompatibleForRule(route, parentRef, ruleName, tc.backendRefs, tc.hasRouteLevelClusterSettings, tc.sessionPersistent, tc.gatewayCtx)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestGetOrCreateBackendCluster(t *testing.T) {
 	key := BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
 	ds1 := &ir.DestinationSetting{Name: "ds-1"}

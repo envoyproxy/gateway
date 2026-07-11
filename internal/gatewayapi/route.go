@@ -274,16 +274,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(httpRoute, parentRef, rule.Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 
-		hasFallbackBackend := false
+		backendRefs := make([]gwapiv1.BackendObjectReference, len(rule.BackendRefs))
 		for i := range rule.BackendRefs {
-			if t.isFallbackBackend(rule.BackendRefs[i].BackendObjectReference, NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())) {
-				hasFallbackBackend = true
-				break
-			}
+			backendRefs[i] = rule.BackendRefs[i].BackendObjectReference
 		}
-		splitIncompatible := len(rule.BackendRefs) > 1 && (rule.SessionPersistence != nil || hasFallbackBackend ||
-			gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(httpRoute.GetRouteType(), utils.NamespacedName(httpRoute), utils.NamespacedName(gatewayCtx.Gateway), parentRef.SectionName, rule.Name))
-		mergeIncompatible := hasRouteLevelClusterSettings || splitIncompatible
+		mergeIncompatible := t.mergeIncompatibleForRule(httpRoute, parentRef, rule.Name, backendRefs, hasRouteLevelClusterSettings, rule.SessionPersistence != nil, gatewayCtx)
 
 		for i := range rule.BackendRefs {
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())
@@ -657,6 +652,40 @@ func (t *Translator) isFallbackBackend(backendRef gwapiv1.BackendObjectReference
 	}
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	return backend != nil && ptr.Deref(backend.Spec.Fallback, false)
+}
+
+// mergeIncompatibleForRule reports whether a rule-level condition makes cluster deduplication
+// unsafe for any of this rule's backendRefs: route-level cluster settings, session persistence,
+// a fallback backend, or ConsistentHash load balancing.
+func (t *Translator) mergeIncompatibleForRule(
+	route RouteContext,
+	parentRef *RouteParentContext,
+	ruleName *gwapiv1.SectionName,
+	backendRefs []gwapiv1.BackendObjectReference,
+	hasRouteLevelClusterSettings bool,
+	sessionPersistent bool,
+	gatewayCtx *GatewayContext,
+) bool {
+	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
+	// cluster shared with other routes if merged.
+	if hasRouteLevelClusterSettings {
+		return true
+	}
+	if len(backendRefs) <= 1 {
+		return false
+	}
+	// Session persistence needs all of a rule's backends in one cluster to track affinity.
+	if sessionPersistent {
+		return true
+	}
+	// A fallback backend relies on Envoy's priority-based failover within a single cluster.
+	for _, ref := range backendRefs {
+		if t.isFallbackBackend(ref, NamespaceDerefOr(ref.Namespace, route.GetNamespace())) {
+			return true
+		}
+	}
+	// ConsistentHash needs the full combined backend pool, not per-identity split clusters.
+	return gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(route.GetRouteType(), utils.NamespacedName(route), utils.NamespacedName(gatewayCtx.Gateway), parentRef.SectionName, ruleName)
 }
 
 // backendClusterSettingName derives the DestinationSetting name for a backendRef: a merged
@@ -1246,16 +1275,11 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(grpcRoute, parentRef, rule.Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 
-		hasFallbackBackend := false
+		backendRefs := make([]gwapiv1.BackendObjectReference, len(rule.BackendRefs))
 		for i := range rule.BackendRefs {
-			if t.isFallbackBackend(rule.BackendRefs[i].BackendObjectReference, NamespaceDerefOr(rule.BackendRefs[i].Namespace, grpcRoute.GetNamespace())) {
-				hasFallbackBackend = true
-				break
-			}
+			backendRefs[i] = rule.BackendRefs[i].BackendObjectReference
 		}
-		splitIncompatible := len(rule.BackendRefs) > 1 && (hasFallbackBackend ||
-			gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(grpcRoute.GetRouteType(), utils.NamespacedName(grpcRoute), utils.NamespacedName(gatewayCtx.Gateway), parentRef.SectionName, rule.Name))
-		mergeIncompatible := hasRouteLevelClusterSettings || splitIncompatible
+		mergeIncompatible := t.mergeIncompatibleForRule(grpcRoute, parentRef, rule.Name, backendRefs, hasRouteLevelClusterSettings, false, gatewayCtx)
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i := range rule.BackendRefs {
