@@ -10458,6 +10458,40 @@ spec:
                 - InsecureSyntax
                 - Disabled
                 type: string
+              mergeBackends:
+                description: |-
+                  MergeBackends configures cluster deduplication: routes that reference the same backend
+                  share a single Envoy cluster instead of Envoy Gateway generating one cluster per route
+                  rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
+                  improves upstream connection pooling.
+
+                  This is an experimental optimization and is disabled when unset.
+                properties:
+                  enabled:
+                    default: false
+                    description: Enabled toggles whether cluster deduplication is
+                      considered at all. Defaults to false.
+                    type: boolean
+                  mode:
+                    default: Fallback
+                    description: |-
+                      Mode determines how backend cluster deduplication behaves when a route-targeted
+                      BackendTrafficPolicy would diverge from a shared backend's cluster-level configuration.
+
+                        - Fallback: a backendRef is merged into a shared cluster only when safe to do so;
+                          otherwise it falls back to a dedicated per-route cluster.
+                        - Force: always merges into a single shared cluster. Not supported yet - selecting this
+                          value is rejected.
+
+                      Defaults to Fallback.
+                    enum:
+                    - Fallback
+                    - Force
+                    type: string
+                    x-kubernetes-validations:
+                    - message: Force mode is not supported yet
+                      rule: self != 'Force'
+                type: object
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
