@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -536,47 +537,58 @@ func TestIsServiceHeadless(t *testing.T) {
 	}
 }
 
-func TestResolveBackendClusterName(t *testing.T) {
+func TestResolveBackendCluster(t *testing.T) {
 	newIdentity := func() *BackendClusterKey {
 		return &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
 	}
+	serviceBackendRef := gwapiv1.BackendObjectReference{Name: "service-1"}
+	emptyDS := &ir.DestinationSetting{}
+	newParentRef := func(sectionName string, port int32) *RouteParentContext {
+		pr := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{}}
+		if sectionName != "" {
+			pr.SectionName = SectionNamePtr(sectionName)
+		}
+		if port != 0 {
+			pr.Port = ptr.To(gwapiv1.PortNumber(port))
+		}
+		return pr
+	}
 
 	t.Run("nil gatewayCtx never merges", func(t *testing.T) {
-		tr := &Translator{MergeBackends: true}
-		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", newIdentity(), nil, nil, false, true, "", 0)
-		require.False(t, merge)
-		require.Equal(t, "route-scoped-name", name)
-		require.Equal(t, &BackendClusterKey{Name: "route-scoped-name"}, key)
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
+		cluster := tr.resolveBackendCluster("route-scoped-name", nil, newParentRef("", 0), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
+		require.False(t, cluster.Merge)
+		require.Equal(t, "route-scoped-name", cluster.Name)
+		require.Equal(t, &BackendClusterKey{Name: "route-scoped-name"}, cluster.Key)
 	})
 
 	t.Run("merge disabled falls back to gateway-scoped route name", func(t *testing.T) {
-		tr := &Translator{MergeBackends: false}
+		tr := &Translator{MergeBackends: false, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
-		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", newIdentity(), gwCtx, nil, false, true, "", 0)
-		require.False(t, merge)
-		require.Equal(t, "route-scoped-name", name)
-		require.Equal(t, &BackendClusterKey{GatewayIRKey: tr.getIRKey(gwCtx.Gateway), Name: "route-scoped-name"}, key)
+		cluster := tr.resolveBackendCluster("route-scoped-name", gwCtx, newParentRef("", 0), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
+		require.False(t, cluster.Merge)
+		require.Equal(t, "route-scoped-name", cluster.Name)
+		require.Equal(t, &BackendClusterKey{GatewayIRKey: tr.getIRKey(gwCtx.Gateway), Name: "route-scoped-name"}, cluster.Key)
 	})
 
 	t.Run("route-scoped key differs across gateways for the same rule (multi-parent route)", func(t *testing.T) {
-		tr := &Translator{MergeBackends: false}
+		tr := &Translator{MergeBackends: false, TranslatorContext: &TranslatorContext{}}
 		gwCtx1 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
 		gwCtx2 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-2"}}}
-		key1, _, _ := tr.resolveBackendClusterName("httproute/default/httproute-1/rule/0", newIdentity(), gwCtx1, nil, false, true, "", 0)
-		key2, _, _ := tr.resolveBackendClusterName("httproute/default/httproute-1/rule/0", newIdentity(), gwCtx2, nil, false, true, "", 0)
-		require.NotEqual(t, key1, key2, "the same route rule processed under two different parent gateways must not collide in BackendClusterMap")
+		cluster1 := tr.resolveBackendCluster("httproute/default/httproute-1/rule/0", gwCtx1, newParentRef("", 0), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
+		cluster2 := tr.resolveBackendCluster("httproute/default/httproute-1/rule/0", gwCtx2, newParentRef("", 0), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
+		require.NotEqual(t, cluster1.Key, cluster2.Key, "the same route rule processed under two different parent gateways must not collide in BackendClusterMap")
 	})
 
 	t.Run("route-scoped key differs across parentRefs on the same gateway (multi-listener route)", func(t *testing.T) {
-		tr := &Translator{MergeBackends: false}
+		tr := &Translator{MergeBackends: false, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
-		key1, _, _ := tr.resolveBackendClusterName("httproute/default/httproute-1/rule/0", newIdentity(), gwCtx, nil, false, true, "http-a", 0)
-		key2, _, _ := tr.resolveBackendClusterName("httproute/default/httproute-1/rule/0", newIdentity(), gwCtx, nil, false, true, "http-b", 0)
-		require.NotEqual(t, key1, key2, "the same rule attached to two listeners on one gateway must not collide in BackendClusterMap")
+		cluster1 := tr.resolveBackendCluster("httproute/default/httproute-1/rule/0", gwCtx, newParentRef("http-a", 0), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
+		cluster2 := tr.resolveBackendCluster("httproute/default/httproute-1/rule/0", gwCtx, newParentRef("http-b", 0), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
+		require.NotEqual(t, cluster1.Key, cluster2.Key, "the same rule attached to two listeners on one gateway must not collide in BackendClusterMap")
 	})
 
 	t.Run("route-scoped key across all combinations of sectionName/parentPort presence", func(t *testing.T) {
-		// A parentRef can specify SectionName only, Port only, both, or neither.
 		tests := []struct {
 			name      string
 			section1  string
@@ -600,14 +612,14 @@ func TestResolveBackendClusterName(t *testing.T) {
 		}
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				tr := &Translator{MergeBackends: false}
+				tr := &Translator{MergeBackends: false, TranslatorContext: &TranslatorContext{}}
 				gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
-				key1, _, _ := tr.resolveBackendClusterName("httproute/default/httproute-1/rule/0", newIdentity(), gwCtx, nil, false, true, tc.section1, tc.port1)
-				key2, _, _ := tr.resolveBackendClusterName("httproute/default/httproute-1/rule/0", newIdentity(), gwCtx, nil, false, true, tc.section2, tc.port2)
+				cluster1 := tr.resolveBackendCluster("httproute/default/httproute-1/rule/0", gwCtx, newParentRef(tc.section1, tc.port1), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
+				cluster2 := tr.resolveBackendCluster("httproute/default/httproute-1/rule/0", gwCtx, newParentRef(tc.section2, tc.port2), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
 				if tc.wantEqual {
-					require.Equal(t, key1, key2)
+					require.Equal(t, cluster1.Key, cluster2.Key)
 				} else {
-					require.NotEqual(t, key1, key2)
+					require.NotEqual(t, cluster1.Key, cluster2.Key)
 				}
 			})
 		}
@@ -617,29 +629,41 @@ func TestResolveBackendClusterName(t *testing.T) {
 		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
 		identity := newIdentity()
-		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", identity, gwCtx, nil, false, true, "", 0)
-		require.True(t, merge)
-		require.Equal(t, "backend/service/default/service-1/8080", name)
-		require.Equal(t, identity.Kind, key.Kind)
-		require.Equal(t, identity.Name, key.Name)
+		cluster := tr.resolveBackendCluster("route-scoped-name", gwCtx, newParentRef("", 0), nil, false, identity, serviceBackendRef, "default", emptyDS)
+		require.True(t, cluster.Merge)
+		require.Equal(t, "backend/service/default/service-1/8080", cluster.Name)
+		require.Equal(t, identity.Kind, cluster.Key.Kind)
+		require.Equal(t, identity.Name, cluster.Key.Name)
 	})
 
-	t.Run("route-level cluster settings excludes even when routing type matches", func(t *testing.T) {
+	t.Run("merge-incompatible excludes even when routing type matches", func(t *testing.T) {
 		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
-		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", newIdentity(), gwCtx, nil, true, true, "", 0)
-		require.False(t, merge)
-		require.Equal(t, "route-scoped-name", name)
-		require.Equal(t, &BackendClusterKey{GatewayIRKey: tr.getIRKey(gwCtx.Gateway), Name: "route-scoped-name"}, key)
+		cluster := tr.resolveBackendCluster("route-scoped-name", gwCtx, newParentRef("", 0), nil, true, newIdentity(), serviceBackendRef, "default", emptyDS)
+		require.False(t, cluster.Merge)
+		require.Equal(t, "route-scoped-name", cluster.Name)
+		require.Equal(t, &BackendClusterKey{GatewayIRKey: tr.getIRKey(gwCtx.Gateway), Name: "route-scoped-name"}, cluster.Key)
 	})
 
 	t.Run("dynamic resolver backend never merges", func(t *testing.T) {
-		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
+		dynamicResolverType := egv1a1.BackendTypeDynamicResolver
+		dynamicBackendRef := gwapiv1.BackendObjectReference{
+			Group: GroupPtr(egv1a1.GroupName),
+			Kind:  KindPtr(egv1a1.KindBackend),
+			Name:  "be-dynamic",
+		}
+		backendMap := map[types.NamespacedName]*egv1a1.Backend{
+			{Namespace: "default", Name: "be-dynamic"}: {
+				ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default"},
+				Spec:       egv1a1.BackendSpec{Type: &dynamicResolverType},
+			},
+		}
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{BackendMap: backendMap}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
-		key, name, merge := tr.resolveBackendClusterName("route-scoped-name", newIdentity(), gwCtx, nil, false, false, "", 0)
-		require.False(t, merge)
-		require.Equal(t, "route-scoped-name", name)
-		require.Equal(t, &BackendClusterKey{GatewayIRKey: tr.getIRKey(gwCtx.Gateway), Name: "route-scoped-name"}, key)
+		cluster := tr.resolveBackendCluster("route-scoped-name", gwCtx, newParentRef("", 0), nil, false, newIdentity(), dynamicBackendRef, "default", emptyDS)
+		require.False(t, cluster.Merge)
+		require.Equal(t, "route-scoped-name", cluster.Name)
+		require.Equal(t, &BackendClusterKey{GatewayIRKey: tr.getIRKey(gwCtx.Gateway), Name: "route-scoped-name"}, cluster.Key)
 	})
 }
 
@@ -744,19 +768,17 @@ func TestGetOrCreateBackendCluster(t *testing.T) {
 func TestBackendClusterKeyProtocolDivergence(t *testing.T) {
 	tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
 	gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+	parentRef := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{}}
+	serviceBackendRef := gwapiv1.BackendObjectReference{Name: "service-1"}
 	identity := &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
 
-	key1, name1, merge1 := tr.resolveBackendClusterName("httproute-dest", identity, gwCtx, nil, false, true, "", 0)
-	require.True(t, merge1)
-	key1.Protocol = ir.HTTP
-	name1 = irBackendClusterName(key1.Kind, key1.Namespace, key1.Name, key1.Port, ir.HTTP)
+	cluster1 := tr.resolveBackendCluster("httproute-dest", gwCtx, parentRef, nil, false, identity, serviceBackendRef, "default", &ir.DestinationSetting{Protocol: ir.HTTP})
+	require.True(t, cluster1.Merge)
 
 	identity2 := &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
-	key2, name2, merge2 := tr.resolveBackendClusterName("grpcroute-dest", identity2, gwCtx, nil, false, true, "", 0)
-	require.True(t, merge2)
-	key2.Protocol = ir.GRPC
-	name2 = irBackendClusterName(key2.Kind, key2.Namespace, key2.Name, key2.Port, ir.GRPC)
+	cluster2 := tr.resolveBackendCluster("grpcroute-dest", gwCtx, parentRef, nil, false, identity2, serviceBackendRef, "default", &ir.DestinationSetting{Protocol: ir.GRPC})
+	require.True(t, cluster2.Merge)
 
-	require.NotEqual(t, *key1, *key2, "an HTTPRoute and a GRPCRoute targeting the same backend must not share a BackendClusterKey")
-	require.NotEqual(t, name1, name2, "an HTTPRoute and a GRPCRoute targeting the same backend must not resolve to the same cluster name")
+	require.NotEqual(t, *cluster1.Key, *cluster2.Key, "an HTTPRoute and a GRPCRoute targeting the same backend must not share a BackendClusterKey")
+	require.NotEqual(t, cluster1.Name, cluster2.Name, "an HTTPRoute and a GRPCRoute targeting the same backend must not resolve to the same cluster name")
 }

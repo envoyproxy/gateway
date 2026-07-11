@@ -136,25 +136,27 @@ type Translator struct {
 }
 
 // shouldMergeBackend decides whether a specific backend participates in cluster deduplication.
-// It reflects the global Enabled flag, refined by a routing-type check: merging is skipped for a
-// backendRef if this rule's effective RoutingType diverges from the gateway's baseline, or a
-// targeted BackendTrafficPolicy sets any backend-cluster-scoped setting.
-// TODO: once a selector is added, this also becomes a per-backend identity match.
 func (t *Translator) shouldMergeBackend(
-	gwNN types.NamespacedName,
-	envoyProxy *egv1a1.EnvoyProxy,
+	gatewayCtx *GatewayContext,
 	btpRoutingType *egv1a1.RoutingType,
-	hasRouteLevelClusterSettings bool,
+	mergeIncompatible bool,
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+	ds *ir.DestinationSetting,
 ) bool {
+	if !t.isMergeableBackendKind(backendRef, backendNamespace) {
+		return false
+	}
+	if mergeIncompatible {
+		return false
+	}
 	if !t.MergeBackends {
 		return false
 	}
-	if hasRouteLevelClusterSettings {
-		return false
-	}
 
-	baseline := t.IsServiceRouting(envoyProxy, t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN))
-	effective := t.IsServiceRouting(envoyProxy, btpRoutingType)
+	gwNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
+	baseline := t.IsServiceRouting(gatewayCtx.envoyProxy, t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN))
+	effective := t.IsServiceRouting(gatewayCtx.envoyProxy, btpRoutingType)
 	return baseline == effective
 }
 
