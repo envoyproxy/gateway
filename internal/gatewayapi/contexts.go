@@ -891,6 +891,7 @@ type TranslatorContext struct {
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
+	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 }
 

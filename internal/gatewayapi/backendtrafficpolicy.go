@@ -354,6 +354,125 @@ func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
 	return false
 }
 
+// BTPLoadBalancerIndex resolves, with the same routeRule > route > listener > gateway
+// precedence as BTPRoutingTypeIndex, whether a target's effective LoadBalancer type is
+// ConsistentHash. Unlike BTPClusterSettingsIndex, a gateway-level match counts here: the risk
+// ConsistentHash poses to MergeBackends is splitting one rule's weighted backends across
+// clusters, not divergence between routes, so it applies regardless of which level set it.
+type BTPLoadBalancerIndex struct {
+	routeRuleLevel map[btpRoutingKey]bool
+	routeLevel     map[btpRoutingKey]bool
+	listenerLevel  map[btpRoutingKey]bool
+	gatewayLevel   map[btpRoutingKey]bool
+}
+
+func hasBTPConsistentHash(btps []*egv1a1.BackendTrafficPolicy) bool {
+	for _, btp := range btps {
+		if btp.Spec.LoadBalancer != nil && btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType {
+			return true
+		}
+	}
+	return false
+}
+
+// BuildBTPLoadBalancerIndex builds a pre-computed index of which route-rule/route/listener/
+// gateway targets have a BackendTrafficPolicy setting LoadBalancer to ConsistentHash.
+func BuildBTPLoadBalancerIndex(
+	btps []*egv1a1.BackendTrafficPolicy,
+	routes []client.Object,
+	gateways []*GatewayContext,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	namespaceLookup func(string) *corev1.Namespace,
+) *BTPLoadBalancerIndex {
+	idx := &BTPLoadBalancerIndex{
+		routeRuleLevel: make(map[btpRoutingKey]bool),
+		routeLevel:     make(map[btpRoutingKey]bool),
+		listenerLevel:  make(map[btpRoutingKey]bool),
+		gatewayLevel:   make(map[btpRoutingKey]bool),
+	}
+
+	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
+	allTargets = append(allTargets, routes...)
+	for _, gw := range gateways {
+		allTargets = append(allTargets, gw)
+	}
+
+	for _, btp := range btps {
+		if btp.Spec.LoadBalancer == nil || btp.Spec.LoadBalancer.Type != egv1a1.ConsistentHashLoadBalancerType {
+			continue
+		}
+		refs := resolvePolicyTargets(
+			btp.Spec.PolicyTargetReferences,
+			allTargets,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
+			btp.Namespace,
+			namespaceLookup,
+		)
+		for _, ref := range refs {
+			kind := string(ref.Kind)
+			key := btpRoutingKey{
+				Kind:        kind,
+				Namespace:   btp.Namespace,
+				Name:        string(ref.Name),
+				SectionName: string(ptr.Deref(ref.SectionName, "")),
+			}
+			if kind == resource.KindGateway {
+				if ref.SectionName != nil {
+					idx.listenerLevel[key] = true
+				} else {
+					idx.gatewayLevel[key] = true
+				}
+			} else {
+				if ref.SectionName != nil {
+					idx.routeRuleLevel[key] = true
+				} else {
+					idx.routeLevel[key] = true
+				}
+			}
+		}
+	}
+
+	return idx
+}
+
+// IsConsistentHash reports whether the effective LoadBalancer for the given target resolves to
+// ConsistentHash, checking routeRule > route > listener > gateway in priority order.
+func (idx *BTPLoadBalancerIndex) IsConsistentHash(
+	routeKind gwapiv1.Kind,
+	routeNN types.NamespacedName,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	routeRuleName *gwapiv1.SectionName,
+) bool {
+	if idx == nil {
+		return false
+	}
+
+	if routeRuleName != nil {
+		key := btpRoutingKey{Kind: string(routeKind), Namespace: routeNN.Namespace, Name: routeNN.Name, SectionName: string(*routeRuleName)}
+		if idx.routeRuleLevel[key] {
+			return true
+		}
+	}
+
+	routeKey := btpRoutingKey{Kind: string(routeKind), Namespace: routeNN.Namespace, Name: routeNN.Name}
+	if idx.routeLevel[routeKey] {
+		return true
+	}
+
+	if listenerName != nil {
+		listenerKey := btpRoutingKey{Kind: resource.KindGateway, Namespace: gatewayNN.Namespace, Name: gatewayNN.Name, SectionName: string(*listenerName)}
+		if idx.listenerLevel[listenerKey] {
+			return true
+		}
+	}
+
+	gatewayKey := btpRoutingKey{Kind: resource.KindGateway, Namespace: gatewayNN.Namespace, Name: gatewayNN.Name}
+	return idx.gatewayLevel[gatewayKey]
+}
+
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)

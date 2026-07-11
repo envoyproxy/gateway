@@ -27,6 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
@@ -273,7 +274,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(httpRoute, parentRef, rule.Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 
-		splitIncompatible := len(rule.BackendRefs) > 1 && rule.SessionPersistence != nil
+		splitIncompatible := len(rule.BackendRefs) > 1 && (rule.SessionPersistence != nil ||
+			gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(httpRoute.GetRouteType(), utils.NamespacedName(httpRoute), utils.NamespacedName(gatewayCtx.Gateway), parentRef.SectionName, rule.Name))
 
 		for i := range rule.BackendRefs {
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())
@@ -1194,12 +1196,18 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(grpcRoute, parentRef, rule.Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 
+		splitIncompatible := gatewayCtx != nil && len(rule.BackendRefs) > 1 &&
+			t.BTPLoadBalancerIndex.IsConsistentHash(grpcRoute.GetRouteType(), utils.NamespacedName(grpcRoute), utils.NamespacedName(gatewayCtx.Gateway), parentRef.SectionName, rule.Name)
+
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i := range rule.BackendRefs {
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, grpcRoute.GetNamespace())
 			backendClusterIdentity := backendClusterIdentity(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
 			mergeableKind := t.isMergeableBackendKind(rule.BackendRefs[i].BackendObjectReference, backendNamespace)
 			backendClusterKey, backendClusterName, merge := t.resolveBackendClusterName(destName, &backendClusterIdentity, gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings, mergeableKind, string(ptr.Deref(parentRef.SectionName, "")), ptr.Deref(parentRef.Port, 0))
+			if splitIncompatible {
+				backendClusterKey, backendClusterName, merge = &BackendClusterKey{Name: destName}, destName, false
+			}
 			settingName := backendClusterSettingName(destName, i, backendClusterName, merge)
 
 			backendRefCtx := BackendRefWithFilters{

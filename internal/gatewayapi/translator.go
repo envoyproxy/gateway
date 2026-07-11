@@ -333,6 +333,17 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		)
 	}
 
+	t.BTPLoadBalancerIndex = nil
+	if hasBTPConsistentHash(resources.BackendTrafficPolicies) {
+		t.BTPLoadBalancerIndex = BuildBTPLoadBalancerIndex(
+			resources.BackendTrafficPolicies,
+			routesToObjects(resources),
+			acceptedGateways,
+			resources.ReferenceGrants,
+			t.GetNamespace,
+		)
+	}
+
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
 
