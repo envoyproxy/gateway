@@ -142,7 +142,8 @@ xdsIR:
       json:
       - path: /dev/stdout
     backends:
-    - metadata:
+    - merged: true
+      metadata:
         kind: HTTPRoute
         name: http-route-1
         namespace: default

@@ -173,7 +173,8 @@ xdsIR:
       json:
       - path: /dev/stdout
     backends:
-    - metadata:
+    - merged: true
+      metadata:
         kind: TCPRoute
         name: tcproute-1
         namespace: default

@@ -759,6 +759,7 @@ func (t *Translator) getOrCreateBackendCluster(
 		Name:     clusterName,
 		Settings: []*ir.DestinationSetting{ds},
 		Metadata: metadata,
+		Merged:   merge,
 	}
 	t.BackendClusterMap[*key] = backendCluster
 	if gwIR != nil {

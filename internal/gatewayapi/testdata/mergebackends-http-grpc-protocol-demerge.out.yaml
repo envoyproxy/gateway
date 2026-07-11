@@ -145,7 +145,8 @@ xdsIR:
       json:
       - path: /dev/stdout
     backends:
-    - metadata:
+    - merged: true
+      metadata:
         kind: HTTPRoute
         name: http-route-1
         namespace: default
@@ -163,7 +164,8 @@ xdsIR:
         name: backend/service/default/service-1/8080/http
         protocol: HTTP
         weight: 1
-    - metadata:
+    - merged: true
+      metadata:
         kind: GRPCRoute
         name: grpc-route-1
         namespace: default

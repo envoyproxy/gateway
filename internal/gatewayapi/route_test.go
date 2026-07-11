@@ -1006,6 +1006,18 @@ func TestGetOrCreateBackendCluster(t *testing.T) {
 		require.Same(t, first, second)
 		require.Equal(t, []*ir.DestinationSetting{ds1, ds2}, second.Settings)
 	})
+
+	t.Run("cache miss records Merged from the merge argument", func(t *testing.T) {
+		tr := &Translator{TranslatorContext: &TranslatorContext{BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{}}}
+		gwIR := &ir.Xds{}
+		mergedKey := BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-2", Port: 8080}
+		bc := tr.getOrCreateBackendCluster(gwIR, &mergedKey, "backend/service/default/service-2/8080", true, ds1, nil)
+		require.True(t, bc.Merged)
+
+		routeScopedKey := BackendClusterKey{Name: "route-scoped-name-2"}
+		bc2 := tr.getOrCreateBackendCluster(gwIR, &routeScopedKey, "route-scoped-name-2", false, ds2, nil)
+		require.False(t, bc2.Merged)
+	})
 }
 
 func TestBackendClusterKeyProtocolDivergence(t *testing.T) {

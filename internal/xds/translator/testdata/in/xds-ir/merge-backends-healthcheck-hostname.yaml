@@ -1,0 +1,50 @@
+# Two routes with different hostnames share one merged BackendCluster that has a
+# gateway-level active HTTP health check with no explicit Host configured. The
+# health check must not fall back to either route's hostname, since the cluster
+# is not owned by any single route.
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "route-a.example.com"
+  - "route-b.example.com"
+  routes:
+  - name: "route-a"
+    hostname: "route-a.example.com"
+    traffic:
+      healthCheck:
+        active:
+          timeout: 1s
+          interval: 5s
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          http:
+            path: "/healthz"
+    destination:
+      name: "shared-dest"
+      backendClusterRefs:
+      - name: "shared-cluster"
+  - name: "route-b"
+    hostname: "route-b.example.com"
+    traffic:
+      healthCheck:
+        active:
+          timeout: 1s
+          interval: 5s
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          http:
+            path: "/healthz"
+    destination:
+      name: "shared-dest"
+      backendClusterRefs:
+      - name: "shared-cluster"
+backends:
+- name: "shared-cluster"
+  merged: true
+  settings:
+  - name: "shared-cluster/backend/0"
+    endpoints:
+    - host: "1.2.3.4"
+      port: 50000
