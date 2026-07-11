@@ -109,21 +109,21 @@ backends:
     - host: "1.2.3.4"
       port: 8080
     name: "api-dest/backend/0"
-  # Test 2: Path exact match
+# Test 2: Path exact match
 - name: "admin-dest"
   settings:
   - endpoints:
     - host: "1.2.3.4"
       port: 8080
     name: "admin-dest/backend/0"
-  # Test 3: Multiple path rules
+# Test 3: Multiple path rules
 - name: "versioned-api-dest"
   settings:
   - endpoints:
     - host: "1.2.3.4"
       port: 8080
     name: "versioned-api-dest/backend/0"
-  # Test 4: Path match with header match combination
+# Test 4: Path match with header match combination
 - name: "premium-dest"
   settings:
   - endpoints:

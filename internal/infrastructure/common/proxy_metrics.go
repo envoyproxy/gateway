@@ -13,7 +13,8 @@ import (
 // ConvertResolvedMetricSinks converts IR metric sinks to bootstrap format.
 func ConvertResolvedMetricSinks(irSinks []ir.ResolvedMetricSink) []bootstrap.MetricSink {
 	result := make([]bootstrap.MetricSink, 0, len(irSinks))
-	for _, sink := range irSinks {
+	for i := range irSinks {
+		sink := &irSinks[i]
 		if len(sink.Backends) == 0 || len(sink.Backends[0].Settings) == 0 || len(sink.Backends[0].Settings[0].Endpoints) == 0 {
 			continue
 		}

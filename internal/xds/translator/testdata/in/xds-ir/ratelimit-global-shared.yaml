@@ -166,7 +166,7 @@ backends:
             port: 50000
         name: "fourth-route-dest/backend/0"
 
-      # fifth-route: mixed shared+non-shared rules with cost — verifies per-domain TypedPerFilterConfig split
+  # fifth-route: mixed shared+non-shared rules with cost — verifies per-domain TypedPerFilterConfig split
   - name: "fifth-route-dest"
     settings:
       - endpoints:

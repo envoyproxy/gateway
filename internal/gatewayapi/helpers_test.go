@@ -1574,6 +1574,7 @@ func requirePolicyScopesEqual(t *testing.T, actual sets.Set[policyScope], expect
 		require.True(t, actual.Has(scope), "expected scope %v", scope)
 	}
 }
+
 func TestIrBackendClusterName(t *testing.T) {
 	tests := []struct {
 		name      string

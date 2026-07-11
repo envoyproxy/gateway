@@ -149,35 +149,35 @@ backends:
     - host: "1.2.3.4"
       port: 8080
     name: "post-dest/backend/0"
-  # Test 2: GET method match
+# Test 2: GET method match
 - name: "get-dest"
   settings:
   - endpoints:
     - host: "1.2.3.4"
       port: 8080
     name: "get-dest/backend/0"
-  # Test 3: PUT method match
+# Test 3: PUT method match
 - name: "put-dest"
   settings:
   - endpoints:
     - host: "1.2.3.4"
       port: 8080
     name: "put-dest/backend/0"
-  # Test 4: DELETE method match
+# Test 4: DELETE method match
 - name: "delete-dest"
   settings:
   - endpoints:
     - host: "1.2.3.4"
       port: 8080
     name: "delete-dest/backend/0"
-  # Test 5: Multiple method rules
+# Test 5: Multiple method rules
 - name: "multi-method-dest"
   settings:
   - endpoints:
     - host: "1.2.3.4"
       port: 8080
     name: "multi-method-dest/backend/0"
-  # Test 6: Method with header match combination
+# Test 6: Method with header match combination
 - name: "premium-post-dest"
   settings:
   - endpoints:
