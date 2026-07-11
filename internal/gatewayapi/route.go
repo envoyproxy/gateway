@@ -585,6 +585,46 @@ func (t *Translator) resolveBackendCluster(
 	}
 }
 
+// shouldMergeBackend decides whether a specific backend participates in cluster deduplication.
+func (t *Translator) shouldMergeBackend(
+	gatewayCtx *GatewayContext,
+	btpRoutingType *egv1a1.RoutingType,
+	mergeIncompatible bool,
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+	ds *ir.DestinationSetting,
+) bool {
+	// Custom/extension-provided and dynamic-resolver backends can never safely share a merged cluster.
+	if !t.isMergeableBackendKind(backendRef, backendNamespace) {
+		return false
+	}
+	// A rule-wide reason (route-level cluster settings, session persistence, fallback backend,
+	// ConsistentHash) already makes merging unsafe for every backendRef in this rule.
+	if mergeIncompatible {
+		return false
+	}
+	// CredentialInjection is baked into the shared cluster (CDS), not the per-route destination, so
+	// a backendRef carrying it must never share a cluster with another differently-configured one.
+	if ds.Filters != nil && ds.Filters.CredentialInjection != nil {
+		return false
+	}
+	if !t.MergeBackends {
+		return false
+	}
+
+	return !t.routingTypeDivergesForRule(gatewayCtx, btpRoutingType)
+}
+
+// routingTypeDivergesForRule reports whether this rule's effective RoutingType differs from the
+// gateway's baseline, meaning merging would leak the baseline's routing behavior into a shared
+// cluster whose rule resolved it differently.
+func (t *Translator) routingTypeDivergesForRule(gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType) bool {
+	gwNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
+	baseline := t.IsServiceRouting(gatewayCtx.envoyProxy, t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN))
+	effective := t.IsServiceRouting(gatewayCtx.envoyProxy, btpRoutingType)
+	return baseline != effective
+}
+
 // processBackendRef processes backendRefContext into a DestinationSetting, resolves its backend
 // cluster key, name, and merge eligibility, and sets ds.Name accordingly — the full sequence every
 // caller needs for a single backendRef. Callers that must never merge (e.g. mirror backends) pass

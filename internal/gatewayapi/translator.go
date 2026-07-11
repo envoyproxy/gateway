@@ -135,36 +135,6 @@ type Translator struct {
 	Logger logging.Logger
 }
 
-// shouldMergeBackend decides whether a specific backend participates in cluster deduplication.
-func (t *Translator) shouldMergeBackend(
-	gatewayCtx *GatewayContext,
-	btpRoutingType *egv1a1.RoutingType,
-	mergeIncompatible bool,
-	backendRef gwapiv1.BackendObjectReference,
-	backendNamespace string,
-	ds *ir.DestinationSetting,
-) bool {
-	if !t.isMergeableBackendKind(backendRef, backendNamespace) {
-		return false
-	}
-	if mergeIncompatible {
-		return false
-	}
-	// CredentialInjection is baked into the shared cluster (CDS), not the per-route destination, so
-	// a backendRef carrying it must never share a cluster with another differently-configured one.
-	if ds.Filters != nil && ds.Filters.CredentialInjection != nil {
-		return false
-	}
-	if !t.MergeBackends {
-		return false
-	}
-
-	gwNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
-	baseline := t.IsServiceRouting(gatewayCtx.envoyProxy, t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN))
-	effective := t.IsServiceRouting(gatewayCtx.envoyProxy, btpRoutingType)
-	return baseline == effective
-}
-
 type TranslateResult struct {
 	resource.Resources
 	XdsIR   resource.XdsIRMap   `json:"xdsIR" yaml:"xdsIR"`

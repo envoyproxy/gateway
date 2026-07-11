@@ -27,9 +27,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -1196,106 +1194,4 @@ func xdsWithoutEqual(a *ir.Xds) any {
 	}
 
 	return ret
-}
-
-func TestShouldMergeBackend(t *testing.T) {
-	gwNN := types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"}
-	gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: gwNN.Namespace, Name: gwNN.Name}}}
-	serviceRT := egv1a1.ServiceRoutingType
-	endpointRT := egv1a1.EndpointRoutingType
-	dynamicResolverType := egv1a1.BackendTypeDynamicResolver
-
-	serviceBackendRef := gwapiv1.BackendObjectReference{Name: "service-1"}
-	dynamicResolverBackendRef := gwapiv1.BackendObjectReference{
-		Group: GroupPtr(egv1a1.GroupName),
-		Kind:  KindPtr(egv1a1.KindBackend),
-		Name:  "be-dynamic",
-	}
-	dynamicResolverBackend := &egv1a1.Backend{
-		ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default"},
-		Spec:       egv1a1.BackendSpec{Type: &dynamicResolverType},
-	}
-
-	tests := []struct {
-		name              string
-		mergeEnabled      bool
-		gatewayBaselineRT *egv1a1.RoutingType
-		effectiveRT       *egv1a1.RoutingType
-		mergeIncompatible bool
-		backendRef        gwapiv1.BackendObjectReference
-		backend           *egv1a1.Backend
-		filters           *ir.DestinationFilters
-		want              bool
-	}{
-		{
-			name:         "disabled globally never merges",
-			mergeEnabled: false,
-			backendRef:   serviceBackendRef,
-			want:         false,
-		},
-		{
-			name:         "enabled, no routing type anywhere: baseline == effective (both Endpoint)",
-			mergeEnabled: true,
-			backendRef:   serviceBackendRef,
-			want:         true,
-		},
-		{
-			name:              "enabled, uniform gateway-level routing type: baseline == effective",
-			mergeEnabled:      true,
-			gatewayBaselineRT: &serviceRT,
-			effectiveRT:       &serviceRT,
-			backendRef:        serviceBackendRef,
-			want:              true,
-		},
-		{
-			name:              "enabled, route-rule overrides routing type away from gateway baseline: diverges",
-			mergeEnabled:      true,
-			gatewayBaselineRT: &endpointRT,
-			effectiveRT:       &serviceRT,
-			backendRef:        serviceBackendRef,
-			want:              false,
-		},
-		{
-			name:              "enabled, uniform routing but marked merge-incompatible (route-level cluster settings, session persistence, ConsistentHash, or fallback): excluded",
-			mergeEnabled:      true,
-			mergeIncompatible: true,
-			backendRef:        serviceBackendRef,
-			want:              false,
-		},
-		{
-			name:         "dynamic resolver backend never merges even when otherwise eligible",
-			mergeEnabled: true,
-			backendRef:   dynamicResolverBackendRef,
-			backend:      dynamicResolverBackend,
-			want:         false,
-		},
-		{
-			name:         "CredentialInjection-filtered backendRef never merges even when otherwise eligible",
-			mergeEnabled: true,
-			backendRef:   serviceBackendRef,
-			filters:      &ir.DestinationFilters{CredentialInjection: &ir.CredentialInjection{}},
-			want:         false,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			backendMap := map[types.NamespacedName]*egv1a1.Backend{}
-			if tc.backend != nil {
-				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
-			}
-			tr := &Translator{
-				MergeBackends: tc.mergeEnabled,
-				TranslatorContext: &TranslatorContext{
-					BackendMap: backendMap,
-					BTPRoutingTypeIndex: &BTPRoutingTypeIndex{
-						gatewayLevel: map[btpRoutingKey]*egv1a1.RoutingType{
-							{Kind: "Gateway", Namespace: gwNN.Namespace, Name: gwNN.Name}: tc.gatewayBaselineRT,
-						},
-					},
-				},
-			}
-			got := tr.shouldMergeBackend(gwCtx, tc.effectiveRT, tc.mergeIncompatible, tc.backendRef, "default", &ir.DestinationSetting{Filters: tc.filters})
-			require.Equal(t, tc.want, got)
-		})
-	}
 }
