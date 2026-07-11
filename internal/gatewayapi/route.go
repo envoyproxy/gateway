@@ -316,6 +316,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			if merge {
 				backendClusterKey.Protocol = ds.Protocol
 				backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
+				ds.Name = backendClusterName
 			}
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight == 0 {
@@ -1228,6 +1229,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			if merge {
 				backendClusterKey.Protocol = ds.Protocol
 				backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
+				ds.Name = backendClusterName
 			}
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight == 0 {
@@ -1685,6 +1687,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				if merge {
 					backendClusterKey.Protocol = ds.Protocol
 					backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
+					ds.Name = backendClusterName
 				}
 				// skip backendRefs with weight 0 as they do not affect the traffic distribution
 				if ds.Weight != nil && *ds.Weight > 0 {
@@ -1878,6 +1881,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			if merge {
 				backendClusterKey.Protocol = ds.Protocol
 				backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
+				ds.Name = backendClusterName
 			}
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
@@ -2042,6 +2046,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			if merge {
 				backendClusterKey.Protocol = ds.Protocol
 				backendClusterName = irBackendClusterName(backendClusterKey.Kind, backendClusterKey.Namespace, backendClusterKey.Name, backendClusterKey.Port, ds.Protocol)
+				ds.Name = backendClusterName
 			}
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {

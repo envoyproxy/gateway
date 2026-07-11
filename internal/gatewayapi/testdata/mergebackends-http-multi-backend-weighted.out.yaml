@@ -161,7 +161,7 @@ xdsIR:
           name: service-1
           namespace: default
           sectionName: "8080"
-        name: backend/service/default/service-1/8080
+        name: backend/service/default/service-1/8080/http
         protocol: HTTP
         weight: 60
     - metadata:
@@ -179,7 +179,7 @@ xdsIR:
           name: service-2
           namespace: default
           sectionName: "8080"
-        name: backend/service/default/service-2/8080
+        name: backend/service/default/service-2/8080/http
         protocol: HTTP
         weight: 40
     - metadata:
