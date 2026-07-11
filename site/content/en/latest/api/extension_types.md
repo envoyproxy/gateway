@@ -308,7 +308,8 @@ _Appears in:_
 | `name` | _string_ |  false  |  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action defines the action to be taken if the rule matches. |
 | `operation` | _[Operation](#operation)_ |  false  |  | Operation specifies the operation of a request, such as HTTP methods.<br />If not specified, all operations are matched on. |
-| `principal` | _[Principal](#principal)_ |  true  |  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
+| `principal` | _[Principal](#principal)_ |  false  |  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
+| `cel` | _[CELExpression](#celexpression)_ |  false  |  | CEL specifies a Common Expression Language expression to evaluate for the<br />request. If specified, the expression must evaluate to true for the rule to match.<br />The expression can use Envoy attributes exposed to the CEL runtime.<br />Request attributes, such as request.path, request.url_path, request.host,<br />request.scheme, request.method, request.headers, and request.query, are<br />generally available during authorization. Connection attributes, such as<br />source.address, source.port, destination.address, destination.port,<br />connection.mtls, and connection.requested_server_name, may also be used.<br />Dynamic metadata and filter state produced by earlier filters may also be<br />available through attributes such as metadata and filter_state.<br />Response attributes are only available after the request completes and<br />should not be used for authorization decisions.<br />For more details, see:<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes<br />The rule matches only when the expression evaluates to a boolean true.<br />Non-boolean results, false, null, and CEL evaluation errors are treated as<br />no match.<br />Examples:<br />`request.headers['x-tenant'] == 'team-a'`<br />`request.method == 'POST' && request.path.startsWith('/admin')` |
 
 
 #### BackOffPolicy
@@ -521,7 +522,8 @@ _Appears in:_
 | `caCertificateRefs` | _[LocalObjectReference](#localobjectreference) array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
 | `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
 | `insecureSkipVerify` | _boolean_ |  false  | false | InsecureSkipVerify indicates whether the upstream's certificate verification<br />should be skipped. Defaults to "false". |
-| `sni` | _[PreciseHostname](#precisehostname)_ |  false  |  | SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.<br />Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:<br />1. Backend resources that do not set SNI, or<br />2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them<br />When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence<br />over this value. |
+| `sni` | _[PreciseHostname](#precisehostname)_ |  false  |  | SNI specifies the fixed SNI value used when establishing an upstream TLS connection to the backend.<br />Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:<br />1. Backend resources that do not set SNI, or<br />2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them<br />If a BackendTLSPolicy is attached to the Backend resource, the BackendTLSPolicy's validation.hostname<br />value takes precedence over this field.<br />If no BackendTLSPolicy validation.hostname applies and both this field and AutoSNIFromEndpointHostname<br />are unset, Envoy Gateway configures Envoy to set the upstream SNI from the downstream HTTP host/authority header. |
+| `autoSNIFromEndpointHostname` | _boolean_ |  false  |  | AutoSNIFromEndpointHostname indicates whether the upstream endpoint's hostname should be used as the SNI value<br />when establishing a TLS connection to the backend.<br />This uses the resolved hostname of the upstream endpoint (e.g., from the Backend Endpoints list),<br />rather than a static value.<br />Mutually exclusive with SNI. When a BackendTLSPolicy is attached, its Hostname value takes<br />precedence and AutoSNIFromEndpointHostname is ignored. |
 
 
 #### BackendTelemetry
@@ -792,6 +794,17 @@ _Appears in:_
 
 
 
+#### CELExpression
+
+_Underlying type:_ _string_
+
+CELExpression specifies a CEL expression.
+
+_Appears in:_
+- [AuthorizationRule](#authorizationrule)
+
+
+
 #### CIDR
 
 _Underlying type:_ _string_
@@ -882,6 +895,8 @@ _Appears in:_
 
 ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 
+Exactly one of XForwardedFor, CustomHeader, or DirectSourceIP must be set.
+
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
@@ -889,6 +904,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  |  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  |  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
+| `directSourceIP` | _[DirectSourceIPSettings](#directsourceipsettings)_ |  false  |  | DirectSourceIP configures the geoip filter to use the downstream connection<br />source address (the TCP peer of the connection terminated by Envoy) as the client IP.<br />Use this in L4-transparent topologies where a load balancer preserves the original<br />client source IP at TCP level and does not populate XFF or a custom header — for<br />example, AWS NLB with target-type=instance + externalTrafficPolicy=Local, or<br />Azure Standard Load Balancer.<br />Mutually exclusive with XForwardedFor and CustomHeader. |
 
 
 #### ClientIPGeoLocation
@@ -1424,6 +1440,19 @@ _Appears in:_
 | `IPv4Preferred` | IPv4PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback<br />to a lookup for addresses in the IPv6 family.<br /> | 
 | `IPv6Preferred` | IPv6PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback<br />to a lookup for addresses in the IPv4 family.<br /> | 
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
+
+
+#### DirectSourceIPSettings
+
+
+
+DirectSourceIPSettings configures client IP detection from the downstream
+connection source address. It currently has no fields; its presence opts the listener
+into using the TCP peer address as the client IP.
+
+_Appears in:_
+- [ClientIPDetectionSettings](#clientipdetectionsettings)
+
 
 
 #### DynamicModule
@@ -2302,6 +2331,7 @@ _Appears in:_
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when failing to call the external processor.<br />If FailOpen is set to true, the system bypasses the ExtProc extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the ExtProc extension will also be bypassed if the configuration is invalid. |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  |  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 | `metadata` | _[ExtProcMetadata](#extprocmetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `statusOnError` | _integer_ |  false  |  | Sets the HTTP status that is returned to the client when the external processor returns an error<br />or cannot be reached. Defaults to 500 Internal Server Error.<br />Only 4xx and 5xx status codes are supported. |
 
 
 #### ExtProcBodyProcessingMode
@@ -2470,16 +2500,16 @@ _Appears in:_
 
 
 ExtractFrom is where to fetch the key from the coming request.
-Only one of header, param or cookie is supposed to be specified.
+Only one of headers, params or cookies must be specified.
 
 _Appears in:_
 - [APIKeyAuth](#apikeyauth)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `headers` | _string array_ |  false  |  | Headers is the names of the header to fetch the key from.<br />If multiple headers are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
-| `params` | _string array_ |  false  |  | Params is the names of the query parameter to fetch the key from.<br />If multiple params are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
-| `cookies` | _string array_ |  false  |  | Cookies is the names of the cookie to fetch the key from.<br />If multiple cookies are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
+| `headers` | _string array_ |  false  |  | Headers is the names of the header to fetch the key from.<br />If multiple headers are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies must be specified. |
+| `params` | _string array_ |  false  |  | Params is the names of the query parameter to fetch the key from.<br />If multiple params are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies must be specified. |
+| `cookies` | _string array_ |  false  |  | Cookies is the names of the cookie to fetch the key from.<br />If multiple cookies are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies must be specified. |
 
 
 #### FQDNEndpoint
@@ -4107,6 +4137,7 @@ _Appears in:_
 | `type` | _[LuaValueType](#luavaluetype)_ |  true  | Inline | Type is the type of method to use to read the Lua value.<br />Valid values are Inline and ValueRef, default is Inline. |
 | `inline` | _string_ |  false  |  | Inline contains the source code as an inline string. |
 | `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  |  | ValueRef has the source code specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br />The value of key `lua` in the ConfigMap will be used.<br />If the key is not found, the first value in the ConfigMap will be used. |
+| `filterContext` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | FilterContext is the filter context configuration for the Lua script.<br />This must be a JSON object (key/value pairs). The values are made available<br />to the Lua script via request_handle:filterContext(). This allows a shared<br />script to be parameterized differently per EnvoyExtensionPolicy/route. |
 
 
 #### LuaValidation
@@ -4619,7 +4650,7 @@ _Appears in:_
 | `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected.<br />For TCPRoute targets (raw TCP connections), HTTP headers such as<br />X-Forwarded-For are not available. The client IP is obtained from the<br />TCP connection's peer address. If intermediaries (load balancers, NAT)<br />terminate or proxy TCP, the original client IP will only be available<br />if the intermediary preserves the source address (for example by<br />enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is<br />configured to preserve the source IP to enable correct client-IP<br />matching for TCPRoute targets. |
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 | `headers` | _[AuthorizationHeaderMatch](#authorizationheadermatch) array_ |  false  |  | Headers authorize the request based on user identity extracted from custom headers.<br />If multiple headers are specified, all headers must match for the rule to match. |
-| `clientIPGeoLocations` | _[ClientIPGeoLocation](#clientipgeolocation) array_ |  false  |  | ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.<br />This field is supported for HTTPRoute and GRPCRoute authorization.<br />It is not supported for TCPRoute targets.<br />If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header or a custom header.<br />You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection. |
+| `clientIPGeoLocations` | _[ClientIPGeoLocation](#clientipgeolocation) array_ |  false  |  | ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.<br />This field is supported for HTTPRoute and GRPCRoute authorization.<br />It is not supported for TCPRoute targets.<br />If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header, or the<br />direct downstream connection source address (the TCP peer of the connection terminated by Envoy).<br />You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection. |
 
 
 #### ProcessingModeOptions
@@ -5358,6 +5389,22 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `requests` | _integer_ |  true  |  | Requests is the number of requests (or cost units, when used with<br />cost-based rate limiting) allowed per Unit. |
 | `unit` | _[RateLimitUnit](#ratelimitunit)_ |  true  |  |  |
+| `fromMetadata` | _[RateLimitValueMetadata](#ratelimitvaluemetadata)_ |  false  |  | FromMetadata sources the limit value from per-request dynamic metadata.<br />When the referenced metadata value is present, it overrides Requests/Unit for that<br />request; otherwise Requests/Unit are used as the default.<br />The referenced metadata value must be a struct containing an integer "requests_per_unit"<br />property and a "unit" property with a value parseable to a RateLimitUnit. An upstream<br />filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.<br />Only supported for Global Rate Limits. |
+
+
+#### RateLimitValueMetadata
+
+
+
+RateLimitValueMetadata specifies the dynamic metadata to retrieve the limit value from.
+
+_Appears in:_
+- [RateLimitValue](#ratelimitvalue)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `namespace` | _string_ |  true  |  | Namespace is the namespace of the dynamic metadata. |
+| `key` | _string_ |  true  |  | Key is the key to retrieve the limit value from within the namespaced filter metadata. |
 
 
 #### RedisTLSSettings
@@ -5412,6 +5459,7 @@ _Appears in:_
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `uri` | _string_ |  true  |  | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.<br />If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs. |
 | `cacheDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 300s |  |
+| `failedRefetchDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | FailedRefetchDuration is the duration Envoy waits before re-fetching the JWKS<br />after a failed fetch.<br />This does not control retries within a single fetch attempt (see BackendSettings.Retry),<br />only the interval between fetch attempts after a failure.<br />If not specified, Envoy's default of 1 second is used. |
 
 
 #### ReplaceRegexMatch
@@ -5674,6 +5722,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
+| `EndpointSliceIndex` | EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.<br />It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.<br />If the additional controller memory usage for the indexes becomes a concern,<br />consider disabling this flag.<br /> | 
 
 
 #### RuntimeFlags
@@ -5750,7 +5799,7 @@ Gateway.
 
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
-NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
+NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, and TCPRoute.
 When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
 (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 authentication/authorization features such as JWT, API Key, Basic Auth,
@@ -5765,7 +5814,7 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](#localpolicytargetreferencewithsectionname)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
-| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).<br />This field cannot be set when targeting a parent resource (Gateway).<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent SecurityPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `apiKeyAuth` | _[APIKeyAuth](#apikeyauth)_ |  false  |  | APIKeyAuth defines the configuration for the API Key Authentication. |
 | `cors` | _[CORS](#cors)_ |  false  |  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  |  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
@@ -6615,6 +6664,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `numTrustedHops` | _integer_ |  false  |  | NumTrustedHops specifies how many trusted hops to count from the rightmost side of<br />the X-Forwarded-For (XFF) header when determining the original client’s IP address.<br />If NumTrustedHops is set to N, the client IP is taken from the Nth address from the<br />right end of the XFF header.<br />Example:<br />  XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"<br />  NumTrustedHops = 2<br />  → Trusted client address = 203.0.113.10<br />Only one of NumTrustedHops or TrustedCIDRs should be configured. |
 | `trustedCIDRs` | _[CIDR](#cidr) array_ |  false  |  | TrustedCIDRs is a list of CIDR ranges to trust when evaluating<br />the remote IP address to determine the original client’s IP address.<br />When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,<br />each entry in the x-forwarded-for header is evaluated from right to left<br />and the first public non-trusted address is used as the original client address.<br />If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
+| `disableXForwardedForAppend` | _boolean_ |  false  |  | DisableXForwardedForAppend configures Envoy Proxy to stop appending the downstream address<br />to the X-Forwarded-For header.<br />This only disables the automatic append behavior. It does not remove or sanitize<br />an incoming X-Forwarded-For header. |
 
 
 #### XRateLimitHeadersOption
@@ -6630,7 +6680,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Disabled` | XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,<br />regardless of the global ClientTrafficPolicy setting.<br /> | 
+| `Off` | XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,<br />regardless of the global ClientTrafficPolicy setting.<br /> | 
 | `DraftVersion03` | XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03<br />for this rate limit rule, regardless of the global ClientTrafficPolicy setting.<br /> | 
 
 

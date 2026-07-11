@@ -11,7 +11,12 @@ import (
 	"sync"
 	"testing"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/require"
+	statusv3 "google.golang.org/genproto/googleapis/rpc/status"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -48,6 +53,51 @@ func TestOnStreamResponseConcurrentAccess(t *testing.T) {
 		}(streamID)
 	}
 	wg.Wait()
+}
+
+// TestOnStreamRequestNACK verifies that a NACK from Envoy is handled
+// gracefully on both the SotW and delta request paths.
+func TestOnStreamRequestNACK(t *testing.T) {
+	const (
+		nodeID  = "test-node"
+		cluster = "test-cluster"
+	)
+
+	newPrimedCache := func(t *testing.T) *snapshotCache {
+		t.Helper()
+		sc := newTestSnapshotCache(t)
+		// A non-nil last snapshot for the node's cluster is required, otherwise the
+		// request handlers return early before reaching the NACK handling.
+		snap, err := cachev3.NewSnapshot("1", nil)
+		require.NoError(t, err)
+		sc.lastSnapshot[cluster] = snap
+		return sc
+	}
+
+	node := &corev3.Node{Id: nodeID, Cluster: cluster}
+	errorDetail := &statusv3.Status{Code: 13, Message: "invalid access log format"}
+
+	t.Run("sotw", func(t *testing.T) {
+		sc := newPrimedCache(t)
+		require.NoError(t, sc.OnStreamOpen(context.Background(), 1, ""))
+		err := sc.OnStreamRequest(1, &discoveryv3.DiscoveryRequest{
+			Node:        node,
+			TypeUrl:     resourcev3.ListenerType,
+			ErrorDetail: errorDetail,
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("delta", func(t *testing.T) {
+		sc := newPrimedCache(t)
+		require.NoError(t, sc.OnDeltaStreamOpen(context.Background(), 1, ""))
+		err := sc.OnStreamDeltaRequest(1, &discoveryv3.DeltaDiscoveryRequest{
+			Node:        node,
+			TypeUrl:     resourcev3.ListenerType,
+			ErrorDetail: errorDetail,
+		})
+		require.NoError(t, err)
+	})
 }
 
 // TestOnStreamDeltaResponseConcurrentAccess verifies the same for delta streams.

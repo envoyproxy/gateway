@@ -58,6 +58,132 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid ListenerSet targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("ListenerSet"),
+								Name:  gwapiv1.ObjectName("xls"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid ListenerSet targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("ListenerSet"),
+									Name:  gwapiv1.ObjectName("xls"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid mergeType with xRoute targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("HTTPRoute"),
+								Name:  gwapiv1.ObjectName("backend"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid mergeType with xRoute targetSelector",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Kind:        gwapiv1.Kind("HTTPRoute"),
+								MatchLabels: map[string]string{"app": "foo"},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeType rejected on ListenerSet targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("ListenerSet"),
+								Name:  gwapiv1.ObjectName("xls"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+		},
+		{
+			desc: "mergeType rejected on ListenerSet targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("ListenerSet"),
+									Name:  gwapiv1.ObjectName("xls"),
+								},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+		},
+		{
+			desc: "mergeType rejected on ListenerSet targetSelector",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Kind:        gwapiv1.Kind("ListenerSet"),
+								MatchLabels: map[string]string{"app": "foo"},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+		},
+		{
 			desc: "no targetRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{}
@@ -84,7 +210,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
 			},
 		},
 		{
@@ -125,7 +251,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
 			},
 		},
 		{
@@ -148,7 +274,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
 			},
 		},
 
@@ -1311,7 +1437,33 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "authorization-missing principal",
+			desc: "authorization-missing-principal-and-cel",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"at least one of principal or cel must be specified"},
+		},
+		{
+			desc: "authorization-empty-principal",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1329,13 +1481,40 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action:    egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{},
+								Principal: &egv1a1.Principal{},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{"at least one of clientCIDRs, jwt, headers, or clientIPGeoLocations must be specified"},
+		},
+		{
+			desc: "authorization-cel-only",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								CEL:    new(egv1a1.CELExpression("request.path.startsWith('/admin')")),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "authorization-client-ip-geo-locations",
@@ -1356,7 +1535,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{
 										{Country: new("US")},
 									},
@@ -1387,7 +1566,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									JWT: &egv1a1.JWTPrincipal{
 										Claims: []egv1a1.JWTClaim{
 											{
@@ -1423,7 +1602,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									JWT: &egv1a1.JWTPrincipal{},
 								},
 							},
@@ -1603,6 +1782,153 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				err = c.Status().Update(ctx, sp)
 			}
 
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}
+
+func TestSecurityPolicyAPIKeyAuthExtractFrom(t *testing.T) {
+	ctx := context.Background()
+	baseSP := egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sp",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: egv1a1.SecurityPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group("gateway.networking.k8s.io"),
+						Kind:  gwapiv1.Kind("Gateway"),
+						Name:  gwapiv1.ObjectName("eg"),
+					},
+				},
+			},
+			APIKeyAuth: &egv1a1.APIKeyAuth{
+				CredentialRefs: []gwapiv1.SecretObjectReference{
+					{
+						Name: gwapiv1.ObjectName("api-key-secret"),
+					},
+				},
+			},
+		},
+	}
+
+	cases := []struct {
+		desc        string
+		extractFrom []*egv1a1.ExtractFrom
+		wantErrors  []string
+	}{
+		{
+			desc: "headers source is valid",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Headers: []string{"x-api-key"},
+				},
+			},
+		},
+		{
+			desc: "params source is valid",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Params: []string{"api_key"},
+				},
+			},
+		},
+		{
+			desc: "cookies source is valid",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Cookies: []string{"api-key"},
+				},
+			},
+		},
+		{
+			desc: "no source specified",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{},
+			},
+			wantErrors: []string{
+				"exactly one of headers, params, or cookies must be specified",
+			},
+		},
+		{
+			desc: "multiple sources specified",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Headers: []string{"x-api-key"},
+					Params:  []string{"api_key"},
+				},
+			},
+			wantErrors: []string{
+				"exactly one of headers, params, or cookies must be specified",
+			},
+		},
+		{
+			desc: "empty header source name",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Headers: []string{""},
+				},
+			},
+			wantErrors: []string{
+				"spec.apiKeyAuth.extractFrom[0].headers[0]",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc: "empty param source name",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Params: []string{""},
+				},
+			},
+			wantErrors: []string{
+				"spec.apiKeyAuth.extractFrom[0].params[0]",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc: "empty cookie source name",
+			extractFrom: []*egv1a1.ExtractFrom{
+				{
+					Cookies: []string{""},
+				},
+			},
+			wantErrors: []string{
+				"spec.apiKeyAuth.extractFrom[0].cookies[0]",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc:        "empty extractFrom list",
+			extractFrom: []*egv1a1.ExtractFrom{},
+			wantErrors: []string{
+				"spec.apiKeyAuth.extractFrom",
+				"should have at least 1 items",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sp := baseSP.DeepCopy()
+			sp.Name = fmt.Sprintf("sp-api-key-auth-%v", time.Now().UnixNano())
+			sp.Spec.APIKeyAuth.ExtractFrom = tc.extractFrom
+
+			err := c.Create(ctx, sp)
 			if (len(tc.wantErrors) != 0) != (err != nil) {
 				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
 			}

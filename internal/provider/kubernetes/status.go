@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -216,7 +215,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.TCPRouteStatusMessageName},
 			r.subscriptions.tcpRouteStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.TCPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -225,9 +224,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a2.TCPRoute),
+					Resource:       new(gwapiv1.TCPRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a2.TCPRoute)
+						t, ok := obj.(*gwapiv1.TCPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -235,11 +234,11 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 						}
 						valCopy := val.DeepCopy()
 						setLastTransitionTimeInConditionsForRouteStatus(&valCopy.RouteStatus, metav1.Now())
-						tCopy := &gwapiv1a2.TCPRoute{
+						tCopy := &gwapiv1.TCPRoute{
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status: gwapiv1a2.TCPRouteStatus{
+							Status: gwapiv1.TCPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
 									Parents: mergeRouteParentStatus(t.Namespace, t.Status.Parents, valCopy.Parents),
 								},
@@ -258,7 +257,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.UDPRouteStatusMessageName},
 			r.subscriptions.udpRouteStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.UDPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -267,9 +266,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a2.UDPRoute),
+					Resource:       new(gwapiv1.UDPRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						u, ok := obj.(*gwapiv1a2.UDPRoute)
+						u, ok := obj.(*gwapiv1.UDPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -277,11 +276,11 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 						}
 						valCopy := val.DeepCopy()
 						setLastTransitionTimeInConditionsForRouteStatus(&valCopy.RouteStatus, metav1.Now())
-						uCopy := &gwapiv1a2.UDPRoute{
+						uCopy := &gwapiv1.UDPRoute{
 							TypeMeta:   u.TypeMeta,
 							ObjectMeta: u.ObjectMeta,
 							Spec:       u.Spec,
-							Status: gwapiv1a2.UDPRouteStatus{
+							Status: gwapiv1.UDPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
 									Parents: mergeRouteParentStatus(u.Namespace, u.Status.Parents, valCopy.Parents),
 								},

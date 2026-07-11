@@ -1,15 +1,14 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= 1.35.0
+ENVTEST_K8S_VERSION ?= 1.36.0
 # Need run cel validation across multiple versions of k8s
-# TODO: update kubebuilder assets to 1.35.0 when available
-ENVTEST_K8S_VERSIONS ?= 1.32.0 1.33.0 1.34.1 1.35.0
+ENVTEST_K8S_VERSIONS ?= 1.33.0 1.34.1 1.35.0 1.36.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
-GATEWAY_API_MINOR_VERSION ?= 1.5
-GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).1
+GATEWAY_API_MINOR_VERSION ?= 1.6
+GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -39,7 +38,7 @@ E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 # If E2E_DEBUG is not explicitly defined, set it based on the ACTIONS_STEP_DEBUG environment variable.
 E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
-E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG)
+E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG) --cleanup-test-resources=$(E2E_CLEANUP)
 
 # Define the Gateway API channel used in tests
 E2E_GATEWAY_API_CHANNEL ?= experimental
@@ -434,7 +433,7 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 		--set crds.gatewayAPI.enabled=true \
 		--set crds.envoyGateway.enabled=true \
 		> $(OUTPUT_DIR)/install.yaml
-	$(GO_TOOL) helm template --set createNamespace=true eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
+	$(GO_TOOL) helm template --set createNamespace=true --set crds.gatewayAPI.safeUpgradePolicy.enabled=false eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
@@ -442,6 +441,24 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 		--set crds.envoyGateway.enabled=true \
 		> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/envoy-gateway-crds.yaml")
+	$(MAKE) verify-install-manifests
+
+# Generated release manifests are concatenations/renders of multiple Helm templates,
+# so a resource can end up duplicated across them. kustomize rejects duplicate resource
+# ids, which breaks users referencing these files as kustomize resources. Build each one
+# with kustomize to catch a duplicate or invalid resource before it ships again.
+# See https://github.com/envoyproxy/gateway/issues/9191.
+VERIFY_MANIFESTS := install.yaml envoy-gateway-crds.yaml
+
+.PHONY: verify-install-manifests
+verify-install-manifests: ## Verify generated release manifests have no duplicate or invalid resources (run after generate-manifests).
+	@$(LOG_TARGET)
+	@for manifest in $(VERIFY_MANIFESTS); do \
+		$(call log, Verifying $(OUTPUT_DIR)/$$manifest is consumable by kustomize); \
+		printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n- %s\n' "$$manifest" > $(OUTPUT_DIR)/kustomization.yaml; \
+		$(GO_TOOL) kustomize build $(OUTPUT_DIR) > /dev/null || { rm -f $(OUTPUT_DIR)/kustomization.yaml; $(call errorlog, $(OUTPUT_DIR)/$$manifest has duplicate or invalid resources - kustomize build failed); exit 1; }; \
+		rm -f $(OUTPUT_DIR)/kustomization.yaml; \
+	done
 
 .PHONY: generate-artifacts
 generate-artifacts: generate-manifests ## Generate release artifacts.

@@ -774,8 +774,9 @@ func (t *Translator) buildLua(
 		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
 	}
 	return &ir.Lua{
-		Name: name,
-		Code: luaCode,
+		Name:          name,
+		Code:          luaCode,
+		FilterContext: lua.FilterContext,
 	}, nil
 }
 
@@ -820,7 +821,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
+		extProcIR, err := t.buildExtProc(name, policy, &ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -841,7 +842,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 func (t *Translator) buildExtProc(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
-	extProc egv1a1.ExtProc,
+	extProc *egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
@@ -891,6 +892,10 @@ func (t *Translator) buildExtProc(
 
 	if extProc.FailOpen != nil {
 		extProcIR.FailOpen = extProc.FailOpen
+	}
+
+	if extProc.StatusOnError != nil {
+		extProcIR.StatusOnError = extProc.StatusOnError
 	}
 
 	if extProc.ProcessingMode != nil {
