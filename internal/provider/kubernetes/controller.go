@@ -273,6 +273,14 @@ func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
 	return !r.envoyGateway.ExtensionAPIs.EnableBackend
 }
 
+func (r *gatewayAPIReconciler) endpointSliceIndexEnabled() bool {
+	var flags *egv1a1.RuntimeFlags
+	if r != nil && r.envoyGateway != nil {
+		flags = r.envoyGateway.RuntimeFlags
+	}
+	return flags.IsEnabled(egv1a1.EndpointSliceIndex)
+}
+
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	if eg.Provider == nil ||
 		eg.Provider.Kubernetes == nil ||
@@ -688,6 +696,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		logger.Info("processing Backend")
 		nn := types.NamespacedName{Namespace: backendNs, Name: backendName}
 		var endpointSliceLabelKey string
+		var endpointSliceIndex string
 		switch backendRefKind {
 		case resource.KindService:
 			service := new(corev1.Service)
@@ -707,6 +716,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				}
 			}
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
+			endpointSliceIndex = serviceEndpointSliceIndex
 
 		case resource.KindServiceImport:
 			serviceImport := new(mcsapiv1a1.ServiceImport)
@@ -727,6 +737,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				}
 			}
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
+			endpointSliceIndex = serviceImportEndpointSliceIndex
 
 		case egv1a1.KindBackend:
 			if r.backendAPIDisabled() {
@@ -821,10 +832,16 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		if endpointSliceLabelKey != "" {
 			endpointSliceList := new(discoveryv1.EndpointSliceList)
 			opts := []client.ListOption{
-				client.MatchingLabels(map[string]string{
+				client.InNamespace(string(*backendRef.Namespace)),
+			}
+			if r.endpointSliceIndexEnabled() {
+				opts = append(opts, client.MatchingFields{
+					endpointSliceIndex: string(backendRef.Name),
+				})
+			} else {
+				opts = append(opts, client.MatchingLabels{
 					endpointSliceLabelKey: string(backendRef.Name),
-				}),
-				client.InNamespace(*backendRef.Namespace),
+				})
 			}
 			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
 				if isTransientError(err) {
@@ -2477,6 +2494,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}),
 			esPredicates...)); err != nil {
 		return err
+	}
+	if r.endpointSliceIndexEnabled() {
+		if err := addEndpointSliceIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	// we didn't check if the backend CRD exists every time for performance,

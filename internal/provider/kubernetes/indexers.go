@@ -8,12 +8,14 @@ package kubernetes
 import (
 	"context"
 
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -40,6 +42,8 @@ const (
 	backendTLSRouteIndex             = "backendTLSRouteIndex"
 	backendTCPRouteIndex             = "backendTCPRouteIndex"
 	backendUDPRouteIndex             = "backendUDPRouteIndex"
+	serviceEndpointSliceIndex        = "serviceEndpointSliceIndex"
+	serviceImportEndpointSliceIndex  = "serviceImportEndpointSliceIndex"
 	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
 	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
@@ -54,6 +58,7 @@ const (
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
+	httpRouteFilterGRPCRouteIndex    = "httpRouteFilterGRPCRouteIndex"
 	configMapBtpIndex                = "configMapBtpIndex"
 	configMapEepIndex                = "configMapEepIndex"
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
@@ -79,6 +84,33 @@ func getReferenceGrantIndexerFunc(rawObj client.Object) []string {
 		referredServices = append(referredServices, string(target.Kind))
 	}
 	return referredServices
+}
+
+func addEndpointSliceIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &discoveryv1.EndpointSlice{}, serviceEndpointSliceIndex, serviceEndpointSliceIndexFunc); err != nil {
+		return err
+	}
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &discoveryv1.EndpointSlice{}, serviceImportEndpointSliceIndex, serviceImportEndpointSliceIndexFunc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func serviceEndpointSliceIndexFunc(rawObj client.Object) []string {
+	return backendEndpointSliceIndexFunc(rawObj, discoveryv1.LabelServiceName)
+}
+
+func serviceImportEndpointSliceIndexFunc(rawObj client.Object) []string {
+	return backendEndpointSliceIndexFunc(rawObj, mcsapiv1a1.LabelServiceName)
+}
+
+func backendEndpointSliceIndexFunc(rawObj client.Object, label string) []string {
+	endpointSlice := rawObj.(*discoveryv1.EndpointSlice)
+	name := endpointSlice.GetLabels()[label]
+	if name == "" {
+		return nil
+	}
+	return []string{name}
 }
 
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
@@ -225,6 +257,28 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	return refs
 }
 
+func httpRouteFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
+	grpcroute := rawObj.(*gwapiv1.GRPCRoute)
+	httpRouteFilterRefs := make(map[string]struct{})
+	// HTTPRouteFilter is only supported at the rule level for GRPCRoute, so
+	// backendRef-level filters are intentionally not indexed.
+	for _, rule := range grpcroute.Spec.Rules {
+		for _, filter := range rule.Filters {
+			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+				httpRouteFilterRefs[types.NamespacedName{
+					Namespace: grpcroute.Namespace,
+					Name:      string(filter.ExtensionRef.Name),
+				}.String()] = struct{}{}
+			}
+		}
+	}
+	refs := make([]string, 0, len(httpRouteFilterRefs))
+	for ref := range httpRouteFilterRefs {
+		refs = append(refs, ref)
+	}
+	return refs
+}
+
 func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc); err != nil {
 		return err
@@ -357,6 +411,10 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	}
 
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.GRPCRoute{}, httpRouteFilterGRPCRouteIndex, httpRouteFilterGRPCRouteIndexFunc); err != nil {
 		return err
 	}
 
