@@ -1,0 +1,37 @@
+# Two routes each have a single backendRef pointing at the same merged
+# BackendCluster (one weight-1 setting, no mixed endpoints/filters/protocols).
+# The translator should collapse this into a single Envoy Cluster resource
+# and give each route a plain RouteAction_Cluster rather than a one-entry
+# weighted-clusters wrapper.
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "route-a"
+    hostname: "*"
+    pathMatch:
+      prefix: "/route-a"
+    destination:
+      name: "route-a-dest"
+      backendClusterRefs:
+      - name: "shared-cluster"
+  - name: "route-b"
+    hostname: "*"
+    pathMatch:
+      prefix: "/route-b"
+    destination:
+      name: "route-b-dest"
+      backendClusterRefs:
+      - name: "shared-cluster"
+backends:
+- name: "shared-cluster"
+  merged: true
+  settings:
+  - name: "shared-cluster"
+    weight: 1
+    endpoints:
+    - host: "1.2.3.4"
+      port: 50000

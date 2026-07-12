@@ -44,3 +44,17 @@ func (t *Translator) getBackendClusters(rd *ir.RouteDestination) []*ir.BackendCl
 	}
 	return []*ir.BackendCluster{{Name: rd.Name, Metadata: rd.Metadata}}
 }
+
+// singleResolvedClusterName returns the name of rd's one resolved BackendCluster, when it
+// resolves to exactly one: that's the actual Envoy cluster the backend registered under, which
+// differs from rd's own route-scoped Name once the backend merges. Callers use this in place of
+// rd.Name wherever they reference a cluster directly (not through a weighted-clusters
+// specifier), so the reference stays valid after a merge. Falls back to rd.Name (already correct
+// when nothing merged) whenever zero or more than one cluster resolves, since a direct reference
+// can't represent that anyway.
+func (t *Translator) singleResolvedClusterName(rd *ir.RouteDestination) string {
+	if bcs := t.getBackendClusters(rd); len(bcs) == 1 {
+		return bcs[0].Name
+	}
+	return rd.Name
+}

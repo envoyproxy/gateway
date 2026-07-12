@@ -2,22 +2,18 @@
   name: first-listener
   virtualHosts:
   - domains:
-    - route-a.example.com
-    name: first-listener/route-a_example_com
+    - '*'
+    name: first-listener/*
     routes:
     - match:
-        prefix: /
+        pathSeparatedPrefix: /route-a
       name: route-a
       route:
         cluster: shared-cluster
         upgradeConfigs:
         - upgradeType: websocket
-  - domains:
-    - route-b.example.com
-    name: first-listener/route-b_example_com
-    routes:
     - match:
-        prefix: /
+        pathSeparatedPrefix: /route-b
       name: route-b
       route:
         cluster: shared-cluster

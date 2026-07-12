@@ -332,7 +332,7 @@ func buildXdsRouteAction(t *Translator, route *ir.HTTPRoute) *routev3.RouteActio
 
 	return &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: backendWeights.Name,
+			Cluster: t.singleResolvedClusterName(route.Destination),
 		},
 	}
 }
@@ -542,7 +542,7 @@ func buildXdsURLRewriteAction(t *Translator, route *ir.HTTPRoute, urlRewrite *ir
 	} else {
 		routeAction = &routev3.RouteAction{
 			ClusterSpecifier: &routev3.RouteAction_Cluster{
-				Cluster: backendWeights.Name,
+				Cluster: t.singleResolvedClusterName(route.Destination),
 			},
 		}
 	}
