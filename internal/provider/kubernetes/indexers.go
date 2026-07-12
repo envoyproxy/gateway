@@ -58,6 +58,7 @@ const (
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
+	httpRouteFilterGRPCRouteIndex    = "httpRouteFilterGRPCRouteIndex"
 	configMapBtpIndex                = "configMapBtpIndex"
 	configMapEepIndex                = "configMapEepIndex"
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
@@ -256,6 +257,28 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	return refs
 }
 
+func httpRouteFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
+	grpcroute := rawObj.(*gwapiv1.GRPCRoute)
+	httpRouteFilterRefs := make(map[string]struct{})
+	// HTTPRouteFilter is only supported at the rule level for GRPCRoute, so
+	// backendRef-level filters are intentionally not indexed.
+	for _, rule := range grpcroute.Spec.Rules {
+		for _, filter := range rule.Filters {
+			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+				httpRouteFilterRefs[types.NamespacedName{
+					Namespace: grpcroute.Namespace,
+					Name:      string(filter.ExtensionRef.Name),
+				}.String()] = struct{}{}
+			}
+		}
+	}
+	refs := make([]string, 0, len(httpRouteFilterRefs))
+	for ref := range httpRouteFilterRefs {
+		refs = append(refs, ref)
+	}
+	return refs
+}
+
 func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc); err != nil {
 		return err
@@ -388,6 +411,10 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	}
 
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.GRPCRoute{}, httpRouteFilterGRPCRouteIndex, httpRouteFilterGRPCRouteIndexFunc); err != nil {
 		return err
 	}
 

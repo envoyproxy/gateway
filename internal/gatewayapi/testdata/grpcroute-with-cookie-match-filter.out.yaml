@@ -42,7 +42,7 @@ grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: GRPCRoute
   metadata:
-    name: mirror-direct-response
+    name: grpcroute-1
     namespace: default
   spec:
     parentRefs:
@@ -54,20 +54,25 @@ grpcRoutes:
       - name: service-1
         port: 8080
       filters:
-      - requestMirror:
-          backendRef:
-            kind: Service
-            name: service-1
-            port: 8080
-        type: RequestMirror
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
-          name: mirror-direct-response
+          name: cookie-match
         type: ExtensionRef
+      matches:
+      - method:
+          method: Foo
+          service: com.example
+          type: Exact
     - backendRefs:
-      - name: service-2
+      - name: service-1
         port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: another-cookie-match
+        type: ExtensionRef
   status:
     parents:
     - conditions:
@@ -76,12 +81,6 @@ grpcRoutes:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: 'Dropped Rule(s) [0]: RequestMirror filter cannot be used when the
-          rule also configures a DirectResponse filter.'
-        reason: IncompatibleFilters
-        status: "True"
-        type: PartiallyInvalid
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
@@ -156,27 +155,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - addResponseHeaders:
-        - addIfAbsent: false
-          append: false
-          name: Content-Type
-          value:
-          - text/plain
-        directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: true
-        metadata:
-          kind: GRPCRoute
-          name: mirror-direct-response
-          namespace: default
-        name: grpcroute/default/mirror-direct-response/rule/0/match/-1/*
-      - destination:
+      - cookieMatches:
+        - distinct: false
+          exact: xxx
+          name: cookie-3
+        - distinct: false
+          exact: yyy
+          name: cookie-4
+        destination:
           metadata:
             kind: GRPCRoute
-            name: mirror-direct-response
+            name: grpcroute-1
             namespace: default
-          name: grpcroute/default/mirror-direct-response/rule/1
+          name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -184,19 +175,90 @@ xdsIR:
               port: 8080
             metadata:
               kind: Service
-              name: service-2
+              name: service-1
               namespace: default
               sectionName: "8080"
-            name: grpcroute/default/mirror-direct-response/rule/1/backend/0
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:
           kind: GRPCRoute
-          name: mirror-direct-response
+          name: grpcroute-1
           namespace: default
-        name: grpcroute/default/mirror-direct-response/rule/1/match/-1/*
+        name: grpcroute/default/grpcroute-1/rule/0/match/1/*
+        pathMatch:
+          distinct: false
+          exact: /com.example/Foo
+          name: ""
+      - cookieMatches:
+        - distinct: false
+          exact: xxx
+          name: cookie-1
+        - distinct: false
+          name: cookie-2
+          safeRegex: foo.*
+        destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
+          name: grpcroute/default/grpcroute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+        name: grpcroute/default/grpcroute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /com.example/Foo
+          name: ""
+      - cookieMatches:
+        - distinct: false
+          exact: zzz
+          name: cookie-5
+        destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
+          name: grpcroute/default/grpcroute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/grpcroute-1/rule/1/backend/0
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+        name: grpcroute/default/grpcroute-1/rule/1/match/0/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
