@@ -652,7 +652,6 @@ type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
 // BackendWeights stores the weights of valid, invalid and no endpoints backends for the route so that 500/503 error responses can be returned in the same proportions
 type BackendWeights struct {
-	Name        string `json:"name" yaml:"name"`
 	Valid       uint32 `json:"valid" yaml:"valid"`
 	Invalid     uint32 `json:"invalid" yaml:"invalid"`
 	NoEndpoints uint32 `json:"noEndpoints" yaml:"noEndpoints"`
@@ -2042,9 +2041,7 @@ func (b *BackendCluster) HasMixedAutoSNISettings() bool {
 }
 
 func (b *BackendCluster) ToBackendWeights() *BackendWeights {
-	w := &BackendWeights{
-		Name: b.Name,
-	}
+	w := &BackendWeights{}
 
 	for _, s := range b.Settings {
 		if s.Weight == nil {

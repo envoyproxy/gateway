@@ -1759,7 +1759,7 @@ func (t *Translator) httpRouteNeedsClusterPerSetting(h *ir.HTTPRoute) bool {
 // backendWeights sums the valid/invalid/no-endpoints weight across rd's resolved backends.
 func (t *Translator) backendWeights(rd *ir.RouteDestination) *ir.BackendWeights {
 	bcs := t.getBackendClusters(rd)
-	w := &ir.BackendWeights{Name: rd.Name}
+	w := &ir.BackendWeights{}
 	for _, bc := range bcs {
 		bw := bc.ToBackendWeights()
 		w.Valid += bw.Valid
