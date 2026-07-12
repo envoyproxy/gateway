@@ -29743,6 +29743,13 @@ spec:
                       ClientValidation specifies the configuration to validate the client
                       initiating the TLS connection to the Gateway listener.
                     properties:
+                      allowExpiredCertificate:
+                        description: |-
+                          AllowExpiredCertificate permits client certificates that have expired
+                          but are otherwise valid (CA chain, signature). When true, Envoy skips
+                          the NotAfter check during client certificate validation.
+                          Defaults to false.
+                        type: boolean
                       caCertificateRefs:
                         description: |-
                           CACertificateRefs contains one or more references to
@@ -30065,6 +30072,11 @@ spec:
                             type: array
                         type: object
                     type: object
+                    x-kubernetes-validations:
+                    - message: allowExpiredCertificate can only be set when mode is
+                        VerifyIfGiven or RequireAndVerify
+                      rule: '!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate
+                        || !has(self.mode) || self.mode in [''VerifyIfGiven'', ''RequireAndVerify'']'
                   ecdhCurves:
                     description: |-
                       ECDHCurves specifies the set of supported ECDH curves.
