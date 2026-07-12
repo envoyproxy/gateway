@@ -844,7 +844,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
 				route,
-				route.Destination.Name,
+				t.singleResolvedClusterName(route.Destination),
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
@@ -934,7 +934,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		}
 
 		xdsListener, err := buildXdsUDPListener(
-			udpListener.Route.Destination.Name,
+			t.singleResolvedClusterName(udpListener.Route.Destination),
 			udpListener,
 			accesslog,
 			t.xdsNameSchemeV2(),

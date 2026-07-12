@@ -1,0 +1,23 @@
+# A single TCP route whose backendRef merges into a shared, backend-identity-scoped
+# cluster (destination name differs from the merged cluster's name, mirroring real
+# gatewayapi output for mergeBackends). The TcpProxy filter chain must reference the
+# actual Cluster resource's name, not the raw rule-scoped Destination.Name.
+tcp:
+- name: "tcp-listener-simple"
+  address: "::"
+  port: 10080
+  routes:
+  - name: "tcp-route-simple"
+    destination:
+      name: "tcproute/default/tcproute-1/rule/-1"
+      backendClusterRefs:
+      - name: "shared-cluster"
+backends:
+- name: "shared-cluster"
+  merged: true
+  settings:
+  - name: "shared-cluster"
+    weight: 1
+    endpoints:
+    - host: "1.2.3.4"
+      port: 50000

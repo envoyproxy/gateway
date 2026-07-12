@@ -728,6 +728,15 @@ func (t *Translator) mergeIncompatibleForRule(
 	return gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(route.GetRouteType(), utils.NamespacedName(route), utils.NamespacedName(gatewayCtx.Gateway), parentRef.SectionName, ruleName)
 }
 
+// mergeIncompatibleForNonWeightedRule reports whether hasRouteLevelClusterSettings, or the rule
+// having more than one backendRef, makes cluster deduplication unsafe for a TCP/UDP/TLS rule.
+// Unlike HTTP/GRPC, these route types have no weighted-cluster mechanism at the listener layer,
+// so a rule's backendRefs must always land in a single cluster; letting them merge independently
+// would silently split the rule across clusters the listener can't reference together.
+func mergeIncompatibleForNonWeightedRule(hasRouteLevelClusterSettings bool, backendRefCount int) bool {
+	return hasRouteLevelClusterSettings || backendRefCount > 1
+}
+
 // backendClusterSettingName derives the DestinationSetting name for a backendRef: a merged
 // cluster shares its setting's name with the cluster; a route-scoped cluster keeps a
 // per-backendRef setting name.
@@ -1788,10 +1797,11 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		for _, rule := range tlsRoute.Spec.Rules {
 			gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(tlsRoute, parentRef, rule.Name)
 			gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
+			mergeIncompatible := mergeIncompatibleForNonWeightedRule(hasRouteLevelClusterSettings, len(rule.BackendRefs))
 			for i := range rule.BackendRefs {
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
 				// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-				ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, xdsIR, hasRouteLevelClusterSettings)
+				ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
@@ -1971,10 +1981,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(udpRoute, parentRef, udpRoute.Spec.Rules[0].Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
+		mergeIncompatible := mergeIncompatibleForNonWeightedRule(hasRouteLevelClusterSettings, len(udpRoute.Spec.Rules[0].BackendRefs))
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, hasRouteLevelClusterSettings)
+			ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
@@ -2125,9 +2136,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
+		mergeIncompatible := mergeIncompatibleForNonWeightedRule(hasRouteLevelClusterSettings, len(tcpRoute.Spec.Rules[0].BackendRefs))
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
-			ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, hasRouteLevelClusterSettings)
+			ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				resolveErrs.Add(err)

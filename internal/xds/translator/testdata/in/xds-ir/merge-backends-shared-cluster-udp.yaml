@@ -1,0 +1,23 @@
+# A UDP route whose destination merges into a shared, backend-identity-scoped cluster
+# (destination name differs from the merged cluster's name, mirroring real gatewayapi
+# output for mergeBackends). The UdpProxy route must reference the actual Cluster
+# resource's name, not the raw rule-scoped Destination.Name.
+udp:
+- name: "udp-route"
+  address: "::"
+  port: 10080
+  route:
+    name: "udp-route"
+    destination:
+      name: "udproute/default/udproute-1/rule/-1"
+      backendClusterRefs:
+      - name: "shared-cluster"
+backends:
+- name: "shared-cluster"
+  merged: true
+  settings:
+  - name: "shared-cluster"
+    weight: 1
+    endpoints:
+    - host: "1.2.3.4"
+      port: 50000
