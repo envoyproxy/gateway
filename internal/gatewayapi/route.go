@@ -278,7 +278,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		for i := range rule.BackendRefs {
 			backendRefs[i] = rule.BackendRefs[i].BackendObjectReference
 		}
-		mergeIncompatible := t.mergeIncompatibleForRule(httpRoute, parentRef, rule.Name, backendRefs, hasRouteLevelClusterSettings, rule.SessionPersistence != nil, gatewayCtx)
+		mergeIncompatible := t.mergeIncompatibleForWeightedRule(httpRoute, parentRef, rule.Name, backendRefs, hasRouteLevelClusterSettings, rule.SessionPersistence != nil, gatewayCtx)
 
 		for i := range rule.BackendRefs {
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())
@@ -696,10 +696,11 @@ func (t *Translator) isFallbackBackend(backendRef gwapiv1.BackendObjectReference
 	return backend != nil && ptr.Deref(backend.Spec.Fallback, false)
 }
 
-// mergeIncompatibleForRule reports whether a rule-level condition makes cluster deduplication
-// unsafe for any of this rule's backendRefs: route-level cluster settings, session persistence,
-// a fallback backend, or ConsistentHash load balancing.
-func (t *Translator) mergeIncompatibleForRule(
+// mergeIncompatibleForWeightedRule reports whether a rule-level condition makes cluster
+// deduplication unsafe for any of this rule's backendRefs: route-level cluster settings, session
+// persistence, a fallback backend, or ConsistentHash load balancing. For HTTP/GRPC, whose
+// weighted-clusters route action can represent multiple distinct clusters in one rule.
+func (t *Translator) mergeIncompatibleForWeightedRule(
 	route RouteContext,
 	parentRef *RouteParentContext,
 	ruleName *gwapiv1.SectionName,
@@ -713,6 +714,8 @@ func (t *Translator) mergeIncompatibleForRule(
 	if hasRouteLevelClusterSettings {
 		return true
 	}
+	// A single backendRef has no multi-backend pool for the checks below to protect —
+	// nothing to fragment, so it's always mergeable at this point.
 	if len(backendRefs) <= 1 {
 		return false
 	}
@@ -727,16 +730,29 @@ func (t *Translator) mergeIncompatibleForRule(
 		}
 	}
 	// ConsistentHash needs the full combined backend pool, not per-identity split clusters.
-	return gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(route.GetRouteType(), utils.NamespacedName(route), utils.NamespacedName(gatewayCtx.Gateway), parentRef.SectionName, ruleName)
+	if gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(route.GetRouteType(), utils.NamespacedName(route), utils.NamespacedName(gatewayCtx.Gateway), parentRef.SectionName, ruleName) {
+		return true
+	}
+	return false
 }
 
-// mergeIncompatibleForNonWeightedRule reports whether hasRouteLevelClusterSettings, or the rule
-// having more than one backendRef, makes cluster deduplication unsafe for a TCP/UDP/TLS rule.
-// Unlike HTTP/GRPC, these route types have no weighted-cluster mechanism at the listener layer,
-// so a rule's backendRefs must always land in a single cluster; letting them merge independently
-// would silently split the rule across clusters the listener can't reference together.
-func mergeIncompatibleForNonWeightedRule(hasRouteLevelClusterSettings bool, backendRefCount int) bool {
-	return hasRouteLevelClusterSettings || backendRefCount > 1
+// mergeIncompatibleForSingleClusterRule reports whether a rule-level condition makes cluster
+// deduplication unsafe for a TCP/UDP/TLS rule. Unlike HTTP/GRPC, these route types have no
+// weighted-cluster mechanism at the listener layer, so a rule's backendRefs must always resolve
+// to a single cluster.
+func mergeIncompatibleForSingleClusterRule(hasRouteLevelClusterSettings bool, backendRefCount int) bool {
+	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
+	// cluster shared with other routes if merged.
+	if hasRouteLevelClusterSettings {
+		return true
+	}
+	// This route type has no weighted-cluster mechanism at the listener layer, so a rule's
+	// backendRefs must always resolve to a single cluster — letting them merge independently
+	// could split the rule across clusters the listener can't reference together.
+	if backendRefCount > 1 {
+		return true
+	}
+	return false
 }
 
 // backendClusterSettingName derives the DestinationSetting name for a backendRef: a merged
@@ -1331,7 +1347,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		for i := range rule.BackendRefs {
 			backendRefs[i] = rule.BackendRefs[i].BackendObjectReference
 		}
-		mergeIncompatible := t.mergeIncompatibleForRule(grpcRoute, parentRef, rule.Name, backendRefs, hasRouteLevelClusterSettings, false, gatewayCtx)
+		mergeIncompatible := t.mergeIncompatibleForWeightedRule(grpcRoute, parentRef, rule.Name, backendRefs, hasRouteLevelClusterSettings, false, gatewayCtx)
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i := range rule.BackendRefs {
@@ -1799,7 +1815,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		for _, rule := range tlsRoute.Spec.Rules {
 			gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(tlsRoute, parentRef, rule.Name)
 			gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
-			mergeIncompatible := mergeIncompatibleForNonWeightedRule(hasRouteLevelClusterSettings, len(rule.BackendRefs))
+			mergeIncompatible := mergeIncompatibleForSingleClusterRule(hasRouteLevelClusterSettings, len(rule.BackendRefs))
 			for i := range rule.BackendRefs {
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
 				// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
@@ -1983,7 +1999,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(udpRoute, parentRef, udpRoute.Spec.Rules[0].Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
-		mergeIncompatible := mergeIncompatibleForNonWeightedRule(hasRouteLevelClusterSettings, len(udpRoute.Spec.Rules[0].BackendRefs))
+		mergeIncompatible := mergeIncompatibleForSingleClusterRule(hasRouteLevelClusterSettings, len(udpRoute.Spec.Rules[0].BackendRefs))
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
@@ -2138,7 +2154,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRoutingContext(tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name)
 		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
-		mergeIncompatible := mergeIncompatibleForNonWeightedRule(hasRouteLevelClusterSettings, len(tcpRoute.Spec.Rules[0].BackendRefs))
+		mergeIncompatible := mergeIncompatibleForSingleClusterRule(hasRouteLevelClusterSettings, len(tcpRoute.Spec.Rules[0].BackendRefs))
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
 			ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)

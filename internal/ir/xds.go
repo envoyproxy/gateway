@@ -1938,10 +1938,7 @@ type BackendCluster struct {
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// Metadata describes the backend resource (Service, Backend, etc.)
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// Merged is true when this cluster was created via backend-identity deduplication
-	// (MergeBackends) and so may be referenced by more than one route. A property derived from
-	// exactly one referencing route (e.g. that route's own hostname) is not reliable for a merged
-	// cluster and must not be used as if it uniquely belonged to this cluster.
+	// Merged is true when this cluster is shared across routes via backend-identity deduplication.
 	Merged bool `json:"merged,omitempty" yaml:"merged,omitempty"`
 }
 

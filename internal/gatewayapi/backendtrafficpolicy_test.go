@@ -1988,7 +1988,7 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 	}
 }
 
-func TestBtpClusterSettingsHasSettings(t *testing.T) {
+func TestBtpSpecHasClusterScopedFields(t *testing.T) {
 	circuitBreakerSet := &egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}}
 	useClientProtocolTrue := true
 
@@ -2020,7 +2020,7 @@ func TestBtpClusterSettingsHasSettings(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, btpClusterSettingsHasSettings(tc.spec))
+			require.Equal(t, tc.want, btpSpecHasClusterScopedFields(tc.spec))
 		})
 	}
 }

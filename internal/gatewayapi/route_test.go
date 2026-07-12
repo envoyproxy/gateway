@@ -890,7 +890,7 @@ func TestIsFallbackBackend(t *testing.T) {
 	}
 }
 
-func TestMergeIncompatibleForRule(t *testing.T) {
+func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 	fallbackTrue := true
 	fallbackBackend := &egv1a1.Backend{
 		ObjectMeta: metav1.ObjectMeta{Name: "be-fallback", Namespace: "default"},
@@ -974,7 +974,7 @@ func TestMergeIncompatibleForRule(t *testing.T) {
 				BackendMap:           map[types.NamespacedName]*egv1a1.Backend{{Namespace: "default", Name: "be-fallback"}: fallbackBackend},
 				BTPLoadBalancerIndex: tc.lbIndex,
 			}}
-			got := tr.mergeIncompatibleForRule(route, parentRef, ruleName, tc.backendRefs, tc.hasRouteLevelClusterSettings, tc.sessionPersistent, tc.gatewayCtx)
+			got := tr.mergeIncompatibleForWeightedRule(route, parentRef, ruleName, tc.backendRefs, tc.hasRouteLevelClusterSettings, tc.sessionPersistent, tc.gatewayCtx)
 			require.Equal(t, tc.want, got)
 		})
 	}
