@@ -1,12 +1,32 @@
-- clusterName: shared-cluster
+- clusterName: backend/service/default/service-2/8162/udp
   endpoints:
   - lbEndpoints:
     - endpoint:
         address:
           socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
+            address: 7.7.7.8
+            portValue: 8162
+      loadBalancingWeight: 1
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.9
+            portValue: 8162
+      loadBalancingWeight: 1
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8162
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: shared-cluster
+      region: backend/service/default/service-2/8162/udp
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: service-2
+            namespace: default
+            sectionName: "8162"

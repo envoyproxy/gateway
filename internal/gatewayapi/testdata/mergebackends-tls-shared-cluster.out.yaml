@@ -8,24 +8,16 @@ gateways:
     gatewayClassName: envoy-gateway-class
     listeners:
     - allowedRoutes:
-        kinds:
-        - kind: TCPRoute
         namespaces:
           from: All
-      name: tcp-1
-      port: 8080
-      protocol: TCP
-    - allowedRoutes:
-        kinds:
-        - kind: TCPRoute
-        namespaces:
-          from: All
-      name: tcp-2
-      port: 8081
-      protocol: TCP
+      name: tls
+      port: 91
+      protocol: TLS
+      tls:
+        mode: Passthrough
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -42,29 +34,10 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: tcp-1
+      name: tls
       supportedKinds:
-      - kind: TCPRoute
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: tcp-2
-      supportedKinds:
-      - kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -81,18 +54,12 @@ infraIR:
             mode: Fallback
         status: {}
       listeners:
-      - name: envoy-gateway/gateway-1/tcp-1
+      - name: envoy-gateway/gateway-1/tls
         ports:
-        - containerPort: 8080
-          name: tcp-8080
-          protocol: TCP
-          servicePort: 8080
-      - name: envoy-gateway/gateway-1/tcp-2
-        ports:
-        - containerPort: 8081
-          name: tcp-8081
-          protocol: TCP
-          servicePort: 8081
+        - containerPort: 10091
+          name: tls-91
+          protocol: TLS
+          servicePort: 91
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -102,17 +69,18 @@ infraIR:
           name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
-tcpRoutes:
+tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: TCPRoute
+  kind: TLSRoute
   metadata:
-    name: tcproute-1
+    name: tlsroute-1
     namespace: default
   spec:
+    hostnames:
+    - foo.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: tcp-1
     rules:
     - backendRefs:
       - name: service-3
@@ -134,17 +102,17 @@ tcpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: tcp-1
 - apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: TCPRoute
+  kind: TLSRoute
   metadata:
-    name: tcproute-2
+    name: tlsroute-2
     namespace: default
   spec:
+    hostnames:
+    - bar.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: tcp-2
     rules:
     - backendRefs:
       - name: service-3
@@ -166,7 +134,6 @@ tcpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: tcp-2
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -175,8 +142,8 @@ xdsIR:
     backends:
     - merged: true
       metadata:
-        kind: TCPRoute
-        name: tcproute-1
+        kind: TLSRoute
+        name: tlsroute-1
         namespace: default
       name: backend/service/default/service-3/8163/tcp
       settings:
@@ -232,50 +199,48 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 8080
+      externalPort: 91
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: tcp-1
-      name: envoy-gateway/gateway-1/tcp-1
-      port: 8080
+        sectionName: tls
+      name: envoy-gateway/gateway-1/tls
+      port: 10091
       routes:
       - destination:
           backendClusterRefs:
           - name: backend/service/default/service-3/8163/tcp
             weight: 1
           metadata:
-            kind: TCPRoute
-            name: tcproute-1
+            kind: TLSRoute
+            name: tlsroute-1
             namespace: default
-          name: tcproute/default/tcproute-1/rule/-1
+          name: tlsroute/default/tlsroute-1/rule/-1
         metadata:
-          kind: TCPRoute
-          name: tcproute-1
+          kind: TLSRoute
+          name: tlsroute-1
           namespace: default
-        name: tcproute/default/tcproute-1
-    - address: 0.0.0.0
-      externalPort: 8081
-      metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: tcp-2
-      name: envoy-gateway/gateway-1/tcp-2
-      port: 8081
-      routes:
+        name: tlsroute/default/tlsroute-1
+        tls:
+          inspector:
+            snis:
+            - foo.com
       - destination:
           backendClusterRefs:
           - name: backend/service/default/service-3/8163/tcp
             weight: 1
           metadata:
-            kind: TCPRoute
-            name: tcproute-2
+            kind: TLSRoute
+            name: tlsroute-2
             namespace: default
-          name: tcproute/default/tcproute-2/rule/-1
+          name: tlsroute/default/tlsroute-2/rule/-1
         metadata:
-          kind: TCPRoute
-          name: tcproute-2
+          kind: TLSRoute
+          name: tlsroute-2
           namespace: default
-        name: tcproute/default/tcproute-2
+        name: tlsroute/default/tlsroute-2
+        tls:
+          inspector:
+            snis:
+            - bar.com

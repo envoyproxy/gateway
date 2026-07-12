@@ -17,64 +17,64 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-        - name: tcp-1
-          protocol: TCP
-          port: 8080
+        - name: udp-1
+          protocol: UDP
+          port: 80
           allowedRoutes:
             namespaces:
               from: All
             kinds:
-              - kind: TCPRoute
-        - name: tcp-2
-          protocol: TCP
-          port: 8081
+              - kind: UDPRoute
+        - name: udp-2
+          protocol: UDP
+          port: 81
           allowedRoutes:
             namespaces:
               from: All
             kinds:
-              - kind: TCPRoute
-tcpRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: TCPRoute
+              - kind: UDPRoute
+udpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: UDPRoute
     metadata:
       namespace: default
-      name: tcproute-1
+      name: udproute-1
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
-          sectionName: tcp-1
+          sectionName: udp-1
       rules:
         - backendRefs:
-            - name: service-3
-              port: 8163
-  - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: TCPRoute
+            - name: service-2
+              port: 8162
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: UDPRoute
     metadata:
       namespace: default
-      name: tcproute-2
+      name: udproute-2
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
-          sectionName: tcp-2
+          sectionName: udp-2
       rules:
         - backendRefs:
-            - name: service-3
-              port: 8163
+            - name: service-2
+              port: 8162
 endpointSlices:
   - apiVersion: discovery.k8s.io/v1
     kind: EndpointSlice
     metadata:
-      name: endpointslice-service-3
+      name: endpointslice-service-2
       namespace: default
       labels:
-        kubernetes.io/service-name: service-3
+        kubernetes.io/service-name: service-2
     addressType: IPv4
     ports:
-      - name: tcp
-        protocol: TCP
-        port: 8163
+      - name: udp
+        protocol: UDP
+        port: 8162
     endpoints:
       - addresses:
           - "7.7.7.8"

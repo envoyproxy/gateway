@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: '::'
+      address: 0.0.0.0
       portValue: 10080
       protocol: UDP
   listenerFilters:
@@ -13,6 +13,24 @@
             name: route
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
-              cluster: shared-cluster
+              cluster: backend/service/default/service-2/8162/udp
       statPrefix: service
-  name: udp-route
+  name: envoy-gateway/gateway-1/udp-1
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10081
+      protocol: UDP
+  listenerFilters:
+  - name: envoy.filters.udp_listener.udp_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+      matcher:
+        onNoMatch:
+          action:
+            name: route
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+              cluster: backend/service/default/service-2/8162/udp
+      statPrefix: service
+  name: envoy-gateway/gateway-1/udp-2

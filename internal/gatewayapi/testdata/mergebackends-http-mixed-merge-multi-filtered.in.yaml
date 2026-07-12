@@ -28,7 +28,7 @@ httpRoutes:
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: http-route-1
+      name: http-route-mixed
     spec:
       parentRefs:
         - namespace: envoy-gateway
@@ -36,15 +36,34 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: /route-1
+                value: /mixed
           backendRefs:
             - name: service-1
               port: 8080
+              weight: 50
+            - name: service-2
+              port: 8080
+              weight: 50
+              filters:
+                - type: RequestHeaderModifier
+                  requestHeaderModifier:
+                    add:
+                      - name: x-foo
+                        value: bar
+            - name: service-3
+              port: 8080
+              weight: 25
+              filters:
+                - type: RequestHeaderModifier
+                  requestHeaderModifier:
+                    add:
+                      - name: x-baz
+                        value: qux
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: http-route-2
+      name: http-route-solo
     spec:
       parentRefs:
         - namespace: envoy-gateway
@@ -52,29 +71,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: /route-2
+                value: /solo
           backendRefs:
             - name: service-1
               port: 8080
-endpointSlices:
-  - apiVersion: discovery.k8s.io/v1
-    kind: EndpointSlice
-    metadata:
-      name: endpointslice-service-1
-      namespace: default
-      labels:
-        kubernetes.io/service-name: service-1
-    addressType: IPv4
-    ports:
-      - name: http
-        protocol: TCP
-        port: 8080
-    endpoints:
-      - addresses:
-          - "7.7.7.8"
-        conditions:
-          ready: true
-      - addresses:
-          - "7.7.7.9"
-        conditions:
-          ready: true

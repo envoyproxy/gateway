@@ -17,64 +17,62 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-        - name: tcp-1
-          protocol: TCP
-          port: 8080
+        - name: http
+          protocol: HTTP
+          port: 80
           allowedRoutes:
             namespaces:
               from: All
-            kinds:
-              - kind: TCPRoute
-        - name: tcp-2
-          protocol: TCP
-          port: 8081
-          allowedRoutes:
-            namespaces:
-              from: All
-            kinds:
-              - kind: TCPRoute
-tcpRoutes:
+grpcRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: TCPRoute
+    kind: GRPCRoute
     metadata:
       namespace: default
-      name: tcproute-1
+      name: grpc-route-1
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
-          sectionName: tcp-1
       rules:
-        - backendRefs:
-            - name: service-3
-              port: 8163
+        - matches:
+            - headers:
+                - type: Exact
+                  name: magic
+                  value: foo
+          backendRefs:
+            - name: service-1
+              port: 8080
   - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: TCPRoute
+    kind: GRPCRoute
     metadata:
       namespace: default
-      name: tcproute-2
+      name: grpc-route-2
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
-          sectionName: tcp-2
       rules:
-        - backendRefs:
-            - name: service-3
-              port: 8163
+        - matches:
+            - headers:
+                - type: Exact
+                  name: magic
+                  value: bar
+          backendRefs:
+            - name: service-1
+              port: 8080
 endpointSlices:
   - apiVersion: discovery.k8s.io/v1
     kind: EndpointSlice
     metadata:
-      name: endpointslice-service-3
+      name: endpointslice-service-1
       namespace: default
       labels:
-        kubernetes.io/service-name: service-3
+        kubernetes.io/service-name: service-1
     addressType: IPv4
     ports:
-      - name: tcp
+      - name: http
         protocol: TCP
-        port: 8163
+        port: 8080
     endpoints:
       - addresses:
           - "7.7.7.8"

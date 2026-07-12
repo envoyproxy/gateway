@@ -9,20 +9,20 @@ gateways:
     listeners:
     - allowedRoutes:
         kinds:
-        - kind: TCPRoute
+        - kind: UDPRoute
         namespaces:
           from: All
-      name: tcp-1
-      port: 8080
-      protocol: TCP
+      name: udp-1
+      port: 80
+      protocol: UDP
     - allowedRoutes:
         kinds:
-        - kind: TCPRoute
+        - kind: UDPRoute
         namespaces:
           from: All
-      name: tcp-2
-      port: 8081
-      protocol: TCP
+      name: udp-2
+      port: 81
+      protocol: UDP
   status:
     listeners:
     - attachedRoutes: 1
@@ -42,9 +42,9 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: tcp-1
+      name: udp-1
       supportedKinds:
-      - kind: TCPRoute
+      - kind: UDPRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -62,9 +62,9 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: tcp-2
+      name: udp-2
       supportedKinds:
-      - kind: TCPRoute
+      - kind: UDPRoute
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -81,18 +81,18 @@ infraIR:
             mode: Fallback
         status: {}
       listeners:
-      - name: envoy-gateway/gateway-1/tcp-1
+      - name: envoy-gateway/gateway-1/udp-1
         ports:
-        - containerPort: 8080
-          name: tcp-8080
-          protocol: TCP
-          servicePort: 8080
-      - name: envoy-gateway/gateway-1/tcp-2
+        - containerPort: 10080
+          name: udp-80
+          protocol: UDP
+          servicePort: 80
+      - name: envoy-gateway/gateway-1/udp-2
         ports:
-        - containerPort: 8081
-          name: tcp-8081
-          protocol: TCP
-          servicePort: 8081
+        - containerPort: 10081
+          name: udp-81
+          protocol: UDP
+          servicePort: 81
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -102,21 +102,21 @@ infraIR:
           name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
-tcpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: TCPRoute
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
   metadata:
-    name: tcproute-1
+    name: udproute-1
     namespace: default
   spec:
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: tcp-1
+      sectionName: udp-1
     rules:
     - backendRefs:
-      - name: service-3
-        port: 8163
+      - name: service-2
+        port: 8162
   status:
     parents:
     - conditions:
@@ -134,21 +134,21 @@ tcpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: tcp-1
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: TCPRoute
+        sectionName: udp-1
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
   metadata:
-    name: tcproute-2
+    name: udproute-2
     namespace: default
   spec:
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: tcp-2
+      sectionName: udp-2
     rules:
     - backendRefs:
-      - name: service-3
-        port: 8163
+      - name: service-2
+        port: 8162
   status:
     parents:
     - conditions:
@@ -166,7 +166,7 @@ tcpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: tcp-2
+        sectionName: udp-2
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -175,26 +175,26 @@ xdsIR:
     backends:
     - merged: true
       metadata:
-        kind: TCPRoute
-        name: tcproute-1
+        kind: UDPRoute
+        name: udproute-1
         namespace: default
-      name: backend/service/default/service-3/8163/tcp
+      name: backend/service/default/service-2/8162/udp
       settings:
       - addressType: IP
         endpoints:
         - host: 7.7.7.8
-          port: 8163
+          port: 8162
         - host: 7.7.7.9
-          port: 8163
+          port: 8162
         - host: 7.7.7.7
-          port: 8163
+          port: 8162
         metadata:
           kind: Service
-          name: service-3
+          name: service-2
           namespace: default
-          sectionName: "8163"
-        name: backend/service/default/service-3/8163/tcp
-        protocol: TCP
+          sectionName: "8162"
+        name: backend/service/default/service-2/8162/udp
+        protocol: UDP
         weight: 1
     - metadata:
         kind: Service
@@ -230,52 +230,44 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
-    tcp:
+    udp:
     - address: 0.0.0.0
-      externalPort: 8080
+      externalPort: 80
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: tcp-1
-      name: envoy-gateway/gateway-1/tcp-1
-      port: 8080
-      routes:
-      - destination:
+        sectionName: udp-1
+      name: envoy-gateway/gateway-1/udp-1
+      port: 10080
+      route:
+        destination:
           backendClusterRefs:
-          - name: backend/service/default/service-3/8163/tcp
+          - name: backend/service/default/service-2/8162/udp
             weight: 1
           metadata:
-            kind: TCPRoute
-            name: tcproute-1
+            kind: UDPRoute
+            name: udproute-1
             namespace: default
-          name: tcproute/default/tcproute-1/rule/-1
-        metadata:
-          kind: TCPRoute
-          name: tcproute-1
-          namespace: default
-        name: tcproute/default/tcproute-1
+          name: udproute/default/udproute-1/rule/-1
+        name: udproute/default/udproute-1
     - address: 0.0.0.0
-      externalPort: 8081
+      externalPort: 81
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: tcp-2
-      name: envoy-gateway/gateway-1/tcp-2
-      port: 8081
-      routes:
-      - destination:
+        sectionName: udp-2
+      name: envoy-gateway/gateway-1/udp-2
+      port: 10081
+      route:
+        destination:
           backendClusterRefs:
-          - name: backend/service/default/service-3/8163/tcp
+          - name: backend/service/default/service-2/8162/udp
             weight: 1
           metadata:
-            kind: TCPRoute
-            name: tcproute-2
+            kind: UDPRoute
+            name: udproute-2
             namespace: default
-          name: tcproute/default/tcproute-2/rule/-1
-        metadata:
-          kind: TCPRoute
-          name: tcproute-2
-          namespace: default
-        name: tcproute/default/tcproute-2
+          name: udproute/default/udproute-2/rule/-1
+        name: udproute/default/udproute-2

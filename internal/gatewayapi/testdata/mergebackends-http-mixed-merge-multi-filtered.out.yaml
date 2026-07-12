@@ -42,7 +42,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: http-route-1
+    name: http-route-mixed
     namespace: default
   spec:
     parentRefs:
@@ -52,9 +52,28 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+        weight: 50
+      - filters:
+        - requestHeaderModifier:
+            add:
+            - name: x-foo
+              value: bar
+          type: RequestHeaderModifier
+        name: service-2
+        port: 8080
+        weight: 50
+      - filters:
+        - requestHeaderModifier:
+            add:
+            - name: x-baz
+              value: qux
+          type: RequestHeaderModifier
+        name: service-3
+        port: 8080
+        weight: 25
       matches:
       - path:
-          value: /route-1
+          value: /mixed
   status:
     parents:
     - conditions:
@@ -75,7 +94,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: http-route-2
+    name: http-route-solo
     namespace: default
   spec:
     parentRefs:
@@ -87,7 +106,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /route-2
+          value: /solo
   status:
     parents:
     - conditions:
@@ -145,16 +164,12 @@ xdsIR:
     - merged: true
       metadata:
         kind: HTTPRoute
-        name: http-route-1
+        name: http-route-mixed
         namespace: default
       name: backend/service/default/service-1/8080/http
       settings:
       - addressType: IP
         endpoints:
-        - host: 7.7.7.8
-          port: 8080
-        - host: 7.7.7.9
-          port: 8080
         - host: 7.7.7.7
           port: 8080
         metadata:
@@ -164,7 +179,51 @@ xdsIR:
           sectionName: "8080"
         name: backend/service/default/service-1/8080/http
         protocol: HTTP
-        weight: 1
+        weight: 50
+    - metadata:
+        kind: HTTPRoute
+        name: http-route-mixed
+        namespace: default
+      name: httproute/default/http-route-mixed/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        filters:
+          addRequestHeaders:
+          - addIfAbsent: false
+            append: true
+            name: x-foo
+            value:
+            - bar
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/http-route-mixed/rule/0/backend/1
+        protocol: HTTP
+        weight: 50
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        filters:
+          addRequestHeaders:
+          - addIfAbsent: false
+            append: true
+            name: x-baz
+            value:
+            - qux
+        metadata:
+          kind: Service
+          name: service-3
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/http-route-mixed/rule/0/backend/2
+        protocol: HTTP
+        weight: 25
     - metadata:
         kind: Service
         name: envoy-envoy-gateway-gateway-1-196ae069
@@ -213,43 +272,45 @@ xdsIR:
       - destination:
           backendClusterRefs:
           - name: backend/service/default/service-1/8080/http
-            weight: 1
+            weight: 50
+          - name: httproute/default/http-route-mixed/rule/0
+            weight: 50
           metadata:
             kind: HTTPRoute
-            name: http-route-1
+            name: http-route-mixed
             namespace: default
-          name: httproute/default/http-route-1/rule/0
+          name: httproute/default/http-route-mixed/rule/0
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: http-route-1
+          name: http-route-mixed
           namespace: default
-        name: httproute/default/http-route-1/rule/0/match/0/*
+        name: httproute/default/http-route-mixed/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route-1
+          prefix: /mixed
       - destination:
           backendClusterRefs:
           - name: backend/service/default/service-1/8080/http
             weight: 1
           metadata:
             kind: HTTPRoute
-            name: http-route-2
+            name: http-route-solo
             namespace: default
-          name: httproute/default/http-route-2/rule/0
+          name: httproute/default/http-route-solo/rule/0
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: http-route-2
+          name: http-route-solo
           namespace: default
-        name: httproute/default/http-route-2/rule/0/match/0/*
+        name: httproute/default/http-route-solo/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route-2
+          prefix: /solo
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

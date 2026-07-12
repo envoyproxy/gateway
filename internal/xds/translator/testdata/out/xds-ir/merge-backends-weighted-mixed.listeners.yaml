@@ -25,11 +25,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/http
+          routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
-    name: envoy-gateway/gateway-1/http
+    name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-1/http
+  name: first-listener
   perConnectionBufferLimitBytes: 32768

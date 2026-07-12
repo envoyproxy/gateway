@@ -1,0 +1,106 @@
+# Real IR extracted from gatewayapi's mergebackends-http-mixed-merge-weighted.out.yaml:
+# one rule has 2 backendRefs, one merges (shared with a second route) and one
+# doesn't (carries a per-backendRef filter), forcing the weighted-clusters path.
+backends:
+- merged: true
+  metadata:
+    kind: HTTPRoute
+    name: http-route-mixed
+    namespace: default
+  name: backend/service/default/service-1/8080/http
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    metadata:
+      kind: Service
+      name: service-1
+      namespace: default
+      sectionName: "8080"
+    name: backend/service/default/service-1/8080/http
+    protocol: HTTP
+    weight: 50
+- metadata:
+    kind: HTTPRoute
+    name: http-route-mixed
+    namespace: default
+  name: httproute/default/http-route-mixed/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    filters:
+      addRequestHeaders:
+      - addIfAbsent: false
+        append: true
+        name: x-foo
+        value:
+        - bar
+    metadata:
+      kind: Service
+      name: service-2
+      namespace: default
+      sectionName: "8080"
+    name: httproute/default/http-route-mixed/rule/0/backend/1
+    protocol: HTTP
+    weight: 50
+http:
+- address: 0.0.0.0
+  externalPort: 80
+  hostnames:
+  - '*'
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      backendClusterRefs:
+      - name: backend/service/default/service-1/8080/http
+        weight: 50
+      - name: httproute/default/http-route-mixed/rule/0
+        weight: 50
+      metadata:
+        kind: HTTPRoute
+        name: http-route-mixed
+        namespace: default
+      name: httproute/default/http-route-mixed/rule/0
+    hostname: '*'
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: http-route-mixed
+      namespace: default
+    name: httproute/default/http-route-mixed/rule/0/match/0/*
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /mixed
+  - destination:
+      backendClusterRefs:
+      - name: backend/service/default/service-1/8080/http
+        weight: 1
+      metadata:
+        kind: HTTPRoute
+        name: http-route-solo
+        namespace: default
+      name: httproute/default/http-route-solo/rule/0
+    hostname: '*'
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: http-route-solo
+      namespace: default
+    name: httproute/default/http-route-solo/rule/0/match/0/*
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /solo

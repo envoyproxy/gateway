@@ -17,47 +17,41 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-        - name: tcp-1
-          protocol: TCP
-          port: 8080
+        - name: tls
+          protocol: TLS
+          port: 91
+          tls:
+            mode: Passthrough
           allowedRoutes:
             namespaces:
               from: All
-            kinds:
-              - kind: TCPRoute
-        - name: tcp-2
-          protocol: TCP
-          port: 8081
-          allowedRoutes:
-            namespaces:
-              from: All
-            kinds:
-              - kind: TCPRoute
-tcpRoutes:
+tlsRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: TCPRoute
+    kind: TLSRoute
     metadata:
       namespace: default
-      name: tcproute-1
+      name: tlsroute-1
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
-          sectionName: tcp-1
+      hostnames:
+        - "foo.com"
       rules:
         - backendRefs:
             - name: service-3
               port: 8163
   - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: TCPRoute
+    kind: TLSRoute
     metadata:
       namespace: default
-      name: tcproute-2
+      name: tlsroute-2
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
-          sectionName: tcp-2
+      hostnames:
+        - "bar.com"
       rules:
         - backendRefs:
             - name: service-3
