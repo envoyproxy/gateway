@@ -744,6 +744,13 @@ func TestShouldMergeBackend(t *testing.T) {
 			filters:      &ir.DestinationFilters{CredentialInjection: &ir.CredentialInjection{}},
 			want:         false,
 		},
+		{
+			name:         "any other per-backendRef filter (e.g. header modification) never merges either",
+			mergeEnabled: true,
+			backendRef:   serviceBackendRef,
+			filters:      &ir.DestinationFilters{AddRequestHeaders: []ir.AddHeader{{Name: "x-foo", Value: []string{"bar"}}}},
+			want:         false,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

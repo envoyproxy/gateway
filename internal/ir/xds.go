@@ -2077,8 +2077,6 @@ type BackendClusterRef struct {
 	Name string `json:"name" yaml:"name"`
 	// Weight for weighted routing across multiple BackendRefs.
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
-	// Filters are per-backendRef filters (header modification, credential injection, etc.)
-	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // ResolveBackendClusterRefs resolves each ref's Name against idx, a name-keyed index of
