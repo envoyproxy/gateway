@@ -157,7 +157,7 @@ func (r *ResourceRender) ownerReferences() []metav1.OwnerReference {
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
-	saLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	saLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(saLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -178,7 +178,8 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	}, nil
 }
 
-// envoyLabels returns the labels, including extraLabels, used for Envoy resources.
+// envoyLabels returns the labels used for Envoy resources. These also feed the
+// immutable pod selector, so no keys may be added here for existing installs.
 func (r *ResourceRender) envoyLabels(extraLabels map[string]string) map[string]string {
 	appLabels := EnvoyAppLabel()
 	if r.GatewayNamespaceMode {
@@ -187,6 +188,20 @@ func (r *ResourceRender) envoyLabels(extraLabels map[string]string) map[string]s
 	maps.Copy(appLabels, extraLabels)
 
 	return appLabels
+}
+
+// objectLabels returns the metadata labels for generated resources, adding the
+// standard gateway-name label in default mode. It's kept out of envoyLabels
+// since that feeds the immutable selector (merged gateways have no owning name).
+func (r *ResourceRender) objectLabels(extraLabels map[string]string) map[string]string {
+	labels := r.envoyLabels(extraLabels)
+	if !r.GatewayNamespaceMode {
+		if gwName := labels[gatewayapi.OwningGatewayNameLabel]; gwName != "" {
+			labels[gatewayapi.GatewayNameLabel] = gwName
+		}
+	}
+
+	return labels
 }
 
 // Service returns the expected Service based on the provided infra.
@@ -223,7 +238,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	// Set the infraLabels based on the owning gatewayclass name.
-	infraLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	infraLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(infraLabels) {
 		return nil, fmt.Errorf("missing owning gateway infraLabels")
 	}
@@ -254,7 +269,9 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	// Set the spec of gateway service
 	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig)
 	serviceSpec.Ports = ports
-	serviceSpec.Selector = resource.GetSelector(infraLabels).MatchLabels
+	// Build the selector from envoyLabels, not objectLabels, to keep gateway-name
+	// out of the immutable selector.
+	serviceSpec.Selector = resource.GetSelector(r.envoyLabels(r.infra.GetProxyMetadata().Labels)).MatchLabels
 
 	if (*envoyServiceConfig.Type) == egv1a1.ServiceTypeClusterIP {
 		if len(r.infra.Addresses) > 0 {
@@ -315,7 +332,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
-	cmLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	cmLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(cmLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -667,7 +684,7 @@ func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string,
 
 func (r *ResourceRender) getLabels() (map[string]string, error) {
 	// Set the labels based on the owning gateway name.
-	resourceLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	resourceLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(resourceLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -676,10 +693,13 @@ func (r *ResourceRender) getLabels() (map[string]string, error) {
 }
 
 func (r *ResourceRender) getPodLabels(pod *egv1a1.KubernetesPodSpec) map[string]string {
-	podLabels := r.infra.GetProxyMetadata().Labels
+	// Copy into a fresh map so the pod-spec labels are not written back into the
+	// shared infra metadata map (which also feeds getLabels/stableSelector).
+	podLabels := map[string]string{}
+	maps.Copy(podLabels, r.infra.GetProxyMetadata().Labels)
 	maps.Copy(podLabels, pod.Labels)
 
-	return r.envoyLabels(podLabels)
+	return r.objectLabels(podLabels)
 }
 
 // OwningGatewayLabelsAbsent Check if labels are missing some OwningGatewayLabels

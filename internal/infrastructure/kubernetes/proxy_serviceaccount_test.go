@@ -70,6 +70,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
 						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						gatewayapi.GatewayNameLabel:            "gateway-1",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -119,6 +120,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
 						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						gatewayapi.GatewayNameLabel:            "gateway-1",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -181,6 +183,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
 						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						gatewayapi.GatewayNameLabel:            "gateway-1",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
