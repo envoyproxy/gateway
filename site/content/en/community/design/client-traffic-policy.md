@@ -78,7 +78,8 @@ spec:
     kind: Gateway
     name: eg
     namespace: default
-  proxyProtocol: true
+  proxyProtocol:
+    optional: false
 ```
 
 ## Features / API Fields
