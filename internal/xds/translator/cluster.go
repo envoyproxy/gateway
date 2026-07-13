@@ -1420,11 +1420,13 @@ type HTTPRouteTranslator struct {
 }
 
 func (httpRoute *HTTPRouteTranslator) asClusterArgs(bc *ir.BackendCluster, extra *ExtraArgs) *xdsClusterArgs {
-	// A merged cluster may be shared by routes with different hostnames, so no single route's
-	// hostname reliably describes it — fall back to none rather than an arbitrary one.
+	// A merged cluster may be shared by routes with different hostnames or stat names, so no
+	// single route's value reliably describes it — fall back to none rather than an arbitrary one.
 	routeHostname := httpRoute.Hostname
+	statName := extra.statName
 	if bc.Merged {
 		routeHostname = ""
+		statName = nil
 	}
 	clusterArgs := &xdsClusterArgs{
 		backendCluster:    bc,
@@ -1436,7 +1438,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(bc *ir.BackendCluster, extra
 		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 		ipFamily:          extra.ipFamily,
-		statName:          extra.statName,
+		statName:          statName,
 		extensionMgr:      extra.extensionMgr,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,

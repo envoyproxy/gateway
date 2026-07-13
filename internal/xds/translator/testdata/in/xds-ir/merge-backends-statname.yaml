@@ -1,0 +1,39 @@
+# Two routes with different route-derived stat names share one merged BackendCluster. The
+# cluster's AltStatName must not fall back to either route's stat name, since the cluster is
+# not owned by any single route.
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "route-a"
+    hostname: "*"
+    pathMatch:
+      prefix: "/route-a"
+    destination:
+      name: "route-a-dest"
+      statName: "route-a-stat-name"
+      backendClusterRefs:
+      - name: "shared-cluster"
+  - name: "route-b"
+    hostname: "*"
+    pathMatch:
+      prefix: "/route-b"
+    destination:
+      name: "route-b-dest"
+      statName: "route-b-stat-name"
+      backendClusterRefs:
+      - name: "shared-cluster"
+backends:
+- name: "shared-cluster"
+  merged: true
+  settings:
+  - name: "shared-cluster"
+    weight: 1
+    endpoints:
+    - host: "1.2.3.4"
+      port: 50000
+    - host: "5.6.7.8"
+      port: 50000
