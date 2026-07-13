@@ -1,0 +1,1 @@
+SDS clusters generated for Unix socket URLs now include a hash suffix in their xDS names to prevent collisions between distinct paths. EnvoyPatchPolicies or extension servers that match the previous path-derived cluster names must update those references.
