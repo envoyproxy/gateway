@@ -56,7 +56,7 @@
                   apiType: GRPC
                   grpcServices:
                   - envoyGrpc:
-                      clusterName: sds_var_run_secrets_workload-spiffe-uds_socket
+                      clusterName: sds_var_run_secrets_workload-spiffe-uds_socket_2465711674b623c4f815575b37404800
           tlsCertificateSdsSecretConfigs:
           - name: default
             sdsConfig:
@@ -64,7 +64,7 @@
                 apiType: GRPC
                 grpcServices:
                 - envoyGrpc:
-                    clusterName: sds_var_run_secrets_workload-spiffe-uds_socket
+                    clusterName: sds_var_run_secrets_workload-spiffe-uds_socket_2465711674b623c4f815575b37404800
         sni: example.com
   type: EDS
   typedExtensionProtocolOptions:
@@ -78,12 +78,12 @@
 - connectTimeout: 10s
   http2ProtocolOptions: {}
   loadAssignment:
-    clusterName: sds_var_run_secrets_workload-spiffe-uds_socket
+    clusterName: sds_var_run_secrets_workload-spiffe-uds_socket_2465711674b623c4f815575b37404800
     endpoints:
     - lbEndpoints:
       - endpoint:
           address:
             pipe:
               path: /var/run/secrets/workload-spiffe-uds/socket
-  name: sds_var_run_secrets_workload-spiffe-uds_socket
+  name: sds_var_run_secrets_workload-spiffe-uds_socket_2465711674b623c4f815575b37404800
   type: STATIC
