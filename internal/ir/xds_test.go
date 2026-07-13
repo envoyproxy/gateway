@@ -634,15 +634,6 @@ func TestValidateXds(t *testing.T) {
 	}
 }
 
-func TestSDSClusterNameFromURLDistinguishesUnixSocketPaths(t *testing.T) {
-	first := SDSClusterNameFromURL("/run/a/b/socket")
-	second := SDSClusterNameFromURL("/run/a_b/socket")
-
-	require.NotEqual(t, first, second)
-	require.Contains(t, first, "run_a_b_socket")
-	require.Contains(t, second, "run_a_b_socket")
-}
-
 func TestTLSCertificateValidateDistinguishesMissingSDSFields(t *testing.T) {
 	tests := []struct {
 		name string

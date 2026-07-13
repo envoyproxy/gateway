@@ -10,23 +10,23 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
 // SDSClusterNameFromURL returns the canonical xDS cluster name for an SDS URL.
 func SDSClusterNameFromURL(url string) string {
-	hash := sha256.Sum256([]byte(url))
-	if strings.HasPrefix(url, "/") {
-		const maxReadablePrefixLength = 48
+	address := strings.TrimPrefix(url, "unix://")
+	hash := sha256.Sum256([]byte(address))
+	const maxReadablePrefixLength = 48
 
-		hashSuffix := hex.EncodeToString(hash[:16])
-		readablePrefix := strings.Trim(strings.ReplaceAll(url, "/", "_"), "_")
-		if len(readablePrefix) > maxReadablePrefixLength {
-			readablePrefix = readablePrefix[:maxReadablePrefixLength]
-		}
-		if readablePrefix != "" {
-			return fmt.Sprintf("sds_%s_%s", readablePrefix, hashSuffix)
-		}
+	hashSuffix := hex.EncodeToString(hash[:16])
+	readablePrefix := strings.Trim(strings.ReplaceAll(address, "/", "_"), "_")
+	for len(readablePrefix) > maxReadablePrefixLength {
+		_, size := utf8.DecodeLastRuneInString(readablePrefix)
+		readablePrefix = readablePrefix[:len(readablePrefix)-size]
 	}
-
-	return fmt.Sprintf("sds_%s", hex.EncodeToString(hash[:8]))
+	if readablePrefix != "" {
+		return fmt.Sprintf("sds_%s_%s", readablePrefix, hashSuffix)
+	}
+	return fmt.Sprintf("sds_%s", hashSuffix)
 }
