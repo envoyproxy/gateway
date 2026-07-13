@@ -100,7 +100,7 @@ func GetListenerSet(nsName, parentGateway types.NamespacedName, listenerPort int
 			Listeners: []gwapiv1.ListenerEntry{
 				{
 					Name:     "test",
-					Port:     gwapiv1.PortNumber(listenerPort),
+					Port:     listenerPort,
 					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
