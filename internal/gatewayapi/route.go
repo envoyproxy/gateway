@@ -610,11 +610,20 @@ func (t *Translator) shouldMergeBackend(
 	if ds.Filters != nil {
 		return false
 	}
-	if !t.MergeBackends {
+	if !t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 		return false
 	}
 
 	return !t.routingTypeDivergesForRule(gatewayCtx, btpRoutingType)
+}
+
+// isMergeBackendsEnabledForGateway resolves MergeBackends for gatewayCtx, letting a Gateway-level
+// override (via gatewayCtx.envoyProxy) win over t.MergeBackends' GatewayClass/default value.
+func (t *Translator) isMergeBackendsEnabledForGateway(gatewayCtx *GatewayContext) bool {
+	if gatewayCtx != nil && gatewayCtx.envoyProxy != nil && gatewayCtx.envoyProxy.Spec.MergeBackends != nil {
+		return ptr.Deref(gatewayCtx.envoyProxy.Spec.MergeBackends.Enabled, false)
+	}
+	return t.MergeBackends
 }
 
 // routingTypeDivergesForRule reports whether this rule's effective RoutingType differs from the

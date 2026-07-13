@@ -687,6 +687,7 @@ func TestShouldMergeBackend(t *testing.T) {
 	tests := []struct {
 		name              string
 		mergeEnabled      bool
+		gatewayEnvoyProxy *egv1a1.EnvoyProxy
 		gatewayBaselineRT *egv1a1.RoutingType
 		effectiveRT       *egv1a1.RoutingType
 		mergeIncompatible bool
@@ -700,6 +701,24 @@ func TestShouldMergeBackend(t *testing.T) {
 			mergeEnabled: false,
 			backendRef:   serviceBackendRef,
 			want:         false,
+		},
+		{
+			name:         "disabled globally, but Gateway-level EnvoyProxy enables it",
+			mergeEnabled: false,
+			gatewayEnvoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{MergeBackends: &egv1a1.MergeBackendsConfig{Enabled: new(true)}},
+			},
+			backendRef: serviceBackendRef,
+			want:       true,
+		},
+		{
+			name:         "enabled globally, but Gateway-level EnvoyProxy disables it",
+			mergeEnabled: true,
+			gatewayEnvoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{MergeBackends: &egv1a1.MergeBackendsConfig{Enabled: new(false)}},
+			},
+			backendRef: serviceBackendRef,
+			want:       false,
 		},
 		{
 			name:         "enabled, no routing type anywhere: baseline == effective (both Endpoint)",
@@ -769,7 +788,11 @@ func TestShouldMergeBackend(t *testing.T) {
 					},
 				},
 			}
-			got := tr.shouldMergeBackend(gwCtx, tc.effectiveRT, tc.mergeIncompatible, tc.backendRef, "default", &ir.DestinationSetting{Filters: tc.filters})
+			testGwCtx := gwCtx
+			if tc.gatewayEnvoyProxy != nil {
+				testGwCtx = &GatewayContext{Gateway: gwCtx.Gateway, envoyProxy: tc.gatewayEnvoyProxy}
+			}
+			got := tr.shouldMergeBackend(testGwCtx, tc.effectiveRT, tc.mergeIncompatible, tc.backendRef, "default", &ir.DestinationSetting{Filters: tc.filters})
 			require.Equal(t, tc.want, got)
 		})
 	}
