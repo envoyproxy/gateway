@@ -28,7 +28,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
-	"github.com/envoyproxy/gateway/internal/globalratelimit"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
@@ -383,7 +383,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		xTranslator := &translator.Translator{
 			// Set some default settings for translation
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
-				ServiceURL: globalratelimit.GetRateLimitURL(nil, namespace, dnsDomain),
+				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),
 			},
 			Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		}
