@@ -1,0 +1,55 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /route-a
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: http-route-a
+              namespace: default
+      name: httproute/default/http-route-a/rule/0/match/0/*
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: backend/service/default/shared-service/8080/http
+            weight: 30
+          - name: httproute/default/http-route-a/rule/0/backend/1
+            weight: 70
+    - match:
+        pathSeparatedPrefix: /route-b
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: http-route-b
+              namespace: default
+      name: httproute/default/http-route-b/rule/0/match/0/*
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: backend/service/default/shared-service/8080/http
+            weight: 90
+          - name: httproute/default/http-route-b/rule/0/backend/1
+            weight: 10

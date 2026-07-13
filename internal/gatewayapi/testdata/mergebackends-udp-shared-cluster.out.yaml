@@ -195,7 +195,6 @@ xdsIR:
           sectionName: "8162"
         name: backend/service/default/service-2/8162/udp
         protocol: UDP
-        weight: 1
     - metadata:
         kind: Service
         name: envoy-envoy-gateway-gateway-1-196ae069

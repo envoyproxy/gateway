@@ -164,7 +164,6 @@ xdsIR:
           sectionName: "8080"
         name: backend/service/default/service-1/8080/http
         protocol: HTTP
-        weight: 60
     - merged: true
       metadata:
         kind: HTTPRoute
@@ -183,7 +182,6 @@ xdsIR:
           sectionName: "8080"
         name: backend/service/default/service-2/8080/http
         protocol: HTTP
-        weight: 40
     - metadata:
         kind: Service
         name: envoy-envoy-gateway-gateway-1-196ae069

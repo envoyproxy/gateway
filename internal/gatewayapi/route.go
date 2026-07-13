@@ -782,9 +782,18 @@ func (t *Translator) getOrCreateBackendCluster(
 		return backendCluster
 	}
 
+	setting := ds
+	if merge {
+		// Weight is per-route for a merged cluster (see ir.BackendClusterRef.ResolvedWeight),
+		// so clear it here to avoid a stale, misleading value on the shared Setting.
+		copied := *ds
+		copied.Weight = nil
+		setting = &copied
+	}
+
 	backendCluster := &ir.BackendCluster{
 		Name:     clusterName,
-		Settings: []*ir.DestinationSetting{ds},
+		Settings: []*ir.DestinationSetting{setting},
 		Metadata: metadata,
 		Merged:   merge,
 	}

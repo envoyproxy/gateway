@@ -179,7 +179,6 @@ xdsIR:
           sectionName: "8080"
         name: backend/service/default/service-1/8080/http
         protocol: HTTP
-        weight: 50
     - metadata:
         kind: HTTPRoute
         name: http-route-mixed

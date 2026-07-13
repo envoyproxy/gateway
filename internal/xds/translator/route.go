@@ -327,7 +327,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 func buildXdsRouteAction(t *Translator, route *ir.HTTPRoute) *routev3.RouteAction {
 	backendWeights := t.backendWeights(route.Destination)
 	if t.httpRouteNeedsClusterPerSetting(route) {
-		return buildXdsWeightedRouteAction(backendWeights, t.getBackendClusters(route.Destination))
+		return buildXdsWeightedRouteAction(backendWeights, t.resolveBackendClusterRefs(route.Destination))
 	}
 
 	return &routev3.RouteAction{
@@ -337,7 +337,7 @@ func buildXdsRouteAction(t *Translator, route *ir.HTTPRoute) *routev3.RouteActio
 	}
 }
 
-func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, backends []*ir.BackendCluster) *routev3.RouteAction {
+func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, pairs []resolvedBackendRef) *routev3.RouteAction {
 	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0)
 	if backendWeights.UnavailableWeight() > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
@@ -347,12 +347,13 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, backends []*
 		weightedClusters = append(weightedClusters, invalidCluster)
 	}
 
-	for _, bc := range backends {
-		for _, destinationSetting := range bc.Settings {
+	for _, pair := range pairs {
+		for _, destinationSetting := range pair.bc.Settings {
 			if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
+				weight := pair.ResolvedWeight(destinationSetting)
 				validCluster := &routev3.WeightedCluster_ClusterWeight{
 					Name:   destinationSetting.Name,
-					Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
+					Weight: &wrapperspb.UInt32Value{Value: *weight},
 				}
 
 				if destinationSetting.Filters != nil {
@@ -538,7 +539,7 @@ func buildXdsURLRewriteAction(t *Translator, route *ir.HTTPRoute, urlRewrite *ir
 	// only use weighted cluster when there are invalid weights
 	var routeAction *routev3.RouteAction
 	if t.httpRouteNeedsClusterPerSetting(route) {
-		routeAction = buildXdsWeightedRouteAction(backendWeights, t.getBackendClusters(route.Destination))
+		routeAction = buildXdsWeightedRouteAction(backendWeights, t.resolveBackendClusterRefs(route.Destination))
 	} else {
 		routeAction = &routev3.RouteAction{
 			ClusterSpecifier: &routev3.RouteAction_Cluster{

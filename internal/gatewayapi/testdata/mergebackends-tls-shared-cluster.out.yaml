@@ -162,7 +162,6 @@ xdsIR:
           sectionName: "8163"
         name: backend/service/default/service-3/8163/tcp
         protocol: TCP
-        weight: 1
     - metadata:
         kind: Service
         name: envoy-envoy-gateway-gateway-1-196ae069
