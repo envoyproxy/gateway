@@ -23,14 +23,8 @@ http:
   routes:
   - destination:
       name: httproute/default/httproute-1/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-1/rule/0/backend/0
+      backendClusterRefs:
+      - name: httproute/default/httproute-1/rule/0
     hostname: gateway.envoyproxy.io
     name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
     pathMatch:
@@ -38,3 +32,13 @@ http:
       name: ""
       prefix: /
     useClientProtocol: true
+backends:
+- name: httproute/default/httproute-1/rule/0
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    protocol: HTTP
+    weight: 1
+    name: httproute/default/httproute-1/rule/0/backend/0
