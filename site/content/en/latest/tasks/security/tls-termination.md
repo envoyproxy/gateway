@@ -251,6 +251,115 @@ curl -v -HHost:backend-2.example.com --resolve "backend-2.example.com:443:${GATE
 
 The echo response includes the serving pod's name (`POD_NAME`), so each request lands on a different backend Service even though they share one listener.
 
+## SDS Certificate References
+
+Besides inline `kubernetes.io/tls` Secrets, a listener's `tls.certificateRefs` can reference a Secret of type `gateway.envoyproxy.io/sds`. Rather than embedding a certificate and key directly, this Secret tells Envoy to fetch the certificate at runtime from an external Secret Discovery Service (SDS) server, identified by two keys: `url` (the SDS server Unix domain socket path) and `secretName` (the resource name Envoy requests from that server):
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sds-cert
+type: gateway.envoyproxy.io/sds
+stringData:
+  url: /var/run/secrets/workload-spiffe-uds/socket
+  secretName: default
+```
+
+A listener references it the same way it references any other certificate Secret:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: tls
+      protocol: TLS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: sds-cert
+```
+
+This feature is disabled by default. Add `enableSDSSecretRef` under `extensionApis` in the `EnvoyGateway` configuration stored in the `envoy-gateway-config` ConfigMap:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    provider:
+      type: Kubernetes
+    extensionApis:
+      enableSDSSecretRef: true
+```
+
+Preserve any other settings already present in `envoy-gateway.yaml`, then apply the ConfigMap and restart Envoy Gateway:
+
+```shell
+kubectl apply -f envoy-gateway-config.yaml
+kubectl rollout restart deployment/envoy-gateway -n envoy-gateway-system
+kubectl rollout status deployment/envoy-gateway -n envoy-gateway-system
+```
+
+The SDS Unix domain socket must also be mounted into the Envoy Proxy pod at the path specified by `url`. For example, the following `EnvoyProxy` mounts a socket directory provided on every Kubernetes node:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: sds-socket
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  volumes:
+                    - name: sds-socket
+                      hostPath:
+                        path: /var/run/secrets/workload-spiffe-uds
+                        type: Directory
+                  containers:
+                    - name: envoy
+                      volumeMounts:
+                        - name: sds-socket
+                          mountPath: /var/run/secrets/workload-spiffe-uds
+```
+
+Attach the `EnvoyProxy` to the `GatewayClass` used by the Gateway:
+
+```shell
+kubectl apply -f envoyproxy-sds.yaml
+kubectl patch gatewayclass eg --type=merge --patch '{"spec":{"parametersRef":{"group":"gateway.envoyproxy.io","kind":"EnvoyProxy","name":"sds-socket","namespace":"envoy-gateway-system"}}}'
+```
+
+Replace the `hostPath` with the directory used by the SDS provider. The directory must exist on every node that can run an Envoy Proxy pod. The Envoy process must have permission to connect to the socket. If the `GatewayClass` already references an `EnvoyProxy`, add the volume and mount to that resource instead of replacing `parametersRef`. Enabling SDS Secret references does not add the socket or change the proxy deployment automatically.
+
+Kubernetes authorization and ReferenceGrant control access to the Secret containing the SDS connection details. The SDS server separately authorizes the `secretName` requested by Envoy using the proxy's SDS identity. Only enable SDS Secret references when users who can create or reference these Secrets are trusted to request the SDS resources available to that identity. Use separate Envoy Proxy deployments or SDS identities for mutually untrusted tenants.
+
+Envoy waits for SDS-backed listener certificates before activating the listener. Envoy Gateway combines HTTPS listeners on the same address and port into one Envoy listener, so an unavailable SDS server or resource can delay activation or reset connections for every listener sharing that address and port.
+
+To prevent HTTP/2 connection coalescing across HTTPS listeners that share a port, Envoy Gateway normally compares certificate DNS/SAN names and defaults listeners with overlapping certificates to HTTP/1.1 unless ALPN is explicitly configured. Because SDS-backed certificates are opaque to Envoy Gateway, every HTTPS listener sharing a port with an SDS-backed listener is treated conservatively in the same way, even when their configured hostnames are distinct.
+
 [TCPRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#tcproute
 [TLSRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#tlsroute
 [tls-passthrough]: ../tls-passthrough/

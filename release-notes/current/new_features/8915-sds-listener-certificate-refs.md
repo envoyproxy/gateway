@@ -1,0 +1,1 @@
+Added support for referencing a Secret of type `gateway.envoyproxy.io/sds` in a Gateway listener's `tls.certificateRefs`, letting Envoy fetch the listener certificate from an external SDS server instead of an inline `kubernetes.io/tls` Secret, gated by the existing `enableSDSSecretRef` EnvoyGateway extension API flag.
