@@ -42,6 +42,9 @@ var (
 	ErrTCPRouteSNIsEmpty                        = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrTLSCertEmpty                             = errors.New("field certificate must be specified")
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
+	ErrTLSSDSSecretNameEmpty                    = errors.New("field SDS SecretName must be specified")
+	ErrTLSSDSURLEmpty                           = errors.New("field SDS URL must be specified")
+	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS or inline certificate fields may be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
@@ -554,6 +557,18 @@ type SubjectAltName struct {
 
 func (t *TLSCertificate) Validate() error {
 	var errs error
+	if t.SDS != nil {
+		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
+			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
+		}
+		if t.SDS.SecretName == "" {
+			errs = errors.Join(errs, ErrTLSSDSSecretNameEmpty)
+		}
+		if t.SDS.URL == "" {
+			errs = errors.Join(errs, ErrTLSSDSURLEmpty)
+		}
+		return errs
+	}
 	if len(t.Certificate) == 0 {
 		errs = errors.Join(errs, ErrTLSCertEmpty)
 	}
