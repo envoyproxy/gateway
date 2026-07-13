@@ -84,6 +84,30 @@ func GetGateway(nsName types.NamespacedName, gwclass string, listenerPort int32)
 	}
 }
 
+// GetListenerSet returns a sample ListenerSet with single listener.
+func GetListenerSet(nsName, parentGateway types.NamespacedName, listenerPort int32) *gwapiv1.ListenerSet {
+	parentNamespace := gwapiv1.Namespace(parentGateway.Namespace)
+	return &gwapiv1.ListenerSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nsName.Namespace,
+			Name:      nsName.Name,
+		},
+		Spec: gwapiv1.ListenerSetSpec{
+			ParentRef: gwapiv1.ParentGatewayReference{
+				Namespace: &parentNamespace,
+				Name:      gwapiv1.ObjectName(parentGateway.Name),
+			},
+			Listeners: []gwapiv1.ListenerEntry{
+				{
+					Name:     "test",
+					Port:     gwapiv1.PortNumber(listenerPort),
+					Protocol: gwapiv1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+}
+
 // GetSecureGateway returns a sample Gateway with single TLS listener.
 func GetSecureGateway(nsName types.NamespacedName, gwclass string, secretKindNSName GroupKindNamespacedName) *gwapiv1.Gateway {
 	secureGateway := GetGateway(nsName, gwclass, 8080)
