@@ -34,8 +34,10 @@ import (
 
 var _ ListenersTranslator = (*Translator)(nil)
 
+const sdsCertificateOpaqueConditionMessage = "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default."
+
 type ListenersTranslator interface {
-	ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources)
+	ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) error
 }
 
 func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *resource.Resources) {
@@ -281,9 +283,10 @@ func (t *Translator) validateListenerSpec(listener *ListenerContext, resources *
 	return specValid
 }
 
-func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) {
+func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) error {
 	// Infra IR proxy ports must be unique.
 	foundPorts := make(map[string][]*protocolPort)
+	var listenerErrors []error
 
 	// Phase 1: Validate each listener's spec independently.
 	// This must happen before conflict resolution so that invalid listeners
@@ -338,6 +341,18 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
+				tlsConfig, err := irTLSConfigs(&listener.tls)
+				if err != nil {
+					listenerErr := fmt.Errorf("failed to build TLS config for listener %s: %w", irListenerName(listener), err)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonInvalid,
+						listenerErr.Error(),
+					)
+					listenerErrors = append(listenerErrors, listenerErr)
+					continue
+				}
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -347,7 +362,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Metadata:     buildListenerMetadata(listener, gateway),
 						IPFamily:     ipFamily,
 					},
-					TLS: irTLSConfigs(&listener.tls),
+					TLS: tlsConfig,
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -368,6 +383,18 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
 				listener.httpIR = irListener
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
+				tlsConfig, err := irTLSConfigsForTCPListener(&listener.tls)
+				if err != nil {
+					listenerErr := fmt.Errorf("failed to build TLS config for listener %s: %w", irListenerName(listener), err)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonInvalid,
+						listenerErr.Error(),
+					)
+					listenerErrors = append(listenerErrors, listenerErr)
+					continue
+				}
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -382,7 +409,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
 					// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
 					// refers to the Listener TLS.
-					TLS: irTLSConfigsForTCPListener(&listener.tls),
+					TLS: tlsConfig,
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
@@ -409,6 +436,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 	}
 
 	t.checkOverlappingTLSConfig(gateways)
+	return errors.Join(listenerErrors...)
 }
 
 // checkOverlappingTLSConfig checks for overlapping hostnames and certificates between listeners and sets
@@ -536,6 +564,61 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 // checkOverlappingCertificates checks for overlapping certificates SANs between HTTPSlisteners and sets
 // the `OverlappingTLSConfig` condition if there are overlapping certificates.
 func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
+	// Envoy Gateway cannot inspect certificates served over SDS. When multiple
+	// valid listeners share a port, disable HTTP/2 on SDS-backed listeners and on
+	// peers whose known certificate SANs may overlap the SDS listener hostname. A
+	// nil SDS listener hostname matches every peer because it accepts all hostnames.
+	validListenerCountByPort := make(map[gwapiv1.PortNumber]int)
+	sdsListenersByPort := make(map[gwapiv1.PortNumber][]*ListenerContext)
+	for _, listener := range httpsListeners {
+		if hasInvalidCondition(listener) {
+			continue
+		}
+		validListenerCountByPort[listener.Port]++
+
+		for _, secret := range listener.tls.secrets {
+			if secret.Type == egv1a1.SDSSecretType {
+				sdsListenersByPort[listener.Port] = append(sdsListenersByPort[listener.Port], listener)
+				break
+			}
+		}
+	}
+
+	for _, listener := range httpsListeners {
+		if hasInvalidCondition(listener) || validListenerCountByPort[listener.Port] < 2 {
+			continue
+		}
+
+		disableHTTP2 := false
+		for _, sdsListener := range sdsListenersByPort[listener.Port] {
+			if listener == sdsListener || sdsListener.Hostname == nil {
+				disableHTTP2 = true
+				break
+			}
+			for _, dnsName := range listener.tls.certDNSNames {
+				if areOverlappingHostnames(sdsListener.Hostname, new(gwapiv1.Hostname(dnsName))) {
+					disableHTTP2 = true
+					break
+				}
+			}
+			if disableHTTP2 {
+				break
+			}
+		}
+		if !disableHTTP2 {
+			continue
+		}
+		if listener.httpIR != nil {
+			listener.httpIR.TLSOverlaps = true
+		}
+		listener.SetCondition(
+			status.ListenerConditionTLSCertificateNamesUnknown,
+			metav1.ConditionTrue,
+			status.ListenerReasonSDSCertificateOpaque,
+			sdsCertificateOpaqueConditionMessage,
+		)
+	}
+
 	type overlappingListener struct {
 		gateway1  *GatewayContext
 		gateway2  *GatewayContext

@@ -38,6 +38,12 @@ const (
 // Listener condition reasons for various error scenarios
 const (
 	ListenerReasonPartiallyInvalidCertificateRef gwapiv1.ListenerConditionReason = "PartiallyInvalidCertificateRef"
+	ListenerReasonSDSCertificateOpaque           gwapiv1.ListenerConditionReason = "SDSCertificateOpaque"
+)
+
+// Listener condition types for various error scenarios
+const (
+	ListenerConditionTLSCertificateNamesUnknown gwapiv1.ListenerConditionType = "gateway.envoyproxy.io/TLSCertificateNamesUnknown"
 )
 
 // ListenerError is an error interface that represents errors that need to be reflected

@@ -48,7 +48,8 @@ var (
 	ErrTLSCertEmpty                             = errors.New("field certificate must be specified")
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
 	ErrTLSSDSSecretNameEmpty                    = errors.New("field SDS SecretName must be specified")
-	ErrTLSSDSURLEmpty                           = errors.New("field SDS URL must be specified")
+	ErrTLSSDSSchemeEmpty                        = errors.New("field SDS Scheme must be specified")
+	ErrTLSSDSAddressEmpty                       = errors.New("field SDS Address must be specified")
 	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS or inline certificate fields may be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
@@ -359,7 +360,8 @@ type HTTPListener struct {
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
 	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
-	// TLSOverlaps indicates if the listener's certificate SANs overlap with another listener's certificate SANs.
+	// TLSOverlaps indicates that another listener on the same port either has overlapping certificate SANs or uses an
+	// SDS-backed certificate whose SANs cannot be inspected.
 	// HTTP/2 should be disabled if this is true to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
 	// We use a standalone field to avoid messing with the ClientTrafficPolicy ALPN config.
 	TLSOverlaps bool `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
@@ -637,8 +639,11 @@ func (t *TLSCertificate) Validate() error {
 		if t.SDS.SecretName == "" {
 			errs = errors.Join(errs, ErrTLSSDSSecretNameEmpty)
 		}
-		if t.SDS.URL == "" {
-			errs = errors.Join(errs, ErrTLSSDSURLEmpty)
+		if t.SDS.Scheme == "" {
+			errs = errors.Join(errs, ErrTLSSDSSchemeEmpty)
+		}
+		if t.SDS.Address == "" {
+			errs = errors.Join(errs, ErrTLSSDSAddressEmpty)
 		}
 		return errs
 	}

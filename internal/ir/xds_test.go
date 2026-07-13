@@ -643,6 +643,33 @@ func TestSDSClusterNameFromURLDistinguishesUnixSocketPaths(t *testing.T) {
 	require.Contains(t, second, "run_a_b_socket")
 }
 
+func TestTLSCertificateValidateDistinguishesMissingSDSFields(t *testing.T) {
+	tests := []struct {
+		name string
+		sds  *SDSConfig
+		want error
+	}{
+		{
+			name: "scheme",
+			sds:  &SDSConfig{SecretName: "listener", Address: "/var/run/sds.sock"},
+			want: ErrTLSSDSSchemeEmpty,
+		},
+		{
+			name: "address",
+			sds:  &SDSConfig{SecretName: "listener", Scheme: "unix"},
+			want: ErrTLSSDSAddressEmpty,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := (&TLSCertificate{SDS: test.sds}).Validate()
+
+			require.ErrorIs(t, err, test.want)
+		})
+	}
+}
+
 func TestValidateHTTPListener(t *testing.T) {
 	tests := []struct {
 		name  string
