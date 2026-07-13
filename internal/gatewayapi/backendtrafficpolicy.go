@@ -213,7 +213,8 @@ func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.Names
 
 // btpSpecHasClusterScopedFields reports whether spec sets any backend-cluster-scoped (CDS) field —
 // either directly inside its embedded ClusterSettings, or via a sibling field on the spec that also
-// affects the generated Cluster resource (UseClientProtocol feeds into HTTPRouteTranslator.asClusterArgs).
+// affects the generated Cluster resource (UseClientProtocol feeds into HTTPRouteTranslator.asClusterArgs;
+// AdmissionControl feeds into xdsClusterArgs.admissionControl's upstream filter).
 func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 	if spec == nil {
 		return false
@@ -227,6 +228,7 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.Connection != nil ||
 		spec.HTTP2 != nil ||
 		spec.DNS != nil ||
+		spec.AdmissionControl != nil ||
 		spec.UseClientProtocol != nil
 }
 

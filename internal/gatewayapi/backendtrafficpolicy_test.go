@@ -2017,6 +2017,11 @@ func TestBtpSpecHasClusterScopedFields(t *testing.T) {
 			spec: &egv1a1.BackendTrafficPolicySpec{UseClientProtocol: &useClientProtocolTrue},
 			want: true,
 		},
+		{
+			name: "AdmissionControl set, no ClusterSettings field",
+			spec: &egv1a1.BackendTrafficPolicySpec{AdmissionControl: &egv1a1.AdmissionControl{}},
+			want: true,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
