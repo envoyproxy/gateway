@@ -1825,14 +1825,16 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 	roundRobinType := egv1a1.RoundRobinLoadBalancerType
 
 	tests := []struct {
-		name          string
-		btps          []*egv1a1.BackendTrafficPolicy
-		routeKind     gwapiv1.Kind
-		routeNN       types.NamespacedName
-		gatewayNN     types.NamespacedName
-		listenerName  *gwapiv1.SectionName
-		routeRuleName *gwapiv1.SectionName
-		want          bool
+		name            string
+		btps            []*egv1a1.BackendTrafficPolicy
+		routes          []client.Object
+		referenceGrants []*gwapiv1b1.ReferenceGrant
+		routeKind       gwapiv1.Kind
+		routeNN         types.NamespacedName
+		gatewayNN       types.NamespacedName
+		listenerName    *gwapiv1.SectionName
+		routeRuleName   *gwapiv1.SectionName
+		want            bool
 	}{
 		{
 			name:      "no BTPs at all",
@@ -1840,6 +1842,55 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 			routeNN:   types.NamespacedName{Namespace: "default", Name: "route-1"},
 			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
 			want:      false,
+		},
+		{
+			name: "cross-namespace targetSelector keys by the target route's namespace, not the policy's",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "policy-ns", Name: "btp-selector"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetSelectors: []egv1a1.TargetSelector{
+								{
+									Kind:        gwapiv1.Kind("HTTPRoute"),
+									Namespaces:  &egv1a1.TargetSelectorNamespaces{From: egv1a1.TargetNamespaceFromAll},
+									MatchLabels: map[string]string{"app": "web"},
+								},
+							},
+						},
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+						},
+					},
+				},
+			},
+			routes: []client.Object{
+				&gwapiv1.HTTPRoute{
+					TypeMeta:   metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
+					ObjectMeta: metav1.ObjectMeta{Namespace: "route-ns", Name: "route-1", Labels: map[string]string{"app": "web"}},
+				},
+			},
+			referenceGrants: []*gwapiv1b1.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "route-ns", Name: "grant-btp"},
+					Spec: gwapiv1b1.ReferenceGrantSpec{
+						From: []gwapiv1b1.ReferenceGrantFrom{
+							{
+								Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+								Kind:      gwapiv1b1.Kind(egv1a1.KindBackendTrafficPolicy),
+								Namespace: gwapiv1b1.Namespace("policy-ns"),
+							},
+						},
+						To: []gwapiv1b1.ReferenceGrantTo{
+							{Group: gwapiv1b1.Group(gwapiv1.GroupName), Kind: gwapiv1b1.Kind("HTTPRoute")},
+						},
+					},
+				},
+			},
+			routeKind: "HTTPRoute",
+			routeNN:   types.NamespacedName{Namespace: "route-ns", Name: "route-1"},
+			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
+			want:      true,
 		},
 		{
 			name: "route-rule-targeted ConsistentHash",
@@ -1979,9 +2030,9 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			idx := BuildBTPLoadBalancerIndex(tc.btps, nil, []*GatewayContext{
+			idx := BuildBTPLoadBalancerIndex(tc.btps, tc.routes, []*GatewayContext{
 				{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: tc.gatewayNN.Namespace, Name: tc.gatewayNN.Name}}},
-			}, nil, func(string) *corev1.Namespace { return nil })
+			}, tc.referenceGrants, func(string) *corev1.Namespace { return nil })
 			got := idx.IsConsistentHash(tc.routeKind, tc.routeNN, tc.gatewayNN, tc.listenerName, tc.routeRuleName)
 			require.Equal(t, tc.want, got)
 		})
@@ -2028,4 +2079,62 @@ func TestBtpSpecHasClusterScopedFields(t *testing.T) {
 			require.Equal(t, tc.want, btpSpecHasClusterScopedFields(tc.spec))
 		})
 	}
+}
+
+func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
+	circuitBreaker := &egv1a1.CircuitBreaker{}
+
+	btps := []*egv1a1.BackendTrafficPolicy{
+		{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "policy-ns", Name: "btp-selector"},
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{
+						{
+							Kind:        gwapiv1.Kind("HTTPRoute"),
+							Namespaces:  &egv1a1.TargetSelectorNamespaces{From: egv1a1.TargetNamespaceFromAll},
+							MatchLabels: map[string]string{"app": "web"},
+						},
+					},
+				},
+				ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: circuitBreaker},
+			},
+		},
+	}
+	routes := []client.Object{
+		&gwapiv1.HTTPRoute{
+			TypeMeta:   metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: "route-ns", Name: "route-1", Labels: map[string]string{"app": "web"}},
+		},
+	}
+	referenceGrants := []*gwapiv1b1.ReferenceGrant{
+		{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "route-ns", Name: "grant-btp"},
+			Spec: gwapiv1b1.ReferenceGrantSpec{
+				From: []gwapiv1b1.ReferenceGrantFrom{
+					{
+						Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind(egv1a1.KindBackendTrafficPolicy),
+						Namespace: gwapiv1b1.Namespace("policy-ns"),
+					},
+				},
+				To: []gwapiv1b1.ReferenceGrantTo{
+					{Group: gwapiv1b1.Group(gwapiv1.GroupName), Kind: gwapiv1b1.Kind("HTTPRoute")},
+				},
+			},
+		},
+	}
+
+	idx := BuildBTPClusterSettingsIndex(btps, routes, nil, referenceGrants, nil)
+
+	// The index must be keyed by the target route's own namespace (route-ns), not the
+	// policy's namespace (policy-ns), or this lookup misses and MergeBackends wrongly
+	// shares a cluster with routes that don't carry this cluster-scoped policy.
+	require.True(t, idx.HasRouteLevelClusterSettings(
+		"HTTPRoute",
+		types.NamespacedName{Namespace: "route-ns", Name: "route-1"},
+		types.NamespacedName{},
+		nil,
+		nil,
+	))
 }
