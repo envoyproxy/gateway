@@ -8,7 +8,6 @@ package validation
 import (
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -45,9 +44,6 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		}
 	case egv1a1.ProviderTypeCustom:
 		if err := validateEnvoyGatewayCustomProvider(eg.Provider.Custom); err != nil {
-			return err
-		}
-		if err := validateEnvoyGatewayCustomRateLimit(eg.RateLimit); err != nil {
 			return err
 		}
 	default:
@@ -266,39 +262,6 @@ func ValidateRedisURL(redisURL string) error {
 		if _, err := url.Parse(host); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}
-	}
-
-	if rateLimit.URL != nil {
-		return fmt.Errorf("direct ratelimit url is not supported for Kubernetes provider")
-	}
-	return nil
-}
-
-func validateEnvoyGatewayCustomRateLimit(rateLimit *egv1a1.RateLimit) error {
-	if rateLimit == nil {
-		return nil
-	}
-	if rateLimit.URL == nil {
-		return fmt.Errorf("empty ratelimit url settings")
-	}
-	u, err := url.Parse(*rateLimit.URL)
-	if err != nil {
-		return fmt.Errorf("unknown ratelimit url format: %w", err)
-	}
-	// The xDS translator expects a grpc:// URL with an explicit port so it can
-	// build the rate limit service cluster. Reject anything else here so that
-	// configuration validation fails instead of the translator panicking.
-	if u.Scheme != "grpc" {
-		return fmt.Errorf("ratelimit url must use the grpc:// scheme, got %q", *rateLimit.URL)
-	}
-	if u.Hostname() == "" {
-		return fmt.Errorf("ratelimit url must include a host, got %q", *rateLimit.URL)
-	}
-	if u.Port() == "" {
-		return fmt.Errorf("ratelimit url must include an explicit port, got %q", *rateLimit.URL)
-	}
-	if _, err := strconv.ParseUint(u.Port(), 10, 32); err != nil {
-		return fmt.Errorf("ratelimit url has invalid port %q: %w", u.Port(), err)
 	}
 	return nil
 }
