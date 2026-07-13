@@ -25,6 +25,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -1615,6 +1616,58 @@ func TestIrBackendClusterName(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.want, irBackendClusterName(tc.kind, tc.namespace, tc.bcName, tc.port, tc.protocol))
+		})
+	}
+}
+
+func TestIsMergeBackendsEnabled(t *testing.T) {
+	enabled := &egv1a1.MergeBackendsConfig{Enabled: new(true)}
+	disabled := &egv1a1.MergeBackendsConfig{Enabled: new(false)}
+
+	tests := []struct {
+		name string
+		res  *resource.Resources
+		want bool
+	}{
+		{
+			name: "gatewayclass envoyproxy set",
+			res: &resource.Resources{
+				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{MergeBackends: enabled}},
+			},
+			want: true,
+		},
+		{
+			name: "default spec set",
+			res: &resource.Resources{
+				EnvoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{MergeBackends: enabled},
+			},
+			want: true,
+		},
+		{
+			name: "gatewayclass envoyproxy takes precedence over default spec",
+			res: &resource.Resources{
+				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{MergeBackends: disabled}},
+				EnvoyProxyDefaultSpec:     &egv1a1.EnvoyProxySpec{MergeBackends: enabled},
+			},
+			want: false,
+		},
+		{
+			name: "gatewayclass envoyproxy set but MergeBackends nil falls back to default spec",
+			res: &resource.Resources{
+				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{}},
+				EnvoyProxyDefaultSpec:     &egv1a1.EnvoyProxySpec{MergeBackends: enabled},
+			},
+			want: true,
+		},
+		{
+			name: "unset",
+			res:  &resource.Resources{},
+			want: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, IsMergeBackendsEnabled(tc.res))
 		})
 	}
 }
