@@ -3732,7 +3732,7 @@ type ExtProc struct {
 type Lua struct {
 	// Name is a unique name for the LUa configuration.
 	// The xds translator only generates one Lua filter for each unique name
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// Code is the Lua source code
 	Code *string `json:"code,omitempty" yaml:"code,omitempty"`
 	// FilterContext is the filter context configuration for the Lua script.
