@@ -24,6 +24,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, route RouteContext,
@@ -454,7 +455,10 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 	}
 
 	var errs []status.ListenerError
-	secrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
+	tlsSecrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
+	sdsSecrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
+	orderedSecrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
+	resolvedSDSSecretNames := make(map[types.NamespacedName]struct{})
 	for idx, certificateRef := range listener.TLS.CertificateRefs {
 		if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
 			errs = append(errs, status.NewListenerStatusError(
@@ -518,6 +522,33 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			continue
 		}
 
+		if secret.Type == egv1a1.SDSSecretType {
+			if !t.SDSSecretRefEnabled {
+				errs = append(errs, status.NewListenerStatusError(
+					fmt.Errorf("certificate refs %d: SDS Secret %s/%s cannot be used because SDS Secret references are not enabled in EnvoyGateway configuration.", idx, secretNamespace, certificateRef.Name),
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+				))
+				continue
+			}
+
+			_, err := ir.NewSDSConfig(secret)
+			if err != nil {
+				errs = append(errs, status.NewListenerStatusError(
+					fmt.Errorf("certificate refs %d: Secret %s/%s is not a valid SDS reference secret: %w.", idx, secretNamespace, certificateRef.Name, err),
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+				))
+				continue
+			}
+			name := types.NamespacedName{Namespace: secret.Namespace, Name: secret.Name}
+			if _, ok := resolvedSDSSecretNames[name]; ok {
+				continue
+			}
+			resolvedSDSSecretNames[name] = struct{}{}
+			sdsSecrets = append(sdsSecrets, secret)
+			orderedSecrets = append(orderedSecrets, secret)
+			continue
+		}
+
 		if secret.Type != corev1.SecretTypeTLS {
 			errs = append(errs, status.NewListenerStatusError(
 				fmt.Errorf("certificate refs %d: Secret %s/%s must be of type %s.", idx, secretNamespace, certificateRef.Name, corev1.SecretTypeTLS),
@@ -534,10 +565,11 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			continue
 		}
 
-		secrets = append(secrets, secret)
+		tlsSecrets = append(tlsSecrets, secret)
+		orderedSecrets = append(orderedSecrets, secret)
 	}
 
-	if len(secrets) == 0 {
+	if len(tlsSecrets)+len(sdsSecrets) == 0 {
 		// Use RefNotPermitted only if ALL errors are RefNotPermitted
 		// Otherwise use InvalidCertificateRef as the general catch-all
 		reason := gwapiv1.ListenerReasonRefNotPermitted
@@ -563,16 +595,20 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 		return nil, nil, false
 	}
 
-	validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
+	validSecrets, certs, err := parseCertsFromTLSSecretsData(tlsSecrets)
 	if err != nil {
 		if err.Reason() != status.ListenerReasonPartiallyInvalidCertificateRef {
-			listener.SetCondition(
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
-				err.Reason(),
-				fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
-			)
-			return nil, nil, false
+			if len(validSecrets) == 0 && len(sdsSecrets) > 0 {
+				errs = append(errs, err)
+			} else {
+				listener.SetCondition(
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					err.Reason(),
+					fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
+				)
+				return nil, nil, false
+			}
 		} else {
 			errs = append(errs, err)
 		}
@@ -591,7 +627,29 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			fmt.Sprintf("Some secrets are invalid: %v", errors.Join(errList...)),
 		)
 	}
-	return validSecrets, certs, true
+	validTLSSecretsByName := make(map[types.NamespacedName][]*corev1.Secret, len(validSecrets))
+	for _, secret := range validSecrets {
+		name := types.NamespacedName{Namespace: secret.Namespace, Name: secret.Name}
+		validTLSSecretsByName[name] = append(validTLSSecretsByName[name], secret)
+	}
+
+	resolvedSecrets := make([]*corev1.Secret, 0, len(validSecrets)+len(sdsSecrets))
+	for _, secret := range orderedSecrets {
+		if secret.Type == egv1a1.SDSSecretType {
+			resolvedSecrets = append(resolvedSecrets, secret)
+			continue
+		}
+
+		name := types.NamespacedName{Namespace: secret.Namespace, Name: secret.Name}
+		matchingSecrets := validTLSSecretsByName[name]
+		if len(matchingSecrets) == 0 {
+			continue
+		}
+		resolvedSecrets = append(resolvedSecrets, matchingSecrets[0])
+		validTLSSecretsByName[name] = matchingSecrets[1:]
+	}
+
+	return resolvedSecrets, certs, true
 }
 
 // validateTLSConfiguration validates TLS configuration per protocol.

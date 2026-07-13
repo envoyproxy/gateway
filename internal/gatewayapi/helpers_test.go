@@ -28,6 +28,19 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func TestGetTLSCertificateFromSecretReturnsInvalidSDSError(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "listener-cert", Namespace: "default"},
+		Type:       egv1a1.SDSSecretType,
+		Data:       map[string][]byte{"secretName": []byte("listener-cert")},
+	}
+
+	certificate, err := getTLSCertificateFromSecret(secret)
+
+	require.EqualError(t, err, "no url found in SDS reference secret default/listener-cert")
+	require.Equal(t, ir.TLSCertificate{}, certificate)
+}
+
 func TestValidateGRPCFilterRef(t *testing.T) {
 	testCases := []struct {
 		name     string

@@ -299,7 +299,9 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessGatewayTLS(acceptedGateways, resources)
 
 	// Process all Listeners for all relevant Gateways.
-	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
+	if err := t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources); err != nil {
+		errs = errors.Join(errs, err)
+	}
 
 	// Compute ListenerSet status based on listener processing results
 	// This should be done after ProcessListeners because ListenerSet status depends on listener processing results
