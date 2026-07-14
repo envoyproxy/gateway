@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -586,7 +585,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	}
 
 	if r.tcpRouteCRDExists {
-		tcpRouteList := &gwapiv1a2.TCPRouteList{}
+		tcpRouteList := &gwapiv1.TCPRouteList{}
 		if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {
@@ -599,7 +598,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	}
 
 	if r.udpRouteCRDExists {
-		udpRouteList := &gwapiv1a2.UDPRouteList{}
+		udpRouteList := &gwapiv1.UDPRouteList{}
 		if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {
@@ -994,7 +993,7 @@ func (r *gatewayAPIReconciler) isExtensionPolicyReferencingSecret(nsName *types.
 	return len(eepList.Items) > 0
 }
 
-// isRouteReferencingHTTPRouteFilter returns true if the HTTPRouteFilter is referenced by an HTTPRoute
+// isRouteReferencingHTTPRouteFilter returns true if the HTTPRouteFilter is referenced by an HTTPRoute or GRPCRoute
 func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.NamespacedName) bool {
 	ctx := context.Background()
 	httpRouteList := &gwapiv1.HTTPRouteList{}
@@ -1004,8 +1003,19 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 		r.log.Error(err, "unable to find associated HTTPRoutes")
 		return false
 	}
+	if len(httpRouteList.Items) != 0 {
+		return true
+	}
 
-	return len(httpRouteList.Items) != 0
+	grpcRouteList := &gwapiv1.GRPCRouteList{}
+	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(httpRouteFilterGRPCRouteIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated GRPCRoutes")
+		return false
+	}
+
+	return len(grpcRouteList.Items) != 0
 }
 
 // isProxyServiceCluster returns true if the provided labels reference an owning Gateway or GatewayClass
