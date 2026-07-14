@@ -326,7 +326,7 @@ run-e2e-upgrade:
 	cd test && go test $(E2E_TEST_ARGS) ./e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
 
 .PHONY: e2e-remote-infra
-e2e-remote-infra: KUBE_DEPLOY_PROFILE = remote-infra
+e2e-remote-infra: KUBE_DEPLOY_PROFILE = remote-infra-mode
 e2e-remote-infra: create-cluster kube-install-image kube-install-examples-image kube-deploy \
 	e2e-remote-infra-prepare run-e2e-remote-infra delete-cluster ## Create a kind cluster, deploy EG with the remote infra provider, and run remote-infra e2e tests.
 
@@ -342,9 +342,10 @@ e2e-remote-infra-prepare: prepare-ip-family
 	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
 
 .PHONY: run-e2e-remote-infra
+run-e2e-remote-infra: KUBE_DEPLOY_PROFILE = remote-infra-mode
 run-e2e-remote-infra:
 	@$(LOG_TARGET)
-	cd test && go test $(E2E_TEST_ARGS) ./e2e/remote_infra $(E2E_TEST_SUITE_ARGS) --gateway-class=remote-infra --cleanup-base-resources=$(E2E_CLEANUP)
+	cd test && KUBE_DEPLOY_PROFILE=$(KUBE_DEPLOY_PROFILE) go test $(E2E_TEST_ARGS) ./e2e/remote_infra $(E2E_TEST_SUITE_ARGS) --gateway-class=remote-infra --cleanup-base-resources=$(E2E_CLEANUP)
 
 .PHONY: run-resilience
 run-resilience: ## Run resilience tests

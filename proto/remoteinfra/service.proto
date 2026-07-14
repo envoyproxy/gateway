@@ -17,17 +17,198 @@ service EnvoyGatewayRemoteInfrastructureProvider {
 }
 
 message CreateOrUpdateProxyInfraRequest {
-  bytes ir_bytes = 1;
+  // infra is the proxy infrastructure IR that the provider should reconcile.
+  Infra infra = 1;
 }
 
 message CreateOrUpdateProxyInfraResponse {
 }
 
 message DeleteProxyInfraRequest {
-  bytes ir_bytes = 1;
+  // infra is the proxy infrastructure IR that the provider should tear down.
+  Infra infra = 1;
 }
 
 message DeleteProxyInfraResponse {
+}
+
+// Infra defines managed infrastructure. It mirrors ir.Infra.
+message Infra {
+  // proxy defines managed proxy infrastructure.
+  ProxyInfra proxy = 1;
+}
+
+// ProxyInfra defines managed proxy infrastructure. It mirrors ir.ProxyInfra.
+message ProxyInfra {
+  // metadata defines metadata for the managed proxy infrastructure.
+  InfraMetadata metadata = 1;
+  // name is the name used for managed proxy infrastructure.
+  string name = 2;
+  // namespace is the namespace used for managed proxy infrastructure.
+  string namespace = 3;
+  // config is the user-facing configuration of the managed proxy
+  // infrastructure (ir.ProxyInfra.Config, an EnvoyProxy resource), encoded as
+  // JSON. It is carried as opaque bytes because the EnvoyProxy CRD schema is
+  // large and evolves independently of this contract; providers that need it
+  // can unmarshal the JSON into their own representation.
+  bytes config = 4;
+  // listeners define the listeners exposed by the proxy infrastructure.
+  repeated ProxyListener listeners = 5;
+  // addresses contain the external addresses this gateway has been requested
+  // to be available at.
+  repeated string addresses = 6;
+  // resolved_metric_sinks contains pre-resolved OpenTelemetry metric sink
+  // destinations.
+  repeated ResolvedMetricSink resolved_metric_sinks = 7;
+}
+
+// InfraMetadata defines metadata for the managed proxy infrastructure. It
+// mirrors ir.InfraMetadata.
+message InfraMetadata {
+  // annotations to apply to proxy infrastructure objects.
+  map<string, string> annotations = 1;
+  // labels to apply to proxy infrastructure objects.
+  map<string, string> labels = 2;
+  // owner_reference is used to set ownerReference for proxy infrastructure
+  // objects.
+  ResourceMetadata owner_reference = 3;
+}
+
+// ResourceMetadata is metadata from the provider resource that is translated to
+// an envoy resource. It mirrors ir.ResourceMetadata.
+message ResourceMetadata {
+  // kind is the kind of the resource.
+  string kind = 1;
+  // name is the name of the resource.
+  string name = 2;
+  // namespace is the namespace of the resource.
+  string namespace = 3;
+  // annotations are the annotations of the resource.
+  repeated MapEntry annotations = 4;
+  // section_name is the name of a section of a resource.
+  string section_name = 5;
+  // policies is the information of the xPolicy resources associated with this
+  // resource.
+  repeated PolicyMetadata policies = 6;
+}
+
+// MapEntry holds a key-value pair for a map. It mirrors ir.MapEntry.
+message MapEntry {
+  // key is the map entry key.
+  string key = 1;
+  // value is the map entry value.
+  string value = 2;
+}
+
+// PolicyMetadata is the information of an xPolicy resource. It mirrors
+// ir.PolicyMetadata.
+message PolicyMetadata {
+  // kind is the kind of the policy.
+  string kind = 1;
+  // name is the name of the policy.
+  string name = 2;
+  // namespace is the namespace of the policy.
+  string namespace = 3;
+}
+
+// ProxyListener defines the listener configuration of the proxy
+// infrastructure. It mirrors ir.ProxyListener.
+message ProxyListener {
+  // name of the ProxyListener.
+  string name = 1;
+  // ports define network ports of the listener.
+  repeated ListenerPort ports = 2;
+}
+
+// ListenerPort defines a network port of a listener. It mirrors
+// ir.ListenerPort.
+message ListenerPort {
+  // name is the name of the listener port.
+  string name = 1;
+  // protocol is the protocol that the listener port will listen for.
+  string protocol = 2;
+  // service_port is the port number the proxy service is listening on.
+  int32 service_port = 3;
+  // container_port is the port number the proxy container is listening on.
+  int32 container_port = 4;
+}
+
+// ResolvedMetricSink defines a resolved OpenTelemetry metrics sink. It mirrors
+// ir.ResolvedMetricSink.
+message ResolvedMetricSink {
+  // destination is the endpoint and TLS configuration for the metric sink. It
+  // carries the subset of ir.RouteDestination that remote providers need.
+  RouteDestination destination = 1;
+  // authority is the gRPC authority header value (typically SNI or hostname).
+  string authority = 2;
+  // headers to send with OTLP export requests.
+  repeated HTTPHeader headers = 3;
+  // resource_attributes is a map of resource attributes for the metrics sink.
+  map<string, string> resource_attributes = 4;
+  // report_counters_as_deltas configures counters to use delta temporality.
+  bool report_counters_as_deltas = 5;
+  // report_histograms_as_deltas configures histograms to use delta temporality.
+  bool report_histograms_as_deltas = 6;
+}
+
+// HTTPHeader is a name/value HTTP header. It mirrors the subset of
+// gwapiv1.HTTPHeader used by ResolvedMetricSink.
+message HTTPHeader {
+  // name is the header name.
+  string name = 1;
+  // value is the header value.
+  string value = 2;
+}
+
+// RouteDestination holds the destination details associated with the route. It
+// mirrors the subset of ir.RouteDestination needed by remote providers.
+message RouteDestination {
+  // settings holds the destination settings.
+  repeated DestinationSetting settings = 1;
+}
+
+// DestinationSetting holds the settings associated with the destination. It
+// mirrors the subset of ir.DestinationSetting needed by remote providers.
+message DestinationSetting {
+  // endpoints holds the endpoints associated with the destination.
+  repeated DestinationEndpoint endpoints = 1;
+  // tls holds the upstream TLS configuration for the destination.
+  TLSUpstreamConfig tls = 2;
+}
+
+// DestinationEndpoint holds the endpoint details associated with the
+// destination. It mirrors the subset of ir.DestinationEndpoint needed by
+// remote providers.
+message DestinationEndpoint {
+  // host refers to the FQDN or IP address of the backend service.
+  string host = 1;
+  // port on the service to forward the request to.
+  uint32 port = 2;
+}
+
+// TLSUpstreamConfig contains the upstream TLS configuration. It mirrors the
+// subset of ir.TLSUpstreamConfig needed by remote providers.
+message TLSUpstreamConfig {
+  // sni is the Server Name Indication to present to the upstream.
+  optional string sni = 1;
+  // use_system_trust_store uses the system trust store to verify the upstream.
+  bool use_system_trust_store = 2;
+  // tls_config holds the CA configuration used to verify the upstream.
+  TLSConfig tls_config = 3;
+}
+
+// TLSConfig holds the TLS configuration. It mirrors the subset of ir.TLSConfig
+// needed by remote providers.
+message TLSConfig {
+  // ca_certificate is the CA certificate used to verify the upstream.
+  TLSCACertificate ca_certificate = 1;
+}
+
+// TLSCACertificate holds a CA certificate. It mirrors the subset of
+// ir.TLSCACertificate needed by remote providers.
+message TLSCACertificate {
+  // certificate is the CA certificate content.
+  bytes certificate = 1;
 }
 
 message CreateOrUpdateRateLimitInfraRequest {

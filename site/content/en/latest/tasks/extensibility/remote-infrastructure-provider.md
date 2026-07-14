@@ -5,9 +5,8 @@ title: 'Remote Infrastructure Provider'
 This task explains how to configure Envoy Gateway to defer Envoy proxy and rate
 limit infrastructure management to a remote service of your own. With the Remote
 infrastructure provider, Envoy Gateway translates Gateway API resources into its
-into an infrastructure IR format and forwards it over
-gRPC to a provider you operate. The provider is then responsible for reconciling
-the data plane.
+into an infrastructure IR format and forwards it over gRPC to a provider you
+operate. The provider is then responsible for reconciling the data plane.
 
 This is the right choice when the built-in Kubernetes infrastructure provider
 doesn't fit your environment. Common cases include running proxies in a
@@ -43,7 +42,7 @@ When deploying a remote infrastructure provider, you should:
 When the Remote provider is enabled, Envoy Gateway defers infrastructure
 management using an gRPC client to send updates to your provider. For every
 reconcile that mutates a proxy or rate limit deployment, Envoy Gateway issues a
-corresponding RPC carrying the JSON-serialized IR.
+corresponding RPC carrying the IR as structured protobuf data.
 
 The service contract is defined in `proto/remoteinfra/service.proto`:
 
@@ -56,10 +55,15 @@ service EnvoyGatewayRemoteInfrastructureProvider {
 }
 ```
 
-The proxy RPCs carry the IR as raw JSON in the `ir_bytes` field; the rate limit
-RPCs are parameterless. The provider is expected to be idempotent — Envoy
-Gateway calls the `CreateOrUpdate` RPCs every time the desired state changes and
-may retry on transient errors.
+The proxy RPCs carry the IR as a structured `Infra` message that mirrors
+`internal/ir/infra.go`, including proxy metadata (labels, annotations, and the
+owner reference) and each metric sink's `destination` (endpoints and upstream
+TLS). Most fields are typed protobuf fields; the proxy `config` (an `EnvoyProxy`
+resource) is the only field carried as JSON-encoded `bytes`, because that CRD
+schema is large and evolves independently of this contract. The rate limit RPCs
+are parameterless. The provider is expected to be idempotent — Envoy Gateway
+calls the `CreateOrUpdate` RPCs every time the desired state changes and may
+retry on transient errors.
 
 ## Configuration
 

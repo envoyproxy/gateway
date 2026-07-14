@@ -8,13 +8,12 @@
 package remoteinfra
 
 import (
+	"encoding/json"
 	"flag"
 	"io/fs"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
-	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"sigs.k8s.io/gateway-api/pkg/features"
@@ -25,47 +24,49 @@ import (
 )
 
 func TestRemoteInfra(t *testing.T) {
-	// Skip the entire test suite if we're in Gateway Namespace Mode
-	if tests.IsRemoteInfraMode() {
-		t.Skip("MergeGateways tests are not supported in Gateway Namespace Mode")
+	if !tests.IsRemoteInfraMode() {
+		t.Skip("Remote Infra Mode not specified, skipping tests.")
 	}
 	flag.Parse()
 
 	c, cfg := kubetest.NewClient(t)
-
-	tlog.Logf(t, "Running RemoteInfra E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
-		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
-
+	suiteOpts := suite.ConfigurableOptions{}
+	flags.ApplyAll(&suiteOpts)
+	data, _ := json.MarshalIndent(suiteOpts, "", "  ")
+	tlog.Logf(t, "Running Remote Infra tests with options: %s\n", string(data))
+	suiteOpts.TimeoutConfig = tests.TimeoutConfig()
+	// SupportedFeatures cannot be empty, so we set it to SupportGateway
+	// All e2e tests should leave Features empty.
+	suiteOpts.SupportedFeatures = []features.FeatureName{features.SupportGateway}
+	suiteOpts.SkipTests = []string{}
+	suiteOpts.FailFast = true
+	suiteOpts.CleanupTestResources = true
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
-		Client:               c,
-		RestConfig:           cfg,
-		Debug:                *flags.ShowDebug,
-		CleanupBaseResources: *flags.CleanupBaseResources,
-		RunTest:              *flags.RunTest,
-		TimeoutConfig:        tests.TimeoutConfig(),
-		// SupportedFeatures cannot be empty, so we set it to SupportGateway
-		// to satisfy the conformance suite contract. The actual feature set
-		// exercised here is irrelevant.
-		SupportedFeatures: sets.New(features.SupportGateway),
-		SkipTests:         []string{},
-		Hook:              e2e.Hook,
-		FailFast:          true,
-		GatewayClassName:  *flags.GatewayClassName,
-		ManifestFS:        []fs.FS{e2e.Manifests},
+		Client:              c,
+		RestConfig:          cfg,
+		ConfigurableOptions: suiteOpts,
+		ManifestFS:          []fs.FS{e2e.Manifests},
+		Hook:                e2e.Hook,
 	})
 	if err != nil {
-		t.Fatalf("Failed to create RemoteInfra ConformanceTestSuite: %v", err)
+		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
 	}
-	cSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, cSuite.Client, cSuite.TimeoutConfig, cSuite.GatewayClassName)
 
 	recorder := e2e.NewTimingRecorder()
 	t.Cleanup(func() {
 		recorder.Report(t)
 	})
 	timedTests := e2e.WrapConformanceTestsWithTiming(tests.RemoteInfraTests, recorder)
+
+	// Apply the base conformance resources (namespaces, backends, secrets, etc.) and
+	// wait for them to be ready. Unlike the merge_gateways/multiple_gc suites, the
+	// remote-infra suite runs standalone and cannot rely on a previous suite having
+	// already created the base resources.
 	cSuite.Setup(t, timedTests)
-	tlog.Logf(t, "Running %d RemoteInfra tests", len(tests.RemoteInfraTests))
-	if err := cSuite.Run(t, timedTests); err != nil {
-		t.Fatalf("Failed to run RemoteInfra tests: %v", err)
+
+	tlog.Logf(t, "Running %d Remote Infra tests", len(tests.RemoteInfraTests))
+	err = cSuite.Run(t, timedTests)
+	if err != nil {
+		t.Fatalf("Failed to run Remote Infra tests: %v", err)
 	}
 }

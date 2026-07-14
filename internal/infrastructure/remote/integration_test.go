@@ -9,7 +9,6 @@ package remote
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net"
 	"sync"
@@ -233,14 +232,11 @@ func TestRemoteInfraIntegration(t *testing.T) {
 		srv.mu.Unlock()
 		require.NotNil(t, got)
 
-		// IR is sent as JSON bytes matching the IR's own JSONString output.
-		assert.Equal(t, []byte(input.JSONString()), got.IrBytes)
-
-		var roundTripped ir.Infra
-		require.NoError(t, json.Unmarshal(got.IrBytes, &roundTripped))
-		require.NotNil(t, roundTripped.Proxy)
-		assert.Equal(t, "test-proxy", roundTripped.Proxy.Name)
-		assert.Equal(t, "envoy-gateway-system", roundTripped.Proxy.Namespace)
+		// IR is sent as structured proto data mirroring ir.Infra.
+		require.NotNil(t, got.GetInfra())
+		require.NotNil(t, got.GetInfra().GetProxy())
+		assert.Equal(t, "test-proxy", got.GetInfra().GetProxy().GetName())
+		assert.Equal(t, "envoy-gateway-system", got.GetInfra().GetProxy().GetNamespace())
 	})
 
 	t.Run("delete_proxy_infra", func(t *testing.T) {
@@ -263,7 +259,10 @@ func TestRemoteInfraIntegration(t *testing.T) {
 		got := srv.lastDeleteProxyReq
 		srv.mu.Unlock()
 		require.NotNil(t, got)
-		assert.Equal(t, []byte(input.JSONString()), got.IrBytes)
+		require.NotNil(t, got.GetInfra())
+		require.NotNil(t, got.GetInfra().GetProxy())
+		assert.Equal(t, "test-proxy", got.GetInfra().GetProxy().GetName())
+		assert.Equal(t, "envoy-gateway-system", got.GetInfra().GetProxy().GetNamespace())
 	})
 
 	t.Run("create_or_update_rate_limit_infra", func(t *testing.T) {
