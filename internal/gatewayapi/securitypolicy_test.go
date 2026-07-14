@@ -939,6 +939,59 @@ func TestDiscoverEndpointsFromIssuerRejectsOversizeBody(t *testing.T) {
 	require.Contains(t, err.Error(), "exceeds maximum size")
 }
 
+func TestDiscoverEndpointsFromIssuerRetriesTruncatedBody(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		server    *httptest.Server
+	)
+
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if callCount.Add(1) == 1 {
+			// Declare more bytes than are written so the client sees the
+			// connection close mid-body and the read returns an error.
+			w.Header().Set("Content-Length", "1024")
+			_, _ = w.Write([]byte(`{"token_endpoint":`))
+			return
+		}
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`,
+			server.URL+"/token", server.URL+"/authorize")
+	}))
+	defer server.Close()
+
+	cfg, err := discoverEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	require.GreaterOrEqual(t, callCount.Load(), int32(2), "truncated response should be retried")
+}
+
+func TestDiscoverEndpointsFromIssuerRejectsInvalidJSON(t *testing.T) {
+	var callCount atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"token_endpoint":`))
+	}))
+	defer server.Close()
+
+	cfg, err := discoverEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfg)
+	require.Contains(t, err.Error(), "error decoding openid-configuration response")
+	require.Equal(t, int32(1), callCount.Load(), "decode failures should not be retried")
+}
+
 // / tiny helper to build a minimal SecurityPolicy
 func sp(ns, name string) *egv1a1.SecurityPolicy {
 	return &egv1a1.SecurityPolicy{
