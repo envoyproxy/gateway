@@ -1225,7 +1225,7 @@ func (t *Translator) processProxyGRPCSettings(
 func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, gwCtx *GatewayContext,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
-	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings, nil)
+	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings, gwCtx.Telemetry())
 	if err != nil {
 		return nil, nil, err
 	}

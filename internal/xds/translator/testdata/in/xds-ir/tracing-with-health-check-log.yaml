@@ -1,0 +1,51 @@
+tracing:
+  serviceName: "gateway-1.envoy-gateway"
+  samplingRate: 100
+  authority: "otel-collector.monitoring.svc"
+  destination:
+    name: "tracing"
+    settings:
+      - endpoints:
+          - host: "1.2.3.4"
+            port: 4317
+        protocol: GRPC
+        name: "tracing/backend/-1"
+  provider:
+    type: OpenTelemetry
+  # traffic carries the translated backendSettings — circuitBreaker appears here
+  # (mirroring provider.backendSettings) to show both are passthrough, while
+  # eventLog only appears here because it comes from ProxyTelemetry.healthCheckLog.
+  traffic:
+    circuitBreaker:
+      maxConnections: 1024
+    healthCheck:
+      active:
+        timeout: "3s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        tcp: {}
+        eventLog:
+          fileSinks:
+            - path: "/dev/stdout"
+          alwaysLogHealthCheckFailures: true
+          alwaysLogHealthCheckSuccess: true
+http:
+  - name: "first-listener"
+    address: "::"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "first-route"
+        hostname: "*"
+        destination:
+          name: "first-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 8080
+              name: "first-route-dest/backend/0"

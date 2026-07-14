@@ -100,6 +100,37 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 
 			require.NoError(t, err, "failed to get control-plane trace from tempo within timeout")
 		})
+
+		// Verify that healthCheckLog is applied to telemetry backend clusters, not
+		// only to route backend clusters. The tracing-otel EnvoyProxy has a TCP
+		// active health check on the OTel collector backend; HC events should appear
+		// in the Envoy log collected by Loki.
+		t.Run("HealthCheckEventLogOnTracingBackend", func(t *testing.T) {
+			gatewayNS := GetGatewayResourceNamespace()
+			lokiLabels := map[string]string{
+				"job":       fmt.Sprintf("%s/envoy", gatewayNS),
+				"namespace": gatewayNS,
+				"container": "envoy",
+			}
+			// HC event JSON contains "health_checker_type" and the cluster name.
+			// The tracing cluster is named "tracing/backend/-1".
+			const hcLogMatch = `health_checker_type.*tracing/backend/-1`
+
+			baseline, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
+			require.NoError(t, err, "loki baseline query failed")
+			tlog.Logf(t, "tracing backend HC event log baseline count=%d", baseline)
+
+			err = wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+				count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
+				if err != nil {
+					tlog.Logf(t, "loki query error: %v", err)
+					return false, nil
+				}
+				tlog.Logf(t, "tracing backend HC event log count=%d (baseline=%d)", count, baseline)
+				return count > baseline, nil
+			})
+			require.NoError(t, err, "HC events for tracing backend cluster did not appear in logs")
+		})
 	},
 }
 
