@@ -1,0 +1,241 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-with-tls-and-http-conflict
+    namespace: gateway-conformance-infra
+  spec:
+    allowedListeners:
+      namespaces:
+        from: Same
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: other.com
+      name: tls-listener
+      port: 443
+      protocol: TLS
+      tls:
+        mode: Passthrough
+  status:
+    attachedListenerSets: 1
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tls-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+infraIR:
+  gateway-conformance-infra/gateway-with-tls-and-http-conflict:
+    proxy:
+      listeners:
+      - name: gateway-conformance-infra/gateway-with-tls-and-http-conflict/tls-listener
+        ports:
+        - containerPort: 10443
+          name: tls-443
+          protocol: TLS
+          servicePort: 443
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-with-tls-and-http-conflict
+          gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: gateway-conformance-infra/gateway-with-tls-and-http-conflict
+      namespace: envoy-gateway-system
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: listenerset-http-on-tls-port
+    namespace: gateway-conformance-infra
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: shared.com
+      name: http-loser
+      port: 443
+      protocol: HTTP
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-tls-and-http-conflict
+      namespace: gateway-conformance-infra
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: No listeners are accepted
+      reason: ListenersNotValid
+      status: "False"
+      type: Accepted
+    - lastTransitionTime: null
+      message: No listeners are programmed
+      reason: ListenersNotValid
+      status: "False"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: 'All listeners for a given port must use a compatible protocol, conflicting
+          listeners: gateway-conformance-infra/gateway-with-tls-and-http-conflict/tls-listener,
+          gateway-conformance-infra/listenerset-http-on-tls-port/http-loser, gateway-conformance-infra/listenerset-tls-winner/tls-winner'
+        reason: ProtocolConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: 'All listeners for a given port must use a compatible protocol, conflicting
+          listeners: gateway-conformance-infra/gateway-with-tls-and-http-conflict/tls-listener,
+          gateway-conformance-infra/listenerset-http-on-tls-port/http-loser, gateway-conformance-infra/listenerset-tls-winner/tls-winner'
+        reason: ProtocolConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'All listeners for a given port must use a compatible protocol, conflicting
+          listeners: gateway-conformance-infra/gateway-with-tls-and-http-conflict/tls-listener,
+          gateway-conformance-infra/listenerset-http-on-tls-port/http-loser, gateway-conformance-infra/listenerset-tls-winner/tls-winner'
+        reason: ProtocolConflict
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-loser
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: listenerset-tls-winner
+    namespace: gateway-conformance-infra
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: shared.com
+      name: tls-winner
+      port: 443
+      protocol: TLS
+      tls:
+        mode: Passthrough
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-tls-and-http-conflict
+      namespace: gateway-conformance-infra
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are programmed
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: tls-winner
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+xdsIR:
+  gateway-conformance-infra/gateway-with-tls-and-http-conflict:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-gateway-conformance-infra-gateway-with-tls-and-h-7432013d
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: gateway-conformance-infra/gateway-with-tls-and-http-conflict
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-gateway-conformance-infra-gateway-with-tls-and-h-7432013d
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: gateway-conformance-infra/gateway-with-tls-and-http-conflict
+          protocol: TCP
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 443
+      metadata:
+        kind: Gateway
+        name: gateway-with-tls-and-http-conflict
+        namespace: gateway-conformance-infra
+        sectionName: tls-listener
+      name: gateway-conformance-infra/gateway-with-tls-and-http-conflict/tls-listener
+      port: 10443
+    - address: 0.0.0.0
+      externalPort: 443
+      metadata:
+        kind: Gateway
+        name: gateway-with-tls-and-http-conflict
+        namespace: gateway-conformance-infra
+        sectionName: tls-winner
+      name: gateway-conformance-infra/gateway-with-tls-and-http-conflict/gateway-conformance-infra/listenerset-tls-winner/tls-winner
+      port: 10443
