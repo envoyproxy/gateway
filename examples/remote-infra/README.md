@@ -24,9 +24,10 @@ The provider implements the four RPCs defined in
 | `CreateOrUpdateRateLimitInfra` | No-op. Rate limiting must be provisioned out of band, see below  |
 | `DeleteRateLimitInfra`         | No-op                                                            |
 
-The IR is delivered as JSON in the request's `ir_bytes` field. The example
-ignores fields it doesn't understand, which is the same forward-compatibility
-posture you'll want in your own provider.
+The IR is delivered as a structured `Infra` protobuf message in the request's
+`infra` field. The example maps only the subset of fields it understands onto
+its own pared-down types (see `synthesizer/ir.go`) and ignores the rest, which
+is the same forward-compatibility posture you'll want in your own provider.
 
 ## Layout
 

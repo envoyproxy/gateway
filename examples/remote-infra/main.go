@@ -13,7 +13,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -22,11 +21,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/envoyproxy/gateway-remote-infra/pb"
-	"github.com/envoyproxy/gateway-remote-infra/synthesizer"
 	"google.golang.org/grpc"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
+
+	"github.com/envoyproxy/gateway-remote-infra/pb"
+	"github.com/envoyproxy/gateway-remote-infra/synthesizer"
 )
 
 var (
@@ -43,10 +43,7 @@ type basicServer struct {
 }
 
 func (bs *basicServer) CreateOrUpdateProxyInfra(ctx context.Context, req *pb.CreateOrUpdateProxyInfraRequest) (*pb.CreateOrUpdateProxyInfraResponse, error) {
-	ir := new(synthesizer.Infra{})
-	if err := json.Unmarshal(req.GetIrBytes(), ir); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal IR: %w", err)
-	}
+	ir := infraFromProto(req.GetInfra())
 
 	fmt.Printf("Creating proxy infra [%v]\n", ir)
 	err := bs.synth.CreateOrUpdate(ctx, ir)
@@ -54,14 +51,54 @@ func (bs *basicServer) CreateOrUpdateProxyInfra(ctx context.Context, req *pb.Cre
 }
 
 func (bs *basicServer) DeleteProxyInfra(ctx context.Context, req *pb.DeleteProxyInfraRequest) (*pb.DeleteProxyInfraResponse, error) {
-	ir := new(synthesizer.Infra{})
-	if err := json.Unmarshal(req.GetIrBytes(), ir); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal IR: %w", err)
-	}
+	ir := infraFromProto(req.GetInfra())
 
 	fmt.Printf("Deleting proxy infra [%v]\n", ir)
 	err := bs.synth.Delete(ctx, ir)
 	return new(pb.DeleteProxyInfraResponse{}), err
+}
+
+// infraFromProto maps the structured proto IR onto the pared-down
+// synthesizer.Infra used by this example. Fields the synthesizer does not
+// consume (proxy config, addresses, resolved metric sinks, and the owner
+// reference within metadata) are intentionally dropped, demonstrating the
+// forward-compatible posture a provider should adopt: read only what you
+// understand.
+func infraFromProto(in *pb.Infra) *synthesizer.Infra {
+	if in == nil || in.GetProxy() == nil {
+		return new(synthesizer.Infra{})
+	}
+
+	p := in.GetProxy()
+	proxy := &synthesizer.ProxyInfra{
+		Name:      p.GetName(),
+		Namespace: p.GetNamespace(),
+	}
+
+	if md := p.GetMetadata(); md != nil {
+		proxy.Metadata = &synthesizer.InfraMetadata{
+			Annotations: md.GetAnnotations(),
+			Labels:      md.GetLabels(),
+		}
+	}
+
+	for _, l := range p.GetListeners() {
+		if l == nil {
+			continue
+		}
+		listener := &synthesizer.ProxyListener{Name: l.GetName()}
+		for _, port := range l.GetPorts() {
+			listener.Ports = append(listener.Ports, synthesizer.ListenerPort{
+				Name:          port.GetName(),
+				Protocol:      port.GetProtocol(),
+				ServicePort:   port.GetServicePort(),
+				ContainerPort: port.GetContainerPort(),
+			})
+		}
+		proxy.Listeners = append(proxy.Listeners, listener)
+	}
+
+	return &synthesizer.Infra{Proxy: proxy}
 }
 
 func (bs *basicServer) CreateOrUpdateRateLimitInfra(_ context.Context, _ *pb.CreateOrUpdateRateLimitInfraRequest) (*pb.CreateOrUpdateRateLimitInfraResponse, error) {

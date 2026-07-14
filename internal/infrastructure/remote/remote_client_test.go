@@ -7,7 +7,6 @@ package remote
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"net"
@@ -196,14 +195,12 @@ func TestInfraClientImpl_CreateOrUpdateProxyInfra(t *testing.T) {
 		assert.Equal(t, 1, srv.createProxyCalls)
 		require.NotNil(t, srv.createProxyReq)
 
-		// The IR is sent as JSON bytes matching the IR's own JSONString output.
-		assert.Equal(t, []byte(input.JSONString()), srv.createProxyReq.IrBytes)
-
-		var got ir.Infra
-		require.NoError(t, json.Unmarshal(srv.createProxyReq.IrBytes, &got))
-		require.NotNil(t, got.Proxy)
-		assert.Equal(t, "proxy", got.Proxy.Name)
-		assert.Equal(t, "ns", got.Proxy.Namespace)
+		// The IR is sent as structured proto data mirroring ir.Infra.
+		got := srv.createProxyReq.GetInfra()
+		require.NotNil(t, got)
+		require.NotNil(t, got.GetProxy())
+		assert.Equal(t, "proxy", got.GetProxy().GetName())
+		assert.Equal(t, "ns", got.GetProxy().GetNamespace())
 	})
 
 	t.Run("server_error_propagates", func(t *testing.T) {
@@ -245,7 +242,11 @@ func TestInfraClientImpl_DeleteProxyInfra(t *testing.T) {
 		defer srv.mu.Unlock()
 		assert.Equal(t, 1, srv.deleteProxyCalls)
 		require.NotNil(t, srv.deleteProxyReq)
-		assert.Equal(t, []byte(input.JSONString()), srv.deleteProxyReq.IrBytes)
+		got := srv.deleteProxyReq.GetInfra()
+		require.NotNil(t, got)
+		require.NotNil(t, got.GetProxy())
+		assert.Equal(t, "proxy", got.GetProxy().GetName())
+		assert.Equal(t, "ns", got.GetProxy().GetNamespace())
 	})
 
 	t.Run("server_error_propagates", func(t *testing.T) {

@@ -34,11 +34,9 @@ type InfraClient interface {
 // factory lazily on the first method call that needs the client.
 type InfraClientFactory func(ctx context.Context) (InfraClient, error)
 
-// infraClientImpl is the gRPC-backed implementation of InfraClient. It
-// serializes IR payloads to JSON and forwards them to a remote
-// infrastructure provider.
-// (TODO) In the future, the protobuf definition should be able to ingest
-// IR payloads fields directly.
+// infraClientImpl is the gRPC-backed implementation of InfraClient. It maps
+// IR payloads onto the structured proto contract and forwards them to a
+// remote infrastructure provider.
 type infraClientImpl struct {
 	k8sClient          k8scli.Client
 	namespace          string
@@ -56,26 +54,32 @@ func (i *infraClientImpl) Close() error {
 	return i.extensionConnCache.Close()
 }
 
-// CreateOrUpdateProxyInfra serializes the IR to JSON and forwards it to the
-// remote provider. The provider is responsible for reconciling the proxy
-// infrastructure to match.
+// CreateOrUpdateProxyInfra maps the IR onto the proto contract and forwards it
+// to the remote provider. The provider is responsible for reconciling the
+// proxy infrastructure to match.
 func (i *infraClientImpl) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) error {
-	bs := []byte(infra.JSONString())
+	pbInfra, err := infraToProto(infra)
+	if err != nil {
+		return err
+	}
 
-	req := new(remoteinfra.CreateOrUpdateProxyInfraRequest{IrBytes: bs})
+	req := new(remoteinfra.CreateOrUpdateProxyInfraRequest{Infra: pbInfra})
 
-	_, err := i.client.CreateOrUpdateProxyInfra(ctx, req)
+	_, err = i.client.CreateOrUpdateProxyInfra(ctx, req)
 	return err
 }
 
-// DeleteProxyInfra serializes the IR to JSON and asks the remote provider to
-// tear down the corresponding proxy infrastructure.
+// DeleteProxyInfra maps the IR onto the proto contract and asks the remote
+// provider to tear down the corresponding proxy infrastructure.
 func (i *infraClientImpl) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
-	bs := []byte(infra.JSONString())
+	pbInfra, err := infraToProto(infra)
+	if err != nil {
+		return err
+	}
 
-	req := new(remoteinfra.DeleteProxyInfraRequest{IrBytes: bs})
+	req := new(remoteinfra.DeleteProxyInfraRequest{Infra: pbInfra})
 
-	_, err := i.client.DeleteProxyInfra(ctx, req)
+	_, err = i.client.DeleteProxyInfra(ctx, req)
 	return err
 }
 
