@@ -5,6 +5,10 @@ title: "HTTP URL Rewrite"
 [HTTPURLRewriteFilter][] defines a filter that modifies a request during forwarding. At most one of these filters may be
 used on a Route rule. This MUST NOT be used on the same Route rule as a HTTPRequestRedirect filter.
 
+The Envoy Gateway `HTTPRouteFilter` (used for hostname and regex path rewrite) can also be referenced from a `GRPCRoute`
+via an `extensionRef` filter. For gRPC, a regex `:path` rewrite operates on the gRPC path, which has the form
+`/<package>.<Service>/<Method>`. See [Gateway API support](./gatewayapi-support#grpcroute) for details.
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}

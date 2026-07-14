@@ -1,0 +1,81 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    # A method match ANDed with the filter cookie matches (cross product).
+    - matches:
+      - method:
+          method: "Foo"
+          service: "com.example"
+          type: Exact
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: cookie-match
+    # No method match: the filter cookie matches alone drive routing.
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: another-cookie-match
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    namespace: default
+    name: cookie-match
+  spec:
+    matches:
+    - cookies:
+      - name: cookie-1
+        value: xxx
+      - name: cookie-2
+        value: "foo.*"
+        type: RegularExpression
+    - cookies:
+      - name: cookie-3
+        value: xxx
+      - name: cookie-4
+        value: yyy
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    namespace: default
+    name: another-cookie-match
+  spec:
+    matches:
+    - cookies:
+      - name: cookie-5
+        value: zzz

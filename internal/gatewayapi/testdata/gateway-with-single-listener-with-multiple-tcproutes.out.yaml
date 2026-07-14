@@ -15,7 +15,7 @@ gateways:
       protocol: TCP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -103,9 +103,9 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Multiple routes on the same TCP listener
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route

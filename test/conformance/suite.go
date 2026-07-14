@@ -51,9 +51,6 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 	opts.SkipTests = append(opts.SkipTests,
 		// TODO: retry after https://github.com/envoyproxy/gateway/pull/9196 merged
 		tests.GatewayListenerUnsupportedProtocol.ShortName,
-		// TODO: will be fixed in https://github.com/envoyproxy/gateway/pull/9247
-		tests.TCPRouteMultipleRoutesAttachment.ShortName,
-		tests.UDPRouteMultipleRoutesAttachment.ShortName,
 	)
 
 	opts.Hook = e2e.Hook
@@ -65,11 +62,6 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 // SkipTests is a list of tests that are skipped in the conformance suite.
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := make([]suite.ConformanceTest, 0, 4)
-	skipTests = append(skipTests,
-		// TODO: fix following conformance tests
-		tests.ListenerSetProtocolConflict,
-	)
-
 	if gatewayNamespaceMode {
 		return skipTests
 	}
