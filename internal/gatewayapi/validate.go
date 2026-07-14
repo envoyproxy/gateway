@@ -855,6 +855,20 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 
 // validateConflictedProtocolsListeners checks for listeners that have conflicting protocols on the same port.
 // UDP can coexist with any protocol. HTTPS and TLS are treated as compatible via getProtocolForListener.
+//
+// For each port, listeners are grouped into Gateway-owned listeners and ListenerSet-owned listeners,
+// and one of the following cases applies:
+//  1. No conflict: at most one distinct non-UDP protocol is used on the port.
+//  2. Gateway-owned listeners disagree: two or more distinct protocols are used by Gateway-owned
+//     listeners themselves, so no protocol can win — every non-UDP listener on the port, Gateway-owned
+//     or ListenerSet-owned, is marked conflicted.
+//  3. Gateway-owned listeners agree, some ListenerSet listener disagrees: the single Gateway-owned
+//     protocol wins; any ListenerSet listener using a different protocol is marked conflicted.
+//  4. No Gateway-owned listeners, ListenerSet listeners disagree:
+//     a. A single ListenerSet uses multiple protocols internally — every listener belonging to that
+//     ListenerSet is marked conflicted.
+//     b. Otherwise, the first listener encountered establishes the winner protocol, and any later
+//     listener using a different protocol is marked conflicted.
 func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayContext) {
 	validateByPort := func(listeners []*ListenerContext) {
 		portListenerInfo := map[gwapiv1.PortNumber][]*ListenerContext{}
@@ -955,11 +969,7 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 					}
 				} else {
 					// All conflicted listeners are from ListenerSet, first one wins
-					if winnerProtocol == "" {
-						winnerProtocol = protocol
-					} else if protocol != winnerProtocol {
-						setConflictedConditions(listener, gwapiv1.ListenerReasonProtocolConflict, conflictMsg)
-					}
+					winnerProtocol = protocol
 				}
 			}
 		}
