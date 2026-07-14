@@ -443,6 +443,79 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	}
 }
 
+func TestUpdateGatewayStatusAccepted(t *testing.T) {
+	acceptedListener := gwapiv1.ListenerStatus{
+		Name: "http",
+		Conditions: []metav1.Condition{
+			{Type: string(gwapiv1.ListenerConditionAccepted), Status: metav1.ConditionTrue, Reason: string(gwapiv1.ListenerReasonAccepted)},
+		},
+	}
+	unsupportedProtocolListener := gwapiv1.ListenerStatus{
+		Name: "invalid",
+		Conditions: []metav1.Condition{
+			{Type: string(gwapiv1.ListenerConditionAccepted), Status: metav1.ConditionFalse, Reason: string(gwapiv1.ListenerReasonUnsupportedProtocol)},
+		},
+	}
+
+	testCases := []struct {
+		name            string
+		listeners       []gwapiv1.ListenerStatus
+		expectCondition metav1.Condition
+	}{
+		{
+			name:      "no listeners",
+			listeners: nil,
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1.GatewayReasonAccepted),
+				Message: "The Gateway has been scheduled by Envoy Gateway",
+			},
+		},
+		{
+			name:      "all listeners accepted",
+			listeners: []gwapiv1.ListenerStatus{acceptedListener},
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1.GatewayReasonAccepted),
+				Message: "The Gateway has been scheduled by Envoy Gateway",
+			},
+		},
+		{
+			name:      "no listeners accepted",
+			listeners: []gwapiv1.ListenerStatus{unsupportedProtocolListener},
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gwapiv1.GatewayReasonListenersNotValid),
+				Message: "No listeners are valid",
+			},
+		},
+		{
+			name:      "some listeners accepted",
+			listeners: []gwapiv1.ListenerStatus{acceptedListener, unsupportedProtocolListener},
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1.GatewayReasonListenersNotValid),
+				Message: "Some listeners are invalid",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gtw := &gwapiv1.Gateway{Status: gwapiv1.GatewayStatus{Listeners: tc.listeners}}
+			UpdateGatewayStatusAccepted(gtw)
+
+			if d := cmp.Diff([]metav1.Condition{tc.expectCondition}, gtw.Status.Conditions, cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")); d != "" {
+				t.Errorf("unexpected condition diff: %s", d)
+			}
+		})
+	}
+}
+
 func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 	testCases := []struct {
 		name string
