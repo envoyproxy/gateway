@@ -1,0 +1,1 @@
+Fixed a TLS Secret with a mismatched certificate and private key being pushed to Envoy and rejected by BoringSSL (KEY_VALUES_MISMATCH), which with mergeGateways enabled broke TLS for all Gateways sharing the proxy; such Secrets are now rejected during translation and isolated to the affected listener.

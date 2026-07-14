@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -111,6 +112,47 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 			continue
 		}
 
+		switch keyBlock.Type {
+		case "PRIVATE KEY":
+			_, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS8 formatted private key in %s",
+					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
+				continue
+			}
+		case "RSA PRIVATE KEY":
+			_, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS1 formatted private key in %s",
+					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
+				continue
+			}
+		case "EC PRIVATE KEY":
+			_, err := x509.ParseECPrivateKey(keyBlock.Bytes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse EC formatted private key in %s",
+					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
+				continue
+			}
+		default:
+			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, %s key format found in %s, supported formats are PKCS1, PKCS8 or EC",
+				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, keyBlock.Type, corev1.TLSPrivateKeyKey))
+			continue
+		}
+
+		// Ensure the private key actually corresponds to the public key in the
+		// certificate. Validating the cert and key independently is not enough:
+		// a mismatched pair (e.g. a stale/rotated Secret) parses fine locally but
+		// is rejected by BoringSSL at the xDS layer with KEY_VALUES_MISMATCH. With
+		// mergeGateways enabled that NACKs the whole SDS push, breaking TLS for all
+		// Gateways sharing the proxy. Reject the bad Secret here so it never reaches
+		// Envoy and only the affected listener degrades.
+		if _, err := tls.X509KeyPair(validData, pem.EncodeToMemory(keyBlock)); err != nil {
+			errs = append(errs, fmt.Errorf("%s/%s must contain a matching tls.crt and tls.key: %w",
+				secret.Namespace, secret.Name, err))
+			continue
+		}
+
 		// SNI and SAN/Cert Domain mismatch is allowed
 		// Consider converting this into a warning once
 		// https://github.com/envoyproxy/gateway/issues/6717 is in
@@ -141,33 +183,6 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 			continue
 		}
 
-		switch keyBlock.Type {
-		case "PRIVATE KEY":
-			_, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS8 formatted private key in %s",
-					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
-				continue
-			}
-		case "RSA PRIVATE KEY":
-			_, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS1 formatted private key in %s",
-					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
-				continue
-			}
-		case "EC PRIVATE KEY":
-			_, err := x509.ParseECPrivateKey(keyBlock.Bytes)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse EC formatted private key in %s",
-					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
-				continue
-			}
-		default:
-			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, %s key format found in %s, supported formats are PKCS1, PKCS8 or EC",
-				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, keyBlock.Type, corev1.TLSPrivateKeyKey))
-			continue
-		}
 		normalizedSecret := *secret
 		normalizedSecret.Data = maps.Clone(secret.Data)
 		normalizedSecret.Data[corev1.TLSCertKey] = validData
