@@ -43,6 +43,7 @@ spec:
               unhealthyThreshold: 3
               healthyThreshold: 1
               type: TCP
+              tcp: {}
       customTags:
         "provider":
           type: Literal
