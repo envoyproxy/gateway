@@ -9,11 +9,53 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
+
+func TestEndpointSliceIndexFuncs(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		labels                map[string]string
+		expectedService       []string
+		expectedServiceImport []string
+	}{
+		{
+			name: "service endpointslice",
+			labels: map[string]string{
+				discoveryv1.LabelServiceName: "backend",
+			},
+			expectedService: []string{"backend"},
+		},
+		{
+			name: "serviceimport endpointslice",
+			labels: map[string]string{
+				mcsapiv1a1.LabelServiceName: "imported-backend",
+			},
+			expectedServiceImport: []string{"imported-backend"},
+		},
+		{
+			name: "unlabeled endpointslice",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			endpointSlice := &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: tc.labels,
+				},
+			}
+
+			require.Equal(t, tc.expectedService, serviceEndpointSliceIndexFunc(endpointSlice))
+			require.Equal(t, tc.expectedServiceImport, serviceImportEndpointSliceIndexFunc(endpointSlice))
+		})
+	}
+}
 
 func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 	testCases := []struct {

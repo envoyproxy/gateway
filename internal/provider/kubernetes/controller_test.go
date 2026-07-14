@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -334,6 +335,88 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProcessBackendRefsUsesEndpointSliceIndex(t *testing.T) {
+	const ns = "default"
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backend",
+			Namespace: ns,
+		},
+	}
+	matchingEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-backend"}, service.Name, false)
+	otherEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(service, matchingEndpointSlice, otherEndpointSlice).
+		WithIndex(&discoveryv1.EndpointSlice{}, serviceEndpointSliceIndex, serviceEndpointSliceIndexFunc).
+		Build()
+
+	r := &gatewayAPIReconciler{
+		log:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeClient,
+	}
+
+	resourceMappings := newResourceMapping()
+	resourceMappings.insertBackendRef(gwapiv1.BackendObjectReference{
+		Name:      gwapiv1.ObjectName(service.Name),
+		Namespace: gatewayapi.NamespacePtr(ns),
+	})
+
+	gwcResource := resource.NewResources()
+	require.NoError(t, r.processBackendRefs(t.Context(), gwcResource, resourceMappings))
+
+	require.Len(t, gwcResource.Services, 1)
+	require.Equal(t, service.Name, gwcResource.Services[0].Name)
+	require.Len(t, gwcResource.EndpointSlices, 1)
+	require.Equal(t, matchingEndpointSlice.Name, gwcResource.EndpointSlices[0].Name)
+}
+
+func TestProcessBackendRefsEndpointSliceIndexDisabled(t *testing.T) {
+	const ns = "default"
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backend",
+			Namespace: ns,
+		},
+	}
+	matchingEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-backend"}, service.Name, false)
+	otherEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
+
+	// Do not register EndpointSlice field indexes here. This verifies the disabled
+	// runtime flag path falls back to label selection instead of using MatchingFields.
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(service, matchingEndpointSlice, otherEndpointSlice).
+		Build()
+
+	r := &gatewayAPIReconciler{
+		log:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeClient,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				RuntimeFlags: &egv1a1.RuntimeFlags{
+					Disabled: []egv1a1.RuntimeFlag{egv1a1.EndpointSliceIndex},
+				},
+			},
+		},
+	}
+
+	resourceMappings := newResourceMapping()
+	resourceMappings.insertBackendRef(gwapiv1.BackendObjectReference{
+		Name:      gwapiv1.ObjectName(service.Name),
+		Namespace: gatewayapi.NamespacePtr(ns),
+	})
+
+	gwcResource := resource.NewResources()
+	require.NoError(t, r.processBackendRefs(t.Context(), gwcResource, resourceMappings))
+
+	require.Len(t, gwcResource.Services, 1)
+	require.Equal(t, service.Name, gwcResource.Services[0].Name)
+	require.Len(t, gwcResource.EndpointSlices, 1)
+	require.Equal(t, matchingEndpointSlice.Name, gwcResource.EndpointSlices[0].Name)
 }
 
 func TestRemoveGatewayClassFinalizer(t *testing.T) {
