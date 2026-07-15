@@ -489,7 +489,7 @@ func TestUpdateGatewayStatusAccepted(t *testing.T) {
 				Type:    string(gwapiv1.GatewayConditionAccepted),
 				Status:  metav1.ConditionFalse,
 				Reason:  string(gwapiv1.GatewayReasonListenersNotValid),
-				Message: "No listeners are valid",
+				Message: "No listeners are valid: invalid",
 			},
 		},
 		{
@@ -499,7 +499,7 @@ func TestUpdateGatewayStatusAccepted(t *testing.T) {
 				Type:    string(gwapiv1.GatewayConditionAccepted),
 				Status:  metav1.ConditionTrue,
 				Reason:  string(gwapiv1.GatewayReasonListenersNotValid),
-				Message: "Some listeners are invalid",
+				Message: "Listeners not valid: invalid",
 			},
 		},
 	}
