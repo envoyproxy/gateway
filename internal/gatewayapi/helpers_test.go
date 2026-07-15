@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -1360,5 +1361,216 @@ func TestWildcardHostnameMatchesHostname(t *testing.T) {
 			result := wildcardHostnameMatchesHostname(tc.wildcard, tc.hostname)
 			require.Equal(t, tc.expected, result)
 		})
+	}
+}
+
+func TestPolicyScopeGraphGetDirectChildren(t *testing.T) {
+	gatewayNN := types.NamespacedName{Namespace: "default", Name: "gateway"}
+	listenerSetNN := types.NamespacedName{Namespace: "default", Name: "listener-set"}
+	routeNN := types.NamespacedName{Namespace: "default", Name: "route"}
+	gateway := gatewayScope(gatewayNN)
+	httpListener := gatewayListenerScope(gatewayNN, gwapiv1.SectionName("http"))
+	route := routeScope(routeNN)
+
+	testCases := []struct {
+		name     string
+		setup    []policyScopeGraphSetup
+		parent   policyScope
+		expected []policyScope
+	}{
+		{
+			name:   "empty graph",
+			parent: gateway,
+		},
+		{
+			name: "returns only direct children",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupAdd, parent: gateway, child: httpListener},
+				{kind: policyScopeGraphSetupAdd, parent: httpListener, child: route},
+			},
+			parent:   gateway,
+			expected: []policyScope{httpListener},
+		},
+		{
+			name: "ignores registered listener set containment",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupAdd, parent: gateway, child: httpListener},
+				{kind: policyScopeGraphSetupRegisterListenerSet, listenerSet: listenerSetNN, gateway: gatewayNN},
+			},
+			parent:   gateway,
+			expected: []policyScope{httpListener},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			graph := newTestPolicyScopeGraph(t, tc.setup)
+
+			got := graph.GetDirectChildren(tc.parent)
+			requirePolicyScopesEqual(t, got, tc.expected...)
+		})
+	}
+}
+
+func TestPolicyScopeGraphGetWithDescendants(t *testing.T) {
+	gatewayNN := types.NamespacedName{Namespace: "default", Name: "gateway"}
+	otherGatewayNN := types.NamespacedName{Namespace: "default", Name: "other-gateway"}
+	listenerSetNN := types.NamespacedName{Namespace: "default", Name: "listener-set"}
+
+	gateway := gatewayScope(gatewayNN)
+	otherGateway := gatewayScope(otherGatewayNN)
+	httpListener := gatewayListenerScope(gatewayNN, gwapiv1.SectionName("http"))
+	httpsListener := gatewayListenerScope(gatewayNN, gwapiv1.SectionName("https"))
+	otherGatewayListener := gatewayListenerScope(otherGatewayNN, gwapiv1.SectionName("http"))
+	listenerSet := listenerSetScope(listenerSetNN)
+	listenerSetHTTPListener := listenerSetListenerScope(listenerSetNN, gwapiv1.SectionName("ls-http"))
+	listenerSetHTTPSListener := listenerSetListenerScope(listenerSetNN, gwapiv1.SectionName("ls-https"))
+
+	gatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-route"})
+	gatewayListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-listener-route"})
+	listenerSetRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-route"})
+	listenerSetListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-listener-route"})
+	otherGatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "other-gateway-route"})
+
+	testCases := []struct {
+		name       string
+		setup      []policyScopeGraphSetup
+		parent     policyScope
+		expected   []policyScope
+		unexpected []policyScope
+	}{
+		{
+			name:   "empty graph",
+			parent: gateway,
+		},
+		{
+			name: "resource scope returns direct children",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupAdd, parent: gateway, child: httpsListener},
+				{kind: policyScopeGraphSetupAdd, parent: gateway, child: gatewayRoute},
+			},
+			parent:   gateway,
+			expected: []policyScope{httpsListener, gatewayRoute},
+		},
+		{
+			name: "gateway includes gateway listener descendants",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupAdd, parent: httpListener, child: gatewayListenerRoute},
+			},
+			parent:   gateway,
+			expected: []policyScope{gatewayListenerRoute},
+		},
+		{
+			name: "gateway includes nested listener set descendants",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupRegisterListenerSet, listenerSet: listenerSetNN, gateway: gatewayNN},
+				{kind: policyScopeGraphSetupAdd, parent: listenerSet, child: listenerSetRoute},
+				{kind: policyScopeGraphSetupAdd, parent: listenerSetHTTPListener, child: listenerSetListenerRoute},
+			},
+			parent:   gateway,
+			expected: []policyScope{listenerSetRoute, listenerSetListenerRoute},
+		},
+		{
+			name: "listener set includes listener descendants",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupAdd, parent: listenerSet, child: listenerSetRoute},
+				{kind: policyScopeGraphSetupAdd, parent: listenerSetHTTPListener, child: listenerSetListenerRoute},
+			},
+			parent:   listenerSet,
+			expected: []policyScope{listenerSetRoute, listenerSetListenerRoute},
+		},
+		{
+			name: "gateway listener includes direct children and resource-level routes only",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupAdd, parent: gateway, child: gatewayRoute},
+				{kind: policyScopeGraphSetupAdd, parent: gateway, child: httpsListener},
+				{kind: policyScopeGraphSetupAdd, parent: httpListener, child: gatewayListenerRoute},
+			},
+			parent:     httpListener,
+			expected:   []policyScope{gatewayRoute, gatewayListenerRoute},
+			unexpected: []policyScope{httpsListener},
+		},
+		{
+			name: "listener set listener includes direct children and resource-level routes only",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupAdd, parent: listenerSet, child: listenerSetRoute},
+				{kind: policyScopeGraphSetupAdd, parent: listenerSet, child: listenerSetHTTPSListener},
+				{kind: policyScopeGraphSetupAdd, parent: listenerSetHTTPListener, child: listenerSetListenerRoute},
+			},
+			parent:     listenerSetHTTPListener,
+			expected:   []policyScope{listenerSetRoute, listenerSetListenerRoute},
+			unexpected: []policyScope{listenerSetHTTPSListener},
+		},
+		{
+			name: "gateway ignores unregistered listener set containment",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupAdd, parent: listenerSet, child: listenerSetRoute},
+			},
+			parent: gateway,
+		},
+		{
+			name: "gateway ignores other gateway descendants",
+			setup: []policyScopeGraphSetup{
+				{kind: policyScopeGraphSetupAdd, parent: otherGateway, child: otherGatewayRoute},
+				{kind: policyScopeGraphSetupAdd, parent: otherGatewayListener, child: gatewayListenerRoute},
+			},
+			parent: gateway,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			graph := newTestPolicyScopeGraph(t, tc.setup)
+
+			got := graph.GetWithDescendants(tc.parent)
+			requirePolicyScopesEqual(t, got, tc.expected...)
+			for _, scope := range tc.unexpected {
+				require.False(t, got.Has(scope), "unexpected scope %v", scope)
+			}
+		})
+	}
+}
+
+type policyScopeGraphSetupKind string
+
+const (
+	policyScopeGraphSetupAdd                 policyScopeGraphSetupKind = "add"
+	policyScopeGraphSetupRegisterListenerSet policyScopeGraphSetupKind = "registerListenerSet"
+)
+
+type policyScopeGraphSetup struct {
+	kind policyScopeGraphSetupKind
+
+	parent policyScope
+	child  policyScope
+
+	listenerSet types.NamespacedName
+	gateway     types.NamespacedName
+}
+
+func newTestPolicyScopeGraph(t *testing.T, setup []policyScopeGraphSetup) policyScopeGraph {
+	t.Helper()
+
+	graph := newPolicyScopeGraph()
+	for i := range setup {
+		step := &setup[i]
+		switch step.kind {
+		case policyScopeGraphSetupAdd:
+			graph.Add(step.parent, step.child)
+		case policyScopeGraphSetupRegisterListenerSet:
+			graph.RegisterListenerSet(step.listenerSet, step.gateway)
+		default:
+			require.FailNowf(t, "unknown policy scope graph setup kind", "kind: %s", step.kind)
+		}
+	}
+	return graph
+}
+
+func requirePolicyScopesEqual(t *testing.T, actual sets.Set[policyScope], expected ...policyScope) {
+	t.Helper()
+
+	require.Equal(t, len(expected), actual.Len())
+	for _, scope := range expected {
+		require.True(t, actual.Has(scope), "expected scope %v", scope)
 	}
 }

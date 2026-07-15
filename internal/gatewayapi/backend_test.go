@@ -26,6 +26,11 @@ func TestValidateHostnameRunningOnHost(t *testing.T) {
 			runningOnHost: false,
 		},
 		{
+			name:          "absolute domain ok in any case",
+			hostname:      "httpbin.org.",
+			runningOnHost: false,
+		},
+		{
 			name:          "single label not ok when in k8s",
 			hostname:      "otel-tui",
 			runningOnHost: false,

@@ -19,13 +19,16 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	egmetrics "github.com/envoyproxy/gateway/internal/metrics"
@@ -316,4 +319,297 @@ func TestNoopDeleteMetricsStaySuppressedAcrossDaemonSetReconciles(t *testing.T) 
 		"repeated no-op reconciles should not record successful delete metrics for HPA")
 	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "PDB"),
 		"repeated no-op reconciles should not record successful delete metrics for PDB")
+}
+
+// owningLabels returns the full set of labels that envoy-gateway stamps on resources
+// it manages for a given Gateway.
+func owningLabels(ns, name string) map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/managed-by":         "envoy-gateway",
+		gatewayapi.OwningGatewayNamespaceLabel: ns,
+		gatewayapi.OwningGatewayNameLabel:      name,
+	}
+}
+
+// owningClassLabels returns labels for a MergeGateways resource identified by GatewayClass.
+func owningClassLabels(gwClass string) map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/managed-by":     "envoy-gateway",
+		gatewayapi.OwningGatewayClassLabel: gwClass,
+	}
+}
+
+// newGatewayNamespaceInfra returns a test Infra with GatewayNamespace mode enabled.
+func newGatewayNamespaceInfra(t *testing.T, cli client.Client) *Infra {
+	t.Helper()
+	kube := newTestInfraWithClient(t, cli)
+	kube.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeKubernetes,
+		Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+			Deploy: &egv1a1.KubernetesDeployMode{
+				Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+			},
+		},
+	}
+	return kube
+}
+
+// TestOwnedByGateway covers ownedByGateway across all three labels.
+func TestOwnedByGateway(t *testing.T) {
+	tests := []struct {
+		name     string
+		existing map[string]string
+		desired  map[string]string
+		want     bool
+	}{
+		// gateway-scoped
+		{
+			name:     "gateway-scoped: exact match",
+			existing: owningLabels("default", "my-gateway"),
+			desired:  owningLabels("default", "my-gateway"),
+			want:     true,
+		},
+		{
+			name:     "gateway-scoped: different gateway name",
+			existing: owningLabels("default", "other-gateway"),
+			desired:  owningLabels("default", "my-gateway"),
+			want:     false,
+		},
+		{
+			name:     "gateway-scoped: different namespace",
+			existing: owningLabels("other-ns", "my-gateway"),
+			desired:  owningLabels("default", "my-gateway"),
+			want:     false,
+		},
+		{
+			name:     "gateway-scoped: managed-by absent on existing",
+			existing: map[string]string{gatewayapi.OwningGatewayNamespaceLabel: "default", gatewayapi.OwningGatewayNameLabel: "my-gateway"},
+			desired:  owningLabels("default", "my-gateway"),
+			want:     false,
+		},
+		{
+			name:     "gateway-scoped: managed-by wrong controller",
+			existing: map[string]string{"app.kubernetes.io/managed-by": "helm", gatewayapi.OwningGatewayNamespaceLabel: "default", gatewayapi.OwningGatewayNameLabel: "my-gateway"},
+			desired:  owningLabels("default", "my-gateway"),
+			want:     false,
+		},
+		// gatewayclass-scoped
+		{
+			name:     "gatewayclass-scoped: exact match",
+			existing: owningClassLabels("my-class"),
+			desired:  owningClassLabels("my-class"),
+			want:     true,
+		},
+		{
+			name:     "gatewayclass-scoped: different class",
+			existing: owningClassLabels("other-class"),
+			desired:  owningClassLabels("my-class"),
+			want:     false,
+		},
+		{
+			name:     "gatewayclass-scoped: existing has correct managed-by but empty class",
+			existing: map[string]string{"app.kubernetes.io/managed-by": "envoy-gateway"},
+			desired:  owningClassLabels("my-class"),
+			want:     false,
+		},
+		// no-identity-labels
+		{
+			name:     "no-identity-labels: existing has managed-by only",
+			existing: map[string]string{"app.kubernetes.io/managed-by": "envoy-gateway"},
+			desired:  map[string]string{"app.kubernetes.io/managed-by": "envoy-gateway"},
+			want:     false,
+		},
+		{
+			name:     "no-identity-labels: nil existing labels",
+			existing: nil,
+			desired:  map[string]string{"app.kubernetes.io/managed-by": "envoy-gateway"},
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, ownedByGateway(tt.existing, tt.desired))
+		})
+	}
+}
+
+// TestCheckOwnership_NotFound verifies that checkOwnership returns nil when the
+// resource does not yet exist.
+func TestCheckOwnership_NotFound(t *testing.T) {
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	sa := &corev1.ServiceAccount{
+		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "does-not-exist", Labels: owningLabels("default", "my-gateway")},
+	}
+	require.NoError(t, kube.checkOwnership(context.Background(), sa))
+}
+
+// TestCheckOwnership_SameGateway verifies that checkOwnership returns nil when the
+// resource already exists and is owned by the same Gateway being reconciled.
+func TestCheckOwnership_SameGateway(t *testing.T) {
+	ctx := context.Background()
+	sa := &corev1.ServiceAccount{
+		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "my-gateway", Labels: owningLabels("default", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(sa).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	require.NoError(t, kube.checkOwnership(ctx, sa))
+}
+
+// TestCheckOwnership_UnownedResource verifies that checkOwnership returns an error
+// when the resource exists but has no envoy-gateway ownership labels.
+func TestCheckOwnership_UnownedResource(t *testing.T) {
+	ctx := context.Background()
+	existing := &corev1.ServiceAccount{
+		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway"},
+	}
+	desired := &corev1.ServiceAccount{
+		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway", Labels: owningLabels("kube-system", "envoy-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_DifferentGateway verifies that a resource owned by another Gateway
+// with same managed-by label, different owning-gateway identity is rejected.
+func TestCheckOwnership_DifferentGateway(t *testing.T) {
+	ctx := context.Background()
+	existing := &corev1.ServiceAccount{
+		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "shared-name", Labels: owningLabels("default", "gateway-a")},
+	}
+	desired := &corev1.ServiceAccount{
+		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "shared-name", Labels: owningLabels("default", "gateway-b")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedConfigMap verifies the same protection applies to ConfigMaps.
+func TestCheckOwnership_UnownedConfigMap(t *testing.T) {
+	ctx := context.Background()
+	existing := &corev1.ConfigMap{
+		TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway", Labels: map[string]string{"app": "something-else"}},
+	}
+	desired := &corev1.ConfigMap{
+		TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway", Labels: owningLabels("kube-system", "envoy-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedDeployment verifies the protection applies to Deployments.
+func TestCheckOwnership_UnownedDeployment(t *testing.T) {
+	ctx := context.Background()
+	existing := &appsv1.Deployment{
+		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &appsv1.Deployment{
+		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedDaemonSet verifies the protection applies to DaemonSets.
+func TestCheckOwnership_UnownedDaemonSet(t *testing.T) {
+	ctx := context.Background()
+	existing := &appsv1.DaemonSet{
+		TypeMeta:   metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &appsv1.DaemonSet{
+		TypeMeta:   metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedService verifies the protection applies to Services.
+func TestCheckOwnership_UnownedService(t *testing.T) {
+	ctx := context.Background()
+	existing := &corev1.Service{
+		TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &corev1.Service{
+		TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedPDB verifies the protection applies to PodDisruptionBudgets.
+func TestCheckOwnership_UnownedPDB(t *testing.T) {
+	ctx := context.Background()
+	existing := &policyv1.PodDisruptionBudget{
+		TypeMeta:   metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &policyv1.PodDisruptionBudget{
+		TypeMeta:   metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+}
+
+// TestCheckOwnership_UnownedHPA verifies the protection applies to HPAs.
+func TestCheckOwnership_UnownedHPA(t *testing.T) {
+	ctx := context.Background()
+	existing := &autoscalingv2.HorizontalPodAutoscaler{
+		TypeMeta:   metav1.TypeMeta{Kind: "HorizontalPodAutoscaler", APIVersion: "autoscaling/v2"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+	}
+	desired := &autoscalingv2.HorizontalPodAutoscaler{
+		TypeMeta:   metav1.TypeMeta{Kind: "HorizontalPodAutoscaler", APIVersion: "autoscaling/v2"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+	}
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
+	kube := newGatewayNamespaceInfra(t, cli)
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
 }
