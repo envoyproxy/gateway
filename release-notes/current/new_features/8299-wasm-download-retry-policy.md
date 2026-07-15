@@ -1,0 +1,1 @@
+Added a `fetchRetryPolicy` field to the Wasm code source in `EnvoyExtensionPolicy`, allowing the number of retries and backoff intervals Envoy uses when fetching Wasm code over HTTP or OCI to be configured to recover from transient failures.
