@@ -1246,6 +1246,9 @@ func setTLSClientValidationContext(tlsClientValidation *egv1a1.ClientValidationC
 	if len(tlsClientValidation.CertificateHashes) > 0 {
 		irTLSConfig.VerifyCertificateHash = append(irTLSConfig.VerifyCertificateHash, tlsClientValidation.CertificateHashes...)
 	}
+	if tlsClientValidation.AllowExpiredCertificate != nil && *tlsClientValidation.AllowExpiredCertificate {
+		irTLSConfig.AllowExpiredCertificate = true
+	}
 	if tlsClientValidation.SubjectAltNames != nil {
 		for _, match := range tlsClientValidation.SubjectAltNames.DNSNames {
 			irTLSConfig.MatchTypedSubjectAltNames = append(irTLSConfig.MatchTypedSubjectAltNames, irStringMatch("DNS", match))

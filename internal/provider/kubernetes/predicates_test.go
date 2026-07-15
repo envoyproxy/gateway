@@ -1826,6 +1826,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 			httpRouteFilter: sampleHTTPRouteFilter,
 			expect:          true,
 		},
+		{
+			name: "httproutefilter referenced by grpcroute",
+			configs: []client.Object{
+				sampleGWC,
+				sampleGateway,
+				sampleService,
+				sampleHTTPRouteFilter,
+				test.GetGRPCRouteWithHTTPRouteFilter(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80, "httproutefilter"),
+			},
+			httpRouteFilter: sampleHTTPRouteFilter,
+			expect:          true,
+		},
 	}
 
 	// Create the reconciler.
@@ -1842,6 +1854,7 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.HTTPRoute{}, httpRouteFilterHTTPRouteIndex, httpRouteFilterHTTPRouteIndexFunc).
+			WithIndex(&gwapiv1.GRPCRoute{}, httpRouteFilterGRPCRouteIndex, httpRouteFilterGRPCRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateHTTPRouteFilterForReconcile(tc.httpRouteFilter)
