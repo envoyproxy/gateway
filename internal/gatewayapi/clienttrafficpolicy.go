@@ -697,11 +697,6 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
 
-		// Translate Host Settings
-		if policy.Spec.Headers != nil {
-			translateHostSettings(policy.Spec.Headers.Host, httpIR)
-		}
-
 		// Translate HTTP1 Settings
 		if err = translateHTTP1Settings(policy.Spec.HTTP1, connection, httpIR); err != nil {
 			err = perr.WithMessage(err, "HTTP1")
@@ -844,18 +839,6 @@ func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPLis
 	}
 }
 
-func translateHostSettings(hostSettings *egv1a1.HostSettings, httpIR *ir.HTTPListener) {
-	if hostSettings == nil {
-		return
-	}
-	if hostSettings.StripTrailingHostDot == nil {
-		return
-	}
-	httpIR.Host = &ir.HostSettings{
-		StripTrailingHostDot: ptr.Deref(hostSettings.StripTrailingHostDot, false),
-	}
-}
-
 func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout, error) {
 	// Return early if not set
 	if clientTimeout == nil {
@@ -939,6 +922,12 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		if httpIR.Headers.XForwardedClientCert.Mode == egv1a1.XFCCForwardModeAppendForward ||
 			httpIR.Headers.XForwardedClientCert.Mode == egv1a1.XFCCForwardModeSanitizeSet {
 			httpIR.Headers.XForwardedClientCert.CertDetailsToAdd = headerSettings.XForwardedClientCert.CertDetailsToAdd
+		}
+	}
+
+	if headerSettings.Host != nil && headerSettings.Host.StripTrailingHostDot != nil {
+		httpIR.Host = &ir.HostSettings{
+			StripTrailingHostDot: ptr.Deref(headerSettings.Host.StripTrailingHostDot, false),
 		}
 	}
 
