@@ -12,14 +12,18 @@ gateways:
           from: All
       hostname: foo.com
       name: http-1
-      port: 80
-      protocol: HTTP
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - name: tls-secret-example-com
+        mode: Terminate
     - allowedRoutes:
         namespaces:
           from: All
       hostname: foo.com
       name: tls-1
-      port: 80
+      port: 443
       protocol: TLS
       tls:
         mode: Passthrough
@@ -28,7 +32,8 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
+        message: 'All listeners for a given port must use a unique hostname, conflicting
+          listeners: envoy-gateway/gateway-1/http-1, envoy-gateway/gateway-1/tls-1'
         reason: HostnameConflict
         status: "True"
         type: Conflicted
@@ -51,7 +56,8 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
+        message: 'All listeners for a given port must use a unique hostname, conflicting
+          listeners: envoy-gateway/gateway-1/http-1, envoy-gateway/gateway-1/tls-1'
         reason: HostnameConflict
         status: "True"
         type: Conflicted
@@ -90,9 +96,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -133,9 +139,9 @@ tlsRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route

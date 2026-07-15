@@ -681,6 +681,7 @@ spec:
                             description: |-
                               Method defines the HTTP method used for health checking.
                               Defaults to GET
+                            maxLength: 16
                             type: string
                           path:
                             description: Path defines the HTTP path that will be requested
@@ -688,6 +689,38 @@ spec:
                             maxLength: 1024
                             minLength: 1
                             type: string
+                          requestBody:
+                            description: RequestBody defines the HTTP request body
+                              payload sent during health checking.
+                            properties:
+                              binary:
+                                description: Binary payload base64 encoded.
+                                format: byte
+                                type: string
+                              text:
+                                description: Text payload in plain text.
+                                type: string
+                              type:
+                                allOf:
+                                - enum:
+                                  - Text
+                                  - Binary
+                                - enum:
+                                  - Text
+                                  - Binary
+                                description: Type defines the type of the payload.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: If payload type is Text, text field needs to
+                                be set.
+                              rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                            - message: If payload type is Binary, binary field needs
+                                to be set.
+                              rule: 'self.type == ''Binary'' ? has(self.binary) :
+                                !has(self.binary)'
                           retriableStatuses:
                             description: |-
                               RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -703,6 +736,11 @@ spec:
                         required:
                         - path
                         type: object
+                        x-kubernetes-validations:
+                        - message: The requestBody field can only be set when method
+                            is POST or PUT.
+                          rule: '!has(self.requestBody) || (has(self.method) && self.method.upperAscii()
+                            in [''POST'',''PUT''])'
                       initialJitter:
                         description: |-
                           InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -1757,11 +1795,38 @@ spec:
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
+                                fromMetadata:
+                                  description: |-
+                                    FromMetadata sources the limit value from per-request dynamic metadata.
+                                    When the referenced metadata value is present, it overrides Requests/Unit for that
+                                    request; otherwise Requests/Unit are used as the default.
+
+                                    The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                    property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                    filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                    Only supported for Global Rate Limits.
+                                  properties:
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        limit value from within the namespaced filter
+                                        metadata.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - key
+                                  - namespace
+                                  type: object
                                 requests:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
                                     cost-based rate limiting) allowed per Unit.
-                                  format: int32
+                                  format: int64
                                   maximum: 4294967295
                                   minimum: 1
                                   type: integer
@@ -2141,11 +2206,38 @@ spec:
                                 429 HTTP status code is sent back to the client when
                                 the selected requests have reached the limit.
                               properties:
+                                fromMetadata:
+                                  description: |-
+                                    FromMetadata sources the limit value from per-request dynamic metadata.
+                                    When the referenced metadata value is present, it overrides Requests/Unit for that
+                                    request; otherwise Requests/Unit are used as the default.
+
+                                    The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                    property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                    filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                    Only supported for Global Rate Limits.
+                                  properties:
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        limit value from within the namespaced filter
+                                        metadata.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - key
+                                  - namespace
+                                  type: object
                                 requests:
                                   description: |-
                                     Requests is the number of requests (or cost units, when used with
                                     cost-based rate limiting) allowed per Unit.
-                                  format: int32
+                                  format: int64
                                   maximum: 4294967295
                                   minimum: 1
                                   type: integer
@@ -2197,6 +2289,9 @@ spec:
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(r, !has(r.cost) || !has(r.cost.response))
+                        - message: limit fromMetadata is not supported for Local Rate
+                            Limits
+                          rule: self.all(r, !has(r.limit.fromMetadata))
                     type: object
                   type:
                     description: |-

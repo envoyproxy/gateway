@@ -577,6 +577,7 @@ spec:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
                                         Defaults to GET
+                                      maxLength: 16
                                       type: string
                                     path:
                                       description: Path defines the HTTP path that
@@ -584,6 +585,40 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    requestBody:
+                                      description: RequestBody defines the HTTP request
+                                        body payload sent during health checking.
+                                      properties:
+                                        binary:
+                                          description: Binary payload base64 encoded.
+                                          format: byte
+                                          type: string
+                                        text:
+                                          description: Text payload in plain text.
+                                          type: string
+                                        type:
+                                          allOf:
+                                          - enum:
+                                            - Text
+                                            - Binary
+                                          - enum:
+                                            - Text
+                                            - Binary
+                                          description: Type defines the type of the
+                                            payload.
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: If payload type is Text, text field
+                                          needs to be set.
+                                        rule: 'self.type == ''Text'' ? has(self.text)
+                                          : !has(self.text)'
+                                      - message: If payload type is Binary, binary
+                                          field needs to be set.
+                                        rule: 'self.type == ''Binary'' ? has(self.binary)
+                                          : !has(self.binary)'
                                     retriableStatuses:
                                       description: |-
                                         RetriableStatuses defines a list of HTTP response statuses considered retriable.
@@ -600,6 +635,11 @@ spec:
                                   required:
                                   - path
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: The requestBody field can only be set
+                                      when method is POST or PUT.
+                                    rule: '!has(self.requestBody) || (has(self.method)
+                                      && self.method.upperAscii() in [''POST'',''PUT''])'
                                 initialJitter:
                                   description: |-
                                     InitialJitter defines the maximum time Envoy will wait before the first health check.
@@ -1568,6 +1608,51 @@ spec:
                               type: string
                           type: object
                       type: object
+                    statusOnError:
+                      description: |-
+                        Sets the HTTP status that is returned to the client when the external processor returns an error
+                        or cannot be reached. Defaults to 500 Internal Server Error.
+                        Only 4xx and 5xx status codes are supported.
+                      enum:
+                      - 400
+                      - 401
+                      - 402
+                      - 403
+                      - 404
+                      - 405
+                      - 406
+                      - 407
+                      - 408
+                      - 409
+                      - 410
+                      - 411
+                      - 412
+                      - 413
+                      - 414
+                      - 415
+                      - 416
+                      - 417
+                      - 421
+                      - 422
+                      - 423
+                      - 424
+                      - 426
+                      - 428
+                      - 429
+                      - 431
+                      - 500
+                      - 501
+                      - 502
+                      - 503
+                      - 504
+                      - 505
+                      - 506
+                      - 507
+                      - 508
+                      - 510
+                      - 511
+                      format: int32
+                      type: integer
                   type: object
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
@@ -1600,6 +1685,13 @@ spec:
                     Lua defines a Lua extension
                     Only one of Inline or ValueRef must be set
                   properties:
+                    filterContext:
+                      description: |-
+                        FilterContext is the filter context configuration for the Lua script.
+                        This must be a JSON object (key/value pairs). The values are made available
+                        to the Lua script via request_handle:filterContext(). This allows a shared
+                        script to be parameterized differently per EnvoyExtensionPolicy/route.
+                      x-kubernetes-preserve-unknown-fields: true
                     inline:
                       description: Inline contains the source code as an inline string.
                       type: string

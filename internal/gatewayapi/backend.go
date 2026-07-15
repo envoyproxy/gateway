@@ -164,8 +164,9 @@ func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*g
 }
 
 func validateHostname(hostname, typeName string, runningOnHost bool) *status.RouteStatusError {
+	hostnameToValidate := strings.TrimSuffix(hostname, ".")
 	// must be a valid hostname
-	if errs := validation.IsDNS1123Subdomain(hostname); errs != nil {
+	if errs := validation.IsDNS1123Subdomain(hostnameToValidate); errs != nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("hostname %s is not a valid %s", hostname, typeName),
 			status.RouteReasonInvalidAddress,

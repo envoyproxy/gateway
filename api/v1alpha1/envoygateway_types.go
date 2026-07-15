@@ -161,13 +161,19 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex
 type RuntimeFlag string
 
 const (
 	// XDSNameSchemeV2 indicates that the xds name scheme v2 is used.
 	// * The listener name will be generated using the protocol and port of the listener.
 	XDSNameSchemeV2 RuntimeFlag = "XDSNameSchemeV2"
+
+	// EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.
+	// It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.
+	// If the additional controller memory usage for the indexes becomes a concern,
+	// consider disabling this flag.
+	EndpointSliceIndex RuntimeFlag = "EndpointSliceIndex"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.
@@ -439,12 +445,16 @@ type KubernetesWatchMode struct {
 
 	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
 	// resources such as Gateway, HTTPRoute and Service.
+	// The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its
+	// own managed infrastructure resources.
 	// Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as
 	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set.
 	Namespaces []string `json:"namespaces,omitempty"`
 
 	// NamespaceSelector holds the label selector used to dynamically select namespaces.
 	// Envoy Gateway will watch for namespaces matching the specified label selector.
+	// The namespace where Envoy Gateway runs is always included so Envoy Gateway can reconcile its
+	// own managed infrastructure resources.
 	// Precisely one of Namespaces and NamespaceSelector must be set.
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }

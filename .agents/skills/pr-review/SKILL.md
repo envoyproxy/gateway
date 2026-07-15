@@ -46,8 +46,8 @@ metadata:
 - For bug fixes, check that `test/e2e` has coverage if the bug is in user-facing code or has user-facing impact.
 
 ### Release notes
-Release notes should be added to `release-notes/current.yaml` for any of the following changes:
-- Bug fixes should be noted as "bug fix" and include a brief description of the issue and the fix.
+Release notes should be added as a new fragment file under `release-notes/current/<section>/<pr-number>-<slug>.md` (see `release-notes/current/README.md`) for any of the following changes. One change per file; the section directory determines the category.
+- Bug fixes should be noted as "bug fix" (`bug_fixes/`) and include a brief description of the issue and the fix.
 - New features should be noted as "new feature" and include a brief description of the feature.
 - Any breaking changes should be noted as "breaking change" and include a clear description of the change and its impact on users.
 - Any change to generated Envoy config (xDS) that moves, removes, or modifies existing config content would break EnvoyPatchPolicies and Extension Servers, so it should be noted as a breaking change. Additions to generated xDS config do not need to be called out.

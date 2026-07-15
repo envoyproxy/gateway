@@ -177,6 +177,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 		})
 	} else if clientIPDetection.XForwardedFor != nil {
 		var xffHeaderConfigAny *anypb.Any
+		skipXffAppend := ptr.Deref(clientIPDetection.XForwardedFor.DisableXForwardedForAppend, false)
 		if clientIPDetection.XForwardedFor.TrustedCIDRs != nil {
 			trustedCidrs := make([]*corev3.CidrRange, 0)
 			for _, cidr := range clientIPDetection.XForwardedFor.TrustedCIDRs {
@@ -191,12 +192,12 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 				XffTrustedCidrs: &xffv3.XffTrustedCidrs{
 					Cidrs: trustedCidrs,
 				},
-				SkipXffAppend: wrapperspb.Bool(false),
+				SkipXffAppend: wrapperspb.Bool(skipXffAppend),
 			})
 		} else if clientIPDetection.XForwardedFor.NumTrustedHops != nil {
 			xffHeaderConfigAny, _ = proto.ToAnyWithValidation(&xffv3.XffConfig{
 				XffNumTrustedHops: xffNumTrustedHops(clientIPDetection),
-				SkipXffAppend:     wrapperspb.Bool(false),
+				SkipXffAppend:     wrapperspb.Bool(skipXffAppend),
 			})
 		}
 		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
@@ -919,6 +920,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 
 func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsContext) {
 	needsDefaultValidationContext := tlsConfig.AcceptUntrusted ||
+		tlsConfig.AllowExpiredCertificate ||
 		len(tlsConfig.VerifyCertificateSpki) > 0 ||
 		len(tlsConfig.VerifyCertificateHash) > 0 ||
 		len(tlsConfig.MatchTypedSubjectAltNames) > 0
@@ -927,6 +929,9 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 
 	if tlsConfig.AcceptUntrusted {
 		validationContext.TrustChainVerification = tlsv3.CertificateValidationContext_ACCEPT_UNTRUSTED
+	}
+	if tlsConfig.AllowExpiredCertificate {
+		validationContext.AllowExpiredCertificate = true
 	}
 
 	validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)

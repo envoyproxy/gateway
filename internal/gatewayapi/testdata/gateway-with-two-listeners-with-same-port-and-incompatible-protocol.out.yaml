@@ -30,7 +30,8 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a compatible protocol
+        message: 'All listeners for a given port must use a compatible protocol, conflicting
+          listeners: envoy-gateway/gateway-1/http-1, envoy-gateway/gateway-1/http-2'
         reason: ProtocolConflict
         status: "True"
         type: Conflicted
@@ -53,7 +54,8 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a compatible protocol
+        message: 'All listeners for a given port must use a compatible protocol, conflicting
+          listeners: envoy-gateway/gateway-1/http-1, envoy-gateway/gateway-1/http-2'
         reason: ProtocolConflict
         status: "True"
         type: Conflicted
@@ -94,9 +96,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route

@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -134,6 +133,39 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 			require.Equal(t, tc.expect, res)
 		})
 	}
+}
+
+func TestHasMatchingNamespaceLabelsControllerNamespaceBypass(t *testing.T) {
+	controllerNamespace := "envoy-gateway-system"
+	namespaceSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{"gateway": "enabled"},
+	}
+
+	r := gatewayAPIReconciler{
+		namespace:      controllerNamespace,
+		namespaceLabel: namespaceSelector,
+		log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace},
+			}).
+			Build(),
+	}
+
+	gateway := test.GetGateway(types.NamespacedName{
+		Namespace: controllerNamespace,
+		Name:      "gateway",
+	}, "gatewayclass", 80)
+	require.False(t, r.hasMatchingNamespaceLabels(gateway))
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: controllerNamespace,
+			Name:      "envoy-default-gateway",
+		},
+	}
+	require.True(t, r.hasMatchingNamespaceLabels(svc))
 }
 
 // TestValidateGatewayForReconcile tests the validateGatewayForReconcile
@@ -258,6 +290,60 @@ func TestFindOwningGateway(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEnvoyServiceForGatewayIncludesControllerNamespace(t *testing.T) {
+	ctx := context.Background()
+	gatewayNamespace := "watched"
+	controllerNamespace := "envoy-gateway-system"
+	gatewayClassName := "gc-name"
+	namespaceSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{"gateway": "enabled"},
+	}
+	gtw := test.GetGateway(types.NamespacedName{
+		Namespace: gatewayNamespace,
+		Name:      "gateway",
+	}, gatewayClassName, 80)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: controllerNamespace,
+			Name:      "envoy-default-gateway",
+			Labels:    gatewayapi.OwnerLabels(gtw, false),
+		},
+	}
+
+	baseClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   gatewayNamespace,
+					Labels: namespaceSelector.MatchLabels,
+				},
+			},
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace},
+			},
+			svc,
+		).
+		Build()
+	r := &gatewayAPIReconciler{
+		namespace:       controllerNamespace,
+		classController: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
+		mergeGateways:   sets.New[string](),
+	}
+
+	r.client = newNamespaceSelectorClient(baseClient, namespaceSelector, "")
+	got, err := r.envoyServiceForGateway(ctx, gtw)
+	require.NoError(t, err)
+	require.Nil(t, got)
+
+	r.client = newNamespaceSelectorClient(baseClient, namespaceSelector, controllerNamespace)
+	got, err = r.envoyServiceForGateway(ctx, gtw)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	require.Equal(t, svc.Name, got.Name)
+	require.Equal(t, controllerNamespace, got.Namespace)
 }
 
 // TestValidateConfigMapForReconcile tests the validateConfigMapForReconcile
@@ -932,8 +1018,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
+			WithIndex(&gwapiv1.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+			WithIndex(&gwapiv1.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateEndpointSliceForReconcile(tc.endpointSlice)
@@ -1368,8 +1454,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
+			WithIndex(&gwapiv1.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+			WithIndex(&gwapiv1.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
@@ -1740,6 +1826,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 			httpRouteFilter: sampleHTTPRouteFilter,
 			expect:          true,
 		},
+		{
+			name: "httproutefilter referenced by grpcroute",
+			configs: []client.Object{
+				sampleGWC,
+				sampleGateway,
+				sampleService,
+				sampleHTTPRouteFilter,
+				test.GetGRPCRouteWithHTTPRouteFilter(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80, "httproutefilter"),
+			},
+			httpRouteFilter: sampleHTTPRouteFilter,
+			expect:          true,
+		},
 	}
 
 	// Create the reconciler.
@@ -1756,6 +1854,7 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.HTTPRoute{}, httpRouteFilterHTTPRouteIndex, httpRouteFilterHTTPRouteIndexFunc).
+			WithIndex(&gwapiv1.GRPCRoute{}, httpRouteFilterGRPCRouteIndex, httpRouteFilterGRPCRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateHTTPRouteFilterForReconcile(tc.httpRouteFilter)

@@ -21,7 +21,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -50,8 +49,8 @@ type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext
 	ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext
 	ProcessTLSRoutes(tlsRoutes []*gwapiv1.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
-	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
-	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
+	ProcessTCPRoutes(tcpRoutes []*gwapiv1.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
+	ProcessUDPRoutes(udpRoutes []*gwapiv1.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
 }
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
@@ -501,6 +500,34 @@ func buildRouteMatchCombinations(ruleMatches []gwapiv1.HTTPRouteMatch, filterMat
 	return results
 }
 
+// buildCookieMatches converts the cookie matches from an HTTPRouteFilter into IR
+// string matches. It is shared by the HTTPRoute and GRPCRoute translation paths.
+func buildCookieMatches(cookies []egv1a1.HTTPCookieMatch) ([]*ir.StringMatch, error) {
+	var matches []*ir.StringMatch
+	for _, cookieMatch := range cookies {
+		sm := &ir.StringMatch{
+			Name: cookieMatch.Name,
+		}
+		matchType := egv1a1.CookieMatchExact
+		if cookieMatch.Type != nil {
+			matchType = *cookieMatch.Type
+		}
+		switch matchType {
+		case egv1a1.CookieMatchExact:
+			sm.Exact = new(cookieMatch.Value)
+		case egv1a1.CookieMatchRegularExpression:
+			if err := regex.Validate(cookieMatch.Value); err != nil {
+				return nil, err
+			}
+			sm.SafeRegex = new(cookieMatch.Value)
+		default:
+			return nil, fmt.Errorf("unsupported cookie match type %q", matchType)
+		}
+		matches = append(matches, sm)
+	}
+	return matches, nil
+}
+
 func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
 	processRouteTimeout(irRoute, rule)
 	processRouteRetry(irRoute, rule)
@@ -542,18 +569,22 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
 	if retry.Backoff != nil {
 		backoff, err := time.ParseDuration(string(*retry.Backoff))
 		if err == nil {
-			res.PerRetry = &ir.PerRetryPolicy{
-				BackOff: &ir.BackOffPolicy{
-					BaseInterval: ir.MetaV1DurationPtr(backoff),
-				},
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
 			}
-			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
-			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
-				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
-				if err == nil {
-					res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
-				}
+			res.PerRetry.BackOff = &ir.BackOffPolicy{
+				BaseInterval: ir.MetaV1DurationPtr(backoff),
 			}
+		}
+	}
+	// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
+	if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+		backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+		if err == nil {
+			if res.PerRetry == nil {
+				res.PerRetry = &ir.PerRetryPolicy{}
+			}
+			res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
 		}
 	}
 	if len(retry.Codes) > 0 {
@@ -577,13 +608,6 @@ func (t *Translator) processHTTPRouteRule(
 ) ([]*ir.HTTPRoute, status.Error) {
 	var sessionPersistence *ir.SessionPersistence
 	if rule.SessionPersistence != nil {
-		if rule.SessionPersistence.IdleTimeout != nil {
-			return nil, status.NewRouteStatusError(
-				fmt.Errorf("idle timeout is not supported in envoy gateway"),
-				status.RouteReasonUnsupportedSetting,
-			)
-		}
-
 		var sessionName string
 		if rule.SessionPersistence.SessionName == nil {
 			// SessionName is optional on the gateway-api, but envoy requires it
@@ -721,30 +745,11 @@ func (t *Translator) processHTTPRouteRule(
 				Exact: new(string(*match.Method)),
 			})
 		}
-		for _, cookieMatch := range match.cookies {
-			sm := &ir.StringMatch{
-				Name: cookieMatch.Name,
-			}
-			matchType := egv1a1.CookieMatchExact
-			if cookieMatch.Type != nil {
-				matchType = *cookieMatch.Type
-			}
-			switch matchType {
-			case egv1a1.CookieMatchExact:
-				sm.Exact = new(cookieMatch.Value)
-			case egv1a1.CookieMatchRegularExpression:
-				if err := regex.Validate(cookieMatch.Value); err != nil {
-					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
-				}
-				sm.SafeRegex = new(cookieMatch.Value)
-			default:
-				return nil, status.NewRouteStatusError(
-					fmt.Errorf("unsupported cookie match type %q", matchType),
-					gwapiv1.RouteReasonUnsupportedValue,
-				)
-			}
-			irRoute.CookieMatches = append(irRoute.CookieMatches, sm)
+		cookieMatches, err := buildCookieMatches(match.cookies)
+		if err != nil {
+			return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 		}
+		irRoute.CookieMatches = append(irRoute.CookieMatches, cookieMatches...)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 
@@ -1152,15 +1157,67 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
+// grpcRouteMatchCombination is a single gRPC route match ANDed with the cookie
+// matches contributed by an HTTPRouteFilter referenced from the GRPCRoute.
+type grpcRouteMatchCombination struct {
+	gwapiv1.GRPCRouteMatch
+	cookies []egv1a1.HTTPCookieMatch
+}
+
+// buildGRPCRouteMatchCombinations builds the list of gRPC route match combinations
+// from the rule matches and the filter (HTTPRouteFilter) matches. The rule matches
+// are ANDed with the filter matches, producing an X*Y cross product. It mirrors
+// buildRouteMatchCombinations used for HTTPRoute.
+func buildGRPCRouteMatchCombinations(ruleMatches []gwapiv1.GRPCRouteMatch, filterMatches []egv1a1.HTTPRouteMatchFilter) []grpcRouteMatchCombination {
+	if len(ruleMatches) == 0 && len(filterMatches) == 0 {
+		return nil
+	}
+
+	// If there are no filter matches, return the base matches directly.
+	if len(filterMatches) == 0 {
+		results := make([]grpcRouteMatchCombination, len(ruleMatches))
+		for i, match := range ruleMatches {
+			results[i] = grpcRouteMatchCombination{GRPCRouteMatch: match}
+		}
+		return results
+	}
+
+	// Cross product of base matches and filter matches.
+	baseMatches := ruleMatches
+	if len(baseMatches) == 0 {
+		baseMatches = []gwapiv1.GRPCRouteMatch{{}}
+	}
+	total := len(baseMatches) * len(filterMatches)
+	results := make([]grpcRouteMatchCombination, total)
+	idx := 0
+	for _, match := range baseMatches {
+		for _, filterMatch := range filterMatches {
+			results[idx] = grpcRouteMatchCombination{
+				GRPCRouteMatch: match,
+				cookies:        filterMatch.Cookies,
+			}
+			idx++
+		}
+	}
+
+	return results
+}
+
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {
-	capacity := len(rule.Matches)
+	filterMatches := []egv1a1.HTTPRouteMatchFilter(nil)
+	if httpFiltersContext != nil {
+		filterMatches = httpFiltersContext.Matches
+	}
+	matches := buildGRPCRouteMatchCombinations(rule.Matches, filterMatches)
+
+	capacity := len(matches)
 	if capacity == 0 {
 		capacity = 1
 	}
 	ruleRoutes := make([]*ir.HTTPRoute, 0, capacity)
 
 	// If no matches are specified, the implementation MUST match every gRPC request.
-	if len(rule.Matches) == 0 {
+	if len(matches) == 0 {
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, -1),
 		}
@@ -1172,7 +1229,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 	// A rule is matched if any one of its matches
 	// is satisfied (i.e. a logical "OR"), so generate
 	// a unique Xds IR HTTPRoute per match.
-	for matchIdx, match := range rule.Matches {
+	for matchIdx, match := range matches {
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, matchIdx),
 		}
@@ -1214,6 +1271,13 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 				t.processGRPCRouteMethodRegularExpression(match.Method, irRoute)
 			}
 		}
+
+		// Additional cookie matches contributed by a referenced HTTPRouteFilter.
+		cookieMatches, err := buildCookieMatches(match.cookies)
+		if err != nil {
+			return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
+		}
+		irRoute.CookieMatches = append(irRoute.CookieMatches, cookieMatches...)
 
 		ruleRoutes = append(ruleRoutes, irRoute)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
@@ -1524,7 +1588,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
+func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	relevantUDPRoutes := make([]*UDPRouteContext, 0, len(udpRoutes))
@@ -1621,21 +1685,20 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 		accepted := false
 		for _, listener := range parentRef.listeners {
-			// only one route is allowed for a UDP listener
-			if listener.AttachedRoutes() >= 1 {
-				continue
-			}
+			accepted = true
 			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
-			accepted = true
 
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
-			if irListener != nil {
+			// When multiple UDPRoutes target the same Gateway listener, all of must report Accepted=True.
+			// Only the oldest route is attached to the listener, and the listener's AttachedRoutes count must reflect this.
+			// https://github.com/kubernetes-sigs/gateway-api/blob/cf34ac933d068c6008598cce945819ce9cee16be/conformance/tests/udproute-multiple-routes-attachment.go#L107
+			if irListener != nil && irListener.Route == nil {
 				irRoute := &ir.UDPRoute{
 					Name: irUDPRouteName(udpRoute),
 					Destination: &ir.RouteDestination{
@@ -1677,7 +1740,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
+func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	relevantTCPRoutes := make([]*TCPRouteContext, 0, len(tcpRoutes))
@@ -1773,21 +1836,19 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 		accepted := false
 		for _, listener := range parentRef.listeners {
-			// only one route is allowed for a TCP listener
-			if listener.AttachedRoutes() >= 1 {
-				continue
-			}
+			accepted = true
+			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
-			listener.IncrementAttachedRoutes()
-
-			accepted = true
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
-			if irListener != nil {
+			// When multiple TCPRoutes target the same Gateway listener, all of must report Accepted=True.
+			// Only the oldest route is attached to the listener, and the listener's AttachedRoutes count must reflect this.
+			// https://github.com/kubernetes-sigs/gateway-api/blob/cf34ac933d068c6008598cce945819ce9cee16be/conformance/tests/tcproute-multiple-routes-attachment.go#L104
+			if irListener != nil && len(irListener.Routes) == 0 {
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tcpRoute),
 					Destination: &ir.RouteDestination{
@@ -1868,6 +1929,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			if err != nil {
 				return emptyDS, nil, err
 			}
+		}
+	} else {
+		// Custom backend resources still require ReferenceGrant for cross-namespace references.
+		if err = t.validateBackendNamespace(backendRef, route, resources, routeType); err != nil {
+			return emptyDS, nil, err
 		}
 	}
 
@@ -2003,17 +2069,25 @@ func isServiceHeadless(service *corev1.Service) bool {
 	return false
 }
 
+// isServiceExternalName reports true when a Kubernetes Service is of type ExternalName.
+// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
+// translated into a valid backend and are not supported.
+func isServiceExternalName(service *corev1.Service) bool {
+	return service != nil && service.Spec.Type == corev1.ServiceTypeExternalName
+}
+
 func (t *Translator) processServiceImportDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
+		protocol  = defaultProtocol
 	)
 
 	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
@@ -2026,8 +2100,11 @@ func (t *Translator) processServiceImportDestinationSetting(
 	}
 
 	if servicePort.AppProtocol != nil {
-		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, false)
+		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
+	// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	backendIps := serviceImport.Spec.IPs
 	isHeadless := len(backendIps) == 0
@@ -2052,11 +2129,12 @@ func (t *Translator) processServiceImportDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:        name,
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
-		Metadata:    buildResourceMetadata(serviceImport, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:               name,
+		Protocol:           protocol,
+		ForceHTTP1Upstream: forceHTTP1Upstream,
+		Endpoints:          endpoints,
+		AddressType:        addrType,
+		Metadata:           buildResourceMetadata(serviceImport, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
 }
 
@@ -2064,7 +2142,7 @@ func (t *Translator) processServiceDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
@@ -2072,8 +2150,19 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
 	)
+	protocol := defaultProtocol
 
 	service := t.GetService(backendNamespace, string(backendRef.Name))
+	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
+	// translated into a valid backend.
+	// Backend with FQDN endpoint should be used instead of ExternalName Service to route to external services.
+	if isServiceExternalName(service) {
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("Service %s/%s is of type ExternalName, which is not supported as a backend; "+
+				"use an Envoy Gateway Backend resource with an FQDN endpoint instead",
+				backendNamespace, string(backendRef.Name)),
+			gwapiv1.RouteReasonUnsupportedValue)
+	}
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -2084,8 +2173,11 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// support HTTPRouteBackendProtocolH2C/GRPC
 	if servicePort.AppProtocol != nil {
-		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, true)
+		protocol = resolveBackendProtocol(*servicePort.AppProtocol, protocol)
 	}
+	// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+	forceHTTP1Upstream := shouldForceHTTP1Upstream(protocol, servicePort.AppProtocol)
 
 	isHeadless := isServiceHeadless(service)
 
@@ -2107,12 +2199,13 @@ func (t *Translator) processServiceDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:        name,
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
-		PreferLocal: processPreferLocalZone(service),
-		Metadata:    buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:               name,
+		Protocol:           protocol,
+		ForceHTTP1Upstream: forceHTTP1Upstream,
+		Endpoints:          endpoints,
+		AddressType:        addrType,
+		PreferLocal:        processPreferLocalZone(service),
+		Metadata:           buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
 }
 
@@ -2225,7 +2318,12 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 	case resource.KindGRPCRoute:
 		return ir.GRPC
 	case resource.KindTLSRoute:
-		return ir.HTTPS
+		// TLSRoute is translated into an ir.TCPRoute. The upstream protocol is
+		// plain TCP from Envoy's perspective; whether the upstream connection is
+		// secured by TLS is governed by ds.TLS (e.g. via BackendTLSPolicy), not by
+		// the AppProtocol. Returning ir.TCP keeps the IR semantically accurate and
+		// avoids emitting HTTP protocol options on a TCP proxy cluster.
+		return ir.TCP
 	}
 	return ir.TCP
 }
@@ -2286,19 +2384,6 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			continue
 		}
 		parentRefCtx.SetListeners(allowedListeners...)
-
-		if !HasReadyListener(allowedListeners) {
-			routeStatus := GetRouteStatus(routeContext)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRefCtx.routeParentStatusIdx,
-				routeContext.GetGeneration(),
-				gwapiv1.RouteConditionAccepted,
-				metav1.ConditionFalse,
-				"NoReadyListeners",
-				"There are no ready listeners for this parent ref",
-			)
-			continue
-		}
 
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,
@@ -2474,18 +2559,19 @@ func (t *Translator) processBackendDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	protocol ir.AppProtocol,
+	defaultProtocol ir.AppProtocol,
 ) *ir.DestinationSetting {
 	var dstAddrType *ir.DestinationAddressType
+	protocol := defaultProtocol
 	forceHTTP1Upstream := false
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
-		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
+		protocol = resolveBackendProtocol(string(ap), protocol)
 		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
 		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-		forceHTTP1Upstream = forceHTTP1Upstream || isWebSocketBackendAppProtocol(ap)
+		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
 	}
 
 	ds := &ir.DestinationSetting{Name: name}
@@ -2515,8 +2601,9 @@ func (t *Translator) processBackendDestinationSetting(
 		case bep.Unix != nil:
 			addrTypeMap[ir.UDS]++
 			irde = &ir.DestinationEndpoint{
-				Path: new(bep.Unix.Path),
-				Zone: bep.Zone,
+				Hostname: bep.Hostname,
+				Path:     new(bep.Unix.Path),
+				Zone:     bep.Zone,
 			}
 		}
 
@@ -2551,37 +2638,56 @@ func (t *Translator) processBackendDestinationSetting(
 	return ds
 }
 
-// serviceAppProtocolToIRAppProtocol translates the appProtocol string into an ir.AppProtocol.
+// resolveBackendProtocol computes the upstream ir.AppProtocol for a backend from the
+// backend's own appProtocol and the route's default (fallback) protocol. It recognizes
+// both the Kubernetes Service convention ("kubernetes.io/*") and the Envoy Gateway
+// Backend convention ("gateway.envoyproxy.io/*").
 //
-// When grpcCompatibility is enabled, `grpc` will be parsed as a valid option for HTTP2.
-// See https://github.com/envoyproxy/gateway/issues/5485#issuecomment-2731322578.
-func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol, grpcCompatibility bool) ir.AppProtocol {
+// backendAppProtocol describes an HTTP-layer protocol (h2c/ws/grpc), so it only refines
+// the upstream protocol of HTTP-based routes. For non-HTTP routes (e.g. TCPRoute, TLSRoute
+// and UDPRoute, whose default protocol is TCP/UDP), the route is a raw L4 proxy and the
+// appProtocol is irrelevant; returning the default avoids emitting HTTP protocol options
+// on an L4 cluster.
+func resolveBackendProtocol(backendAppProtocol string, defaultProtocol ir.AppProtocol) ir.AppProtocol {
+	// The backendAppProtocol is only relevant for HTTP-based routes, so if the default protocol is not HTTP, return the default.
+	if defaultProtocol != ir.HTTP {
+		return defaultProtocol
+	}
 	switch {
-	case ap == "kubernetes.io/h2c":
+	case backendAppProtocol == "kubernetes.io/h2c" || backendAppProtocol == string(egv1a1.AppProtocolTypeH2C):
 		return ir.HTTP2
-	case ap == "grpc" && grpcCompatibility:
+	// HTTPRoute can route to gRPC backends, returning ir.GRPC allows the IR to emit gRPC protocol options on the cluster.
+	// Kubernetes does not standardize grpc as a Kubernetes appProtocol value, but some projects like Istio uses "grpc" as a convention for gRPC backends, so we recognize it here.
+	case backendAppProtocol == "grpc":
 		return ir.GRPC
 	default:
 		return defaultProtocol
 	}
 }
 
-func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtocol ir.AppProtocol) ir.AppProtocol {
-	switch ap {
-	case egv1a1.AppProtocolTypeH2C:
-		return ir.HTTP2
-	case egv1a1.AppProtocolTypeWS, egv1a1.AppProtocolTypeWSS:
-		return ir.HTTP
-	case "grpc":
-		return ir.GRPC
+// shouldForceHTTP1Upstream reports whether the upstream connection should be forced to
+// HTTP/1.1. WebSocket over HTTP/2 is not widely supported by upstreams and can lead to
+// connection failures, so a WebSocket backend on an HTTP-based route must use HTTP/1.1.
+func shouldForceHTTP1Upstream(appProtocol ir.AppProtocol, backendAppProtocol *string) bool {
+	return backendAppProtocol != nil && isHTTPProtocol(appProtocol) && isWebSocketAppProtocol(*backendAppProtocol)
+}
+
+func isHTTPProtocol(appProtocol ir.AppProtocol) bool {
+	switch appProtocol {
+	case ir.HTTP, ir.HTTP2, ir.GRPC:
+		return true
 	default:
-		return defaultProtocol
+		return false
 	}
 }
 
-func isWebSocketBackendAppProtocol(ap egv1a1.AppProtocolType) bool {
+// isWebSocketAppProtocol reports whether the given appProtocol denotes WebSocket
+// traffic, covering both the Kubernetes Service convention ("kubernetes.io/ws[s]")
+// and the Envoy Gateway Backend convention ("gateway.envoyproxy.io/ws[s]").
+func isWebSocketAppProtocol(ap string) bool {
 	switch ap {
-	case egv1a1.AppProtocolTypeWS, egv1a1.AppProtocolTypeWSS:
+	case "kubernetes.io/ws", "kubernetes.io/wss",
+		string(egv1a1.AppProtocolTypeWS), string(egv1a1.AppProtocolTypeWSS):
 		return true
 	default:
 		return false
@@ -2649,8 +2755,8 @@ func tlsRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.TLSRoute) []*gwapiv1.TLS
 	return copies
 }
 
-func udpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1a2.UDPRoute) []*gwapiv1a2.UDPRoute {
-	copies := make([]*gwapiv1a2.UDPRoute, len(routes))
+func udpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.UDPRoute) []*gwapiv1.UDPRoute {
+	copies := make([]*gwapiv1.UDPRoute, len(routes))
 	for i, r := range routes {
 		out := *r
 		r.Status.DeepCopyInto(&out.Status)
@@ -2659,8 +2765,8 @@ func udpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1a2.UDPRoute) []*gwapiv1a2
 	return copies
 }
 
-func tcpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1a2.TCPRoute) []*gwapiv1a2.TCPRoute {
-	copies := make([]*gwapiv1a2.TCPRoute, len(routes))
+func tcpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.TCPRoute) []*gwapiv1.TCPRoute {
+	copies := make([]*gwapiv1.TCPRoute, len(routes))
 	for i, r := range routes {
 		out := *r
 		r.Status.DeepCopyInto(&out.Status)
