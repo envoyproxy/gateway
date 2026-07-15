@@ -19,32 +19,55 @@ import (
 )
 
 func TestBuildRouteTracingSampling(t *testing.T) {
-	httpRoute := &ir.HTTPRoute{
-		Traffic: &ir.TrafficFeatures{
-			Telemetry: &ir.BackendTelemetry{
-				Tracing: &ir.BackendTracing{
-					SamplingFraction: &gwapiv1.Fraction{
-						Numerator:   1,
-						Denominator: new(int32(100)),
-					},
-					ClientSamplingFraction: &gwapiv1.Fraction{
-						Numerator:   2,
-						Denominator: new(int32(100)),
-					},
-					OverallSamplingFraction: &gwapiv1.Fraction{
-						Numerator:   3,
-						Denominator: new(int32(100)),
-					},
-				},
+	tests := []struct {
+		name               string
+		clientSampling     *gwapiv1.Fraction
+		wantClientSampling *xdstype.FractionalPercent
+	}{
+		{
+			name: "client sampling configured",
+			clientSampling: &gwapiv1.Fraction{
+				Numerator:   2,
+				Denominator: new(int32(100)),
+			},
+			wantClientSampling: &xdstype.FractionalPercent{Numerator: 2},
+		},
+		{
+			name: "client sampling defaults to zero",
+			wantClientSampling: &xdstype.FractionalPercent{
+				Numerator:   0,
+				Denominator: xdstype.FractionalPercent_HUNDRED,
 			},
 		},
 	}
 
-	got, err := buildRouteTracing(httpRoute)
-	require.NoError(t, err)
-	require.Equal(t, &xdstype.FractionalPercent{Numerator: 1}, got.RandomSampling)
-	require.Equal(t, &xdstype.FractionalPercent{Numerator: 2}, got.ClientSampling)
-	require.Equal(t, &xdstype.FractionalPercent{Numerator: 3}, got.OverallSampling)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			httpRoute := &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					Telemetry: &ir.BackendTelemetry{
+						Tracing: &ir.BackendTracing{
+							SamplingFraction: &gwapiv1.Fraction{
+								Numerator:   1,
+								Denominator: new(int32(100)),
+							},
+							ClientSamplingFraction: tc.clientSampling,
+							OverallSamplingFraction: &gwapiv1.Fraction{
+								Numerator:   3,
+								Denominator: new(int32(100)),
+							},
+						},
+					},
+				},
+			}
+
+			got, err := buildRouteTracing(httpRoute)
+			require.NoError(t, err)
+			require.Equal(t, &xdstype.FractionalPercent{Numerator: 1}, got.RandomSampling)
+			require.Equal(t, tc.wantClientSampling, got.ClientSampling)
+			require.Equal(t, &xdstype.FractionalPercent{Numerator: 3}, got.OverallSampling)
+		})
+	}
 }
 
 func TestBuildHashPolicy(t *testing.T) {

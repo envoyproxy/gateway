@@ -877,7 +877,7 @@ func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
 	op, upstreamOp := buildTracingOperation(tracing.SpanName)
 
 	return &routev3.Tracing{
-		ClientSampling:    fractionalpercent.FromFraction(tracing.ClientSamplingFraction),
+		ClientSampling:    fractionalpercent.FromFractionOrZero(tracing.ClientSamplingFraction),
 		RandomSampling:    fractionalpercent.FromFraction(tracing.SamplingFraction),
 		OverallSampling:   fractionalpercent.FromFraction(tracing.OverallSamplingFraction),
 		CustomTags:        tags,
