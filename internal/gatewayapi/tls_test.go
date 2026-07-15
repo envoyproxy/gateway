@@ -6,9 +6,18 @@
 package gatewayapi
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -390,7 +399,7 @@ func TestFilterValidCertificates(t *testing.T) {
 			certData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.CertFile))
 			require.NoError(t, err)
 
-			result, listenerErr := filterValidCertificates(certData)
+			result, listenerErr := filterValidCACertificates(certData)
 
 			if tc.ExpectedErrMsg == "" {
 				require.NoError(t, listenerErr)
@@ -421,4 +430,129 @@ func TestFilterValidCertificates(t *testing.T) {
 			}
 		})
 	}
+}
+
+// buildServingChain builds a serving certificate chain of [leaf, intermediate]
+// (leaf first) with the given validity windows, plus the leaf's matching key.
+func buildServingChain(t *testing.T, leafNotAfter, caNotAfter time.Time) (chainPEM, keyPEM []byte) {
+	t.Helper()
+	now := time.Now()
+
+	caKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+	caTmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Test Intermediate"},
+		NotBefore:             now.Add(-time.Hour),
+		NotAfter:              caNotAfter,
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign,
+	}
+	caDER, err := x509.CreateCertificate(rand.Reader, caTmpl, caTmpl, &caKey.PublicKey, caKey)
+	require.NoError(t, err)
+	caCert, err := x509.ParseCertificate(caDER)
+	require.NoError(t, err)
+
+	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	leafTmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: "test.example.com"},
+		DNSNames:     []string{"test.example.com"},
+		NotBefore:    now.Add(-2 * time.Hour),
+		NotAfter:     leafNotAfter,
+	}
+	leafDER, err := x509.CreateCertificate(rand.Reader, leafTmpl, caCert, &leafKey.PublicKey, caKey)
+	require.NoError(t, err)
+
+	leafPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafDER})
+	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caDER})
+	chainPEM = append(append([]byte{}, leafPEM...), caPEM...)
+
+	keyDER, err := x509.MarshalECPrivateKey(leafKey)
+	require.NoError(t, err)
+	keyPEM = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	return chainPEM, keyPEM
+}
+
+func countPEMCertBlocks(data []byte) int {
+	n := 0
+	for rest := data; len(rest) > 0; {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type == "CERTIFICATE" {
+			n++
+		}
+	}
+	return n
+}
+
+// TestValidateServingCertificateChain ensures a serving chain is validated as a
+// whole: any expired/not-yet-valid/malformed member rejects the entire chain
+// (it is never partially filtered), while a fully valid chain is returned intact.
+func TestValidateServingCertificateChain(t *testing.T) {
+	now := time.Now()
+	future := now.Add(24 * time.Hour)
+	past := now.Add(-time.Minute)
+
+	t.Run("all-valid-chain-kept-intact", func(t *testing.T) {
+		chain, _ := buildServingChain(t, future, future)
+		out, lerr := validateServingCertificateChain(chain)
+		require.Nil(t, lerr)
+		require.Equal(t, 2, countPEMCertBlocks(out), "full chain (leaf + intermediate) must be preserved")
+	})
+
+	t.Run("expired-leaf-rejects-whole-chain", func(t *testing.T) {
+		chain, _ := buildServingChain(t, past, future) // leaf expired, intermediate valid
+		out, lerr := validateServingCertificateChain(chain)
+		require.Nil(t, out)
+		require.Error(t, lerr)
+		require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, lerr.Reason())
+		require.Contains(t, lerr.Error(), "has expired")
+	})
+
+	t.Run("malformed-cert-rejects-whole-chain", func(t *testing.T) {
+		malformed := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: []byte("not a der certificate")})
+		out, lerr := validateServingCertificateChain(malformed)
+		require.Nil(t, out)
+		require.Error(t, lerr)
+		require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, lerr.Reason())
+	})
+
+	t.Run("empty-data", func(t *testing.T) {
+		out, lerr := validateServingCertificateChain(nil)
+		require.Nil(t, out)
+		require.Error(t, lerr)
+		require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, lerr.Reason())
+	})
+}
+
+// TestParseCertsExpiredLeafChainRejected is the #9225 / #9473 regression: a
+// legitimate secret (leaf and key match) whose chain has an expired leaf is
+// rejected outright at translation, so the corrupted chain never reaches Envoy
+// (which would otherwise NACK the whole SDS push with KEY_VALUES_MISMATCH).
+func TestParseCertsExpiredLeafChainRejected(t *testing.T) {
+	now := time.Now()
+	chain, key := buildServingChain(t, now.Add(-time.Minute), now.Add(24*time.Hour))
+
+	// The secret itself is legitimate: the leaf and key match.
+	_, err := tls.X509KeyPair(chain, key)
+	require.NoError(t, err, "leaf and key are expected to match; the chain is only expired")
+
+	secrets := []*corev1.Secret{{
+		ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: secretNamespace},
+		Type:       corev1.SecretTypeTLS,
+		Data:       map[string][]byte{corev1.TLSCertKey: chain, corev1.TLSPrivateKeyKey: key},
+	}}
+
+	validSecrets, certs, listenerErr := parseCertsFromTLSSecretsData(secrets)
+	require.Empty(t, validSecrets, "expired serving chain must not be served")
+	require.Empty(t, certs)
+	require.Error(t, listenerErr)
+	require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, listenerErr.Reason())
+	require.Contains(t, listenerErr.Error(), "has expired")
 }
