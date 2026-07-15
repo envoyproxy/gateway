@@ -297,7 +297,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 	// Phase 2: Run conflict detection.
 	// Only listeners that haven't been marked as invalid will participate in conflict resolution.
 	t.validateConflictedProtocolsListeners(gateways)
-	t.validateConflictedLayer7Listeners(gateways)
+	t.validateConflictedHostnameListeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
 	if t.MergeGateways {

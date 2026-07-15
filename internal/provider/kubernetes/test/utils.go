@@ -199,6 +199,23 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 	}
 }
 
+// GetGRPCRouteWithHTTPRouteFilter returns a sample GRPCRoute that references an
+// Envoy Gateway HTTPRouteFilter via an extensionRef filter.
+func GetGRPCRouteWithHTTPRouteFilter(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32, httpRouteFilterName string) *gwapiv1.GRPCRoute {
+	grpcRoute := GetGRPCRoute(nsName, parent, serviceName, port)
+	grpcRoute.Spec.Rules[0].Filters = []gwapiv1.GRPCRouteFilter{
+		{
+			Type: gwapiv1.GRPCRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: egv1a1.GroupName,
+				Kind:  egv1a1.KindHTTPRouteFilter,
+				Name:  gwapiv1.ObjectName(httpRouteFilterName),
+			},
+		},
+	}
+	return grpcRoute
+}
+
 // GetTLSRoute returns a sample TLSRoute with a parent reference.
 func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1.TLSRoute {
 	return &gwapiv1.TLSRoute{
