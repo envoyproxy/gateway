@@ -80,14 +80,14 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 		// bundle (see filterValidCACertificates), an expired or malformed member is
 		// not dropped but rejects the whole secret, so a corrupted chain never
 		// reaches Envoy. The failure is isolated to the referencing listener.
-		validData, listenerErr := validateServingCertificateChain(certData)
+		canonicalChain, listenerErr := validateServingCertificateChain(certData)
 		if listenerErr != nil {
 			errs = append(errs, fmt.Errorf("%s/%s must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: %s",
 				secret.Namespace, secret.Name, listenerErr.Error()))
 			continue
 		}
 
-		certBlock, _ := pem.Decode(validData)
+		certBlock, _ := pem.Decode(canonicalChain)
 		if certBlock == nil {
 			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s",
 				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey))
@@ -146,7 +146,7 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 		// mergeGateways enabled that NACKs the whole SDS push, breaking TLS for all
 		// Gateways sharing the proxy. Reject the bad Secret here so it never reaches
 		// Envoy and only the affected listener degrades.
-		if _, err := tls.X509KeyPair(validData, pem.EncodeToMemory(keyBlock)); err != nil {
+		if _, err := tls.X509KeyPair(canonicalChain, pem.EncodeToMemory(keyBlock)); err != nil {
 			errs = append(errs, fmt.Errorf("%s/%s must contain a matching tls.crt and tls.key: %w",
 				secret.Namespace, secret.Name, err))
 			continue
@@ -184,7 +184,7 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 
 		normalizedSecret := *secret
 		normalizedSecret.Data = maps.Clone(secret.Data)
-		normalizedSecret.Data[corev1.TLSCertKey] = validData
+		normalizedSecret.Data[corev1.TLSCertKey] = canonicalChain
 		normalizedSecret.Data[corev1.TLSPrivateKeyKey] = pem.EncodeToMemory(keyBlock)
 		validSecrets = append(validSecrets, &normalizedSecret)
 
