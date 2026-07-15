@@ -918,6 +918,22 @@ func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 			},
 			expected: egv1a1.LogLevelInfo,
 		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelOff,
+				},
+			},
+			expected: egv1a1.LogLevelOff,
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelCritical,
+				},
+			},
+			expected: egv1a1.LogLevelCritical,
+		},
 	}
 
 	for _, tc := range cases {
@@ -974,6 +990,16 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 				},
 			},
 			expected: "admin:warn,filter:debug",
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					egv1a1.LogComponentAdmin:   egv1a1.LogLevelOff,
+					egv1a1.LogComponentFilter:  egv1a1.LogLevelCritical,
+				},
+			},
+			expected: "admin:off,filter:critical",
 		},
 	}
 

@@ -62,11 +62,6 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 // SkipTests is a list of tests that are skipped in the conformance suite.
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := make([]suite.ConformanceTest, 0, 4)
-	skipTests = append(skipTests,
-		// TODO: fix following conformance tests
-		tests.ListenerSetProtocolConflict,
-	)
-
 	if gatewayNamespaceMode {
 		return skipTests
 	}
