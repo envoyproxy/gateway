@@ -15,7 +15,7 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: first-route
+          requirementName: example-cookie-or-example-header-or-missing-or-failed_f403d1f429347916
     - match:
         path: foo/baz
       name: second-route
@@ -26,4 +26,4 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: second-route
+          requirementName: example-or-missing-or-failed_3adbd87437a23687

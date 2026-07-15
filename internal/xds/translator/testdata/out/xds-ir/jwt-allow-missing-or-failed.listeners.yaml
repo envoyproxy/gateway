@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              first-route/example-cookie:
+              example-cookie_0cd81fec67dbf176:
                 audiences:
                 - foo.com
                 forward: true
@@ -37,7 +37,7 @@
                     cluster: localhost_443
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
-              first-route/example-header:
+              example-header_18dee9d5ffa8102b:
                 audiences:
                 - foo.com
                 forward: true
@@ -57,7 +57,7 @@
                     cluster: localhost_443
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
-              second-route/example:
+              example_ced70d98fe975d58:
                 audiences:
                 - foo.com
                 forward: true
@@ -75,16 +75,16 @@
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
             requirementMap:
-              first-route:
+              example-cookie-or-example-header-or-missing-or-failed_f403d1f429347916:
                 requiresAny:
                   requirements:
-                  - providerName: first-route/example-cookie
-                  - providerName: first-route/example-header
+                  - providerName: example-cookie_0cd81fec67dbf176
+                  - providerName: example-header_18dee9d5ffa8102b
                   - allowMissingOrFailed: {}
-              second-route:
+              example-or-missing-or-failed_3adbd87437a23687:
                 requiresAny:
                   requirements:
-                  - providerName: second-route/example
+                  - providerName: example_ced70d98fe975d58
                   - allowMissingOrFailed: {}
         - name: envoy.filters.http.router
           typedConfig:

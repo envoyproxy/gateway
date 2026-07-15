@@ -660,7 +660,7 @@
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication",
                                 "providers": {
-                                  "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example": {
+                                  "example_7815c684b265ae47": {
                                     "forward": true,
                                     "normalizePayloadInMetadata": {
                                       "spaceDelimitedClaims": [
@@ -681,8 +681,8 @@
                                   }
                                 },
                                 "requirementMap": {
-                                  "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com": {
-                                    "providerName": "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example"
+                                  "example_610fd14578c340be": {
+                                    "providerName": "example_7815c684b265ae47"
                                   }
                                 }
                               }
@@ -779,7 +779,7 @@
                         "typedPerFilterConfig": {
                           "envoy.filters.http.jwt_authn": {
                             "@type": "type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig",
-                            "requirementName": "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com"
+                            "requirementName": "example_610fd14578c340be"
                           }
                         }
                       }
