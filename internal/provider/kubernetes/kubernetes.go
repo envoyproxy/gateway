@@ -371,7 +371,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			},
 		})
 	}
-	updateHandler := NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
+	updateHandler := NewUpdateHandler(mgr.GetLogger(), mgr.GetClient(), mgr.GetAPIReader())
 	if err := mgr.Add(updateHandler); err != nil {
 		return nil, fmt.Errorf("failed to add status update handler %w", err)
 	}
