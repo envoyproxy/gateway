@@ -158,9 +158,9 @@ func testTLSRouteConnectionAllowed(t *testing.T, gwAddr, hostname string) {
 
 	if n > 0 {
 		t.Logf("Successfully received response: %s", string(buf[:n]))
-	} else {
-		t.Log("Connection allowed and completed successfully")
+		return
 	}
+	t.Fatalf("Connection was established but got an empty response; expected the backend to reply")
 }
 
 func verifyRBACStats(t *testing.T, promClient *prometheus.Client, expectAllowed bool) {

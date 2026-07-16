@@ -955,7 +955,7 @@ func validateSecurityPolicyForTCPAndTLS(p *egv1a1.SecurityPolicy) error {
 	for i := range p.Spec.Authorization.Rules {
 		rule := &p.Spec.Authorization.Rules[i]
 		if rule.CEL != nil {
-			return fmt.Errorf("rule %d: CEL not supported for TCP", i)
+			return fmt.Errorf("rule %d: CEL not supported for TCP/TLS", i)
 		}
 		if rule.Principal == nil {
 			continue
