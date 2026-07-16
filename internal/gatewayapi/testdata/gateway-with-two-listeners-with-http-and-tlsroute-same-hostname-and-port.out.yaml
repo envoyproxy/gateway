@@ -12,14 +12,18 @@ gateways:
           from: All
       hostname: foo.com
       name: http-1
-      port: 80
-      protocol: HTTP
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - name: tls-secret-example-com
+        mode: Terminate
     - allowedRoutes:
         namespaces:
           from: All
       hostname: foo.com
       name: tls-1
-      port: 80
+      port: 443
       protocol: TLS
       tls:
         mode: Passthrough
