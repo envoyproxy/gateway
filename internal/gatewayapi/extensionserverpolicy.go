@@ -9,11 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -58,8 +56,6 @@ func (t *Translator) ProcessExtensionServerPolicies(
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
-	policyCopies := extensionServerPolicyCopiesWithStatusDeepCopy(policies)
-
 	handledPolicies := make(map[policyKey]*unstructured.Unstructured, len(policies))
 	// handledPoliciesOrder tracks insertion order so we can build res deterministically.
 	handledPoliciesOrder := make([]policyKey, 0, len(policies))
@@ -87,7 +83,7 @@ func (t *Translator) ProcessExtensionServerPolicies(
 		}
 		policy, found := handledPolicies[key]
 		if !found {
-			policy = policyCopies[i]
+			policy = &policies[i]
 			handledPolicies[key] = policy
 			handledPoliciesOrder = append(handledPoliciesOrder, key)
 		}
@@ -430,18 +426,4 @@ func appendUnstructuredRefIfAbsent(refs []*ir.UnstructuredRef, policy *unstructu
 		}
 	}
 	return append(refs, &ir.UnstructuredRef{Object: policy})
-}
-
-// extensionServerPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied status entries.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func extensionServerPolicyCopiesWithStatusDeepCopy(policies []unstructured.Unstructured) []*unstructured.Unstructured {
-	copies := make([]*unstructured.Unstructured, len(policies))
-	for i, p := range policies {
-		p.Object = maps.Clone(p.Object) // shallow copy map - no shared ref for "status" key
-		if statusObj, ok := policies[i].Object["status"].(map[string]any); ok {
-			p.Object["status"] = runtime.DeepCopyJSON(statusObj)
-		}
-		copies[i] = &p
-	}
-	return copies
 }

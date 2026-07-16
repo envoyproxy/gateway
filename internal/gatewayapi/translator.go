@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 
-	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -252,6 +252,13 @@ func newTranslateResult(
 
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
+
+	// The input resource tree is shared with the watchable coalesce goroutine, which
+	// walks it with reflect.DeepEqual. The translator mutates resource Status in place
+	// while computing status updates, which races with that walk. Work on a copy whose
+	// status-bearing objects are shallow-copied with only their Status fields deep-copied,
+	// isolating those mutations without the memory cost of a full DeepCopy.
+	resources = resources.StatusDeepCopy()
 
 	// Preprocessing to improve get resources operations performance.
 	translatorContext := &TranslatorContext{}

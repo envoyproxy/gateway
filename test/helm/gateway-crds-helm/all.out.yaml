@@ -28394,6 +28394,18 @@ spec:
                     required:
                     - name
                     type: object
+                  directSourceIP:
+                    description: |-
+                      DirectSourceIP configures the geoip filter to use the downstream connection
+                      source address (the TCP peer of the connection terminated by Envoy) as the client IP.
+
+                      Use this in L4-transparent topologies where a load balancer preserves the original
+                      client source IP at TCP level and does not populate XFF or a custom header — for
+                      example, AWS NLB with target-type=instance + externalTrafficPolicy=Local, or
+                      Azure Standard Load Balancer.
+
+                      Mutually exclusive with XForwardedFor and CustomHeader.
+                    type: object
                   xForwardedFor:
                     description: XForwardedForSettings provides configuration for
                       using X-Forwarded-For headers for determining the client IP
@@ -28448,8 +28460,10 @@ spec:
                         || (!has(self.numTrustedHops) && has(self.trustedCIDRs))
                 type: object
                 x-kubernetes-validations:
-                - message: customHeader cannot be used in conjunction with xForwardedFor
-                  rule: '!(has(self.xForwardedFor) && has(self.customHeader))'
+                - message: exactly one of xForwardedFor, customHeader, or directSourceIP
+                    must be set
+                  rule: '[has(self.xForwardedFor), has(self.customHeader), has(self.directSourceIP)].filter(x,
+                    x).size() == 1'
               connection:
                 description: Connection includes client connection settings.
                 properties:
@@ -29729,6 +29743,13 @@ spec:
                       ClientValidation specifies the configuration to validate the client
                       initiating the TLS connection to the Gateway listener.
                     properties:
+                      allowExpiredCertificate:
+                        description: |-
+                          AllowExpiredCertificate permits client certificates that have expired
+                          but are otherwise valid (CA chain, signature). When true, Envoy skips
+                          the NotAfter check during client certificate validation.
+                          Defaults to false.
+                        type: boolean
                       caCertificateRefs:
                         description: |-
                           CACertificateRefs contains one or more references to
@@ -30051,6 +30072,11 @@ spec:
                             type: array
                         type: object
                     type: object
+                    x-kubernetes-validations:
+                    - message: allowExpiredCertificate can only be set when mode is
+                        VerifyIfGiven or RequireAndVerify
+                      rule: '!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate
+                        || !has(self.mode) || self.mode in [''VerifyIfGiven'', ''RequireAndVerify'']'
                   ecdhCurves:
                     description: |-
                       ECDHCurves specifies the set of supported ECDH curves.
@@ -34418,6 +34444,8 @@ spec:
                       - info
                       - warn
                       - error
+                      - "off"
+                      - critical
                       type: string
                     default:
                       default: warn
@@ -52072,8 +52100,15 @@ spec:
                 - credential
                 type: object
               directResponse:
-                description: HTTPDirectResponseFilter defines the configuration to
-                  return a fixed response.
+                description: |-
+                  DirectResponse returns a fixed response for matching requests.
+
+                  When this filter is referenced from a GRPCRoute, only a non-2xx status code
+                  is supported. gRPC signals success with a grpc-status trailer and a response
+                  message, which a direct response cannot produce, so a 2xx status code (which
+                  maps to the gRPC OK status) yields an invalid response for gRPC clients. Use a
+                  non-2xx status code to deny or block gRPC requests (e.g. 403 maps to
+                  PERMISSION_DENIED, 404 to UNIMPLEMENTED, 429/503 to UNAVAILABLE).
                 properties:
                   body:
                     description: |-
@@ -52294,6 +52329,8 @@ spec:
                     description: |-
                       Status Code of the HTTP response
                       If unset, defaults to 200.
+                      Note: when this filter is referenced from a GRPCRoute, a 2xx status code
+                      (including the default 200) is rejected; a non-2xx status code must be set.
                     type: integer
                 type: object
               matches:
@@ -52791,7 +52828,8 @@ spec:
 
                                 If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 
-                                The client IP is inferred from the X-Forwarded-For header or a custom header.
+                                The client IP is inferred from the X-Forwarded-For header, a custom header, or the
+                                direct downstream connection source address (the TCP peer of the connection terminated by Envoy).
                                 You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
                               items:
                                 description: ClientIPGeoLocation specifies geolocation-based
