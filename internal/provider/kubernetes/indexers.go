@@ -1211,7 +1211,7 @@ func secretRouteFilterIndexFunc(rawObj client.Object) []string {
 	if filter.Spec.CredentialInjection != nil {
 		secretReferences = append(secretReferences,
 			types.NamespacedName{
-				Namespace: filter.Namespace,
+				Namespace: gatewayapi.NamespaceDerefOr(filter.Spec.CredentialInjection.Credential.ValueRef.Namespace, filter.Namespace),
 				Name:      string(filter.Spec.CredentialInjection.Credential.ValueRef.Name),
 			}.String(),
 		)
