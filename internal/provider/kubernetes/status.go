@@ -753,8 +753,8 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 	}
 
 	if status.GatewayAccepted(gtw) {
-		// update accepted condition to true if it is not false
-		// this is needed because the accepted condition is not set to true by the Gateway API translator
+		// Not already explicitly rejected (e.g. invalid EnvoyProxy/address) earlier in translation,
+		// so derive Accepted from the per-listener Accepted conditions the translator already set.
 		// TODO (huabing): this is tricky and confusing for later readers, we should remove this and set the accepted condition
 		// to true in the Gateway API translator
 		status.UpdateGatewayStatusAccepted(gtw)
