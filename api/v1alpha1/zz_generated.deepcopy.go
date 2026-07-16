@@ -7355,8 +7355,8 @@ func (in *ProxyProtocolSettings) DeepCopyInto(out *ProxyProtocolSettings) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.ForwardProtoConfig != nil {
-		in, out := &in.ForwardProtoConfig, &out.ForwardProtoConfig
+	if in.ForwardProto != nil {
+		in, out := &in.ForwardProto, &out.ForwardProto
 		*out = new(ForwardProtoConfig)
 		(*in).DeepCopyInto(*out)
 	}
