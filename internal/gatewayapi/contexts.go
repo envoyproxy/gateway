@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -151,6 +150,12 @@ type ListenerContext struct {
 	// specValid indicates whether per-listener spec validation succeeded.
 	// Conflict detection should only consider listeners with specValid=true.
 	specValid bool
+
+	// protocolConflicted is set by validateConflictedProtocolsListeners when this
+	// listener loses a protocol conflict. Listeners with this flag must be excluded
+	// from subsequent hostname conflict resolution so they cannot steal a hostname
+	// slot from a valid same-hostname listener that uses the winner protocol.
+	protocolConflicted bool
 
 	tls ListenerTLSConfig
 
@@ -506,7 +511,7 @@ func (r *TLSRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefer
 // UDPRouteContext wraps a UDPRoute and provides helper methods for
 // accessing the route's parents.
 type UDPRouteContext struct {
-	*gwapiv1a2.UDPRoute
+	*gwapiv1.UDPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -561,7 +566,7 @@ func (r *UDPRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RoutePare
 // TCPRouteContext wraps a TCPRoute and provides helper methods for
 // accessing the route's parents.
 type TCPRouteContext struct {
-	*gwapiv1a2.TCPRoute
+	*gwapiv1.TCPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -788,8 +793,8 @@ type RouteParentContext struct {
 	HTTPRoute *gwapiv1.HTTPRoute
 	GRPCRoute *gwapiv1.GRPCRoute
 	TLSRoute  *gwapiv1.TLSRoute
-	TCPRoute  *gwapiv1a2.TCPRoute
-	UDPRoute  *gwapiv1a2.UDPRoute
+	TCPRoute  *gwapiv1.TCPRoute
+	UDPRoute  *gwapiv1.UDPRoute
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
