@@ -1,0 +1,1 @@
+Fixed log timestamps regressing to Unix epoch floats (e.g. `1.784e+09`) since v1.8.0 by explicitly setting `ISO8601TimeEncoder` on the production zap encoder config, restoring the expected ISO 8601 format (e.g. `2026-07-14T17:44:06.617Z`).
