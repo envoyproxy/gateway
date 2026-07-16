@@ -616,7 +616,7 @@ func (t *Translator) addRouteToRouteConfig(
 					httpRoute.Destination.Settings,
 					&HTTPRouteTranslator{httpRoute},
 					ea,
-					httpRoute.Destination.Metadata,
+					clusterMetadata(httpRoute.Destination, nil),
 				)
 				if err != nil {
 					errs = errors.Join(errs, err)
@@ -630,7 +630,7 @@ func (t *Translator) addRouteToRouteConfig(
 						tSettings,
 						&HTTPRouteTranslator{httpRoute},
 						ea,
-						httpRoute.Destination.Metadata)
+						clusterMetadata(httpRoute.Destination, setting))
 					if err != nil {
 						errs = errors.Join(errs, err)
 					}
@@ -1068,6 +1068,23 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 	metadata *ir.ResourceMetadata,
 ) error {
 	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras, metadata))
+}
+
+func clusterMetadata(destination *ir.RouteDestination, setting *ir.DestinationSetting) *ir.ResourceMetadata {
+	if destination == nil {
+		return nil
+	}
+	if setting != nil && isStableBackendClusterName(setting.Name) {
+		return setting.Metadata
+	}
+	if setting == nil && isStableBackendClusterName(destination.Name) && len(destination.Settings) == 1 {
+		return destination.Settings[0].Metadata
+	}
+	return destination.Metadata
+}
+
+func isStableBackendClusterName(name string) bool {
+	return strings.HasPrefix(name, "backend/")
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.

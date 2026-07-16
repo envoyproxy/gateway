@@ -270,7 +270,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-tls
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-tls/rule/0
+          name: backend/fcd33b6514a2c856
           settings:
           - addressType: IP
             endpoints:
@@ -281,7 +281,7 @@ xdsIR:
               name: https-backend
               namespace: default
               sectionName: "443"
-            name: httproute/envoy-gateway/httproute-tls/rule/0/backend/0
+            name: backend/fcd33b6514a2c856
             protocol: HTTP
             tls:
               alpnProtocols:

@@ -253,7 +253,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-btls-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-btls-1/rule/0
+          name: backend/257bb0e6d9a10beb
           settings:
           - addressType: IP
             endpoints:
@@ -264,7 +264,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8080"
-            name: httproute/envoy-gateway/httproute-btls-1/rule/0/backend/0
+            name: backend/257bb0e6d9a10beb
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -291,7 +291,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-btls-2
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-btls-2/rule/0
+          name: backend/f6fe862eacda25e5
           settings:
           - addressType: IP
             endpoints:
@@ -302,7 +302,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8081"
-            name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
+            name: backend/f6fe862eacda25e5
             protocol: HTTP
             tls:
               alpnProtocols: null

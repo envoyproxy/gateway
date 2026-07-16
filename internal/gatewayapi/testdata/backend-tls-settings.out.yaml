@@ -1038,7 +1038,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-          name: httproute/default/httproute-1/rule/0
+          name: backend/584820c6b91472ff
           settings:
           - addressType: IP
             endpoints:
@@ -1048,7 +1048,7 @@ xdsIR:
               kind: Backend
               name: backend-1
               namespace: default
-            name: httproute/default/httproute-1/rule/0/backend/0
+            name: backend/584820c6b91472ff
             protocol: HTTP
             tls:
               alpnProtocols:
@@ -1093,7 +1093,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-2
             namespace: default
-          name: httproute/default/httproute-2/rule/0
+          name: backend/3c80e82dc63992bc
           settings:
           - addressType: IP
             endpoints:
@@ -1103,7 +1103,7 @@ xdsIR:
               kind: Backend
               name: backend-2
               namespace: default
-            name: httproute/default/httproute-2/rule/0/backend/0
+            name: backend/3c80e82dc63992bc
             protocol: HTTP
             tls:
               alpnProtocols:
@@ -1144,7 +1144,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-3
             namespace: default
-          name: httproute/default/httproute-3/rule/0
+          name: backend/0d9bb2ec9cfda007
           settings:
           - addressType: IP
             endpoints:
@@ -1154,7 +1154,7 @@ xdsIR:
               kind: Backend
               name: backend-3
               namespace: default
-            name: httproute/default/httproute-3/rule/0/backend/0
+            name: backend/0d9bb2ec9cfda007
             protocol: HTTP
             tls:
               alpnProtocols:
@@ -1196,7 +1196,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-4
             namespace: default
-          name: httproute/default/httproute-4/rule/0
+          name: backend/2eb216de2f1ddc1f
           settings:
           - addressType: IP
             endpoints:
@@ -1206,7 +1206,7 @@ xdsIR:
               kind: Backend
               name: backend-4
               namespace: default
-            name: httproute/default/httproute-4/rule/0/backend/0
+            name: backend/2eb216de2f1ddc1f
             protocol: HTTP
             tls:
               alpnProtocols:
@@ -1274,7 +1274,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-7-override-client-tls-settings
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-7-override-client-tls-settings/rule/0
+          name: backend/b34c7fbddf5e496a
           settings:
           - addressType: IP
             endpoints:
@@ -1284,7 +1284,7 @@ xdsIR:
               kind: Backend
               name: backend-7
               namespace: envoy-gateway
-            name: httproute/envoy-gateway/httproute-7-override-client-tls-settings/rule/0/backend/0
+            name: backend/b34c7fbddf5e496a
             protocol: HTTP
             tls:
               alpnProtocols:
@@ -1324,7 +1324,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-9-override-client-tls-settings-disable-alpn
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-9-override-client-tls-settings-disable-alpn/rule/0
+          name: backend/1dc76463cd0c7470
           settings:
           - addressType: IP
             endpoints:
@@ -1334,7 +1334,7 @@ xdsIR:
               kind: Backend
               name: backend-9
               namespace: envoy-gateway
-            name: httproute/envoy-gateway/httproute-9-override-client-tls-settings-disable-alpn/rule/0/backend/0
+            name: backend/1dc76463cd0c7470
             protocol: HTTP
             tls:
               alpnProtocols: []
@@ -1419,7 +1419,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-8-gateway-backend-tls-precedence
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-8-gateway-backend-tls-precedence/rule/0
+          name: backend/3ad6190c2de764f7
           settings:
           - addressType: IP
             endpoints:
@@ -1429,7 +1429,7 @@ xdsIR:
               kind: Backend
               name: backend-8
               namespace: envoy-gateway
-            name: httproute/envoy-gateway/httproute-8-gateway-backend-tls-precedence/rule/0/backend/0
+            name: backend/3ad6190c2de764f7
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -1509,7 +1509,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-10-no-client-tls-settings
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-10-no-client-tls-settings/rule/0
+          name: backend/3c025280b9f192c1
           settings:
           - addressType: IP
             endpoints:
@@ -1519,7 +1519,7 @@ xdsIR:
               kind: Backend
               name: backend-10
               namespace: envoy-gateway
-            name: httproute/envoy-gateway/httproute-10-no-client-tls-settings/rule/0/backend/0
+            name: backend/3c025280b9f192c1
             protocol: HTTP
             tls:
               alpnProtocols: null

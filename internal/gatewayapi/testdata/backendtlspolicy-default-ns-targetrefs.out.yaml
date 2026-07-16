@@ -317,7 +317,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-btls
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-btls/rule/0
+          name: backend/3171b2e69f3682dc
           settings:
           - addressType: IP
             endpoints:
@@ -328,7 +328,7 @@ xdsIR:
               name: http-backend
               namespace: default
               sectionName: "8080"
-            name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
+            name: backend/e7f3f760a4bfcdc6
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -347,7 +347,7 @@ xdsIR:
               kind: Backend
               name: backend-ip-tls
               namespace: default
-            name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
+            name: backend/318423ce46304d70
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -420,7 +420,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-btls2
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-btls2/rule/0
+          name: backend/3171b2e69f3682dc
           settings:
           - addressType: IP
             endpoints:
@@ -431,7 +431,7 @@ xdsIR:
               name: http-backend
               namespace: default
               sectionName: "8080"
-            name: httproute/envoy-gateway/httproute-btls2/rule/0/backend/0
+            name: backend/e7f3f760a4bfcdc6
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -450,7 +450,7 @@ xdsIR:
               kind: Backend
               name: backend-ip-tls
               namespace: default
-            name: httproute/envoy-gateway/httproute-btls2/rule/0/backend/1
+            name: backend/318423ce46304d70
             protocol: HTTP
             tls:
               alpnProtocols: null

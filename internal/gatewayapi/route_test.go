@@ -106,6 +106,125 @@ func TestAppProtocolToIRAppProtocol(t *testing.T) {
 	}
 }
 
+func TestStableClusterRouteDestinationReusesSameTLSBackend(t *testing.T) {
+	weight := uint32(1)
+	addressType := ir.IP
+	sni := "backend.example.com"
+	metadata := &ir.ResourceMetadata{
+		Kind:      "Service",
+		Name:      "backend",
+		Namespace: "default",
+	}
+	settings := []*ir.DestinationSetting{
+		{
+			Name:        "httproute/default/route-a/rule/0/backend/0",
+			Weight:      &weight,
+			Protocol:    ir.HTTP,
+			AddressType: &addressType,
+			Endpoints: []*ir.DestinationEndpoint{
+				ir.NewDestEndpoint(nil, "10.0.0.1", 8080, false, nil),
+			},
+			TLS: &ir.TLSUpstreamConfig{
+				SNI: &sni,
+				CACertificate: &ir.TLSCACertificate{
+					Name:        "backend-ca",
+					Certificate: []byte("ca-bundle"),
+				},
+			},
+			Metadata: metadata,
+		},
+	}
+
+	routeMetadata := &ir.ResourceMetadata{
+		Kind:      "HTTPRoute",
+		Name:      "route-a",
+		Namespace: "default",
+	}
+	otherRouteMetadata := &ir.ResourceMetadata{
+		Kind:      "HTTPRoute",
+		Name:      "route-b",
+		Namespace: "default",
+	}
+	first := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-a/rule/0", settings, nil, nil, routeMetadata, stableClusterRouteDestinationOptions{})
+	second := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-b/rule/0", settings, nil, nil, otherRouteMetadata, stableClusterRouteDestinationOptions{})
+	routeOnlyTraffic := &ir.TrafficFeatures{
+		Retry: &ir.Retry{
+			NumRetries: new(uint32),
+		},
+	}
+	third := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-c/rule/0", settings, routeOnlyTraffic, nil, routeMetadata, stableClusterRouteDestinationOptions{})
+
+	require.Equal(t, first.Name, second.Name)
+	require.Equal(t, first.Name, third.Name)
+	require.Equal(t, first.Settings[0].Name, second.Settings[0].Name)
+	require.NotEqual(t, "httproute/default/route-a/rule/0", first.Name)
+	require.Equal(t, settings[0].Name, "httproute/default/route-a/rule/0/backend/0")
+}
+
+func TestStableClusterRouteDestinationUsesXDSClusterInputs(t *testing.T) {
+	weight := uint32(1)
+	addressType := ir.IP
+	settings := []*ir.DestinationSetting{
+		{
+			Name:        "httproute/default/route-a/rule/0/backend/0",
+			Weight:      &weight,
+			Protocol:    ir.HTTP,
+			AddressType: &addressType,
+			Endpoints: []*ir.DestinationEndpoint{
+				ir.NewDestEndpoint(nil, "10.0.0.1", 8080, false, nil),
+			},
+			TLS: &ir.TLSUpstreamConfig{
+				CACertificate: &ir.TLSCACertificate{
+					Name:        "backend-ca",
+					Certificate: []byte("ca-bundle"),
+				},
+			},
+			Metadata: &ir.ResourceMetadata{
+				Kind:      "Service",
+				Name:      "backend",
+				Namespace: "default",
+			},
+		},
+	}
+
+	routeAMetadata := &ir.ResourceMetadata{Kind: "HTTPRoute", Name: "route-a", Namespace: "default"}
+	routeBMetadata := &ir.ResourceMetadata{Kind: "HTTPRoute", Name: "route-b", Namespace: "default"}
+	routeAStatName := "route-a-cluster"
+	routeBStatName := "route-b-cluster"
+
+	routeMetadataOnly := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-b/rule/0", settings, nil, nil, routeBMetadata, stableClusterRouteDestinationOptions{})
+	sameRouteMetadataOnly := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-a/rule/0", settings, nil, nil, routeAMetadata, stableClusterRouteDestinationOptions{})
+	first := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-a/rule/0", settings, nil, nil, routeAMetadata, stableClusterRouteDestinationOptions{
+		StatName: &routeAStatName,
+	})
+	second := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-b/rule/0", settings, nil, nil, routeBMetadata, stableClusterRouteDestinationOptions{
+		StatName: &routeBStatName,
+	})
+	withExtensionRef := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-c/rule/0", settings, nil, nil, routeAMetadata, stableClusterRouteDestinationOptions{
+		HasExtensionRefs: true,
+	})
+
+	require.Equal(t, sameRouteMetadataOnly.Name, routeMetadataOnly.Name)
+	require.NotEqual(t, first.Name, second.Name)
+	require.Equal(t, "httproute/default/route-c/rule/0", withExtensionRef.Name)
+	require.Equal(t, "httproute/default/route-a/rule/0/backend/0", settings[0].Name)
+
+	healthCheckTraffic := &ir.TrafficFeatures{
+		HealthCheck: &ir.HealthCheck{
+			Active: &ir.ActiveHealthCheck{
+				HTTP: &ir.HTTPHealthChecker{},
+			},
+		},
+	}
+	routeHostA := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-a/rule/0", settings, healthCheckTraffic, nil, routeAMetadata, stableClusterRouteDestinationOptions{
+		RouteHostname: "route-a.example.com",
+	})
+	routeHostB := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-a/rule/0", settings, healthCheckTraffic, nil, routeAMetadata, stableClusterRouteDestinationOptions{
+		RouteHostname: "route-b.example.com",
+	})
+	require.NotEqual(t, routeHostA.Name, routeHostB.Name)
+}
+
 func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 	tests := []struct {
 		name              string

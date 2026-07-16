@@ -1,0 +1,1 @@
+Deduplicated generated upstream TLS xDS clusters that share the same backend and cluster-level configuration, which changes affected cluster names from route-derived names to stable backend hash names; EnvoyPatchPolicies and extension servers that match the previous route-derived cluster names must be updated.

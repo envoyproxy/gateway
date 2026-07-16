@@ -1831,7 +1831,7 @@ xdsIR:
             kind: HTTPRoute
             name: invalid-gateway-backend-client-cert-no-fallback
             namespace: default
-          name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0
+          name: backend/c20714977179ae8e
           settings:
           - addressType: IP
             endpoints:
@@ -1842,7 +1842,7 @@ xdsIR:
               name: tls-backend
               namespace: default
               sectionName: "443"
-            name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0/backend/0
+            name: backend/c20714977179ae8e
             protocol: HTTP
             tls:
               alpnProtocols: null

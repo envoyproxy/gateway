@@ -209,7 +209,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-          name: httproute/default/httproute-1/rule/0
+          name: backend/cbcefd28840669c5
           settings:
           - addressType: IP
             endpoints:
@@ -220,7 +220,7 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
+            name: backend/cbcefd28840669c5
             protocol: HTTP
             tls:
               alpnProtocols:

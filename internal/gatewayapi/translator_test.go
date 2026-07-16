@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	xdsresource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
@@ -41,6 +43,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/wasm"
+	xdstranslator "github.com/envoyproxy/gateway/internal/xds/translator"
 )
 
 func mustUnmarshal(t *testing.T, val []byte, out any) {
@@ -509,6 +512,83 @@ func TestTranslate(t *testing.T) {
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
+}
+
+func TestTranslateReusesUpstreamTLSClusterForSameBackend(t *testing.T) {
+	input, err := os.ReadFile(filepath.Join("testdata", "backendtlspolicy-ca-only.in.yaml"))
+	require.NoError(t, err)
+
+	resources := &resource.Resources{}
+	mustUnmarshal(t, input, resources)
+	base, err := os.ReadFile(filepath.Join("testdata", "base", "base.yaml"))
+	require.NoError(t, err)
+	baseResources := &resource.Resources{}
+	mustUnmarshal(t, base, baseResources)
+	resources.Secrets = append(resources.Secrets, baseResources.Secrets...)
+	resources.Namespaces = append(resources.Namespaces,
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "backends"}},
+	)
+
+	secondRoute := resources.HTTPRoutes[0].DeepCopy()
+	secondRoute.Name = "httproute-btls-2"
+	secondPath := "/exact-2"
+	secondRoute.Spec.Rules[0].Matches[0].Path.Value = &secondPath
+	resources.HTTPRoutes = append(resources.HTTPRoutes, secondRoute)
+
+	translator := &Translator{
+		GatewayControllerName:  egv1a1.GatewayControllerName,
+		GatewayClassName:       "envoy-gateway-class",
+		GlobalRateLimitEnabled: true,
+		BackendEnabled:         true,
+		MergeGateways:          IsMergeGatewaysEnabled(resources),
+		ControllerNamespace:    "envoy-gateway-system",
+		WasmCache:              &mockWasmCache{},
+		Logger:                 logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+	}
+
+	got, err := translator.Translate(resources)
+	require.NoError(t, err)
+
+	xdsIR := got.XdsIR["envoy-gateway/gateway-btls"]
+	require.NotNil(t, xdsIR)
+	require.Len(t, xdsIR.HTTP, 1)
+	require.Len(t, xdsIR.HTTP[0].Routes, 2)
+
+	firstDestination := xdsIR.HTTP[0].Routes[0].Destination
+	secondDestination := xdsIR.HTTP[0].Routes[1].Destination
+	require.NotNil(t, firstDestination)
+	require.NotNil(t, secondDestination)
+	require.Equal(t, firstDestination.Name, secondDestination.Name)
+	require.Equal(t, firstDestination.Settings[0].Name, secondDestination.Settings[0].Name)
+
+	xdsTranslator := &xdstranslator.Translator{
+		ControllerNamespace: "envoy-gateway-system",
+		FilterOrder:         xdsIR.FilterOrder,
+	}
+	tCtx, err := xdsTranslator.Translate(xdsIR)
+	require.NoError(t, err)
+
+	clusterCount := 0
+	var matchedCluster *clusterv3.Cluster
+	for _, xdsResource := range tCtx.XdsResources[xdsresource.ClusterType] {
+		cluster, ok := xdsResource.(*clusterv3.Cluster)
+		if ok && cluster.Name == firstDestination.Name {
+			clusterCount++
+			matchedCluster = cluster
+		}
+	}
+	require.Equal(t, 1, clusterCount)
+	require.NotNil(t, matchedCluster)
+	metadata := matchedCluster.GetMetadata().GetFilterMetadata()["envoy-gateway"]
+	require.NotNil(t, metadata)
+	metadataResources := metadata.GetFields()["resources"].GetListValue().GetValues()
+	require.Len(t, metadataResources, 1)
+	resourceMetadata := metadataResources[0].GetStructValue().GetFields()
+	require.Equal(t, "Service", resourceMetadata["kind"].GetStringValue())
+	require.Equal(t, "http-backend", resourceMetadata["name"].GetStringValue())
+	require.Equal(t, "backends", resourceMetadata["namespace"].GetStringValue())
 }
 
 func TestTranslateWithExtensionKinds(t *testing.T) {
