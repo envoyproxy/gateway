@@ -604,7 +604,7 @@ type ProxyProtocolSettings struct {
 	// ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
 	// destination port. Only takes effect when PROXY protocol is enabled.
 	// +optional
-	ForwardProtoConfig *ForwardProtoConfig `json:"forwardProtoConfig,omitempty" yaml:"forwardProtoConfig,omitempty"`
+	ForwardProto *ForwardProtoConfig `json:"forwardProtoConfig,omitempty" yaml:"forwardProtoConfig,omitempty"`
 }
 
 // ForwardProtoConfig holds configuration for inferring the x-forwarded-proto header

@@ -412,8 +412,8 @@ func (t *Translator) addHCMToXDSListener(
 	// Set forward_proto_config to infer the x-forwarded-proto header from the PROXY protocol
 	// destination port. Requires the PROXY protocol listener filter to be enabled, which is added
 	// from the same irListener.ProxyProtocol field.
-	if irListener.ProxyProtocol != nil && irListener.ProxyProtocol.ForwardProtoConfig != nil {
-		fpc := irListener.ProxyProtocol.ForwardProtoConfig
+	if irListener.ProxyProtocol != nil && irListener.ProxyProtocol.ForwardProto != nil {
+		fpc := irListener.ProxyProtocol.ForwardProto
 		mgr.ForwardProtoConfig = &hcmv3.ForwardProtoConfig{
 			HttpsDestinationPorts: fpc.HTTPSDestinationPorts,
 			HttpDestinationPorts:  fpc.HTTPDestinationPorts,

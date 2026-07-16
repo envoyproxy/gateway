@@ -110,7 +110,7 @@ func TestHCMForwardProtoConfig(t *testing.T) {
 		{
 			name: "forwardProtoConfig with both port lists",
 			proxyProtocol: &ir.ProxyProtocolSettings{
-				ForwardProtoConfig: &ir.ForwardProtoConfig{
+				ForwardProto: &ir.ForwardProtoConfig{
 					HTTPSDestinationPorts: []uint32{443, 8443},
 					HTTPDestinationPorts:  []uint32{80, 8080},
 				},
@@ -122,7 +122,7 @@ func TestHCMForwardProtoConfig(t *testing.T) {
 		{
 			name: "forwardProtoConfig with only https ports",
 			proxyProtocol: &ir.ProxyProtocolSettings{
-				ForwardProtoConfig: &ir.ForwardProtoConfig{
+				ForwardProto: &ir.ForwardProtoConfig{
 					HTTPSDestinationPorts: []uint32{443},
 				},
 			},

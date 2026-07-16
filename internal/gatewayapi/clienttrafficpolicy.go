@@ -665,8 +665,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// ProxyProtocol field takes precedence when configured
 		// Even if it's an empty object {}, we should enable proxy protocol with default settings
 		proxyProtocol = &ir.ProxyProtocolSettings{
-			Optional:           ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
-			ForwardProtoConfig: buildIRForwardProtoConfig(policy.Spec.ProxyProtocol.ForwardProtoConfig),
+			Optional:     ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
+			ForwardProto: buildIRForwardProtoConfig(policy.Spec.ProxyProtocol.ForwardProto),
 		}
 	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
 		// Fallback to legacy EnableProxyProtocol field

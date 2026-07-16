@@ -810,7 +810,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
-						ForwardProtoConfig: &egv1a1.ForwardProtoConfig{
+						ForwardProto: &egv1a1.ForwardProtoConfig{
 							HTTPSDestinationPorts: []int32{443, 8443},
 							HTTPDestinationPorts:  []int32{80, 8080},
 						},
@@ -834,7 +834,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
-						ForwardProtoConfig: &egv1a1.ForwardProtoConfig{
+						ForwardProto: &egv1a1.ForwardProtoConfig{
 							HTTPSDestinationPorts: []int32{443},
 						},
 					},
@@ -857,7 +857,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
-						ForwardProtoConfig: &egv1a1.ForwardProtoConfig{},
+						ForwardProto: &egv1a1.ForwardProtoConfig{},
 					},
 				}
 			},
@@ -882,7 +882,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
-						ForwardProtoConfig: &egv1a1.ForwardProtoConfig{
+						ForwardProto: &egv1a1.ForwardProtoConfig{
 							HTTPSDestinationPorts: []int32{443, 8443},
 							HTTPDestinationPorts:  []int32{8443, 80},
 						},
