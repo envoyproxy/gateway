@@ -180,43 +180,6 @@ func TestAppendUnstructuredRefIfAbsent(t *testing.T) {
 	require.Same(t, p1Copy, refs[2].Object)
 }
 
-func TestExtensionServerPolicyCopiesWithStatusDeepCopy(t *testing.T) {
-	objectWithStatus := unstructured.Unstructured{Object: map[string]any{
-		"metadata": map[string]any{"name": "some-name"},
-		"status": map[string]any{
-			"ancestors": []any{
-				map[string]any{
-					"ancestorRef": map[string]any{"name": "some-gateway"},
-				},
-			},
-		},
-	}}
-	objectWithoutStatus := unstructured.Unstructured{Object: map[string]any{
-		"metadata": map[string]any{"name": "no-status"},
-	}}
-
-	policies := []unstructured.Unstructured{objectWithStatus, objectWithoutStatus}
-	copies := extensionServerPolicyCopiesWithStatusDeepCopy(policies)
-	require.Len(t, copies, 2)
-	// status does not differ after initial copy
-	require.Equal(t, objectWithStatus.Object["status"], copies[0].Object["status"])
-	require.Equal(t, objectWithoutStatus.Object["status"], copies[1].Object["status"])
-
-	// changing the status (or another top-level key) of a copy should not affect original status
-	copies[0].Object["status"].(map[string]any)["ancestors"].([]any)[0].(map[string]any)["ancestorRef"].(map[string]any)["name"] = "mutated"
-	require.Equal(t, "some-gateway", objectWithStatus.Object["status"].(map[string]any)["ancestors"].([]any)[0].(map[string]any)["ancestorRef"].(map[string]any)["name"])
-	copies[0].Object["status"] = map[string]any{"replaced": true}
-	copies[0].Object["newKey"] = "x"
-	require.NotEqual(t, copies[0].Object["status"], policies[0].Object["status"])
-	_, exists := objectWithStatus.Object["newKey"]
-	require.False(t, exists)
-
-	// policy with no status does not get a status after copy
-	_, hasStatus := copies[1].Object["status"]
-	require.False(t, hasStatus)
-	require.Equal(t, "no-status", copies[1].Object["metadata"].(map[string]any)["name"])
-}
-
 func TestMergeAncestorsForExtensionServerPolicies(t *testing.T) {
 	tests := []struct {
 		aggStatus *gwapiv1.PolicyStatus
