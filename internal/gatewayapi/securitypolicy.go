@@ -119,8 +119,6 @@ func (t *Translator) ProcessSecurityPolicies(
 		SectionIndex: make(map[types.NamespacedName]sets.Set[string], gatewayMapSize),
 	}
 
-	policyCopies := securityPolicyCopiesWithStatusDeepCopy(securityPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy, policyMapSize)
 
 	// Map of attached Policy to Gateway. Used for policy merge process.
@@ -150,7 +148,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -174,7 +172,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -192,7 +190,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -217,7 +215,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -2666,16 +2664,4 @@ func buildExtAuthContextExtensionOwners(route, parent *egv1a1.SecurityPolicy) ma
 		}
 	}
 	return owners
-}
-
-// securityPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func securityPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.SecurityPolicy) []*egv1a1.SecurityPolicy {
-	copies := make([]*egv1a1.SecurityPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }
