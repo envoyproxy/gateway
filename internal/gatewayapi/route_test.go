@@ -223,6 +223,12 @@ func TestStableClusterRouteDestinationUsesXDSClusterInputs(t *testing.T) {
 		RouteHostname: "route-b.example.com",
 	})
 	require.NotEqual(t, routeHostA.Name, routeHostB.Name)
+
+	emptyALPNSettings := []*ir.DestinationSetting{settings[0].DeepCopy()}
+	emptyALPNSettings[0].TLS.ALPNProtocols = []string{}
+	nilALPN := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-a/rule/0", settings, nil, nil, routeAMetadata, stableClusterRouteDestinationOptions{})
+	emptyALPN := stableClusterRouteDestination(resource.KindHTTPRoute, "httproute/default/route-a/rule/0", emptyALPNSettings, nil, nil, routeAMetadata, stableClusterRouteDestinationOptions{})
+	require.NotEqual(t, nilALPN.Name, emptyALPN.Name)
 }
 
 func TestGetIREndpointsFromEndpointSlices(t *testing.T) {

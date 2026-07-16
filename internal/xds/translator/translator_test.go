@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -217,6 +218,101 @@ func TestTranslateXds(t *testing.T) {
 	if test.OverrideTestData() {
 		cleanupOutdatedTestData(t, filepath.Join("testdata", "out", "xds-ir"), keep)
 	}
+}
+
+func TestTranslateXdsStableBackendClusterNameIncludesListenerHTTP1(t *testing.T) {
+	weight := uint32(1)
+	addressType := ir.IP
+	pathPrefix := "/"
+	routeDestination := func() *ir.RouteDestination {
+		return &ir.RouteDestination{
+			Name: "backend/shared",
+			Settings: []*ir.DestinationSetting{
+				{
+					Name:        "backend/shared",
+					Weight:      &weight,
+					Protocol:    ir.HTTP,
+					AddressType: &addressType,
+					Endpoints: []*ir.DestinationEndpoint{
+						ir.NewDestEndpoint(nil, "10.0.0.1", 8080, false, nil),
+					},
+				},
+			},
+		}
+	}
+
+	xdsIR := &ir.Xds{
+		HTTP: []*ir.HTTPListener{
+			{
+				CoreListenerDetails: ir.CoreListenerDetails{
+					Name:    "listener-a",
+					Address: "0.0.0.0",
+					Port:    10080,
+				},
+				Hostnames: []string{"a.example.com"},
+				HTTP1: &ir.HTTP1Settings{
+					EnableTrailers: true,
+				},
+				Routes: []*ir.HTTPRoute{
+					{
+						Name:        "route-a",
+						Hostname:    "a.example.com",
+						PathMatch:   &ir.StringMatch{Prefix: &pathPrefix},
+						Destination: routeDestination(),
+					},
+				},
+			},
+			{
+				CoreListenerDetails: ir.CoreListenerDetails{
+					Name:    "listener-b",
+					Address: "0.0.0.0",
+					Port:    10081,
+				},
+				Hostnames: []string{"b.example.com"},
+				HTTP1: &ir.HTTP1Settings{
+					PreserveHeaderCase: true,
+				},
+				Routes: []*ir.HTTPRoute{
+					{
+						Name:        "route-b",
+						Hostname:    "b.example.com",
+						PathMatch:   &ir.StringMatch{Prefix: &pathPrefix},
+						Destination: routeDestination(),
+					},
+				},
+			},
+		},
+	}
+
+	translator := &Translator{}
+	tCtx, err := translator.Translate(xdsIR)
+	require.NoError(t, err)
+
+	var clusterNames []string
+	for _, xdsResource := range tCtx.XdsResources[resourcev3.ClusterType] {
+		cluster, ok := xdsResource.(*clusterv3.Cluster)
+		if ok && strings.HasPrefix(cluster.Name, "backend/shared/http1/") {
+			clusterNames = append(clusterNames, cluster.Name)
+		}
+	}
+	require.Len(t, clusterNames, 2)
+	require.NotEqual(t, clusterNames[0], clusterNames[1])
+
+	var routeClusterNames []string
+	for _, xdsResource := range tCtx.XdsResources[resourcev3.RouteType] {
+		routeConfig, ok := xdsResource.(*routev3.RouteConfiguration)
+		if !ok {
+			continue
+		}
+		for _, virtualHost := range routeConfig.VirtualHosts {
+			for _, route := range virtualHost.Routes {
+				routeClusterNames = append(routeClusterNames, route.GetRoute().GetCluster())
+			}
+		}
+	}
+	require.ElementsMatch(t, clusterNames, routeClusterNames)
+	require.Equal(t, "backend/shared", xdsIR.HTTP[0].Routes[0].Destination.Name)
+	require.Equal(t, "backend/shared", xdsIR.HTTP[1].Routes[0].Destination.Name)
 }
 
 func cleanupOutdatedTestData(t *testing.T, dir string, keep sets.Set[string]) {

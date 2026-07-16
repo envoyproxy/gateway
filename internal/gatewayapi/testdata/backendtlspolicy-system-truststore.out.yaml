@@ -175,7 +175,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-btls
             namespace: envoy-gateway
-          name: backend/8a1cbc099645cd3a
+          name: backend/e9d255f2b4df93a3
           settings:
           - addressType: IP
             endpoints:
@@ -186,7 +186,7 @@ xdsIR:
               name: http-backend
               namespace: default
               sectionName: "8080"
-            name: backend/8a1cbc099645cd3a
+            name: backend/e9d255f2b4df93a3
             protocol: HTTP
             tls:
               alpnProtocols: null

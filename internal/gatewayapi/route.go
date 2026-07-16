@@ -2084,16 +2084,29 @@ func stableClusterRouteDestination(
 		return destination
 	}
 
+	settingNames := make([]string, 0, len(copiedSettings))
 	for _, setting := range copiedSettings {
-		setting.Name = stableClusterName(routeType, []*ir.DestinationSetting{setting}, traffic, useClientProtocol, options)
+		name, ok := stableClusterName(routeType, []*ir.DestinationSetting{setting}, traffic, useClientProtocol, options)
+		if !ok {
+			return destination
+		}
+		settingNames = append(settingNames, name)
 	}
 
 	if len(copiedSettings) == 1 {
-		destination.Name = copiedSettings[0].Name
+		copiedSettings[0].Name = settingNames[0]
+		destination.Name = settingNames[0]
 		return destination
 	}
 
-	destination.Name = stableClusterName(routeType, copiedSettings, traffic, useClientProtocol, options)
+	name, ok := stableClusterName(routeType, copiedSettings, traffic, useClientProtocol, options)
+	if !ok {
+		return destination
+	}
+	for idx, setting := range copiedSettings {
+		setting.Name = settingNames[idx]
+	}
+	destination.Name = name
 	return destination
 }
 
@@ -2126,7 +2139,7 @@ func stableClusterName(
 	traffic *ir.TrafficFeatures,
 	useClientProtocol *bool,
 	options stableClusterRouteDestinationOptions,
-) string {
+) (string, bool) {
 	input := stableClusterNameInput{
 		RouteType:         routeType,
 		Settings:          make([]stableDestinationSetting, 0, len(settings)),
@@ -2154,10 +2167,10 @@ func stableClusterName(
 
 	data, err := json.Marshal(input)
 	if err != nil {
-		return ""
+		return "", false
 	}
 	sum := sha256.Sum256(data)
-	return "backend/" + hex.EncodeToString(sum[:8])
+	return "backend/" + hex.EncodeToString(sum[:8]), true
 }
 
 func routeDestinationStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, ruleIdx int, backendRefNames []string) *string {
@@ -2261,7 +2274,7 @@ type stableTLSUpstream struct {
 	Ciphers                     []string                `json:"ciphers,omitempty"`
 	ECDHCurves                  []string                `json:"ecdhCurves,omitempty"`
 	SignatureAlgorithms         []string                `json:"signatureAlgorithms,omitempty"`
-	ALPNProtocols               []string                `json:"alpnProtocols,omitempty"`
+	ALPNProtocols               []string                `json:"alpnProtocols"`
 	StatelessSessionResumption  bool                    `json:"statelessSessionResumption,omitempty"`
 	StatefulSessionResumption   bool                    `json:"statefulSessionResumption,omitempty"`
 	Fingerprints                []ir.TLSFingerprintType `json:"fingerprints,omitempty"`

@@ -1324,7 +1324,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-9-override-client-tls-settings-disable-alpn
             namespace: envoy-gateway
-          name: backend/1dc76463cd0c7470
+          name: backend/cee3446a71c5851d
           settings:
           - addressType: IP
             endpoints:
@@ -1334,7 +1334,7 @@ xdsIR:
               kind: Backend
               name: backend-9
               namespace: envoy-gateway
-            name: backend/1dc76463cd0c7470
+            name: backend/cee3446a71c5851d
             protocol: HTTP
             tls:
               alpnProtocols: []
@@ -1419,7 +1419,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-8-gateway-backend-tls-precedence
             namespace: envoy-gateway
-          name: backend/3ad6190c2de764f7
+          name: backend/bcc469569e8f3c10
           settings:
           - addressType: IP
             endpoints:
@@ -1429,7 +1429,7 @@ xdsIR:
               kind: Backend
               name: backend-8
               namespace: envoy-gateway
-            name: backend/3ad6190c2de764f7
+            name: backend/bcc469569e8f3c10
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -1509,7 +1509,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-10-no-client-tls-settings
             namespace: envoy-gateway
-          name: backend/3c025280b9f192c1
+          name: backend/30292a3421d8ef6d
           settings:
           - addressType: IP
             endpoints:
@@ -1519,7 +1519,7 @@ xdsIR:
               kind: Backend
               name: backend-10
               namespace: envoy-gateway
-            name: backend/3c025280b9f192c1
+            name: backend/30292a3421d8ef6d
             protocol: HTTP
             tls:
               alpnProtocols: null

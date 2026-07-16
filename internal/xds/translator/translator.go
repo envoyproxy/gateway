@@ -6,6 +6,9 @@
 package translator
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -508,6 +511,8 @@ func (t *Translator) addRouteToRouteConfig(
 
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 	for _, httpRoute := range httpListener.Routes {
+		httpRoute = httpRouteWithListenerHTTP1ClusterName(httpRoute, httpListener.HTTP1)
+
 		// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
 		vHost := vHosts[httpRoute.Hostname]
 		if vHost == nil {
@@ -1085,6 +1090,51 @@ func clusterMetadata(destination *ir.RouteDestination, setting *ir.DestinationSe
 
 func isStableBackendClusterName(name string) bool {
 	return strings.HasPrefix(name, "backend/")
+}
+
+func httpRouteWithListenerHTTP1ClusterName(route *ir.HTTPRoute, http1 *ir.HTTP1Settings) *ir.HTTPRoute {
+	suffix, ok := listenerHTTP1ClusterNameSuffix(http1)
+	if !ok || route == nil || route.Destination == nil {
+		return route
+	}
+
+	destination := route.Destination
+	if !isStableBackendClusterName(destination.Name) {
+		return route
+	}
+
+	route = route.DeepCopy()
+	route.Destination.Name += suffix
+	for _, setting := range route.Destination.Settings {
+		if setting != nil && isStableBackendClusterName(setting.Name) {
+			setting.Name += suffix
+		}
+	}
+	return route
+}
+
+type stableListenerHTTP1Settings struct {
+	EnableTrailers     bool               `json:"enableTrailers,omitempty"`
+	PreserveHeaderCase bool               `json:"preserveHeaderCase,omitempty"`
+	HTTP10             *ir.HTTP10Settings `json:"http10,omitempty"`
+}
+
+func listenerHTTP1ClusterNameSuffix(http1 *ir.HTTP1Settings) (string, bool) {
+	if http1 == nil || (!http1.EnableTrailers && !http1.PreserveHeaderCase && http1.HTTP10 == nil) {
+		return "", false
+	}
+
+	input := stableListenerHTTP1Settings{
+		EnableTrailers:     http1.EnableTrailers,
+		PreserveHeaderCase: http1.PreserveHeaderCase,
+		HTTP10:             http1.HTTP10,
+	}
+	data, err := json.Marshal(input)
+	if err != nil {
+		return "", false
+	}
+	sum := sha256.Sum256(data)
+	return "/http1/" + hex.EncodeToString(sum[:8]), true
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
