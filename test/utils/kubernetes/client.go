@@ -16,7 +16,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	netutil "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/transport"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -46,7 +45,7 @@ func NewClient(t *testing.T) (client.Client, *rest.Config) {
 	// closes that gap: if the first DELETE reached the apiserver but the
 	// response was lost, the retry may return 404, which conformance cleanup
 	// already treats as success.
-	cfg.Wrap(transport.Wrappers(cfg.WrapTransport, newRetryTransportWrapper))
+	cfg.Wrap(newRetryTransportWrapper)
 
 	c, err := client.New(cfg, client.Options{})
 	require.NoError(t, err)

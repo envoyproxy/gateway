@@ -11,6 +11,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -348,24 +349,33 @@ func TestRetryTransport_ContextCancelDuringBackoffLeaksNoBody(t *testing.T) {
 }
 
 func TestRetryTransport_ConnectionResetAndTimeoutAreRetried(t *testing.T) {
-	// Use a timeout error (net.Error) and verify it is treated as transient.
-	timeoutErr := &timeoutError{}
-	ft := &fakeTransport{calls: []call{
-		{err: timeoutErr},
-		{status: http.StatusOK},
-	}}
-	rt := &retryTransport{base: ft}
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{name: "connection reset", err: syscall.ECONNRESET},
+		{name: "timeout", err: &timeoutError{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ft := &fakeTransport{calls: []call{
+				{err: tt.err},
+				{status: http.StatusOK},
+			}}
+			rt := &retryTransport{base: ft}
 
-	resp, err := rt.RoundTrip(newGetRequest(t))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
-	}
-	closeBody(t, resp)
-	if got := len(ft.seenBodies); got != 2 {
-		t.Fatalf("expected 2 attempts, got %d", got)
+			resp, err := rt.RoundTrip(newGetRequest(t))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("expected 200, got %d", resp.StatusCode)
+			}
+			closeBody(t, resp)
+			if got := len(ft.seenBodies); got != 2 {
+				t.Fatalf("expected 2 attempts, got %d", got)
+			}
+		})
 	}
 }
 
@@ -385,6 +395,7 @@ func TestIsTransientNetworkError(t *testing.T) {
 		{"nil", nil, false},
 		{"io.EOF", io.EOF, true},
 		{"io.ErrUnexpectedEOF", io.ErrUnexpectedEOF, true},
+		{"connection reset", syscall.ECONNRESET, true},
 		{"timeout", &timeoutError{}, true},
 		{"generic", errors.New("boom"), false},
 	}
