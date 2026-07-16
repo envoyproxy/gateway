@@ -2333,13 +2333,13 @@ func stableTLSUpstreamConfig(tlsConfig *ir.TLSUpstreamConfig) *stableTLSUpstream
 		SubjectAltNames:             tlsConfig.SubjectAltNames,
 		InsecureSkipVerify:          tlsConfig.InsecureSkipVerify,
 	}
-	for _, cert := range tlsConfig.ClientCertificates {
-		out.ClientCertificates = append(out.ClientCertificates, stableTLSCertificateConfig(cert))
+	for idx := range tlsConfig.ClientCertificates {
+		out.ClientCertificates = append(out.ClientCertificates, stableTLSCertificateConfig(&tlsConfig.ClientCertificates[idx]))
 	}
 	return out
 }
 
-func stableTLSCertificateConfig(cert ir.TLSCertificate) stableTLSCertificate {
+func stableTLSCertificateConfig(cert *ir.TLSCertificate) stableTLSCertificate {
 	return stableTLSCertificate{
 		Name:        cert.Name,
 		SDS:         cert.SDS,

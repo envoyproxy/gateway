@@ -268,7 +268,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-wss
             namespace: default
-          name: backend/7615f8a554e14fe6
+          name: backend/e52571ea68020e59
           settings:
           - addressType: FQDN
             endpoints:
@@ -279,7 +279,7 @@ xdsIR:
               kind: Backend
               name: backend-wss
               namespace: default
-            name: backend/7615f8a554e14fe6
+            name: backend/e52571ea68020e59
             protocol: HTTP
             tls:
               alpnProtocols: null

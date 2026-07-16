@@ -199,7 +199,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-btls
             namespace: envoy-gateway
-          name: backend/af80659051696cf7
+          name: backend/1fb24d0e632fc76f
           settings:
           - addressType: IP
             endpoints:
@@ -209,7 +209,7 @@ xdsIR:
               kind: Backend
               name: backend-1
               namespace: backends
-            name: backend/af80659051696cf7
+            name: backend/1fb24d0e632fc76f
             protocol: HTTP
             tls:
               alpnProtocols: null

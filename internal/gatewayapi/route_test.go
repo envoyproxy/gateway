@@ -158,7 +158,7 @@ func TestStableClusterRouteDestinationReusesSameTLSBackend(t *testing.T) {
 	require.Equal(t, first.Name, third.Name)
 	require.Equal(t, first.Settings[0].Name, second.Settings[0].Name)
 	require.NotEqual(t, "httproute/default/route-a/rule/0", first.Name)
-	require.Equal(t, settings[0].Name, "httproute/default/route-a/rule/0/backend/0")
+	require.Equal(t, "httproute/default/route-a/rule/0/backend/0", settings[0].Name)
 }
 
 func TestStableClusterRouteDestinationUsesXDSClusterInputs(t *testing.T) {
