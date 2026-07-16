@@ -511,7 +511,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 	for _, httpRoute := range httpListener.Routes {
-		httpRoute = httpRouteWithListenerHTTP1ClusterName(httpRoute, httpListener.HTTP1)
+		httpRoute = httpRouteWithXDSClusterNameInputs(httpRoute, httpListener.HTTP1)
 
 		// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
 		vHost := vHosts[httpRoute.Hostname]
@@ -1092,25 +1092,104 @@ func isStableBackendClusterName(name string) bool {
 	return strings.HasPrefix(name, "backend/")
 }
 
-func httpRouteWithListenerHTTP1ClusterName(route *ir.HTTPRoute, http1 *ir.HTTP1Settings) *ir.HTTPRoute {
-	suffix, ok := listenerHTTP1ClusterNameSuffix(http1)
-	if !ok || route == nil || route.Destination == nil {
+func httpRouteWithXDSClusterNameInputs(route *ir.HTTPRoute, http1 *ir.HTTP1Settings) *ir.HTTPRoute {
+	if route == nil || route.Destination == nil {
 		return route
 	}
-
 	destination := route.Destination
 	if !isStableBackendClusterName(destination.Name) {
 		return route
 	}
 
+	var suffix strings.Builder
+	if routeSuffix, ok := routeClusterNameSuffix(route); ok {
+		suffix.WriteString(routeSuffix)
+	}
+	if http1Suffix, ok := listenerHTTP1ClusterNameSuffix(http1); ok {
+		suffix.WriteString(http1Suffix)
+	}
+	if suffix.Len() == 0 {
+		return route
+	}
+
 	route = route.DeepCopy()
-	route.Destination.Name += suffix
+	route.Destination.Name += suffix.String()
 	for _, setting := range route.Destination.Settings {
 		if setting != nil && isStableBackendClusterName(setting.Name) {
-			setting.Name += suffix
+			setting.Name += suffix.String()
 		}
 	}
 	return route
+}
+
+type stableHTTPRouteClusterSettings struct {
+	Traffic           *stableXDSClusterTraffic `json:"traffic,omitempty"`
+	UseClientProtocol bool                     `json:"useClientProtocol,omitempty"`
+}
+
+type stableXDSClusterTraffic struct {
+	LoadBalancer      *ir.LoadBalancer      `json:"loadBalancer,omitempty"`
+	ProxyProtocol     *ir.ProxyProtocol     `json:"proxyProtocol,omitempty"`
+	CircuitBreaker    *ir.CircuitBreaker    `json:"circuitBreaker,omitempty"`
+	HealthCheck       *ir.HealthCheck       `json:"healthCheck,omitempty"`
+	Timeout           *ir.Timeout           `json:"timeout,omitempty"`
+	TCPKeepalive      *ir.TCPKeepalive      `json:"tcpKeepalive,omitempty"`
+	BackendConnection *ir.BackendConnection `json:"backendConnection,omitempty"`
+	DNS               *ir.DNS               `json:"dns,omitempty"`
+	HTTP2             *ir.HTTP2Settings     `json:"http2,omitempty"`
+	AdmissionControl  *ir.AdmissionControl  `json:"admissionControl,omitempty"`
+}
+
+func routeClusterNameSuffix(route *ir.HTTPRoute) (string, bool) {
+	if route == nil {
+		return "", false
+	}
+
+	input := stableHTTPRouteClusterSettings{
+		Traffic:           stableXDSClusterTrafficConfig(route.Traffic),
+		UseClientProtocol: ptr.Deref(route.UseClientProtocol, false),
+	}
+	if input.Traffic == nil && !input.UseClientProtocol {
+		return "", false
+	}
+
+	data, err := json.Marshal(input)
+	if err != nil {
+		return "", false
+	}
+	sum := sha256.Sum256(data)
+	return "/route/" + hex.EncodeToString(sum[:8]), true
+}
+
+func stableXDSClusterTrafficConfig(traffic *ir.TrafficFeatures) *stableXDSClusterTraffic {
+	if traffic == nil {
+		return nil
+	}
+	clusterTraffic := &stableXDSClusterTraffic{
+		LoadBalancer:      traffic.LoadBalancer,
+		ProxyProtocol:     traffic.ProxyProtocol,
+		CircuitBreaker:    traffic.CircuitBreaker,
+		HealthCheck:       traffic.HealthCheck,
+		Timeout:           traffic.Timeout,
+		TCPKeepalive:      traffic.TCPKeepalive,
+		BackendConnection: traffic.BackendConnection,
+		DNS:               traffic.DNS,
+		HTTP2:             traffic.HTTP2,
+		AdmissionControl:  traffic.AdmissionControl,
+	}
+	if clusterTraffic.LoadBalancer == nil &&
+		clusterTraffic.ProxyProtocol == nil &&
+		clusterTraffic.CircuitBreaker == nil &&
+		clusterTraffic.HealthCheck == nil &&
+		clusterTraffic.Timeout == nil &&
+		clusterTraffic.TCPKeepalive == nil &&
+		clusterTraffic.BackendConnection == nil &&
+		clusterTraffic.DNS == nil &&
+		clusterTraffic.HTTP2 == nil &&
+		clusterTraffic.AdmissionControl == nil {
+		return nil
+	}
+	return clusterTraffic
 }
 
 type stableListenerHTTP1Settings struct {

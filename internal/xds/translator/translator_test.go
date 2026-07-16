@@ -315,6 +315,96 @@ func TestTranslateXdsStableBackendClusterNameIncludesListenerHTTP1(t *testing.T)
 	require.Equal(t, "backend/shared", xdsIR.HTTP[1].Routes[0].Destination.Name)
 }
 
+func TestTranslateXdsStableBackendClusterNameIncludesRouteClusterInputs(t *testing.T) {
+	weight := uint32(1)
+	addressType := ir.IP
+	pathA := "/a"
+	pathB := "/b"
+	useClientProtocol := true
+	connectionIdleTimeout := metav1.Duration{Duration: time.Second}
+	routeDestination := func() *ir.RouteDestination {
+		return &ir.RouteDestination{
+			Name: "backend/shared",
+			Settings: []*ir.DestinationSetting{
+				{
+					Name:        "backend/shared",
+					Weight:      &weight,
+					Protocol:    ir.HTTP,
+					AddressType: &addressType,
+					Endpoints: []*ir.DestinationEndpoint{
+						ir.NewDestEndpoint(nil, "10.0.0.1", 8080, false, nil),
+					},
+				},
+			},
+		}
+	}
+
+	xdsIR := &ir.Xds{
+		HTTP: []*ir.HTTPListener{
+			{
+				CoreListenerDetails: ir.CoreListenerDetails{
+					Name:    "listener",
+					Address: "0.0.0.0",
+					Port:    10080,
+				},
+				Hostnames: []string{"example.com"},
+				Routes: []*ir.HTTPRoute{
+					{
+						Name:        "route-a",
+						Hostname:    "example.com",
+						PathMatch:   &ir.StringMatch{Prefix: &pathA},
+						Destination: routeDestination(),
+					},
+					{
+						Name:        "route-b",
+						Hostname:    "example.com",
+						PathMatch:   &ir.StringMatch{Prefix: &pathB},
+						Destination: routeDestination(),
+						Traffic: &ir.TrafficFeatures{
+							Timeout: &ir.Timeout{
+								HTTP: &ir.HTTPTimeout{
+									ConnectionIdleTimeout: &connectionIdleTimeout,
+								},
+							},
+						},
+						UseClientProtocol: &useClientProtocol,
+					},
+				},
+			},
+		},
+	}
+
+	translator := &Translator{}
+	tCtx, err := translator.Translate(xdsIR)
+	require.NoError(t, err)
+
+	var clusterNames []string
+	for _, xdsResource := range tCtx.XdsResources[resourcev3.ClusterType] {
+		cluster, ok := xdsResource.(*clusterv3.Cluster)
+		if ok && strings.HasPrefix(cluster.Name, "backend/shared") {
+			clusterNames = append(clusterNames, cluster.Name)
+		}
+	}
+	require.Len(t, clusterNames, 2)
+	require.Contains(t, clusterNames, "backend/shared")
+
+	var routeClusterNames []string
+	for _, xdsResource := range tCtx.XdsResources[resourcev3.RouteType] {
+		routeConfig, ok := xdsResource.(*routev3.RouteConfiguration)
+		if !ok {
+			continue
+		}
+		for _, virtualHost := range routeConfig.VirtualHosts {
+			for _, route := range virtualHost.Routes {
+				routeClusterNames = append(routeClusterNames, route.GetRoute().GetCluster())
+			}
+		}
+	}
+	require.ElementsMatch(t, clusterNames, routeClusterNames)
+	require.Equal(t, "backend/shared", xdsIR.HTTP[0].Routes[0].Destination.Name)
+	require.Equal(t, "backend/shared", xdsIR.HTTP[0].Routes[1].Destination.Name)
+}
+
 func cleanupOutdatedTestData(t *testing.T, dir string, keep sets.Set[string]) {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
