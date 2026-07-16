@@ -1136,7 +1136,7 @@ func (t *Translator) buildListenerTLSParameters(
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
-			validCaCertBytes, listenerErr := filterValidCertificates(caCertBytes)
+			validCaCertBytes, listenerErr := filterValidCACertificates(caCertBytes)
 			if listenerErr != nil {
 				if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
 					return irTLSConfig, fmt.Errorf("no valid certificates exist in %s: %w", caCertRef.Name, listenerErr)
