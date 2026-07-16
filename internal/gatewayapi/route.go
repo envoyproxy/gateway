@@ -1336,6 +1336,12 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 		perHostRoutes := make([]*ir.HTTPRoute, 0, len(hosts)*len(routeRoutes))
 		for _, host := range hosts {
 			for _, routeRoute := range routeRoutes {
+				// Deep copy the route first to avoid modifying the original and
+				// affecting other listeners that may be attached to the same route.
+				// This is important when a route has multiple parent refs (listeners)
+				// with different ports, as the redirect port needs to be derived
+				// independently for each listener.
+				routeRoute := routeRoute.DeepCopy()
 				// If the redirect port is not set, the final redirect port must be derived.
 				if routeRoute.Redirect != nil && routeRoute.Redirect.Port == nil {
 					redirectPort := uint32(listener.Port)
@@ -1356,10 +1362,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				// Remove dots from the hostname before appending it to the IR Route name
 				// since dots are special chars used in stats tag extraction in Envoy
 				underscoredHost := strings.ReplaceAll(host, ".", "_")
-				hostRoute := routeRoute.DeepCopy()
-				hostRoute.Name = fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost)
-				hostRoute.Hostname = host
-				perHostRoutes = append(perHostRoutes, hostRoute)
+				routeRoute.Name = fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost)
+				routeRoute.Hostname = host
+				perHostRoutes = append(perHostRoutes, routeRoute)
 			}
 		}
 		irKey := t.getIRKey(listener.gateway.Gateway)
