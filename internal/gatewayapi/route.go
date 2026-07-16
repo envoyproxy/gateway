@@ -55,15 +55,14 @@ type RoutesTranslator interface {
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	relevantHTTPRoutes := make([]*HTTPRouteContext, 0, len(httpRoutes))
-	httpRouteCopies := httpRouteCopiesWithStatusDeepCopy(httpRoutes)
 
 	// HTTPRoutes are already sorted by the provider layer
 
-	for i, h := range httpRoutes {
+	for _, h := range httpRoutes {
 		if h == nil {
 			panic("received nil httproute")
 		}
-		httpRoute := &HTTPRouteContext{HTTPRoute: httpRouteCopies[i]}
+		httpRoute := &HTTPRouteContext{HTTPRoute: h}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -83,15 +82,14 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 
 func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
 	relevantGRPCRoutes := make([]*GRPCRouteContext, 0, len(grpcRoutes))
-	grpcRouteCopies := grpcRouteCopiesWithStatusDeepCopy(grpcRoutes)
 
 	// GRPCRoutes are already sorted by the provider layer
 
-	for i, g := range grpcRoutes {
+	for _, g := range grpcRoutes {
 		if g == nil {
 			panic("received nil grpcroute")
 		}
-		grpcRoute := &GRPCRouteContext{GRPCRoute: grpcRouteCopies[i]}
+		grpcRoute := &GRPCRouteContext{GRPCRoute: g}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -1427,14 +1425,13 @@ func filterEGPrefix(in map[string]string) map[string]string {
 
 func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	relevantTLSRoutes := make([]*TLSRouteContext, 0, len(tlsRoutes))
-	tlsRouteCopies := tlsRouteCopiesWithStatusDeepCopy(tlsRoutes)
 	// TLSRoutes are already sorted by the provider layer
 
-	for i, tls := range tlsRoutes {
+	for _, tls := range tlsRoutes {
 		if tls == nil {
 			panic("received nil tlsroute")
 		}
-		tlsRoute := &TLSRouteContext{TLSRoute: tlsRouteCopies[i]}
+		tlsRoute := &TLSRouteContext{TLSRoute: tls}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -1597,14 +1594,13 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1.UDPRoute, gateways []
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	relevantUDPRoutes := make([]*UDPRouteContext, 0, len(udpRoutes))
-	udpRouteCopies := udpRouteCopiesWithStatusDeepCopy(udpRoutes)
 	// UDPRoutes are already sorted by the provider layer
 
-	for i, u := range udpRoutes {
+	for _, u := range udpRoutes {
 		if u == nil {
 			panic("received nil udproute")
 		}
-		udpRoute := &UDPRouteContext{UDPRoute: udpRouteCopies[i]}
+		udpRoute := &UDPRouteContext{UDPRoute: u}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -1749,14 +1745,13 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1.TCPRoute, gateways []
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	relevantTCPRoutes := make([]*TCPRouteContext, 0, len(tcpRoutes))
-	tcpRouteCopies := tcpRouteCopiesWithStatusDeepCopy(tcpRoutes)
 	// TCPRoutes are already sorted by the provider layer
 
-	for i, tcp := range tcpRoutes {
+	for _, tcp := range tcpRoutes {
 		if tcp == nil {
 			panic("received nil tcproute")
 		}
-		tcpRoute := &TCPRouteContext{TCPRoute: tcpRouteCopies[i]}
+		tcpRoute := &TCPRouteContext{TCPRoute: tcp}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -2725,57 +2720,4 @@ func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.Section
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", idx))
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterBackendRefs, strings.Join(refs, "|"))
 	return statName
-}
-
-// Shallow-copy helpers that deep-copy only the Status field.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-
-func httpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.HTTPRoute) []*gwapiv1.HTTPRoute {
-	copies := make([]*gwapiv1.HTTPRoute, len(routes))
-	for i, r := range routes {
-		out := *r
-		r.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
-}
-
-func grpcRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.GRPCRoute) []*gwapiv1.GRPCRoute {
-	copies := make([]*gwapiv1.GRPCRoute, len(routes))
-	for i, r := range routes {
-		out := *r
-		r.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
-}
-
-func tlsRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.TLSRoute) []*gwapiv1.TLSRoute {
-	copies := make([]*gwapiv1.TLSRoute, len(routes))
-	for i, r := range routes {
-		out := *r
-		r.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
-}
-
-func udpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.UDPRoute) []*gwapiv1.UDPRoute {
-	copies := make([]*gwapiv1.UDPRoute, len(routes))
-	for i, r := range routes {
-		out := *r
-		r.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
-}
-
-func tcpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.TCPRoute) []*gwapiv1.TCPRoute {
-	copies := make([]*gwapiv1.TCPRoute, len(routes))
-	for i, r := range routes {
-		out := *r
-		r.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

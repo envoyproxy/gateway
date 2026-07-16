@@ -103,8 +103,6 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// The routes are grouped by sectionNames of their targetRefs.
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
-	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
 
 	// Translate
@@ -122,7 +120,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -148,7 +146,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -168,7 +166,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -194,7 +192,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -1281,16 +1279,4 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
-}
-
-// envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func envoyExtensionPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyExtensionPolicy) []*egv1a1.EnvoyExtensionPolicy {
-	copies := make([]*egv1a1.EnvoyExtensionPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }
