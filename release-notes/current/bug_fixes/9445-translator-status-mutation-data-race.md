@@ -1,0 +1,1 @@
+Fixed a data race that could crash envoy-gateway with `panic: reflect: slice index out of range` when the watchable coalesce goroutine compared the xDS IR with `reflect.DeepEqual` while the translator concurrently mutated resource status in place; the translator now isolates status mutations by deep-copying only the status field of each resource at the start of translation.
