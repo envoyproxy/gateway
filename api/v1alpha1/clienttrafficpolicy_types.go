@@ -463,7 +463,7 @@ type ProxyProtocolSettings struct {
 	// scheme for the forwarded request.
 	//
 	// +optional
-	ForwardProtoConfig *ForwardProtoConfig `json:"forwardProtoConfig,omitempty"`
+	ForwardProto *ForwardProtoConfig `json:"forwardProtoConfig,omitempty"`
 }
 
 // ForwardProtoConfig configures the ports used to infer the x-forwarded-proto
