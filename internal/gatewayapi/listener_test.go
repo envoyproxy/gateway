@@ -1434,6 +1434,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	backendPolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel.example.com"), UseSystemTrustStore: true,
 		CACertificate: &ir.TLSCACertificate{Name: "otel-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
 	}
 
 	serviceBackendCluster := egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
@@ -1472,6 +1473,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	servicePolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel-svc.example.com"), UseSystemTrustStore: true,
 		CACertificate: &ir.TLSCACertificate{Name: "otel-svc-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
 	}
 
 	tests := []struct {

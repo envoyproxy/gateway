@@ -319,7 +319,7 @@ func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingSecret(nsName *types.
 		return true
 	}
 
-	return true
+	return false
 }
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types.NamespacedName) bool {
@@ -993,7 +993,7 @@ func (r *gatewayAPIReconciler) isExtensionPolicyReferencingSecret(nsName *types.
 	return len(eepList.Items) > 0
 }
 
-// isRouteReferencingHTTPRouteFilter returns true if the HTTPRouteFilter is referenced by an HTTPRoute
+// isRouteReferencingHTTPRouteFilter returns true if the HTTPRouteFilter is referenced by an HTTPRoute or GRPCRoute
 func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.NamespacedName) bool {
 	ctx := context.Background()
 	httpRouteList := &gwapiv1.HTTPRouteList{}
@@ -1003,8 +1003,19 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 		r.log.Error(err, "unable to find associated HTTPRoutes")
 		return false
 	}
+	if len(httpRouteList.Items) != 0 {
+		return true
+	}
 
-	return len(httpRouteList.Items) != 0
+	grpcRouteList := &gwapiv1.GRPCRouteList{}
+	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(httpRouteFilterGRPCRouteIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated GRPCRoutes")
+		return false
+	}
+
+	return len(grpcRouteList.Items) != 0
 }
 
 // isProxyServiceCluster returns true if the provided labels reference an owning Gateway or GatewayClass

@@ -394,7 +394,7 @@ type KubernetesServiceSpec struct {
 }
 
 // LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
-// +kubebuilder:validation:Enum=trace;debug;info;warn;error
+// +kubebuilder:validation:Enum=trace;debug;info;warn;error;off;critical
 type LogLevel string
 
 const (
@@ -412,6 +412,12 @@ const (
 
 	// LogLevelError defines the "Error" logging level.
 	LogLevelError LogLevel = "error"
+
+	// LogLevelOff disables logging.
+	LogLevelOff LogLevel = "off"
+
+	// LogLevelCritical defines the "critical" logging level.
+	LogLevelCritical LogLevel = "critical"
 )
 
 // XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support

@@ -438,6 +438,10 @@ type TLSConfig struct {
 	// AcceptUntrusted permits the connection even when client certificate verification fails.
 	// This maps to Envoy CertificateValidationContext.trust_chain_verification=ACCEPT_UNTRUSTED.
 	AcceptUntrusted bool `json:"acceptUntrusted,omitempty" yaml:"acceptUntrusted,omitempty"`
+	// AllowExpiredCertificate permits client certificates that have expired but are otherwise valid.
+	//
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#envoy-v3-api-field-extensions-transport-sockets-tls-v3-certificatevalidationcontext-allow-expired-certificate
+	AllowExpiredCertificate bool `json:"allowExpiredCertificate,omitempty" yaml:"allowExpiredCertificate,omitempty"`
 	// A list of allowed base64-encoded SHA-256 hashes of the DER-encoded Subject Public Key Information (SPKI)
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
 	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
@@ -3726,7 +3730,8 @@ type ExtProc struct {
 // Lua holds the information associated with Lua extensions
 // +k8s:deepcopy-gen=true
 type Lua struct {
-	// Name is a unique name for the Lua configuration.
+	// Name is a unique name for the LUa configuration.
+	// The xds translator only generates one Lua filter for each unique name
 	Name string
 	// Code is the Lua source code
 	Code *string
