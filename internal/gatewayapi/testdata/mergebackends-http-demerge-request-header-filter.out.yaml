@@ -174,9 +174,10 @@ xdsIR:
         weight: 1
     - merged: true
       metadata:
-        kind: HTTPRoute
-        name: http-route-2
+        kind: Service
+        name: service-1
         namespace: default
+        sectionName: "8080"
       name: backend/service/default/service-1/8080/http
       settings:
       - addressType: IP

@@ -146,9 +146,10 @@ xdsIR:
     backends:
     - merged: true
       metadata:
-        kind: HTTPRoute
-        name: http-route-1
+        kind: Service
+        name: service-1
         namespace: default
+        sectionName: "8080"
       name: backend/service/default/service-1/8080/http
       settings:
       - addressType: IP
@@ -164,9 +165,10 @@ xdsIR:
         protocol: HTTP
     - merged: true
       metadata:
-        kind: GRPCRoute
-        name: grpc-route-1
+        kind: Service
+        name: service-1
         namespace: default
+        sectionName: "8080"
       name: backend/service/default/service-1/8080/grpc
       settings:
       - addressType: IP

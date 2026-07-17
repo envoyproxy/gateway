@@ -174,9 +174,10 @@ xdsIR:
     backends:
     - merged: true
       metadata:
-        kind: UDPRoute
-        name: udproute-1
+        kind: Service
+        name: service-2
         namespace: default
+        sectionName: "8162"
       name: backend/service/default/service-2/8162/udp
       settings:
       - addressType: IP
