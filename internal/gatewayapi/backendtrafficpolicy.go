@@ -311,7 +311,9 @@ func BuildBTPClusterSettingsIndex(
 
 // HasRouteLevelClusterSettings reports whether a route-rule, route, or listener-level
 // BackendTrafficPolicy (in that priority order) contributes backend-cluster-scoped settings for
-// the given target. This does not fall through to a gateway-level match.
+// the given target. This does not fall through to a gateway-level match: a merged cluster is
+// already scoped to one gateway, so a gateway-level setting applies uniformly to every route
+// sharing it and can never cause the divergence this check exists to catch.
 func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
 	routeKind gwapiv1.Kind,
 	routeNN types.NamespacedName,
