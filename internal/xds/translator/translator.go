@@ -1353,7 +1353,7 @@ func processClientCertificates(tCtx *types.ResourceVersionTable, backends []*ir.
 				for _, c := range st.TLS.ClientCertificates {
 					secret := buildXdsTLSCertSecret(&c)
 					if secret != nil {
-						if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+						if err := addXdsSecret(tCtx, secret); err != nil {
 							errs = errors.Join(errs, err)
 						}
 					}
