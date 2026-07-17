@@ -39,6 +39,11 @@
                       cluster: wasm_cluster
                       timeout: 10s
                       uri: https://envoy-gateway:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
+                    retryPolicy:
+                      numRetries: 10
+                      retryBackOff:
+                        baseInterval: 1s
+                        maxInterval: 30s
                     sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
                 runtime: envoy.wasm.runtime.v8
                 vmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/0
@@ -58,6 +63,11 @@
                       cluster: wasm_cluster
                       timeout: 10s
                       uri: https://envoy-gateway:18002/7abf116e5cd5a20389604a5ba0f3bd04fdf76f92181fe67506b42c2ee596d3fd.wasm
+                    retryPolicy:
+                      numRetries: 10
+                      retryBackOff:
+                        baseInterval: 1s
+                        maxInterval: 30s
                     sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
                 runtime: envoy.wasm.runtime.v8
                 vmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/1
@@ -65,7 +75,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com/example1:
+              example1_324018c9eaae726a:
                 audiences:
                 - one.foo.com
                 claimToHeaders:
@@ -85,7 +95,7 @@
                     cluster: one_example_com_443
                     timeout: 10s
                     uri: https://one.example.com/jwt/public-key/jwks.json
-              httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com/example2:
+              example2_b2e71814e87a6562:
                 audiences:
                 - two.foo.com
                 claimToHeaders:
@@ -106,11 +116,11 @@
                     timeout: 10s
                     uri: http://two.example.com/jwt/public-key/jwks.json
             requirementMap:
-              httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com:
+              example1-or-example2_73a070ef6c8ee8ea:
                 requiresAny:
                   requirements:
-                  - providerName: httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com/example1
-                  - providerName: httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com/example2
+                  - providerName: example1_324018c9eaae726a
+                  - providerName: example2_b2e71814e87a6562
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

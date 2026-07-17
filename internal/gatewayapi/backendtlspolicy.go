@@ -158,6 +158,15 @@ func (t *Translator) applyBackendTLSSetting(
 		mergedTLSConfig.TLSConfig = *mergedClientTLSConfig
 	}
 
+	// Set to the default TLS protocol versions (min 1.2, max 1.3) when
+	// not explicitly configured.
+	if mergedTLSConfig.MinVersion == nil {
+		mergedTLSConfig.MinVersion = new(ir.TLSv12)
+	}
+	if mergedTLSConfig.MaxVersion == nil {
+		mergedTLSConfig.MaxVersion = new(ir.TLSv13)
+	}
+
 	return mergedTLSConfig, nil
 }
 
@@ -184,8 +193,9 @@ func mergeServerValidationTLSConfigs(
 	if btpValidationTLSConfig.CACertificate != nil {
 		mergedConfig.CACertificate = btpValidationTLSConfig.CACertificate
 	}
-	if btpValidationTLSConfig.SNI != nil {
+	if btpValidationTLSConfig.SNI != nil { // BTP takes precedence for SNI, if set, it will override Backend resource SNI and disable AutoSNIFromEndpointHostname
 		mergedConfig.SNI = btpValidationTLSConfig.SNI
+		mergedConfig.AutoSNIFromEndpointHostname = false
 	}
 	if btpValidationTLSConfig.UseSystemTrustStore {
 		mergedConfig.UseSystemTrustStore = btpValidationTLSConfig.UseSystemTrustStore
@@ -244,7 +254,7 @@ func mergeClientTLSConfigs(
 		mergedConfig.SignatureAlgorithms = backendClientTLSConfig.SignatureAlgorithms
 	}
 
-	if len(backendClientTLSConfig.ALPNProtocols) > 0 {
+	if backendClientTLSConfig.ALPNProtocols != nil {
 		mergedConfig.ALPNProtocols = backendClientTLSConfig.ALPNProtocols
 	}
 
@@ -255,7 +265,8 @@ func (t *Translator) processServerValidationTLSSettings(
 	backend *egv1a1.Backend,
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
-		InsecureSkipVerify: ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
+		InsecureSkipVerify:          ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
+		AutoSNIFromEndpointHostname: ptr.Deref(backend.Spec.TLS.AutoSNIFromEndpointHostname, false),
 	}
 
 	if backend.Spec.TLS.SNI != nil {
@@ -373,7 +384,8 @@ func (t *Translator) processClientTLSSettings(
 	if clientTLS.MaxVersion != nil {
 		tlsConfig.MaxVersion = new(ir.TLSVersion(*clientTLS.MaxVersion))
 	}
-	if len(clientTLS.ALPNProtocols) > 0 {
+	// An empty list of ALPNProtocols means ALPN is disabled, while a nil value means it is not set.
+	if clientTLS.ALPNProtocols != nil {
 		tlsConfig.ALPNProtocols = make([]string, len(clientTLS.ALPNProtocols))
 		for i := range clientTLS.ALPNProtocols {
 			tlsConfig.ALPNProtocols[i] = string(clientTLS.ALPNProtocols[i])

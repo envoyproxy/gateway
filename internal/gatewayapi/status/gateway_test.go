@@ -128,6 +128,59 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 		},
 		{
+			name: "LoadBalancer svc with no ingress falls back to spec externalIPs",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						ClusterIPs:  []string{"127.0.0.1"},
+						Type:        corev1.ServiceTypeLoadBalancer,
+						ExternalIPs: []string{"10.19.0.11"},
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  new(gwapiv1.IPAddressType),
+					Value: "10.19.0.11",
+				},
+			},
+		},
+		{
+			name: "LoadBalancer svc with ingress ip ignores spec externalIPs",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						ClusterIPs:  []string{"127.0.0.1"},
+						Type:        corev1.ServiceTypeLoadBalancer,
+						ExternalIPs: []string{"10.19.0.11"},
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "127.0.0.1",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  new(gwapiv1.IPAddressType),
+					Value: "127.0.0.1",
+				},
+			},
+		},
+		{
 			name: "ClusterIP svc",
 			args: args{
 				gw: &gwapiv1.Gateway{},
@@ -386,6 +439,79 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment, tt.args.nodeAddresses)
 			assert.True(t, reflect.DeepEqual(tt.wantAddresses, tt.args.gw.Status.Addresses))
+		})
+	}
+}
+
+func TestUpdateGatewayStatusAccepted(t *testing.T) {
+	acceptedListener := gwapiv1.ListenerStatus{
+		Name: "http",
+		Conditions: []metav1.Condition{
+			{Type: string(gwapiv1.ListenerConditionAccepted), Status: metav1.ConditionTrue, Reason: string(gwapiv1.ListenerReasonAccepted)},
+		},
+	}
+	unsupportedProtocolListener := gwapiv1.ListenerStatus{
+		Name: "invalid",
+		Conditions: []metav1.Condition{
+			{Type: string(gwapiv1.ListenerConditionAccepted), Status: metav1.ConditionFalse, Reason: string(gwapiv1.ListenerReasonUnsupportedProtocol)},
+		},
+	}
+
+	testCases := []struct {
+		name            string
+		listeners       []gwapiv1.ListenerStatus
+		expectCondition metav1.Condition
+	}{
+		{
+			name:      "no listeners",
+			listeners: nil,
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1.GatewayReasonAccepted),
+				Message: "The Gateway has been scheduled by Envoy Gateway",
+			},
+		},
+		{
+			name:      "all listeners accepted",
+			listeners: []gwapiv1.ListenerStatus{acceptedListener},
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1.GatewayReasonAccepted),
+				Message: "The Gateway has been scheduled by Envoy Gateway",
+			},
+		},
+		{
+			name:      "no listeners accepted",
+			listeners: []gwapiv1.ListenerStatus{unsupportedProtocolListener},
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gwapiv1.GatewayReasonListenersNotValid),
+				Message: "No listeners are valid: invalid",
+			},
+		},
+		{
+			name:      "some listeners accepted",
+			listeners: []gwapiv1.ListenerStatus{acceptedListener, unsupportedProtocolListener},
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1.GatewayReasonListenersNotValid),
+				Message: "Listeners not valid: invalid",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gtw := &gwapiv1.Gateway{Status: gwapiv1.GatewayStatus{Listeners: tc.listeners}}
+			UpdateGatewayStatusAccepted(gtw)
+
+			if d := cmp.Diff([]metav1.Condition{tc.expectCondition}, gtw.Status.Conditions, cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")); d != "" {
+				t.Errorf("unexpected condition diff: %s", d)
+			}
 		})
 	}
 }

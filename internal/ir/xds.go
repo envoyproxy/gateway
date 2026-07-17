@@ -438,6 +438,10 @@ type TLSConfig struct {
 	// AcceptUntrusted permits the connection even when client certificate verification fails.
 	// This maps to Envoy CertificateValidationContext.trust_chain_verification=ACCEPT_UNTRUSTED.
 	AcceptUntrusted bool `json:"acceptUntrusted,omitempty" yaml:"acceptUntrusted,omitempty"`
+	// AllowExpiredCertificate permits client certificates that have expired but are otherwise valid.
+	//
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#envoy-v3-api-field-extensions-transport-sockets-tls-v3-certificatevalidationcontext-allow-expired-certificate
+	AllowExpiredCertificate bool `json:"allowExpiredCertificate,omitempty" yaml:"allowExpiredCertificate,omitempty"`
 	// A list of allowed base64-encoded SHA-256 hashes of the DER-encoded Subject Public Key Information (SPKI)
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
 	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
@@ -1263,6 +1267,10 @@ type RemoteJWKS struct {
 
 	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
 	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
+
+	// FailedRefetchDuration is the interval Envoy waits before re-fetching the JWKS after a
+	// failed fetch. If not specified, Envoy's default of 1 second is used.
+	FailedRefetchDuration *metav1.Duration `json:"failedRefetchDuration,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -1654,6 +1662,9 @@ type AuthorizationRule struct {
 
 	// Principal defines the principal to be matched.
 	Principal Principal `json:"principal"`
+
+	// CEL defines a CEL expression to be matched.
+	CEL *string `json:"cel,omitempty"`
 }
 
 // Principal defines the schema for the principal.
@@ -1912,7 +1923,8 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
 		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
-		r.HasMixedUpstreamProtocolRequirements()
+		r.HasMixedUpstreamProtocolRequirements() ||
+		r.HasMixedAutoSNISettings()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -1966,6 +1978,24 @@ func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
 	}
 
 	return hasForceHTTP1Upstream && hasHTTP2Upstream
+}
+
+// HasMixedAutoSNISettings returns true if some settings use AutoSNIFromEndpointHostname while
+// others don't. These two modes compute requiresAutoSNI in conflicting ways and cannot share a cluster.
+func (r *RouteDestination) HasMixedAutoSNISettings() bool {
+	hasAutoSNIFromHost := 0
+	totalSettings := len(r.Settings)
+
+	for _, s := range r.Settings {
+		if s.TLS == nil {
+			continue
+		}
+		if s.TLS.AutoSNIFromEndpointHostname {
+			hasAutoSNIFromHost++
+		}
+	}
+
+	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
@@ -2718,6 +2748,18 @@ type RateLimitValue struct {
 	Requests uint32 `json:"requests" yaml:"requests"`
 	// Unit of rate limiting.
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
+	// FromMetadata sources the limit value from per-request dynamic metadata,
+	// overriding Requests/Unit when the metadata value is present.
+	FromMetadata *RateLimitValueMetadata `json:"fromMetadata,omitempty" yaml:"fromMetadata,omitempty"`
+}
+
+// RateLimitValueMetadata specifies the dynamic metadata to source the limit value from.
+// +k8s:deepcopy-gen=true
+type RateLimitValueMetadata struct {
+	// Namespace is the namespace of the dynamic metadata.
+	Namespace string `json:"namespace" yaml:"namespace"`
+	// Key is the key to retrieve the limit value from within the namespaced filter metadata.
+	Key string `json:"key" yaml:"key"`
 }
 
 // BandwidthLimit holds bandwidth limiting configuration for request and/or response directions.
@@ -3523,12 +3565,13 @@ type BackOffPolicy struct {
 // TLSUpstreamConfig contains sni and ca file in []byte format.
 // +k8s:deepcopy-gen=true
 type TLSUpstreamConfig struct {
-	SNI                 *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
-	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
-	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
-	TLSConfig           `json:",inline"`
-	SubjectAltNames     []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
-	InsecureSkipVerify  bool             `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
+	SNI                         *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
+	AutoSNIFromEndpointHostname bool              `json:"autoSNIFromEndpointHostname,omitempty" yaml:"autoSNIFromEndpointHostname,omitempty"`
+	UseSystemTrustStore         bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
+	CACertificate               *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
+	TLSConfig                   `json:",inline"`
+	SubjectAltNames             []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
+	InsecureSkipVerify          bool             `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
 }
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
@@ -3673,15 +3716,24 @@ type ExtProc struct {
 
 	// AllowModeOverride allows the external processor to modify the processing mode.
 	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
+
+	// Sets the HTTP status that is returned when the external processor returns an error
+	// or cannot be reached. Defaults to 500 Internal Server Error.
+	// +optional
+	StatusOnError *int32 `json:"statusOnError,omitempty" yaml:"statusOnError,omitempty"`
 }
 
 // Lua holds the information associated with Lua extensions
 // +k8s:deepcopy-gen=true
 type Lua struct {
-	// Name is a unique name for the Lua configuration.
+	// Name is a unique name for the LUa configuration.
+	// The xds translator only generates one Lua filter for each unique name
 	Name string
 	// Code is the Lua source code
 	Code *string
+	// FilterContext is the filter context configuration for the Lua script.
+	// This is a JSON object passed to the Lua script via request_handle:filterContext().
+	FilterContext *apiextensionsv1.JSON
 }
 
 // Wasm holds the information associated with the Wasm extensions.

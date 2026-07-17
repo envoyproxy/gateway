@@ -103,8 +103,6 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// The routes are grouped by sectionNames of their targetRefs.
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
-	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
 
 	// Translate
@@ -122,7 +120,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -148,7 +146,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -168,7 +166,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -194,7 +192,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -774,8 +772,9 @@ func (t *Translator) buildLua(
 		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
 	}
 	return &ir.Lua{
-		Name: name,
-		Code: luaCode,
+		Name:          name,
+		Code:          luaCode,
+		FilterContext: lua.FilterContext,
 	}, nil
 }
 
@@ -820,7 +819,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
+		extProcIR, err := t.buildExtProc(name, policy, &ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -841,7 +840,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 func (t *Translator) buildExtProc(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
-	extProc egv1a1.ExtProc,
+	extProc *egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
@@ -891,6 +890,10 @@ func (t *Translator) buildExtProc(
 
 	if extProc.FailOpen != nil {
 		extProcIR.FailOpen = extProc.FailOpen
+	}
+
+	if extProc.StatusOnError != nil {
+		extProcIR.StatusOnError = extProc.StatusOnError
 	}
 
 	if extProc.ProcessingMode != nil {
@@ -1276,16 +1279,4 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
-}
-
-// envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func envoyExtensionPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyExtensionPolicy) []*egv1a1.EnvoyExtensionPolicy {
-	copies := make([]*egv1a1.EnvoyExtensionPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

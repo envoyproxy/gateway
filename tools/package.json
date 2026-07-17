@@ -4,6 +4,6 @@
   "private": true,
   "dependencies": {
     "linkinator": "7.6.1",
-    "markdownlint-cli": "0.48.0"
+    "markdownlint-cli": "0.49.1"
   }
 }

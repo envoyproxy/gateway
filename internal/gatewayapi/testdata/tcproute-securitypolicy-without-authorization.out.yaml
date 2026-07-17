@@ -87,7 +87,7 @@ securityPolicies:
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 tcpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcpr-app

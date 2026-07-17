@@ -1,0 +1,1 @@
+Added support for `deployment.envoyGateway.strategy` in Helm values, allowing users to configure the Deployment update strategy (e.g. `RollingUpdate` or `Recreate`) for the Envoy Gateway control plane.

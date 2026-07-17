@@ -104,7 +104,7 @@ func BuildBTPRoutingTypeIndex(
 			kind := string(ref.Kind)
 			key := btpRoutingKey{
 				Kind:        kind,
-				Namespace:   btp.Namespace,
+				Namespace:   string(ref.Namespace),
 				Name:        string(ref.Name),
 				SectionName: string(ptr.Deref(ref.SectionName, "")),
 			}
@@ -259,8 +259,6 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		SectionIndex: make(map[types.NamespacedName]sets.Set[string], gatewayMapSize),
 	}
 
-	policyCopies := backendTrafficPolicyCopiesWithStatusDeepCopy(backendTrafficPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
 
 	// Translate
@@ -281,7 +279,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -307,7 +305,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -327,7 +325,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -352,7 +350,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -1509,6 +1507,13 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		XRateLimitOption: rule.XRateLimitHeaders,
 	}
 
+	if md := rule.Limit.FromMetadata; md != nil {
+		irRule.Limit.FromMetadata = &ir.RateLimitValueMetadata{
+			Namespace: md.Namespace,
+			Key:       md.Key,
+		}
+	}
+
 	for _, match := range rule.ClientSelectors {
 		if len(match.Headers) == 0 && len(match.Methods) == 0 &&
 			match.Path == nil && match.SourceCIDR == nil && len(match.QueryParams) == 0 {
@@ -2188,16 +2193,4 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	}
 
 	return &statName
-}
-
-// backendTrafficPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func backendTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.BackendTrafficPolicy) []*egv1a1.BackendTrafficPolicy {
-	copies := make([]*egv1a1.BackendTrafficPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

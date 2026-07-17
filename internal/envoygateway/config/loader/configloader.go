@@ -75,14 +75,15 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 					continue
 				}
 
+				// Set defaults for unset fields before validation so the validator
+				// always sees a fully-defaulted struct.
+				eg.SetEnvoyGatewayDefaults()
+				eg.Logging.SetEnvoyGatewayLoggingDefaults()
+
 				if err := validation.ValidateEnvoyGateway(eg); err != nil {
 					r.logger.Error(err, "failed to validate EnvoyGateway config")
 					continue
 				}
-
-				// Set defaults for unset fields
-				eg.SetEnvoyGatewayDefaults()
-				eg.Logging.SetEnvoyGatewayLoggingDefaults()
 
 				r.cfgMu.Lock()
 				r.cfg.EnvoyGateway = eg
