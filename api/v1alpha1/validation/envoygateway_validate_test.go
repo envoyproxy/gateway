@@ -1054,40 +1054,6 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			},
 			expect: true,
 		},
-		{
-			name: "default EnvoyProxy with valid backendTrafficPolicy.mergeType",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					EnvoyProxy: &egv1a1.EnvoyProxySpec{
-						PolicyDefaults: &egv1a1.PolicyDefaults{
-							BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{
-								MergeType: new(egv1a1.StrategicMerge),
-							}},
-						},
-					},
-				},
-			},
-			expect: true,
-		},
-		{
-			name: "default EnvoyProxy with invalid backendTrafficPolicy.mergeType",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					EnvoyProxy: &egv1a1.EnvoyProxySpec{
-						PolicyDefaults: &egv1a1.PolicyDefaults{
-							BackendTrafficPolicy: &egv1a1.BackendTrafficPolicyDefaults{MergeSettings: egv1a1.MergeSettings{
-								MergeType: new(egv1a1.Replace),
-							}},
-						},
-					},
-				},
-			},
-			expect: false,
-		},
 	}
 
 	for _, tc := range testCases {

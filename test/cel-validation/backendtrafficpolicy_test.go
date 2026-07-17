@@ -3726,6 +3726,60 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "defaultChildMergeType is valid on gateway targets",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					DefaultChildMergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "defaultChildMergeType is rejected on route targets",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("HTTPRoute"),
+								Name:  gwapiv1.ObjectName("httpbin-route"),
+							},
+						},
+					},
+					DefaultChildMergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"defaultChildMergeType can only be used with Gateway targets"},
+		},
+		{
+			desc: "defaultChildMergeType Replace is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					DefaultChildMergeType: new(egv1a1.Replace),
+				}
+			},
+			wantErrors: []string{"Unsupported value: \"Replace\": supported values: \"StrategicMerge\", \"JSONMerge\""},
+		},
 	}
 
 	for _, tc := range cases {

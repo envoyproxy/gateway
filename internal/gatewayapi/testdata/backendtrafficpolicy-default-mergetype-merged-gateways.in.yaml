@@ -6,9 +6,6 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
   spec:
     mergeGateways: true
-    policyDefaults:
-      backendTrafficPolicy:
-        mergeType: StrategicMerge
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -73,6 +70,7 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
+      defaultChildMergeType: StrategicMerge
       circuitBreaker:
         maxConnections: 1111
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -85,6 +83,7 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-2
+      defaultChildMergeType: StrategicMerge
       circuitBreaker:
         maxConnections: 2222
   # Route-level policy with no mergeType: should merge into each Gateway's own parent, so the route

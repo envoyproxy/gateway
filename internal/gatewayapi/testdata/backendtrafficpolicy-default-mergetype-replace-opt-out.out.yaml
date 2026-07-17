@@ -3,10 +3,11 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     name: policy-for-route
-    namespace: envoy-gateway-system
+    namespace: default
   spec:
     connection:
       bufferLimit: 100M
+    mergeType: Replace
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -40,6 +41,7 @@ backendTrafficPolicies:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
+    defaultChildMergeType: StrategicMerge
     httpUpgrade:
     - type: websocket
     targetRef:
@@ -72,7 +74,7 @@ backendTrafficPolicies:
         type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
-          for these routes: [envoy-gateway-system/httproute-1]'
+          for these routes: [default/httproute-1]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -122,7 +124,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     name: httproute-1
-    namespace: envoy-gateway-system
+    namespace: default
   spec:
     hostnames:
     - gateway.envoyproxy.io
@@ -146,10 +148,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: service envoy-gateway-system/service-1
-          not found.'
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -159,18 +160,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          name: test
-          namespace: envoy-gateway-system
-        spec:
-          logging: {}
-          policyDefaults:
-            backendTrafficPolicy:
-              mergeType: StrategicMerge
-        status: {}
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -229,19 +218,36 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
-          namespace: envoy-gateway-system
+          namespace: default
           policies:
           - kind: BackendTrafficPolicy
             name: policy-for-route
-            namespace: envoy-gateway-system
-        name: httproute/envoy-gateway-system/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+            namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""

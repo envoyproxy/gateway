@@ -1,18 +1,3 @@
-namespaces:
-  - apiVersion: v1
-    kind: Namespace
-    metadata:
-      name: envoy-gateway-system
-envoyProxyForGatewayClass:
-  apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyProxy
-  metadata:
-    namespace: envoy-gateway-system
-    name: test
-  spec:
-    policyDefaults:
-      backendTrafficPolicy:
-        mergeType: StrategicMerge
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -32,7 +17,7 @@ httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
-      namespace: envoy-gateway-system
+      namespace: default
       name: httproute-1
     spec:
       hostnames:
@@ -59,6 +44,7 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
+      defaultChildMergeType: StrategicMerge
       timeout:
         tcp:
           connectTimeout: 15s
@@ -67,18 +53,19 @@ backendTrafficPolicies:
           maxConnectionDuration: 17s
       httpUpgrade:
         - type: websocket
-  # Route-level policy lives in the control-plane (controller) namespace, so the EnvoyProxy
-  # mergeType does not apply and the policy replaces the gateway-level policy.
+  # Route-level policy with mergeType Replace: it opts out of the parent policy's
+  # defaultChildMergeType and replaces the gateway-level policy for this route.
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
-      namespace: envoy-gateway-system
+      namespace: default
       name: policy-for-route
     spec:
       targetRef:
         group: gateway.networking.k8s.io
         kind: HTTPRoute
         name: httproute-1
+      mergeType: Replace
       timeout:
         tcp:
           connectTimeout: 10s

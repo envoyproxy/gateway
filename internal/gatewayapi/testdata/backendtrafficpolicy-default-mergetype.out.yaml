@@ -45,6 +45,7 @@ backendTrafficPolicies:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
+    defaultChildMergeType: StrategicMerge
     httpUpgrade:
     - type: websocket
     targetRef:
@@ -163,18 +164,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          name: test
-          namespace: envoy-gateway-system
-        spec:
-          logging: {}
-          policyDefaults:
-            backendTrafficPolicy:
-              mergeType: StrategicMerge
-        status: {}
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:

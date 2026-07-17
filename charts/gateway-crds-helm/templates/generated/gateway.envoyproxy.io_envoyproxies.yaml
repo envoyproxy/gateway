@@ -794,29 +794,6 @@ spec:
                 - StrategicMerge
                 - JSONMerge
                 type: string
-              policyDefaults:
-                description: |-
-                  PolicyDefaults defines defaults applied to Envoy Gateway policies attached to
-                  Gateways that use this EnvoyProxy.
-                properties:
-                  backendTrafficPolicy:
-                    description: BackendTrafficPolicy defines defaults applied to
-                      BackendTrafficPolicy resources.
-                    properties:
-                      mergeExcludeLabel:
-                        description: MergeExcludeLabel, when present on a policy,
-                          opts that policy out of the default MergeType.
-                        type: string
-                      mergeType:
-                        description: |-
-                          MergeType is the mergeType applied to a policy that does not set one,
-                          so a route-level policy merges into its parent instead of replacing it.
-                        enum:
-                        - StrategicMerge
-                        - JSONMerge
-                        type: string
-                    type: object
-                type: object
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API

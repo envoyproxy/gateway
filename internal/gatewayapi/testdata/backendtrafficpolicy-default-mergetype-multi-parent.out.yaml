@@ -63,6 +63,7 @@ backendTrafficPolicies:
     name: policy-for-gateway-1
     namespace: envoy-gateway
   spec:
+    defaultChildMergeType: StrategicMerge
     httpUpgrade:
     - type: websocket
     targetRef:
@@ -140,30 +141,6 @@ backendTrafficPolicies:
         status: "True"
         type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-envoyProxiesForGateways:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyProxy
-  metadata:
-    name: ep-merge-default
-    namespace: envoy-gateway
-  spec:
-    logging: {}
-    policyDefaults:
-      backendTrafficPolicy:
-        mergeType: StrategicMerge
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: EnvoyProxy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -172,11 +149,6 @@ gateways:
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
-    infrastructure:
-      parametersRef:
-        group: gateway.envoyproxy.io
-        kind: EnvoyProxy
-        name: ep-merge-default
     listeners:
     - allowedRoutes:
         namespaces:
@@ -308,30 +280,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          name: ep-merge-default
-          namespace: envoy-gateway
-        spec:
-          logging: {}
-          policyDefaults:
-            backendTrafficPolicy:
-              mergeType: StrategicMerge
-        status:
-          ancestors:
-          - ancestorRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-1
-              namespace: envoy-gateway
-            conditions:
-            - lastTransitionTime: null
-              message: EnvoyProxy has been accepted.
-              reason: Accepted
-              status: "True"
-              type: Accepted
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:

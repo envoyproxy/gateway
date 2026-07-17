@@ -67,6 +67,7 @@ backendTrafficPolicies:
   spec:
     circuitBreaker:
       maxConnections: 1111
+    defaultChildMergeType: StrategicMerge
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -104,6 +105,7 @@ backendTrafficPolicies:
   spec:
     circuitBreaker:
       maxConnections: 2222
+    defaultChildMergeType: StrategicMerge
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -281,9 +283,6 @@ infraIR:
         spec:
           logging: {}
           mergeGateways: true
-          policyDefaults:
-            backendTrafficPolicy:
-              mergeType: StrategicMerge
         status: {}
       listeners:
       - name: envoy-gateway/gateway-1/http

@@ -1,14 +1,3 @@
-envoyProxiesForGateways:
-  # Attached to gateway-1 only: supplies a default mergeType.
-  - apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: EnvoyProxy
-    metadata:
-      namespace: envoy-gateway
-      name: ep-merge-default
-    spec:
-      policyDefaults:
-        backendTrafficPolicy:
-          mergeType: StrategicMerge
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -17,11 +6,6 @@ gateways:
       name: gateway-1
     spec:
       gatewayClassName: envoy-gateway-class
-      infrastructure:
-        parametersRef:
-          group: gateway.envoyproxy.io
-          kind: EnvoyProxy
-          name: ep-merge-default
       listeners:
         - name: http
           protocol: HTTP
@@ -29,7 +13,7 @@ gateways:
           allowedRoutes:
             namespaces:
               from: All
-  # gateway-2 has no EnvoyProxy default, so the same route policy applies standalone here.
+  # gateway-2's policy has no defaultChildMergeType, so the same route policy applies standalone here.
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
     metadata:
@@ -78,6 +62,7 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
+      defaultChildMergeType: StrategicMerge
       timeout:
         tcp:
           connectTimeout: 15s
@@ -101,8 +86,8 @@ backendTrafficPolicies:
           connectTimeout: 25s
       httpUpgrade:
         - type: websocket
-  # Route-level policy with no mergeType: merges into gateway-1's policy (which has the default),
-  # but applies standalone on gateway-2 (which has no default).
+  # Route-level policy with no mergeType: merges into gateway-1's policy (which sets
+  # defaultChildMergeType), but applies standalone on gateway-2 (whose policy does not).
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
