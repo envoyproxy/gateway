@@ -661,24 +661,24 @@ func (b *BackendWeights) UnavailableWeight() uint32 {
 	return b.Invalid + b.NoEndpoints
 }
 
-// AddWeighted adds weight to w under the category s's own status indicates (invalid,
+// AddWeighted adds weight to b under the category s's own status indicates (invalid,
 // dynamic-resolver, custom backend, has/no endpoints), independent of s.Weight.
-func (w *BackendWeights) AddWeighted(s *DestinationSetting, weight *uint32) {
+func (b *BackendWeights) AddWeighted(s *DestinationSetting, weight *uint32) {
 	if weight == nil {
 		return
 	}
 
 	switch {
 	case s.Invalid: // If invalid, add to invalid weight
-		w.Invalid += *weight
+		b.Invalid += *weight
 	case s.IsDynamicResolver: // Dynamic resolver has no endpoints
-		w.Valid += *weight
+		b.Valid += *weight
 	case s.IsCustomBackend: // Custom backends has no endpoints
-		w.Valid += *weight
+		b.Valid += *weight
 	case len(s.Endpoints) > 0: // All other cases should have endpoints
-		w.Valid += *weight
+		b.Valid += *weight
 	default: // DestinationSetting with no endpoints
-		w.NoEndpoints += *weight
+		b.NoEndpoints += *weight
 	}
 }
 
