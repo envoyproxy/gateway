@@ -232,38 +232,13 @@ type EnvoyProxySpec struct {
 type MergeBackendsConfig struct {
 	// Enabled toggles whether cluster deduplication is considered at all. Defaults to false.
 	//
+	// A backendRef is only merged into a shared cluster when safe to do so; otherwise it falls
+	// back to a dedicated per-route cluster.
+	//
 	// +optional
 	// +kubebuilder:default=false
 	Enabled *bool `json:"enabled,omitempty"`
-
-	// Mode determines how backend cluster deduplication behaves when a route-targeted
-	// BackendTrafficPolicy would diverge from a shared backend's cluster-level configuration.
-	//
-	//   - Fallback: a backendRef is merged into a shared cluster only when safe to do so;
-	//     otherwise it falls back to a dedicated per-route cluster.
-	//   - Force: always merges into a single shared cluster. Not supported yet - selecting this
-	//     value is rejected.
-	//
-	// Defaults to Fallback.
-	//
-	// +optional
-	// +kubebuilder:default=Fallback
-	// +kubebuilder:validation:XValidation:rule="self != 'Force'",message="Force mode is not supported yet"
-	Mode *MergeBackendsMode `json:"mode,omitempty"`
 }
-
-// MergeBackendsMode determines how aggressively Envoy Gateway deduplicates clusters when
-// MergeBackends is enabled.
-// +kubebuilder:validation:Enum=Fallback;Force
-type MergeBackendsMode string
-
-const (
-	// MergeBackendsModeFallback merges a backend's cluster across routes only when safe to do so.
-	MergeBackendsModeFallback MergeBackendsMode = "Fallback"
-
-	// MergeBackendsModeForce always merges a backend's cluster across routes. Not supported yet.
-	MergeBackendsModeForce MergeBackendsMode = "Force"
-)
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
 type EnvoyProxyGeoIP struct {

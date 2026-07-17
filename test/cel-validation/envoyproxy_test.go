@@ -2486,35 +2486,18 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
 		{
-			desc: "mergeBackends with everything unset defaults to disabled/Fallback and is valid",
+			desc: "mergeBackends with everything unset defaults to disabled and is valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: "mergeBackends enabled with Fallback mode is valid",
+			desc: "mergeBackends enabled is valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				mode := egv1a1.MergeBackendsModeFallback
-				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: new(true), Mode: &mode}
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: new(true)}
 			},
 			wantErrors: []string{},
-		},
-		{
-			desc: "mergeBackends enabled false with Fallback mode is valid",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				mode := egv1a1.MergeBackendsModeFallback
-				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: new(false), Mode: &mode}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "mergeBackends Force mode is rejected even when enabled",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				mode := egv1a1.MergeBackendsModeForce
-				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: new(true), Mode: &mode}
-			},
-			wantErrors: []string{"Force mode is not supported yet"},
 		},
 	}
 

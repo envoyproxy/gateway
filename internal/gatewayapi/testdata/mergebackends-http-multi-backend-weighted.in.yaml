@@ -7,7 +7,6 @@ envoyProxyForGatewayClass:
   spec:
     mergeBackends:
       enabled: true
-      mode: Fallback
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway

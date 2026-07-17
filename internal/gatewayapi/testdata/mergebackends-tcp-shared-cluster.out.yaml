@@ -78,7 +78,6 @@ infraIR:
           logging: {}
           mergeBackends:
             enabled: true
-            mode: Fallback
         status: {}
       listeners:
       - name: envoy-gateway/gateway-1/tcp-1

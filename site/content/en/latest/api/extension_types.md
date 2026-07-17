@@ -4202,24 +4202,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `enabled` | _boolean_ |  false  | false | Enabled toggles whether cluster deduplication is considered at all. Defaults to false. |
-| `mode` | _[MergeBackendsMode](#mergebackendsmode)_ |  false  | Fallback | Mode determines how backend cluster deduplication behaves when a route-targeted<br />BackendTrafficPolicy would diverge from a shared backend's cluster-level configuration.<br />  - Fallback: a backendRef is merged into a shared cluster only when safe to do so;<br />    otherwise it falls back to a dedicated per-route cluster.<br />  - Force: always merges into a single shared cluster. Not supported yet - selecting this<br />    value is rejected.<br />Defaults to Fallback. |
-
-
-#### MergeBackendsMode
-
-_Underlying type:_ _string_
-
-MergeBackendsMode determines how aggressively Envoy Gateway deduplicates clusters when
-MergeBackends is enabled.
-
-_Appears in:_
-- [MergeBackendsConfig](#mergebackendsconfig)
-
-| Value | Description |
-| ----- | ----------- |
-| `Fallback` | MergeBackendsModeFallback merges a backend's cluster across routes only when safe to do so.<br /> | 
-| `Force` | MergeBackendsModeForce always merges a backend's cluster across routes. Not supported yet.<br /> | 
+| `enabled` | _boolean_ |  false  | false | Enabled toggles whether cluster deduplication is considered at all. Defaults to false.<br />A backendRef is only merged into a shared cluster when safe to do so; otherwise it falls<br />back to a dedicated per-route cluster. |
 
 
 #### MergeType
