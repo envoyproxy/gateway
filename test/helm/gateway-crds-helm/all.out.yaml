@@ -8,7 +8,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -1425,7 +1425,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: gatewayclasses.gateway.networking.k8s.io
 spec:
@@ -1942,7 +1942,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: gateways.gateway.networking.k8s.io
 spec:
@@ -5284,7 +5284,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: grpcroutes.gateway.networking.k8s.io
 spec:
@@ -7561,7 +7561,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: httproutes.gateway.networking.k8s.io
 spec:
@@ -16095,7 +16095,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: listenersets.gateway.networking.k8s.io
 spec:
@@ -16874,7 +16874,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: referencegrants.gateway.networking.k8s.io
 spec:
@@ -17230,7 +17230,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: tcproutes.gateway.networking.k8s.io
 spec:
@@ -18699,7 +18699,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: tlsroutes.gateway.networking.k8s.io
 spec:
@@ -21083,7 +21083,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: udproutes.gateway.networking.k8s.io
 spec:
@@ -22552,7 +22552,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: xbackends.gateway.networking.x-k8s.io
 spec:
@@ -23225,7 +23225,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -23823,7 +23823,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: experimental
   name: xmeshes.gateway.networking.x-k8s.io
 spec:
@@ -24143,7 +24143,7 @@ spec:
                             endpoint.
                           maxLength: 253
                           minLength: 1
-                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\.?$
                           type: string
                         port:
                           description: Port defines the port of the backend endpoint.
@@ -28424,6 +28424,18 @@ spec:
                     required:
                     - name
                     type: object
+                  directSourceIP:
+                    description: |-
+                      DirectSourceIP configures the geoip filter to use the downstream connection
+                      source address (the TCP peer of the connection terminated by Envoy) as the client IP.
+
+                      Use this in L4-transparent topologies where a load balancer preserves the original
+                      client source IP at TCP level and does not populate XFF or a custom header — for
+                      example, AWS NLB with target-type=instance + externalTrafficPolicy=Local, or
+                      Azure Standard Load Balancer.
+
+                      Mutually exclusive with XForwardedFor and CustomHeader.
+                    type: object
                   xForwardedFor:
                     description: XForwardedForSettings provides configuration for
                       using X-Forwarded-For headers for determining the client IP
@@ -28478,8 +28490,10 @@ spec:
                         || (!has(self.numTrustedHops) && has(self.trustedCIDRs))
                 type: object
                 x-kubernetes-validations:
-                - message: customHeader cannot be used in conjunction with xForwardedFor
-                  rule: '!(has(self.xForwardedFor) && has(self.customHeader))'
+                - message: exactly one of xForwardedFor, customHeader, or directSourceIP
+                    must be set
+                  rule: '[has(self.xForwardedFor), has(self.customHeader), has(self.directSourceIP)].filter(x,
+                    x).size() == 1'
               connection:
                 description: Connection includes client connection settings.
                 properties:
@@ -29759,6 +29773,13 @@ spec:
                       ClientValidation specifies the configuration to validate the client
                       initiating the TLS connection to the Gateway listener.
                     properties:
+                      allowExpiredCertificate:
+                        description: |-
+                          AllowExpiredCertificate permits client certificates that have expired
+                          but are otherwise valid (CA chain, signature). When true, Envoy skips
+                          the NotAfter check during client certificate validation.
+                          Defaults to false.
+                        type: boolean
                       caCertificateRefs:
                         description: |-
                           CACertificateRefs contains one or more references to
@@ -30081,6 +30102,11 @@ spec:
                             type: array
                         type: object
                     type: object
+                    x-kubernetes-validations:
+                    - message: allowExpiredCertificate can only be set when mode is
+                        VerifyIfGiven or RequireAndVerify
+                      rule: '!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate
+                        || !has(self.mode) || self.mode in [''VerifyIfGiven'', ''RequireAndVerify'']'
                   ecdhCurves:
                     description: |-
                       ECDHCurves specifies the set of supported ECDH curves.
@@ -32168,6 +32194,51 @@ spec:
                               type: string
                           type: object
                       type: object
+                    statusOnError:
+                      description: |-
+                        Sets the HTTP status that is returned to the client when the external processor returns an error
+                        or cannot be reached. Defaults to 500 Internal Server Error.
+                        Only 4xx and 5xx status codes are supported.
+                      enum:
+                      - 400
+                      - 401
+                      - 402
+                      - 403
+                      - 404
+                      - 405
+                      - 406
+                      - 407
+                      - 408
+                      - 409
+                      - 410
+                      - 411
+                      - 412
+                      - 413
+                      - 414
+                      - 415
+                      - 416
+                      - 417
+                      - 421
+                      - 422
+                      - 423
+                      - 424
+                      - 426
+                      - 428
+                      - 429
+                      - 431
+                      - 500
+                      - 501
+                      - 502
+                      - 503
+                      - 504
+                      - 505
+                      - 506
+                      - 507
+                      - 508
+                      - 510
+                      - 511
+                      format: int32
+                      type: integer
                   type: object
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
@@ -34433,6 +34504,8 @@ spec:
                       - info
                       - warn
                       - error
+                      - "off"
+                      - critical
                       type: string
                     default:
                       default: warn
@@ -52210,8 +52283,15 @@ spec:
                 - credential
                 type: object
               directResponse:
-                description: HTTPDirectResponseFilter defines the configuration to
-                  return a fixed response.
+                description: |-
+                  DirectResponse returns a fixed response for matching requests.
+
+                  When this filter is referenced from a GRPCRoute, only a non-2xx status code
+                  is supported. gRPC signals success with a grpc-status trailer and a response
+                  message, which a direct response cannot produce, so a 2xx status code (which
+                  maps to the gRPC OK status) yields an invalid response for gRPC clients. Use a
+                  non-2xx status code to deny or block gRPC requests (e.g. 403 maps to
+                  PERMISSION_DENIED, 404 to UNIMPLEMENTED, 429/503 to UNAVAILABLE).
                 properties:
                   body:
                     description: |-
@@ -52432,6 +52512,8 @@ spec:
                     description: |-
                       Status Code of the HTTP response
                       If unset, defaults to 200.
+                      Note: when this filter is referenced from a GRPCRoute, a 2xx status code
+                      (including the default 200) is rejected; a non-2xx status code must be set.
                     type: integer
                 type: object
               matches:
@@ -52929,7 +53011,8 @@ spec:
 
                                 If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 
-                                The client IP is inferred from the X-Forwarded-For header or a custom header.
+                                The client IP is inferred from the X-Forwarded-For header, a custom header, or the
+                                direct downstream connection source address (the TCP peer of the connection terminated by Envoy).
                                 You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
                               items:
                                 description: ClientIPGeoLocation specifies geolocation-based
@@ -58133,8 +58216,10 @@ spec:
                 description: |-
                   MergeType determines how this configuration is merged with existing SecurityPolicy
                   configurations targeting a parent resource. When set, this configuration will be merged
-                  into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).
-                  This field cannot be set when targeting a parent resource (Gateway).
+                  into the closest parent SecurityPolicy in the route's attachment hierarchy (for
+                  example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet
+                  listener).
+                  Currently, this field can only be set when targeting xRoute resources.
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
                 x-kubernetes-validations:
@@ -60180,15 +60265,21 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
-              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
-                ''GRPCRoute'', ''TCPRoute''] : true'
+            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute
+              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'',
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''] : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
+                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
+            - message: mergeType can only be used with xRoute targets
+              rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) && (!has(self.targetRefs)
+                || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'', ''GRPCRoute'',
+                ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
+                sel.kind in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''])))'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
@@ -60556,7 +60647,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: standard
   name: "safe-upgrades.gateway.networking.k8s.io"
 spec:
@@ -60589,7 +60680,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: standard
   name: safe-upgrades.gateway.networking.k8s.io
 spec:

@@ -35,6 +35,9 @@ Once Helm has been set up correctly, install the chart from dockerhub:
 ``` shell
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
+
+Image overrides target different components. `global.images.envoyGateway.*` configures the Envoy Gateway control plane Deployment rendered by this chart. `global.images.envoyProxy.*` configures the managed Envoy Proxy data plane through the generated `EnvoyGateway` config.
+
 This command installs both Gateway API CRDs and Envoy Gateway CRDs. If your Kubernetes provider already manages
 Gateway API CRDs for the cluster, confirm that the provider-installed Gateway API version and channel are compatible
 with the Envoy Gateway release and the Gateway API resources you plan to use. If they are compatible, install only the
@@ -87,7 +90,7 @@ helm uninstall eg -n envoy-gateway-system
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| certgen | object | `{"job":{"affinity":{},"annotations":{},"args":[],"nodeSelector":{},"pod":{"annotations":{},"labels":{}},"resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
+| certgen | object | `{"job":{"affinity":{},"annotations":{},"args":[],"nodeSelector":{},"pod":{"annotations":{},"labels":{},"securityContext":{"fsGroup":65532,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}}},"resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
 | commonLabels | object | `{}` | Labels to apply to all resources |
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | crds.enabled | bool | `true` | Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately. |
@@ -104,11 +107,13 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.envoyGateway.securityContext.allowPrivilegeEscalation | bool | `false` |  |
 | deployment.envoyGateway.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | deployment.envoyGateway.securityContext.privileged | bool | `false` |  |
+| deployment.envoyGateway.securityContext.readOnlyRootFilesystem | bool | `true` |  |
 | deployment.envoyGateway.securityContext.runAsGroup | int | `65532` |  |
 | deployment.envoyGateway.securityContext.runAsNonRoot | bool | `true` |  |
 | deployment.envoyGateway.securityContext.runAsUser | int | `65532` |  |
 | deployment.envoyGateway.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
-| deployment.envoyGateway.strategy | object | `{}` |  |
+| deployment.envoyGateway.strategy | object | `{}` | Volume source for the Wasm module cache mounted at /var/lib/eg/wasm. Defaults to an emptyDir when left empty. Example: persist the Wasm module cache across controller restarts by backing it with a PersistentVolumeClaim:   wasmCacheVolume:     persistentVolumeClaim:       claimName: envoy-gateway-wasm-cache |
+| deployment.envoyGateway.wasmCacheVolume | object | `{}` |  |
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
@@ -116,6 +121,7 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.pod.extraVolumes | list | `[]` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
+| deployment.pod.securityContext.fsGroup | int | `65532` |  |
 | deployment.pod.securityContext.runAsGroup | int | `65532` |  |
 | deployment.pod.securityContext.runAsNonRoot | bool | `true` |  |
 | deployment.pod.securityContext.runAsUser | int | `65532` |  |
@@ -138,12 +144,12 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.replicas | int | `1` |  |
 | global.imagePullSecrets | list | `[]` | Global override for image pull secrets |
 | global.imageRegistry | string | `""` | Global override for image registry |
-| global.images.envoyGateway.image | string | `nil` |  |
-| global.images.envoyGateway.pullPolicy | string | `nil` |  |
-| global.images.envoyGateway.pullSecrets | list | `[]` |  |
-| global.images.envoyProxy.image | string | `""` |  |
-| global.images.envoyProxy.pullPolicy | string | `""` |  |
-| global.images.envoyProxy.pullSecrets | list | `[]` |  |
+| global.images.envoyGateway.image | string | `nil` | Full image for the Envoy Gateway control plane Deployment installed by this chart. |
+| global.images.envoyGateway.pullPolicy | string | `nil` | Image pull policy for the Envoy Gateway control plane Deployment. Default behavior: latest images will be Always else IfNotPresent. |
+| global.images.envoyGateway.pullSecrets | list | `[]` | Pull secrets for the Envoy Gateway control plane Deployment. |
+| global.images.envoyProxy.image | string | `""` | Full image for the managed Envoy Proxy data plane. This updates the generated `envoyProxy` config and does not change the `envoy-gateway` control plane Deployment image. If not specified, the default image built into `envoy-gateway` is used. |
+| global.images.envoyProxy.pullPolicy | string | `""` | Image pull policy for the managed Envoy Proxy data plane. Default behavior: IfNotPresent. |
+| global.images.envoyProxy.pullSecrets | list | `[]` | Pull secrets for the managed Envoy Proxy data plane. |
 | global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |

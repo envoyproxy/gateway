@@ -545,6 +545,7 @@ spec:
     spec:
       automountServiceAccountToken: true
       securityContext:
+        fsGroup: 65532
         runAsGroup: 65532
         runAsNonRoot: true
         runAsUser: 65532
@@ -600,6 +601,7 @@ spec:
             drop:
             - ALL
           privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -612,6 +614,8 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+        - mountPath: /var/lib/eg/wasm
+          name: wasm-cache
       imagePullSecrets: []
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
@@ -623,6 +627,10 @@ spec:
       - name: certs
         secret:
           secretName: envoy-gateway
+      # Writable cache for Wasm modules; required because the controller's
+      # root filesystem is read-only by default (readOnlyRootFilesystem).
+      - name: wasm-cache
+        emptyDir: {}
 ---
 # Source: gateway-helm/charts/crds/templates/gatewayapi-safe-upgrade-policy.yaml
 #
@@ -632,7 +640,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: standard
   name: "safe-upgrades.gateway.networking.k8s.io"
 spec:
@@ -665,7 +673,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: standard
   name: safe-upgrades.gateway.networking.k8s.io
 spec:
@@ -827,6 +835,13 @@ spec:
         app: certgen
     spec:
       automountServiceAccountToken: true
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - command:
         - envoy-gateway

@@ -8,6 +8,7 @@ package status
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,11 +23,50 @@ func UpdateGatewayStatusNotAccepted(gw *gwapiv1.Gateway, reason gwapiv1.GatewayC
 	return gw
 }
 
+// UpdateGatewayStatusAccepted sets the Gateway's Accepted condition based on the
+// Accepted condition of its listeners: True/Accepted if all listeners are accepted,
+// True/ListenersNotValid if only some are accepted, and False/ListenersNotValid if
+// none are, matching the upstream Gateway API contract for GatewayReasonListenersNotValid.
 func UpdateGatewayStatusAccepted(gw *gwapiv1.Gateway) *gwapiv1.Gateway {
-	cond := newCondition(string(gwapiv1.GatewayConditionAccepted), metav1.ConditionTrue,
-		string(gwapiv1.GatewayReasonAccepted), "The Gateway has been scheduled by Envoy Gateway", gw.Generation)
+	condStatus, reason, msg := computeGatewayAcceptedFromListeners(gw.Status.Listeners)
+	cond := newCondition(string(gwapiv1.GatewayConditionAccepted), condStatus, string(reason), msg, gw.Generation)
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, cond)
 	return gw
+}
+
+// computeGatewayAcceptedFromListeners derives the Gateway-level Accepted status/reason/message
+// from the Accepted condition already set on each of its listeners.
+func computeGatewayAcceptedFromListeners(listeners []gwapiv1.ListenerStatus) (metav1.ConditionStatus, gwapiv1.GatewayConditionReason, string) {
+	allAccepted := true
+	anyAccepted := false
+	notAcceptedNames := make([]string, 0, len(listeners))
+	for _, l := range listeners {
+		accepted := false
+		for _, cond := range l.Conditions {
+			if cond.Type == string(gwapiv1.ListenerConditionAccepted) && cond.Status == metav1.ConditionTrue {
+				accepted = true
+				break
+			}
+		}
+		anyAccepted = anyAccepted || accepted
+		allAccepted = allAccepted && accepted
+		if !accepted {
+			notAcceptedNames = append(notAcceptedNames, string(l.Name))
+		}
+	}
+	slices.Sort(notAcceptedNames)
+
+	switch {
+	case allAccepted:
+		return metav1.ConditionTrue, gwapiv1.GatewayReasonAccepted, "The Gateway has been scheduled by Envoy Gateway"
+	case anyAccepted:
+		// Gateway with at least one accepted listeners should be accepted and the listeners should have the Accepted condition set accordingly
+		return metav1.ConditionTrue, gwapiv1.GatewayReasonListenersNotValid,
+			fmt.Sprintf("Listeners not valid: %s", strings.Join(notAcceptedNames, ", "))
+	default:
+		return metav1.ConditionFalse, gwapiv1.GatewayReasonListenersNotValid,
+			fmt.Sprintf("No listeners are valid: %s", strings.Join(notAcceptedNames, ", "))
+	}
 }
 
 func UpdateGatewayStatusResolvedRefsCondition(gw *gwapiv1.Gateway, status metav1.ConditionStatus, reason gwapiv1.GatewayConditionReason, msg string) {
