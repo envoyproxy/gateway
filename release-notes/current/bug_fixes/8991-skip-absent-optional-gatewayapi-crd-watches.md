@@ -1,0 +1,1 @@
+Fixed Envoy Gateway crash-looping at startup on clusters that do not have the ListenerSet, TLSRoute, or BackendTLSPolicy CRDs installed (for example clusters using only the Gateway API standard channel), by skipping the watches for CRDs that are not present.

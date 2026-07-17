@@ -113,6 +113,9 @@ func NewOfflineGatewayAPIController(
 		tcpRouteCRDExists:      true,
 		udpRouteCRDExists:      true,
 		backendCRDExists:       true,
+		btlsCRDExists:          true,
+		listenerSetCRDExists:   true,
+		tlsRouteCRDExists:      true,
 	}
 
 	r.log.Info("created offline gatewayapi controller")
