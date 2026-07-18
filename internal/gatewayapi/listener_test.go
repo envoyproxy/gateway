@@ -1563,3 +1563,106 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslateHealthCheckLog(t *testing.T) {
+	fileSink := egv1a1.ProxyHealthCheckLogSink{
+		Type: egv1a1.ProxyHealthCheckLogSinkTypeFile,
+		File: &egv1a1.FileEnvoyProxyHealthCheckLog{Path: "/dev/stdout"},
+	}
+
+	tests := []struct {
+		name     string
+		input    *egv1a1.ProxyHealthCheckLog
+		expected *ir.ProxyHealthCheckLog
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name:  "no sinks defaults to /dev/stdout",
+			input: &egv1a1.ProxyHealthCheckLog{},
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name:  "no matches logs everything",
+			input: &egv1a1.ProxyHealthCheckLog{Sinks: []egv1a1.ProxyHealthCheckLogSink{fileSink}},
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name: "Failure and Success",
+			input: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
+			},
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name: "FailureTransition and SuccessTransition",
+			input: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+			},
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks: []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				// Transition-only: AlwaysLog flags stay false (Envoy logs transitions by default).
+			},
+		},
+		{
+			name: "Failure OR FailureTransition ORed to Failure",
+			input: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
+			},
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name: "Success OR SuccessTransition ORed to Success",
+			input: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+			},
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name: "Failure and SuccessTransition",
+			input: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+			},
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				// SuccessTransition alone: AlwaysLogHealthCheckSuccess stays false.
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := translateHealthCheckLog(tc.input)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}

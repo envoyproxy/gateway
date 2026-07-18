@@ -8,14 +8,18 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -196,6 +200,36 @@ var ExtProcTest = suite.ConformanceTest{
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("health check events appear in logs for ext-proc cluster", func(t *testing.T) {
+			gatewayNS := GetGatewayResourceNamespace()
+			lokiLabels := map[string]string{
+				"job":       fmt.Sprintf("%s/envoy", gatewayNS),
+				"namespace": gatewayNS,
+				"container": "envoy",
+			}
+			// The ext-proc cluster name includes the EEP name; scope to this test's cluster only.
+			const hcLogMatch = `health_checker_type.*ext-proc-test`
+
+			baseline, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
+			require.NoError(t, err, "loki query failed")
+			tlog.Logf(t, "ext-proc HC event log baseline count=%d", baseline)
+
+			http.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
+					if err != nil {
+						tlog.Logf(t, "loki query error: %v", err)
+						return false
+					}
+					tlog.Logf(t, "ext-proc HC event log count=%d (baseline=%d)", count, baseline)
+					return count > baseline
+				},
+			)
 		})
 	},
 }

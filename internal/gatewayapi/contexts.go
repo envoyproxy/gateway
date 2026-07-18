@@ -89,6 +89,14 @@ func (g *GatewayContext) ResetListeners() {
 	}
 }
 
+// Telemetry returns the ProxyTelemetry from the attached EnvoyProxy, or nil.
+func (g *GatewayContext) Telemetry() *egv1a1.ProxyTelemetry {
+	if g == nil || g.envoyProxy == nil {
+		return nil
+	}
+	return g.envoyProxy.Spec.Telemetry
+}
+
 // attachEnvoyProxy merges EnvoyProxy configurations from multiple levels and attaches the result.
 // Returns an error if the merge fails, which should be logged by the caller.
 // On error, the envoyProxy is still set using fallback priority-based selection

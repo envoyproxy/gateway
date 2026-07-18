@@ -32,6 +32,7 @@ spec:
                 path: /var/run/ext-proc
                 type: ""
   telemetry:
+    healthCheckLog: {}
     accessLog:
       settings:
         - format:

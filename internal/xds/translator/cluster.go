@@ -19,6 +19,7 @@ import (
 	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	hcfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/health_check/event_sinks/file/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	cluster_providedv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/cluster_provided/v3"
@@ -459,7 +460,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
-		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname)
+		hcs, err := buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname)
+		if err != nil {
+			return nil, err
+		}
+		cluster.HealthChecks = hcs
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {
@@ -579,7 +584,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 	return lbConfig
 }
 
-func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string) []*corev3.HealthCheck {
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
@@ -630,7 +635,25 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			},
 		}
 	}
-	return []*corev3.HealthCheck{hc}
+
+	if healthCheckLogging := healthcheck.EventLog; healthCheckLogging != nil {
+		hc.AlwaysLogHealthCheckFailures = healthCheckLogging.AlwaysLogHealthCheckFailures
+		hc.AlwaysLogHealthCheckSuccess = healthCheckLogging.AlwaysLogHealthCheckSuccess
+		for _, fs := range healthCheckLogging.FileSinks {
+			fileSinkAny, err := proto.ToAnyWithValidation(&hcfilev3.HealthCheckEventFileSink{
+				EventLogPath: fs.Path,
+			})
+			if err != nil {
+				return nil, err
+			}
+			hc.EventLogger = append(hc.EventLogger, &corev3.TypedExtensionConfig{
+				Name:        "envoy.health_check.event_sinks.file",
+				TypedConfig: fileSinkAny,
+			})
+		}
+	}
+
+	return []*corev3.HealthCheck{hc}, nil
 }
 
 func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {

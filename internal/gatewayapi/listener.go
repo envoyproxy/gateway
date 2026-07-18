@@ -729,6 +729,47 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
 }
 
+// translateHealthCheckLog converts a ProxyHealthCheckLog API type to its IR representation.
+func translateHealthCheckLog(hcLogging *egv1a1.ProxyHealthCheckLog) *ir.ProxyHealthCheckLog {
+	if hcLogging == nil {
+		return nil
+	}
+	irHCLogging := &ir.ProxyHealthCheckLog{}
+
+	// Translate Matches to the two Envoy booleans.
+	// Empty/omitted Matches means log everything (both always-log flags true).
+	// Failure sets AlwaysLogHealthCheckFailures; FailureTransition leaves it false
+	// (Envoy logs transitions by default). Same for Success/SuccessTransition.
+	// Both variants may coexist: Failure OR FailureTransition resolves to Failure.
+	if len(hcLogging.Matches) == 0 {
+		irHCLogging.AlwaysLogHealthCheckFailures = true
+		irHCLogging.AlwaysLogHealthCheckSuccess = true
+	} else {
+		for _, et := range hcLogging.Matches {
+			switch et {
+			case egv1a1.ProxyHealthCheckLogEventTypeFailure:
+				irHCLogging.AlwaysLogHealthCheckFailures = true
+			case egv1a1.ProxyHealthCheckLogEventTypeSuccess:
+				irHCLogging.AlwaysLogHealthCheckSuccess = true
+			}
+		}
+	}
+
+	if len(hcLogging.Sinks) == 0 {
+		irHCLogging.FileSinks = append(irHCLogging.FileSinks, &ir.FileEnvoyProxyHealthCheckLog{
+			Path: "/dev/stdout",
+		})
+	} else {
+		sink := hcLogging.Sinks[0]
+		if sink.Type == egv1a1.ProxyHealthCheckLogSinkTypeFile && sink.File != nil {
+			irHCLogging.FileSinks = append(irHCLogging.FileSinks, &ir.FileEnvoyProxyHealthCheckLog{
+				Path: sink.File.Path,
+			})
+		}
+	}
+	return irHCLogging
+}
+
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
 	var proto ir.ProtocolType
 	switch listener.Protocol {
@@ -1195,7 +1236,7 @@ func (t *Translator) processProxyGRPCSettings(
 func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, gwCtx *GatewayContext,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
-	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
+	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings, gwCtx.Telemetry())
 	if err != nil {
 		return nil, nil, err
 	}

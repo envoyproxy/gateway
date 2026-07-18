@@ -25,7 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
-func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatures, error) {
+func translateTrafficFeatures(policy *egv1a1.ClusterSettings, telemetry *egv1a1.ProxyTelemetry) (*ir.TrafficFeatures, error) {
 	if policy == nil {
 		return nil, nil
 	}
@@ -63,7 +63,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 
 	ret.ProxyProtocol = buildProxyProtocol(policy)
 
-	ret.HealthCheck = buildHealthCheck(policy)
+	ret.HealthCheck = buildHealthCheck(policy, telemetry)
 
 	// The name for non-policy DNS settings is not used in xDS generation for now, so leave it empty.
 	ret.DNS = translateDNS(policy, "")
@@ -517,7 +517,7 @@ func buildProxyProtocol(policy *egv1a1.ClusterSettings) *ir.ProxyProtocol {
 	return pp
 }
 
-func buildHealthCheck(policy *egv1a1.ClusterSettings) *ir.HealthCheck {
+func buildHealthCheck(policy *egv1a1.ClusterSettings, telemetry *egv1a1.ProxyTelemetry) *ir.HealthCheck {
 	if policy.HealthCheck == nil {
 		return nil
 	}
@@ -526,6 +526,9 @@ func buildHealthCheck(policy *egv1a1.ClusterSettings) *ir.HealthCheck {
 	irhc.Passive = buildPassiveHealthCheck(*policy.HealthCheck)
 	irhc.Active = buildActiveHealthCheck(*policy.HealthCheck)
 	irhc.PanicThreshold = policy.HealthCheck.PanicThreshold
+	if irhc.Active != nil && telemetry != nil {
+		irhc.Active.EventLog = translateHealthCheckLog(telemetry.HealthCheckLog)
+	}
 	return irhc
 }
 

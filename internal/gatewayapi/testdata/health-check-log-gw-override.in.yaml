@@ -1,0 +1,113 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: gwc-proxy
+  spec:
+    telemetry:
+      healthCheckLog: {}
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway
+    name: gw-proxy
+  spec:
+    telemetry:
+      healthCheckLog:
+        matches:
+        - Failure
+        sinks:
+        - type: File
+          file:
+            path: /dev/stdout
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: gw-proxy
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: envoy-gateway
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /foo
+      backendRefs:
+      - name: service-1
+        port: 8080
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: envoy-gateway
+    name: service-1
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-service-1
+    namespace: envoy-gateway
+    labels:
+      kubernetes.io/service-name: service-1
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 7.7.7.7
+    conditions:
+      ready: true
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: btp-for-route
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    healthCheck:
+      active:
+        type: HTTP
+        http:
+          path: /healthz
+        interval: 5s
+        timeout: 1s
+        unhealthyThreshold: 3
+        healthyThreshold: 1
