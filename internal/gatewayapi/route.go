@@ -726,6 +726,22 @@ func (t *Translator) mergeIncompatibleForWeightedRule(
 	if len(backendRefs) <= 1 {
 		return false
 	}
+	// Delegate to the remaining multi-backendRef checks.
+	return t.weightedRuleBackendsMustBeInOneCluster(route, backendRefs, sessionPersistent, gatewayCtx)
+}
+
+// weightedRuleBackendsMustBeInOneCluster reports whether a feature on this multi-backendRef
+// HTTP/GRPC rule needs all its backends kept in one Envoy cluster, so they can't be split into
+// per-identity merged clusters.
+//
+// Every feature whose behavior depends on the backends sharing one cluster — hash ring, priority
+// failover, session affinity — MUST be listed here.
+func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
+	route RouteContext,
+	backendRefs []gwapiv1.BackendObjectReference,
+	sessionPersistent bool,
+	gatewayCtx *GatewayContext,
+) bool {
 	// Session persistence needs all of a rule's backends in one cluster to track affinity.
 	if sessionPersistent {
 		return true
