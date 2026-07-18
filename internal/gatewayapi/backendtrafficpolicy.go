@@ -1191,10 +1191,12 @@ func buildBackendTracing(tracing *egv1a1.Tracing) *ir.BackendTracing {
 		return nil
 	}
 	return &ir.BackendTracing{
-		SamplingFraction: tracing.SamplingFraction,
-		CustomTags:       ir.CustomTagMapToSlice(tracing.CustomTags),
-		Tags:             ir.MapToSlice(tracing.Tags),
-		SpanName:         tracing.SpanName,
+		SamplingFraction:        tracing.SamplingFraction,
+		ClientSamplingFraction:  tracing.ClientSamplingFraction,
+		OverallSamplingFraction: tracing.OverallSamplingFraction,
+		CustomTags:              ir.CustomTagMapToSlice(tracing.CustomTags),
+		Tags:                    ir.MapToSlice(tracing.Tags),
+		SpanName:                tracing.SpanName,
 	}
 }
 

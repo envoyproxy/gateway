@@ -58,3 +58,9 @@ http:
               samplingFraction:
                 denominator: 100
                 numerator: 1
+              clientSamplingFraction:
+                denominator: 100
+                numerator: 2
+              overallSamplingFraction:
+                denominator: 100
+                numerator: 3
