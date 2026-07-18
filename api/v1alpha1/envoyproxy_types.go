@@ -235,7 +235,15 @@ type EnvoyProxySpec struct {
 // MergeBackendsConfig configures backend cluster deduplication (MergeBackends). Its mere
 // presence on EnvoyProxySpec enables it; a backendRef is only merged into a shared cluster when
 // safe to do so, otherwise it falls back to a dedicated per-route cluster.
-type MergeBackendsConfig struct{}
+type MergeBackendsConfig struct {
+	// Selector restricts cluster deduplication to backends whose target Service, ServiceImport,
+	// or Backend resource matches this label selector. When unset, every otherwise-eligible
+	// backend is merged (today's behavior). Use this to opt individual backends into
+	// deduplication gradually instead of enabling it for every backend at once.
+	//
+	// +optional
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+}
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
 type EnvoyProxyGeoIP struct {

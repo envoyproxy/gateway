@@ -4324,6 +4324,9 @@ safe to do so, otherwise it falls back to a dedicated per-route cluster.
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `selector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  false  |  | Selector restricts cluster deduplication to backends whose target Service, ServiceImport,<br />or Backend resource matches this label selector. When unset, every otherwise-eligible<br />backend is merged (today's behavior). Use this to opt individual backends into<br />deduplication gradually instead of enabling it for every backend at once. |
 
 
 #### MergeType
