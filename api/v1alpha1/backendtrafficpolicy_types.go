@@ -46,6 +46,7 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.compression) || !has(self.compressor)", message="either compression or compressor can be set, not both"
 // +kubebuilder:validation:XValidation:rule="!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0", message="requestBuffer cannot be used together with httpUpgrade"
 // +kubebuilder:validation:XValidation:rule="!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute'])))", message="admissionControl can only be used with HTTPRoute, GRPCRoute, or Gateway targets"
+// +kubebuilder:validation:XValidation:rule="!has(self.defaultChildMergeType) || ((!has(self.targetRef) || self.targetRef.kind == 'Gateway') && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind == 'Gateway')) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind == 'Gateway')))", message="defaultChildMergeType can only be used with Gateway targets"
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 	ClusterSettings        `json:",inline"`
@@ -59,6 +60,16 @@ type BackendTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self != 'Replace'",message="Replace is not a valid MergeType for BackendTrafficPolicySpec"
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
+
+	// DefaultChildMergeType is the merge strategy applied to child policies (policies targeting
+	// an xRoute under this policy's target) that do not set their own mergeType, so a child
+	// policy merges into this policy instead of replacing it. A child policy can opt out by
+	// setting mergeType to Replace.
+	// This field can only be set on policies targeting a parent resource (Gateway).
+	//
+	// +kubebuilder:validation:Enum=StrategicMerge;JSONMerge
+	// +optional
+	DefaultChildMergeType *MergeType `json:"defaultChildMergeType,omitempty"`
 
 	// RateLimit allows the user to limit the number of incoming requests
 	// to a predefined value based on attributes within the traffic flow.

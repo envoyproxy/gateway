@@ -25130,6 +25130,17 @@ spec:
                       Note that when the suffix is not provided, the value is interpreted as bytes.
                     x-kubernetes-int-or-string: true
                 type: object
+              defaultChildMergeType:
+                description: |-
+                  DefaultChildMergeType is the merge strategy applied to child policies (policies targeting
+                  an xRoute under this policy's target) that do not set their own mergeType, so a child
+                  policy merges into this policy instead of replacing it. A child policy can opt out by
+                  setting mergeType to Replace.
+                  This field can only be set on policies targeting a parent resource (Gateway).
+                enum:
+                - StrategicMerge
+                - JSONMerge
+                type: string
               dns:
                 description: DNS includes dns resolution settings.
                 properties:
@@ -28016,6 +28027,11 @@ spec:
                 || self.targetRefs.all(ref, ref.kind in [''Gateway'', ''HTTPRoute'',
                 ''GRPCRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
                 sel.kind in [''Gateway'', ''HTTPRoute'', ''GRPCRoute''])))'
+            - message: defaultChildMergeType can only be used with Gateway targets
+              rule: '!has(self.defaultChildMergeType) || ((!has(self.targetRef) ||
+                self.targetRef.kind == ''Gateway'') && (!has(self.targetRefs) || self.targetRefs.all(ref,
+                ref.kind == ''Gateway'')) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
+                sel.kind == ''Gateway'')))'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&

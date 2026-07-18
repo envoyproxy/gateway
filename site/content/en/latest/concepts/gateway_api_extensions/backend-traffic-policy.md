@@ -147,7 +147,7 @@ spec:
 
 In this example, `alpha-policy` would take precedence due to its earlier creation time, so the HTTPRoute would use `maxConnections: 30`.
 
-When the `mergeType` field is unset, no merging occurs and only the most specific configuration takes effect. However, policies can be configured to merge with parent policies using the `mergeType` field (see [Policy Merging](#policy-merging) section below).
+When the `mergeType` field is unset, no merging occurs and only the most specific configuration takes effect, unless the parent policy sets `defaultChildMergeType` (see [Defaulting mergeType via the parent policy](#defaulting-mergetype-via-the-parent-policy)). Policies can also opt into merging explicitly using the `mergeType` field (see [Policy Merging](#policy-merging) section below).
 
 ## Policy Merging
 
@@ -214,10 +214,39 @@ spec:
 
 In this example, the route-level policy merges with the gateway-level policy, resulting in both rate limits being enforced: the global 100 requests/second abuse limit and the route-specific 5 requests/minute limit.
 
+### Defaulting mergeType via the parent policy
+
+Setting `mergeType` on every route-level policy can be repetitive when an organization wants merging to be the norm. To make merging the default, set `defaultChildMergeType` on the parent (Gateway-targeting) BackendTrafficPolicy:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: gateway-baseline
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  defaultChildMergeType: StrategicMerge
+  rateLimit:
+    # ... baseline configuration for all routes under this Gateway
+```
+
+With this configuration, a route-level BackendTrafficPolicy that does **not** set `mergeType` merges into this parent policy as if it had set `mergeType: StrategicMerge`. This keeps merge behavior discoverable from the Policy resources alone, following the pattern described in [GEP-713](https://gateway-api.sigs.k8s.io/geps/gep-713/#example-3-merged-specs).
+
+The effective merge strategy for a child policy is resolved in this order:
+
+1. The child policy's own `mergeType`, if set. `Replace` explicitly opts the child out of merging, so it replaces the parent even when the parent sets `defaultChildMergeType`.
+2. Otherwise, the closest parent policy's `defaultChildMergeType` (the listener-level policy if one exists, else the gateway-level policy).
+3. Otherwise, no merging occurs and only the most specific policy takes effect.
+
+Note that `defaultChildMergeType` accepts only `StrategicMerge` or `JSONMerge` (defaulting to a replace would have no effect), and it can only be set on policies targeting a Gateway.
+
 ### Key Constraints
 
 - The `mergeType` field can only be set on policies targeting child resources (like HTTPRoute), not parent resources (like Gateway)
-- When `mergeType` is unset, no merging occurs - only the most specific policy takes effect
+- When `mergeType` is unset, no merging occurs - only the most specific policy takes effect - unless the parent policy sets a [defaultChildMergeType](#defaulting-mergetype-via-the-parent-policy)
 - The merged configuration combines both policies, enabling layered protection strategies
 
 ## Related Resources
