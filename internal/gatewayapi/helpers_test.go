@@ -1578,44 +1578,41 @@ func requirePolicyScopesEqual(t *testing.T, actual sets.Set[policyScope], expect
 
 func TestIrBackendClusterName(t *testing.T) {
 	tests := []struct {
-		name      string
-		kind      string
-		namespace string
-		bcName    string
-		port      int32
-		protocol  ir.AppProtocol
-		want      string
+		name          string
+		key           *BackendClusterKey
+		mergeGateways bool
+		want          string
 	}{
 		{
-			name:      "service with port, no protocol",
-			kind:      "Service",
-			namespace: "default",
-			bcName:    "service-1",
-			port:      8080,
-			want:      "backend/service/default/service-1/8080",
+			name: "service with port, no protocol",
+			key:  &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080},
+			want: "backend/service/default/service-1/8080",
 		},
 		{
-			name:      "backend kind, http protocol",
-			kind:      "Backend",
-			namespace: "ns",
-			bcName:    "be",
-			port:      443,
-			protocol:  ir.HTTP,
-			want:      "backend/backend/ns/be/443/http",
+			name: "backend kind, http protocol",
+			key:  &BackendClusterKey{Kind: "Backend", Namespace: "ns", Name: "be", Port: 443, Protocol: ir.HTTP},
+			want: "backend/backend/ns/be/443/http",
 		},
 		{
-			name:      "service with grpc protocol differs from http",
-			kind:      "Service",
-			namespace: "default",
-			bcName:    "service-1",
-			port:      8080,
-			protocol:  ir.GRPC,
-			want:      "backend/service/default/service-1/8080/grpc",
+			name: "service with grpc protocol differs from http",
+			key:  &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080, Protocol: ir.GRPC},
+			want: "backend/service/default/service-1/8080/grpc",
+		},
+		{
+			name:          "mergeGateways appends the owning Gateway's identity",
+			key:           &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080, GatewayIRKey: "envoy-gateway/gateway-1"},
+			mergeGateways: true,
+			want:          "backend/service/default/service-1/8080/envoy-gateway/gateway-1",
+		},
+		{
+			name: "GatewayIRKey is ignored when mergeGateways is false",
+			key:  &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080, GatewayIRKey: "envoy-gateway/gateway-1"},
+			want: "backend/service/default/service-1/8080",
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, irBackendClusterName(tc.kind, tc.namespace, tc.bcName, tc.port, tc.protocol))
+			require.Equal(t, tc.want, irBackendClusterName(tc.key, tc.mergeGateways))
 		})
 	}
 }

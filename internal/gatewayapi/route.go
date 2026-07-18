@@ -576,11 +576,13 @@ func (t *Translator) resolveBackendCluster(
 		return &ResolvedBackendCluster{Key: &BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName, SectionName: sectionName, ParentPort: parentPort}, Name: ruleDestName}
 	}
 
-	identity.GatewayIRKey = gwIRKey
+	// Key by the owning Gateway's own identity, not the MergeGateways-collapsed one, so two
+	// Gateways never merge each other's backends.
+	identity.GatewayIRKey = irStringKey(gatewayCtx.Namespace, gatewayCtx.Name)
 	identity.Protocol = ds.Protocol
 	return &ResolvedBackendCluster{
 		Key:   identity,
-		Name:  irBackendClusterName(identity.Kind, identity.Namespace, identity.Name, identity.Port, identity.Protocol),
+		Name:  irBackendClusterName(identity, t.MergeGateways),
 		Merge: true,
 	}
 }

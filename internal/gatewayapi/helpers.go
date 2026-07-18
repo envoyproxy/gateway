@@ -518,13 +518,17 @@ func irDestinationSettingName(destName string, backendIdx int) string {
 }
 
 // irBackendClusterName names a BackendCluster shared across routes that reference the same
-// backend.
-func irBackendClusterName(kind, namespace, name string, port int32, protocol ir.AppProtocol) string {
-	base := fmt.Sprintf("backend/%s/%s/%s/%d", strings.ToLower(kind), namespace, name, port)
-	if protocol == "" {
-		return base
+// backend. Under MergeGateways, key.GatewayIRKey (the owning Gateway's own identity) is appended
+// so two Gateways sharing one Envoy deployment never collide on the same cluster name.
+func irBackendClusterName(key *BackendClusterKey, mergeGateways bool) string {
+	base := fmt.Sprintf("backend/%s/%s/%s/%d", strings.ToLower(key.Kind), key.Namespace, key.Name, key.Port)
+	if key.Protocol != "" {
+		base += "/" + strings.ToLower(string(key.Protocol))
 	}
-	return base + "/" + strings.ToLower(string(protocol))
+	if mergeGateways {
+		base += "/" + key.GatewayIRKey
+	}
+	return base
 }
 
 func irRuleName(policyNamespace, policyName string, ruleIndex int) string {

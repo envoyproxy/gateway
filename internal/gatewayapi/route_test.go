@@ -635,6 +635,18 @@ func TestResolveBackendCluster(t *testing.T) {
 		require.Equal(t, identity.Name, cluster.Key.Name)
 	})
 
+	t.Run("merge enabled with MergeGateways never merges across gateways", func(t *testing.T) {
+		tr := &Translator{MergeBackends: true, MergeGateways: true, TranslatorContext: &TranslatorContext{}}
+		gwCtx1 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
+		gwCtx2 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-2"}}}
+		cluster1 := tr.resolveBackendCluster("route-scoped-name", gwCtx1, newParentRef("", 0), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
+		cluster2 := tr.resolveBackendCluster("route-scoped-name", gwCtx2, newParentRef("", 0), nil, false, newIdentity(), serviceBackendRef, "default", emptyDS)
+		require.NotEqual(t, cluster1.Key, cluster2.Key, "two gateways merged by MergeGateways must not collide in BackendClusterMap")
+		require.NotEqual(t, cluster1.Name, cluster2.Name, "two gateways merged by MergeGateways must not share a cluster name")
+		require.Equal(t, "backend/service/default/service-1/8080/envoy-gateway/gateway-1", cluster1.Name)
+		require.Equal(t, "backend/service/default/service-1/8080/envoy-gateway/gateway-2", cluster2.Name)
+	})
+
 	t.Run("merge-incompatible excludes even when routing type matches", func(t *testing.T) {
 		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}

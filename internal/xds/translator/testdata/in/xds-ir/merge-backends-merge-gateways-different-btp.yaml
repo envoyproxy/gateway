@@ -1,0 +1,60 @@
+# Two routes reference distinctly-named merged clusters for the same backend identity (as
+# gatewayapi now produces per-Gateway under MergeGateways+MergeBackends), each with a different
+# gateway-scoped CircuitBreaker. Both Clusters must be built with their own settings, not have the
+# second skipped as a duplicate of the first.
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "gateway-1.example.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "httproute/default/http-route-1/rule/0/match/0/*"
+    hostname: "gateway-1.example.com"
+    traffic:
+      circuitBreaker:
+        maxConnections: 1000
+    destination:
+      name: "httproute/default/http-route-1/rule/0"
+      backendClusterRefs:
+      - name: "backend/service/default/service-1/8080/http/envoy-gateway/gateway-1"
+- name: "second-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "gateway-2.example.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "httproute/default/http-route-2/rule/0/match/0/*"
+    hostname: "gateway-2.example.com"
+    traffic:
+      circuitBreaker:
+        maxConnections: 2000
+    destination:
+      name: "httproute/default/http-route-2/rule/0"
+      backendClusterRefs:
+      - name: "backend/service/default/service-1/8080/http/envoy-gateway/gateway-2"
+backends:
+- name: "backend/service/default/service-1/8080/http/envoy-gateway/gateway-1"
+  merged: true
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: "7.7.7.7"
+      port: 8080
+    name: "backend/service/default/service-1/8080/http/envoy-gateway/gateway-1"
+    protocol: HTTP
+- name: "backend/service/default/service-1/8080/http/envoy-gateway/gateway-2"
+  merged: true
+  settings:
+  - addressType: IP
+    endpoints:
+    - host: "7.7.7.7"
+      port: 8080
+    name: "backend/service/default/service-1/8080/http/envoy-gateway/gateway-2"
+    protocol: HTTP

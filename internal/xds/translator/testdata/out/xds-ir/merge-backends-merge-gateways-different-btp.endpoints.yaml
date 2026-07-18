@@ -1,0 +1,24 @@
+- clusterName: backend/service/default/service-1/8080/http/envoy-gateway/gateway-1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: backend/service/default/service-1/8080/http/envoy-gateway/gateway-1
+- clusterName: backend/service/default/service-1/8080/http/envoy-gateway/gateway-2
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: backend/service/default/service-1/8080/http/envoy-gateway/gateway-2
