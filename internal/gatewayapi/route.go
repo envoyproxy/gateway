@@ -278,7 +278,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		for i := range rule.BackendRefs {
 			backendRefs[i] = rule.BackendRefs[i].BackendObjectReference
 		}
-		mergeIncompatible := t.mergeIncompatibleForWeightedRule(httpRoute, parentRef, rule.Name, backendRefs, hasRouteLevelClusterSettings, rule.SessionPersistence != nil, gatewayCtx)
+		mergeIncompatible := t.mergeIncompatibleForWeightedRule(httpRoute, backendRefs, hasRouteLevelClusterSettings, rule.SessionPersistence != nil, gatewayCtx)
 
 		for i := range rule.BackendRefs {
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())
@@ -711,8 +711,6 @@ func (t *Translator) isFallbackBackend(backendRef gwapiv1.BackendObjectReference
 // weighted-clusters route action can represent multiple distinct clusters in one rule.
 func (t *Translator) mergeIncompatibleForWeightedRule(
 	route RouteContext,
-	parentRef *RouteParentContext,
-	ruleName *gwapiv1.SectionName,
 	backendRefs []gwapiv1.BackendObjectReference,
 	hasRouteLevelClusterSettings bool,
 	sessionPersistent bool,
@@ -739,7 +737,7 @@ func (t *Translator) mergeIncompatibleForWeightedRule(
 		}
 	}
 	// ConsistentHash needs the full combined backend pool, not per-identity split clusters.
-	if gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(route.GetRouteType(), utils.NamespacedName(route), utils.NamespacedName(gatewayCtx.Gateway), parentRef.SectionName, ruleName) {
+	if gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(utils.NamespacedName(gatewayCtx.Gateway)) {
 		return true
 	}
 	return false
@@ -1371,7 +1369,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		for i := range rule.BackendRefs {
 			backendRefs[i] = rule.BackendRefs[i].BackendObjectReference
 		}
-		mergeIncompatible := t.mergeIncompatibleForWeightedRule(grpcRoute, parentRef, rule.Name, backendRefs, hasRouteLevelClusterSettings, false, gatewayCtx)
+		mergeIncompatible := t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, hasRouteLevelClusterSettings, false, gatewayCtx)
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i := range rule.BackendRefs {

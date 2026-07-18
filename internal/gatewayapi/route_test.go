@@ -928,14 +928,12 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 	serviceRef2 := gwapiv1.BackendObjectReference{Name: "service-2"}
 
 	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route-1"}}}
-	parentRef := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{}}
-	ruleName := SectionNamePtr("rule-1")
 	gatewayCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
 
-	// consistentHashIdx forces IsConsistentHash to return true for route-1/rule-1, regardless of gatewayCtx.
+	// consistentHashIdx forces IsConsistentHash to return true for gatewayCtx's gateway.
 	consistentHashIdx := &BTPLoadBalancerIndex{
-		routeRuleLevel: map[btpRoutingKey]*egv1a1.LoadBalancer{
-			{Kind: "HTTPRoute", Namespace: "default", Name: "route-1", SectionName: "rule-1"}: {Type: egv1a1.ConsistentHashLoadBalancerType},
+		gatewayLevel: map[types.NamespacedName]bool{
+			{Namespace: "envoy-gateway", Name: "gateway-1"}: true,
 		},
 	}
 
@@ -997,7 +995,7 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 				BackendMap:           map[types.NamespacedName]*egv1a1.Backend{{Namespace: "default", Name: "be-fallback"}: fallbackBackend},
 				BTPLoadBalancerIndex: tc.lbIndex,
 			}}
-			got := tr.mergeIncompatibleForWeightedRule(route, parentRef, ruleName, tc.backendRefs, tc.hasRouteLevelClusterSettings, tc.sessionPersistent, tc.gatewayCtx)
+			got := tr.mergeIncompatibleForWeightedRule(route, tc.backendRefs, tc.hasRouteLevelClusterSettings, tc.sessionPersistent, tc.gatewayCtx)
 			require.Equal(t, tc.want, got)
 		})
 	}

@@ -361,16 +361,13 @@ func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
 	return false
 }
 
-// BTPLoadBalancerIndex resolves, with the same routeRule > route > listener > gateway
-// precedence as BTPRoutingTypeIndex, whether a target's effective LoadBalancer type is
-// ConsistentHash. Unlike BTPClusterSettingsIndex, a gateway-level match counts here: the risk
-// ConsistentHash poses to MergeBackends is splitting one rule's weighted backends across
-// clusters, not divergence between routes, so it applies regardless of which level set it.
+// BTPLoadBalancerIndex reports, per gateway, whether a BackendTrafficPolicy attached to it sets
+// LoadBalancer to ConsistentHash. Route-rule/route/listener-level LoadBalancer is already covered
+// by BTPClusterSettingsIndex.HasRouteLevelClusterSettings, which every caller of IsConsistentHash
+// checks first (and treats any LoadBalancer, not just ConsistentHash, as disqualifying) - so only
+// the gateway level can ever actually apply here.
 type BTPLoadBalancerIndex struct {
-	routeRuleLevel map[btpRoutingKey]*egv1a1.LoadBalancer
-	routeLevel     map[btpRoutingKey]*egv1a1.LoadBalancer
-	listenerLevel  map[btpRoutingKey]*egv1a1.LoadBalancer
-	gatewayLevel   map[btpRoutingKey]*egv1a1.LoadBalancer
+	gatewayLevel map[types.NamespacedName]bool
 }
 
 func hasBTPConsistentHash(btps []*egv1a1.BackendTrafficPolicy) bool {
@@ -382,10 +379,8 @@ func hasBTPConsistentHash(btps []*egv1a1.BackendTrafficPolicy) bool {
 	return false
 }
 
-// BuildBTPLoadBalancerIndex builds a pre-computed index of the effective LoadBalancer setting
-// for each route-rule/route/listener/gateway target that has a BackendTrafficPolicy setting
-// LoadBalancer, so that a more-specific level's override (to any type, not just ConsistentHash)
-// correctly stops precedence fallthrough to a coarser level.
+// BuildBTPLoadBalancerIndex builds a pre-computed index of which gateways have a
+// BackendTrafficPolicy setting LoadBalancer to ConsistentHash.
 func BuildBTPLoadBalancerIndex(
 	btps []*egv1a1.BackendTrafficPolicy,
 	routes []client.Object,
@@ -394,10 +389,7 @@ func BuildBTPLoadBalancerIndex(
 	namespaceLookup func(string) *corev1.Namespace,
 ) *BTPLoadBalancerIndex {
 	idx := &BTPLoadBalancerIndex{
-		routeRuleLevel: make(map[btpRoutingKey]*egv1a1.LoadBalancer),
-		routeLevel:     make(map[btpRoutingKey]*egv1a1.LoadBalancer),
-		listenerLevel:  make(map[btpRoutingKey]*egv1a1.LoadBalancer),
-		gatewayLevel:   make(map[btpRoutingKey]*egv1a1.LoadBalancer),
+		gatewayLevel: make(map[types.NamespacedName]bool),
 	}
 
 	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
@@ -420,69 +412,24 @@ func BuildBTPLoadBalancerIndex(
 			namespaceLookup,
 		)
 		for _, ref := range refs {
-			kind := string(ref.Kind)
-			key := btpRoutingKey{
-				Kind:        kind,
-				Namespace:   string(ref.Namespace),
-				Name:        string(ref.Name),
-				SectionName: string(ptr.Deref(ref.SectionName, "")),
+			if string(ref.Kind) != resource.KindGateway || ref.SectionName != nil {
+				continue
 			}
-			if kind == resource.KindGateway {
-				if ref.SectionName != nil {
-					idx.listenerLevel[key] = btp.Spec.LoadBalancer
-				} else {
-					idx.gatewayLevel[key] = btp.Spec.LoadBalancer
-				}
-			} else {
-				if ref.SectionName != nil {
-					idx.routeRuleLevel[key] = btp.Spec.LoadBalancer
-				} else {
-					idx.routeLevel[key] = btp.Spec.LoadBalancer
-				}
-			}
+			key := types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}
+			idx.gatewayLevel[key] = btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType
 		}
 	}
 
 	return idx
 }
 
-// IsConsistentHash reports whether the effective LoadBalancer for the given target resolves to
-// ConsistentHash, checking routeRule > route > listener > gateway in priority order.
-func (idx *BTPLoadBalancerIndex) IsConsistentHash(
-	routeKind gwapiv1.Kind,
-	routeNN types.NamespacedName,
-	gatewayNN types.NamespacedName,
-	listenerName *gwapiv1.SectionName,
-	routeRuleName *gwapiv1.SectionName,
-) bool {
+// IsConsistentHash reports whether gatewayNN has a BackendTrafficPolicy setting LoadBalancer to
+// ConsistentHash.
+func (idx *BTPLoadBalancerIndex) IsConsistentHash(gatewayNN types.NamespacedName) bool {
 	if idx == nil {
 		return false
 	}
-
-	if routeRuleName != nil {
-		key := btpRoutingKey{Kind: string(routeKind), Namespace: routeNN.Namespace, Name: routeNN.Name, SectionName: string(*routeRuleName)}
-		if lb, ok := idx.routeRuleLevel[key]; ok {
-			return lb.Type == egv1a1.ConsistentHashLoadBalancerType
-		}
-	}
-
-	routeKey := btpRoutingKey{Kind: string(routeKind), Namespace: routeNN.Namespace, Name: routeNN.Name}
-	if lb, ok := idx.routeLevel[routeKey]; ok {
-		return lb.Type == egv1a1.ConsistentHashLoadBalancerType
-	}
-
-	if listenerName != nil {
-		listenerKey := btpRoutingKey{Kind: resource.KindGateway, Namespace: gatewayNN.Namespace, Name: gatewayNN.Name, SectionName: string(*listenerName)}
-		if lb, ok := idx.listenerLevel[listenerKey]; ok {
-			return lb.Type == egv1a1.ConsistentHashLoadBalancerType
-		}
-	}
-
-	gatewayKey := btpRoutingKey{Kind: resource.KindGateway, Namespace: gatewayNN.Namespace, Name: gatewayNN.Name}
-	if lb, ok := idx.gatewayLevel[gatewayKey]; ok {
-		return lb.Type == egv1a1.ConsistentHashLoadBalancerType
-	}
-	return false
+	return idx.gatewayLevel[gatewayNN]
 }
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
