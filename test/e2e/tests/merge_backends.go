@@ -15,9 +15,6 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-
-	kube "github.com/envoyproxy/gateway/internal/kubernetes"
-	"github.com/envoyproxy/gateway/internal/troubleshoot/collect"
 )
 
 func init() {
@@ -68,34 +65,15 @@ var MergeBackendsTest = suite.ConformanceTest{
 	},
 }
 
-// envoyClusterNames returns the distinct Cluster names configured on gwNN's Envoy proxy, fetched
-// from its admin /clusters endpoint via port-forward (see collect.RequestWithPortForwarder, used
-// the same way in test/benchmark/suite/report.go for pprof).
+// envoyClusterNames returns the distinct Cluster names configured on gwNN's Envoy proxy.
 func envoyClusterNames(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName) ([]string, error) {
 	t.Helper()
 
-	cli, err := kube.NewForRestConfig(suite.RestConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	selector := []string{
+	body, err := fetchEnvoyClustersOutput(t, suite,
 		"app.kubernetes.io/name=envoy",
-		"gateway.envoyproxy.io/owning-gateway-name=" + gwNN.Name,
-		"gateway.envoyproxy.io/owning-gateway-namespace=" + gwNN.Namespace,
-	}
-	pods, err := cli.PodsForSelector(GetGatewayResourceNamespace(), selector...)
-	if err != nil {
-		return nil, err
-	}
-	if len(pods.Items) == 0 {
-		t.Fatalf("no Envoy pod found for gateway %s", gwNN)
-	}
-
-	body, err := collect.RequestWithPortForwarder(cli, types.NamespacedName{
-		Namespace: pods.Items[0].Namespace,
-		Name:      pods.Items[0].Name,
-	}, 19000, "/clusters")
+		"gateway.envoyproxy.io/owning-gateway-name="+gwNN.Name,
+		"gateway.envoyproxy.io/owning-gateway-namespace="+gwNN.Namespace,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +84,7 @@ func envoyClusterNames(t *testing.T, suite *suite.ConformanceTestSuite, gwNN typ
 	// Many lines share the same cluster name, so keep only the first "::"-delimited field, deduped.
 	seen := map[string]bool{}
 	var names []string
-	for _, line := range strings.Split(string(body), "\n") {
+	for _, line := range strings.Split(body, "\n") {
 		name, _, ok := strings.Cut(line, "::")
 		if !ok || seen[name] {
 			continue

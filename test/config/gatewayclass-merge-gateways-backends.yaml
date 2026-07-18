@@ -1,0 +1,22 @@
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: merge-gateways-backends
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: merge-gateways-backends-config
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: merge-gateways-backends-config
+  namespace: envoy-gateway-system
+spec:
+  ipFamily: IPv4
+  mergeGateways: true
+  mergeBackends:
+    enabled: true

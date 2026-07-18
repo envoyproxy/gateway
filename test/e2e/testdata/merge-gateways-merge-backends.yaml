@@ -1,0 +1,101 @@
+# Two Gateways in the merge-gateways-backends GatewayClass (mergeGateways+mergeBackends both
+# enabled), each with its own gateway-scoped BackendTrafficPolicy setting a different
+# CircuitBreaker, both routing to the same backend. Each Gateway must get its own Cluster with its
+# own settings, instead of being merged into one shared Cluster across Gateways.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: merge-gateways-backends-1
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: merge-gateways-backends
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-mgb-1
+      port: 8090
+      protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: merge-gateways-backends-2
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: merge-gateways-backends
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-mgb-2
+      port: 8091
+      protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: merge-gateways-backends-route-1
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: merge-gateways-backends-1
+  hostnames:
+    - "www.merge-gateways-backends-1.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /merge-gateways-backends-1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: merge-gateways-backends-route-2
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: merge-gateways-backends-2
+  hostnames:
+    - "www.merge-gateways-backends-2.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /merge-gateways-backends-2
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: merge-gateways-backends-btp-1
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: merge-gateways-backends-1
+  circuitBreaker:
+    maxConnections: 1111
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: merge-gateways-backends-btp-2
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: merge-gateways-backends-2
+  circuitBreaker:
+    maxConnections: 2222

@@ -302,6 +302,7 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
 	kubectl apply -f test/config/gatewayclass.yaml
+	kubectl apply -f test/config/gatewayclass-merge-gateways-backends.yaml
 
 .PHONY: setup-mac-net-connect
 setup-mac-net-connect:
