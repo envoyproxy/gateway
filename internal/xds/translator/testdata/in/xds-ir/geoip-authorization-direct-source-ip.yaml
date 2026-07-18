@@ -52,6 +52,10 @@ http:
               country: US
 backends:
 - name: httproute/default/httproute-geo/rule/0
+  metadata:
+    kind: HTTPRoute
+    name: httproute-geo
+    namespace: default
   settings:
   - addressType: IP
     endpoints:
