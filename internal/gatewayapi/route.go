@@ -679,7 +679,12 @@ func (t *Translator) mergeBackendsSelectorMatches(selector *metav1.LabelSelector
 		return false
 	}
 	matches, err := labelsutil.SelectorMatch(selector, backendLabels)
-	return err == nil && matches
+	if err != nil {
+		t.Logger.Error(err, "invalid mergeBackends selector, excluding backend from deduplication",
+			"backendRef", backendRef.Name, "namespace", backendNamespace)
+		return false
+	}
+	return matches
 }
 
 // backendLabelsFor returns the labels of the Service, ServiceImport, or Backend object backendRef
