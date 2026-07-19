@@ -54,9 +54,15 @@ spec:
     - type: Brotli
       brotli: {}
       minContentLength: 50
+      contentTypes:
+        - application/json
     - type: Gzip
       gzip: {}
       minContentLength: 50
+      contentTypes:
+        - application/json
     - type: Zstd
       zstd: {}
       minContentLength: 50
+      contentTypes:
+        - application/json

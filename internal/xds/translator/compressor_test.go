@@ -93,11 +93,27 @@ func TestBuildCompressorFilter(t *testing.T) {
 			},
 		},
 		{
+			name: "with content types",
+			compression: &ir.Compression{
+				Type:         egv1a1.GzipCompressorType,
+				ContentTypes: []string{"application/json", "text/html"},
+			},
+			expectedName:    "envoy.filters.http.compressor.gzip",
+			expectedExtName: "envoy.compression.gzip.compressor",
+			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
+				require.NotNil(t, c.ResponseDirectionConfig)
+				require.NotNil(t, c.ResponseDirectionConfig.CommonConfig)
+				assert.Equal(t, []string{"application/json", "text/html"}, c.ResponseDirectionConfig.CommonConfig.ContentType)
+				assert.Nil(t, c.ResponseDirectionConfig.CommonConfig.MinContentLength)
+			},
+		},
+		{
 			name: "with all options",
 			compression: &ir.Compression{
 				Type:             egv1a1.BrotliCompressorType,
 				ChooseFirst:      true,
 				MinContentLength: new(uint32(2048)),
+				ContentTypes:     []string{"application/json"},
 			},
 			expectedName:    "envoy.filters.http.compressor.brotli",
 			expectedExtName: "envoy.compression.brotli.compressor",
@@ -105,6 +121,7 @@ func TestBuildCompressorFilter(t *testing.T) {
 				assert.True(t, c.ChooseFirst)
 				require.NotNil(t, c.ResponseDirectionConfig)
 				assert.Equal(t, uint32(2048), c.ResponseDirectionConfig.CommonConfig.MinContentLength.Value)
+				assert.Equal(t, []string{"application/json"}, c.ResponseDirectionConfig.CommonConfig.ContentType)
 			},
 		},
 	}

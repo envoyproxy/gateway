@@ -1118,6 +1118,7 @@ _Appears in:_
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
 | `zstd` | _[ZstdCompressor](#zstdcompressor)_ |  false  |  | The configuration for Zstd compressor. |
 | `minContentLength` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MinContentLength defines the minimum response size in bytes to apply compression.<br />Responses smaller than this threshold will not be compressed.<br />Must be at least 30 bytes as enforced by Envoy Proxy.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 30 bytes |
+| `contentTypes` | _string array_ |  false  |  | ContentTypes defines the set of response Content-Types that will trigger compression.<br />When set, only responses whose Content-Type matches one of these values are compressed.<br />If not specified, Envoy's default content types are used:<br />application/javascript, application/json, application/xhtml+xml, image/svg+xml,<br />text/css, text/html, text/plain, text/xml. |
 
 
 #### CompressorType

@@ -924,6 +924,16 @@ spec:
                     brotli:
                       description: The configuration for Brotli compressor.
                       type: object
+                    contentTypes:
+                      description: |-
+                        ContentTypes defines the set of response Content-Types that will trigger compression.
+                        When set, only responses whose Content-Type matches one of these values are compressed.
+                        If not specified, Envoy's default content types are used:
+                        application/javascript, application/json, application/xhtml+xml, image/svg+xml,
+                        text/css, text/html, text/plain, text/xml.
+                      items:
+                        type: string
+                      type: array
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
@@ -969,6 +979,16 @@ spec:
                     brotli:
                       description: The configuration for Brotli compressor.
                       type: object
+                    contentTypes:
+                      description: |-
+                        ContentTypes defines the set of response Content-Types that will trigger compression.
+                        When set, only responses whose Content-Type matches one of these values are compressed.
+                        If not specified, Envoy's default content types are used:
+                        application/javascript, application/json, application/xhtml+xml, image/svg+xml,
+                        text/css, text/html, text/plain, text/xml.
+                      items:
+                        type: string
+                      type: array
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
@@ -24372,6 +24392,16 @@ spec:
                               brotli:
                                 description: The configuration for Brotli compressor.
                                 type: object
+                              contentTypes:
+                                description: |-
+                                  ContentTypes defines the set of response Content-Types that will trigger compression.
+                                  When set, only responses whose Content-Type matches one of these values are compressed.
+                                  If not specified, Envoy's default content types are used:
+                                  application/javascript, application/json, application/xhtml+xml, image/svg+xml,
+                                  text/css, text/html, text/plain, text/xml.
+                                items:
+                                  type: string
+                                type: array
                               gzip:
                                 description: The configuration for GZIP compressor.
                                 type: object
