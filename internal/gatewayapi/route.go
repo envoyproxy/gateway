@@ -28,6 +28,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
@@ -615,7 +616,8 @@ func (t *Translator) shouldMergeBackend(
 	}
 	// Cheapest check first: skip all the more expensive eligibility work below when merging is
 	// off for this Gateway.
-	if !t.isMergeBackendsEnabledForGateway(gatewayCtx) {
+	cfg := t.mergeBackendsConfigForGateway(gatewayCtx)
+	if cfg == nil {
 		return false
 	}
 	// Custom/extension-provided and dynamic-resolver backends can never safely share a cluster.
@@ -633,6 +635,10 @@ func (t *Translator) shouldMergeBackend(
 	if ds.Filters != nil {
 		return false
 	}
+	// The backend's target object must match the configured Selector, if any.
+	if !t.mergeBackendsSelectorMatches(cfg.Selector, backendRef, backendNamespace) {
+		return false
+	}
 	// A rule whose effective RoutingType diverges from the gateway's baseline would leak that
 	// divergence into a cluster shared with rules that don't diverge.
 	if t.routingTypeDivergesForRule(gatewayCtx, btpRoutingType) {
@@ -642,13 +648,66 @@ func (t *Translator) shouldMergeBackend(
 	return true
 }
 
-// isMergeBackendsEnabledForGateway resolves MergeBackends for gatewayCtx, letting a Gateway-level
-// override (via gatewayCtx.envoyProxy) win over t.MergeBackends' GatewayClass/default value.
-func (t *Translator) isMergeBackendsEnabledForGateway(gatewayCtx *GatewayContext) bool {
+// mergeBackendsConfigForGateway resolves the effective MergeBackendsConfig for gatewayCtx, letting
+// a Gateway-level override (via gatewayCtx.envoyProxy) win over t.MergeBackends' GatewayClass/default
+// value wholesale, rather than merging the two field-by-field. Returns nil when MergeBackends is
+// disabled for gatewayCtx.
+func (t *Translator) mergeBackendsConfigForGateway(gatewayCtx *GatewayContext) *MergeBackendsConfig {
 	if gatewayCtx != nil && gatewayCtx.envoyProxy != nil && gatewayCtx.envoyProxy.Spec.MergeBackends != nil {
-		return true
+		cfg := gatewayCtx.envoyProxy.Spec.MergeBackends
+		return &MergeBackendsConfig{Selector: cfg.Selector}
 	}
 	return t.MergeBackends
+}
+
+// isMergeBackendsEnabledForGateway resolves whether MergeBackends is enabled for gatewayCtx.
+func (t *Translator) isMergeBackendsEnabledForGateway(gatewayCtx *GatewayContext) bool {
+	return t.mergeBackendsConfigForGateway(gatewayCtx) != nil
+}
+
+// mergeBackendsSelectorMatches reports whether backendRef's target object satisfies selector. A
+// nil selector matches everything (the behavior before this field existed) — this is the opposite
+// of metav1.LabelSelectorAsSelector(nil)'s own "matches nothing" semantics, so nil is special-cased
+// here rather than passed through. A selector that is configured but whose target object cannot be
+// found, or that fails to parse, does not match (fails closed).
+func (t *Translator) mergeBackendsSelectorMatches(selector *metav1.LabelSelector, backendRef gwapiv1.BackendObjectReference, backendNamespace string) bool {
+	if selector == nil {
+		return true
+	}
+	backendLabels, found := t.backendLabelsFor(backendRef, backendNamespace)
+	if !found {
+		return false
+	}
+	matches, err := labelsutil.SelectorMatch(selector, backendLabels)
+	return err == nil && matches
+}
+
+// backendLabelsFor returns the labels of the Service, ServiceImport, or Backend object backendRef
+// resolves to, and whether that object was found. Mirrors the 3-way kind dispatch already used by
+// t.processDestination for the same backendRef kinds.
+func (t *Translator) backendLabelsFor(backendRef gwapiv1.BackendObjectReference, backendNamespace string) (map[string]string, bool) {
+	switch KindDerefOr(backendRef.Kind, resource.KindService) {
+	case resource.KindServiceImport:
+		svcImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
+		if svcImport == nil {
+			return nil, false
+		}
+		return svcImport.Labels, true
+	case resource.KindService:
+		svc := t.GetService(backendNamespace, string(backendRef.Name))
+		if svc == nil {
+			return nil, false
+		}
+		return svc.Labels, true
+	case egv1a1.KindBackend:
+		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
+		if backend == nil {
+			return nil, false
+		}
+		return backend.Labels, true
+	default:
+		return nil, false
+	}
 }
 
 // anyGatewayHasMergeBackendsEnabled reports whether MergeBackends is enabled for at least one of

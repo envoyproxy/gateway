@@ -699,19 +699,23 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return false
 }
 
-func IsMergeBackendsEnabled(resources *resource.Resources) bool {
-	// Check GatewayClass-level EnvoyProxy first (higher priority)
+// ResolveMergeBackendsConfig resolves MergeBackends config, preferring the GatewayClass-level
+// EnvoyProxy over the global default. Returns nil when MergeBackends is unset in both.
+func ResolveMergeBackendsConfig(resources *resource.Resources) *MergeBackendsConfig {
 	if resources.EnvoyProxyForGatewayClass != nil &&
 		resources.EnvoyProxyForGatewayClass.Spec.MergeBackends != nil {
-		return true
+		cfg := resources.EnvoyProxyForGatewayClass.Spec.MergeBackends
+		return &MergeBackendsConfig{Selector: cfg.Selector}
 	}
 
 	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
-	if resources.EnvoyProxyDefaultSpec != nil {
-		return resources.EnvoyProxyDefaultSpec.MergeBackends != nil
+	if resources.EnvoyProxyDefaultSpec != nil &&
+		resources.EnvoyProxyDefaultSpec.MergeBackends != nil {
+		cfg := resources.EnvoyProxyDefaultSpec.MergeBackends
+		return &MergeBackendsConfig{Selector: cfg.Selector}
 	}
 
-	return false
+	return nil
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {

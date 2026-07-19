@@ -672,8 +672,20 @@ func TestShouldMergeBackend(t *testing.T) {
 			if tc.backend != nil {
 				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
 			}
+			serviceMap := map[types.NamespacedName]*corev1.Service{}
+			if tc.service != nil {
+				serviceMap[types.NamespacedName{Namespace: tc.service.Namespace, Name: tc.service.Name}] = tc.service
+			}
+			serviceImportMap := map[types.NamespacedName]*mcsapiv1a1.ServiceImport{}
+			if tc.serviceImport != nil {
+				serviceImportMap[types.NamespacedName{Namespace: tc.serviceImport.Namespace, Name: tc.serviceImport.Name}] = tc.serviceImport
+			}
+			var mergeBackends *MergeBackendsConfig
+			if tc.mergeEnabled {
+				mergeBackends = &MergeBackendsConfig{Selector: tc.mergeSelector}
+			}
 			tr := &Translator{
-				MergeBackends: tc.mergeEnabled,
+				MergeBackends: mergeBackends,
 				TranslatorContext: &TranslatorContext{
 					BackendMap: backendMap,
 					BTPRoutingTypeIndex: func() *BTPRoutingTypeIndex {
