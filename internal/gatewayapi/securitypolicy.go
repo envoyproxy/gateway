@@ -1403,7 +1403,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						continue
 					}
 
-					if replaceClaimsRoutes {
+					// Only claim IR routes that belong to the targeted route:
+					// other routes on the same listener must keep inheriting
+					// the parent policy's authorization.
+					if replaceClaimsRoutes && strings.HasPrefix(r.Destination.Name, prefix) {
 						t.replacedSecurityPolicyRoutes.Insert(replacedRouteKey(tl.Name, r.Destination.Name))
 					}
 
