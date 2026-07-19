@@ -1,0 +1,112 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends:
+      enabled: true
+      selector:
+        matchLabels:
+          mergebackends-selector: enabled
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /selected
+          backendRefs:
+            - name: service-selected
+              port: 8080
+        - matches:
+            - path:
+                value: /not-selected
+          backendRefs:
+            - name: service-not-selected
+              port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: service-selected
+      namespace: default
+      labels:
+        mergebackends-selector: enabled
+    spec:
+      clusterIP: 7.7.7.10
+      ports:
+        - name: http
+          protocol: TCP
+          port: 8080
+          targetPort: 8080
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: service-not-selected
+      namespace: default
+    spec:
+      clusterIP: 7.7.7.11
+      ports:
+        - name: http
+          protocol: TCP
+          port: 8080
+          targetPort: 8080
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-selected
+      namespace: default
+      labels:
+        kubernetes.io/service-name: service-selected
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - 7.7.7.10
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-not-selected
+      namespace: default
+      labels:
+        kubernetes.io/service-name: service-not-selected
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - 7.7.7.11
+        conditions:
+          ready: true
