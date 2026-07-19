@@ -923,6 +923,12 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		}
 	}
 
+	if headerSettings.Host != nil && headerSettings.Host.StripTrailingHostDot != nil {
+		httpIR.Host = &ir.HostSettings{
+			StripTrailingHostDot: *headerSettings.Host.StripTrailingHostDot,
+		}
+	}
+
 	var errs error
 
 	if headerSettings.EarlyRequestHeaders != nil {
