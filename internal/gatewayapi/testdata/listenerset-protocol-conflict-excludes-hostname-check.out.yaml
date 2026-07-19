@@ -194,27 +194,36 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
+    backends:
+    - metadata:
+        kind: Service
+        name: envoy-gateway-conformance-infra-gateway-with-tls-and-h-7432013d
+        namespace: envoy-gateway-system
+        sectionName: "8080"
+      name: gateway-conformance-infra/gateway-with-tls-and-http-conflict
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
         metadata:
           kind: Service
           name: envoy-gateway-conformance-infra-gateway-with-tls-and-h-7432013d
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: gateway-conformance-infra/gateway-with-tls-and-http-conflict
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            kind: Service
-            name: envoy-gateway-conformance-infra-gateway-with-tls-and-h-7432013d
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: gateway-conformance-infra/gateway-with-tls-and-http-conflict
-          protocol: TCP
+        protocol: TCP
+    globalResources:
+      proxyServiceCluster:
+        backendClusterRefs:
+        - name: gateway-conformance-infra/gateway-with-tls-and-http-conflict
+        metadata:
+          kind: Service
+          name: envoy-gateway-conformance-infra-gateway-with-tls-and-h-7432013d
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: gateway-conformance-infra/gateway-with-tls-and-http-conflict
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
