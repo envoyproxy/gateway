@@ -30,10 +30,10 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Merged with policy envoy-gateway-system/my-gateway-error-response
-        reason: Merged
-        status: "True"
-        type: Merged
+        message: 'ResponseOverride: can''t find the referenced configmap envoy-gateway-system/missing-error-page.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -66,7 +66,7 @@ backendTrafficPolicies:
           valueRef:
             group: ""
             kind: ConfigMap
-            name: error-page
+            name: missing-error-page
         contentType: text/html
     targetRefs:
     - group: gateway.networking.k8s.io
@@ -81,16 +81,16 @@ backendTrafficPolicies:
         namespace: envoy-gateway-system
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: 'ResponseOverride: can''t find the referenced configmap envoy-gateway-system/missing-error-page.'
+        reason: Invalid
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/my-app]'
-        reason: Merged
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these routes: [default/my-app]'
+        reason: Overridden
         status: "True"
-        type: Merged
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -256,51 +256,19 @@ xdsIR:
             name: httproute/default/my-app/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: myapp.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: my-app
           namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: my-app-rate-limit
-            namespace: default
         name: httproute/default/my-app/rule/0/match/0/myapp_example_com
         pathMatch:
           distinct: false
           name: ""
           prefix: /
-        traffic:
-          rateLimit:
-            local:
-              default:
-                requests: 4294967295
-                unit: Second
-              rules:
-              - cidrMatch:
-                  cidr: 0.0.0.0/0
-                  distinct: true
-                  invert: false
-                  isIPv6: false
-                  maskLen: 0
-                headerMatches: []
-                limit:
-                  requests: 200
-                  unit: Minute
-                name: default/my-app-rate-limit/rule/0
-          responseOverride:
-            name: backendtrafficpolicy/default/my-app-rate-limit
-            rules:
-            - match:
-                statusCodes:
-                - range:
-                    end: 504
-                    start: 502
-              name: backendtrafficpolicy/default/my-app-rate-limit/responseoverride/rule/0
-              response:
-                body: ZXJyb3IgcGFnZSBjb250ZW50cyBoZXJlCg==
-                contentType: text/html
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
