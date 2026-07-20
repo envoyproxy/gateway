@@ -1218,6 +1218,10 @@ type JWT struct {
 	// AllowMissing determines whether a missing JWT is acceptable.
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
 
+	// AllowMissingOrFailed determines whether a missing or invalid JWT is tolerated.
+	// When true it supersedes AllowMissing and maps to Envoy's `allow_missing_or_failed`.
+	AllowMissingOrFailed bool `json:"allowMissingOrFailed,omitempty" yaml:"allowMissingOrFailed,omitempty"`
+
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }

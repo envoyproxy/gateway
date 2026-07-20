@@ -3560,7 +3560,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `optional` | _boolean_ |  true  |  | Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.<br />Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented. |
+| `optional` | _boolean_ |  false  |  | Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.<br />Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT<br />is presented. See FailOpen if this is necessary for your use case. |
+| `failOpen` | _boolean_ |  false  |  | FailOpen lets a request pass JWT authentication even when its JWT is<br />missing or invalid, rather than being rejected. This helps when a header<br />that clients use to carry a JWT may also legitimately hold a non-JWT value<br />that the backend relies on.<br />A valid JWT is still verified and its claims forwarded as usual; only the<br />rejection of requests with a missing or invalid JWT is relaxed. Because this<br />does not enforce authentication on its own, pair it with an Authorization<br />policy when access needs to be restricted.<br />This is broader than Optional (which tolerates a missing JWT but still<br />rejects an invalid one) and takes precedence over it. |
 | `providers` | _[JWTProvider](#jwtprovider) array_ |  true  |  | Providers defines the JSON Web Token (JWT) authentication provider type.<br />When multiple JWT providers are specified, the JWT is considered valid if<br />any of the providers successfully validate the JWT. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
 
 
