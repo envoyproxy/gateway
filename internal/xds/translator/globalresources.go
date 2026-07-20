@@ -139,12 +139,19 @@ func buildEnvoyClientTLSSocket(envoyClientCertificate *ir.TLSCertificate) (*core
 	}, nil
 }
 
+// containsWasm reports whether any route uses a remote Wasm code source
+// (HTTP/Image, served by the control-plane wasm HTTP service). Filesystem
+// sources load a local path on the proxy and do not need wasm_cluster.
 func containsWasm(httpListeners []*ir.HTTPListener) bool {
 	for _, httpListener := range httpListeners {
 		for _, route := range httpListener.Routes {
-			if route.EnvoyExtensions != nil &&
-				len(route.EnvoyExtensions.Wasms) > 0 {
-				return true
+			if route.EnvoyExtensions == nil {
+				continue
+			}
+			for _, w := range route.EnvoyExtensions.Wasms {
+				if w.Code != nil {
+					return true
+				}
 			}
 		}
 	}
