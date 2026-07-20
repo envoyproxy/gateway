@@ -86,6 +86,8 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
       commonTlsContext:
+        tlsParams:
+          tlsMaximumProtocolVersion: TLSv1_3
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
@@ -132,6 +134,8 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
       commonTlsContext:
+        tlsParams:
+          tlsMaximumProtocolVersion: TLSv1_3
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
