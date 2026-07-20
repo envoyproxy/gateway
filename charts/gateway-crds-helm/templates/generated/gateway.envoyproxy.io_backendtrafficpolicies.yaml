@@ -519,7 +519,9 @@ spec:
                   an xRoute under this policy's target) that do not set their own mergeType, so a child
                   policy merges into this policy instead of replacing it. A child policy can opt out by
                   setting mergeType to Replace.
-                  This field can only be set on policies targeting a parent resource (Gateway).
+                  This field can only be set on policies targeting an entire Gateway. It is rejected on
+                  policies targeting a specific Listener (via sectionName), so the default is defined at a
+                  single top-level parent rather than at multiple intermediate parents.
                 enum:
                 - StrategicMerge
                 - JSONMerge
@@ -3369,10 +3371,12 @@ spec:
                 ''GRPCRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
                 sel.kind in [''Gateway'', ''HTTPRoute'', ''GRPCRoute''])))'
             - message: defaultChildMergeType can only be used with Gateway targets
+                without a sectionName
               rule: '!has(self.defaultChildMergeType) || ((!has(self.targetRef) ||
-                self.targetRef.kind == ''Gateway'') && (!has(self.targetRefs) || self.targetRefs.all(ref,
-                ref.kind == ''Gateway'')) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
-                sel.kind == ''Gateway'')))'
+                (self.targetRef.kind == ''Gateway'' && !has(self.targetRef.sectionName)))
+                && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind ==
+                ''Gateway'' && !has(ref.sectionName))) && (!has(self.targetSelectors)
+                || self.targetSelectors.all(sel, sel.kind == ''Gateway'')))'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&

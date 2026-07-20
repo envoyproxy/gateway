@@ -1,0 +1,88 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+backendTrafficPolicies:
+  # Gateway-level policy declares defaultChildMergeType. It is the only place the default can be
+  # declared (CEL rejects it on listener targets).
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-gateway
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+      defaultChildMergeType: StrategicMerge
+      timeout:
+        tcp:
+          connectTimeout: 15s
+      httpUpgrade:
+        - type: websocket
+  # Listener-level policy is the closest parent config a child merges into. It sets no
+  # defaultChildMergeType, so under "closest declared default" resolution the child still inherits
+  # the gateway-level default and merges into this policy.
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-listener
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        sectionName: http
+      timeout:
+        http:
+          connectionIdleTimeout: 16s
+          maxConnectionDuration: 17s
+      httpUpgrade:
+        - type: websocket
+  # Route-level policy with no mergeType: merges into the listener-level policy using the
+  # gateway-level defaultChildMergeType.
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-1
+      connection:
+        bufferLimit: 100M

@@ -3745,6 +3745,25 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "defaultChildMergeType is rejected on gateway listener (sectionName) targets",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+							SectionName: &sectionName,
+						},
+					},
+					DefaultChildMergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"defaultChildMergeType can only be used with Gateway targets"},
+		},
+		{
 			desc: "defaultChildMergeType is rejected on route targets",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

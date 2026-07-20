@@ -28,30 +28,64 @@ func TestEffectiveMergeType(t *testing.T) {
 			Spec:       egv1a1.BackendTrafficPolicySpec{MergeType: mt},
 		}
 	}
-	parent := func(defaultMT *egv1a1.MergeType) *egv1a1.BackendTrafficPolicy {
-		return &egv1a1.BackendTrafficPolicy{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "app", Name: "parent"},
-			Spec:       egv1a1.BackendTrafficPolicySpec{DefaultChildMergeType: defaultMT},
-		}
-	}
 
 	tests := []struct {
-		name   string
-		pol    *egv1a1.BackendTrafficPolicy
-		parent *egv1a1.BackendTrafficPolicy
-		want   *egv1a1.MergeType
+		name      string
+		pol       *egv1a1.BackendTrafficPolicy
+		defaultMT *egv1a1.MergeType
+		want      *egv1a1.MergeType
 	}{
-		{"explicit value wins over parent default", child(&jsonMerge), parent(&strategic), &jsonMerge},
-		{"explicit replace opts out of parent default", child(&replace), parent(&strategic), nil},
-		{"parent default applied when unset", child(nil), parent(&strategic), &strategic},
-		{"no parent policy stays nil", child(nil), nil, nil},
-		{"parent without default stays nil", child(nil), parent(nil), nil},
-		{"invalid parent default is ignored", child(nil), parent(&replace), nil},
+		{"explicit value wins over default", child(&jsonMerge), &strategic, &jsonMerge},
+		{"explicit replace opts out of default", child(&replace), &strategic, nil},
+		{"default applied when unset", child(nil), &strategic, &strategic},
+		{"no default stays nil", child(nil), nil, nil},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := effectiveMergeType(tt.pol, tt.parent)
+			got := effectiveMergeType(tt.pol, tt.defaultMT)
+			if tt.want == nil {
+				assert.Nil(t, got)
+				return
+			}
+			assert.NotNil(t, got)
+			assert.Equal(t, *tt.want, *got)
+		})
+	}
+}
+
+// TestResolveDefaultChildMergeType covers resolveDefaultChildMergeType, which returns the
+// defaultChildMergeType declared by the nearest ancestor policy (closest first). This decouples
+// the default-merge intent (which, after CEL restricts defaultChildMergeType to Gateway targets,
+// is only declared on the Gateway-level policy) from the merge target (the closest parent config).
+func TestResolveDefaultChildMergeType(t *testing.T) {
+	strategic := egv1a1.StrategicMerge
+	jsonMerge := egv1a1.JSONMerge
+	replace := egv1a1.Replace
+
+	withDefault := func(mt *egv1a1.MergeType) *egv1a1.BackendTrafficPolicy {
+		return &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{DefaultChildMergeType: mt}}
+	}
+
+	tests := []struct {
+		name      string
+		ancestors []*egv1a1.BackendTrafficPolicy
+		want      *egv1a1.MergeType
+	}{
+		{"no ancestors", nil, nil},
+		{"nil ancestor", []*egv1a1.BackendTrafficPolicy{nil}, nil},
+		{"single ancestor with default", []*egv1a1.BackendTrafficPolicy{withDefault(&strategic)}, &strategic},
+		{"single ancestor without default", []*egv1a1.BackendTrafficPolicy{withDefault(nil)}, nil},
+		// Reading B: the closest parent (listener) declares no default, so resolution falls through
+		// to the gateway-level policy that does.
+		{"closest without default falls through", []*egv1a1.BackendTrafficPolicy{withDefault(nil), withDefault(&strategic)}, &strategic},
+		{"closest declarer wins", []*egv1a1.BackendTrafficPolicy{withDefault(&jsonMerge), withDefault(&strategic)}, &jsonMerge},
+		{"invalid nearest default is ignored", []*egv1a1.BackendTrafficPolicy{withDefault(&replace), withDefault(&strategic)}, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveDefaultChildMergeType(tt.ancestors...)
 			if tt.want == nil {
 				assert.Nil(t, got)
 				return
