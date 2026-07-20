@@ -1391,8 +1391,8 @@ func (in *ClientTimeout) DeepCopyInto(out *ClientTimeout) {
 		*out = new(HTTPClientTimeout)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.ListenerFiltersTimeout != nil {
-		in, out := &in.ListenerFiltersTimeout, &out.ListenerFiltersTimeout
+	if in.ConnectionInspectionTimeout != nil {
+		in, out := &in.ConnectionInspectionTimeout, &out.ConnectionInspectionTimeout
 		*out = new(v1.Duration)
 		**out = **in
 	}
@@ -4466,6 +4466,11 @@ func (in *HTTPClientTimeout) DeepCopyInto(out *HTTPClientTimeout) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.RequestHeadersReceivedTimeout != nil {
+		in, out := &in.RequestHeadersReceivedTimeout, &out.RequestHeadersReceivedTimeout
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.IdleTimeout != nil {
 		in, out := &in.IdleTimeout, &out.IdleTimeout
 		*out = new(v1.Duration)
@@ -4473,11 +4478,6 @@ func (in *HTTPClientTimeout) DeepCopyInto(out *HTTPClientTimeout) {
 	}
 	if in.StreamIdleTimeout != nil {
 		in, out := &in.StreamIdleTimeout, &out.StreamIdleTimeout
-		*out = new(v1.Duration)
-		**out = **in
-	}
-	if in.RequestHeadersTimeout != nil {
-		in, out := &in.RequestHeadersTimeout, &out.RequestHeadersTimeout
 		*out = new(v1.Duration)
 		**out = **in
 	}
@@ -8527,8 +8527,8 @@ func (in *TCPClientTimeout) DeepCopyInto(out *TCPClientTimeout) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.TransportSocketConnectTimeout != nil {
-		in, out := &in.TransportSocketConnectTimeout, &out.TransportSocketConnectTimeout
+	if in.HandshakeTimeout != nil {
+		in, out := &in.HandshakeTimeout, &out.HandshakeTimeout
 		*out = new(v1.Duration)
 		**out = **in
 	}
