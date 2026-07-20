@@ -1200,6 +1200,7 @@ func makeConfigSource() *corev3.ConfigSource {
 	source.ConfigSourceSpecifier = &corev3.ConfigSource_Ads{
 		Ads: &corev3.AggregatedConfigSource{},
 	}
+	source.InitialFetchTimeout = durationpb.New(0)
 	return source
 }
 
