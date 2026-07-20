@@ -72,13 +72,13 @@ type ClientTimeout struct {
 	// +optional
 	HTTP *HTTPClientTimeout `json:"http,omitempty"`
 
-	// ListenerFiltersTimeout is the duration envoy waits for all listener filters to complete operation.
-	// If the timeout is reached, the accepted socket is closed without a connection being created.
-	// Specify 0 to disable the timeout.
+	// ConnectionInspectionTimeout is the maximum time to wait for initial inspection
+	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.
+	// If exceeded, the connection is dropped.
 	// Default: 15 seconds.
 	//
 	// +optional
-	ListenerFiltersTimeout  *gwapiv1.Duration `json:"listenerFiltersTimeout,omitempty"`
+	ConnectionInspectionTimeout  *gwapiv1.Duration `json:"connectionInspectionTimeout,omitempty"`
 }
 
 // TCPClientTimeout only provides timeout configuration on the listener whose protocol is TCP or TLS.
@@ -90,12 +90,13 @@ type TCPClientTimeout struct {
 	// +optional
 	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
 
-	// TransportSocketConnectTimeout is the duration envoy waits for incoming connections to complete any transport socket negotiations.
+	// HandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
+	// (e.g. the TLS handshake) after a connection is accepted.
 	// If this expires before the transport reports connection establishment, the connection is summarily closed.
 	// Default: 5 seconds.
 	//
 	// +optional
-	TransportSocketConnectTimeout  *gwapiv1.Duration `json:"transportSocketConnectTimeout,omitempty"`
+	HandshakeTimeout  *gwapiv1.Duration `json:"handshakeTimeout,omitempty"`
 }
 
 type HTTPClientTimeout struct {
@@ -104,6 +105,15 @@ type HTTPClientTimeout struct {
 	//
 	// +optional
 	RequestReceivedTimeout *gwapiv1.Duration `json:"requestReceivedTimeout,omitempty"`
+
+	// RequestHeadersReceivedTimeout is the duration envoy waits for the request headers to arrive.
+	// The timer is activated when the first byte of the headers is received,
+	// and is disarmed when the last byte of the headers has been received.
+	// Specify 0 to disable the timeout.
+	// Default: 10 seconds.
+	//
+	// +optional
+	RequestHeadersReceivedTimeout *gwapiv1.Duration `json:"requestHeadersReceivedTimeout,omitempty"`
 
 	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	// Default: 1 hour.
@@ -116,13 +126,4 @@ type HTTPClientTimeout struct {
 	//
 	// +optional
 	StreamIdleTimeout *gwapiv1.Duration `json:"streamIdleTimeout,omitempty"`
-
-	// RequestHeadersTimeout is the duration envoy waits for the request headers to arrive.
-	// The timer is activated when the first byte of the headers is received,
-	// and is disarmed when the last byte of the headers has been received.
-	// Specify 0 to disable the timeout.
-	// Default: 10 seconds.
-	//
-	// +optional
-	RequestHeadersTimeout *gwapiv1.Duration `json:"requestHeadersTimeout,omitempty"`
 }

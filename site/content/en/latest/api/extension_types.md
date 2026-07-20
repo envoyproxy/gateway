@@ -961,7 +961,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `tcp` | _[TCPClientTimeout](#tcpclienttimeout)_ |  false  |  | Timeout settings for TCP. |
 | `http` | _[HTTPClientTimeout](#httpclienttimeout)_ |  false  |  | Timeout settings for HTTP. |
-| `listenerFiltersTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ListenerFiltersTimeout is the duration envoy waits for all listener filters to complete operation.<br />If the timeout is reached, the accepted socket is closed without a connection being created.<br />Specify 0 to disable the timeout.<br />Default: 15 seconds. |
+| `connectionInspectionTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ConnectionInspectionTimeout is the maximum time to wait for initial inspection<br />(TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.<br />If exceeded, the connection is dropped.<br />Default: 15 seconds. |
 
 
 #### ClientTrafficPolicy
@@ -2997,9 +2997,9 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `requestReceivedTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request<br />initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
+| `requestHeadersReceivedTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | RequestHeadersReceivedTimeout is the duration envoy waits for the request headers to arrive.<br />The timer is activated when the first byte of the headers is received,<br />and is disarmed when the last byte of the headers has been received.<br />Specify 0 to disable the timeout.<br />Default: 10 seconds. |
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `streamIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  |  The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.<br /> Default: 5 minutes. |
-| `requestHeadersTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | RequestHeadersTimeout is the duration envoy waits for the request headers to arrive.<br />The timer is activated when the first byte of the headers is received,<br />and is disarmed when the last byte of the headers has been received.<br />Specify 0 to disable the timeout.<br />Default: 10 seconds. |
 
 
 #### HTTPCookieMatch
@@ -6164,7 +6164,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
-| `transportSocketConnectTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | TransportSocketConnectTimeout is the duration envoy waits for incoming connections to complete any transport socket negotiations.<br />If this expires before the transport reports connection establishment, the connection is summarily closed.<br />Default: 5 seconds. |
+| `handshakeTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | HandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation<br />(e.g. the TLS handshake) after a connection is accepted.<br />If this expires before the transport reports connection establishment, the connection is summarily closed.<br />Default: 5 seconds. |
 
 
 #### TCPKeepalive
