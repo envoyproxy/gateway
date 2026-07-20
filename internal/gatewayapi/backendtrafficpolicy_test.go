@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -214,7 +215,7 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 			},
 		}
 
-		tf, err := tr.buildTrafficFeatures(policy)
+		tf, err := tr.buildTrafficFeatures(policy, nil)
 		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})
@@ -237,10 +238,10 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 			},
 		}
 
-		mergedPolicy, err := tr.mergeBackendTrafficPolicy(routePolicy, parentPolicy)
+		mergedPolicy, owners, err := tr.mergeBackendTrafficPolicy(routePolicy, parentPolicy)
 		require.NoError(t, err)
 
-		tf, err := tr.buildTrafficFeatures(mergedPolicy)
+		tf, err := tr.buildTrafficFeatures(mergedPolicy, owners)
 		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})
@@ -977,16 +978,17 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 	gatewayNN := types.NamespacedName{Namespace: "default", Name: "gateway-1"}
 
 	tests := []struct {
-		name          string
-		btps          []*egv1a1.BackendTrafficPolicy
-		routes        []client.Object
-		gateways      []*GatewayContext
-		routeKind     gwapiv1.Kind
-		routeNN       types.NamespacedName
-		gatewayNN     types.NamespacedName
-		listenerName  *gwapiv1.SectionName
-		routeRuleName *gwapiv1.SectionName
-		expected      *egv1a1.RoutingType
+		name            string
+		btps            []*egv1a1.BackendTrafficPolicy
+		routes          []client.Object
+		gateways        []*GatewayContext
+		referenceGrants []*gwapiv1b1.ReferenceGrant
+		routeKind       gwapiv1.Kind
+		routeNN         types.NamespacedName
+		gatewayNN       types.NamespacedName
+		listenerName    *gwapiv1.SectionName
+		routeRuleName   *gwapiv1.SectionName
+		expected        *egv1a1.RoutingType
 	}{
 		{
 			name:      "no BTPs",
@@ -1739,11 +1741,78 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 			routeRuleName: new(gwapiv1.SectionName("rule-0")),
 			expected:      &serviceRouting,
 		},
+		{
+			// This test verifies that the index uses the target resource's namespace (ref.Namespace)
+			// instead of the policy's namespace (btp.Namespace) when building the key.
+			// This is critical for cross-namespace targetSelectors to work correctly.
+			name: "BTP with targetSelector matching route in different namespace (cross-namespace)",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "policy-ns",
+						Name:      "btp-selector",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetSelectors: []egv1a1.TargetSelector{
+								{
+									Kind: gwapiv1.Kind("HTTPRoute"),
+									Namespaces: &egv1a1.TargetSelectorNamespaces{
+										From: egv1a1.TargetNamespaceFromAll,
+									},
+									MatchLabels: map[string]string{"app": "web"},
+								},
+							},
+						},
+						RoutingType: &serviceRouting,
+					},
+				},
+			},
+			routes: []client.Object{
+				&gwapiv1.HTTPRoute{
+					TypeMeta: metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "route-ns",
+						Name:      "route-1",
+						Labels:    map[string]string{"app": "web"},
+					},
+				},
+			},
+			gateways: []*GatewayContext{defaultGateway},
+			// ReferenceGrant allows BTP in policy-ns to reference HTTPRoute in route-ns
+			referenceGrants: []*gwapiv1b1.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "route-ns",
+						Name:      "grant-btp",
+					},
+					Spec: gwapiv1b1.ReferenceGrantSpec{
+						From: []gwapiv1b1.ReferenceGrantFrom{
+							{
+								Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+								Kind:      gwapiv1b1.Kind(egv1a1.KindBackendTrafficPolicy),
+								Namespace: gwapiv1b1.Namespace("policy-ns"),
+							},
+						},
+						To: []gwapiv1b1.ReferenceGrantTo{
+							{
+								Group: gwapiv1b1.Group(gwapiv1.GroupName),
+								Kind:  gwapiv1b1.Kind("HTTPRoute"),
+							},
+						},
+					},
+				},
+			},
+			routeKind: "HTTPRoute",
+			routeNN:   types.NamespacedName{Namespace: "route-ns", Name: "route-1"},
+			gatewayNN: gatewayNN,
+			expected:  &serviceRouting,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			idx := BuildBTPRoutingTypeIndex(tt.btps, tt.routes, tt.gateways, nil, nil)
+			idx := BuildBTPRoutingTypeIndex(tt.btps, tt.routes, tt.gateways, tt.referenceGrants, nil)
 			got := idx.LookupBTPRoutingType(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
 			require.Equal(t, tt.expected, got)
 		})

@@ -189,6 +189,34 @@ helm upgrade eg oci://docker.io/envoyproxy/gateway-helm \
   -n envoy-gateway-system
 ```
 
+Alternatively, instead of a literal `url`, you can source the Redis URL from a
+`Secret` key with `urlRef`. This is useful for GitOps workflows where the Redis
+endpoint is provisioned dynamically by an external controller (for example,
+Crossplane writing a connection `Secret`). The referenced `Secret` must exist in
+the Envoy Gateway namespace (`envoy-gateway-system`), and `url` and `urlRef` are
+mutually exclusive:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    ... keep the existing configuration ...
+    rateLimit:
+      backend:
+        type: Redis
+        redis:
+          urlRef:
+            secretKeyRef:
+              name: ratelimit-redis-redisstd
+              key: REDIS_ENDPOINT
+```
+
 {{< boilerplate rollout-envoy-gateway >}}
 
 ## Rate Limit Specific User

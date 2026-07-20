@@ -338,7 +338,10 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)
 		}
-		gRes.EnvoyProxyForGatewayClass = resources.EnvoyProxyForGatewayClass
+		// Don't overwrite gRes.EnvoyProxyForGatewayClass here: the translator already
+		// populated it with the status-isolated copy carrying the computed Accepted
+		// condition. resources.EnvoyProxyForGatewayClass is the original object, whose
+		// Status the translator no longer mutates in place (see Translate's StatusDeepCopy).
 	}
 
 	if !epInvalid {

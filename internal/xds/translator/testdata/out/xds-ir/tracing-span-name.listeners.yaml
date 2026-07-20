@@ -29,8 +29,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         tracing:
-          clientSampling:
-            value: 100
+          clientSampling: {}
           operation: '%REQ(X-ENVOY-ORIGINAL-HOST)%%PATH(NQ:ORIG)%'
           overallSampling:
             value: 100
@@ -83,8 +82,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8888
         tracing:
-          clientSampling:
-            value: 100
+          clientSampling: {}
           operation: '%REQ(X-ENVOY-ORIGINAL-HOST)%%PATH(NQ:ORIG)%'
           overallSampling:
             value: 100

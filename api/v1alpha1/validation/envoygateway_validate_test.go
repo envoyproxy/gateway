@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -1461,4 +1462,124 @@ func TestLuaDisabled(t *testing.T) {
 			assert.Equal(t, tc.expected, tc.ext.LuaDisabled())
 		})
 	}
+}
+
+func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
+	redisBackend := func(redis *egv1a1.RateLimitRedisSettings) *egv1a1.RateLimit {
+		return &egv1a1.RateLimit{
+			Backend: egv1a1.RateLimitDatabaseBackend{
+				Type:  egv1a1.RedisBackendType,
+				Redis: redis,
+			},
+		}
+	}
+	cases := []struct {
+		name      string
+		rateLimit *egv1a1.RateLimit
+		expectErr bool
+	}{
+		{
+			name:      "nil redis settings",
+			rateLimit: redisBackend(nil),
+			expectErr: true,
+		},
+		{
+			name:      "url only",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{URL: "redis.redis.svc:6379"}),
+			expectErr: false,
+		},
+		{
+			name: "urlRef only",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+					},
+				},
+			}),
+			expectErr: false,
+		},
+		{
+			name: "both url and urlRef set",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URL: "redis.redis.svc:6379",
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+					},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name:      "neither url nor urlRef",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef missing key",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+					},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef missing name",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{Key: "REDIS_ENDPOINT"},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef optional true",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+						Optional:             new(true),
+					},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef optional false",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+						Optional:             new(false),
+					},
+				},
+			}),
+			expectErr: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateEnvoyGatewayRateLimit(tc.rateLimit)
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateRedisURL(t *testing.T) {
+	require.NoError(t, ValidateRedisURL("redis.redis.svc:6379"))
+	require.NoError(t, ValidateRedisURL("a.redis.svc:6379,b.redis.svc:6379"))
+	require.ErrorContains(t, ValidateRedisURL(""), "ratelimit redis url is empty")
+	require.ErrorContains(t, ValidateRedisURL(":foo"), "unknown ratelimit redis url format")
 }
