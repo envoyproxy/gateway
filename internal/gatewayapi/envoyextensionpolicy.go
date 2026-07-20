@@ -544,6 +544,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			wasms        []ir.Wasm
 			wasmFailOpen bool
 		)
+		// Built per parent Gateway because Filesystem Wasm resolves against
+		// that Gateway's EnvoyProxy.wasmModules. HTTP/Image call WasmCache.Get
+		// here; IfNotPresent is a cache hit on repeats, Always may re-fetch
+		// once per parentRef (same placement as Lua and DynamicModules).
 		if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources, gtwCtx.envoyProxy); wasmError != nil {
 			wasmError = perr.WithMessage(wasmError, "Wasm")
 			errs = errors.Join(errs, wasmError)
