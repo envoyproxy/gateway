@@ -1100,4 +1100,5 @@ curl --header "Host: www.merged3.com" http://$GATEWAY_HOST:8082/example3
 [issue1231]: https://github.com/envoyproxy/gateway/issues/1231
 [issue2629]: https://github.com/envoyproxy/gateway/issues/2629
 [issue 1230]: https://github.com/envoyproxy/gateway/issues/1230
-[ListenerSet]: https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/
+[ListenerSet]: https://gateway-api.sigs.k8s.io/reference/api-types/listenerset/
+[ListenerSet user guide]: https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/
