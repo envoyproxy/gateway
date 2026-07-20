@@ -1,0 +1,1 @@
+Added a Filesystem Wasm code source for EnvoyExtensionPolicy. Register modules on EnvoyProxy.spec.wasmModules by name and path, then reference them by name from the policy so Envoy loads local files without the control-plane fetch and cache path.

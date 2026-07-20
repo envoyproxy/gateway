@@ -3782,11 +3782,14 @@ type Wasm struct {
 	// during the initialization or the execution of the Wasm extension.
 	FailOpen bool `json:"failOpen"`
 
-	// Code is the HTTP Wasm code source.
-	// Envoy only supports HTTP Wasm code source. EG downloads the Wasm code from the
-	// original URL(either an HTTP URL or an OCI image) and serves it through the
-	// local HTTP server.
+	// Code is the HTTP Wasm code source when the module is served by the EG HTTP
+	// server (HTTP/Image sources downloaded by the control plane).
 	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+
+	// Path is the absolute filesystem path to the Wasm module on the Envoy proxy
+	// when using a Filesystem code source resolved from EnvoyProxy.wasmModules.
+	// Mutually exclusive with Code.
+	Path string `json:"path,omitempty"`
 
 	// HostKeys is a list of keys for environment variables from the host envoy process
 	// that should be passed into the Wasm VM.

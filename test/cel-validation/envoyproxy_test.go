@@ -2485,6 +2485,95 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
+		// WasmModules
+		{
+			desc: "valid: wasmModules with name and path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Path: "/var/lib/envoy/security-filter.wasm",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: multiple wasmModules",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Path: "/var/lib/envoy/security-filter.wasm",
+						},
+						{
+							Name: "metrics-filter",
+							Path: "/opt/wasm/metrics.wasm",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid: wasmModules with empty name",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "",
+							Path: "/var/lib/envoy/filter.wasm",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].name in body should be at least 1 chars long"},
+		},
+		{
+			desc: "invalid: wasmModules name with uppercase",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "My-Filter",
+							Path: "/var/lib/envoy/filter.wasm",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].name in body should match"},
+		},
+		{
+			desc: "invalid: wasmModules relative path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Path: "relative/filter.wasm",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].path in body should match"},
+		},
+		{
+			desc: "invalid: wasmModules empty path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Path: "",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].path in body should be at least 1 chars long"},
+		},
 	}
 
 	for _, tc := range cases {

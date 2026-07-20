@@ -32607,6 +32607,26 @@ spec:
                     code:
                       description: Code is the Wasm code for the extension.
                       properties:
+                        filesystem:
+                          description: |-
+                            Filesystem loads Wasm code from a module registered on the EnvoyProxy
+                            wasmModules allowlist. The policy references the module by name only;
+                            the filesystem path is configured by the infrastructure operator on EnvoyProxy.
+
+                            This source skips the control-plane fetch/cache path used by HTTP and Image
+                            sources. The operator must ensure the file is present on the Envoy proxy
+                            (for example via a custom image or volume mount).
+                          properties:
+                            name:
+                              description: Name is the logical name of a module in
+                                the EnvoyProxy wasmModules allowlist.
+                              maxLength: 253
+                              minLength: 1
+                              pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                              type: string
+                          required:
+                          - name
+                          type: object
                         http:
                           description: |-
                             HTTP is the HTTP URL containing the Wasm code.
@@ -32816,6 +32836,8 @@ spec:
                             Note: EG does not update the Wasm module every time an Envoy proxy requests
                             the Wasm module even if the pull policy is set to Always.
                             It only updates the Wasm module when the EnvoyExtension resource version changes.
+
+                            PullPolicy must not be set when Type is Filesystem.
                           enum:
                           - IfNotPresent
                           - Always
@@ -32825,13 +32847,14 @@ spec:
                           - enum:
                             - HTTP
                             - Image
+                            - Filesystem
                           - enum:
                             - HTTP
                             - Image
-                            - ConfigMap
+                            - Filesystem
                           description: |-
                             Type is the type of the source of the Wasm code.
-                            Valid WasmCodeSourceType values are "HTTP" or "Image".
+                            Valid WasmCodeSourceType values are "HTTP", "Image", or "Filesystem".
                           type: string
                       required:
                       - type
@@ -32841,6 +32864,14 @@ spec:
                         rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
                       - message: If type is Image, image field needs to be set.
                         rule: 'self.type == ''Image'' ? has(self.image) : !has(self.image)'
+                      - message: If type is Filesystem, filesystem field needs to
+                          be set.
+                        rule: 'self.type == ''Filesystem'' ? has(self.filesystem)
+                          : !has(self.filesystem)'
+                      - message: PullPolicy is only valid for HTTP and Image code
+                          sources.
+                        rule: 'self.type == ''Filesystem'' ? !has(self.pullPolicy)
+                          : true'
                     config:
                       description: |-
                         Config is the configuration for the Wasm extension.
@@ -51868,6 +51899,47 @@ spec:
                         specified
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
+              wasmModules:
+                description: |-
+                  WasmModules defines the set of Wasm modules that are allowed to be used by
+                  EnvoyExtensionPolicy resources with a Filesystem code source. Each entry
+                  registers a module by a logical name and the absolute path on the Envoy proxy.
+
+                  The EnvoyProxy owner is responsible for ensuring the Wasm files are available
+                  on the proxy container's filesystem (e.g., via init containers, custom images,
+                  or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path.
+                items:
+                  description: |-
+                    WasmModuleEntry defines a Wasm module that is registered and allowed for use
+                    by EnvoyExtensionPolicy resources with a Filesystem code source.
+                  properties:
+                    name:
+                      description: |-
+                        Name is the logical name for this module. EnvoyExtensionPolicy resources
+                        reference modules by this name.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                      type: string
+                    path:
+                      description: |-
+                        Path is the absolute filesystem path to the Wasm module on the Envoy proxy.
+
+                        The EnvoyProxy owner is responsible for ensuring the file is available on
+                        the proxy container's filesystem (for example via a custom image or volume mount).
+                      maxLength: 4096
+                      minLength: 1
+                      pattern: ^/.*
+                      type: string
+                  required:
+                  - name
+                  - path
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
             type: object
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.

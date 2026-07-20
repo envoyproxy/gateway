@@ -964,6 +964,147 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				": Exactly one of inline or valueRef must be set with correct type.",
 			},
 		},
+		// Wasm Filesystem code source
+		{
+			desc: "valid Wasm Filesystem code source",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Name: new("wasm-filter"),
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.FilesystemWasmCodeSourceType,
+								Filesystem: &egv1a1.FilesystemWasmCodeSource{
+									Name: "security-filter",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Wasm Filesystem without filesystem field",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.FilesystemWasmCodeSourceType,
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Filesystem, filesystem field needs to be set"},
+		},
+		{
+			desc: "Wasm HTTP with filesystem field set",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/filter.wasm",
+								},
+								Filesystem: &egv1a1.FilesystemWasmCodeSource{
+									Name: "security-filter",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Filesystem, filesystem field needs to be set"},
+		},
+		{
+			desc: "Wasm Filesystem with pullPolicy set",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.FilesystemWasmCodeSourceType,
+								Filesystem: &egv1a1.FilesystemWasmCodeSource{
+									Name: "security-filter",
+								},
+								PullPolicy: new(egv1a1.ImagePullPolicyAlways),
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"PullPolicy is only valid for HTTP and Image code sources"},
+		},
+		{
+			desc: "Wasm Filesystem with empty module name",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.FilesystemWasmCodeSourceType,
+								Filesystem: &egv1a1.FilesystemWasmCodeSource{
+									Name: "",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.wasm[0].code.filesystem.name: Invalid value:",
+				"should be at least 1 chars long",
+			},
+		},
 		// DynamicModules
 		{
 			desc: "valid DynamicModule with all fields",
