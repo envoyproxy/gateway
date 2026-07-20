@@ -532,6 +532,11 @@ func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 	}
 	for i, tlsSecret := range config.secrets {
 		cert := getTLSCertificateFromSecret(tlsSecret)
+		if tlsSecret.Type == egv1a1.SDSSecretType {
+			if sds, err := ir.NewSDSConfig(tlsSecret); err == nil {
+				cert = ir.TLSCertificate{Name: irTLSListenerConfigName(tlsSecret), SDS: sds}
+			}
+		}
 		tlsListenerConfigs.Certificates[i] = cert
 	}
 
