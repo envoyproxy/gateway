@@ -115,25 +115,8 @@ func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
 }
 
 // processSDSClusters scans the IR for SDS URLs and creates clusters for them
-func (t *Translator) processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
+func processSDSClusters(tCtx *types.ResourceVersionTable, backendIndex backendClusterIndex, xdsIR *ir.Xds) error {
 	sdsURLs := make(map[string]bool)
-
-	scanSettings := func(dsts []*ir.DestinationSetting) {
-		for _, dest := range dsts {
-			if dest.TLS != nil {
-				if caCert := dest.TLS.CACertificate; caCert != nil {
-					if caCert.SDS != nil && caCert.SDS.URL != "" {
-						sdsURLs[caCert.SDS.URL] = true
-					}
-				}
-				for _, cert := range dest.TLS.ClientCertificates {
-					if cert.SDS != nil && cert.SDS.URL != "" {
-						sdsURLs[cert.SDS.URL] = true
-					}
-				}
-			}
-		}
-	}
 
 	// Collect SDS URLs from HTTP listeners
 	for _, httpListener := range xdsIR.HTTP {
@@ -141,9 +124,21 @@ func (t *Translator) processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR 
 			if route.Destination == nil {
 				continue
 			}
-			scanSettings(route.Destination.Settings)
-			for _, bc := range t.resolveMergedBackendClusters(route.Destination) {
-				scanSettings([]*ir.DestinationSetting{bc.Setting})
+			for _, dest := range routeDestinationSettings(route.Destination, backendIndex) {
+				if dest.TLS != nil {
+					// Check CA certificate
+					if caCert := dest.TLS.CACertificate; caCert != nil {
+						if caCert.SDS != nil && caCert.SDS.URL != "" {
+							sdsURLs[caCert.SDS.URL] = true
+						}
+					}
+					// Check client certificates
+					for _, cert := range dest.TLS.ClientCertificates {
+						if cert.SDS != nil && cert.SDS.URL != "" {
+							sdsURLs[cert.SDS.URL] = true
+						}
+					}
+				}
 			}
 		}
 	}
@@ -154,9 +149,21 @@ func (t *Translator) processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR 
 			if route.Destination == nil {
 				continue
 			}
-			scanSettings(route.Destination.Settings)
-			for _, bc := range t.resolveMergedBackendClusters(route.Destination) {
-				scanSettings([]*ir.DestinationSetting{bc.Setting})
+			for _, dest := range routeDestinationSettings(route.Destination, backendIndex) {
+				if dest.TLS != nil {
+					// Check CA certificate
+					if caCert := dest.TLS.CACertificate; caCert != nil {
+						if caCert.SDS != nil && caCert.SDS.URL != "" {
+							sdsURLs[caCert.SDS.URL] = true
+						}
+					}
+					// Check client certificates
+					for _, cert := range dest.TLS.ClientCertificates {
+						if cert.SDS != nil && cert.SDS.URL != "" {
+							sdsURLs[cert.SDS.URL] = true
+						}
+					}
+				}
 			}
 		}
 	}

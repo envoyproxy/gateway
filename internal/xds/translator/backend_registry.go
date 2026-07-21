@@ -10,7 +10,6 @@ import (
 )
 
 // backendClusterIndex resolves a BackendClusterRef's Name against ir.Xds.Backends.
-// Built once per Translate() call.
 type backendClusterIndex map[string]*ir.BackendCluster
 
 func newBackendClusterIndex(xdsIR *ir.Xds) backendClusterIndex {
@@ -21,27 +20,35 @@ func newBackendClusterIndex(xdsIR *ir.Xds) backendClusterIndex {
 	return idx
 }
 
-// resolveMergedBackendClusters resolves rd's BackendClusterRefs (the genuinely merged,
-// identity-deduplicated backends for this destination) against idx. A ref whose Name isn't found
-// in idx is silently dropped (matches this package's existing convention for stale/missing
-// references). Non-merged backends never appear here — they live in rd.Settings, handled entirely
-// separately by the reverted pre-PR code paths in translator.go/cluster.go/route.go.
-func (t *Translator) resolveMergedBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
+// resolveBackendClusters resolves rd's BackendClusterRefs against backendIndex, dropping any ref
+// whose Name isn't found.
+func resolveBackendClusters(rd *ir.RouteDestination, backendIndex backendClusterIndex) []*ir.BackendCluster {
 	if rd == nil || len(rd.BackendClusterRefs) == 0 {
 		return nil
 	}
 	bcs := make([]*ir.BackendCluster, 0, len(rd.BackendClusterRefs))
 	for _, ref := range rd.BackendClusterRefs {
-		if bc, ok := t.backendIndex[ref.Name]; ok {
+		if bc, ok := backendIndex[ref.Name]; ok {
 			bcs = append(bcs, bc)
 		}
 	}
 	return bcs
 }
 
-// mergedBackendClusterRef returns bc's original BackendClusterRef from rd, so callers can recover
-// its route-scoped Weight (a merged BackendCluster's own Setting.Weight is always nil).
-func mergedBackendClusterRef(rd *ir.RouteDestination, bc *ir.BackendCluster) *ir.BackendClusterRef {
+// routeDestinationSettings returns rd's own Settings plus every resolved backend's Setting.
+func routeDestinationSettings(rd *ir.RouteDestination, backendIndex backendClusterIndex) []*ir.DestinationSetting {
+	backendClusters := resolveBackendClusters(rd, backendIndex)
+	settings := make([]*ir.DestinationSetting, 0, len(rd.Settings)+len(backendClusters))
+	settings = append(settings, rd.Settings...)
+	for _, bc := range backendClusters {
+		settings = append(settings, bc.Setting)
+	}
+	return settings
+}
+
+// backendClusterRef returns bc's original BackendClusterRef from rd. A BackendCluster's own
+// Setting.Weight is always nil; the ref carries the real, route-scoped Weight instead.
+func backendClusterRef(rd *ir.RouteDestination, bc *ir.BackendCluster) *ir.BackendClusterRef {
 	for _, ref := range rd.BackendClusterRefs {
 		if ref.Name == bc.Name {
 			return ref
@@ -50,17 +57,15 @@ func mergedBackendClusterRef(rd *ir.RouteDestination, bc *ir.BackendCluster) *ir
 	return nil
 }
 
-// needsRouteCluster reports whether rd needs its own route-scoped cluster built: either it has
-// non-merged settings, or it has no backends at all (a placeholder destination that still needs a
-// real, empty-endpoint EDS cluster).
+// needsRouteCluster reports whether rd needs its own route-scoped cluster: it has non-merged
+// Settings, or no backends at all (a placeholder destination still needs a real EDS cluster).
 func needsRouteCluster(rd *ir.RouteDestination) bool {
 	return len(rd.Settings) > 0 || len(rd.BackendClusterRefs) == 0
 }
 
-// tcpDestinationClusterName returns rd's single Envoy Cluster name. TCP/UDP/TLS routes have no
-// weighted-clusters mechanism, so a destination must resolve to exactly one cluster: its own
-// route-scoped name (non-merged, rd.Settings) or its one merged backend's name.
-func tcpDestinationClusterName(rd *ir.RouteDestination) string {
+// singleClusterDestinationName returns rd's single Envoy Cluster name — TCP/UDP/TLS routes have no
+// weighted-clusters mechanism, so exactly one of rd.Settings/rd.BackendClusterRefs must resolve it.
+func singleClusterDestinationName(rd *ir.RouteDestination) string {
 	if len(rd.Settings) > 0 {
 		return rd.Name
 	}

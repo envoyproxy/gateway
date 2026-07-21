@@ -45,7 +45,7 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(t *Translator, httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*routev3.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex) (*routev3.Route, error) {
 	connectMatch := trafficUpgradeConnect(httpRoute.Traffic)
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
@@ -74,7 +74,7 @@ func buildXdsRoute(t *Translator, httpRoute *ir.HTTPRoute, httpListener *ir.HTTP
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(t, httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch, backendIndex)
 		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
@@ -86,7 +86,7 @@ func buildXdsRoute(t *Translator, httpRoute *ir.HTTPRoute, httpListener *ir.HTTP
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		routeAction := buildXdsRouteAction(t, httpRoute)
+		routeAction := buildXdsRouteAction(httpRoute, backendIndex)
 		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 
 		if httpRoute.Mirrors != nil {
@@ -324,8 +324,8 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(t *Translator, route *ir.HTTPRoute) *routev3.RouteAction {
-	mergedClusters := t.resolveMergedBackendClusters(route.Destination)
+func buildXdsRouteAction(route *ir.HTTPRoute, backendIndex backendClusterIndex) *routev3.RouteAction {
+	mergedClusters := resolveBackendClusters(route.Destination, backendIndex)
 	hasNonMerged := len(route.Destination.Settings) > 0
 
 	// Weighted routing is needed whenever there's more than one distinct cluster to route
@@ -408,7 +408,7 @@ func buildXdsWeightedRouteAction(destination *ir.RouteDestination, mergedCluster
 	// Merged: each distinct merged backend gets its own weighted entry, using its own
 	// per-route BackendClusterRef.Weight (a merged Setting's own Weight is always nil).
 	for _, bc := range mergedClusters {
-		ref := mergedBackendClusterRef(destination, bc)
+		ref := backendClusterRef(destination, bc)
 		if ref == nil || ref.Weight == nil {
 			continue
 		}
@@ -569,8 +569,8 @@ func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
 	}
 }
 
-func buildXdsURLRewriteAction(t *Translator, route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
-	routeAction := buildXdsRouteAction(t, route)
+func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch, backendIndex backendClusterIndex) *routev3.RouteAction {
+	routeAction := buildXdsRouteAction(route, backendIndex)
 
 	if urlRewrite.Path != nil {
 		switch {

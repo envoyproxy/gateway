@@ -349,7 +349,7 @@ func TestBuildXdsURLRewriteAction_AppendXForwardedHost(t *testing.T) {
 				},
 				AppendXForwardedHost: tt.appendXForwardedHost,
 			}
-			got := buildXdsURLRewriteAction(&Translator{}, baseRoute, urlRewrite, nil)
+			got := buildXdsURLRewriteAction(baseRoute, urlRewrite, nil, nil)
 			if got.AppendXForwardedHost != tt.wantAppendXForwardedHost {
 				t.Errorf("AppendXForwardedHost = %v, want %v", got.AppendXForwardedHost, tt.wantAppendXForwardedHost)
 			}

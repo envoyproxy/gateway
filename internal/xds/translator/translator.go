@@ -147,7 +147,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	if err := t.processSDSClusters(tCtx, xdsIR); err != nil {
+	if err := processSDSClusters(tCtx, t.backendIndex, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -581,7 +581,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(t, httpRoute, httpListener)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
@@ -859,7 +859,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
 				route,
-				tcpDestinationClusterName(route.Destination),
+				singleClusterDestinationName(route.Destination),
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
@@ -948,7 +948,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		}
 
 		xdsListener, err := buildXdsUDPListener(
-			tcpDestinationClusterName(udpListener.Route.Destination),
+			singleClusterDestinationName(udpListener.Route.Destination),
 			udpListener,
 			accesslog,
 			t.xdsNameSchemeV2(),
