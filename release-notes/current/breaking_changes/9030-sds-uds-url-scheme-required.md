@@ -1,0 +1,1 @@
+The SDS (Secret Discovery Service) reference secret `url` field must now include the `unix://` scheme (e.g. `unix:///var/run/secrets/workload-spiffe-uds/socket`). Bare filesystem paths that were previously accepted (introduced in v1.9.0-rc.0) are now rejected and must be updated.
