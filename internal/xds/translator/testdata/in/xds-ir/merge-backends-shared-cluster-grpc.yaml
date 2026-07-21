@@ -60,8 +60,7 @@ http:
       namespace: default
     name: grpcroute/default/grpc-route-2/rule/0/match/0/*
 backends:
-- merged: true
-  metadata:
+- metadata:
     kind: GRPCRoute
     name: grpc-route-1
     namespace: default

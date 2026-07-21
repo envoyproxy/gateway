@@ -14,7 +14,6 @@ http:
   port: 10080
   routes:
   - destination:
-      isDynamicResolver: true
       name: httproute/default/httproute-1/rule/0
       settings:
       - isDynamicResolver: true

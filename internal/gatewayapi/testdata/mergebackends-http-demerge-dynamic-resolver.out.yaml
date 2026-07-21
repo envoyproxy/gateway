@@ -195,7 +195,6 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: http-route-1
@@ -218,7 +217,6 @@ xdsIR:
           name: ""
           prefix: /route-1
       - destination:
-          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: http-route-2

@@ -209,7 +209,6 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-1
@@ -235,7 +234,6 @@ xdsIR:
           namespace: default
         name: httproute/default/httproute-1/rule/0/match/-1/gateway_envoyproxy_io
       - destination:
-          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-2

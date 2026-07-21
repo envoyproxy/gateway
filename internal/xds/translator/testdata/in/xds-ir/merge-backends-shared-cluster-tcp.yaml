@@ -51,8 +51,7 @@ tcp:
       namespace: default
     name: tcproute/default/tcproute-2
 backends:
-- merged: true
-  metadata:
+- metadata:
     kind: TCPRoute
     name: tcproute-1
     namespace: default

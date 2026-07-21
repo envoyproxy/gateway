@@ -42,7 +42,6 @@ http:
       - name: "shared-cluster"
 backends:
 - name: "shared-cluster"
-  merged: true
   setting:
     name: "shared-cluster/backend/0"
     endpoints:

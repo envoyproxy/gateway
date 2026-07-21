@@ -28,7 +28,6 @@ http:
       - name: "shared-cluster"
 backends:
 - name: "shared-cluster"
-  merged: true
   setting:
     name: "shared-cluster"
     weight: 1

@@ -314,7 +314,6 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-1
@@ -340,7 +339,6 @@ xdsIR:
           host:
             header: x-dynamic-host-header-1
       - destination:
-          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-1
@@ -373,7 +371,6 @@ xdsIR:
           host:
             header: x-dynamic-host-header-2
       - destination:
-          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-2
@@ -419,7 +416,6 @@ xdsIR:
           host:
             header: x-dynamic-host-header-3
       - destination:
-          isDynamicResolver: true
           metadata:
             kind: HTTPRoute
             name: httproute-2

@@ -2,8 +2,7 @@
 # but with different weights. The merged cluster's cached Settings[0].Weight (30, from
 # whichever route registered it first) must not leak into the route that uses weight 90.
 backends:
-- merged: true
-  metadata:
+- metadata:
     kind: HTTPRoute
     name: http-route-a
     namespace: default

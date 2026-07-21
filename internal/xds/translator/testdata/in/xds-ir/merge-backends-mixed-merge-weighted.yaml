@@ -2,8 +2,7 @@
 # one rule has 2 backendRefs, one merges (shared with a second route) and one
 # doesn't (carries a per-backendRef filter), forcing the weighted-clusters path.
 backends:
-- merged: true
-  metadata:
+- metadata:
     kind: HTTPRoute
     name: http-route-mixed
     namespace: default

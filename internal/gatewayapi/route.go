@@ -444,7 +444,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					Name:               destName,
 					Settings:           allDs,
 					BackendClusterRefs: backendClusterRefs.refs,
-					IsDynamicResolver:  len(allDs) == 1 && allDs[0].IsDynamicResolver,
 					Metadata:           routeRuleMetadata,
 				}
 			}
@@ -530,8 +529,7 @@ type ResolvedBackendCluster struct {
 }
 
 // resolveBackendCluster decides whether the backend identified by identity participates in
-// cluster deduplication (via shouldMergeBackend) and, if so, builds its fully-qualified cluster
-// key and name in one place.
+// cluster deduplication and, if so, builds its fully-qualified cluster key and name in one place.
 //
 // When disabled, the returned key is never looked up in BackendClusterMap, so it only needs to
 // carry enough for cluster.Name/.Merge. When enabled, the backend's own identity (plus gateway)
@@ -799,8 +797,8 @@ func (t *Translator) getOrCreateBackendCluster(
 		t.BackendClusterMap = make(map[BackendClusterKey]*ir.BackendCluster)
 	}
 
-	// Weight is per-route for a merged cluster (see ir.BackendClusterRef.ResolvedWeight), so
-	// clear it here to avoid a stale, misleading value on the shared Setting.
+	// Weight is per-route for a merged cluster (see mergedBackendClusterRef), so clear it here to
+	// avoid a stale, misleading value on the shared Setting.
 	copied := *ds
 	copied.Weight = nil
 
@@ -810,7 +808,6 @@ func (t *Translator) getOrCreateBackendCluster(
 		// (invariant) identity rather than whichever route happens to register it first.
 		Setting:  &copied,
 		Metadata: ds.Metadata,
-		Merged:   true,
 	}
 	t.BackendClusterMap[*key] = backendCluster
 	if gwIR != nil {
@@ -1506,7 +1503,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					Name:               destName,
 					Settings:           allDs,
 					BackendClusterRefs: backendClusterRefs.refs,
-					IsDynamicResolver:  len(allDs) == 1 && allDs[0].IsDynamicResolver,
 					Metadata:           routeRuleMetadata,
 				}
 			}

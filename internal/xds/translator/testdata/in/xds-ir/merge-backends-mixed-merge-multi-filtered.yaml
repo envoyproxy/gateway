@@ -2,8 +2,7 @@
 # one rule has 3 backendRefs - 1 merged, 2 differently-filtered and non-merged (grouped
 # into one gatewayapi-layer registry entry but split back into separate real clusters here).
 backends:
-- merged: true
-  metadata:
+- metadata:
     kind: HTTPRoute
     name: http-route-mixed
     namespace: default

@@ -26,7 +26,6 @@ http:
           port: 8081
 backends:
 - name: "backend/service/default/service-1/8080/http"
-  merged: true
   setting:
     name: "backend/service/default/service-1/8080/http"
     weight: 50

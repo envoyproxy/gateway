@@ -81,6 +81,7 @@ var (
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
 	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
+	ErrBackendClusterMergedDynamicResolver      = errors.New("a BackendCluster must not be a dynamic resolver")
 
 	redacted = []byte("[redacted]")
 )
@@ -175,8 +176,8 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
-	// Backends holds every distinct BackendCluster referenced by this gateway, keyed by Name -
-	// the single source of truth for a cluster's Settings/Metadata.
+	// Backends holds every distinct merged BackendCluster for this gateway - the single source
+	// of truth for a cluster's Settings/Metadata.
 	Backends []*BackendCluster `json:"backends,omitempty" yaml:"backends,omitempty"`
 }
 
@@ -661,7 +662,7 @@ func (b *BackendWeights) UnavailableWeight() uint32 {
 	return b.Invalid + b.NoEndpoints
 }
 
-// AddWeighted adds weight to b under the category s's own status indicates (invalid,
+// AddWeighted adds weight to b under the category that s's own status indicates (invalid,
 // dynamic-resolver, custom backend, has/no endpoints), independent of s.Weight.
 func (b *BackendWeights) AddWeighted(s *DestinationSetting, weight *uint32) {
 	if weight == nil {
@@ -1012,8 +1013,11 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	return h.Destination.NeedsClusterPerSetting()
 }
 
+// IsDynamicResolverRoute reports whether h's destination is a dynamic resolver.
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
-	return h.Destination != nil && h.Destination.IsDynamicResolver
+	// Only checks Settings, never BackendClusterRefs: a dynamic-resolver backend is never
+	// merge-eligible, so its setting always lives in Settings.
+	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -1942,8 +1946,6 @@ type RouteDestination struct {
 	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
 	// never here.
 	BackendClusterRefs []*BackendClusterRef `json:"backendClusterRefs,omitempty" yaml:"backendClusterRefs,omitempty"`
-	// IsDynamicResolver denormalizes whether this destination's backend is a dynamic resolver.
-	IsDynamicResolver bool `json:"isDynamicResolver,omitempty" yaml:"isDynamicResolver,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
 	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
@@ -1951,7 +1953,7 @@ type RouteDestination struct {
 }
 
 // Validate the fields within the RouteDestination structure. BackendCluster-level validation
-// happens once per distinct cluster via Xds.Validate(), not here per-ref.
+// happens once per distinct cluster, not here per-ref.
 func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
@@ -2058,19 +2060,16 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 }
 
 // BackendCluster is a shared, identity-deduplicated backend: exactly one backend identity, one
-// setting. Only ever constructed for genuinely merged (Merged: true) backends — see
-// getOrCreateBackendCluster in internal/gatewayapi/route.go.
+// setting. Only ever constructed for genuinely merged backends.
 // +kubebuilder:object:generate=true
 type BackendCluster struct {
 	// Name uniquely identifies this backend cluster.
 	Name string `json:"name" yaml:"name"`
-	// Setting holds this backend's own endpoint locality. Always exactly one, since a merged
+	// Setting holds this backend's own configuration. Always exactly one, since a merged
 	// cluster is by definition a single deduplicated backend identity.
 	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
 	// Metadata describes the backend resource (Service, Backend, etc.)
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// Merged is true when this cluster is shared across routes via backend-identity deduplication.
-	Merged bool `json:"merged,omitempty" yaml:"merged,omitempty"`
 }
 
 func (b *BackendCluster) Validate() error {
@@ -2081,6 +2080,9 @@ func (b *BackendCluster) Validate() error {
 	if b.Setting != nil {
 		if err := b.Setting.Validate(); err != nil {
 			errs = errors.Join(errs, err)
+		}
+		if b.Setting.IsDynamicResolver {
+			errs = errors.Join(errs, ErrBackendClusterMergedDynamicResolver)
 		}
 	}
 	return errs
@@ -2098,7 +2100,7 @@ type BackendClusterRef struct {
 }
 
 // ResolveBackendClusterRefs resolves each ref's Name against idx, a name-keyed index of
-// BackendClusters.
+// BackendClusters. A ref whose Name isn't found in idx is silently dropped.
 func ResolveBackendClusterRefs(idx map[string]*BackendCluster, refs []*BackendClusterRef) []*BackendCluster {
 	bcs := make([]*BackendCluster, 0, len(refs))
 	for _, ref := range refs {

@@ -239,8 +239,7 @@ xdsIR:
       json:
       - path: /dev/stdout
     backends:
-    - merged: true
-      metadata:
+    - metadata:
         kind: Service
         name: service-1
         namespace: default
@@ -258,8 +257,7 @@ xdsIR:
           sectionName: "8080"
         name: backend/service/default/service-1/8080/http/envoy-gateway/gateway-1
         protocol: HTTP
-    - merged: true
-      metadata:
+    - metadata:
         kind: Service
         name: service-1
         namespace: default

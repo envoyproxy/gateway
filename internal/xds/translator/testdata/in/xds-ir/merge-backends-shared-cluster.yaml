@@ -57,8 +57,7 @@ http:
       name: ""
       prefix: /route-2
 backends:
-- merged: true
-  metadata:
+- metadata:
     kind: HTTPRoute
     name: http-route-1
     namespace: default

@@ -49,8 +49,7 @@ tcp:
         snis:
         - bar.com
 backends:
-- merged: true
-  metadata:
+- metadata:
     kind: TLSRoute
     name: tlsroute-1
     namespace: default

@@ -1320,6 +1320,47 @@ func TestValidateRouteDestination(t *testing.T) {
 	}
 }
 
+func TestValidateBackendCluster(t *testing.T) {
+	tests := []struct {
+		name  string
+		input BackendCluster
+		want  error
+	}{
+		{
+			name: "happy",
+			input: BackendCluster{
+				Name:    "bc-1",
+				Setting: &DestinationSetting{},
+			},
+			want: nil,
+		},
+		{
+			name: "missing name",
+			input: BackendCluster{
+				Setting: &DestinationSetting{},
+			},
+			want: ErrDestinationNameEmpty,
+		},
+		{
+			name: "dynamic resolver is invalid",
+			input: BackendCluster{
+				Name:    "bc-1",
+				Setting: &DestinationSetting{IsDynamicResolver: true},
+			},
+			want: ErrBackendClusterMergedDynamicResolver,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, (&test.input).Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
 func TestValidateStringMatch(t *testing.T) {
 	tests := []struct {
 		name  string

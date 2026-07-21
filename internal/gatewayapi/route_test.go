@@ -970,7 +970,6 @@ func TestGetOrCreateBackendCluster(t *testing.T) {
 		require.Len(t, gwIR.Backends, 1)
 		require.Same(t, bc, gwIR.Backends[0])
 		require.Equal(t, ds1.Name, bc.Setting.Name)
-		require.True(t, bc.Merged)
 	})
 
 	t.Run("cache hit returns the existing cluster without replacing its setting", func(t *testing.T) {

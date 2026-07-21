@@ -43,8 +43,7 @@ udp:
       name: udproute/default/udproute-2/rule/-1
     name: udproute/default/udproute-2
 backends:
-- merged: true
-  metadata:
+- metadata:
     kind: UDPRoute
     name: udproute-1
     namespace: default

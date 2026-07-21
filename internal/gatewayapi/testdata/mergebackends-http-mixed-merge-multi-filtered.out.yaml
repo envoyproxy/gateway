@@ -160,8 +160,7 @@ xdsIR:
       json:
       - path: /dev/stdout
     backends:
-    - merged: true
-      metadata:
+    - metadata:
         kind: Service
         name: service-1
         namespace: default
