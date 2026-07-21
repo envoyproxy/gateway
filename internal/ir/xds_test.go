@@ -602,6 +602,15 @@ func TestValidateXds(t *testing.T) {
 	}
 }
 
+func TestSDSClusterNameFromURLDistinguishesUnixSocketPaths(t *testing.T) {
+	first := SDSClusterNameFromURL("/run/a/b/socket")
+	second := SDSClusterNameFromURL("/run/a_b/socket")
+
+	require.NotEqual(t, first, second)
+	require.Contains(t, first, "run_a_b_socket")
+	require.Contains(t, second, "run_a_b_socket")
+}
+
 func TestValidateHTTPListener(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -709,9 +718,10 @@ func TestValidateTCPListener(t *testing.T) {
 
 func TestValidateTLSListenerConfig(t *testing.T) {
 	tests := []struct {
-		name  string
-		input TLSConfig
-		want  error
+		name    string
+		input   TLSConfig
+		want    error
+		wantErr bool
 	}{
 		{
 			name: "happy",
@@ -722,6 +732,72 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 				}},
 			},
 			want: nil,
+		},
+		{
+			name: "SDS happy",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{
+						SecretName: "default",
+						URL:        "/var/run/secrets/workload-spiffe-uds/socket",
+					},
+				}},
+			},
+			want: nil,
+		},
+		{
+			name: "SDS with inline certificate and private key",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{
+						SecretName: "default",
+						URL:        "/var/run/secrets/workload-spiffe-uds/socket",
+					},
+					Certificate: []byte("server-cert"),
+					PrivateKey:  []byte("priv-key"),
+				}},
+			},
+			want: ErrTLSCertificateMultipleSources,
+		},
+		{
+			name: "SDS with inline OCSP staple",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{
+						SecretName: "default",
+						URL:        "/var/run/secrets/workload-spiffe-uds/socket",
+					},
+					OCSPStaple: []byte("ocsp-staple"),
+				}},
+			},
+			want: ErrTLSCertificateMultipleSources,
+		},
+		{
+			name: "SDS empty",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "SDS missing URL",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{SecretName: "default"},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "SDS missing secret name",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{URL: "/x"},
+				}},
+			},
+			wantErr: true,
 		},
 		{
 			name: "invalid server cert",
@@ -744,6 +820,10 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			if test.wantErr {
+				require.Error(t, (&test.input).Validate())
+				return
+			}
 			if test.want == nil {
 				require.NoError(t, (&test.input).Validate())
 			} else {

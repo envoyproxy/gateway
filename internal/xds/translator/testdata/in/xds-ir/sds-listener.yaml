@@ -1,0 +1,81 @@
+http:
+- name: test1
+  address: 0.0.0.0
+  port: 10080
+  hostnames:
+  - example.com
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  tls:
+    certificates:
+    - name: sds-default
+      sds:
+        url: /var/run/secrets/workload-spiffe-uds/socket
+        secretName: default
+    - name: sds-other
+      sds:
+        url: /var/run/sds/two/socket
+        secretName: other
+    - name: sds-underscore
+      sds:
+        url: /var/run/sds/underscore/socket
+        secretName: underscore
+    - name: inline
+      certificate: Y2VydC1kYXRh
+      privateKey: a2V5LWRhdGE=
+  tlsOverlaps: true
+  routes:
+  - name: route1
+    hostname: '*'
+    destination:
+      name: test1-dest
+      settings:
+      - endpoints:
+        - host: 1.2.3.4
+          port: 50000
+        name: test1-dest/backend/0
+- name: test2
+  address: 0.0.0.0
+  port: 10081
+  hostnames:
+  - '*'
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  routes:
+  - name: route2
+    hostname: '*'
+    destination:
+      name: test2-dest
+      settings:
+      - endpoints:
+        - host: 2.3.4.5
+          port: 50001
+        name: test2-dest/backend/0
+tcp:
+- name: test3
+  address: 0.0.0.0
+  port: 10082
+  tls:
+    certificates:
+    - name: sds-default
+      sds:
+        url: /var/run/secrets/workload-spiffe-uds/socket
+        secretName: default
+  routes:
+  - name: route3
+    tls:
+      terminate:
+        certificates:
+        - name: sds-default
+          sds:
+            url: /var/run/secrets/workload-spiffe-uds/socket
+            secretName: default
+    destination:
+      name: test3-dest
+      settings:
+      - endpoints:
+        - host: 3.4.5.6
+          port: 50002
+        name: test3-dest/backend/0

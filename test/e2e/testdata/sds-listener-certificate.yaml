@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sds-listener-certificate-source
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUIzVENDQVlPZ0F3SUJBZ0lVSjl1Z1JKaDJNL3VZU2ZnZk13UkFMK1RSa3Njd0NnWUlLb1pJemowRUF3SXcKTmpFYU1CZ0dBMVVFQ2d3UlJXNTJiM2tnUjJGMFpYZGhlU0JGTWtVeEdEQVdCZ05WQkFNTUQzTmtjeTVsZUdGdApjR3hsTG1OdmJUQWVGdzB5TmpBM01UY3hORFExTWpKYUZ3MHpOakEzTVRReE5EUTFNakphTURZeEdqQVlCZ05WCkJBb01FVVZ1ZG05NUlFZGhkR1YzWVhrZ1JUSkZNUmd3RmdZRFZRUUREQTl6WkhNdVpYaGhiWEJzWlM1amIyMHcKV1RBVEJnY3Foa2pPUFFJQkJnZ3Foa2pPUFFNQkJ3TkNBQVRwVC9WNGxKZ0puS2hBcE5vRDZZemE2VGFOV1JDcQpDc1ZjVWlxTnhWNjNzd21RQnlUSjU5Z3hwTTY4SU1UbXhHMyticVljdW9PNnhKRFozcTFsVHhHc28yOHdiVEFkCkJnTlZIUTRFRmdRVTh2dHo0c01WRk85dyswR0h2LzFBZENhU0ZBQXdId1lEVlIwakJCZ3dGb0FVOHZ0ejRzTVYKRk85dyswR0h2LzFBZENhU0ZBQXdEd1lEVlIwVEFRSC9CQVV3QXdFQi96QWFCZ05WSFJFRUV6QVJnZzl6WkhNdQpaWGhoYlhCc1pTNWpiMjB3Q2dZSUtvWkl6ajBFQXdJRFNBQXdSUUlnY05CN284OFR4M2tDUUFkczRENXlPcldBCjhWa2Z1MHhuRlZsU1JIU0szSE1DSVFDU0lSVXVOMnJacmd4eG9sN2R4L0l3OXhQWFdVVFdxM24vNlhwQU45V2gKZ2c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUVWWVVGTU4wUEpsdlQyZ0VEeGhWenNQTUtJcFAxYlE3UmhKNkY4aFE5dWNvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFNlUvMWVKU1lDWnlvUUtUYUErbU0ydWsyalZrUXFnckZYRklxamNWZXQ3TUprQWNreWVmWQpNYVRPdkNERTVzUnQvbTZtSExxRHVzU1EyZDZ0WlU4UnJBPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sds-listener-certificate-source
+  namespace: envoy-gateway-system
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUIzVENDQVlPZ0F3SUJBZ0lVSjl1Z1JKaDJNL3VZU2ZnZk13UkFMK1RSa3Njd0NnWUlLb1pJemowRUF3SXcKTmpFYU1CZ0dBMVVFQ2d3UlJXNTJiM2tnUjJGMFpYZGhlU0JGTWtVeEdEQVdCZ05WQkFNTUQzTmtjeTVsZUdGdApjR3hsTG1OdmJUQWVGdzB5TmpBM01UY3hORFExTWpKYUZ3MHpOakEzTVRReE5EUTFNakphTURZeEdqQVlCZ05WCkJBb01FVVZ1ZG05NUlFZGhkR1YzWVhrZ1JUSkZNUmd3RmdZRFZRUUREQTl6WkhNdVpYaGhiWEJzWlM1amIyMHcKV1RBVEJnY3Foa2pPUFFJQkJnZ3Foa2pPUFFNQkJ3TkNBQVRwVC9WNGxKZ0puS2hBcE5vRDZZemE2VGFOV1JDcQpDc1ZjVWlxTnhWNjNzd21RQnlUSjU5Z3hwTTY4SU1UbXhHMyticVljdW9PNnhKRFozcTFsVHhHc28yOHdiVEFkCkJnTlZIUTRFRmdRVTh2dHo0c01WRk85dyswR0h2LzFBZENhU0ZBQXdId1lEVlIwakJCZ3dGb0FVOHZ0ejRzTVYKRk85dyswR0h2LzFBZENhU0ZBQXdEd1lEVlIwVEFRSC9CQVV3QXdFQi96QWFCZ05WSFJFRUV6QVJnZzl6WkhNdQpaWGhoYlhCc1pTNWpiMjB3Q2dZSUtvWkl6ajBFQXdJRFNBQXdSUUlnY05CN284OFR4M2tDUUFkczRENXlPcldBCjhWa2Z1MHhuRlZsU1JIU0szSE1DSVFDU0lSVXVOMnJacmd4eG9sN2R4L0l3OXhQWFdVVFdxM24vNlhwQU45V2gKZ2c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUVWWVVGTU4wUEpsdlQyZ0VEeGhWenNQTUtJcFAxYlE3UmhKNkY4aFE5dWNvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFNlUvMWVKU1lDWnlvUUtUYUErbU0ydWsyalZrUXFnckZYRklxamNWZXQ3TUprQWNreWVmWQpNYVRPdkNERTVzUnQvbTZtSExxRHVzU1EyZDZ0WlU4UnJBPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sds-listener-certificate
+  namespace: gateway-conformance-infra
+type: gateway.envoyproxy.io/sds
+stringData:
+  url: /var/run/sds/server.sock
+  secretName: sds-listener-certificate
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: sds-listener-certificate
+  namespace: gateway-conformance-infra
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  volumes:
+                    - name: sds-socket
+                      emptyDir: {}
+                    - name: sds-listener-certificate-source
+                      secret:
+                        secretName: sds-listener-certificate-source
+                  containers:
+                    - name: envoy
+                      volumeMounts:
+                        - name: sds-socket
+                          mountPath: /var/run/sds
+                    - name: sds-test-server
+                      image: envoyproxy/gateway-sds-test-server:latest
+                      imagePullPolicy: IfNotPresent
+                      args:
+                        - --socket-path=/var/run/sds/server.sock
+                        - --secret-name=sds-listener-certificate
+                        - --cert-path=/var/run/certificate/tls.crt
+                        - --key-path=/var/run/certificate/tls.key
+                      volumeMounts:
+                        - name: sds-socket
+                          mountPath: /var/run/sds
+                        - name: sds-listener-certificate-source
+                          mountPath: /var/run/certificate
+                          readOnly: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: sds-listener-certificate
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: sds-listener-certificate
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: sds.example.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: sds-listener-certificate
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sds-listener-certificate
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: sds-listener-certificate
+      sectionName: https
+  hostnames:
+    - sds.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /sds-listener
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

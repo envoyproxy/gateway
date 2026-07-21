@@ -1,0 +1,105 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: test1-dest
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: test1-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: test2-dest
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: test2-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: test3-dest
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: test3-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- connectTimeout: 10s
+  http2ProtocolOptions: {}
+  loadAssignment:
+    clusterName: sds_var_run_secrets_workload-spiffe-uds_socket_2465711674b623c4f815575b37404800
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            pipe:
+              path: /var/run/secrets/workload-spiffe-uds/socket
+  name: sds_var_run_secrets_workload-spiffe-uds_socket_2465711674b623c4f815575b37404800
+  type: STATIC
+- connectTimeout: 10s
+  http2ProtocolOptions: {}
+  loadAssignment:
+    clusterName: sds_var_run_sds_two_socket_bf395108472af10505ea7b43dde5a5e9
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            pipe:
+              path: /var/run/sds/two/socket
+  name: sds_var_run_sds_two_socket_bf395108472af10505ea7b43dde5a5e9
+  type: STATIC
+- connectTimeout: 10s
+  http2ProtocolOptions: {}
+  loadAssignment:
+    clusterName: sds_var_run_sds_underscore_socket_e84255b605ecebe05308d449b6fe20d6
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            pipe:
+              path: /var/run/sds/underscore/socket
+  name: sds_var_run_sds_underscore_socket_e84255b605ecebe05308d449b6fe20d6
+  type: STATIC

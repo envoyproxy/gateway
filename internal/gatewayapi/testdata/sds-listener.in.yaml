@@ -1,0 +1,145 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: sds-multiple
+          hostname: sds.example.com
+          protocol: HTTPS
+          port: 443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: sds-cert-default
+              - name: sds-cert-other
+        - name: inline-same-port
+          hostname: inline.example.com
+          protocol: HTTPS
+          port: 443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: envoy
+                namespace: envoy-gateway-system
+        - name: sds-mixed
+          protocol: HTTPS
+          port: 8443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: sds-cert-default
+              - name: envoy
+                namespace: envoy-gateway-system
+        - name: sds-tls-terminate
+          protocol: TLS
+          port: 9443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: sds-cert-default
+        - name: sds-cross-namespace
+          protocol: HTTPS
+          port: 11443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: sds-cert-cross
+                namespace: sds-secrets
+tcpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: TCPRoute
+    metadata:
+      namespace: default
+      name: sds-tcproute
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: sds-tls-terminate
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+referenceGrants:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: ReferenceGrant
+    metadata:
+      namespace: envoy-gateway-system
+      name: allow-base-certificate
+    spec:
+      from:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          namespace: envoy-gateway
+      to:
+        - group: ""
+          kind: Secret
+          name: envoy
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: ReferenceGrant
+    metadata:
+      namespace: sds-secrets
+      name: allow-sds-certificate
+    spec:
+      from:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          namespace: envoy-gateway
+      to:
+        - group: ""
+          kind: Secret
+          name: sds-cert-cross
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: sds-cert-default
+    type: gateway.envoyproxy.io/sds
+    data:
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+      secretName: ZGVmYXVsdA==
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: sds-cert-other
+    type: gateway.envoyproxy.io/sds
+    data:
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+      secretName: b3RoZXI=
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: sds-secrets
+      name: sds-cert-cross
+    type: gateway.envoyproxy.io/sds
+    data:
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+      secretName: Y3Jvc3M=

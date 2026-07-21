@@ -544,3 +544,51 @@ func TestBuildListenerTLSParametersDedupCACerts(t *testing.T) {
 		"expected exactly 1 PEM block after deduplication, got %d — "+
 			"appendDedupPEMCertsWithSeen may not be used in buildListenerTLSParameters", pemCount)
 }
+
+func TestValidateTerminateModeDeduplicatesSDSCertificateRefs(t *testing.T) {
+	sdsSecretOne := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "sds-one", Namespace: secretNamespace},
+		Type:       egv1a1.SDSSecretType,
+		Data: map[string][]byte{
+			"secretName": []byte("listener-one"),
+			"url":        []byte("/var/run/sds/one.sock"),
+		},
+	}
+	sdsSecretTwo := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "sds-two", Namespace: secretNamespace},
+		Type:       egv1a1.SDSSecretType,
+		Data: map[string][]byte{
+			"secretName": []byte("listener-two"),
+			"url":        []byte("/var/run/sds/two.sock"),
+		},
+	}
+
+	gateway := &GatewayContext{Gateway: &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: secretNamespace},
+		Spec: gwapiv1.GatewaySpec{Listeners: []gwapiv1.Listener{{
+			Name: "https",
+			TLS: &gwapiv1.ListenerTLSConfig{CertificateRefs: []gwapiv1.SecretObjectReference{
+				{Name: "sds-one"},
+				{Name: "sds-one"},
+				{Name: "sds-two"},
+				{Name: "sds-one"},
+			}},
+		}}},
+	}}
+	gateway.ResetListeners()
+
+	translator := &Translator{
+		TranslatorContext:   &TranslatorContext{},
+		SDSSecretRefEnabled: true,
+	}
+	translator.SetSecrets([]*corev1.Secret{sdsSecretOne, sdsSecretTwo})
+
+	resolvedSecrets, certs, ok := translator.validateTerminateModeAndGetTLSSecrets(
+		gateway.listeners[0],
+		&resource.Resources{},
+	)
+
+	require.True(t, ok)
+	require.Empty(t, certs)
+	require.Equal(t, []*corev1.Secret{sdsSecretOne, sdsSecretTwo}, resolvedSecrets)
+}

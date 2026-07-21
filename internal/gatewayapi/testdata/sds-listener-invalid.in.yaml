@@ -1,0 +1,129 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: missing-url
+          protocol: HTTPS
+          port: 443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: sds-missing-url
+        - name: missing-secret-name
+          protocol: HTTPS
+          port: 8443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: sds-missing-secret-name
+        - name: mixed-invalid-sds
+          protocol: HTTPS
+          port: 9443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: envoy
+                namespace: envoy-gateway-system
+              - name: sds-missing-url
+        - name: cross-namespace-without-grant
+          protocol: HTTPS
+          port: 10444
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: sds-cross-without-grant
+                namespace: sds-secrets
+        - name: valid-sds-malformed-tls
+          protocol: HTTPS
+          port: 11443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: sds-valid
+              - name: malformed-tls
+referenceGrants:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: ReferenceGrant
+    metadata:
+      namespace: envoy-gateway-system
+      name: allow-base-certificate
+    spec:
+      from:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          namespace: envoy-gateway
+      to:
+        - group: ""
+          kind: Secret
+          name: envoy
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: sds-missing-url
+    type: gateway.envoyproxy.io/sds
+    data:
+      secretName: ZGVmYXVsdA==
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: sds-missing-secret-name
+    type: gateway.envoyproxy.io/sds
+    data:
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: sds-valid
+    type: gateway.envoyproxy.io/sds
+    data:
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+      secretName: dmFsaWQ=
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: sds-secrets
+      name: sds-cross-without-grant
+    type: gateway.envoyproxy.io/sds
+    data:
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+      secretName: Y3Jvc3M=
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: malformed-tls
+    type: kubernetes.io/tls
+    data:
+      tls.crt: bm90IGEgcGVtIGNlcnRpZmljYXRl
+      tls.key: bm90IGEgcGVtIHByaXZhdGUga2V5
