@@ -1076,8 +1076,9 @@ func (t *Translator) processRequestMirrorFilter(
 	}
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
+	settingName := irDestinationSettingName(destName, -1 /*unused*/)
 	gatewayCtx, btpRoutingType, _ := t.resolveRoutingContext(filterContext.Route, filterContext.ParentRef, nil)
-	ds, _, _, err := t.processBackendRef(destName, -1, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, gatewayCtx, btpRoutingType, xdsIR, true /* mirror backends never merge */)
+	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, gatewayCtx, btpRoutingType, xdsIR)
 	if err != nil {
 		// Gateway API conformance: When backendRef Service exists but has no endpoints,
 		// the ResolvedRefs condition should NOT be set to False.
@@ -1089,14 +1090,9 @@ func (t *Translator) processRequestMirrorFilter(
 		return err
 	}
 
-	bc := &ir.BackendCluster{
+	routeDst := &ir.RouteDestination{
 		Name:     destName,
 		Settings: []*ir.DestinationSetting{ds},
-	}
-	gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
-	routeDst := &ir.RouteDestination{
-		Name:               destName,
-		BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(gwIR, bc)},
 	}
 
 	var percent *float32
