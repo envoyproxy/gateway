@@ -13,12 +13,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
-	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
 )
@@ -29,20 +27,16 @@ func TestExperimentalConformance(t *testing.T) {
 
 	opts := conformanceOpts(t)
 
-	opts.ConformanceProfiles = sets.New(
+	opts.ConformanceProfiles = []suite.ConformanceProfileName{
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
-	)
+	}
 
 	// If focusing on a single test, clear the skip list to ensure it runs.
 	if opts.RunTest != "" {
 		opts.SkipTests = nil
 	}
-
-	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
-		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, opts.ConformanceProfiles)
-
 	cSuite, err := suite.NewConformanceTestSuite(opts)
 	if err != nil {
 		t.Fatalf("error creating experimental conformance test suite: %v", err)
@@ -59,7 +53,7 @@ func TestExperimentalConformance(t *testing.T) {
 	}
 
 	// use to trigger the experimental conformance report
-	err = experimentalConformanceReport(t.Logf, report, *flags.ReportOutput)
+	err = experimentalConformanceReport(t.Logf, report, opts.ReportOutputPath)
 	require.NoError(t, err)
 }
 

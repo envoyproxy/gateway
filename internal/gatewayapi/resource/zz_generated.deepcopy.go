@@ -16,7 +16,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	apisv1alpha1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
@@ -107,22 +106,22 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 	}
 	if in.TCPRoutes != nil {
 		in, out := &in.TCPRoutes, &out.TCPRoutes
-		*out = make([]*v1alpha2.TCPRoute, len(*in))
+		*out = make([]*v1.TCPRoute, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(v1alpha2.TCPRoute)
+				*out = new(v1.TCPRoute)
 				(*in).DeepCopyInto(*out)
 			}
 		}
 	}
 	if in.UDPRoutes != nil {
 		in, out := &in.UDPRoutes, &out.UDPRoutes
-		*out = make([]*v1alpha2.UDPRoute, len(*in))
+		*out = make([]*v1.UDPRoute, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(v1alpha2.UDPRoute)
+				*out = new(v1.UDPRoute)
 				(*in).DeepCopyInto(*out)
 			}
 		}

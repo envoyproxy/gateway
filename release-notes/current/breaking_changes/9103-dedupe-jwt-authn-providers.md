@@ -1,0 +1,1 @@
+JWT authentication provider and requirement names in generated listener xDS now use stable, content-derived names so identical providers can be deduplicated across routes. EnvoyPatchPolicy or extension-server integrations that match previous route-derived `jwt_authn.providers` or `requirementMap` keys must update those references.
