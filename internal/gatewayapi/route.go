@@ -265,6 +265,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
 		var backendClusterRefs backendClusterRefBuilder
+		backendWeights := &ir.BackendWeights{}
 		var processDestinationError error
 		failedNoReadyEndpoints := false
 		hasDynamicResolver := false
@@ -322,6 +323,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 
+			backendWeights.AddWeighted(ds, ds.Weight)
 			if cluster.Merge {
 				backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
 				backendClusterRefs.add(backendCluster, ds.Weight)
@@ -330,8 +332,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 		}
 
-		destination := &ir.RouteDestination{Settings: allDs, Metadata: routeRuleMetadata}
-		backendWeights := destination.ToBackendWeights()
 		switch {
 		// return 500 if any filter processing error occurred
 		case processFilterError != nil:
@@ -1359,6 +1359,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		destName := irRouteDestinationName(grpcRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
 		var backendClusterRefs backendClusterRefBuilder
+		backendWeights := &ir.BackendWeights{}
 		var processDestinationError error
 		failedNoReadyEndpoints := false
 		routeRuleMetadata := buildResourceMetadata(grpcRoute, rule.Name)
@@ -1405,6 +1406,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			}
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 
+			backendWeights.AddWeighted(ds, ds.Weight)
 			if cluster.Merge {
 				backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
 				backendClusterRefs.add(backendCluster, ds.Weight)
@@ -1413,8 +1415,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			}
 		}
 
-		destination := &ir.RouteDestination{Settings: allDs, Metadata: routeRuleMetadata}
-		backendWeights := destination.ToBackendWeights()
 		switch {
 		// return 500 if any filter processing error occurred
 		case processFilterError != nil:
