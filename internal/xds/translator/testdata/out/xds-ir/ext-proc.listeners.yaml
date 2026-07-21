@@ -79,6 +79,7 @@
               receivingNamespaces:
                 untyped:
                 - envoy.filters.http.prc_ext
+            observabilityMode: true
             processingMode:
               requestHeaderMode: SKIP
               requestTrailerMode: SKIP
@@ -89,6 +90,8 @@
             - connection.requested_server_name
             responseAttributes:
             - request.path
+            statusOnError:
+              code: ServiceUnavailable
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/extproc/0
           typedConfig:

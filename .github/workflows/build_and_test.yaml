@@ -27,7 +27,7 @@ jobs:
     outputs:
       run_test_workflow: ${{ steps.check-changes.outputs.run_test_workflow }}
     steps:
-    - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4.0.1
+    - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706  # v4.0.2
       id: check-changes
       # A dependent job will be automatically skipped if its parent job is skipped.
       # So we skip this step in pull_request event if the changes are not relevant.
@@ -157,32 +157,32 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.32.11
+        - version: v1.33.12
           ipFamily: ipv4
           profile: default
           gwapiChannel: standard
-        - version: v1.33.7
+        - version: v1.34.8
           ipFamily: ipv4
           profile: default
           gwapiChannel: experimental
-        - version: v1.34.3
+        - version: v1.35.5
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
           gwapiChannel: experimental
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
           gwapiChannel: experimental
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           gwapiChannel: experimental
           profile: gateway-namespace-mode
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: xds-name-scheme-v2
           gwapiChannel: experimental
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: watch-namespaces
           gwapiChannel: experimental
@@ -223,26 +223,26 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.32.11
+        - version: v1.33.12
           ipFamily: ipv4
           profile: default
-        - version: v1.33.7
+        - version: v1.34.8
           ipFamily: ipv4
           profile: default
-        - version: v1.34.3
+        - version: v1.35.5
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: xds-name-scheme-v2
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: watch-namespaces
 
@@ -368,7 +368,7 @@ jobs:
 
     # build and push image
     - name: Login to DockerHub
-      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
+      uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0  # v4.4.0
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}

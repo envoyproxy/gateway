@@ -62,9 +62,11 @@ backendTrafficPolicies:
           type: Range
       response:
         body:
-          inline: |
-            error page contents here
-          type: Inline
+          type: ValueRef
+          valueRef:
+            group: ""
+            kind: ConfigMap
+            name: error-page
         contentType: text/html
     targetRefs:
     - group: gateway.networking.k8s.io

@@ -8,12 +8,12 @@
 package upgrade
 
 import (
+	"encoding/json"
 	"flag"
 	"io/fs"
 	"os"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
@@ -32,13 +32,14 @@ func TestEGUpgrade(t *testing.T) {
 
 	c, cfg := kubetest.NewClient(t)
 
-	if flags.RunTest != nil && *flags.RunTest != "" {
-		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
-			*flags.RunTest, *flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
-	} else {
-		tlog.Logf(t, "Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
-			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
-	}
+	suiteOpts := suite.ConfigurableOptions{}
+	flags.ApplyAll(&suiteOpts)
+	data, _ := json.MarshalIndent(suiteOpts, "", "  ")
+	tlog.Logf(t, "Running Upgrade tests with options: %s\n", string(data))
+	suiteOpts.TimeoutConfig = tests.TimeoutConfig()
+	suiteOpts.SupportedFeatures = []features.FeatureName{features.SupportGateway}
+	suiteOpts.FailFast = true
+	suiteOpts.CleanupTestResources = true
 
 	var skipTests []string
 	// previous did not support ipv6, so skip upgrade tests for ipv6
@@ -47,21 +48,15 @@ func TestEGUpgrade(t *testing.T) {
 			tests.EGUpgradeTest.ShortName,
 		)
 	}
+	suiteOpts.SkipTests = skipTests
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
-		Client:               c,
-		RestConfig:           cfg,
-		GatewayClassName:     *flags.GatewayClassName,
-		Debug:                *flags.ShowDebug,
-		CleanupBaseResources: *flags.CleanupBaseResources,
-		ManifestFS:           []fs.FS{e2e.UpgradeManifests},
-		RunTest:              *flags.RunTest,
-		BaseManifests:        "upgrade/manifests.yaml",
-		SupportedFeatures:    sets.New(features.SupportGateway),
-		TimeoutConfig:        tests.TimeoutConfig(),
-		SkipTests:            skipTests,
-		Hook:                 e2e.Hook,
-		FailFast:             true,
+		Client:              c,
+		RestConfig:          cfg,
+		ManifestFS:          []fs.FS{e2e.UpgradeManifests},
+		BaseManifests:       "upgrade/manifests.yaml",
+		Hook:                e2e.Hook,
+		ConfigurableOptions: suiteOpts,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test suite: %v", err)

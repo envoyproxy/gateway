@@ -69,6 +69,7 @@ type ExtProcProcessingMode struct {
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service, ServiceImport, and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'ServiceImport' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'multicluster.x-k8s.io' || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:message="If FullDuplexStreamed body processing mode is used, FailOpen must be false.",rule="!(has(self.failOpen) && self.failOpen == true && has(self.processingMode) && ((has(self.processingMode.request) && has(self.processingMode.request.body) && self.processingMode.request.body == 'FullDuplexStreamed') || (has(self.processingMode.response) && has(self.processingMode.response.body) && self.processingMode.response.body == 'FullDuplexStreamed')))"
+// +kubebuilder:validation:XValidation:message="If shadowMode is enabled, body processing mode must be Streamed or unset.",rule="!(has(self.shadowMode) && self.shadowMode == true && has(self.processingMode) && ((has(self.processingMode.request) && has(self.processingMode.request.body) && self.processingMode.request.body != 'Streamed') || (has(self.processingMode.response) && has(self.processingMode.response.body) && self.processingMode.response.body != 'Streamed')))"
 type ExtProc struct {
 	BackendCluster `json:",inline"`
 
@@ -97,6 +98,15 @@ type ExtProc struct {
 	// +optional
 	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
 
+	// ShadowMode sets if envoy gateway should treat this external processor as "send and go".
+	// When enabled, Envoy forwards request/response data to the external processor but does
+	// not wait for or apply any response from it. This maps to Envoy's `observability_mode`
+	// on the ext_proc filter.
+	// Defaults to false.
+	//
+	// +optional
+	ShadowMode *bool `json:"shadowMode,omitempty"`
+
 	// Metadata defines options related to the sending and receiving of dynamic metadata.
 	// These options define which metadata namespaces would be sent to the processor and which dynamic metadata
 	// namespaces the processor would be permitted to emit metadata to.
@@ -106,6 +116,14 @@ type ExtProc struct {
 	//
 	// +optional
 	Metadata *ExtProcMetadata `json:"metadata,omitempty"`
+
+	// Sets the HTTP status that is returned to the client when the external processor returns an error
+	// or cannot be reached. Defaults to 500 Internal Server Error.
+	// Only 4xx and 5xx status codes are supported.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=400;401;402;403;404;405;406;407;408;409;410;411;412;413;414;415;416;417;421;422;423;424;426;428;429;431;500;501;502;503;504;505;506;507;508;510;511
+	StatusOnError *int32 `json:"statusOnError,omitempty"`
 }
 
 // ExtProcMetadata defines options related to the sending and receiving of dynamic metadata to and from the

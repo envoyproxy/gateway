@@ -39,10 +39,16 @@ xds:
         circuitBreakers:
           thresholds:
           - maxRetries: 1024
+        clusterType:
+          name: envoy.cluster.dns
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+            dnsLookupFamily: V4_PREFERRED
+            dnsRefreshRate: 30s
+            respectDnsTtl: true
         commonLbConfig: {}
         connectTimeout: 10s
         dnsLookupFamily: V4_PREFERRED
-        dnsRefreshRate: 30s
         ignoreHealthOnHostRemoval: true
         loadAssignment:
           clusterName: raw_githubusercontent_com_443
@@ -67,7 +73,6 @@ xds:
                   localityWeightedLbConfig: {}
         name: raw_githubusercontent_com_443
         perConnectionBufferLimitBytes: 32768
-        respectDnsTtl: true
         transportSocket:
           name: envoy.transport_sockets.tls
           typedConfig:
@@ -77,4 +82,3 @@ xds:
                 trustedCa:
                   filename: /etc/ssl/certs/ca-certificates.crt
             sni: raw.githubusercontent.com
-        type: STRICT_DNS

@@ -401,6 +401,11 @@ func (t *Translator) addHCMToXDSListener(
 		RequestIdExtension:            buildRequestIDExtension(irListener.RequestID),
 	}
 
+	// Normalize the Host/Authority header if configured.
+	if irListener.Host != nil {
+		mgr.StripTrailingHostDot = irListener.Host.StripTrailingHostDot
+	}
+
 	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
 	// This ensures the correct scheme is sent to backends using TLS when enabled.
 	if irListener.MatchBackendScheme {
@@ -920,6 +925,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 
 func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsContext) {
 	needsDefaultValidationContext := tlsConfig.AcceptUntrusted ||
+		tlsConfig.AllowExpiredCertificate ||
 		len(tlsConfig.VerifyCertificateSpki) > 0 ||
 		len(tlsConfig.VerifyCertificateHash) > 0 ||
 		len(tlsConfig.MatchTypedSubjectAltNames) > 0
@@ -928,6 +934,9 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 
 	if tlsConfig.AcceptUntrusted {
 		validationContext.TrustChainVerification = tlsv3.CertificateValidationContext_ACCEPT_UNTRUSTED
+	}
+	if tlsConfig.AllowExpiredCertificate {
+		validationContext.AllowExpiredCertificate = true
 	}
 
 	validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)

@@ -7,6 +7,7 @@ package resource
 
 import (
 	"context"
+	"maps"
 	"reflect"
 	"sort"
 
@@ -14,8 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -50,8 +51,8 @@ type Resources struct {
 	HTTPRoutes              []*gwapiv1.HTTPRoute           `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
 	GRPCRoutes              []*gwapiv1.GRPCRoute           `json:"grpcRoutes,omitempty" yaml:"grpcRoutes,omitempty"`
 	TLSRoutes               []*gwapiv1.TLSRoute            `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
-	TCPRoutes               []*gwapiv1a2.TCPRoute          `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
-	UDPRoutes               []*gwapiv1a2.UDPRoute          `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
+	TCPRoutes               []*gwapiv1.TCPRoute            `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
+	UDPRoutes               []*gwapiv1.UDPRoute            `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
 	ReferenceGrants         []*gwapiv1b1.ReferenceGrant    `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
 	Namespaces              []*corev1.Namespace            `json:"namespaces,omitempty" yaml:"namespaces,omitempty"`
 	Services                []*corev1.Service              `json:"services,omitempty" yaml:"services,omitempty"`
@@ -502,4 +503,84 @@ func (r *Resources) Sort() {
 		}
 		return tsI.Before(&tsJ)
 	})
+}
+
+// StatusDeepCopy returns a shallow copy of Resources in which every status-bearing
+// object is itself shallow-copied with only its Status field deep-copied.
+//
+// The translator mutates resource Status in place while building status updates,
+// but the input tree is shared with the watchable coalesce goroutine, which walks it
+// with reflect.DeepEqual. Deep-copying only the Status fields isolates those in-place
+// mutations from the shared objects without the memory cost of a full DeepCopy of the
+// (much larger, immutable-during-translation) Spec.
+func (r *Resources) StatusDeepCopy() *Resources {
+	if r == nil {
+		return nil
+	}
+
+	// Shallow copy of the struct: all fields (including the shared, non-status-bearing
+	// slices such as Namespaces, Services, Secrets, ...) are carried over as-is.
+	out := *r
+
+	out.GatewayClass = statusDeepCopyObject(r.GatewayClass, func(dst, src *gwapiv1.GatewayClass) { src.Status.DeepCopyInto(&dst.Status) })
+	out.EnvoyProxyForGatewayClass = statusDeepCopyObject(r.EnvoyProxyForGatewayClass, func(dst, src *egv1a1.EnvoyProxy) { src.Status.DeepCopyInto(&dst.Status) })
+	out.EnvoyProxiesForGateways = statusDeepCopySlice(r.EnvoyProxiesForGateways, func(dst, src *egv1a1.EnvoyProxy) { src.Status.DeepCopyInto(&dst.Status) })
+	out.Gateways = statusDeepCopySlice(r.Gateways, func(dst, src *gwapiv1.Gateway) { src.Status.DeepCopyInto(&dst.Status) })
+	out.ListenerSets = statusDeepCopySlice(r.ListenerSets, func(dst, src *gwapiv1.ListenerSet) { src.Status.DeepCopyInto(&dst.Status) })
+	out.HTTPRoutes = statusDeepCopySlice(r.HTTPRoutes, func(dst, src *gwapiv1.HTTPRoute) { src.Status.DeepCopyInto(&dst.Status) })
+	out.GRPCRoutes = statusDeepCopySlice(r.GRPCRoutes, func(dst, src *gwapiv1.GRPCRoute) { src.Status.DeepCopyInto(&dst.Status) })
+	out.TLSRoutes = statusDeepCopySlice(r.TLSRoutes, func(dst, src *gwapiv1.TLSRoute) { src.Status.DeepCopyInto(&dst.Status) })
+	out.TCPRoutes = statusDeepCopySlice(r.TCPRoutes, func(dst, src *gwapiv1.TCPRoute) { src.Status.DeepCopyInto(&dst.Status) })
+	out.UDPRoutes = statusDeepCopySlice(r.UDPRoutes, func(dst, src *gwapiv1.UDPRoute) { src.Status.DeepCopyInto(&dst.Status) })
+	out.EnvoyPatchPolicies = statusDeepCopySlice(r.EnvoyPatchPolicies, func(dst, src *egv1a1.EnvoyPatchPolicy) { src.Status.DeepCopyInto(&dst.Status) })
+	out.ClientTrafficPolicies = statusDeepCopySlice(r.ClientTrafficPolicies, func(dst, src *egv1a1.ClientTrafficPolicy) { src.Status.DeepCopyInto(&dst.Status) })
+	out.BackendTrafficPolicies = statusDeepCopySlice(r.BackendTrafficPolicies, func(dst, src *egv1a1.BackendTrafficPolicy) { src.Status.DeepCopyInto(&dst.Status) })
+	out.SecurityPolicies = statusDeepCopySlice(r.SecurityPolicies, func(dst, src *egv1a1.SecurityPolicy) { src.Status.DeepCopyInto(&dst.Status) })
+	out.BackendTLSPolicies = statusDeepCopySlice(r.BackendTLSPolicies, func(dst, src *gwapiv1.BackendTLSPolicy) { src.Status.DeepCopyInto(&dst.Status) })
+	out.EnvoyExtensionPolicies = statusDeepCopySlice(r.EnvoyExtensionPolicies, func(dst, src *egv1a1.EnvoyExtensionPolicy) { src.Status.DeepCopyInto(&dst.Status) })
+	out.Backends = statusDeepCopySlice(r.Backends, func(dst, src *egv1a1.Backend) { src.Status.DeepCopyInto(&dst.Status) })
+	out.ExtensionServerPolicies = statusDeepCopyUnstructured(r.ExtensionServerPolicies)
+
+	return &out
+}
+
+// statusDeepCopyObject returns a shallow copy of obj with copyStatus applied to
+// deep-copy its Status field, or nil if obj is nil.
+func statusDeepCopyObject[T any](obj *T, copyStatus func(dst, src *T)) *T {
+	if obj == nil {
+		return nil
+	}
+	cp := *obj
+	copyStatus(&cp, obj)
+	return &cp
+}
+
+// statusDeepCopySlice returns a new slice of shallow copies, each with copyStatus
+// applied to deep-copy its Status field, preserving the original length and nil-ness.
+func statusDeepCopySlice[T any](in []*T, copyStatus func(dst, src *T)) []*T {
+	if in == nil {
+		return nil
+	}
+	out := make([]*T, len(in))
+	for i, obj := range in {
+		out[i] = statusDeepCopyObject(obj, copyStatus)
+	}
+	return out
+}
+
+// statusDeepCopyUnstructured returns shallow copies with deep-copied status entries
+// for unstructured resources (ExtensionServerPolicies).
+func statusDeepCopyUnstructured(in []unstructured.Unstructured) []unstructured.Unstructured {
+	if in == nil {
+		return nil
+	}
+	out := make([]unstructured.Unstructured, len(in))
+	for i, p := range in {
+		p.Object = maps.Clone(p.Object) // shallow copy map - no shared ref for "status" key
+		if statusObj, ok := in[i].Object["status"].(map[string]any); ok {
+			p.Object["status"] = runtime.DeepCopyJSON(statusObj)
+		}
+		out[i] = p
+	}
+	return out
 }

@@ -76,6 +76,7 @@ var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
 const (
 	requestMirrorDirectResponseConflictMsg = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
 	requestMirrorRedirectConflictMsg       = "RequestMirror filter cannot be used when the rule also configures a RequestRedirect filter"
+	grpcDirectResponse2xxMsg               = "DirectResponse with a 2xx status code is not supported for GRPCRoute: a 2xx status maps to the gRPC OK status, but a direct response cannot carry a gRPC response message, so the client would receive an invalid response. Use a non-2xx status code to deny or block the request instead"
 )
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
@@ -217,6 +218,21 @@ func (t *Translator) ProcessGRPCFilters(
 		errs.Add(status.NewRouteStatusError(
 			errors.New(requestMirrorDirectResponseConflictMsg),
 			gwapiv1.RouteReasonIncompatibleFilters,
+		).WithType(gwapiv1.RouteConditionAccepted))
+	}
+
+	// A 2xx direct response is meaningless for gRPC: gRPC signals success via a
+	// grpc-status trailer plus a response message, which a direct response cannot
+	// produce. Envoy maps the status to gRPC OK and emits a trailers-only reply with
+	// no message, which unary clients treat as an invalid response. Only non-2xx
+	// (deny/error) direct responses are supported for GRPCRoute.
+	if dr := httpFiltersContext.DirectResponse; dr != nil && dr.StatusCode != nil &&
+		*dr.StatusCode >= 200 && *dr.StatusCode < 300 {
+		httpFiltersContext.DirectResponse = nil
+
+		errs.Add(status.NewRouteStatusError(
+			errors.New(grpcDirectResponse2xxMsg),
+			gwapiv1.RouteReasonUnsupportedValue,
 		).WithType(gwapiv1.RouteConditionAccepted))
 	}
 

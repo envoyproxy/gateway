@@ -40,6 +40,15 @@ type HTTPRouteFilter struct {
 type HTTPRouteFilterSpec struct {
 	// +optional
 	URLRewrite *HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
+	// DirectResponse returns a fixed response for matching requests.
+	//
+	// When this filter is referenced from a GRPCRoute, only a non-2xx status code
+	// is supported. gRPC signals success with a grpc-status trailer and a response
+	// message, which a direct response cannot produce, so a 2xx status code (which
+	// maps to the gRPC OK status) yields an invalid response for gRPC clients. Use a
+	// non-2xx status code to deny or block gRPC requests (e.g. 403 maps to
+	// PERMISSION_DENIED, 404 to UNIMPLEMENTED, 429/503 to UNAVAILABLE).
+	//
 	// +optional
 	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
 	// +optional
@@ -87,6 +96,8 @@ type HTTPDirectResponseFilter struct {
 
 	// Status Code of the HTTP response
 	// If unset, defaults to 200.
+	// Note: when this filter is referenced from a GRPCRoute, a 2xx status code
+	// (including the default 200) is rejected; a non-2xx status code must be set.
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
 
