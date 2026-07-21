@@ -27,77 +27,31 @@ func (idx backendClusterIndex) resolve(refs []*ir.BackendClusterRef) []*ir.Backe
 	return ir.ResolveBackendClusterRefs(idx, refs)
 }
 
-// getBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data. If none
-// resolve but rd has a Name, a placeholder BackendCluster with no Settings is synthesized instead
-// of returning empty, since TCP/UDP/TLS routes still need an EDS cluster to route to.
-func (t *Translator) getBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
-	if rd == nil {
+// resolveMergedBackendClusters resolves rd's BackendClusterRefs (the genuinely merged,
+// identity-deduplicated backends for this destination) against idx. A ref whose Name isn't found
+// in idx is silently dropped (matches this package's existing convention for stale/missing
+// references). Non-merged backends never appear here — they live in rd.Settings, handled entirely
+// separately by the reverted pre-PR code paths in translator.go/cluster.go/route.go.
+func (t *Translator) resolveMergedBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
+	if rd == nil || len(rd.BackendClusterRefs) == 0 {
 		return nil
 	}
-	if clusters := t.backendIndex.resolve(rd.BackendClusterRefs); len(clusters) > 0 {
-		return clusters
-	}
-	if rd.Name == "" {
-		return nil
-	}
-	return []*ir.BackendCluster{{Name: rd.Name, Metadata: rd.Metadata}}
-}
-
-// resolvedBackendRef pairs a BackendClusterRef with its resolved BackendCluster, so callers can
-// get this route's own weight for it without a separate lookup.
-type resolvedBackendRef struct {
-	ref *ir.BackendClusterRef
-	bc  *ir.BackendCluster
-}
-
-// ResolvedWeight returns the weight bc's setting s contributes for ref: ref's own Weight when bc
-// is merged, or s's own Weight otherwise.
-func (p resolvedBackendRef) ResolvedWeight(s *ir.DestinationSetting) *uint32 {
-	if p.bc.Merged {
-		return p.ref.Weight
-	}
-	return s.Weight
-}
-
-// ToBackendWeights returns bc's weights as seen by ref (see ResolvedWeight).
-func (p resolvedBackendRef) ToBackendWeights() *ir.BackendWeights {
-	w := &ir.BackendWeights{}
-	for _, s := range p.bc.Settings {
-		w.AddWeighted(s, p.ResolvedWeight(s))
-	}
-	return w
-}
-
-// resolveBackendClusterRefs resolves each of rd's BackendClusterRefs to its BackendCluster,
-// keeping the ref paired with its cluster. Mirrors getBackendClusters' fallback, but the
-// fallback pair carries a synthetic ref too, so callers never need to nil-check ref.
-func (t *Translator) resolveBackendClusterRefs(rd *ir.RouteDestination) []resolvedBackendRef {
-	if rd == nil {
-		return nil
-	}
-	pairs := make([]resolvedBackendRef, 0, len(rd.BackendClusterRefs))
+	bcs := make([]*ir.BackendCluster, 0, len(rd.BackendClusterRefs))
 	for _, ref := range rd.BackendClusterRefs {
 		if bc, ok := t.backendIndex[ref.Name]; ok {
-			pairs = append(pairs, resolvedBackendRef{ref: ref, bc: bc})
+			bcs = append(bcs, bc)
 		}
 	}
-	if len(pairs) > 0 {
-		return pairs
-	}
-	if rd.Name == "" {
-		return nil
-	}
-	return []resolvedBackendRef{{
-		ref: &ir.BackendClusterRef{Name: rd.Name},
-		bc:  &ir.BackendCluster{Name: rd.Name, Metadata: rd.Metadata},
-	}}
+	return bcs
 }
 
-// singleResolvedClusterName returns the name of rd's one resolved BackendCluster. Falls back to
-// rd's own route-scoped name if that's not exactly one cluster (should be impossible here).
-func (t *Translator) singleResolvedClusterName(rd *ir.RouteDestination) string {
-	if bcs := t.getBackendClusters(rd); len(bcs) == 1 {
-		return bcs[0].Name
+// mergedBackendClusterRef returns bc's original BackendClusterRef from rd, so callers can recover
+// its route-scoped Weight (a merged BackendCluster's own Setting.Weight is always nil).
+func mergedBackendClusterRef(rd *ir.RouteDestination, bc *ir.BackendCluster) *ir.BackendClusterRef {
+	for _, ref := range rd.BackendClusterRefs {
+		if ref.Name == bc.Name {
+			return ref
+		}
 	}
-	return rd.Name
+	return nil
 }
