@@ -418,12 +418,12 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 		oidc := route.Security.OIDC
 
 		// If the OIDC provider has a destination, use it.
-		if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.BackendClusterRefs) > 0 {
+		if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
 			if err := createExtServiceXDSCluster(
 				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if err := processClientCertificates(tCtx, tCtx.GetBackendClusters(oidc.Provider.Destination)); err != nil {
+			if err := processClientCertificates(tCtx, oidc.Provider.Destination.Settings); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
@@ -473,13 +473,11 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	}
 
 	clusterArgs := &xdsClusterArgs{
-		backendCluster: &ir.BackendCluster{
-			Name:     cluster.name,
-			Settings: []*ir.DestinationSetting{ds},
-			Metadata: ds.Metadata,
-		},
+		name:         cluster.name,
+		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
 		endpointType: cluster.endpointType,
+		metadata:     ds.Metadata,
 	}
 	if cluster.tls {
 		if tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname); err != nil {

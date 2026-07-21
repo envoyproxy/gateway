@@ -55,3 +55,16 @@ func mergedBackendClusterRef(rd *ir.RouteDestination, bc *ir.BackendCluster) *ir
 	}
 	return nil
 }
+
+// tcpDestinationClusterName returns rd's single Envoy Cluster name. TCP/UDP/TLS routes have no
+// weighted-clusters mechanism, so a destination must resolve to exactly one cluster: its own
+// route-scoped name (non-merged, rd.Settings) or its one merged backend's name.
+func tcpDestinationClusterName(rd *ir.RouteDestination) string {
+	if len(rd.Settings) > 0 {
+		return rd.Name
+	}
+	if len(rd.BackendClusterRefs) > 0 {
+		return rd.BackendClusterRefs[0].Name
+	}
+	return rd.Name
+}

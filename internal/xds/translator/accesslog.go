@@ -523,38 +523,38 @@ func convertToKeyValueList(attributes []ir.MapEntry, additionalLabels bool) *otl
 	return keyValueList
 }
 
-func (t *Translator) processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog, metrics *ir.Metrics) error {
+func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog, metrics *ir.Metrics) error {
 	if al == nil {
 		return nil
 	}
 	// add clusters for ALS access logs
 	for _, als := range al.ALS {
-		for _, bc := range t.getBackendClusters(&als.Destination) {
-			args := &xdsClusterArgs{
-				backendCluster: bc,
-				tSocket:        nil,
-				endpointType:   buildEndpointType(bc.Settings),
-			}
-			applyTraffic(args, als.Traffic)
-			if err := addXdsCluster(tCtx, args); err != nil {
-				return err
-			}
+		args := &xdsClusterArgs{
+			name:         als.Destination.Name,
+			settings:     als.Destination.Settings,
+			tSocket:      nil,
+			endpointType: buildEndpointType(als.Destination.Settings),
+			metadata:     als.Destination.Metadata,
+		}
+		applyTraffic(args, als.Traffic)
+		if err := addXdsCluster(tCtx, args); err != nil {
+			return err
 		}
 	}
 
 	// add clusters for Open Telemetry access logs
 	for _, otel := range al.OpenTelemetry {
-		for _, bc := range t.getBackendClusters(&otel.Destination) {
-			args := &xdsClusterArgs{
-				backendCluster: bc,
-				tSocket:        nil,
-				endpointType:   buildEndpointType(bc.Settings),
-				metrics:        metrics,
-			}
-			applyTraffic(args, otel.Traffic)
-			if err := addXdsCluster(tCtx, args); err != nil {
-				return err
-			}
+		args := &xdsClusterArgs{
+			name:         otel.Destination.Name,
+			settings:     otel.Destination.Settings,
+			tSocket:      nil,
+			endpointType: buildEndpointType(otel.Destination.Settings),
+			metrics:      metrics,
+			metadata:     otel.Destination.Metadata,
+		}
+		applyTraffic(args, otel.Traffic)
+		if err := addXdsCluster(tCtx, args); err != nil {
+			return err
 		}
 	}
 
