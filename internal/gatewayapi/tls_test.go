@@ -6,11 +6,17 @@
 package gatewayapi
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
+	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -408,6 +414,54 @@ func TestFilterValidCertificates(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFilterValidCertificates_ExpiredLeafWithValidChain(t *testing.T) {
+	// Generate an expired leaf certificate and a valid intermediate CA cert.
+	// When the leaf is expired but the chain is valid, filterValidCertificates
+	// should reject the entire chain (not just the leaf) because the private
+	// key matches the leaf, not the intermediate.
+
+	// Create a valid cert (not expired)
+	validKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	validTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "Intermediate CA"},
+		NotBefore:    time.Now().Add(-24 * time.Hour),
+		NotAfter:     time.Now().Add(365 * 24 * time.Hour),
+		IsCA:         true,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		KeyUsage:     x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+	}
+	validCertDER, err := x509.CreateCertificate(rand.Reader, validTemplate, validTemplate, &validKey.PublicKey, validKey)
+	require.NoError(t, err)
+	validCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCertDER})
+
+	// Create an expired leaf cert
+	expiredKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	expiredTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: "expired.example.com"},
+		NotBefore:    time.Now().Add(-48 * time.Hour),
+		NotAfter:     time.Now().Add(-24 * time.Hour), // expired yesterday
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+	}
+	expiredCertDER, err := x509.CreateCertificate(rand.Reader, expiredTemplate, validTemplate, &expiredKey.PublicKey, validKey)
+	require.NoError(t, err)
+	expiredCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: expiredCertDER})
+
+	// Chain: expired leaf + valid intermediate
+	chainData := append(expiredCertPEM, validCertPEM...)
+
+	// The entire chain should be rejected because the leaf is expired
+	result, listenerErr := filterValidCertificates(chainData)
+	require.Error(t, listenerErr)
+	require.Nil(t, result)
+	require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, listenerErr.Reason())
+	require.Contains(t, listenerErr.Error(), "expired")
 }
 
 func TestAppendDedupPEMCertsWithSeen(t *testing.T) {
