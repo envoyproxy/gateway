@@ -1021,42 +1021,21 @@ func TestGetOrCreateBackendCluster(t *testing.T) {
 	t.Run("cache miss creates and registers into gwIR.Backends", func(t *testing.T) {
 		tr := &Translator{TranslatorContext: &TranslatorContext{BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{}}}
 		gwIR := &ir.Xds{}
-		bc := tr.getOrCreateBackendCluster(gwIR, &key, "backend/service/default/service-1/8080", true, ds1, nil)
+		bc := tr.getOrCreateBackendCluster(gwIR, &key, "backend/service/default/service-1/8080", ds1)
 		require.Len(t, gwIR.Backends, 1)
 		require.Same(t, bc, gwIR.Backends[0])
-		require.Equal(t, []*ir.DestinationSetting{ds1}, bc.Settings)
-	})
-
-	t.Run("cache hit while merge=true does not append the new setting", func(t *testing.T) {
-		tr := &Translator{TranslatorContext: &TranslatorContext{BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{}}}
-		gwIR := &ir.Xds{}
-		first := tr.getOrCreateBackendCluster(gwIR, &key, "backend/service/default/service-1/8080", true, ds1, nil)
-		second := tr.getOrCreateBackendCluster(gwIR, &key, "backend/service/default/service-1/8080", true, ds2, nil)
-		require.Same(t, first, second)
-		require.Equal(t, []*ir.DestinationSetting{ds1}, second.Settings)
-		require.Len(t, gwIR.Backends, 1)
-	})
-
-	t.Run("cache hit while merge=false appends the new setting", func(t *testing.T) {
-		tr := &Translator{TranslatorContext: &TranslatorContext{BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{}}}
-		gwIR := &ir.Xds{}
-		routeScopedKey := BackendClusterKey{Name: "route-scoped-name"}
-		first := tr.getOrCreateBackendCluster(gwIR, &routeScopedKey, "route-scoped-name", false, ds1, nil)
-		second := tr.getOrCreateBackendCluster(gwIR, &routeScopedKey, "route-scoped-name", false, ds2, nil)
-		require.Same(t, first, second)
-		require.Equal(t, []*ir.DestinationSetting{ds1, ds2}, second.Settings)
-	})
-
-	t.Run("cache miss records Merged from the merge argument", func(t *testing.T) {
-		tr := &Translator{TranslatorContext: &TranslatorContext{BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{}}}
-		gwIR := &ir.Xds{}
-		mergedKey := BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-2", Port: 8080}
-		bc := tr.getOrCreateBackendCluster(gwIR, &mergedKey, "backend/service/default/service-2/8080", true, ds1, nil)
+		require.Equal(t, ds1.Name, bc.Setting.Name)
 		require.True(t, bc.Merged)
+	})
 
-		routeScopedKey := BackendClusterKey{Name: "route-scoped-name-2"}
-		bc2 := tr.getOrCreateBackendCluster(gwIR, &routeScopedKey, "route-scoped-name-2", false, ds2, nil)
-		require.False(t, bc2.Merged)
+	t.Run("cache hit returns the existing cluster without replacing its setting", func(t *testing.T) {
+		tr := &Translator{TranslatorContext: &TranslatorContext{BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{}}}
+		gwIR := &ir.Xds{}
+		first := tr.getOrCreateBackendCluster(gwIR, &key, "backend/service/default/service-1/8080", ds1)
+		second := tr.getOrCreateBackendCluster(gwIR, &key, "backend/service/default/service-1/8080", ds2)
+		require.Same(t, first, second)
+		require.Equal(t, ds1.Name, second.Setting.Name)
+		require.Len(t, gwIR.Backends, 1)
 	})
 }
 
