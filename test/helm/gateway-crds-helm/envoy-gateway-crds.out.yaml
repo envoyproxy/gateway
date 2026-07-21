@@ -3707,6 +3707,28 @@ spec:
 
                       This takes precedence over EnvoyProxy tracing when set.
                     properties:
+                      clientSamplingFraction:
+                        description: |-
+                          ClientSamplingFraction represents the fraction of requests that should be
+                          selected for tracing when requested by the client.
+                          If unspecified, client-forced tracing is disabled by default and users must
+                          set this field to opt in.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
                       customTags:
                         additionalProperties:
                           properties:
@@ -3771,6 +3793,26 @@ spec:
 
                           Deprecated: Use Tags instead.
                         type: object
+                      overallSamplingFraction:
+                        description: |-
+                          OverallSamplingFraction represents the fraction of requests that should be
+                          selected for tracing after all other sampling checks have been applied.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
@@ -4754,6 +4796,21 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
+                  host:
+                    description: Host enables managing how the Host/Authority header
+                      set by clients can be normalized.
+                    properties:
+                      stripTrailingHostDot:
+                        description: |-
+                          StripTrailingHostDot determines if the trailing dot of the host should be removed
+                          from the Host/Authority header before any processing of the request.
+                          This affects the upstream host header as well. Without this option, incoming requests
+                          with host "example.com." will not match routes with domains set to "example.com".
+                          When the host includes a port (for example "example.com.:443"), only the trailing dot
+                          from the host section is stripped, leaving the port as-is ("example.com:443").
+                          Defaults to false.
+                        type: boolean
+                    type: object
                   lateResponseHeaders:
                     description: LateResponseHeaders defines settings for global response
                       header modification.
@@ -8072,6 +8129,14 @@ spec:
                               type: string
                           type: object
                       type: object
+                    shadowMode:
+                      description: |-
+                        ShadowMode sets if envoy gateway should treat this external processor as "send and go".
+                        When enabled, Envoy forwards request/response data to the external processor but does
+                        not wait for or apply any response from it. This maps to Envoy's `observability_mode`
+                        on the ext_proc filter.
+                        Defaults to false.
+                      type: boolean
                     statusOnError:
                       description: |-
                         Sets the HTTP status that is returned to the client when the external processor returns an error
@@ -8138,6 +8203,13 @@ spec:
                       && self.processingMode.request.body == ''FullDuplexStreamed'')
                       || (has(self.processingMode.response) && has(self.processingMode.response.body)
                       && self.processingMode.response.body == ''FullDuplexStreamed'')))'
+                  - message: If shadowMode is enabled, body processing mode must be
+                      Streamed or unset.
+                    rule: '!(has(self.shadowMode) && self.shadowMode == true && has(self.processingMode)
+                      && ((has(self.processingMode.request) && has(self.processingMode.request.body)
+                      && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
+                      && has(self.processingMode.response.body) && self.processingMode.response.body
+                      != ''Streamed'')))'
                 maxItems: 16
                 type: array
               lua:
@@ -25952,6 +26024,28 @@ spec:
                       Tracing defines tracing configuration for managed proxies.
                       If unspecified, will not send tracing data.
                     properties:
+                      clientSamplingFraction:
+                        description: |-
+                          ClientSamplingFraction represents the fraction of requests that should be
+                          selected for tracing when requested by the client.
+                          If unspecified, client-forced tracing is disabled by default and users must
+                          set this field to opt in.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
                       customTags:
                         additionalProperties:
                           properties:
@@ -26016,6 +26110,26 @@ spec:
 
                           Deprecated: Use Tags instead.
                         type: object
+                      overallSamplingFraction:
+                        description: |-
+                          OverallSamplingFraction represents the fraction of requests that should be
+                          selected for tracing after all other sampling checks have been applied.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
                       provider:
                         description: Provider defines the tracing provider.
                         properties:
@@ -32213,10 +32327,26 @@ spec:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
                 properties:
+                  failOpen:
+                    description: |-
+                      FailOpen lets a request pass JWT authentication even when its JWT is
+                      missing or invalid, rather than being rejected. This helps when a header
+                      that clients use to carry a JWT may also legitimately hold a non-JWT value
+                      that the backend relies on.
+
+                      A valid JWT is still verified and its claims forwarded as usual; only the
+                      rejection of requests with a missing or invalid JWT is relaxed. Because this
+                      does not enforce authentication on its own, pair it with an Authorization
+                      policy when access needs to be restricted.
+
+                      This is broader than Optional (which tolerates a missing JWT but still
+                      rejects an invalid one) and takes precedence over it.
+                    type: boolean
                   optional:
                     description: |-
                       Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
-                      Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
+                      Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT
+                      is presented. See FailOpen if this is necessary for your use case.
                     type: boolean
                   providers:
                     description: |-
@@ -33876,6 +34006,10 @@ spec:
                 required:
                 - providers
                 type: object
+                x-kubernetes-validations:
+                - message: optional and failOpen cannot both be set; failOpen already
+                    tolerates a missing JWT
+                  rule: '!(has(self.optional) && has(self.failOpen))'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing SecurityPolicy
