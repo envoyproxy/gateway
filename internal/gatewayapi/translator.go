@@ -285,38 +285,18 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
-	// Build pre-computed BTP RoutingType index for O(1) lookups in processDestination.
-	t.BTPRoutingTypeIndex = nil
-	if hasBTPRoutingType(resources.BackendTrafficPolicies) {
-		t.BTPRoutingTypeIndex = BuildBTPRoutingTypeIndex(
-			resources.BackendTrafficPolicies,
-			routesToObjects(resources),
-			acceptedGateways,
-			resources.ReferenceGrants,
-			t.GetNamespace,
-		)
-	}
-
-	// BTPClusterSettingsIndex and BTPLoadBalancerIndex only inform merge-eligibility decisions, so
-	// skip building either when no accepted gateway has MergeBackends enabled.
-	t.BTPClusterSettingsIndex = nil
-	t.BTPLoadBalancerIndex = nil
-	if t.anyGatewayHasMergeBackendsEnabled(acceptedGateways) {
-		t.BTPClusterSettingsIndex = BuildBTPClusterSettingsIndex(
-			resources.BackendTrafficPolicies,
-			routesToObjects(resources),
-			acceptedGateways,
-			resources.ReferenceGrants,
-			t.GetNamespace,
-		)
-		t.BTPLoadBalancerIndex = BuildBTPLoadBalancerIndex(
-			resources.BackendTrafficPolicies,
-			routesToObjects(resources),
-			acceptedGateways,
-			resources.ReferenceGrants,
-			t.GetNamespace,
-		)
-	}
+	// Build pre-computed BTP indexes for O(1) lookups in processDestination.
+	btpIndexes := BuildBTPIndexes(
+		resources.BackendTrafficPolicies,
+		routesToObjects(resources),
+		acceptedGateways,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
+	t.BTPRoutingTypeIndex = btpIndexes.RoutingType
+	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
+	t.BTPLoadBalancerIndex = btpIndexes.LoadBalancer
 
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)

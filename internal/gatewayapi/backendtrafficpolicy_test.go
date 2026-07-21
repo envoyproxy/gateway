@@ -1813,8 +1813,8 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			idx := BuildBTPRoutingTypeIndex(tt.btps, tt.routes, tt.gateways, tt.referenceGrants, nil)
-			got := idx.LookupBTPRoutingType(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
+			idx := BuildBTPIndexes(tt.btps, tt.routes, tt.gateways, tt.referenceGrants, nil, false)
+			got := idx.RoutingType.LookupBTPRoutingType(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
 			require.Equal(t, tt.expected, got)
 		})
 	}
@@ -1972,8 +1972,8 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 					Labels:    tc.gatewayLabels,
 				},
 			}}
-			idx := BuildBTPLoadBalancerIndex(tc.btps, nil, []*GatewayContext{gwCtx}, tc.referenceGrants, func(string) *corev1.Namespace { return nil })
-			got := idx.IsConsistentHash(tc.gatewayNN)
+			idx := BuildBTPIndexes(tc.btps, nil, []*GatewayContext{gwCtx}, tc.referenceGrants, func(string) *corev1.Namespace { return nil }, true)
+			got := idx.LoadBalancer.IsConsistentHash(tc.gatewayNN)
 			require.Equal(t, tc.want, got)
 		})
 	}
@@ -2065,12 +2065,12 @@ func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
 		},
 	}
 
-	idx := BuildBTPClusterSettingsIndex(btps, routes, nil, referenceGrants, nil)
+	idx := BuildBTPIndexes(btps, routes, nil, referenceGrants, nil, true)
 
 	// The index must be keyed by the target route's own namespace (route-ns), not the
 	// policy's namespace (policy-ns), or this lookup misses and MergeBackends wrongly
 	// shares a cluster with routes that don't carry this cluster-scoped policy.
-	require.True(t, idx.HasRouteLevelClusterSettings(
+	require.True(t, idx.ClusterSettings.HasRouteLevelClusterSettings(
 		"HTTPRoute",
 		types.NamespacedName{Namespace: "route-ns", Name: "route-1"},
 		types.NamespacedName{},
