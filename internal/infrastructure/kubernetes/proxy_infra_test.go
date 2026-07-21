@@ -100,7 +100,7 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "",
+						URL: new(""),
 						TLS: &egv1a1.RedisTLSSettings{
 							CertificateRef: &gwapiv1.SecretObjectReference{
 								Name: "ratelimit-cert",
