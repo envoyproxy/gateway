@@ -1820,10 +1820,9 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 	}
 }
 
-// TestBTPLoadBalancerIndexIsConsistentHash covers only the gateway level: route-rule/route/
-// listener-level LoadBalancer is already excluded upstream by
-// BTPClusterSettingsIndex.HasRouteLevelClusterSettings before IsConsistentHash is ever called
-// (see mergeIncompatibleForWeightedRule), so BTPLoadBalancerIndex doesn't track those levels.
+// TestBTPLoadBalancerIndexIsConsistentHash covers only the gateway level: a route-rule/route/
+// listener-level LoadBalancer setting already disqualifies its rule from cluster merging, so
+// BTPLoadBalancerIndex doesn't track those levels.
 func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 	consistentHashType := egv1a1.ConsistentHashLoadBalancerType
 	roundRobinType := egv1a1.RoundRobinLoadBalancerType

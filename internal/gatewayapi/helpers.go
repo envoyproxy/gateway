@@ -654,15 +654,14 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return false
 }
 
-// IsMergeBackendsEnabled returns true if backend cluster deduplication (MergeBackends) is
-// enabled for the GatewayClass, giving precedence to the GatewayClass-level EnvoyProxy over the
-// default EnvoyProxySpec from the EnvoyGateway configuration.
 func IsMergeBackendsEnabled(resources *resource.Resources) bool {
+	// Check GatewayClass-level EnvoyProxy first (higher priority)
 	if resources.EnvoyProxyForGatewayClass != nil &&
 		resources.EnvoyProxyForGatewayClass.Spec.MergeBackends != nil {
 		return ptr.Deref(resources.EnvoyProxyForGatewayClass.Spec.MergeBackends.Enabled, false)
 	}
 
+	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
 	if resources.EnvoyProxyDefaultSpec != nil &&
 		resources.EnvoyProxyDefaultSpec.MergeBackends != nil {
 		return ptr.Deref(resources.EnvoyProxyDefaultSpec.MergeBackends.Enabled, false)
