@@ -1834,6 +1834,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// not on the Route as a whole.
 		var (
 			backendClusterRefs backendClusterRefBuilder
+			allDs              []*ir.DestinationSetting
 			resolveErrs        = &status.MultiStatusError{}
 			destName           = irRouteDestinationName(tlsRoute, -1 /*rule index*/)
 			routeRuleMetadata  = buildResourceMetadata(tlsRoute, nil)
@@ -1854,8 +1855,12 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				}
 				// skip backendRefs with weight 0 as they do not affect the traffic distribution
 				if ds.Weight != nil && *ds.Weight > 0 {
-					backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, cluster.Merge, ds, routeRuleMetadata)
-					backendClusterRefs.add(cluster.Merge, backendCluster, ds.Weight)
+					if cluster.Merge {
+						backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
+						backendClusterRefs.add(backendCluster, ds.Weight)
+					} else {
+						allDs = append(allDs, ds)
+					}
 				}
 			}
 
@@ -1929,6 +1934,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					TLS:  tlsConfig,
 					Destination: &ir.RouteDestination{
 						Name:               destName,
+						Settings:           allDs,
 						BackendClusterRefs: backendClusterRefs.refs,
 						Metadata:           routeRuleMetadata,
 					},
@@ -2020,6 +2026,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		// not on the Route as a whole.
 		var (
 			backendClusterRefs backendClusterRefBuilder
+			allDs              []*ir.DestinationSetting
 			resolveErrs        = &status.MultiStatusError{}
 			destName           = irRouteDestinationName(udpRoute, -1 /*rule index*/)
 			routeRuleMetadata  = buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name)
@@ -2039,8 +2046,12 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, cluster.Merge, ds, routeRuleMetadata)
-				backendClusterRefs.add(cluster.Merge, backendCluster, ds.Weight)
+				if cluster.Merge {
+					backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
+					backendClusterRefs.add(backendCluster, ds.Weight)
+				} else {
+					allDs = append(allDs, ds)
+				}
 			}
 		}
 
@@ -2089,6 +2100,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					Name: irUDPRouteName(udpRoute),
 					Destination: &ir.RouteDestination{
 						Name:               destName,
+						Settings:           allDs,
 						BackendClusterRefs: backendClusterRefs.refs,
 						// udpRoute Must have a single rule, so can use index 0.
 						Metadata: routeRuleMetadata,
@@ -2175,6 +2187,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		// not on the Route as a whole.
 		var (
 			backendClusterRefs backendClusterRefBuilder
+			allDs              []*ir.DestinationSetting
 			resolveErrs        = &status.MultiStatusError{}
 			destName           = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
 			routeRuleMetadata  = buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name)
@@ -2193,8 +2206,12 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			}
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, cluster.Merge, ds, routeRuleMetadata)
-				backendClusterRefs.add(cluster.Merge, backendCluster, ds.Weight)
+				if cluster.Merge {
+					backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
+					backendClusterRefs.add(backendCluster, ds.Weight)
+				} else {
+					allDs = append(allDs, ds)
+				}
 			}
 		}
 
@@ -2242,6 +2259,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Name: irTCPRouteName(tcpRoute),
 					Destination: &ir.RouteDestination{
 						Name:               destName,
+						Settings:           allDs,
 						BackendClusterRefs: backendClusterRefs.refs,
 						Metadata:           routeRuleMetadata,
 					},
