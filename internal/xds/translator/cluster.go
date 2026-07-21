@@ -1383,7 +1383,11 @@ type UDPRouteTranslator struct {
 	*ir.UDPRoute
 }
 
-func (route *UDPRouteTranslator) asClusterArgs(name string, settings []*ir.DestinationSetting, extra *ExtraArgs, metadata *ir.ResourceMetadata) *xdsClusterArgs {
+func (route *UDPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:         name,
 		settings:     settings,
@@ -1401,7 +1405,11 @@ type TCPRouteTranslator struct {
 	*ir.TCPRoute
 }
 
-func (route *TCPRouteTranslator) asClusterArgs(name string, settings []*ir.DestinationSetting, extra *ExtraArgs, metadata *ir.ResourceMetadata) *xdsClusterArgs {
+func (route *TCPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:              name,
 		settings:          settings,
@@ -1425,7 +1433,11 @@ type HTTPRouteTranslator struct {
 	*ir.HTTPRoute
 }
 
-func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string, settings []*ir.DestinationSetting, extra *ExtraArgs, metadata *ir.ResourceMetadata) *xdsClusterArgs {
+func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
+) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
 		name:              name,
 		settings:          settings,
@@ -1437,8 +1449,8 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string, settings []*ir.
 		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 		ipFamily:          extra.ipFamily,
-		statName:          extra.statName,
 		metadata:          metadata,
+		statName:          extra.statName,
 		extensionMgr:      extra.extensionMgr,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
@@ -1459,7 +1471,11 @@ type mergedHTTPRouteTranslator struct {
 	*ir.HTTPRoute
 }
 
-func (mergedHTTPRoute mergedHTTPRouteTranslator) asClusterArgs(name string, settings []*ir.DestinationSetting, extra *ExtraArgs, metadata *ir.ResourceMetadata) *xdsClusterArgs {
+func (mergedHTTPRoute mergedHTTPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
+) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
 		name:              name,
 		settings:          settings,

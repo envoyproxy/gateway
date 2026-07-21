@@ -226,11 +226,11 @@ func requireCmpNoDiff(t *testing.T, expected, actual interface{}) {
 
 func TestBuildClusterWithBackendUtilization(t *testing.T) {
 	args := &xdsClusterArgs{
-		name: "test-cluster-bu",
+		name:         "test-cluster-bu",
+		endpointType: EndpointTypeStatic,
 		settings: []*ir.DestinationSetting{{
 			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
 		}},
-		endpointType: EndpointTypeStatic,
 		loadBalancer: &ir.LoadBalancer{BackendUtilization: &ir.BackendUtilization{}},
 	}
 
@@ -254,11 +254,11 @@ func TestBuildClusterWithBackendUtilization(t *testing.T) {
 func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
 	window := 5 * time.Second
 	args := &xdsClusterArgs{
-		name: "test-cluster-bu-ss",
+		name:         "test-cluster-bu-ss",
+		endpointType: EndpointTypeStatic,
 		settings: []*ir.DestinationSetting{{
 			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
 		}},
-		endpointType: EndpointTypeStatic,
 		loadBalancer: &ir.LoadBalancer{BackendUtilization: &ir.BackendUtilization{
 			SlowStart: &ir.SlowStart{Window: ir.MetaV1DurationPtr(window)},
 		}},
@@ -288,14 +288,14 @@ func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
 
 func TestBuildClusterWithBackendUtilizationWeightedZones(t *testing.T) {
 	args := &xdsClusterArgs{
-		name: "test-cluster-bu-wz",
+		name:         "test-cluster-bu-wz",
+		endpointType: EndpointTypeStatic,
 		settings: []*ir.DestinationSetting{{
 			Endpoints: []*ir.DestinationEndpoint{
 				{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
 				{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
 			},
 		}},
-		endpointType: EndpointTypeStatic,
 		loadBalancer: &ir.LoadBalancer{
 			BackendUtilization: &ir.BackendUtilization{},
 			WeightedZones: []ir.WeightedZoneConfig{
@@ -338,14 +338,14 @@ func TestBuildClusterWithBackendUtilizationWeightedZones(t *testing.T) {
 
 func TestBuildClusterWithEndpointOverrideBackendUtilizationWeightedZones(t *testing.T) {
 	args := &xdsClusterArgs{
-		name: "test-cluster-eo-bu-wz",
+		name:         "test-cluster-eo-bu-wz",
+		endpointType: EndpointTypeStatic,
 		settings: []*ir.DestinationSetting{{
 			Endpoints: []*ir.DestinationEndpoint{
 				{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
 				{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
 			},
 		}},
-		endpointType: EndpointTypeStatic,
 		loadBalancer: &ir.LoadBalancer{
 			BackendUtilization: &ir.BackendUtilization{
 				BlackoutPeriod: ir.MetaV1DurationPtr(10 * time.Second),
