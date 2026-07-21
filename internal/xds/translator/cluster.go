@@ -1455,10 +1455,12 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string, settings []*ir.
 // cluster's build call — no single route's hostname reliably describes a cluster shared across
 // routes, so this always reports the empty hostname (see asClusterArgs's HTTPRouteTranslator
 // variant for the non-merged case, which always uses its own route's real hostname).
-type mergedHTTPRouteTranslator struct{}
+type mergedHTTPRouteTranslator struct {
+	*ir.HTTPRoute
+}
 
-func (mergedHTTPRouteTranslator) asClusterArgs(name string, settings []*ir.DestinationSetting, extra *ExtraArgs, metadata *ir.ResourceMetadata) *xdsClusterArgs {
-	return &xdsClusterArgs{
+func (mergedHTTPRoute mergedHTTPRouteTranslator) asClusterArgs(name string, settings []*ir.DestinationSetting, extra *ExtraArgs, metadata *ir.ResourceMetadata) *xdsClusterArgs {
+	clusterArgs := &xdsClusterArgs{
 		name:              name,
 		settings:          settings,
 		tSocket:           nil,
@@ -1476,6 +1478,11 @@ func (mergedHTTPRouteTranslator) asClusterArgs(name string, settings []*ir.Desti
 		logger:            extra.logger,
 		isRoute:           true,
 	}
+
+	// Populate traffic features.
+	applyTraffic(clusterArgs, mergedHTTPRoute.Traffic)
+
+	return clusterArgs
 }
 
 func buildHTTP1Settings(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {

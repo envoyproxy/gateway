@@ -646,7 +646,7 @@ func (t *Translator) addRouteToRouteConfig(
 			for _, bc := range t.resolveMergedBackendClusters(httpRoute.Destination) {
 				mergedEa := *ea
 				mergedEa.statName = nil
-				err = processXdsCluster(tCtx, bc.Name, []*ir.DestinationSetting{bc.Setting}, &mergedHTTPRouteTranslator{}, &mergedEa, bc.Metadata)
+				err = processXdsCluster(tCtx, bc.Name, []*ir.DestinationSetting{bc.Setting}, &mergedHTTPRouteTranslator{httpRoute}, &mergedEa, bc.Metadata)
 				if err != nil {
 					errs = errors.Join(errs, err)
 				}
