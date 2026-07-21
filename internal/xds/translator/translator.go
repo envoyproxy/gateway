@@ -106,7 +106,6 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 
 	tCtx := new(types.ResourceVersionTable)
-	tCtx.BackendIndex = t.backendIndex
 
 	// xDS translation is done in a best-effort manner, so we collect all errors
 	// and return them at the end.

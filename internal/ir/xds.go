@@ -2099,18 +2099,6 @@ type BackendClusterRef struct {
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 }
 
-// ResolveBackendClusterRefs resolves each ref's Name against idx, a name-keyed index of
-// BackendClusters. A ref whose Name isn't found in idx is silently dropped.
-func ResolveBackendClusterRefs(idx map[string]*BackendCluster, refs []*BackendClusterRef) []*BackendCluster {
-	bcs := make([]*BackendCluster, 0, len(refs))
-	for _, ref := range refs {
-		if bc, ok := idx[ref.Name]; ok {
-			bcs = append(bcs, bc)
-		}
-	}
-	return bcs
-}
-
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {

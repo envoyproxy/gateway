@@ -25,25 +25,6 @@ type EnvoyPatchPolicyStatuses []*ir.EnvoyPatchPolicyStatus
 type ResourceVersionTable struct {
 	XdsResources
 	EnvoyPatchPolicyStatuses
-
-	// BackendIndex is a name-keyed index of resolved BackendClusters (ir.Xds.Backends).
-	BackendIndex map[string]*ir.BackendCluster
-}
-
-// GetBackendClusters resolves rd's BackendClusterRefs into their BackendCluster data via
-// BackendIndex. If rd has a Name but no refs resolve to anything, a placeholder BackendCluster
-// with no Settings is synthesized instead of returning empty.
-func (t *ResourceVersionTable) GetBackendClusters(rd *ir.RouteDestination) []*ir.BackendCluster {
-	if rd == nil {
-		return nil
-	}
-	if clusters := ir.ResolveBackendClusterRefs(t.BackendIndex, rd.BackendClusterRefs); len(clusters) > 0 {
-		return clusters
-	}
-	if rd.Name == "" {
-		return nil
-	}
-	return []*ir.BackendCluster{{Name: rd.Name, Metadata: rd.Metadata}}
 }
 
 // GetXdsResources retrieves the translated xds resources saved in the translator context.
