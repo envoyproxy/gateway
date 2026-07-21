@@ -264,7 +264,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// process each backendRef, and calculate the destination settings for this rule
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-		var backendClusterRefs backendClusterRefBuilder
+		var backendClusterRefs []*ir.BackendClusterRef
 		backendWeights := &ir.BackendWeights{}
 		var processDestinationError error
 		failedNoReadyEndpoints := false
@@ -326,7 +326,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			backendWeights.AddWeighted(ds, ds.Weight)
 			if cluster.Merge {
 				backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-				backendClusterRefs.add(backendCluster, ds.Weight)
+				backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 			} else {
 				allDs = append(allDs, ds)
 			}
@@ -443,7 +443,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				irRoute.Destination = &ir.RouteDestination{
 					Name:               destName,
 					Settings:           allDs,
-					BackendClusterRefs: backendClusterRefs.refs,
+					BackendClusterRefs: backendClusterRefs,
 					Metadata:           routeRuleMetadata,
 				}
 			}
@@ -511,16 +511,6 @@ func (t *Translator) gatewayXdsIR(gatewayCtx *GatewayContext, xdsIR resource.Xds
 	return xdsIR[t.getIRKey(gatewayCtx.Gateway)]
 }
 
-// backendClusterRefBuilder accumulates a RouteDestination's BackendClusterRefs across a rule's
-// merged backendRefs.
-type backendClusterRefBuilder struct {
-	refs []*ir.BackendClusterRef
-}
-
-func (b *backendClusterRefBuilder) add(backendCluster *ir.BackendCluster, weight *uint32) {
-	b.refs = append(b.refs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: weight})
-}
-
 // ResolvedBackendCluster groups the outcome of a merge-eligibility decision: the cache key to
 // find-or-create the cluster under, its name, and whether it participates in cluster deduplication.
 type ResolvedBackendCluster struct {
@@ -553,7 +543,6 @@ func (t *Translator) resolveBackendCluster(
 	gwIRKey := t.getIRKey(gatewayCtx.Gateway)
 
 	if !t.shouldMergeBackend(gatewayCtx, btpRoutingType, mergeIncompatible, backendRef, backendNamespace, ds) {
-		// Kind is left empty here since it never collides with a merged key's (always non-empty) Kind.
 		return &ResolvedBackendCluster{Key: &BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName}, Name: ruleDestName}
 	}
 
@@ -592,15 +581,19 @@ func (t *Translator) shouldMergeBackend(
 	if mergeIncompatible {
 		return false
 	}
-	// A merged cluster keeps only the first-registered backendRef's Filters (getOrCreateBackendCluster
-	// never replaces an existing cluster's Setting on a cache hit), so any backendRef carrying filters
-	// that could legitimately differ per-backendRef (header modification, URL rewrite,
-	// CredentialInjection, etc.) must never share a cluster with a differently-configured one.
+	// A merged cluster keeps only the first-registered backendRef's Filters, so any backendRef
+	// carrying filters that could legitimately differ per-backendRef (header modification, URL
+	// rewrite, CredentialInjection, etc.) must never share a cluster with a differently-configured one.
 	if ds.Filters != nil {
 		return false
 	}
+	// A rule whose effective RoutingType diverges from the gateway's baseline would leak that
+	// divergence into a cluster shared with rules that don't diverge.
+	if t.routingTypeDivergesForRule(gatewayCtx, btpRoutingType) {
+		return false
+	}
 
-	return !t.routingTypeDivergesForRule(gatewayCtx, btpRoutingType)
+	return true
 }
 
 // isMergeBackendsEnabledForGateway resolves MergeBackends for gatewayCtx, letting a Gateway-level
@@ -649,10 +642,7 @@ func (t *Translator) processBackendRef(
 	xdsIR resource.XdsIRMap,
 	mergeIncompatible bool,
 ) (ds *ir.DestinationSetting, cluster *ResolvedBackendCluster, unstructuredRef *ir.UnstructuredRef, err status.Error) {
-	// irDestinationSettingName(destName, backendIdx) is the route-scoped name backendClusterSettingName
-	// itself falls back to on the non-merge path; ds.Name is unconditionally overwritten below via
-	// backendClusterSettingName once the real cluster name and merge decision are known, so this is
-	// only ever observed as-is when the backendRef ends up not merged.
+	// ds.Name is set below once the real cluster name and merge decision are known.
 	ds, unstructuredRef, err = t.processDestination(irDestinationSettingName(destName, backendIdx), backendRefContext, parentRef, route, resources, gatewayCtx, btpRoutingType, xdsIR)
 
 	backendRef := backendRefContext.GetBackendRef().BackendObjectReference
@@ -799,8 +789,8 @@ func (t *Translator) getOrCreateBackendCluster(
 		t.BackendClusterMap = make(map[BackendClusterKey]*ir.BackendCluster)
 	}
 
-	// Weight is per-route for a merged cluster (see mergedBackendClusterRef), so clear it here to
-	// avoid a stale, misleading value on the shared Setting.
+	// Weight is per-route for a merged cluster, so clear it here to avoid a stale, misleading
+	// value on the shared Setting.
 	copied := *ds
 	copied.Weight = nil
 
@@ -1358,7 +1348,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// process each backendRef, and calculate the destination settings for this rule
 		destName := irRouteDestinationName(grpcRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-		var backendClusterRefs backendClusterRefBuilder
+		var backendClusterRefs []*ir.BackendClusterRef
 		backendWeights := &ir.BackendWeights{}
 		var processDestinationError error
 		failedNoReadyEndpoints := false
@@ -1409,7 +1399,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			backendWeights.AddWeighted(ds, ds.Weight)
 			if cluster.Merge {
 				backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-				backendClusterRefs.add(backendCluster, ds.Weight)
+				backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 			} else {
 				allDs = append(allDs, ds)
 			}
@@ -1504,7 +1494,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				irRoute.Destination = &ir.RouteDestination{
 					Name:               destName,
 					Settings:           allDs,
-					BackendClusterRefs: backendClusterRefs.refs,
+					BackendClusterRefs: backendClusterRefs,
 					Metadata:           routeRuleMetadata,
 				}
 			}
@@ -1832,7 +1822,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		var (
-			backendClusterRefs backendClusterRefBuilder
+			backendClusterRefs []*ir.BackendClusterRef
 			allDs              []*ir.DestinationSetting
 			resolveErrs        = &status.MultiStatusError{}
 			destName           = irRouteDestinationName(tlsRoute, -1 /*rule index*/)
@@ -1856,7 +1846,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				if ds.Weight != nil && *ds.Weight > 0 {
 					if cluster.Merge {
 						backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-						backendClusterRefs.add(backendCluster, ds.Weight)
+						backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 					} else {
 						allDs = append(allDs, ds)
 					}
@@ -1934,7 +1924,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:               destName,
 						Settings:           allDs,
-						BackendClusterRefs: backendClusterRefs.refs,
+						BackendClusterRefs: backendClusterRefs,
 						Metadata:           routeRuleMetadata,
 					},
 					Metadata: routeRuleMetadata,
@@ -2024,7 +2014,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		var (
-			backendClusterRefs backendClusterRefBuilder
+			backendClusterRefs []*ir.BackendClusterRef
 			allDs              []*ir.DestinationSetting
 			resolveErrs        = &status.MultiStatusError{}
 			destName           = irRouteDestinationName(udpRoute, -1 /*rule index*/)
@@ -2047,7 +2037,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			if ds.Weight != nil && *ds.Weight > 0 {
 				if cluster.Merge {
 					backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-					backendClusterRefs.add(backendCluster, ds.Weight)
+					backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 				} else {
 					allDs = append(allDs, ds)
 				}
@@ -2100,7 +2090,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:               destName,
 						Settings:           allDs,
-						BackendClusterRefs: backendClusterRefs.refs,
+						BackendClusterRefs: backendClusterRefs,
 						// udpRoute Must have a single rule, so can use index 0.
 						Metadata: routeRuleMetadata,
 					},
@@ -2185,7 +2175,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		var (
-			backendClusterRefs backendClusterRefBuilder
+			backendClusterRefs []*ir.BackendClusterRef
 			allDs              []*ir.DestinationSetting
 			resolveErrs        = &status.MultiStatusError{}
 			destName           = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
@@ -2207,7 +2197,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			if ds.Weight != nil && *ds.Weight > 0 {
 				if cluster.Merge {
 					backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-					backendClusterRefs.add(backendCluster, ds.Weight)
+					backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 				} else {
 					allDs = append(allDs, ds)
 				}
@@ -2259,7 +2249,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:               destName,
 						Settings:           allDs,
-						BackendClusterRefs: backendClusterRefs.refs,
+						BackendClusterRefs: backendClusterRefs,
 						Metadata:           routeRuleMetadata,
 					},
 					Metadata: buildResourceMetadata(tcpRoute, nil),
