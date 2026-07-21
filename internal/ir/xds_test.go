@@ -526,6 +526,16 @@ var (
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
 		Name: "happy-dest",
+		Settings: []*DestinationSetting{
+			{
+				Endpoints: []*DestinationEndpoint{
+					{
+						Host: "10.11.12.13",
+						Port: 8080,
+					},
+				},
+			},
+		},
 	}
 )
 
@@ -1270,9 +1280,101 @@ func TestValidateRouteDestination(t *testing.T) {
 			want:  nil,
 		},
 		{
+			name: "valid hostname",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "valid ip",
+			input: RouteDestination{
+				Name: "valid ip",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "1.2.3.4",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "invalid address",
+			input: RouteDestination{
+				Name: "invalid address",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com::foo.bar",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "missing ip",
+			input: RouteDestination{
+				Name: "missing ip",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "missing port",
+			input: RouteDestination{
+				Name: "missing port",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.11.12.13",
+							},
+						},
+					},
+				},
+			},
+			want: ErrDestEndpointPortInvalid,
+		},
+		{
 			name: "missing name",
 			input: RouteDestination{
-				BackendClusterRefs: []*BackendClusterRef{{Name: "bc-1"}},
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.11.12.13",
+								Port: 8080,
+							},
+						},
+					},
+				},
 			},
 			want: ErrDestinationNameEmpty,
 		},
@@ -1287,20 +1389,9 @@ func TestValidateRouteDestination(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "valid multiple backend cluster refs with one setting each",
+			name: "valid multiple backend cluster refs",
 			input: RouteDestination{
 				Name: "multi-bc",
-				BackendClusterRefs: []*BackendClusterRef{
-					{Name: "bc-1"},
-					{Name: "bc-2"},
-				},
-			},
-			want: nil,
-		},
-		{
-			name: "multiple backend cluster refs with multiple settings no longer flagged here",
-			input: RouteDestination{
-				Name: "multi-bc-multi-settings",
 				BackendClusterRefs: []*BackendClusterRef{
 					{Name: "bc-1"},
 					{Name: "bc-2"},
