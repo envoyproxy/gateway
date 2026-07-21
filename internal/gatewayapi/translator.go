@@ -274,7 +274,6 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	translatorContext.SetConfigMaps(resources.ConfigMaps)
 	translatorContext.SetClusterTrustBundles(resources.ClusterTrustBundles)
 	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
-	translatorContext.BackendClusterMap = make(map[BackendClusterKey]*ir.BackendCluster)
 
 	t.TranslatorContext = translatorContext
 

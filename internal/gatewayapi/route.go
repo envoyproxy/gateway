@@ -542,11 +542,9 @@ type ResolvedBackendCluster struct {
 // cluster deduplication (via shouldMergeBackend) and, if so, builds its fully-qualified cluster
 // key and name in one place.
 //
-// When disabled, the key is scoped to the owning gateway plus ruleDestName plus
-// sectionName/parentPort, so each route rule gets one cluster per listener. When enabled, the
-// backend's own identity (plus gateway) is used instead, so routes referencing the same backend
-// share one cluster regardless of listener. Backends that are never mergeable always resolve to
-// the route-scoped name.
+// When disabled, the returned key is never looked up in BackendClusterMap, so it only needs to
+// carry enough for cluster.Name/.Merge. When enabled, the backend's own identity (plus gateway)
+// is used, so routes referencing the same backend share one cluster.
 func (t *Translator) resolveBackendCluster(
 	ruleDestName string,
 	gatewayCtx *GatewayContext,
@@ -558,18 +556,15 @@ func (t *Translator) resolveBackendCluster(
 	backendNamespace string,
 	ds *ir.DestinationSetting,
 ) *ResolvedBackendCluster {
-	sectionName := string(ptr.Deref(parentRef.SectionName, ""))
-	parentPort := ptr.Deref(parentRef.Port, 0)
-
 	if gatewayCtx == nil {
-		return &ResolvedBackendCluster{Key: &BackendClusterKey{Name: ruleDestName, SectionName: sectionName, ParentPort: parentPort}, Name: ruleDestName}
+		return &ResolvedBackendCluster{Key: &BackendClusterKey{Name: ruleDestName}, Name: ruleDestName}
 	}
 
 	gwIRKey := t.getIRKey(gatewayCtx.Gateway)
 
 	if !t.shouldMergeBackend(gatewayCtx, btpRoutingType, mergeIncompatible, backendRef, backendNamespace, ds) {
 		// Kind is left empty here since it never collides with a merged key's (always non-empty) Kind.
-		return &ResolvedBackendCluster{Key: &BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName, SectionName: sectionName, ParentPort: parentPort}, Name: ruleDestName}
+		return &ResolvedBackendCluster{Key: &BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName}, Name: ruleDestName}
 	}
 
 	// Key by the owning Gateway's own identity, not the MergeGateways-collapsed one, so two
@@ -592,6 +587,11 @@ func (t *Translator) shouldMergeBackend(
 	backendNamespace string,
 	ds *ir.DestinationSetting,
 ) bool {
+	// Cheapest check first: skip all the more expensive eligibility work below when merging is
+	// off for this Gateway.
+	if !t.isMergeBackendsEnabledForGateway(gatewayCtx) {
+		return false
+	}
 	// Custom/extension-provided and dynamic-resolver backends can never safely share a merged cluster.
 	if !t.isMergeableBackendKind(backendRef, backendNamespace) {
 		return false
@@ -606,9 +606,6 @@ func (t *Translator) shouldMergeBackend(
 	// that could legitimately differ per-backendRef (header modification, URL rewrite,
 	// CredentialInjection, etc.) must never share a cluster with a differently-configured one.
 	if ds.Filters != nil {
-		return false
-	}
-	if !t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 		return false
 	}
 
@@ -796,6 +793,9 @@ func (t *Translator) getOrCreateBackendCluster(
 ) *ir.BackendCluster {
 	if backendCluster, ok := t.BackendClusterMap[*key]; ok {
 		return backendCluster
+	}
+	if t.BackendClusterMap == nil {
+		t.BackendClusterMap = make(map[BackendClusterKey]*ir.BackendCluster)
 	}
 
 	// Weight is per-route for a merged cluster (see ir.BackendClusterRef.ResolvedWeight), so

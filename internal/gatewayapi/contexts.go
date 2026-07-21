@@ -875,8 +875,6 @@ type BackendClusterKey struct {
 	Namespace    string
 	Name         string
 	Port         int32
-	SectionName  string
-	ParentPort   int32
 	Protocol     ir.AppProtocol
 }
 
