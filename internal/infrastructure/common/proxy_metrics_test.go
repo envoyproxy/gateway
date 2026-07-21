@@ -36,10 +36,8 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 			irSinks: []ir.ResolvedMetricSink{
 				{
 					Destination: ir.RouteDestination{
-						Name: "metrics_otel_0",
-					},
-					Backends: []*ir.BackendCluster{
-						{Settings: []*ir.DestinationSetting{{}}},
+						Name:     "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{{}},
 					},
 				},
 			},
@@ -51,14 +49,10 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 				{
 					Destination: ir.RouteDestination{
 						Name: "metrics_otel_0",
-					},
-					Backends: []*ir.BackendCluster{
-						{
-							Settings: []*ir.DestinationSetting{
-								{
-									Endpoints: []*ir.DestinationEndpoint{
-										{Host: "otel-collector.example.com", Port: 4317},
-									},
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 4317},
 								},
 							},
 						},
@@ -78,17 +72,13 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 				{
 					Destination: ir.RouteDestination{
 						Name: "metrics_otel_0",
-					},
-					Backends: []*ir.BackendCluster{
-						{
-							Settings: []*ir.DestinationSetting{
-								{
-									Endpoints: []*ir.DestinationEndpoint{
-										{Host: "otel-collector.example.com", Port: 443},
-									},
-									TLS: &ir.TLSUpstreamConfig{
-										SNI: &sni,
-									},
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 443},
+								},
+								TLS: &ir.TLSUpstreamConfig{
+									SNI: &sni,
 								},
 							},
 						},
@@ -113,20 +103,16 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 				{
 					Destination: ir.RouteDestination{
 						Name: "metrics_otel_0",
-					},
-					Backends: []*ir.BackendCluster{
-						{
-							Settings: []*ir.DestinationSetting{
-								{
-									Endpoints: []*ir.DestinationEndpoint{
-										{Host: "otel-collector.example.com", Port: 443},
-									},
-									TLS: &ir.TLSUpstreamConfig{
-										SNI: &sni,
-										CACertificate: &ir.TLSCACertificate{
-											Name:        "custom-ca",
-											Certificate: test.TestCACertificate,
-										},
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 443},
+								},
+								TLS: &ir.TLSUpstreamConfig{
+									SNI: &sni,
+									CACertificate: &ir.TLSCACertificate{
+										Name:        "custom-ca",
+										Certificate: test.TestCACertificate,
 									},
 								},
 							},
@@ -153,14 +139,10 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 				{
 					Destination: ir.RouteDestination{
 						Name: "metrics_otel_0",
-					},
-					Backends: []*ir.BackendCluster{
-						{
-							Settings: []*ir.DestinationSetting{
-								{
-									Endpoints: []*ir.DestinationEndpoint{
-										{Host: "otel-collector.example.com", Port: 4317},
-									},
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 4317},
 								},
 							},
 						},
@@ -190,14 +172,10 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 				{
 					Destination: ir.RouteDestination{
 						Name: "metrics_otel_0",
-					},
-					Backends: []*ir.BackendCluster{
-						{
-							Settings: []*ir.DestinationSetting{
-								{
-									Endpoints: []*ir.DestinationEndpoint{
-										{Host: "otel-collector.example.com", Port: 4317},
-									},
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 4317},
 								},
 							},
 						},

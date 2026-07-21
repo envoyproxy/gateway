@@ -66,10 +66,6 @@ type ProxyInfra struct {
 type ResolvedMetricSink struct {
 	// Destination contains the endpoint and TLS configuration.
 	Destination RouteDestination `json:"destination" yaml:"destination"`
-	// Backends holds the BackendCluster(s) referenced by Destination.BackendClusterRefs, resolved
-	// at construction time. These are the same objects already registered into the gateway's
-	// Xds.Backends, not copies.
-	Backends []*BackendCluster `json:"backends,omitempty" yaml:"backends,omitempty"`
 	// Authority is the gRPC authority header value (typically SNI or hostname).
 	Authority string `json:"authority,omitempty" yaml:"authority,omitempty"`
 	// Headers to send with OTLP export requests.

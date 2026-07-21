@@ -995,7 +995,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 
 			result, err := translator.processTracing(&GatewayContext{
 				Gateway: tc.gateway,
-			}, tc.envoyProxy, tc.mergeGateways, resources, nil)
+			}, tc.envoyProxy, tc.mergeGateways, resources)
 
 			if tc.expectError {
 				assert.Error(t, err)
@@ -1123,7 +1123,7 @@ func TestProcessAccessLog(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			translator := &Translator{}
 			resources := &resource.Resources{}
-			actual, err := translator.processAccessLog(&GatewayContext{}, tc.envoyProxy, resources, nil)
+			actual, err := translator.processAccessLog(&GatewayContext{}, tc.envoyProxy, resources)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, actual)
 		})
