@@ -57,16 +57,26 @@ var WasmEnvoyProxyModuleTest = suite.ConformanceTest{
 				Request: http.Request{
 					Path: "/wasm-module",
 				},
+				// Empty ExpectedRequest: the example Wasm appends "Hello, world" to the
+				// response body, which invalidates the JSON format used to extract request
+				// properties (same workaround as the HTTP Wasm e2e).
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host:    "",
+						Method:  "",
+						Path:    "",
+						Headers: nil,
+					},
+				},
+				Namespace: "",
 				Response: http.Response{
 					StatusCodes: []int{200},
 					Headers: map[string]string{
 						"x-wasm-custom": "FOO",
 					},
 				},
-				Namespace: ns,
 			}
 
-			// The example Wasm filter also appends "Hello, world" to the response body.
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 	},
