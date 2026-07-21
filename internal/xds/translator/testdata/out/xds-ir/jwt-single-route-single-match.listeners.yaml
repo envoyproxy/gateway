@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              first-route/example:
+              example_ced70d98fe975d58:
                 audiences:
                 - foo.com
                 forward: true
@@ -36,8 +36,8 @@
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
             requirementMap:
-              first-route:
-                providerName: first-route/example
+              example_670bf892477997dd:
+                providerName: example_ced70d98fe975d58
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

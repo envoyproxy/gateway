@@ -1,0 +1,1 @@
+Fixed ListenerSet protocol-conflict precedence so that Gateway-owned listeners collectively win when they share a single protocol, and only ListenerSet listeners using a different protocol are marked Conflicted/Accepted=False/Programmed=False. Previously, all listeners on a port could incorrectly be marked conflicted even when the Gateway itself had a clear protocol winner.

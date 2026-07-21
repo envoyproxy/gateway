@@ -94,6 +94,12 @@ func TestBackend(t *testing.T) {
 								Port:     443,
 							},
 						},
+						{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "foo.s3.eu-west-1.amazonaws.com.",
+								Port:     443,
+							},
+						},
 					},
 				}
 			},
@@ -212,10 +218,10 @@ func TestBackend(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.endpoints[0].fqdn.hostname: Invalid value: \"host name\": spec.endpoints[0].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.endpoints[1].fqdn.hostname: Invalid value: \"host_name\": spec.endpoints[1].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'",
-				"spec.endpoints[2].fqdn.hostname: Invalid value: \"hostname:443\": spec.endpoints[2].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-				"spec.endpoints[3].fqdn.hostname: Invalid value: \"host.*.name\": spec.endpoints[3].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+				"spec.endpoints[0].fqdn.hostname: Invalid value: \"host name\": spec.endpoints[0].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\\.?$'",
+				"spec.endpoints[1].fqdn.hostname: Invalid value: \"host_name\": spec.endpoints[1].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\\.?$'",
+				"spec.endpoints[2].fqdn.hostname: Invalid value: \"hostname:443\": spec.endpoints[2].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\\.?$'",
+				"spec.endpoints[3].fqdn.hostname: Invalid value: \"host.*.name\": spec.endpoints[3].fqdn.hostname in body should match '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\\.?$'",
 			},
 		},
 		{

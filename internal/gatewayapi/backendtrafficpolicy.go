@@ -105,7 +105,7 @@ func BuildBTPRoutingTypeIndex(
 			kind := string(ref.Kind)
 			key := btpRoutingKey{
 				Kind:        kind,
-				Namespace:   btp.Namespace,
+				Namespace:   string(ref.Namespace),
 				Name:        string(ref.Name),
 				SectionName: string(ptr.Deref(ref.SectionName, "")),
 			}
@@ -260,8 +260,6 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		SectionIndex: make(map[types.NamespacedName]sets.Set[string], gatewayMapSize),
 	}
 
-	policyCopies := backendTrafficPolicyCopiesWithStatusDeepCopy(backendTrafficPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
 
 	// Translate
@@ -282,7 +280,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -308,7 +306,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -328,7 +326,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -353,7 +351,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -826,7 +824,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	policyTargetGatewayNN *types.NamespacedName,
 	policyTargetListener *gwapiv1.SectionName,
 ) error {
-	tf, errs := t.buildTrafficFeatures(policy)
+	tf, errs := t.buildTrafficFeatures(policy, nil)
 	if tf == nil {
 		// should not happen
 		return nil
@@ -851,13 +849,13 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	policyTargetGatewayNN types.NamespacedName, policyTargetListener *gwapiv1.SectionName, route RouteContext,
 	xdsIR resource.XdsIRMap,
 ) error {
-	mergedPolicy, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
+	mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
 	if err != nil {
 		return fmt.Errorf("error merging policies: %w", err)
 	}
 
 	// Build traffic features from the merged policy
-	tf, errs := t.buildTrafficFeatures(mergedPolicy)
+	tf, errs := t.buildTrafficFeatures(mergedPolicy, owners)
 	if tf == nil {
 		// should not happen
 		return nil
@@ -872,8 +870,8 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	// 2. Only gateway policy has rate limits - preserve gateway policy's rule names
 	// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
 	if policy.Spec.RateLimit != nil && parentPolicy.Spec.RateLimit != nil {
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
-		tfRoute, _ := t.buildTrafficFeatures(policy)
+		tfGW, _ := t.buildTrafficFeatures(parentPolicy, nil)
+		tfRoute, _ := t.buildTrafficFeatures(policy, nil)
 
 		if tfGW != nil && tfRoute != nil &&
 			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
@@ -887,7 +885,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		}
 	} else if policy.Spec.RateLimit == nil && parentPolicy.Spec.RateLimit != nil {
 		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
+		tfGW, _ := t.buildTrafficFeatures(parentPolicy, nil)
 		if tfGW != nil && tfGW.RateLimit != nil {
 			// Use the gateway policy's rate limit with its original rule names
 			tf.RateLimit = tfGW.RateLimit
@@ -902,7 +900,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	}
 	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, policyTargetListener)
 
-	return nil
+	return errs
 }
 
 func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
@@ -1037,25 +1035,25 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	}
 }
 
-// mergeBackendTrafficPolicy merges route policy into gateway policy.
-func (t *Translator) mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
+// mergeBackendTrafficPolicy merges route policy into gateway policy, returning the merged
+// policy and the per-field owners used to resolve references against the contributing
+// policy's namespace.
+func (t *Translator) mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, *backendTrafficPolicyOwners, error) {
 	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
-		return routePolicy, nil
+		return routePolicy, nil, nil
 	}
 
-	// Resolve LocalObjectReferences to inline content in the policies before merge so the merge operates on concrete values.
-	if err := t.resolveLocalObjectRefsInPolicy(gwPolicy); err != nil {
-		return nil, err
+	mergedPolicy, err := utils.Merge(gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	if err != nil {
+		return nil, nil, err
 	}
-	if err := t.resolveLocalObjectRefsInPolicy(routePolicy); err != nil {
-		return nil, err
-	}
-
-	return utils.Merge(gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	return mergedPolicy, buildBackendTrafficPolicyOwners(routePolicy, gwPolicy), nil
 }
 
-// buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy.
-func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.TrafficFeatures, error) {
+// buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy. owners is
+// the per-field owners for a merged policy, or nil to resolve references against the
+// policy's own namespace.
+func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.TrafficFeatures, error) {
 	var (
 		rl          *ir.RateLimit
 		bl          *ir.BandwidthLimit
@@ -1132,7 +1130,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		errs = errors.Join(errs, err)
 	}
 
-	if ro, err = t.buildResponseOverride(policy); err != nil {
+	if ro, err = t.buildResponseOverride(policy, owners); err != nil {
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
@@ -1201,10 +1199,12 @@ func buildBackendTracing(tracing *egv1a1.Tracing) *ir.BackendTracing {
 		return nil
 	}
 	return &ir.BackendTracing{
-		SamplingFraction: tracing.SamplingFraction,
-		CustomTags:       ir.CustomTagMapToSlice(tracing.CustomTags),
-		Tags:             ir.MapToSlice(tracing.Tags),
-		SpanName:         tracing.SpanName,
+		SamplingFraction:        tracing.SamplingFraction,
+		ClientSamplingFraction:  tracing.ClientSamplingFraction,
+		OverallSamplingFraction: tracing.OverallSamplingFraction,
+		CustomTags:              ir.CustomTagMapToSlice(tracing.CustomTags),
+		Tags:                    ir.MapToSlice(tracing.Tags),
+		SpanName:                tracing.SpanName,
 	}
 }
 
@@ -1221,7 +1221,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	policy *egv1a1.BackendTrafficPolicy, target policyTargetReferenceWithSectionName,
 	gateway *GatewayContext, xdsIR resource.XdsIRMap,
 ) error {
-	tf, errs := t.buildTrafficFeatures(policy)
+	tf, errs := t.buildTrafficFeatures(policy, nil)
 	if tf == nil {
 		// should not happen
 		return errs
@@ -1933,9 +1933,15 @@ func buildRequestBodyBufferLimit(limit *apiresource.Quantity) (*uint64, error) {
 	return &out, nil
 }
 
-func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) (*ir.ResponseOverride, error) {
+func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.ResponseOverride, error) {
 	if len(policy.Spec.ResponseOverride) == 0 {
 		return nil, nil
+	}
+
+	// Resolve body ValueRefs against the owner's namespace, falling back to the policy's own.
+	responseOverrideNs := policy.Namespace
+	if owners != nil && owners.responseOverride != nil {
+		responseOverrideNs = owners.responseOverride.Namespace
 	}
 
 	rules := make([]ir.ResponseOverrideRule, 0, len(policy.Spec.ResponseOverride))
@@ -1995,7 +2001,7 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 			}
 
 			var err error
-			response.Body, err = t.getCustomResponseBody(ro.Response.Body, policy.Namespace)
+			response.Body, err = t.getCustomResponseBody(ro.Response.Body, responseOverrideNs)
 			if err != nil {
 				return nil, err
 			}
@@ -2071,45 +2077,23 @@ func (t *Translator) getCustomResponseBody(
 	return nil, nil
 }
 
-// resolveCustomResponseBodyRefToInline resolves a ValueRef in body to inline content using the given namespace.
-// It mutates body in place: replaces Type and ValueRef with Inline content. No-op if body is nil or already Inline.
-func (t *Translator) resolveCustomResponseBodyRefToInline(body *egv1a1.CustomResponseBody, policyNs string) error {
-	if body == nil {
-		return nil
-	}
-	if body.Type == nil || *body.Type != egv1a1.ResponseValueTypeValueRef || body.ValueRef == nil {
-		return nil
-	}
-	data, err := t.getCustomResponseBody(body, policyNs)
-	if err != nil {
-		return err
-	}
-	inlineStr := string(data)
-	t.Logger.Info("resolved custom response body ref to inline before merge",
-		"namespace", policyNs,
-		"ref", body.ValueRef.Name,
-	)
-	body.Type = new(egv1a1.ResponseValueTypeInline)
-	body.Inline = &inlineStr
-	body.ValueRef = nil
-	return nil
+// backendTrafficPolicyOwners records which policy (route or parent) contributed each
+// merged field that references other objects, so references resolve against the owner's
+// namespace. Mirrors the field-owner pattern used for SecurityPolicy.
+type backendTrafficPolicyOwners struct {
+	responseOverride *egv1a1.BackendTrafficPolicy
 }
 
-// resolveLocalObjectRefsInPolicy resolves LocalObjectReferences to inline content in the given policy (mutates in place).
-// Currently handles ResponseOverride body ValueRefs; may be extended for other refs BackendTrafficPolicy supports.
-func (t *Translator) resolveLocalObjectRefsInPolicy(policy *egv1a1.BackendTrafficPolicy) error {
-	if policy == nil || len(policy.Spec.ResponseOverride) == 0 {
-		return nil
+// buildBackendTrafficPolicyOwners picks the owner of each merged field: the route policy
+// when it sets the field, otherwise the parent.
+func buildBackendTrafficPolicyOwners(route, parent *egv1a1.BackendTrafficPolicy) *backendTrafficPolicyOwners {
+	responseOverrideOwner := parent
+	if len(route.Spec.ResponseOverride) > 0 {
+		responseOverrideOwner = route
 	}
-	policyNs := policy.Namespace
-	for _, ro := range policy.Spec.ResponseOverride {
-		if ro != nil && ro.Response != nil && ro.Response.Body != nil {
-			if err := t.resolveCustomResponseBodyRefToInline(ro.Response.Body, policyNs); err != nil {
-				return err
-			}
-		}
+	return &backendTrafficPolicyOwners{
+		responseOverride: responseOverrideOwner,
 	}
-	return nil
 }
 
 func sourceFromAPI(s *egv1a1.ResponseOverrideSource) egv1a1.ResponseOverrideSource {
@@ -2222,16 +2206,4 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	}
 
 	return &statName
-}
-
-// backendTrafficPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func backendTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.BackendTrafficPolicy) []*egv1a1.BackendTrafficPolicy {
-	copies := make([]*egv1a1.BackendTrafficPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

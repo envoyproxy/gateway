@@ -40,7 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -121,8 +120,8 @@ type subscriptions struct {
 	httpRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
 	grpcRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
 	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.TLSRouteStatus]
-	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
-	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.TCPRouteStatus]
+	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.UDPRouteStatus]
 	listenerSetStatuses          <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.ListenerSetStatus]
 	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
@@ -272,6 +271,14 @@ func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
 	}
 
 	return !r.envoyGateway.ExtensionAPIs.EnableBackend
+}
+
+func (r *gatewayAPIReconciler) endpointSliceIndexEnabled() bool {
+	var flags *egv1a1.RuntimeFlags
+	if r != nil && r.envoyGateway != nil {
+		flags = r.envoyGateway.RuntimeFlags
+	}
+	return flags.IsEnabled(egv1a1.EndpointSliceIndex)
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
@@ -689,6 +696,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		logger.Info("processing Backend")
 		nn := types.NamespacedName{Namespace: backendNs, Name: backendName}
 		var endpointSliceLabelKey string
+		var endpointSliceIndex string
 		switch backendRefKind {
 		case resource.KindService:
 			service := new(corev1.Service)
@@ -708,6 +716,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				}
 			}
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
+			endpointSliceIndex = serviceEndpointSliceIndex
 
 		case resource.KindServiceImport:
 			serviceImport := new(mcsapiv1a1.ServiceImport)
@@ -728,6 +737,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				}
 			}
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
+			endpointSliceIndex = serviceImportEndpointSliceIndex
 
 		case egv1a1.KindBackend:
 			if r.backendAPIDisabled() {
@@ -822,10 +832,16 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		if endpointSliceLabelKey != "" {
 			endpointSliceList := new(discoveryv1.EndpointSliceList)
 			opts := []client.ListOption{
-				client.MatchingLabels(map[string]string{
+				client.InNamespace(string(*backendRef.Namespace)),
+			}
+			if r.endpointSliceIndexEnabled() {
+				opts = append(opts, client.MatchingFields{
+					endpointSliceIndex: string(backendRef.Name),
+				})
+			} else {
+				opts = append(opts, client.MatchingLabels{
 					endpointSliceLabelKey: string(backendRef.Name),
-				}),
-				client.InNamespace(*backendRef.Namespace),
+				})
 			}
 			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
 				if isTransientError(err) {
@@ -2363,7 +2379,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	r.udpRouteCRDExists, err = checkCRD(resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
+	r.udpRouteCRDExists, err = checkCRD(resource.KindUDPRoute, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
 	}
@@ -2371,15 +2387,15 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("UDPRoute CRD not found, skipping UDPRoute watch")
 	} else {
 		// Watch UDPRoute CRUDs and process affected Gateways.
-		udprPredicates := commonPredicates[*gwapiv1a2.UDPRoute]()
+		udprPredicates := commonPredicates[*gwapiv1.UDPRoute]()
 		if r.namespaceLabel != nil {
-			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.UDPRoute) bool {
+			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.UDPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.UDPRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1.UDPRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.UDPRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				udprPredicates...)); err != nil {
@@ -2390,7 +2406,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tcpRouteCRDExists, err = checkCRD(resource.KindTCPRoute, gwapiv1a2.GroupVersion.String())
+	r.tcpRouteCRDExists, err = checkCRD(resource.KindTCPRoute, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
 	}
@@ -2398,15 +2414,15 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("TCPRoute CRD not found, skipping TCPRoute watch")
 	} else {
 		// Watch TCPRoute CRUDs and process affected Gateways.
-		tcprPredicates := commonPredicates[*gwapiv1a2.TCPRoute]()
+		tcprPredicates := commonPredicates[*gwapiv1.TCPRoute]()
 		if r.namespaceLabel != nil {
-			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.TCPRoute) bool {
+			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TCPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.TCPRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1.TCPRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.TCPRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				tcprPredicates...)); err != nil {
@@ -2478,6 +2494,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}),
 			esPredicates...)); err != nil {
 		return err
+	}
+	if r.endpointSliceIndexEnabled() {
+		if err := addEndpointSliceIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	// we didn't check if the backend CRD exists every time for performance,
