@@ -2018,6 +2018,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
+		// udpRoute must have a single rule, so Spec.Rules[0] is always safe to index below.
 		var (
 			backendClusterRefs []*ir.BackendClusterRef
 			allDs              []*ir.DestinationSetting
@@ -2101,8 +2102,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 						Name:               destName,
 						Settings:           allDs,
 						BackendClusterRefs: backendClusterRefs,
-						// udpRoute Must have a single rule, so can use index 0.
-						Metadata: routeRuleMetadata,
+						Metadata:           routeRuleMetadata,
 					},
 				}
 				irListener.Route = irRoute
