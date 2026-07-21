@@ -887,10 +887,10 @@ type TranslatorContext struct {
 	ConfigMapMap            map[types.NamespacedName]*corev1.ConfigMap
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
+	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
 	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
-	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {
