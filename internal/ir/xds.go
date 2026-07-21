@@ -998,6 +998,20 @@ func (h *HTTPRoute) GetRetry() *Retry {
 	return nil
 }
 
+func (h *HTTPRoute) NeedsClusterPerSetting() bool {
+	if h.Traffic != nil &&
+		h.Traffic.LoadBalancer != nil &&
+		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
+		return true
+	}
+	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
+	// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
+	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().NoEndpoints > 0 {
+		return true
+	}
+	return h.Destination.NeedsClusterPerSetting()
+}
+
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
 	return h.Destination != nil && h.Destination.IsDynamicResolver
 }
@@ -1921,6 +1935,9 @@ type RouteDestination struct {
 	// reused
 	Name     string  `json:"name" yaml:"name"`
 	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
+	// Settings holds this destination's own, non-merged backends. Never shared with another
+	// route.
+	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// BackendClusterRefs holds references to backend clusters for this route rule. The
 	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
 	// never here.
@@ -1940,6 +1957,11 @@ func (r *RouteDestination) Validate() error {
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
+	for _, s := range r.Settings {
+		if err := s.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 	for _, ref := range r.BackendClusterRefs {
 		if len(ref.Name) == 0 {
 			errs = errors.Join(errs, ErrDestinationNameEmpty)
@@ -1948,50 +1970,18 @@ func (r *RouteDestination) Validate() error {
 	return errs
 }
 
-// BackendCluster represents a single backend (Service, ServiceImport, or Backend resource)
-// and its endpoint configuration. Multiple routes sharing the same backend can reference the
-// same BackendCluster.
-// +kubebuilder:object:generate=true
-type BackendCluster struct {
-	// Name uniquely identifies this backend cluster.
-	Name string `json:"name" yaml:"name"`
-	// Settings holds the endpoint localities for this backend.
-	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
-	// Metadata describes the backend resource (Service, Backend, etc.)
-	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// Merged is true when this cluster is shared across routes via backend-identity deduplication.
-	Merged bool `json:"merged,omitempty" yaml:"merged,omitempty"`
+func (r *RouteDestination) NeedsClusterPerSetting() bool {
+	return r.HasMixedEndpoints() ||
+		r.HasFiltersInSettings() ||
+		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
+		r.HasMixedUpstreamProtocolRequirements() ||
+		r.HasMixedAutoSNISettings()
 }
 
-func (b *BackendCluster) Validate() error {
-	var errs error
-	if len(b.Name) == 0 {
-		errs = errors.Join(errs, ErrDestinationNameEmpty)
-	}
-	for _, s := range b.Settings {
-		if err := s.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	return errs
-}
-
-func (b *BackendCluster) NeedsClusterPerSetting() bool {
-	w := b.ToBackendWeights()
-	return b.HasMixedEndpoints() ||
-		b.HasFiltersInSettings() ||
-		(len(b.Settings) > 1 && b.HasPreferLocalZone()) ||
-		b.HasMixedUpstreamProtocolRequirements() ||
-		b.HasMixedAutoSNISettings() ||
-		// Mixed valid/invalid backend weights need a cluster per setting, so weighted traffic can
-		// still reach the invalid-backend-cluster's 500/503 response.
-		w.Invalid > 0 || w.NoEndpoints > 0
-}
-
-// HasMixedEndpoints returns true if the BackendCluster has endpoints of multiple types
-func (b *BackendCluster) HasMixedEndpoints() bool {
+// HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
+func (r *RouteDestination) HasMixedEndpoints() bool {
 	destinationAddressTypes := sets.Set[DestinationAddressType]{}
-	for _, s := range b.Settings {
+	for _, s := range r.Settings {
 		if s.AddressType != nil {
 			destinationAddressTypes.Insert(*s.AddressType)
 		}
@@ -1999,19 +1989,20 @@ func (b *BackendCluster) HasMixedEndpoints() bool {
 	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
 }
 
-// HasFiltersInSettings returns true if any setting in the cluster has a filter
-func (b *BackendCluster) HasFiltersInSettings() bool {
-	for _, setting := range b.Settings {
-		if setting.Filters != nil {
+// HasFiltersInSettings returns true if any setting in the destination has a filter
+func (r *RouteDestination) HasFiltersInSettings() bool {
+	for _, setting := range r.Settings {
+		filters := setting.Filters
+		if filters != nil {
 			return true
 		}
 	}
 	return false
 }
 
-// HasPreferLocalZone returns true if any setting in the cluster has PreferLocalZone set
-func (b *BackendCluster) HasPreferLocalZone() bool {
-	for _, setting := range b.Settings {
+// HasPreferLocalZone returns true if any setting in the destination has PreferLocalZone set
+func (r *RouteDestination) HasPreferLocalZone() bool {
+	for _, setting := range r.Settings {
 		if setting.PreferLocal != nil {
 			return true
 		}
@@ -2021,11 +2012,11 @@ func (b *BackendCluster) HasPreferLocalZone() bool {
 
 // HasMixedUpstreamProtocolRequirements returns true if destination settings require
 // mutually exclusive cluster-level upstream protocol configuration.
-func (b *BackendCluster) HasMixedUpstreamProtocolRequirements() bool {
+func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
 	hasForceHTTP1Upstream := false
 	hasHTTP2Upstream := false
 
-	for _, setting := range b.Settings {
+	for _, setting := range r.Settings {
 		if setting == nil {
 			continue
 		}
@@ -2042,11 +2033,11 @@ func (b *BackendCluster) HasMixedUpstreamProtocolRequirements() bool {
 
 // HasMixedAutoSNISettings returns true if some settings use AutoSNIFromEndpointHostname while
 // others don't. These two modes compute requiresAutoSNI in conflicting ways and cannot share a cluster.
-func (b *BackendCluster) HasMixedAutoSNISettings() bool {
+func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	hasAutoSNIFromHost := 0
-	totalSettings := len(b.Settings)
+	totalSettings := len(r.Settings)
 
-	for _, s := range b.Settings {
+	for _, s := range r.Settings {
 		if s.TLS == nil {
 			continue
 		}
@@ -2058,14 +2049,41 @@ func (b *BackendCluster) HasMixedAutoSNISettings() bool {
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
 }
 
-// ToBackendWeights sums b's Settings' own weights. For a merged cluster, use
-// BackendClusterRef.ToBackendWeights instead, which resolves each setting's weight per-route.
-func (b *BackendCluster) ToBackendWeights() *BackendWeights {
+func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	w := &BackendWeights{}
-	for _, s := range b.Settings {
+	for _, s := range r.Settings {
 		w.AddWeighted(s, s.Weight)
 	}
 	return w
+}
+
+// BackendCluster is a shared, identity-deduplicated backend: exactly one backend identity, one
+// setting. Only ever constructed for genuinely merged (Merged: true) backends — see
+// getOrCreateBackendCluster in internal/gatewayapi/route.go.
+// +kubebuilder:object:generate=true
+type BackendCluster struct {
+	// Name uniquely identifies this backend cluster.
+	Name string `json:"name" yaml:"name"`
+	// Setting holds this backend's own endpoint locality. Always exactly one, since a merged
+	// cluster is by definition a single deduplicated backend identity.
+	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
+	// Metadata describes the backend resource (Service, Backend, etc.)
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// Merged is true when this cluster is shared across routes via backend-identity deduplication.
+	Merged bool `json:"merged,omitempty" yaml:"merged,omitempty"`
+}
+
+func (b *BackendCluster) Validate() error {
+	var errs error
+	if len(b.Name) == 0 {
+		errs = errors.Join(errs, ErrDestinationNameEmpty)
+	}
+	if b.Setting != nil {
+		if err := b.Setting.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
 }
 
 // BackendClusterRef is a reference from a route rule to a backend cluster, identified by name.

@@ -976,15 +976,15 @@ func TestValidateTCPRoute(t *testing.T) {
 	}
 }
 
-func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
+func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    BackendCluster
+		input    RouteDestination
 		expected bool
 	}{
 		{
 			name: "single cluster",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1001,7 +1001,7 @@ func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting mixed endpoints",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1028,7 +1028,7 @@ func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting has zone aware routing more than one setting",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1058,7 +1058,7 @@ func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting has zone aware routing one setting",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1079,7 +1079,7 @@ func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting has filters",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1098,7 +1098,7 @@ func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting mixed upstream protocol requirements",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1128,7 +1128,7 @@ func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "single cluster compatible websocket and http backends",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1158,7 +1158,7 @@ func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "single cluster compatible http2 and grpc backends",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1187,7 +1187,7 @@ func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "cluster per setting mixed auto sni",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
@@ -1218,7 +1218,7 @@ func TestBackendCluster_NeedsClusterPerSetting(t *testing.T) {
 		},
 		{
 			name: "single cluster all auto sni from upstream host",
-			input: BackendCluster{
+			input: RouteDestination{
 				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
