@@ -37,9 +37,9 @@ func TestBuildXdsCluster(t *testing.T) {
 	require.NotNil(t, bootstrapXdsCluster)
 
 	args := &xdsClusterArgs{
-		backendCluster: &ir.BackendCluster{Name: bootstrapXdsCluster.Name},
-		tSocket:        bootstrapXdsCluster.TransportSocket,
-		endpointType:   EndpointTypeDNS,
+		name:         bootstrapXdsCluster.Name,
+		tSocket:      bootstrapXdsCluster.TransportSocket,
+		endpointType: EndpointTypeDNS,
 		healthCheck: &ir.HealthCheck{
 			PanicThreshold: new(uint32(66)),
 		},
@@ -226,12 +226,10 @@ func requireCmpNoDiff(t *testing.T, expected, actual interface{}) {
 
 func TestBuildClusterWithBackendUtilization(t *testing.T) {
 	args := &xdsClusterArgs{
-		backendCluster: &ir.BackendCluster{
-			Name: "test-cluster-bu",
-			Settings: []*ir.DestinationSetting{{
-				Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
-			}},
-		},
+		name: "test-cluster-bu",
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
 		endpointType: EndpointTypeStatic,
 		loadBalancer: &ir.LoadBalancer{BackendUtilization: &ir.BackendUtilization{}},
 	}
@@ -256,12 +254,10 @@ func TestBuildClusterWithBackendUtilization(t *testing.T) {
 func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
 	window := 5 * time.Second
 	args := &xdsClusterArgs{
-		backendCluster: &ir.BackendCluster{
-			Name: "test-cluster-bu-ss",
-			Settings: []*ir.DestinationSetting{{
-				Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
-			}},
-		},
+		name: "test-cluster-bu-ss",
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
 		endpointType: EndpointTypeStatic,
 		loadBalancer: &ir.LoadBalancer{BackendUtilization: &ir.BackendUtilization{
 			SlowStart: &ir.SlowStart{Window: ir.MetaV1DurationPtr(window)},
@@ -292,15 +288,13 @@ func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
 
 func TestBuildClusterWithBackendUtilizationWeightedZones(t *testing.T) {
 	args := &xdsClusterArgs{
-		backendCluster: &ir.BackendCluster{
-			Name: "test-cluster-bu-wz",
-			Settings: []*ir.DestinationSetting{{
-				Endpoints: []*ir.DestinationEndpoint{
-					{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
-					{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
-				},
-			}},
-		},
+		name: "test-cluster-bu-wz",
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{
+				{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
+				{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
+			},
+		}},
 		endpointType: EndpointTypeStatic,
 		loadBalancer: &ir.LoadBalancer{
 			BackendUtilization: &ir.BackendUtilization{},
@@ -344,15 +338,13 @@ func TestBuildClusterWithBackendUtilizationWeightedZones(t *testing.T) {
 
 func TestBuildClusterWithEndpointOverrideBackendUtilizationWeightedZones(t *testing.T) {
 	args := &xdsClusterArgs{
-		backendCluster: &ir.BackendCluster{
-			Name: "test-cluster-eo-bu-wz",
-			Settings: []*ir.DestinationSetting{{
-				Endpoints: []*ir.DestinationEndpoint{
-					{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
-					{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
-				},
-			}},
-		},
+		name: "test-cluster-eo-bu-wz",
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{
+				{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
+				{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
+			},
+		}},
 		endpointType: EndpointTypeStatic,
 		loadBalancer: &ir.LoadBalancer{
 			BackendUtilization: &ir.BackendUtilization{

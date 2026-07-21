@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -23,88 +22,88 @@ import (
 func TestDetermineIPFamily(t *testing.T) {
 	tests := []struct {
 		name     string
-		backends []*ir.BackendCluster
+		settings []*ir.DestinationSetting
 		want     *egv1a1.IPFamily
 	}{
 		{
-			name:     "nil backends should return nil",
-			backends: nil,
+			name:     "nil settings should return nil",
+			settings: nil,
 			want:     nil,
 		},
 		{
-			name:     "empty backends should return nil",
-			backends: []*ir.BackendCluster{},
+			name:     "empty settings should return nil",
+			settings: []*ir.DestinationSetting{},
 			want:     nil,
 		},
 		{
 			name:     "single IPv4 setting",
-			backends: []*ir.BackendCluster{{Settings: []*ir.DestinationSetting{{IPFamily: new(egv1a1.IPv4)}}}},
+			settings: []*ir.DestinationSetting{{IPFamily: new(egv1a1.IPv4)}},
 			want:     new(egv1a1.IPv4),
 		},
 		{
 			name:     "single IPv6 setting",
-			backends: []*ir.BackendCluster{{Settings: []*ir.DestinationSetting{{IPFamily: new(egv1a1.IPv6)}}}},
+			settings: []*ir.DestinationSetting{{IPFamily: new(egv1a1.IPv6)}},
 			want:     new(egv1a1.IPv6),
 		},
 		{
 			name:     "single DualStack setting",
-			backends: []*ir.BackendCluster{{Settings: []*ir.DestinationSetting{{IPFamily: new(egv1a1.DualStack)}}}},
+			settings: []*ir.DestinationSetting{{IPFamily: new(egv1a1.DualStack)}},
 			want:     new(egv1a1.DualStack),
 		},
 		{
 			name: "mixed IPv4 and IPv6 should return DualStack",
-			backends: []*ir.BackendCluster{{Settings: []*ir.DestinationSetting{
+			settings: []*ir.DestinationSetting{
 				{IPFamily: new(egv1a1.IPv4)},
 				{IPFamily: new(egv1a1.IPv6)},
-			}}},
+			},
 			want: new(egv1a1.DualStack),
 		},
 		{
 			name: "DualStack with IPv4 should return DualStack",
-			backends: []*ir.BackendCluster{{Settings: []*ir.DestinationSetting{
+			settings: []*ir.DestinationSetting{
 				{IPFamily: new(egv1a1.DualStack)},
 				{IPFamily: new(egv1a1.IPv4)},
-			}}},
+			},
 			want: new(egv1a1.DualStack),
 		},
 		{
 			name: "DualStack with IPv6 should return DualStack",
-			backends: []*ir.BackendCluster{{Settings: []*ir.DestinationSetting{
+			settings: []*ir.DestinationSetting{
 				{IPFamily: new(egv1a1.DualStack)},
 				{IPFamily: new(egv1a1.IPv6)},
-			}}},
+			},
 			want: new(egv1a1.DualStack),
 		},
 		{
 			name: "mixed with nil IPFamily should be ignored",
-			backends: []*ir.BackendCluster{{Settings: []*ir.DestinationSetting{
+			settings: []*ir.DestinationSetting{
 				{IPFamily: new(egv1a1.IPv4)},
 				{IPFamily: nil},
 				{IPFamily: new(egv1a1.IPv6)},
-			}}},
+			},
 			want: new(egv1a1.DualStack),
 		},
 		{
 			name: "multiple IPv4 settings should return IPv4",
-			backends: []*ir.BackendCluster{{Settings: []*ir.DestinationSetting{
+			settings: []*ir.DestinationSetting{
 				{IPFamily: new(egv1a1.IPv4)},
 				{IPFamily: new(egv1a1.IPv4)},
-			}}},
+			},
 			want: new(egv1a1.IPv4),
 		},
 		{
 			name: "multiple IPv6 settings should return IPv6",
-			backends: []*ir.BackendCluster{{Settings: []*ir.DestinationSetting{
+			settings: []*ir.DestinationSetting{
 				{IPFamily: new(egv1a1.IPv6)},
 				{IPFamily: new(egv1a1.IPv6)},
-			}}},
+			},
 			want: new(egv1a1.IPv6),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := determineIPFamily(tt.backends)
+			got := determineIPFamily(tt.settings)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -112,56 +111,36 @@ func TestDetermineIPFamily(t *testing.T) {
 
 func TestCreateExtServiceXDSCluster(t *testing.T) {
 	tests := []struct {
-		name         string
-		rd           *ir.RouteDestination
-		backendIndex map[string]*ir.BackendCluster
-		want         error
+		name string
+		rd   *ir.RouteDestination
 	}{
 		{
-			name: "success with single backend cluster",
+			name: "success with single setting",
 			rd: &ir.RouteDestination{
 				Name: "ext-svc",
-				BackendClusterRefs: []*ir.BackendClusterRef{{
-					Name: "ext-svc",
+				Settings: []*ir.DestinationSetting{{
+					Endpoints:   []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
+					AddressType: new(ir.IP),
 				}},
 			},
-			backendIndex: map[string]*ir.BackendCluster{
-				"ext-svc": {
-					Name: "ext-svc",
-					Settings: []*ir.DestinationSetting{{
-						Endpoints:   []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
-						AddressType: new(ir.IP),
-					}},
-				},
-			},
-			want: nil,
 		},
 		{
-			name: "error with multiple backend clusters",
+			name: "success with multiple settings",
 			rd: &ir.RouteDestination{
 				Name: "ext-svc",
-				BackendClusterRefs: []*ir.BackendClusterRef{
-					{Name: "bc-1"},
-					{Name: "bc-2"},
+				Settings: []*ir.DestinationSetting{
+					{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}},
+					{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}},
 				},
 			},
-			backendIndex: map[string]*ir.BackendCluster{
-				"bc-1": {Name: "bc-1", Settings: []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}}},
-				"bc-2": {Name: "bc-2", Settings: []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}}}},
-			},
-			want: fmt.Errorf("ext service destination ext-svc must have exactly one backend cluster, got 2"),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tCtx := &types.ResourceVersionTable{BackendIndex: tt.backendIndex}
+			tCtx := &types.ResourceVersionTable{}
 			err := createExtServiceXDSCluster(tt.rd, nil, tCtx)
-			if tt.want == nil {
-				require.NoError(t, err)
-			} else {
-				require.EqualError(t, err, tt.want.Error())
-			}
+			require.NoError(t, err)
 		})
 	}
 }

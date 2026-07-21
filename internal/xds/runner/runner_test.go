@@ -292,13 +292,11 @@ func TestRunner(t *testing.T) {
 		Backends: []*ir.BackendCluster{
 			{
 				Name: "test-dest",
-				Settings: []*ir.DestinationSetting{
-					{
-						Endpoints: []*ir.DestinationEndpoint{
-							{
-								Host: "10.11.12.13",
-								Port: 8080,
-							},
+				Setting: &ir.DestinationSetting{
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "10.11.12.13",
+							Port: 8080,
 						},
 					},
 				},
@@ -391,13 +389,11 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 		Backends: []*ir.BackendCluster{
 			{
 				Name: "test-dest",
-				Settings: []*ir.DestinationSetting{
-					{
-						Endpoints: []*ir.DestinationEndpoint{
-							{
-								Host: "10.11.12.13",
-								Port: 8080,
-							},
+				Setting: &ir.DestinationSetting{
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "10.11.12.13",
+							Port: 8080,
 						},
 					},
 				},
@@ -483,13 +479,11 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 		Backends: []*ir.BackendCluster{
 			{
 				Name: "test-dest",
-				Settings: []*ir.DestinationSetting{
-					{
-						Endpoints: []*ir.DestinationEndpoint{
-							{
-								Host: "10.11.12.13",
-								Port: 8080,
-							},
+				Setting: &ir.DestinationSetting{
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "10.11.12.13",
+							Port: 8080,
 						},
 					},
 				},
