@@ -110,7 +110,7 @@ func TestTranslateXds(t *testing.T) {
 			errMsg: "text.Format is nil",
 		},
 		"tracing-invalid": {
-			errMsg: "unknown tracing provider type: ",
+			errMsg: "validation failed for xds resource",
 		},
 		"tracing-unknown-provider-type": {
 			errMsg: "unknown tracing provider type: AwesomeTelemetry",

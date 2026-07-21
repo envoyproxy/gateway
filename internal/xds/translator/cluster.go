@@ -1488,7 +1488,6 @@ func (BackendClusterTranslator) asClusterArgs(name string,
 		extensionMgr:      extra.extensionMgr,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
-		isRoute:           true,
 	}
 }
 

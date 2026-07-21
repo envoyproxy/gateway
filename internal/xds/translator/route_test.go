@@ -316,6 +316,13 @@ func TestBuildXdsURLRewriteAction_AppendXForwardedHost(t *testing.T) {
 		Name: "test-route",
 		Destination: &ir.RouteDestination{
 			Name: "test-dest",
+			Settings: []*ir.DestinationSetting{
+				{
+					Endpoints: []*ir.DestinationEndpoint{
+						{Host: "1.2.3.4", Port: 8080},
+					},
+				},
+			},
 		},
 	}
 

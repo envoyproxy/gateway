@@ -634,8 +634,6 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 
 			var err error
-			// Skip a fully merged destination (Settings empty, BackendClusterRefs populated) —
-			// processBackendClusters builds its cluster separately.
 			if needsRouteCluster(httpRoute.Destination) {
 				// In these cases we create a cluster per setting
 				//
@@ -644,13 +642,27 @@ func (t *Translator) addRouteToRouteConfig(
 				// * There are multiple Address Type of destination settings(IP, FQDN, UDC, etc.)
 				// * There are invalid/empty settings in the destination settings
 				if !httpRoute.NeedsClusterPerSetting() {
-					err = processXdsCluster(tCtx, httpRoute.Destination.Name, httpRoute.Destination.Settings, &HTTPRouteTranslator{httpRoute}, ea, httpRoute.Destination.Metadata)
+					err = processXdsCluster(
+						tCtx,
+						httpRoute.Destination.Name,
+						httpRoute.Destination.Settings,
+						&HTTPRouteTranslator{httpRoute},
+						ea,
+						httpRoute.Destination.Metadata,
+					)
 					if err != nil {
 						errs = errors.Join(errs, err)
 					}
 				} else {
 					for _, setting := range httpRoute.Destination.Settings {
-						err = processXdsCluster(tCtx, setting.Name, []*ir.DestinationSetting{setting}, &HTTPRouteTranslator{httpRoute}, ea, httpRoute.Destination.Metadata)
+						tSettings := []*ir.DestinationSetting{setting}
+						err = processXdsCluster(
+							tCtx,
+							setting.Name,
+							tSettings,
+							&HTTPRouteTranslator{httpRoute},
+							ea,
+							httpRoute.Destination.Metadata)
 						if err != nil {
 							errs = errors.Join(errs, err)
 						}
@@ -815,10 +827,13 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.ProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
-			// Skip a fully merged destination (Settings empty, BackendClusterRefs populated) —
-			// processBackendClusters builds its cluster separately.
 			if needsRouteCluster(route.Destination) {
-				if err := processXdsCluster(tCtx, route.Destination.Name, route.Destination.Settings, &TCPRouteTranslator{route}, &ExtraArgs{metrics: metrics}, route.Destination.Metadata); err != nil {
+				if err := processXdsCluster(tCtx,
+					route.Destination.Name,
+					route.Destination.Settings,
+					&TCPRouteTranslator{route},
+					&ExtraArgs{metrics: metrics},
+					route.Destination.Metadata); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -924,10 +939,14 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
 		if udpListener.Route != nil {
-			// Skip a fully merged destination (Settings empty, BackendClusterRefs populated) —
-			// processBackendClusters builds its cluster separately.
+			// 1:1 between IR UDPRoute and xDS Cluster
 			if needsRouteCluster(udpListener.Route.Destination) {
-				if err := processXdsCluster(tCtx, udpListener.Route.Destination.Name, udpListener.Route.Destination.Settings, &UDPRouteTranslator{udpListener.Route}, &ExtraArgs{metrics: metrics}, udpListener.Route.Destination.Metadata); err != nil {
+				if err := processXdsCluster(tCtx,
+					udpListener.Route.Destination.Name,
+					udpListener.Route.Destination.Settings,
+					&UDPRouteTranslator{udpListener.Route},
+					&ExtraArgs{metrics: metrics},
+					udpListener.Route.Destination.Metadata); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}

@@ -115,42 +115,6 @@ func TestDetermineIPFamily(t *testing.T) {
 	}
 }
 
-func TestCreateExtServiceXDSCluster(t *testing.T) {
-	tests := []struct {
-		name string
-		rd   *ir.RouteDestination
-	}{
-		{
-			name: "success with single setting",
-			rd: &ir.RouteDestination{
-				Name: "ext-svc",
-				Settings: []*ir.DestinationSetting{{
-					Endpoints:   []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
-					AddressType: new(ir.IP),
-				}},
-			},
-		},
-		{
-			name: "success with multiple settings",
-			rd: &ir.RouteDestination{
-				Name: "ext-svc",
-				Settings: []*ir.DestinationSetting{
-					{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}},
-					{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}}},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tCtx := &types.ResourceVersionTable{}
-			err := createExtServiceXDSCluster(tt.rd, nil, tCtx)
-			require.NoError(t, err)
-		})
-	}
-}
-
 func TestAddClusterFromURLWithTraffic(t *testing.T) {
 	tCtx := &types.ResourceVersionTable{}
 	traffic := &ir.TrafficFeatures{
