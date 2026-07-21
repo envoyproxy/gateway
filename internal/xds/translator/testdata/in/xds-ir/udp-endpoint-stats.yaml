@@ -8,14 +8,10 @@ udp:
     name: "udp-route"
     destination:
       name: "udp-route-dest"
-      backendClusterRefs:
-      - name: "udp-route-dest"
-backends:
-- name: "udp-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    - host: "5.6.7.8"
-      port: 50001
-    name: "udp-route-dest/backend/0"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        - host: "5.6.7.8"
+          port: 50001
+        name: "udp-route-dest/backend/0"

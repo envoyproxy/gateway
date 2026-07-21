@@ -13,11 +13,16 @@ http:
     pathMatch:
       safeRegex: "/v1/.*"
     sessionPersistence:
-      header: {name: "session-header"}
+      header: {
+        name: "session-header"
+      }
     destination:
       name: "regex-route-dest"
-      backendClusterRefs:
-      - name: "regex-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "regex-route-dest/backend/0"
   - name: "cookie-based-session-persistence-route-regex"
     hostname: "*"
     pathMatch:
@@ -28,8 +33,11 @@ http:
         ttl: "1h"
     destination:
       name: "regex-route-dest"
-      backendClusterRefs:
-      - name: "regex-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "regex-route-dest/backend/0"
   - name: "cookie-based-session-persistence-route-prefix"
     hostname: "*"
     pathMatch:
@@ -39,8 +47,11 @@ http:
         name: "session-header"
     destination:
       name: "regex-route-dest"
-      backendClusterRefs:
-      - name: "regex-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "regex-route-dest/backend/0"
   - name: "cookie-based-session-persistence-route-exact"
     hostname: "*"
     pathMatch:
@@ -51,12 +62,8 @@ http:
         ttl: "1h"
     destination:
       name: "regex-route-dest"
-      backendClusterRefs:
-      - name: "regex-route-dest"
-backends:
-- name: "regex-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "regex-route-dest/backend/0"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "regex-route-dest/backend/0"

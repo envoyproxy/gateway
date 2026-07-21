@@ -15,8 +15,14 @@ http:
     routes:
       - destination:
           name: httproute/default/httproute-local/rule/0
-          backendClusterRefs:
-            - name: httproute/default/httproute-local/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-local/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:
@@ -38,8 +44,14 @@ http:
                   contentType: application/json
       - destination:
           name: httproute/default/httproute-backend/rule/0
-          backendClusterRefs:
-            - name: httproute/default/httproute-backend/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-backend/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:
@@ -61,8 +73,14 @@ http:
                   contentType: application/json
       - destination:
           name: httproute/default/httproute-all/rule/0
-          backendClusterRefs:
-            - name: httproute/default/httproute-all/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-all/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:
@@ -82,31 +100,3 @@ http:
                 response:
                   body: Tm90IEZvdW5k
                   contentType: text/plain
-backends:
-  - name: httproute/default/httproute-local/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-local/rule/0/backend/0
-  - name: httproute/default/httproute-backend/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-backend/rule/0/backend/0
-  - name: httproute/default/httproute-all/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-all/rule/0/backend/0

@@ -25,12 +25,8 @@ tcp:
             maskLen: 24
     destination:
       name: "tcp-route-authorization-dest"
-      backendClusterRefs:
-      - name: "tcp-route-authorization-dest"
-backends:
-- name: "tcp-route-authorization-dest"
-  settings:
-  - endpoints:
-    - host: "10.2.3.4"
-      port: 50000
-    name: "tcp-route-authorization-dest/backend/0"
+      settings:
+      - endpoints:
+        - host: "10.2.3.4"
+          port: 50000
+        name: "tcp-route-authorization-dest/backend/0"

@@ -233,126 +233,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: HTTPRoute
-        name: httproute-1
-        namespace: default
-      name: httproute/default/httproute-1/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        metadata:
-          kind: Service
-          name: service-1
-          namespace: default
-          sectionName: "8080"
-        name: httproute/default/httproute-1/rule/0/backend/0
-        protocol: HTTP
-        weight: 1
-    - metadata:
-        kind: HTTPRoute
-        name: httproute-1
-        namespace: default
-      name: httproute/default/httproute-1/rule/1
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        metadata:
-          kind: Service
-          name: service-2
-          namespace: default
-          sectionName: "8080"
-        name: httproute/default/httproute-1/rule/1/backend/0
-        protocol: HTTP
-        weight: 1
-    - metadata:
-        kind: HTTPRoute
-        name: httproute-2
-        namespace: default
-      name: httproute/default/httproute-2/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        metadata:
-          kind: Service
-          name: service-3
-          namespace: default
-          sectionName: "8080"
-        name: httproute/default/httproute-2/rule/0/backend/0
-        protocol: HTTP
-        weight: 1
-    - metadata:
-        kind: SecurityPolicy
-        name: policy-for-http-route-1
-        namespace: default
-      name: securitypolicy/default/policy-for-http-route-1/extauth/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 8.8.8.8
-          port: 9000
-        metadata:
-          kind: ServiceImport
-          name: grpc-backend
-          namespace: default
-          sectionName: "9000"
-        name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
-        protocol: GRPC
-        weight: 1
-    - metadata:
-        kind: SecurityPolicy
-        name: policy-for-gateway-1
-        namespace: default
-      name: securitypolicy/default/policy-for-gateway-1/extauth/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 80
-        metadata:
-          kind: ServiceImport
-          name: http-backend
-          namespace: envoy-gateway
-          sectionName: "80"
-        name: securitypolicy/default/policy-for-gateway-1/extauth/0/backend/0
-        protocol: HTTP
-        weight: 1
-    - metadata:
-        kind: Service
-        name: envoy-default-gateway-1-bfd08ef4
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: default/gateway-1
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-default-gateway-1-bfd08ef4
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: default/gateway-1
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: default/gateway-1
         metadata:
           kind: Service
           name: envoy-default-gateway-1-bfd08ef4
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: default/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-default-gateway-1-bfd08ef4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -370,14 +271,24 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          backendClusterRefs:
-          - name: httproute/default/httproute-1/rule/0
-            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -395,26 +306,47 @@ xdsIR:
             grpc:
               authority: grpc-backend.default:9000
               destination:
-                backendClusterRefs:
-                - name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 metadata:
                   kind: SecurityPolicy
                   name: policy-for-http-route-1
                   namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 8.8.8.8
+                    port: 9000
+                  metadata:
+                    kind: ServiceImport
+                    name: grpc-backend
+                    namespace: default
+                    sectionName: "9000"
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
+                  protocol: GRPC
+                  weight: 1
             headersToExtAuth:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
-          backendClusterRefs:
-          - name: httproute/default/httproute-1/rule/1
-            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -432,26 +364,47 @@ xdsIR:
             grpc:
               authority: grpc-backend.default:9000
               destination:
-                backendClusterRefs:
-                - name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 metadata:
                   kind: SecurityPolicy
                   name: policy-for-http-route-1
                   namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 8.8.8.8
+                    port: 9000
+                  metadata:
+                    kind: ServiceImport
+                    name: grpc-backend
+                    namespace: default
+                    sectionName: "9000"
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
+                  protocol: GRPC
+                  weight: 1
             headersToExtAuth:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
-          backendClusterRefs:
-          - name: httproute/default/httproute-2/rule/0
-            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-2
             namespace: default
           name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-3
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: www.bar.com
         isHTTP2: false
         metadata:
@@ -469,13 +422,24 @@ xdsIR:
             http:
               authority: http-backend.envoy-gateway:80
               destination:
-                backendClusterRefs:
-                - name: securitypolicy/default/policy-for-gateway-1/extauth/0
                 metadata:
                   kind: SecurityPolicy
                   name: policy-for-gateway-1
                   namespace: default
                 name: securitypolicy/default/policy-for-gateway-1/extauth/0
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 7.7.7.7
+                    port: 80
+                  metadata:
+                    kind: ServiceImport
+                    name: http-backend
+                    namespace: envoy-gateway
+                    sectionName: "80"
+                  name: securitypolicy/default/policy-for-gateway-1/extauth/0/backend/0
+                  protocol: HTTP
+                  weight: 1
               headersToBackend:
               - header1
               - header2

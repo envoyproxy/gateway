@@ -1,3 +1,15 @@
+- clusterName: httproute/default/http-route-1/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 8.8.8.8
+            portValue: 8081
+      loadBalancingWeight: 1
+    loadBalancingWeight: 50
+    locality:
+      region: httproute/default/http-route-1/rule/0/backend/1
 - clusterName: backend/service/default/service-1/8080/http
   endpoints:
   - lbEndpoints:
@@ -16,15 +28,3 @@
     loadBalancingWeight: 50
     locality:
       region: backend/service/default/service-1/8080/http
-- clusterName: httproute/default/http-route-1/rule/0/backend/1
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 8.8.8.8
-            portValue: 8081
-      loadBalancingWeight: 1
-    loadBalancingWeight: 50
-    locality:
-      region: httproute/default/http-route-1/rule/0/backend/1

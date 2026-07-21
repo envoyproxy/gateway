@@ -25,8 +25,19 @@ http:
         name: httproute-1
         namespace: default
       name: httproute/default/httproute-1/rule/0
-      backendClusterRefs:
-      - name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
     hostname: gateway.envoyproxy.io
     isHTTP2: false
     metadata:
@@ -93,8 +104,19 @@ http:
         name: httproute-2
         namespace: default
       name: httproute/default/httproute-2/rule/0
-      backendClusterRefs:
-      - name: httproute/default/httproute-2/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-2/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
     hostname: gateway.envoyproxy.io
     isHTTP2: false
     metadata:
@@ -143,40 +165,3 @@ http:
               requests: 30
               unit: Hour
             name: default/policy-for-route-2/rule/2
-backends:
-- name: httproute/default/httproute-1/rule/0
-  settings:
-  - addressType: IP
-    endpoints:
-    - host: 7.7.7.7
-      port: 8080
-    metadata:
-      kind: Service
-      name: service-1
-      namespace: default
-      sectionName: "8080"
-    name: httproute/default/httproute-1/rule/0/backend/0
-    protocol: HTTP
-    weight: 1
-  metadata:
-    kind: HTTPRoute
-    name: httproute-1
-    namespace: default
-- name: httproute/default/httproute-2/rule/0
-  settings:
-  - addressType: IP
-    endpoints:
-    - host: 7.7.7.7
-      port: 8080
-    metadata:
-      kind: Service
-      name: service-2
-      namespace: default
-      sectionName: "8080"
-    name: httproute/default/httproute-2/rule/0/backend/0
-    protocol: HTTP
-    weight: 1
-  metadata:
-    kind: HTTPRoute
-    name: httproute-2
-    namespace: default

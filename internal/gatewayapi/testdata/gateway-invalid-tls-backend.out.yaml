@@ -354,36 +354,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-client-certificate-malform-304ddb38
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-client-certificate-malformed-secret
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-client-certificate-malform-304ddb38
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-client-certificate-malformed-secret
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-client-certificate-malformed-secret
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-client-certificate-malform-304ddb38
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-client-certificate-malformed-secret
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-client-certificate-malform-304ddb38
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-client-certificate-malformed-secret
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -408,36 +399,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-client-certificate-missing-3fe317c3
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-client-certificate-missing-reference-grant
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-client-certificate-missing-3fe317c3
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-client-certificate-missing-reference-grant
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-client-certificate-missing-reference-grant
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-client-certificate-missing-3fe317c3
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-client-certificate-missing-reference-grant
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-client-certificate-missing-3fe317c3
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-client-certificate-missing-reference-grant
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -462,36 +444,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-client-certificate-nonexis-ce7f3a98
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-client-certificate-nonexistent-secret
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-client-certificate-nonexis-ce7f3a98
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-client-certificate-nonexistent-secret
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-client-certificate-nonexistent-secret
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-client-certificate-nonexis-ce7f3a98
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-client-certificate-nonexistent-secret
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-client-certificate-nonexis-ce7f3a98
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-client-certificate-nonexistent-secret
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -516,36 +489,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-client-certificate-unsuppo-fe7bbcdb
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-client-certificate-unsupported-group
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-client-certificate-unsuppo-fe7bbcdb
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-client-certificate-unsupported-group
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-client-certificate-unsupported-group
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-client-certificate-unsuppo-fe7bbcdb
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-client-certificate-unsupported-group
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-client-certificate-unsuppo-fe7bbcdb
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-client-certificate-unsupported-group
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -570,36 +534,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-client-certificate-unsuppo-d9dc0a8e
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-client-certificate-unsupported-kind
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-client-certificate-unsuppo-d9dc0a8e
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-client-certificate-unsupported-kind
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-client-certificate-unsupported-kind
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-client-certificate-unsuppo-d9dc0a8e
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-client-certificate-unsupported-kind
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-client-certificate-unsuppo-d9dc0a8e
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-client-certificate-unsupported-kind
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80

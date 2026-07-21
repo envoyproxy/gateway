@@ -15,8 +15,11 @@ http:
         roundRobin: {}
     destination:
       name: "first-route-dest"
-      backendClusterRefs:
-      - name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route"
     hostname: "*"
     traffic:
@@ -24,8 +27,11 @@ http:
         random: {}
     destination:
       name: "second-route-dest"
-      backendClusterRefs:
-      - name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"
   - name: "third-route"
     hostname: "*"
     traffic:
@@ -33,8 +39,11 @@ http:
         leastRequest: {}
     destination:
       name: "third-route-dest"
-      backendClusterRefs:
-      - name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "third-route-dest/backend/0"
   - name: "fourth-route"
     hostname: "*"
     traffic:
@@ -43,8 +52,11 @@ http:
           sourceIP: true
     destination:
       name: "fourth-route-dest"
-      backendClusterRefs:
-      - name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fourth-route-dest/backend/0"
   - name: "fifth-route"
     hostname: "*"
     traffic:
@@ -54,8 +66,11 @@ http:
             window: 60s
     destination:
       name: "fifth-route-dest"
-      backendClusterRefs:
-      - name: "fifth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fifth-route-dest/backend/0"
   - name: "sixth-route"
     hostname: "*"
     traffic:
@@ -65,8 +80,11 @@ http:
             window: 300s
     destination:
       name: "sixth-route-dest"
-      backendClusterRefs:
-      - name: "sixth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "sixth-route-dest/backend/0"
   - name: "seventh-route"
     hostname: "*"
     traffic:
@@ -76,8 +94,11 @@ http:
           - name: name
     destination:
       name: "seventh-route-dest"
-      backendClusterRefs:
-      - name: "seventh-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "seventh-route-dest/backend/0"
   - name: "eighth-route"
     hostname: "*"
     traffic:
@@ -86,8 +107,11 @@ http:
           tableSize: 524287
     destination:
       name: "eighth-route-dest"
-      backendClusterRefs:
-      - name: "eighth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "eighth-route-dest/backend/0"
   - name: "ninth-route"
     hostname: "*"
     traffic:
@@ -97,8 +121,11 @@ http:
             name: "test"
     destination:
       name: "ninth-route-dest"
-      backendClusterRefs:
-      - name: "ninth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "ninth-route-dest/backend/0"
   - name: "tenth-route"
     hostname: "*"
     traffic:
@@ -110,8 +137,11 @@ http:
               foo: bar
     destination:
       name: "tenth-route-dest"
-      backendClusterRefs:
-      - name: "tenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tenth-route-dest/backend/0"
   - name: "eleventh-route"
     hostname: "*"
     traffic:
@@ -122,8 +152,11 @@ http:
           - header: "x-custom-host"
     destination:
       name: "eleventh-route-dest"
-      backendClusterRefs:
-      - name: "eleventh-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "eleventh-route-dest/backend/0"
   - name: "twelfth-route"
     hostname: "*"
     traffic:
@@ -134,8 +167,11 @@ http:
           - header: "x-fallback-host"
     destination:
       name: "twelfth-route-dest"
-      backendClusterRefs:
-      - name: "twelfth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "twelfth-route-dest/backend/0"
   - name: "thirteen-route"
     hostname: "*"
     traffic:
@@ -146,8 +182,11 @@ http:
           - header: "x-custom-host"
     destination:
       name: "thirteen-route-dest"
-      backendClusterRefs:
-      - name: "thirteen-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "thirteen-route-dest/backend/0"
   - name: "fourteenth-route"
     hostname: "*"
     traffic:
@@ -158,8 +197,11 @@ http:
           - name: bar
     destination:
       name: "fourteenth-route-dest"
-      backendClusterRefs:
-      - name: "fourteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fourteenth-route-dest/backend/0"
   - name: "fifteenth-route"
     hostname: "*"
     traffic:
@@ -170,8 +212,11 @@ http:
           - name: "bar"
     destination:
       name: "fifteenth-route-dest"
-      backendClusterRefs:
-      - name: "fifteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fifteenth-route-dest/backend/0"
   - name: "sixteenth-route"
     hostname: "*"
     traffic:
@@ -187,8 +232,11 @@ http:
           - "cpu_utilization"
     destination:
       name: "sixteenth-route-dest"
-      backendClusterRefs:
-      - name: "sixteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "sixteenth-route-dest/backend/0"
   - name: "seventeenth-route"
     hostname: "*"
     traffic:
@@ -201,108 +249,8 @@ http:
           - "named_metric.foo"
     destination:
       name: "seventeenth-route-dest"
-      backendClusterRefs:
-      - name: "seventeenth-route-dest"
-backends:
-- name: "first-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "first-route-dest/backend/0"
-- name: "second-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "second-route-dest/backend/0"
-- name: "third-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "third-route-dest/backend/0"
-- name: "fourth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "fourth-route-dest/backend/0"
-- name: "fifth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "fifth-route-dest/backend/0"
-- name: "sixth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "sixth-route-dest/backend/0"
-- name: "seventh-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "seventh-route-dest/backend/0"
-- name: "eighth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "eighth-route-dest/backend/0"
-- name: "ninth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "ninth-route-dest/backend/0"
-- name: "tenth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "tenth-route-dest/backend/0"
-- name: "eleventh-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "eleventh-route-dest/backend/0"
-- name: "twelfth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "twelfth-route-dest/backend/0"
-- name: "thirteen-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "thirteen-route-dest/backend/0"
-- name: "fourteenth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "fourteenth-route-dest/backend/0"
-- name: "fifteenth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "fifteenth-route-dest/backend/0"
-- name: "sixteenth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "sixteenth-route-dest/backend/0"
-- name: "seventeenth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "seventeenth-route-dest/backend/0"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "seventeenth-route-dest/backend/0"

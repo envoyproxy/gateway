@@ -27,8 +27,10 @@ http:
       exact: "foo/bar"
     destination:
       name: "first-route-dest"
-      backendClusterRefs:
-      - name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
   - name: "second-route-ratelimit-multiple-rules"
     hostname: "*"
     traffic:
@@ -63,16 +65,7 @@ http:
       exact: "example"
     destination:
       name: "second-route-dest"
-      backendClusterRefs:
-      - name: "second-route-dest"
-backends:
-- name: "first-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-- name: "second-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

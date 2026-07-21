@@ -10,8 +10,20 @@ http:
     routes:
       - destination:
           name: "first-route-dest"
-          backendClusterRefs:
-            - name: "first-route-dest"
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 1.1.1.1
+                  port: 8080
+              name: "first-route-dest/backend/0"
+              filters:
+                addRequestHeaders:
+                  - append: false
+                    name: add-header-3
+                    value:
+                      - some-value
+              protocol: HTTP
+              weight: 1
         hostname: '*'
         name: "first-route"
         pathMatch:
@@ -21,8 +33,32 @@ http:
             prefixMatchReplace: /
       - destination:
           name: "second-route-dest"
-          backendClusterRefs:
-            - name: "second-route-dest"
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 2.2.2.2
+                  port: 8080
+              name: "second-route-dest/backend/0"
+              filters:
+                addRequestHeaders:
+                  - append: true
+                    name: add-header-1
+                    value:
+                      - some-value
+                  - append: true
+                    name: add-header-2
+                    value:
+                      - some-value
+              protocol: HTTP
+              weight: 8
+            - addressType: IP
+              endpoints:
+                - host: 3.3.3.3
+                  port: 8080
+              filters: {}
+              protocol: HTTP
+              weight: 2
+              name: "second-route-dest/backend/1"
         hostname: '*'
         name: "second-route"
         pathMatch:
@@ -30,46 +66,3 @@ http:
         urlRewrite:
           path:
             prefixMatchReplace: /
-backends:
-  - name: "first-route-dest"
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 1.1.1.1
-            port: 8080
-        name: "first-route-dest/backend/0"
-        filters:
-          addRequestHeaders:
-            - append: false
-              name: add-header-3
-              value:
-                - some-value
-        protocol: HTTP
-        weight: 1
-  - name: "second-route-dest"
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 2.2.2.2
-            port: 8080
-        name: "second-route-dest/backend/0"
-        filters:
-          addRequestHeaders:
-            - append: true
-              name: add-header-1
-              value:
-                - some-value
-            - append: true
-              name: add-header-2
-              value:
-                - some-value
-        protocol: HTTP
-        weight: 8
-      - addressType: IP
-        endpoints:
-          - host: 3.3.3.3
-            port: 8080
-        filters: {}
-        protocol: HTTP
-        weight: 2
-        name: "second-route-dest/backend/1"

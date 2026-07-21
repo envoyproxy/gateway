@@ -24,8 +24,11 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      backendClusterRefs:
-      - name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
 tcp:
 - name: "second-listener"
   address: "::"
@@ -51,18 +54,8 @@ tcp:
         - bar.com
     destination:
       name: "tcp-route-dest"
-      backendClusterRefs:
-      - name: "tcp-route-dest"
-backends:
-- name: "first-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "first-route-dest/backend/0"
-- name: "tcp-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "tcp-route-dest/backend/0"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tcp-route-dest/backend/0"

@@ -9,21 +9,17 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      backendClusterRefs:
-      - name: "first-route-dest"
-backends:
-- name: "first-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 8080
-      zone: us-east-1a
-    - host: "2.3.4.5"
-      port: 8080
-      zone: us-east-1b
-    name: "first-route-dest/backend/0"
-    weight: 30
-    preferLocal:
-      force:
-        minEndpointsInZoneThreshold: 1
-      minEndpointsThreshold: 1
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "first-route-dest/backend/0"
+        weight: 30
+        preferLocal:
+          force:
+            minEndpointsInZoneThreshold: 1
+          minEndpointsThreshold: 1

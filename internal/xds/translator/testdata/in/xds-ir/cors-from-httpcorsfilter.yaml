@@ -14,8 +14,11 @@ http:
       exact: "foo/bar"
     destination:
       name: "first-route-dest"
-      backendClusterRefs:
-      - name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
     security:
       cors:
         allowOrigins:
@@ -38,10 +41,3 @@ http:
       - exact: https://gateway.envoyproxy.io
       allowMethods:
       - GET
-backends:
-- name: "first-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "first-route-dest/backend/0"

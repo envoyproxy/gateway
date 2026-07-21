@@ -43,8 +43,8 @@ http:
 backends:
 - name: "shared-cluster"
   merged: true
-  settings:
-  - name: "shared-cluster/backend/0"
+  setting:
+    name: "shared-cluster/backend/0"
     endpoints:
     - host: "1.2.3.4"
       port: 50000

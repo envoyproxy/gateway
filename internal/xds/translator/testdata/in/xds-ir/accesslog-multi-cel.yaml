@@ -37,8 +37,13 @@ accesslog:
     - request.url_path.contains('v1beta3')
     destination:
       name: "accesslog-0"
-      backendClusterRefs:
-      - name: "accesslog-0"
+      settings:
+      - endpoints:
+        - host: "otel-collector.default.svc.cluster.local"
+          port: 4317
+        addressType: FQDN
+        protocol: "GRPC"
+        name: "accesslog-0/backend/0"
 http:
 - name: "first-listener"
   address: "::"
@@ -53,20 +58,8 @@ http:
     hostname: "*"
     destination:
       name: "direct-route-dest"
-      backendClusterRefs:
-      - name: "direct-route-dest"
-backends:
-- name: "accesslog-0"
-  settings:
-  - endpoints:
-    - host: "otel-collector.default.svc.cluster.local"
-      port: 4317
-    addressType: FQDN
-    protocol: "GRPC"
-    name: "accesslog-0/backend/0"
-- name: "direct-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "direct-route-dest/backend/0"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "direct-route-dest/backend/0"

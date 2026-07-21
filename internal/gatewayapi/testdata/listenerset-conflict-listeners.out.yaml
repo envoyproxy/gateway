@@ -545,36 +545,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-gateway-xls-composite-gateway-e1ee602f
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: gateway-xls/composite-gateway
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-gateway-xls-composite-gateway-e1ee602f
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: gateway-xls/composite-gateway
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: gateway-xls/composite-gateway
         metadata:
           kind: Service
           name: envoy-gateway-xls-composite-gateway-e1ee602f
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: gateway-xls/composite-gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-gateway-xls-composite-gateway-e1ee602f
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: gateway-xls/composite-gateway
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80

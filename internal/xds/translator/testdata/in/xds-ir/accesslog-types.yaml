@@ -2,8 +2,13 @@ accessLog:
   als:
     - destination:
         name: accesslog_als_0_1
-        backendClusterRefs:
-          - name: accesslog_als_0_1
+        settings:
+          - addressType: IP
+            endpoints:
+              - host: 10.240.0.10
+                port: 9090
+            protocol: GRPC
+            name: accesslog_als_0_1/backend/0
       http:
         requestHeaders:
           - x-client-ip-address
@@ -18,8 +23,13 @@ accessLog:
       type: HTTP
     - destination:
         name: accesslog_als_0_2
-        backendClusterRefs:
-          - name: accesslog_als_0_2
+        settings:
+          - addressType: IP
+            endpoints:
+              - host: 10.240.0.10
+                port: 9090
+            protocol: GRPC
+            name: accesslog_als_0_2/backend/0
       logType: Route
       name: envoy-gateway-system/test
       text: |
@@ -27,8 +37,13 @@ accessLog:
       type: TCP
     - destination:
         name: accesslog_als_1_1
-        backendClusterRefs:
-          - name: accesslog_als_1_1
+        settings:
+          - addressType: IP
+            endpoints:
+              - host: 10.240.0.10
+                port: 9090
+            protocol: GRPC
+            name: accesslog_als_1_1/backend/0
       http:
         requestHeaders:
           - x-client-ip-address
@@ -43,8 +58,13 @@ accessLog:
       type: HTTP
     - destination:
         name: accesslog_als_1_2
-        backendClusterRefs:
-          - name: accesslog_als_1_2
+        settings:
+          - addressType: IP
+            endpoints:
+              - host: 10.240.0.10
+                port: 9090
+            protocol: GRPC
+            name: accesslog_als_1_2/backend/0
       logType: Listener
       name: envoy-gateway-system/test
       text: |
@@ -52,8 +72,13 @@ accessLog:
       type: TCP
     - destination:
         name: accesslog_als_2_1
-        backendClusterRefs:
-          - name: accesslog_als_2_1
+        settings:
+          - addressType: IP
+            endpoints:
+              - host: 10.240.0.10
+                port: 9090
+            protocol: GRPC
+            name: accesslog_als_2_1/backend/0
       http:
         requestHeaders:
           - x-client-ip-address
@@ -67,8 +92,13 @@ accessLog:
       type: HTTP
     - destination:
         name: accesslog_als_2_2
-        backendClusterRefs:
-          - name: accesslog_als_2_2
+        settings:
+          - addressType: IP
+            endpoints:
+              - host: 10.240.0.10
+                port: 9090
+            protocol: GRPC
+            name: accesslog_als_2_2/backend/0
       name: envoy-gateway-system/test
       text: |
         this is a Global log
@@ -77,8 +107,14 @@ accessLog:
     - authority: otel-collector.monitoring.svc.cluster.local
       destination:
         name: accesslog_otel_0_3
-        backendClusterRefs:
-          - name: accesslog_otel_0_3
+        settings:
+          - endpoints:
+              - host: otel-collector.monitoring.svc.cluster.local
+                port: 4317
+            protocol: GRPC
+            addressType: FQDN
+            weight: 1
+            name: accesslog_otel_0_3/backend/0
       logType: Route
       resourceAttributes:
         - key: k8s.cluster.name
@@ -88,8 +124,14 @@ accessLog:
     - authority: otel-collector.monitoring.svc.cluster.local
       destination:
         name: accesslog_otel_1_3
-        backendClusterRefs:
-          - name: accesslog_otel_1_3
+        settings:
+          - endpoints:
+              - host: otel-collector.monitoring.svc.cluster.local
+                port: 4317
+            protocol: GRPC
+            addressType: FQDN
+            weight: 1
+            name: accesslog_otel_1_3/backend/0
       logType: Listener
       resourceAttributes:
         - key: k8s.cluster.name
@@ -99,8 +141,14 @@ accessLog:
     - authority: otel-collector.monitoring.svc.cluster.local
       destination:
         name: accesslog_otel_2_3
-        backendClusterRefs:
-          - name: accesslog_otel_2_3
+        settings:
+          - endpoints:
+              - host: otel-collector.monitoring.svc.cluster.local
+                port: 4317
+            protocol: GRPC
+            addressType: FQDN
+            weight: 1
+            name: accesslog_otel_2_3/backend/0
       resourceAttributes:
         - key: k8s.cluster.name
           value: cluster-1
@@ -143,87 +191,8 @@ http:
         hostname: "*"
         destination:
           name: "direct-route-dest"
-          backendClusterRefs:
-            - name: "direct-route-dest"
-backends:
-  - name: accesslog_als_0_1
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 10.240.0.10
-            port: 9090
-        protocol: GRPC
-        name: accesslog_als_0_1/backend/0
-  - name: accesslog_als_0_2
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 10.240.0.10
-            port: 9090
-        protocol: GRPC
-        name: accesslog_als_0_2/backend/0
-  - name: accesslog_als_1_1
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 10.240.0.10
-            port: 9090
-        protocol: GRPC
-        name: accesslog_als_1_1/backend/0
-  - name: accesslog_als_1_2
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 10.240.0.10
-            port: 9090
-        protocol: GRPC
-        name: accesslog_als_1_2/backend/0
-  - name: accesslog_als_2_1
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 10.240.0.10
-            port: 9090
-        protocol: GRPC
-        name: accesslog_als_2_1/backend/0
-  - name: accesslog_als_2_2
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 10.240.0.10
-            port: 9090
-        protocol: GRPC
-        name: accesslog_als_2_2/backend/0
-  - name: accesslog_otel_0_3
-    settings:
-      - endpoints:
-          - host: otel-collector.monitoring.svc.cluster.local
-            port: 4317
-        protocol: GRPC
-        addressType: FQDN
-        weight: 1
-        name: accesslog_otel_0_3/backend/0
-  - name: accesslog_otel_1_3
-    settings:
-      - endpoints:
-          - host: otel-collector.monitoring.svc.cluster.local
-            port: 4317
-        protocol: GRPC
-        addressType: FQDN
-        weight: 1
-        name: accesslog_otel_1_3/backend/0
-  - name: accesslog_otel_2_3
-    settings:
-      - endpoints:
-          - host: otel-collector.monitoring.svc.cluster.local
-            port: 4317
-        protocol: GRPC
-        addressType: FQDN
-        weight: 1
-        name: accesslog_otel_2_3/backend/0
-  - name: "direct-route-dest"
-    settings:
-      - endpoints:
-          - host: "1.2.3.4"
-            port: 50000
-        name: "direct-route-dest/backend/0"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "direct-route-dest/backend/0"

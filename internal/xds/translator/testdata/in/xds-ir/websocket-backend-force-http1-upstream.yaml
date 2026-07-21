@@ -12,39 +12,32 @@ http:
         hostname: "*"
         destination:
           name: "websocket-wss-route-dest"
-          backendClusterRefs:
-            - name: "websocket-wss-route-dest"
+          settings:
+            - endpoints:
+                - host: "websocket.example.com"
+                  port: 443
+              name: "websocket-wss-route-dest/backend/0"
+              protocol: HTTP
+              forceHTTP1Upstream: true
+              tls:
+                alpnProtocols: null
+                caCertificate:
+                  name: websocket-wss-route/ca
+                sni: "websocket.example.com"
+                useSystemTrustStore: true
       - name: "ordinary-tls-http-route"
         hostname: "*"
         destination:
           name: "ordinary-tls-http-route-dest"
-          backendClusterRefs:
-            - name: "ordinary-tls-http-route-dest"
-backends:
-  - name: "websocket-wss-route-dest"
-    settings:
-      - endpoints:
-          - host: "websocket.example.com"
-            port: 443
-        name: "websocket-wss-route-dest/backend/0"
-        protocol: HTTP
-        forceHTTP1Upstream: true
-        tls:
-          alpnProtocols:
-          caCertificate:
-            name: websocket-wss-route/ca
-          sni: "websocket.example.com"
-          useSystemTrustStore: true
-  - name: "ordinary-tls-http-route-dest"
-    settings:
-      - endpoints:
-          - host: "ordinary.example.com"
-            port: 443
-        name: "ordinary-tls-http-route-dest/backend/0"
-        protocol: HTTP
-        tls:
-          alpnProtocols:
-          caCertificate:
-            name: ordinary-tls-http-route/ca
-          sni: "ordinary.example.com"
-          useSystemTrustStore: true
+          settings:
+            - endpoints:
+                - host: "ordinary.example.com"
+                  port: 443
+              name: "ordinary-tls-http-route-dest/backend/0"
+              protocol: HTTP
+              tls:
+                alpnProtocols: null
+                caCertificate:
+                  name: ordinary-tls-http-route/ca
+                sni: "ordinary.example.com"
+                useSystemTrustStore: true

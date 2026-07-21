@@ -12,8 +12,11 @@ http:
         hostname: "*"
         destination:
           name: "first-route-dest"
-          backendClusterRefs:
-            - name: "first-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "first-route-dest/backend/0"
     connection:
       maxAcceptPerSocketEvent: 2
 tcp:
@@ -26,8 +29,11 @@ tcp:
       - name: "max-accept-disabled"
         destination:
           name: "max-accept-disabled"
-          backendClusterRefs:
-            - name: "max-accept-disabled"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "max-accept-disabled/backend/0"
   - name: "third-listener"
     address: "::"
     port: 10082
@@ -35,24 +41,8 @@ tcp:
       - name: "max-accept-default"
         destination:
           name: "max-accept-default"
-          backendClusterRefs:
-            - name: "max-accept-default"
-backends:
-  - name: "first-route-dest"
-    settings:
-      - endpoints:
-          - host: "1.2.3.4"
-            port: 50000
-        name: "first-route-dest/backend/0"
-  - name: "max-accept-disabled"
-    settings:
-      - endpoints:
-          - host: "1.2.3.4"
-            port: 50000
-        name: "max-accept-disabled/backend/0"
-  - name: "max-accept-default"
-    settings:
-      - endpoints:
-          - host: "2.3.4.5"
-            port: 50001
-        name: "max-accept-default/backend/0"
+          settings:
+            - endpoints:
+                - host: "2.3.4.5"
+                  port: 50001
+              name: "max-accept-default/backend/0"

@@ -72,11 +72,7 @@ http:
       exact: "jason"
     destination:
       name: "first-route-dest"
-      backendClusterRefs:
-      - name: "first-route-dest"
-backends:
-- name: "first-route-dest"
-  settings:
-  - endpoints:
-    - host: ""
-      port: 50000
+      settings:
+      - endpoints:
+        - host: ""
+          port: 50000

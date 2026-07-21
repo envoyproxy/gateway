@@ -22,8 +22,12 @@ tracing:
   authority: "datadog-agent.default.svc.cluster.local"
   destination:
     name: "tracing-0"
-    backendClusterRefs:
-      - name: "tracing-0"
+    settings:
+      - endpoints:
+          - host: "datadog-agent.default.svc.cluster.local"
+            port: 8126
+        addressType: FQDN
+        name: "tracing-0/backend/0"
   provider:
     type: Datadog
 http:
@@ -40,19 +44,8 @@ http:
         hostname: "*"
         destination:
           name: "direct-route-dest"
-          backendClusterRefs:
-            - name: "direct-route-dest"
-backends:
-  - name: "tracing-0"
-    settings:
-      - endpoints:
-          - host: "datadog-agent.default.svc.cluster.local"
-            port: 8126
-        addressType: FQDN
-        name: "tracing-0/backend/0"
-  - name: "direct-route-dest"
-    settings:
-      - endpoints:
-          - host: "1.2.3.4"
-            port: 50000
-        name: "direct-route-dest/backend/0"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "direct-route-dest/backend/0"

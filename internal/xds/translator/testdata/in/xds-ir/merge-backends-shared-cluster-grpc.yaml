@@ -66,8 +66,8 @@ backends:
     name: grpc-route-1
     namespace: default
   name: backend/service/default/service-1/8080/grpc
-  settings:
-  - addressType: IP
+  setting:
+    addressType: IP
     endpoints:
     - host: 7.7.7.8
       port: 8080

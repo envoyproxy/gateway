@@ -86,66 +86,50 @@ xdsIR:
     accessLog:
       als:
       - destination:
-          backendClusterRefs:
-          - name: accesslog_als_0_0
           metadata:
             kind: EnvoyProxy
             name: als-backend
             namespace: envoy-gateway-system
           name: accesslog_als_0_0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 50051
+            metadata:
+              kind: Service
+              name: access-logger
+              namespace: default
+              sectionName: "50051"
+            name: accesslog_als_0_0/backend/-1
+            protocol: GRPC
         name: envoy-gateway-system/als-backend
         traffic:
           timeout:
             http:
               maxStreamDuration: 30s
         type: HTTP
-    backends:
-    - metadata:
-        kind: EnvoyProxy
-        name: als-backend
-        namespace: envoy-gateway-system
-      name: accesslog_als_0_0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 50051
-        metadata:
-          kind: Service
-          name: access-logger
-          namespace: default
-          sectionName: "50051"
-        name: accesslog_als_0_0/backend/-1
-        protocol: GRPC
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-1-196ae069
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-1
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-1-196ae069
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-1
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80

@@ -21,8 +21,19 @@ http:
             name: domain1
             namespace: ns1
           name: httproute/ns1/domain1/rule/0
-          backendClusterRefs:
-            - name: httproute/ns1/domain1/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 80
+              metadata:
+                kind: Service
+                name: app1
+                namespace: ns1
+                sectionName: "80"
+              name: httproute/ns1/domain1/rule/0/backend/0
+              protocol: HTTP
+              weight: 1
         hostname: domain1.example.com
         isHTTP2: false
         metadata:
@@ -66,8 +77,19 @@ http:
             name: domain2
             namespace: ns2
           name: httproute/ns2/domain2/rule/0
-          backendClusterRefs:
-            - name: httproute/ns2/domain2/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 9.9.9.9
+                  port: 80
+              metadata:
+                kind: Service
+                name: app2
+                namespace: ns2
+                sectionName: "80"
+              name: httproute/ns2/domain2/rule/0/backend/0
+              protocol: HTTP
+              weight: 1
         hostname: domain2.example.com
         isHTTP2: false
         metadata:
@@ -95,40 +117,3 @@ readyListener:
   ipFamily: IPv4
   path: /ready
   port: 19003
-backends:
-  - name: httproute/ns1/domain1/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 80
-        metadata:
-          kind: Service
-          name: app1
-          namespace: ns1
-          sectionName: "80"
-        name: httproute/ns1/domain1/rule/0/backend/0
-        protocol: HTTP
-        weight: 1
-    metadata:
-      kind: HTTPRoute
-      name: domain1
-      namespace: ns1
-  - name: httproute/ns2/domain2/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 9.9.9.9
-            port: 80
-        metadata:
-          kind: Service
-          name: app2
-          namespace: ns2
-          sectionName: "80"
-        name: httproute/ns2/domain2/rule/0/backend/0
-        protocol: HTTP
-        weight: 1
-    metadata:
-      kind: HTTPRoute
-      name: domain2
-      namespace: ns2

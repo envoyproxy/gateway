@@ -8,7 +8,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: backend/service/default/service-1/8080/http
+    serviceName: httproute/default/http-route-1/rule/0
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -18,7 +18,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: backend/service/default/service-1/8080/http
+  name: httproute/default/http-route-1/rule/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -31,7 +31,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/http-route-1/rule/0/backend/1
+    serviceName: backend/service/default/service-1/8080/http
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -41,6 +41,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: httproute/default/http-route-1/rule/0/backend/1
+  name: backend/service/default/service-1/8080/http
   perConnectionBufferLimitBytes: 32768
   type: EDS

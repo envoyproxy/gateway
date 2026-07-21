@@ -10,8 +10,14 @@ http:
     routes:
       - destination:
           name: httproute/default/httproute-1/rule/0
-          backendClusterRefs:
-            - name: httproute/default/httproute-1/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
         envoyExtensions:
           extProcs:
             - name: envoyextensionpolicy/default/policy-for-route-2/extproc/0
@@ -33,8 +39,10 @@ http:
                 - envoy.filters.http.my_custom
               destination:
                 name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
-                backendClusterRefs:
-                  - name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
+                settings:
+                  - protocol: GRPC
+                    weight: 1
+                    name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4/backend/0
             - name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
               failOpen: true
               messageTimeout: 5s
@@ -43,8 +51,10 @@ http:
               authority: grpc-backend-2.default:8000
               destination:
                 name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
-                backendClusterRefs:
-                  - name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
+                settings:
+                  - protocol: GRPC
+                    weight: 1
+                    name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2/backend/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
@@ -54,16 +64,24 @@ http:
           prefix: /foo
       - destination:
           name: httproute/default/httproute-2/rule/0
-          backendClusterRefs:
-            - name: httproute/default/httproute-2/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-2/rule/0/backend/0
         envoyExtensions:
           extProcs:
             - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/extproc/0
               authority: grpc-backend-3.envoy-gateway:3000
               destination:
                 name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
-                backendClusterRefs:
-                  - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
+                settings:
+                  - protocol: GRPC
+                    weight: 1
+                    name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3/backend/0
             - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
               failOpen: false
               statusOnError: 503
@@ -80,12 +98,20 @@ http:
               authority: grpc-backend.envoy-gateway:9000
               destination:
                 name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
-                backendClusterRefs:
-                  - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
+                settings:
+                  - protocol: GRPC
+                    weight: 1
+                    name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend/backend/0
       - destination:
           name: httproute/default/httproute-3/rule/0
-          backendClusterRefs:
-            - name: httproute/default/httproute-3/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-3/rule/0/backend/0
         envoyExtensions:
           extProcs:
             - name: envoyextensionpolicy/envoy-gateway/policy-for-route-3/extproc/0
@@ -94,8 +120,10 @@ http:
               responseBodyProcessingMode: FullDuplexStreamed
               destination:
                 name: envoyextensionpolicy/envoy-gateway/policy-for-route-3/0/grpc-backend-3
-                backendClusterRefs:
-                  - name: envoyextensionpolicy/envoy-gateway/policy-for-route-3/0/grpc-backend-3
+                settings:
+                  - protocol: GRPC
+                    weight: 1
+                    name: envoyextensionpolicy/envoy-gateway/policy-for-route-3/0/grpc-backend-3/backend/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
@@ -103,56 +131,3 @@ http:
           distinct: false
           name: ""
           prefix: /bar
-backends:
-  - name: httproute/default/httproute-1/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-1/rule/0/backend/0
-  - name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
-    settings:
-      - protocol: GRPC
-        weight: 1
-        name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4/backend/0
-  - name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
-    settings:
-      - protocol: GRPC
-        weight: 1
-        name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2/backend/0
-  - name: httproute/default/httproute-2/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-2/rule/0/backend/0
-  - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
-    settings:
-      - protocol: GRPC
-        weight: 1
-        name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3/backend/0
-  - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
-    settings:
-      - protocol: GRPC
-        weight: 1
-        name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend/backend/0
-  - name: httproute/default/httproute-3/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-3/rule/0/backend/0
-  - name: envoyextensionpolicy/envoy-gateway/policy-for-route-3/0/grpc-backend-3
-    settings:
-      - protocol: GRPC
-        weight: 1
-        name: envoyextensionpolicy/envoy-gateway/policy-for-route-3/0/grpc-backend-3/backend/0

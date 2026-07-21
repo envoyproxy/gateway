@@ -12,8 +12,11 @@ http:
     hostname: "*"
     destination:
       name: "response-header-route-dest"
-      backendClusterRefs:
-      - name: "response-header-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "response-header-route-dest/backend/0"
     addResponseHeaders:
     - name: "some-header"
       value:
@@ -38,10 +41,3 @@ http:
     removeResponseHeaders:
     - "some-header5"
     - "some-header6"
-backends:
-- name: "response-header-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "response-header-route-dest/backend/0"

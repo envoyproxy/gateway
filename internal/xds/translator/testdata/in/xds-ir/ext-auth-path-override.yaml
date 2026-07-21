@@ -17,8 +17,14 @@ http:
           prefix: /bar
         destination:
           name: httproute/default/httproute-2/rule/0
-          backendClusterRefs:
-            - name: httproute/default/httproute-2/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-2/rule/0/backend/0
         security:
           extAuth:
             name: securitypolicy/default/policy-for-gateway-1
@@ -27,28 +33,15 @@ http:
               authority: http-backend.envoy-gateway:80
               destination:
                 name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
-                backendClusterRefs:
-                  - name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+                settings:
+                  - addressType: IP
+                    endpoints:
+                      - host: 7.7.7.7
+                        port: 80
+                    protocol: HTTP
+                    weight: 1
+                    name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
               headersToBackend:
                 - header1
                 - header2
               pathOverride: /auth/hello
-backends:
-  - name: httproute/default/httproute-2/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-2/rule/0/backend/0
-  - name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 80
-        protocol: HTTP
-        weight: 1
-        name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0

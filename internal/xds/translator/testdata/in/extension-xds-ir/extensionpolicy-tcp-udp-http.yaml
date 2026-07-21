@@ -39,8 +39,11 @@ http:
     hostname: "*"
     destination:
       name: "http-route-dest"
-      backendClusterRefs:
-      - name: "http-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "http-route-dest/backend/0"
 tcp:
 - address: 0.0.0.0
   extensionRefs:
@@ -75,16 +78,22 @@ tcp:
   routes:
   - destination:
       name: "tcp-route-dest"
-      backendClusterRefs:
-      - name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tcp-route-dest/backend/0"
 udp:
 - address: 0.0.0.0
   route:
     name: "udp-route"
     destination:
       name: "udp-route-dest"
-      backendClusterRefs:
-      - name: "udp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "udp-route-dest/backend/0"
   extensionRefs:
   - object:
       apiVersion: foo.example.io/v1alpha1
@@ -114,22 +123,3 @@ udp:
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
   name: envoy-gateway/gateway-1/udp1
   port: 10162
-backends:
-- name: "http-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "http-route-dest/backend/0"
-- name: "tcp-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "tcp-route-dest/backend/0"
-- name: "udp-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "udp-route-dest/backend/0"

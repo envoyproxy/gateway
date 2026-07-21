@@ -29,8 +29,6 @@
         - upgradeType: websocket
         weightedClusters:
           clusters:
-          - name: backend/service/default/service-1/8080/http
-            weight: 50
           - name: httproute/default/http-route-mixed/rule/0/backend/1
             requestHeadersToAdd:
             - header:
@@ -43,6 +41,8 @@
                 key: x-baz
                 value: qux
             weight: 25
+          - name: backend/service/default/service-1/8080/http
+            weight: 50
     - match:
         pathSeparatedPrefix: /solo
       metadata:

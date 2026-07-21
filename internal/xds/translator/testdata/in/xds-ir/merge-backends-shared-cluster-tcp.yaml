@@ -57,8 +57,8 @@ backends:
     name: tcproute-1
     namespace: default
   name: backend/service/default/service-3/8163/tcp
-  settings:
-  - addressType: IP
+  setting:
+    addressType: IP
     endpoints:
     - host: 7.7.7.8
       port: 8163

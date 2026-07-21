@@ -10,8 +10,14 @@ http:
   routes:
   - destination:
       name: httproute/default/httproute-1/rule/0
-      backendClusterRefs:
-      - name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
     hostname: www.example.com
     isHTTP2: false
     name: httproute/default/httproute-1/rule/0/match/0/www_example_com
@@ -21,15 +27,23 @@ http:
       prefix: /foo
     envoyExtensions:
       luas:
-      - code: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.') end
+      - code: function envoy_on_request(request_handle)
+          request_handle:logInfo('Goodbye.')
+          end
         name: envoyextensionpolicy/default/policy-for-http-route/lua/0
         filterContext:
           token_header: x-api-key
           mode: strict
   - destination:
       name: httproute/default/httproute-2/rule/0
-      backendClusterRefs:
-      - name: httproute/default/httproute-2/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-2/rule/0/backend/0
     hostname: www.example.com
     isHTTP2: false
     name: httproute/default/httproute-2/rule/0/match/0/www_example_com
@@ -39,26 +53,11 @@ http:
       prefix: /bar
     envoyExtensions:
       luas:
-      - code: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.') end
+      - code: function envoy_on_response(response_handle)
+          response_handle:logWarn('Goodbye.')
+          end
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
-      - code: function envoy_on_response(response_handle) response_handle:logError('Hello.') end
+      - code: function envoy_on_response(response_handle)
+          response_handle:logError('Hello.')
+          end
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/1
-backends:
-- name: httproute/default/httproute-1/rule/0
-  settings:
-  - addressType: IP
-    endpoints:
-    - host: 7.7.7.7
-      port: 8080
-    protocol: HTTP
-    weight: 1
-    name: httproute/default/httproute-1/rule/0/backend/0
-- name: httproute/default/httproute-2/rule/0
-  settings:
-  - addressType: IP
-    endpoints:
-    - host: 7.7.7.7
-      port: 8080
-    protocol: HTTP
-    weight: 1
-    name: httproute/default/httproute-2/rule/0/backend/0

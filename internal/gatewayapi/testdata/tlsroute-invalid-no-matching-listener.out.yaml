@@ -534,54 +534,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: TLSRoute
-        name: tlsroute-hostname-mismatch-1
-        namespace: envoy-gateway
-      name: tlsroute/envoy-gateway/tlsroute-hostname-mismatch-1/rule/-1
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 10.244.0.11
-          port: 8443
-        metadata:
-          kind: Service
-          name: tls-backend
-          namespace: envoy-gateway
-          sectionName: "8443"
-        name: tlsroute/envoy-gateway/tlsroute-hostname-mismatch-1/rule/-1/backend/0
-        protocol: TCP
-        weight: 1
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-tls-exact-hostname-5ccc95e9
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-tls-exact-hostname
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-tls-exact-hostname-5ccc95e9
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-tls-exact-hostname
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-tls-exact-hostname
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-tls-exact-hostname-5ccc95e9
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-tls-exact-hostname
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-tls-exact-hostname-5ccc95e9
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-tls-exact-hostname
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -601,54 +574,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: TLSRoute
-        name: tlsroute-hostname-mismatch-2
-        namespace: envoy-gateway
-      name: tlsroute/envoy-gateway/tlsroute-hostname-mismatch-2/rule/-1
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 10.244.0.11
-          port: 8443
-        metadata:
-          kind: Service
-          name: tls-backend
-          namespace: envoy-gateway
-          sectionName: "8443"
-        name: tlsroute/envoy-gateway/tlsroute-hostname-mismatch-2/rule/-1/backend/0
-        protocol: TCP
-        weight: 1
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-tls-wildcard-hostname-90a4fdc8
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-tls-wildcard-hostname
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-tls-wildcard-hostname-90a4fdc8
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-tls-wildcard-hostname
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-tls-wildcard-hostname
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-tls-wildcard-hostname-90a4fdc8
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-tls-wildcard-hostname
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-tls-wildcard-hostname-90a4fdc8
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-tls-wildcard-hostname
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -668,36 +614,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-tlsroute-http-only-f8771668
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-tlsroute-http-only
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-tlsroute-http-only-f8771668
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-tlsroute-http-only
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-tlsroute-http-only
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-tlsroute-http-only-f8771668
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-tlsroute-http-only
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-tlsroute-http-only-f8771668
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-tlsroute-http-only
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -722,36 +659,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-tlsroute-https-only-d05b9162
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-tlsroute-https-only
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-tlsroute-https-only-d05b9162
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-tlsroute-https-only
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-tlsroute-https-only
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-tlsroute-https-only-d05b9162
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-tlsroute-https-only
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-tlsroute-https-only-d05b9162
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-tlsroute-https-only
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 443
@@ -782,36 +710,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-tlsroute-tcproute-only-54b16df4
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-tlsroute-tcproute-only
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-tlsroute-tcproute-only-54b16df4
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-tlsroute-tcproute-only
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-tlsroute-tcproute-only
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-tlsroute-tcproute-only-54b16df4
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-tlsroute-tcproute-only
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-tlsroute-tcproute-only-54b16df4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-tlsroute-tcproute-only
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -821,36 +740,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-tlsroute-tls-passthrough-o-92dd85f5
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-tlsroute-tls-passthrough-only
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-tlsroute-tls-passthrough-o-92dd85f5
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-tlsroute-tls-passthrough-only
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-tlsroute-tls-passthrough-only
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-tlsroute-tls-passthrough-o-92dd85f5
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-tlsroute-tls-passthrough-only
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-tlsroute-tls-passthrough-o-92dd85f5
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-tlsroute-tls-passthrough-only
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

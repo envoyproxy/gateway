@@ -42,8 +42,8 @@ http:
 backends:
 - name: "backend/service/default/service-1/8080/http/envoy-gateway/gateway-1"
   merged: true
-  settings:
-  - addressType: IP
+  setting:
+    addressType: IP
     endpoints:
     - host: "7.7.7.7"
       port: 8080
@@ -51,8 +51,8 @@ backends:
     protocol: HTTP
 - name: "backend/service/default/service-1/8080/http/envoy-gateway/gateway-2"
   merged: true
-  settings:
-  - addressType: IP
+  setting:
+    addressType: IP
     endpoints:
     - host: "7.7.7.7"
       port: 8080

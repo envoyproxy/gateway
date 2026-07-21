@@ -326,89 +326,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: HTTPRoute
-        name: httproute-btp-host
-        namespace: default
-      name: httproute/default/httproute-btp-host/rule/0
-      settings:
-      - addressType: FQDN
-        endpoints:
-        - host: backend-address.example.com
-          hostname: backend-endpoint.example.com
-          port: 443
-        metadata:
-          kind: Backend
-          name: backend-with-hostname
-          namespace: default
-        name: httproute/default/httproute-btp-host/rule/0/backend/0
-        protocol: HTTP
-        weight: 1
-    - metadata:
-        kind: HTTPRoute
-        name: httproute-backend-host
-        namespace: default
-      name: httproute/default/httproute-backend-host/rule/0
-      settings:
-      - addressType: FQDN
-        endpoints:
-        - host: backend-address.example.com
-          hostname: backend-endpoint.example.com
-          port: 443
-        metadata:
-          kind: Backend
-          name: backend-with-hostname
-          namespace: default
-        name: httproute/default/httproute-backend-host/rule/0/backend/0
-        protocol: HTTP
-        weight: 1
-    - metadata:
-        kind: HTTPRoute
-        name: httproute-route-host
-        namespace: default
-      name: httproute/default/httproute-route-host/rule/0
-      settings:
-      - addressType: FQDN
-        endpoints:
-        - host: backend-no-endpoint-host.example.com
-          port: 443
-        metadata:
-          kind: Backend
-          name: backend-without-hostname
-          namespace: default
-        name: httproute/default/httproute-route-host/rule/0/backend/0
-        protocol: HTTP
-        weight: 1
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-966d2c13
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-966d2c13
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-966d2c13
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-966d2c13
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -426,14 +364,24 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          backendClusterRefs:
-          - name: httproute/default/httproute-backend-host/rule/0
-            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-backend-host
             namespace: default
           name: httproute/default/httproute-backend-host/rule/0
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: backend-address.example.com
+              hostname: backend-endpoint.example.com
+              port: 443
+            metadata:
+              kind: Backend
+              name: backend-with-hostname
+              namespace: default
+            name: httproute/default/httproute-backend-host/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: backend-route.example.com
         isHTTP2: false
         metadata:
@@ -463,14 +411,23 @@ xdsIR:
               timeout: 2s
               unhealthyThreshold: 3
       - destination:
-          backendClusterRefs:
-          - name: httproute/default/httproute-route-host/rule/0
-            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-route-host
             namespace: default
           name: httproute/default/httproute-route-host/rule/0
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: backend-no-endpoint-host.example.com
+              port: 443
+            metadata:
+              kind: Backend
+              name: backend-without-hostname
+              namespace: default
+            name: httproute/default/httproute-route-host/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: route-fallback.example.com
         isHTTP2: false
         metadata:
@@ -500,14 +457,24 @@ xdsIR:
               timeout: 2s
               unhealthyThreshold: 3
       - destination:
-          backendClusterRefs:
-          - name: httproute/default/httproute-btp-host/rule/0
-            weight: 1
           metadata:
             kind: HTTPRoute
             name: httproute-btp-host
             namespace: default
           name: httproute/default/httproute-btp-host/rule/0
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: backend-address.example.com
+              hostname: backend-endpoint.example.com
+              port: 443
+            metadata:
+              kind: Backend
+              name: backend-with-hostname
+              namespace: default
+            name: httproute/default/httproute-btp-host/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: btp-route.example.com
         isHTTP2: false
         metadata:

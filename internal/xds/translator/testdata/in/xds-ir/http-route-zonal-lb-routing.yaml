@@ -9,14 +9,35 @@ http:
     hostname: "*"
     destination:
       name: "route-with-settings-preferlocal-dest"
-      backendClusterRefs:
-      - name: "route-with-settings-preferlocal-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "route-with-settings-preferlocal/backend/0"
+        weight: 30
+        preferLocal:
+          minEndpointsThreshold: 1
+          percentageEnabled: 90
+          force:
+            minEndpointsInZoneThreshold: 1
   - name: "route-with-lb-preferlocal"
     hostname: "*"
     destination:
       name: "route-with-lb-preferlocal-dest"
-      backendClusterRefs:
-      - name: "route-with-lb-preferlocal-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "route-with-lb-preferlocal-dest/backend/0"
+        weight: 30
     traffic:
       loadBalancer:
         leastRequest: {}
@@ -26,53 +47,22 @@ http:
     hostname: "*"
     destination:
       name: "route-with-lb-and-settings-preferlocal-dest"
-      backendClusterRefs:
-      - name: "route-with-lb-and-settings-preferlocal-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "route-with-lb-and-settings-preferlocal-dest/backend/0"
+        weight: 30
+        preferLocal:
+          minEndpointsThreshold: 1
+          force:
+            minEndpointsInZoneThreshold: 1
     traffic:
       loadBalancer:
         leastRequest: {}
         preferLocal:
           minEndpointsThreshold: 3
-backends:
-- name: "route-with-settings-preferlocal-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 8080
-      zone: us-east-1a
-    - host: "2.3.4.5"
-      port: 8080
-      zone: us-east-1b
-    name: "route-with-settings-preferlocal/backend/0"
-    weight: 30
-    preferLocal:
-      minEndpointsThreshold: 1
-      percentageEnabled: 90
-      force:
-        minEndpointsInZoneThreshold: 1
-- name: "route-with-lb-preferlocal-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 8080
-      zone: us-east-1a
-    - host: "2.3.4.5"
-      port: 8080
-      zone: us-east-1b
-    name: "route-with-lb-preferlocal-dest/backend/0"
-    weight: 30
-- name: "route-with-lb-and-settings-preferlocal-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 8080
-      zone: us-east-1a
-    - host: "2.3.4.5"
-      port: 8080
-      zone: us-east-1b
-    name: "route-with-lb-and-settings-preferlocal-dest/backend/0"
-    weight: 30
-    preferLocal:
-      minEndpointsThreshold: 1
-      force:
-        minEndpointsInZoneThreshold: 1

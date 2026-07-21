@@ -29,8 +29,11 @@ http:
       exact: "foo/bar"
     destination:
       name: "first-route-dest"
-      backendClusterRefs:
-      - name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route"
     hostname: "*"
     traffic:
@@ -58,18 +61,8 @@ http:
       exact: "example"
     destination:
       name: "second-route-dest"
-      backendClusterRefs:
-      - name: "second-route-dest"
-backends:
-- name: "first-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "first-route-dest/backend/0"
-- name: "second-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "second-route-dest/backend/0"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"

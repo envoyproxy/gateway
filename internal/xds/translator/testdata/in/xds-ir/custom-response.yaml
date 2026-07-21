@@ -15,8 +15,14 @@ http:
     routes:
       - destination:
           name: httproute/default/httproute-1/rule/0
-          backendClusterRefs:
-            - name: httproute/default/httproute-1/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:
@@ -67,8 +73,14 @@ http:
                     fullReplace: /redirect/path
       - destination:
           name: httproute/default/httproute-2/rule/0
-          backendClusterRefs:
-            - name: httproute/default/httproute-2/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-2/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:
@@ -86,22 +98,3 @@ http:
                 name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
                 response:
                   statusCode: 404
-backends:
-  - name: httproute/default/httproute-1/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-1/rule/0/backend/0
-  - name: httproute/default/httproute-2/rule/0
-    settings:
-      - addressType: IP
-        endpoints:
-          - host: 7.7.7.7
-            port: 8080
-        protocol: HTTP
-        weight: 1
-        name: httproute/default/httproute-2/rule/0/backend/0

@@ -32,8 +32,13 @@ http:
             - 200
     destination:
       name: btp-host-route-dest
-      backendClusterRefs:
-      - name: btp-host-route-dest
+      settings:
+      - name: btp-host-route-dest/backend/0
+        addressType: FQDN
+        endpoints:
+        - host: backend-address.example.com
+          hostname: backend-endpoint.example.com
+          port: 443
   - name: backend-host-route
     hostname: backend-route.example.com
     traffic:
@@ -51,8 +56,13 @@ http:
             - 200
     destination:
       name: backend-host-route-dest
-      backendClusterRefs:
-      - name: backend-host-route-dest
+      settings:
+      - name: backend-host-route-dest/backend/0
+        addressType: FQDN
+        endpoints:
+        - host: backend-address.example.com
+          hostname: backend-endpoint.example.com
+          port: 443
   - name: route-host-route
     hostname: route-fallback.example.com
     traffic:
@@ -70,29 +80,9 @@ http:
             - 200
     destination:
       name: route-host-route-dest
-      backendClusterRefs:
-      - name: route-host-route-dest
-backends:
-- name: btp-host-route-dest
-  settings:
-  - name: btp-host-route-dest/backend/0
-    addressType: FQDN
-    endpoints:
-    - host: backend-address.example.com
-      hostname: backend-endpoint.example.com
-      port: 443
-- name: backend-host-route-dest
-  settings:
-  - name: backend-host-route-dest/backend/0
-    addressType: FQDN
-    endpoints:
-    - host: backend-address.example.com
-      hostname: backend-endpoint.example.com
-      port: 443
-- name: route-host-route-dest
-  settings:
-  - name: route-host-route-dest/backend/0
-    addressType: FQDN
-    endpoints:
-    - host: backend-no-endpoint-host.example.com
-      port: 443
+      settings:
+      - name: route-host-route-dest/backend/0
+        addressType: FQDN
+        endpoints:
+        - host: backend-no-endpoint-host.example.com
+          port: 443

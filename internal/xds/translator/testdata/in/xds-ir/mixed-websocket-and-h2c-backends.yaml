@@ -16,23 +16,19 @@ http:
           prefix: /
         destination:
           name: "weighted-protocol-route-dest"
-          backendClusterRefs:
-            - name: "weighted-protocol-route-dest"
-backends:
-  - name: "weighted-protocol-route-dest"
-    settings:
-      - name: "weighted-protocol-route-dest/backend/0"
-        addressType: IP
-        endpoints:
-          - host: "10.0.0.1"
-            port: 8080
-        protocol: HTTP
-        forceHTTP1Upstream: true
-        weight: 1
-      - name: "weighted-protocol-route-dest/backend/1"
-        addressType: IP
-        endpoints:
-          - host: "10.0.0.2"
-            port: 8080
-        protocol: HTTP2
-        weight: 1
+          settings:
+            - name: "weighted-protocol-route-dest/backend/0"
+              addressType: IP
+              endpoints:
+                - host: "10.0.0.1"
+                  port: 8080
+              protocol: HTTP
+              forceHTTP1Upstream: true
+              weight: 1
+            - name: "weighted-protocol-route-dest/backend/1"
+              addressType: IP
+              endpoints:
+                - host: "10.0.0.2"
+                  port: 8080
+              protocol: HTTP2
+              weight: 1

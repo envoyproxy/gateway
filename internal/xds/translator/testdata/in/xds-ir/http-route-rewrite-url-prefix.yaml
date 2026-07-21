@@ -17,8 +17,11 @@ http:
       exact: gateway.envoyproxy.io
     destination:
       name: "rewrite-route-dest"
-      backendClusterRefs:
-      - name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route-dest/backend/0"
     urlRewrite:
       path:
         prefixMatchReplace: /rewrite
@@ -31,8 +34,11 @@ http:
       exact: gateway.envoyproxy.io
     destination:
       name: "rewrite-route-dest"
-      backendClusterRefs:
-      - name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route-dest/backend/0"
     urlRewrite:
       path:
         prefixMatchReplace: /rewrite
@@ -40,10 +46,3 @@ http:
       timeout:
         http:
           requestTimeout: 5s
-backends:
-- name: "rewrite-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "rewrite-route-dest/backend/0"

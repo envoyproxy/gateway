@@ -8,8 +8,8 @@ backends:
     name: http-route-mixed
     namespace: default
   name: backend/service/default/service-1/8080/http
-  settings:
-  - addressType: IP
+  setting:
+    addressType: IP
     endpoints:
     - host: 7.7.7.7
       port: 8080
@@ -19,31 +19,6 @@ backends:
       namespace: default
       sectionName: "8080"
     name: backend/service/default/service-1/8080/http
-    protocol: HTTP
-    weight: 50
-- metadata:
-    kind: HTTPRoute
-    name: http-route-mixed
-    namespace: default
-  name: httproute/default/http-route-mixed/rule/0
-  settings:
-  - addressType: IP
-    endpoints:
-    - host: 7.7.7.7
-      port: 8080
-    filters:
-      addRequestHeaders:
-      - addIfAbsent: false
-        append: true
-        name: x-foo
-        value:
-        - bar
-    metadata:
-      kind: Service
-      name: service-2
-      namespace: default
-      sectionName: "8080"
-    name: httproute/default/http-route-mixed/rule/0/backend/1
     protocol: HTTP
     weight: 50
 http:
@@ -66,7 +41,25 @@ http:
       backendClusterRefs:
       - name: backend/service/default/service-1/8080/http
         weight: 50
-      - name: httproute/default/http-route-mixed/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        filters:
+          addRequestHeaders:
+          - addIfAbsent: false
+            append: true
+            name: x-foo
+            value:
+            - bar
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/http-route-mixed/rule/0/backend/1
+        protocol: HTTP
         weight: 50
       metadata:
         kind: HTTPRoute

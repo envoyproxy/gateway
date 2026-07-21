@@ -20,8 +20,11 @@ http:
       exact: "yes"
     destination:
       name: "valid-route-dest"
-      backendClusterRefs:
-      - name: "valid-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "valid-route-dest/backend/0"
   - name: "invalid-route"
     hostname: "*"
     headerMatches:
@@ -34,18 +37,8 @@ http:
       exact: "yes"
     destination:
       name: "invalid-route-dest"
-      backendClusterRefs:
-      - name: "invalid-route-dest"
-backends:
-- name: "valid-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "valid-route-dest/backend/0"
-- name: "invalid-route-dest"
-  settings:
-  - endpoints:
-    - host: ""
-      port: 50000
-    name: "invalid-route-dest/backend/0"
+      settings:
+      - endpoints:
+        - host: ""
+          port: 50000
+        name: "invalid-route-dest/backend/0"

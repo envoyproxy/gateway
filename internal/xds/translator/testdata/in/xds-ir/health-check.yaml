@@ -38,8 +38,11 @@ http:
           splitExternalLocalOriginErrors: false
     destination:
       name: "first-route-dest"
-      backendClusterRefs:
-      - name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route"
     hostname: "*"
     traffic:
@@ -73,8 +76,12 @@ http:
           splitExternalLocalOriginErrors: false
     destination:
       name: "second-route-dest"
-      backendClusterRefs:
-      - name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          hostname: example.com
+          port: 50000
+        name: "second-route-dest/backend/0"
   - name: "third-route"
     hostname: "*"
     traffic:
@@ -99,8 +106,11 @@ http:
           splitExternalLocalOriginErrors: false
     destination:
       name: "third-route-dest"
-      backendClusterRefs:
-      - name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "third-route-dest/backend/0"
   - name: "fourth-route"
     hostname: "*"
     traffic:
@@ -125,8 +135,11 @@ http:
           splitExternalLocalOriginErrors: true
     destination:
       name: "fourth-route-dest"
-      backendClusterRefs:
-      - name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fourth-route-dest/backend/0"
   - name: "fifth-route"
     hostname: "*"
     traffic:
@@ -140,39 +153,10 @@ http:
             service: my-service
     destination:
       name: "fifth-route-dest"
-      backendClusterRefs:
-      - name: "fifth-route-dest"
-backends:
-- name: "first-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "first-route-dest/backend/0"
-- name: "second-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      hostname: example.com
-      port: 50000
-    name: "second-route-dest/backend/0"
-- name: "third-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "third-route-dest/backend/0"
-- name: "fourth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 50000
-    name: "fourth-route-dest/backend/0"
-- name: "fifth-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      hostname: example.com
-      port: 50000
-    protocol: GRPC
-    name: "fifth-route-dest/backend/0"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          hostname: example.com
+          port: 50000
+        protocol: GRPC
+        name: "fifth-route-dest/backend/0"

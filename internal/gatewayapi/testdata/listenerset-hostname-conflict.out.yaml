@@ -479,36 +479,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-with-listenerset-hostname-facad556
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: envoy-gateway/gateway-with-listenerset-hostname-conflict
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-with-listenerset-hostname-facad556
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: envoy-gateway/gateway-with-listenerset-hostname-conflict
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-with-listenerset-hostname-conflict
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-with-listenerset-hostname-facad556
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-with-listenerset-hostname-conflict
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-with-listenerset-hostname-facad556
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-with-listenerset-hostname-conflict
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80

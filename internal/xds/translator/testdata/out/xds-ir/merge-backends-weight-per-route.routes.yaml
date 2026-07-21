@@ -29,10 +29,10 @@
         - upgradeType: websocket
         weightedClusters:
           clusters:
-          - name: backend/service/default/shared-service/8080/http
-            weight: 30
           - name: httproute/default/http-route-a/rule/0/backend/1
             weight: 70
+          - name: backend/service/default/shared-service/8080/http
+            weight: 30
     - match:
         pathSeparatedPrefix: /route-b
       metadata:
@@ -49,7 +49,7 @@
         - upgradeType: websocket
         weightedClusters:
           clusters:
-          - name: backend/service/default/shared-service/8080/http
-            weight: 90
           - name: httproute/default/http-route-b/rule/0/backend/1
             weight: 10
+          - name: backend/service/default/shared-service/8080/http
+            weight: 90

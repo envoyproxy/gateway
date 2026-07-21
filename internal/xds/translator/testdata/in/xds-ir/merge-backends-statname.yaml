@@ -29,8 +29,8 @@ http:
 backends:
 - name: "shared-cluster"
   merged: true
-  settings:
-  - name: "shared-cluster"
+  setting:
+    name: "shared-cluster"
     weight: 1
     endpoints:
     - host: "1.2.3.4"

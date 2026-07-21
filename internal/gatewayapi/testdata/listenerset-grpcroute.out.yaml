@@ -297,90 +297,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: GRPCRoute
-        name: route-core-grpc
-        namespace: default
-      name: grpcroute/default/route-core-grpc/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        metadata:
-          kind: Service
-          name: service-1
-          namespace: default
-          sectionName: "8080"
-        name: grpcroute/default/route-core-grpc/rule/0/backend/0
-        protocol: GRPC
-        weight: 1
-    - metadata:
-        kind: GRPCRoute
-        name: route-grpc-one
-        namespace: default
-      name: grpcroute/default/route-grpc-one/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        metadata:
-          kind: Service
-          name: service-1
-          namespace: default
-          sectionName: "8080"
-        name: grpcroute/default/route-grpc-one/rule/0/backend/0
-        protocol: GRPC
-        weight: 1
-    - metadata:
-        kind: GRPCRoute
-        name: route-grpc-two
-        namespace: default
-      name: grpcroute/default/route-grpc-two/rule/0
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        metadata:
-          kind: Service
-          name: service-1
-          namespace: default
-          sectionName: "8080"
-        name: grpcroute/default/route-grpc-two/rule/0/backend/0
-        protocol: GRPC
-        weight: 1
-    - metadata:
-        kind: Service
-        name: envoy-gateway-xls-composite-gateway-e1ee602f
-        namespace: envoy-gateway-system
-        sectionName: "8080"
-      name: gateway-xls/composite-gateway
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-gateway-xls-composite-gateway-e1ee602f
-          namespace: envoy-gateway-system
-          sectionName: "8080"
-        name: gateway-xls/composite-gateway
-        protocol: TCP
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: gateway-xls/composite-gateway
         metadata:
           kind: Service
           name: envoy-gateway-xls-composite-gateway-e1ee602f
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: gateway-xls/composite-gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-gateway-xls-composite-gateway-e1ee602f
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: gateway-xls/composite-gateway
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -401,14 +338,24 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          backendClusterRefs:
-          - name: grpcroute/default/route-core-grpc/rule/0
-            weight: 1
           metadata:
             kind: GRPCRoute
             name: route-core-grpc
             namespace: default
           name: grpcroute/default/route-core-grpc/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/route-core-grpc/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:
@@ -435,14 +382,24 @@ xdsIR:
       port: 8081
       routes:
       - destination:
-          backendClusterRefs:
-          - name: grpcroute/default/route-grpc-one/rule/0
-            weight: 1
           metadata:
             kind: GRPCRoute
             name: route-grpc-one
             namespace: default
           name: grpcroute/default/route-grpc-one/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/route-grpc-one/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:
@@ -469,14 +426,24 @@ xdsIR:
       port: 8082
       routes:
       - destination:
-          backendClusterRefs:
-          - name: grpcroute/default/route-grpc-two/rule/0
-            weight: 1
           metadata:
             kind: GRPCRoute
             name: route-grpc-two
             namespace: default
           name: grpcroute/default/route-grpc-two/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/route-grpc-two/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:

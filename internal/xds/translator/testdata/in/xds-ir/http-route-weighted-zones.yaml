@@ -9,8 +9,22 @@ http:
     hostname: "*"
     destination:
       name: "route-with-weighted-zones-roundrobin-dest"
-      backendClusterRefs:
-      - name: "route-with-weighted-zones-roundrobin-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1a
+        - host: "3.4.5.6"
+          port: 8080
+          zone: us-east-1b
+        - host: "4.5.6.7"
+          port: 8080
+          zone: us-east-1c
+        name: "route-with-weighted-zones-roundrobin-dest/backend/0"
+        weight: 1
     traffic:
       loadBalancer:
         roundRobin: {}
@@ -23,8 +37,16 @@ http:
     hostname: "*"
     destination:
       name: "route-with-weighted-zones-maglev-dest"
-      backendClusterRefs:
-      - name: "route-with-weighted-zones-maglev-dest"
+      settings:
+      - endpoints:
+        - host: "10.0.0.1"
+          port: 8080
+          zone: us-west-2a
+        - host: "10.0.0.2"
+          port: 8080
+          zone: us-west-2b
+        name: "route-with-weighted-zones-maglev-dest/backend/0"
+        weight: 1
     traffic:
       loadBalancer:
         consistentHash:
@@ -38,8 +60,16 @@ http:
     hostname: "*"
     destination:
       name: "route-with-weighted-zones-backend-utilization-dest"
-      backendClusterRefs:
-      - name: "route-with-weighted-zones-backend-utilization-dest"
+      settings:
+      - endpoints:
+        - host: "5.6.7.8"
+          port: 8080
+          zone: us-east-1a
+        - host: "6.7.8.9"
+          port: 8080
+          zone: us-east-1b
+        name: "route-with-weighted-zones-backend-utilization-dest/backend/0"
+        weight: 1
     traffic:
       loadBalancer:
         backendUtilization:
@@ -50,43 +80,3 @@ http:
           weight: 80
         - zone: us-east-1b
           weight: 20
-backends:
-- name: "route-with-weighted-zones-roundrobin-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 8080
-      zone: us-east-1a
-    - host: "2.3.4.5"
-      port: 8080
-      zone: us-east-1a
-    - host: "3.4.5.6"
-      port: 8080
-      zone: us-east-1b
-    - host: "4.5.6.7"
-      port: 8080
-      zone: us-east-1c
-    name: "route-with-weighted-zones-roundrobin-dest/backend/0"
-    weight: 1
-- name: "route-with-weighted-zones-maglev-dest"
-  settings:
-  - endpoints:
-    - host: "10.0.0.1"
-      port: 8080
-      zone: us-west-2a
-    - host: "10.0.0.2"
-      port: 8080
-      zone: us-west-2b
-    name: "route-with-weighted-zones-maglev-dest/backend/0"
-    weight: 1
-- name: "route-with-weighted-zones-backend-utilization-dest"
-  settings:
-  - endpoints:
-    - host: "5.6.7.8"
-      port: 8080
-      zone: us-east-1a
-    - host: "6.7.8.9"
-      port: 8080
-      zone: us-east-1b
-    name: "route-with-weighted-zones-backend-utilization-dest/backend/0"
-    weight: 1

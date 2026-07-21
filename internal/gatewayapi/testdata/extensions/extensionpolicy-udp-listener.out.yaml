@@ -146,24 +146,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backends:
-    - metadata:
-        kind: Service
-        name: envoy-envoy-gateway-gateway-1-196ae069
-        sectionName: "8080"
-      name: envoy-gateway/gateway-1
-      settings:
-      - addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-1-196ae069
-          sectionName: "8080"
-        name: envoy-gateway/gateway-1
-        protocol: TCP
     extensionServerPolicies:
     - object:
         apiVersion: foo.example.io/v1alpha1
@@ -221,13 +203,23 @@ xdsIR:
             controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:
-        backendClusterRefs:
-        - name: envoy-gateway/gateway-1
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           sectionName: "8080"
         name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

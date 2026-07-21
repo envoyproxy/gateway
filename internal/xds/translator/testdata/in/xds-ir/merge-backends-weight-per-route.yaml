@@ -8,8 +8,8 @@ backends:
     name: http-route-a
     namespace: default
   name: backend/service/default/shared-service/8080/http
-  settings:
-  - addressType: IP
+  setting:
+    addressType: IP
     endpoints:
     - host: 7.7.7.7
       port: 8080
@@ -21,42 +21,6 @@ backends:
     name: backend/service/default/shared-service/8080/http
     protocol: HTTP
     weight: 30
-- metadata:
-    kind: HTTPRoute
-    name: http-route-a
-    namespace: default
-  name: httproute/default/http-route-a/rule/0
-  settings:
-  - addressType: IP
-    endpoints:
-    - host: 7.7.7.8
-      port: 8080
-    metadata:
-      kind: Service
-      name: other-service-a
-      namespace: default
-      sectionName: "8080"
-    name: httproute/default/http-route-a/rule/0/backend/1
-    protocol: HTTP
-    weight: 70
-- metadata:
-    kind: HTTPRoute
-    name: http-route-b
-    namespace: default
-  name: httproute/default/http-route-b/rule/0
-  settings:
-  - addressType: IP
-    endpoints:
-    - host: 7.7.7.9
-      port: 8080
-    metadata:
-      kind: Service
-      name: other-service-b
-      namespace: default
-      sectionName: "8080"
-    name: httproute/default/http-route-b/rule/0/backend/1
-    protocol: HTTP
-    weight: 10
 http:
 - address: 0.0.0.0
   externalPort: 80
@@ -77,7 +41,18 @@ http:
       backendClusterRefs:
       - name: backend/service/default/shared-service/8080/http
         weight: 30
-      - name: httproute/default/http-route-a/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.8
+          port: 8080
+        metadata:
+          kind: Service
+          name: other-service-a
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/http-route-a/rule/0/backend/1
+        protocol: HTTP
         weight: 70
       metadata:
         kind: HTTPRoute
@@ -99,7 +74,18 @@ http:
       backendClusterRefs:
       - name: backend/service/default/shared-service/8080/http
         weight: 90
-      - name: httproute/default/http-route-b/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.9
+          port: 8080
+        metadata:
+          kind: Service
+          name: other-service-b
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/http-route-b/rule/0/backend/1
+        protocol: HTTP
         weight: 10
       metadata:
         kind: HTTPRoute

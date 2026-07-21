@@ -1,8 +1,14 @@
 globalResources:
   proxyServiceCluster:
     name: envoy-gateway-gateway-1-196ae069
-    backendClusterRefs:
-    - name: envoy-gateway-gateway-1-196ae069
+    settings:
+    - addressType: IP
+      endpoints:
+      - host: 7.6.5.4
+        port: 8080
+        zone: zone1
+      name: envoy-envoy-gateway-gateway-1-196ae069
+      protocol: HTTP
 http:
 - name: "first-listener"
   address: "::"
@@ -14,30 +20,17 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      backendClusterRefs:
-      - name: "first-route-dest"
-backends:
-- name: envoy-gateway-gateway-1-196ae069
-  settings:
-  - addressType: IP
-    endpoints:
-    - host: 7.6.5.4
-      port: 8080
-      zone: zone1
-    name: envoy-envoy-gateway-gateway-1-196ae069
-    protocol: HTTP
-- name: "first-route-dest"
-  settings:
-  - endpoints:
-    - host: "1.2.3.4"
-      port: 8080
-      zone: us-east-1a
-    - host: "2.3.4.5"
-      port: 8080
-      zone: us-east-1b
-    name: "first-route-dest/backend/0"
-    weight: 30
-    preferLocal:
-      force:
-        minEndpointsInZoneThreshold: 1
-      minEndpointsThreshold: 1
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "first-route-dest/backend/0"
+        weight: 30
+        preferLocal:
+          force:
+            minEndpointsInZoneThreshold: 1
+          minEndpointsThreshold: 1
