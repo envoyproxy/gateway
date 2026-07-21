@@ -205,10 +205,10 @@ type EnvoyProxySpec struct {
 	DynamicModules []DynamicModuleEntry `json:"dynamicModules,omitempty"`
 
 	// WasmModules defines the set of Wasm modules that are allowed to be used by
-	// EnvoyExtensionPolicy resources with a Filesystem code source. Each entry
-	// registers a module by a logical name and the absolute path on the Envoy proxy.
+	// EnvoyExtensionPolicy resources with an EnvoyProxyModule code source. Each
+	// entry registers a module by a logical name and a source (currently Local path).
 	//
-	// The EnvoyProxy owner is responsible for ensuring the Wasm files are available
+	// The EnvoyProxy owner is responsible for ensuring Local modules are available
 	// on the proxy container's filesystem (e.g., via init containers, custom images,
 	// or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path.
 	//

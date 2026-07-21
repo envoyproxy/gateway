@@ -7,9 +7,15 @@ envoyProxiesForGateways:
   spec:
     wasmModules:
     - name: security-filter
-      path: /var/lib/envoy/security-filter.wasm
+      source:
+        type: Local
+        local:
+          path: /var/lib/envoy/security-filter.wasm
     - name: metrics-filter
-      path: /opt/wasm/metrics.wasm
+      source:
+        type: Local
+        local:
+          path: /opt/wasm/metrics.wasm
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -83,8 +89,8 @@ envoyextensionpolicies:
     wasm:
     - name: wasm-filter-1
       code:
-        type: Filesystem
-        filesystem:
+        type: EnvoyProxyModule
+        envoyProxyModule:
           name: security-filter
       config:
         mode: enforce
@@ -102,7 +108,7 @@ envoyextensionpolicies:
     - name: wasm-filter-2
       rootID: my-root-id
       code:
-        type: Filesystem
-        filesystem:
+        type: EnvoyProxyModule
+        envoyProxyModule:
           name: metrics-filter
       failOpen: true

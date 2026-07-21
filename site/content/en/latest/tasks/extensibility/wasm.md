@@ -19,7 +19,7 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 Envoy Gateway supports three types of Wasm extensions:
 * HTTP Wasm Extension: The Wasm extension is fetched from a remote URL.
 * Image Wasm Extension: The Wasm extension is packaged as an OCI image and fetched from an image registry.
-* Filesystem Wasm Extension: The Wasm extension is loaded from a path already present on the Envoy proxy. Modules are registered on [EnvoyProxy][] (`spec.wasmModules`) and referenced by name from [EnvoyExtensionPolicy][].
+* EnvoyProxyModule Wasm Extension: The Wasm extension is loaded from a module registered on [EnvoyProxy][] (`spec.wasmModules`). Today only a Local filesystem path is supported; the policy references the module by name.
 
 The following example demonstrates how to configure an [EnvoyExtensionPolicy][] to attach a Wasm extension to an [EnvoyExtensionPolicy][] .
 This Wasm extension adds a custom header `x-wasm-custom: FOO` to the response.
@@ -142,9 +142,9 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-### Filesystem Wasm Extension
+### EnvoyProxyModule Wasm Extension
 
-Register the module path on the [EnvoyProxy][] attached to the Gateway, then reference it by name from the [EnvoyExtensionPolicy][]. Envoy Gateway does not place the file on the proxy; provision it with a custom Envoy image or a volume mount. This source skips the control-plane download path, which avoids a fail-closed load window when the module is already on the proxy.
+Register the module on the [EnvoyProxy][] attached to the Gateway, then reference it by name from the [EnvoyExtensionPolicy][]. Envoy Gateway does not place Local modules on the proxy; provision them with a custom Envoy image or a volume mount. Local modules skip the control-plane download path, which avoids a fail-closed load window when the file is already on the proxy.
 
 Update the EnvoyProxy used by the Gateway:
 
@@ -157,7 +157,10 @@ metadata:
 spec:
   wasmModules:
   - name: example-filter
-    path: /var/lib/envoy/example-filter.wasm
+    source:
+      type: Local
+      local:
+        path: /var/lib/envoy/example-filter.wasm
 ```
 
 Then apply the EnvoyExtensionPolicy:
@@ -180,8 +183,8 @@ spec:
   - name: wasm-filter
     rootID: my_root_id
     code:
-      type: Filesystem
-      filesystem:
+      type: EnvoyProxyModule
+      envoyProxyModule:
         name: example-filter
 EOF
 ```
@@ -205,8 +208,8 @@ spec:
   - name: wasm-filter
     rootID: my_root_id
     code:
-      type: Filesystem
-      filesystem:
+      type: EnvoyProxyModule
+      envoyProxyModule:
         name: example-filter
 ```
 

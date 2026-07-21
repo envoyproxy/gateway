@@ -544,7 +544,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			wasms        []ir.Wasm
 			wasmFailOpen bool
 		)
-		// Built per parent Gateway because Filesystem Wasm resolves against
+		// Built per parent Gateway because EnvoyProxyModule Wasm resolves against
 		// that Gateway's EnvoyProxy.wasmModules. HTTP/Image call WasmCache.Get
 		// here; IfNotPresent is a cache hit on repeats, Always may re-fetch
 		// once per parentRef (same placement as Lua and DynamicModules).
@@ -977,7 +977,7 @@ func (t *Translator) buildWasms(
 
 	wasmIRList := make([]ir.Wasm, 0, len(policy.Spec.Wasm))
 
-	// Filesystem sources resolve from EnvoyProxy and skip the control-plane cache.
+	// EnvoyProxyModule sources resolve from EnvoyProxy and skip the control-plane cache.
 	needsCache := false
 	for _, wasm := range policy.Spec.Wasm {
 		if wasm.Code.Type == egv1a1.HTTPWasmCodeSourceType || wasm.Code.Type == egv1a1.ImageWasmCodeSourceType {
@@ -1048,14 +1048,14 @@ func (t *Translator) buildWasm(
 	}
 
 	switch config.Code.Type {
-	case egv1a1.FilesystemWasmCodeSourceType:
+	case egv1a1.EnvoyProxyModuleWasmCodeSourceType:
 		// Sanity check; CEL validation should have caught this.
-		if config.Code.Filesystem == nil {
-			return nil, fmt.Errorf("missing Filesystem field in Wasm code source")
+		if config.Code.EnvoyProxyModule == nil {
+			return nil, fmt.Errorf("missing EnvoyProxyModule field in Wasm code source")
 		}
-		moduleName := config.Code.Filesystem.Name
+		moduleName := config.Code.EnvoyProxyModule.Name
 		if moduleName == "" {
-			return nil, fmt.Errorf("Filesystem name must not be empty")
+			return nil, fmt.Errorf("EnvoyProxyModule name must not be empty")
 		}
 
 		var entry *egv1a1.WasmModuleEntry
@@ -1070,10 +1070,19 @@ func (t *Translator) buildWasm(
 		if entry == nil {
 			return nil, fmt.Errorf("wasm module %q is not registered in the EnvoyProxy wasmModules allowlist", moduleName)
 		}
-		if entry.Path == "" {
-			return nil, fmt.Errorf("wasm module %q has empty path", moduleName)
+
+		switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalWasmModuleSourceType); sourceType {
+		case egv1a1.LocalWasmModuleSourceType:
+			if entry.Source.Local == nil {
+				return nil, fmt.Errorf("wasm module %q has no local source configured", moduleName)
+			}
+			if entry.Source.Local.Path == "" {
+				return nil, fmt.Errorf("wasm module %q has empty path", moduleName)
+			}
+			localPath = entry.Source.Local.Path
+		default:
+			return nil, fmt.Errorf("wasm module %q has unsupported source type %q", moduleName, sourceType)
 		}
-		localPath = entry.Path
 
 	case egv1a1.HTTPWasmCodeSourceType:
 		var checksum string

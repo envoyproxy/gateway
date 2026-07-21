@@ -11,9 +11,9 @@ envoyExtensionPolicies:
       name: httproute-1
     wasm:
     - code:
-        filesystem:
+        envoyProxyModule:
           name: not-registered
-        type: Filesystem
+        type: EnvoyProxyModule
       name: wasm-filter-missing
   status:
     ancestors:
@@ -46,7 +46,10 @@ envoyProxiesForGateways:
     logging: {}
     wasmModules:
     - name: security-filter
-      path: /var/lib/envoy/security-filter.wasm
+      source:
+        local:
+          path: /var/lib/envoy/security-filter.wasm
+        type: Local
   status:
     ancestors:
     - ancestorRef:
@@ -156,7 +159,10 @@ infraIR:
           logging: {}
           wasmModules:
           - name: security-filter
-            path: /var/lib/envoy/security-filter.wasm
+            source:
+              local:
+                path: /var/lib/envoy/security-filter.wasm
+              type: Local
         status:
           ancestors:
           - ancestorRef:

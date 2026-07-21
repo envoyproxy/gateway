@@ -2024,15 +2024,15 @@ spec:
                     code:
                       description: Code is the Wasm code for the extension.
                       properties:
-                        filesystem:
+                        envoyProxyModule:
                           description: |-
-                            Filesystem loads Wasm code from a module registered on the EnvoyProxy
+                            EnvoyProxyModule loads Wasm code from a module registered on the EnvoyProxy
                             wasmModules allowlist. The policy references the module by name only;
-                            the filesystem path is configured by the infrastructure operator on EnvoyProxy.
+                            the module source is configured by the infrastructure operator on EnvoyProxy.
 
-                            This source skips the control-plane fetch/cache path used by HTTP and Image
-                            sources. The operator must ensure the file is present on the Envoy proxy
-                            (for example via a custom image or volume mount).
+                            For Local modules this skips the control-plane fetch/cache path used by
+                            HTTP and Image sources. The operator must ensure the file is present on
+                            the Envoy proxy (for example via a custom image or volume mount).
                           properties:
                             name:
                               description: Name is the logical name of a module in
@@ -2254,7 +2254,7 @@ spec:
                             the Wasm module even if the pull policy is set to Always.
                             It only updates the Wasm module when the EnvoyExtension resource version changes.
 
-                            PullPolicy must not be set when Type is Filesystem.
+                            PullPolicy must not be set when Type is EnvoyProxyModule.
                           enum:
                           - IfNotPresent
                           - Always
@@ -2264,14 +2264,14 @@ spec:
                           - enum:
                             - HTTP
                             - Image
-                            - Filesystem
+                            - EnvoyProxyModule
                           - enum:
                             - HTTP
                             - Image
-                            - Filesystem
+                            - EnvoyProxyModule
                           description: |-
                             Type is the type of the source of the Wasm code.
-                            Valid WasmCodeSourceType values are "HTTP", "Image", or "Filesystem".
+                            Valid WasmCodeSourceType values are "HTTP", "Image", or "EnvoyProxyModule".
                           type: string
                       required:
                       - type
@@ -2281,13 +2281,13 @@ spec:
                         rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
                       - message: If type is Image, image field needs to be set.
                         rule: 'self.type == ''Image'' ? has(self.image) : !has(self.image)'
-                      - message: If type is Filesystem, filesystem field needs to
-                          be set.
-                        rule: 'self.type == ''Filesystem'' ? has(self.filesystem)
-                          : !has(self.filesystem)'
+                      - message: If type is EnvoyProxyModule, envoyProxyModule field
+                          needs to be set.
+                        rule: 'self.type == ''EnvoyProxyModule'' ? has(self.envoyProxyModule)
+                          : !has(self.envoyProxyModule)'
                       - message: PullPolicy is only valid for HTTP and Image code
                           sources.
-                        rule: 'self.type == ''Filesystem'' ? !has(self.pullPolicy)
+                        rule: 'self.type == ''EnvoyProxyModule'' ? !has(self.pullPolicy)
                           : true'
                     config:
                       description: |-

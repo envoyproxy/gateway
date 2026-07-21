@@ -3787,7 +3787,7 @@ type Wasm struct {
 	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
 
 	// Path is the absolute filesystem path to the Wasm module on the Envoy proxy
-	// when using a Filesystem code source resolved from EnvoyProxy.wasmModules.
+	// when using an EnvoyProxyModule Local source resolved from EnvoyProxy.wasmModules.
 	// Mutually exclusive with Code.
 	Path string `json:"path,omitempty"`
 

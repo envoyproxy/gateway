@@ -2487,13 +2487,18 @@ func TestEnvoyProxyProvider(t *testing.T) {
 		},
 		// WasmModules
 		{
-			desc: "valid: wasmModules with name and path",
+			desc: "valid: wasmModules with local source",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					WasmModules: []egv1a1.WasmModuleEntry{
 						{
 							Name: "security-filter",
-							Path: "/var/lib/envoy/security-filter.wasm",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.LocalWasmModuleSourceType),
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+							},
 						},
 					},
 				}
@@ -2507,11 +2512,20 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					WasmModules: []egv1a1.WasmModuleEntry{
 						{
 							Name: "security-filter",
-							Path: "/var/lib/envoy/security-filter.wasm",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+							},
 						},
 						{
 							Name: "metrics-filter",
-							Path: "/opt/wasm/metrics.wasm",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.LocalWasmModuleSourceType),
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/opt/wasm/metrics.wasm",
+								},
+							},
 						},
 					},
 				}
@@ -2525,7 +2539,11 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					WasmModules: []egv1a1.WasmModuleEntry{
 						{
 							Name: "",
-							Path: "/var/lib/envoy/filter.wasm",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/filter.wasm",
+								},
+							},
 						},
 					},
 				}
@@ -2539,12 +2557,30 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					WasmModules: []egv1a1.WasmModuleEntry{
 						{
 							Name: "My-Filter",
-							Path: "/var/lib/envoy/filter.wasm",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/filter.wasm",
+								},
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{"spec.wasmModules[0].name in body should match"},
+		},
+		{
+			desc: "invalid: wasmModules Local type without local field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name:   "security-filter",
+							Source: egv1a1.WasmModuleSource{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Local, local field needs to be set"},
 		},
 		{
 			desc: "invalid: wasmModules relative path",
@@ -2553,12 +2589,16 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					WasmModules: []egv1a1.WasmModuleEntry{
 						{
 							Name: "security-filter",
-							Path: "relative/filter.wasm",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "relative/filter.wasm",
+								},
+							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.wasmModules[0].path in body should match"},
+			wantErrors: []string{"spec.wasmModules[0].source.local.path in body should match"},
 		},
 		{
 			desc: "invalid: wasmModules empty path",
@@ -2567,12 +2607,16 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					WasmModules: []egv1a1.WasmModuleEntry{
 						{
 							Name: "security-filter",
-							Path: "",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "",
+								},
+							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.wasmModules[0].path in body should be at least 1 chars long"},
+			wantErrors: []string{"spec.wasmModules[0].source.local.path in body should be at least 1 chars long"},
 		},
 	}
 
