@@ -110,6 +110,8 @@ type OIDC struct {
 	// as a header a JWT provider extracts from (the "Authorization" header by
 	// default). The forwarded ID token header is owned by Envoy, and Envoy rejects
 	// an OAuth2 configuration whose pass-through matcher keys on it.
+	//
+	// +optional
 	ForwardIDToken *OIDCTokenForwarding `json:"forwardIDToken,omitempty"`
 
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
