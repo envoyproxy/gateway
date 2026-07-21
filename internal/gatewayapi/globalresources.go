@@ -23,7 +23,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 	// Add the ProxyServiceCluster information for each gateway to the IR map
 	for _, gateway := range gateways {
 		// Get the gateway IR key and RouteDestination representing the ProxyServiceCluster
-		irKey, rDest := t.processServiceClusterForGateway(gateway, resources, xdsIRs)
+		irKey, rDest := t.processServiceClusterForGateway(gateway, resources)
 
 		if xdsIRs[irKey] == nil {
 			continue
@@ -63,7 +63,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 }
 
 // processServiceClusterForGateway returns the matching IR key for a gateway and builds a RouteDestination to represent the ProxyServiceCluster
-func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, resources *resource.Resources, xdsIRs resource.XdsIRMap) (string, *ir.RouteDestination) {
+func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, resources *resource.Resources) (string, *ir.RouteDestination) {
 	irKey := t.getIRKey(gateway.Gateway)
 	labels := OwnerLabels(gateway.Gateway, t.MergeGateways)
 
@@ -90,15 +90,10 @@ func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, re
 		return "", nil
 	}
 
-	bc := &ir.BackendCluster{
+	return irKey, &ir.RouteDestination{
 		Name:     dst.Name,
 		Settings: []*ir.DestinationSetting{dst},
 		Metadata: dst.Metadata,
-	}
-	return irKey, &ir.RouteDestination{
-		Name:               dst.Name,
-		BackendClusterRefs: []*ir.BackendClusterRef{registerBackendCluster(xdsIRs[irKey], bc)},
-		Metadata:           dst.Metadata,
 	}
 }
 

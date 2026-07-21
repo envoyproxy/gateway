@@ -30,16 +30,14 @@ func (t *Translator) translateExtServiceBackendRefs(
 	gtwCtx *GatewayContext,
 	configType string,
 	index int, // index is used to differentiate between multiple external services in the same policy
-	xdsIR resource.XdsIRMap,
-) (*ir.RouteDestination, *ir.BackendCluster, error) {
+) (*ir.RouteDestination, error) {
 	var (
 		rs  *ir.RouteDestination
-		bc  *ir.BackendCluster
 		err error
 	)
 
 	if len(backendRefs) == 0 {
-		return nil, nil, errors.New("no backendRefs found for external service")
+		return nil, errors.New("no backendRefs found for external service")
 	}
 
 	ds := make([]*ir.DestinationSetting, 0, len(backendRefs))
@@ -52,7 +50,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 			policy.GetNamespace(),
 			policy.GetObjectKind().GroupVersionKind().Kind,
 			resources); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		// don't process backends with weight 0
@@ -71,33 +69,26 @@ func (t *Translator) translateExtServiceBackendRefs(
 			resources,
 			gtwCtx,
 		); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		ds = append(ds, extServiceDest)
 	}
 
 	rs = &ir.RouteDestination{
 		Name:     destName,
+		Settings: ds,
 		Metadata: buildResourceMetadata(policy, nil),
-	}
-	if len(ds) > 0 {
-		bc = &ir.BackendCluster{
-			Name:     destName,
-			Settings: ds,
-			Metadata: buildResourceMetadata(policy, nil),
-		}
-		// TODO: Support mixed destinations for ext service
-		if bc.HasMixedEndpoints() {
-			return nil, nil, errors.New("external service destinations having multiple endpoint types are not supported")
-		}
-		rs.BackendClusterRefs = []*ir.BackendClusterRef{registerBackendCluster(t.gatewayXdsIR(gtwCtx, xdsIR), bc)}
 	}
 
 	if validationErr := rs.Validate(); validationErr != nil {
-		return nil, nil, validationErr
+		return nil, validationErr
+	}
+	// TODO: Support mixed destinations for ext service
+	if rs.HasMixedEndpoints() {
+		return nil, errors.New("external service destinations having multiple endpoint types are not supported")
 	}
 
-	return rs, bc, nil
+	return rs, nil
 }
 
 func (t *Translator) processExtServiceDestination(

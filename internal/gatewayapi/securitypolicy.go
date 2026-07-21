@@ -1936,8 +1936,8 @@ func (t *Translator) buildRemoteJWKS(
 	}
 
 	if len(remoteJWKS.BackendRefs) > 0 {
-		if rd, _, err = t.translateExtServiceBackendRefs(
-			policy, remoteJWKS.BackendRefs, protocol, resources, gtwCtx, "jwt", index, xdsIR); err != nil {
+		if rd, err = t.translateExtServiceBackendRefs(
+			policy, remoteJWKS.BackendRefs, protocol, resources, gtwCtx, "jwt", index); err != nil {
 			return nil, err
 		}
 	}
@@ -2188,7 +2188,6 @@ func (t *Translator) buildOIDCProvider(
 		endSessionEndpoint    *string
 		protocol              ir.AppProtocol
 		rd                    *ir.RouteDestination
-		bc                    *ir.BackendCluster
 		traffic               *ir.TrafficFeatures
 		providerTLS           *ir.TLSUpstreamConfig
 		err                   error
@@ -2213,14 +2212,14 @@ func (t *Translator) buildOIDCProvider(
 
 	oidcProviderOwner := policyOwnerOr(owners.oidcProviderBackendRefs, policy)
 	if len(provider.BackendRefs) > 0 {
-		if rd, bc, err = t.translateExtServiceBackendRefs(
-			oidcProviderOwner, provider.BackendRefs, protocol, resources, gtwCtx, "oidc", 0, xdsIR); err != nil {
+		if rd, err = t.translateExtServiceBackendRefs(
+			oidcProviderOwner, provider.BackendRefs, protocol, resources, gtwCtx, "oidc", 0); err != nil {
 			return nil, err
 		}
 	}
 
-	if bc != nil {
-		for _, st := range bc.Settings {
+	if rd != nil {
+		for _, st := range rd.Settings {
 			if st.TLS != nil {
 				providerTLS = st.TLS
 				break
@@ -2694,8 +2693,8 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
-	if rd, _, err = t.translateExtServiceBackendRefs(
-		backendRefsOwnerPolicy, backendRefs, protocol, resources, gtwCtx, "extauth", 0, xdsIR); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(
+		backendRefsOwnerPolicy, backendRefs, protocol, resources, gtwCtx, "extauth", 0); err != nil {
 		return nil, err
 	}
 
