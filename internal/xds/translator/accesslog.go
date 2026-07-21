@@ -537,6 +537,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			metadata:     als.Destination.Metadata,
 		}
 		applyTraffic(args, als.Traffic)
+
 		if err := addXdsCluster(tCtx, args); err != nil {
 			return err
 		}

@@ -232,15 +232,6 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.UseClientProtocol != nil
 }
 
-func hasBTPClusterSettings(btps []*egv1a1.BackendTrafficPolicy) bool {
-	for _, btp := range btps {
-		if btpSpecHasClusterScopedFields(&btp.Spec) {
-			return true
-		}
-	}
-	return false
-}
-
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
 // BackendTrafficPolicy contributes backend-cluster-scoped (CDS) settings.
 type BTPClusterSettingsIndex struct {
@@ -310,10 +301,9 @@ func BuildBTPClusterSettingsIndex(
 }
 
 // HasRouteLevelClusterSettings reports whether a route-rule, route, or listener-level
-// BackendTrafficPolicy (in that priority order) contributes backend-cluster-scoped settings for
-// the given target. This does not fall through to a gateway-level match: a merged cluster is
-// already scoped to one gateway, so a gateway-level setting applies uniformly to every route
-// sharing it and can never cause the divergence this check exists to catch.
+// BackendTrafficPolicy contributes backend-cluster-scoped settings for the given target. A
+// gateway-level setting isn't checked: it applies uniformly to every route sharing a merged
+// cluster, so it can't cause a divergence.
 func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
 	routeKind gwapiv1.Kind,
 	routeNN types.NamespacedName,
@@ -362,21 +352,9 @@ func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
 }
 
 // BTPLoadBalancerIndex reports, per gateway, whether a BackendTrafficPolicy attached to it sets
-// LoadBalancer to ConsistentHash. Route-rule/route/listener-level LoadBalancer is already covered
-// by BTPClusterSettingsIndex.HasRouteLevelClusterSettings, which every caller of IsConsistentHash
-// checks first (and treats any LoadBalancer, not just ConsistentHash, as disqualifying) - so only
-// the gateway level can ever actually apply here.
+// LoadBalancer to ConsistentHash.
 type BTPLoadBalancerIndex struct {
 	gatewayLevel map[types.NamespacedName]bool
-}
-
-func hasBTPConsistentHash(btps []*egv1a1.BackendTrafficPolicy) bool {
-	for _, btp := range btps {
-		if btp.Spec.LoadBalancer != nil && btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType {
-			return true
-		}
-	}
-	return false
 }
 
 // BuildBTPLoadBalancerIndex builds a pre-computed index of which gateways have a

@@ -161,6 +161,7 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	if tracing == nil {
 		return nil
 	}
+
 	args := &xdsClusterArgs{
 		name:         tracing.Destination.Name,
 		settings:     tracing.Destination.Settings,
@@ -169,7 +170,9 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		metrics:      metrics,
 		metadata:     tracing.Destination.Metadata,
 	}
+
 	applyTraffic(args, tracing.Traffic)
+
 	return addXdsCluster(tCtx, args)
 }
 

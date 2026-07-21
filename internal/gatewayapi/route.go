@@ -611,6 +611,17 @@ func (t *Translator) isMergeBackendsEnabledForGateway(gatewayCtx *GatewayContext
 	return t.MergeBackends
 }
 
+// anyGatewayHasMergeBackendsEnabled reports whether MergeBackends is enabled for at least one of
+// gateways, so callers can skip merge-only precomputation entirely when none of them merge.
+func (t *Translator) anyGatewayHasMergeBackendsEnabled(gateways []*GatewayContext) bool {
+	for _, gw := range gateways {
+		if t.isMergeBackendsEnabledForGateway(gw) {
+			return true
+		}
+	}
+	return false
+}
+
 // routingTypeDivergesForRule reports whether this rule's effective RoutingType differs from the
 // gateway's baseline, meaning merging would leak the baseline's routing behavior into a shared
 // cluster whose rule resolved it differently.

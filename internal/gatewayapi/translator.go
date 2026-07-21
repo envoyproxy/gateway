@@ -297,9 +297,11 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		)
 	}
 
-	// Build pre-computed BTP ClusterSettings index for O(1) merge-eligibility lookups.
+	// BTPClusterSettingsIndex and BTPLoadBalancerIndex only inform merge-eligibility decisions, so
+	// skip building either when no accepted gateway has MergeBackends enabled.
 	t.BTPClusterSettingsIndex = nil
-	if hasBTPClusterSettings(resources.BackendTrafficPolicies) {
+	t.BTPLoadBalancerIndex = nil
+	if t.anyGatewayHasMergeBackendsEnabled(acceptedGateways) {
 		t.BTPClusterSettingsIndex = BuildBTPClusterSettingsIndex(
 			resources.BackendTrafficPolicies,
 			routesToObjects(resources),
@@ -307,10 +309,6 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 			resources.ReferenceGrants,
 			t.GetNamespace,
 		)
-	}
-
-	t.BTPLoadBalancerIndex = nil
-	if hasBTPConsistentHash(resources.BackendTrafficPolicies) {
 		t.BTPLoadBalancerIndex = BuildBTPLoadBalancerIndex(
 			resources.BackendTrafficPolicies,
 			routesToObjects(resources),

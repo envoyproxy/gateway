@@ -36,19 +36,25 @@ func TestDetermineIPFamily(t *testing.T) {
 			want:     nil,
 		},
 		{
-			name:     "single IPv4 setting",
-			settings: []*ir.DestinationSetting{{IPFamily: new(egv1a1.IPv4)}},
-			want:     new(egv1a1.IPv4),
+			name: "single IPv4 setting",
+			settings: []*ir.DestinationSetting{
+				{IPFamily: new(egv1a1.IPv4)},
+			},
+			want: new(egv1a1.IPv4),
 		},
 		{
-			name:     "single IPv6 setting",
-			settings: []*ir.DestinationSetting{{IPFamily: new(egv1a1.IPv6)}},
-			want:     new(egv1a1.IPv6),
+			name: "single IPv6 setting",
+			settings: []*ir.DestinationSetting{
+				{IPFamily: new(egv1a1.IPv6)},
+			},
+			want: new(egv1a1.IPv6),
 		},
 		{
-			name:     "single DualStack setting",
-			settings: []*ir.DestinationSetting{{IPFamily: new(egv1a1.DualStack)}},
-			want:     new(egv1a1.DualStack),
+			name: "single DualStack setting",
+			settings: []*ir.DestinationSetting{
+				{IPFamily: new(egv1a1.DualStack)},
+			},
+			want: new(egv1a1.DualStack),
 		},
 		{
 			name: "mixed IPv4 and IPv6 should return DualStack",

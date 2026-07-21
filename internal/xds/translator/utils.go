@@ -220,6 +220,7 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
 	args.admissionControl = traffic.AdmissionControl
 }
 
+// determineIPFamily determines the IP family based on multiple destination settings
 func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
 	// If there's only one setting, return its IPFamily directly
 	if len(settings) == 1 {
