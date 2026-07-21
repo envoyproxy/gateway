@@ -325,66 +325,34 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 }
 
 func buildXdsRouteAction(route *ir.HTTPRoute, backendIndex backendClusterIndex) *routev3.RouteAction {
-	mergedClusters := resolveBackendClusters(route.Destination, backendIndex)
-	hasNonMerged := len(route.Destination.Settings) > 0
+	backendClusters := resolveBackendClusters(route.Destination, backendIndex)
 
-	// Weighted routing is needed whenever there's more than one distinct cluster to route
-	// between: 2+ merged backends, or any merged backend alongside the non-merged bucket (a
-	// mixed rule), or the non-merged bucket itself needs splitting (NeedsClusterPerSetting).
-	if route.NeedsClusterPerSetting() || len(mergedClusters) > 1 || (len(mergedClusters) > 0 && hasNonMerged) {
-		return buildXdsWeightedRouteAction(route.Destination, mergedClusters)
+	clusterCount := len(backendClusters)
+	if len(route.Destination.Settings) > 0 {
+		clusterCount++
 	}
 
-	if len(mergedClusters) == 1 {
-		// The rule's one and only backend is a single merged cluster.
-		return &routev3.RouteAction{
-			ClusterSpecifier: &routev3.RouteAction_Cluster{Cluster: mergedClusters[0].Name},
-		}
+	// Weighted routing is needed whenever there's more than one cluster to route between.
+	if route.NeedsClusterPerSetting() || clusterCount > 1 {
+		return buildXdsWeightedRouteAction(route.Destination, backendClusters)
 	}
-	// Purely non-merged (no merged refs at all): the destination's own name is exactly the
-	// cluster processXdsCluster builds it under.
+
+	// Defaults to the destination's own name; a single backend cluster overrides it.
+	clusterName := route.Destination.Name
+	if len(backendClusters) == 1 {
+		clusterName = backendClusters[0].Name
+	}
 	return &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: route.Destination.Name,
+			Cluster: clusterName,
 		},
 	}
 }
 
-// applyWeightedClusterFilters applies a DestinationSetting/BackendCluster's own filters to its
-// WeightedCluster_ClusterWeight entry. Shared by both the non-merged and merged loops below.
-func applyWeightedClusterFilters(validCluster *routev3.WeightedCluster_ClusterWeight, filters *ir.DestinationFilters) {
-	if filters == nil {
-		return
-	}
-
-	if len(filters.AddRequestHeaders) > 0 {
-		validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(filters.AddRequestHeaders)...)
-	}
-
-	if len(filters.RemoveRequestHeaders) > 0 {
-		validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, filters.RemoveRequestHeaders...)
-	}
-
-	if len(filters.AddResponseHeaders) > 0 {
-		validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(filters.AddResponseHeaders)...)
-	}
-
-	if len(filters.RemoveResponseHeaders) > 0 {
-		validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, filters.RemoveResponseHeaders...)
-	}
-
-	if filters.URLRewrite != nil &&
-		filters.URLRewrite.Host != nil &&
-		filters.URLRewrite.Host.Name != nil {
-		validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
-			HostRewriteLiteral: *filters.URLRewrite.Host.Name,
-		}
-	}
-}
-
-func buildXdsWeightedRouteAction(destination *ir.RouteDestination, mergedClusters []*ir.BackendCluster) *routev3.RouteAction {
-	backendWeights := destination.ToBackendWeights()
+func buildXdsWeightedRouteAction(destination *ir.RouteDestination, backendClusters []*ir.BackendCluster) *routev3.RouteAction {
 	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0)
+
+	backendWeights := destination.ToBackendWeights()
 	if backendWeights.UnavailableWeight() > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
@@ -393,7 +361,7 @@ func buildXdsWeightedRouteAction(destination *ir.RouteDestination, mergedCluster
 		weightedClusters = append(weightedClusters, invalidCluster)
 	}
 
-	// Non-merged: this destination's own local settings, exactly as before MergeBackends existed.
+	// Each Setting gets its own weighted entry, using its own Weight.
 	for _, destinationSetting := range destination.Settings {
 		if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
@@ -405,9 +373,9 @@ func buildXdsWeightedRouteAction(destination *ir.RouteDestination, mergedCluster
 		}
 	}
 
-	// Merged: each distinct merged backend gets its own weighted entry, using its own
-	// per-route BackendClusterRef.Weight (a merged Setting's own Weight is always nil).
-	for _, bc := range mergedClusters {
+	// Each backend cluster gets its own weighted entry, using its own per-route
+	// BackendClusterRef.Weight (a BackendCluster's own Setting.Weight is always nil).
+	for _, bc := range backendClusters {
 		ref := backendClusterRef(destination, bc)
 		if ref == nil || ref.Weight == nil {
 			continue
@@ -439,6 +407,37 @@ func buildXdsWeightedRouteAction(destination *ir.RouteDestination, mergedCluster
 				Clusters: weightedClusters,
 			},
 		},
+	}
+}
+
+// applyWeightedClusterFilters applies a DestinationSetting's filters to its WeightedCluster_ClusterWeight entry.
+func applyWeightedClusterFilters(validCluster *routev3.WeightedCluster_ClusterWeight, filters *ir.DestinationFilters) {
+	if filters == nil {
+		return
+	}
+
+	if len(filters.AddRequestHeaders) > 0 {
+		validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(filters.AddRequestHeaders)...)
+	}
+
+	if len(filters.RemoveRequestHeaders) > 0 {
+		validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, filters.RemoveRequestHeaders...)
+	}
+
+	if len(filters.AddResponseHeaders) > 0 {
+		validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(filters.AddResponseHeaders)...)
+	}
+
+	if len(filters.RemoveResponseHeaders) > 0 {
+		validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, filters.RemoveResponseHeaders...)
+	}
+
+	if filters.URLRewrite != nil &&
+		filters.URLRewrite.Host != nil &&
+		filters.URLRewrite.Host.Name != nil {
+		validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
+			HostRewriteLiteral: *filters.URLRewrite.Host.Name,
+		}
 	}
 }
 
