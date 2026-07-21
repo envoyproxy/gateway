@@ -622,9 +622,15 @@ func (t *Translator) addRouteToRouteConfig(
 			// * There are multiple Address Type of destination settings(IP, FQDN, UDC, etc.)
 			// * There are invalid/empty settings in the destination settings
 			if !httpRoute.NeedsClusterPerSetting() {
-				err = processXdsCluster(tCtx, httpRoute.Destination.Name, httpRoute.Destination.Settings, &HTTPRouteTranslator{httpRoute}, ea, httpRoute.Destination.Metadata)
-				if err != nil {
-					errs = errors.Join(errs, err)
+				// Skip when the destination is fully merged (Settings empty, BackendClusterRefs
+				// populated): the merged loop below builds its cluster(s). Still build for a
+				// destination with no backends at all (Settings and BackendClusterRefs both
+				// empty), matching pre-PR behavior for that placeholder-destination edge case.
+				if len(httpRoute.Destination.Settings) > 0 || len(httpRoute.Destination.BackendClusterRefs) == 0 {
+					err = processXdsCluster(tCtx, httpRoute.Destination.Name, httpRoute.Destination.Settings, &HTTPRouteTranslator{httpRoute}, ea, httpRoute.Destination.Metadata)
+					if err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			} else {
 				for _, setting := range httpRoute.Destination.Settings {
@@ -803,7 +809,11 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.ProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
-			if len(route.Destination.Settings) > 0 {
+			// Skip when the destination is fully merged (Settings empty, BackendClusterRefs
+			// populated): the merged loop below builds its cluster. Still build for a
+			// destination with no backends at all (Settings and BackendClusterRefs both
+			// empty), matching pre-PR behavior for that placeholder-destination edge case.
+			if len(route.Destination.Settings) > 0 || len(route.Destination.BackendClusterRefs) == 0 {
 				if err := processXdsCluster(tCtx, route.Destination.Name, route.Destination.Settings, &TCPRouteTranslator{route}, &ExtraArgs{metrics: metrics}, route.Destination.Metadata); err != nil {
 					errs = errors.Join(errs, err)
 				}
@@ -920,7 +930,11 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
 		if udpListener.Route != nil {
-			if len(udpListener.Route.Destination.Settings) > 0 {
+			// Skip when the destination is fully merged (Settings empty, BackendClusterRefs
+			// populated): the merged loop below builds its cluster. Still build for a
+			// destination with no backends at all (Settings and BackendClusterRefs both
+			// empty), matching pre-PR behavior for that placeholder-destination edge case.
+			if len(udpListener.Route.Destination.Settings) > 0 || len(udpListener.Route.Destination.BackendClusterRefs) == 0 {
 				if err := processXdsCluster(tCtx, udpListener.Route.Destination.Name, udpListener.Route.Destination.Settings, &UDPRouteTranslator{udpListener.Route}, &ExtraArgs{metrics: metrics}, udpListener.Route.Destination.Metadata); err != nil {
 					errs = errors.Join(errs, err)
 				}

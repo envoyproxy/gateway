@@ -197,7 +197,7 @@ func buildJWTProvider(irProvider *ir.JWTProvider) (*jwtauthnv3.JwtProvider, erro
 		var jwksCluster string
 
 		jwks := irProvider.RemoteJWKS
-		if jwks.Destination != nil && len(jwks.Destination.BackendClusterRefs) > 0 {
+		if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
 			jwksCluster = jwks.Destination.Name
 		} else {
 			cluster, err := url2Cluster(jwks.URI)

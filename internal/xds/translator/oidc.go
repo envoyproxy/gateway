@@ -88,7 +88,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 
 	oidc := securityFeatures.OIDC
 
-	if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.BackendClusterRefs) > 0 {
+	if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
 		tokenEndpointCluster = oidc.Provider.Destination.Name
 	} else {
 		var cluster *urlCluster
