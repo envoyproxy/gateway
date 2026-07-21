@@ -511,15 +511,6 @@ func (t *Translator) gatewayXdsIR(gatewayCtx *GatewayContext, xdsIR resource.Xds
 	return xdsIR[t.getIRKey(gatewayCtx.Gateway)]
 }
 
-// registerBackendCluster appends bc to gwIR's Backends registry and returns a BackendClusterRef
-// naming it.
-func registerBackendCluster(gwIR *ir.Xds, bc *ir.BackendCluster) *ir.BackendClusterRef {
-	if gwIR != nil {
-		gwIR.Backends = append(gwIR.Backends, bc)
-	}
-	return &ir.BackendClusterRef{Name: bc.Name}
-}
-
 // backendClusterRefBuilder accumulates a RouteDestination's BackendClusterRefs across a rule's
 // merged backendRefs.
 type backendClusterRefBuilder struct {
@@ -548,7 +539,6 @@ type ResolvedBackendCluster struct {
 func (t *Translator) resolveBackendCluster(
 	ruleDestName string,
 	gatewayCtx *GatewayContext,
-	parentRef *RouteParentContext,
 	btpRoutingType *egv1a1.RoutingType,
 	mergeIncompatible bool,
 	identity *BackendClusterKey,
@@ -657,7 +647,7 @@ func (t *Translator) processBackendRef(
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	identity := backendClusterIdentity(backendRef, backendNamespace)
 
-	cluster = t.resolveBackendCluster(destName, gatewayCtx, parentRef, btpRoutingType, mergeIncompatible, &identity, backendRef, backendNamespace, ds)
+	cluster = t.resolveBackendCluster(destName, gatewayCtx, btpRoutingType, mergeIncompatible, &identity, backendRef, backendNamespace, ds)
 	ds.Name = backendClusterSettingName(destName, backendIdx, cluster.Name, cluster.Merge)
 	return ds, cluster, unstructuredRef, err
 }

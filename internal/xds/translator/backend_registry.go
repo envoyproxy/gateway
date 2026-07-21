@@ -21,12 +21,6 @@ func newBackendClusterIndex(xdsIR *ir.Xds) backendClusterIndex {
 	return idx
 }
 
-// resolve returns the BackendCluster for each ref, in order. A ref whose Name isn't found
-// in the index is silently dropped.
-func (idx backendClusterIndex) resolve(refs []*ir.BackendClusterRef) []*ir.BackendCluster {
-	return ir.ResolveBackendClusterRefs(idx, refs)
-}
-
 // resolveMergedBackendClusters resolves rd's BackendClusterRefs (the genuinely merged,
 // identity-deduplicated backends for this destination) against idx. A ref whose Name isn't found
 // in idx is silently dropped (matches this package's existing convention for stale/missing

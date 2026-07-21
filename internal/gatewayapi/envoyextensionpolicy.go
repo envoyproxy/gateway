@@ -552,7 +552,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		}
 
 		var extProcs []ir.ExtProc
-		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx, xdsIR); extProcError != nil {
+		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx); extProcError != nil {
 			extProcError = perr.WithMessage(extProcError, "ExtProc")
 			errs = errors.Join(errs, extProcError)
 		}
@@ -642,7 +642,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		errs                                                  error
 	)
 
-	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway, xdsIR); extProcError != nil {
+	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway); extProcError != nil {
 		extProcError = perr.WithMessage(extProcError, "ExtProc")
 		errs = errors.Join(errs, extProcError)
 	}
@@ -804,7 +804,7 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 	}
 }
 
-func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, gtwCtx *GatewayContext, xdsIR resource.XdsIRMap) ([]ir.ExtProc, error, bool) {
+func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, gtwCtx *GatewayContext) ([]ir.ExtProc, error, bool) {
 	var (
 		failOpen bool
 		errs     error
@@ -819,7 +819,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, &ep, idx, resources, gtwCtx, xdsIR)
+		extProcIR, err := t.buildExtProc(name, policy, &ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -844,7 +844,6 @@ func (t *Translator) buildExtProc(
 	extProcIdx int,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
-	xdsIR resource.XdsIRMap,
 ) (*ir.ExtProc, error) {
 	var (
 		rd        *ir.RouteDestination
