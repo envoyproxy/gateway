@@ -18,26 +18,6 @@
             name: other-service-a
             namespace: default
             sectionName: "8080"
-- clusterName: backend/service/default/shared-service/8080/http
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 7.7.7.7
-            portValue: 8080
-      loadBalancingWeight: 1
-    loadBalancingWeight: 30
-    locality:
-      region: backend/service/default/shared-service/8080/http
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Service
-            name: shared-service
-            namespace: default
-            sectionName: "8080"
 - clusterName: httproute/default/http-route-b/rule/0
   endpoints:
   - lbEndpoints:
@@ -56,5 +36,25 @@
           resources:
           - kind: Service
             name: other-service-b
+            namespace: default
+            sectionName: "8080"
+- clusterName: backend/service/default/shared-service/8080/http
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 30
+    locality:
+      region: backend/service/default/shared-service/8080/http
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: shared-service
             namespace: default
             sectionName: "8080"

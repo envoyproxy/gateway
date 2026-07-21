@@ -50,6 +50,13 @@ func mergedBackendClusterRef(rd *ir.RouteDestination, bc *ir.BackendCluster) *ir
 	return nil
 }
 
+// needsRouteCluster reports whether rd needs its own route-scoped cluster built: either it has
+// non-merged settings, or it has no backends at all (a placeholder destination that still needs a
+// real, empty-endpoint EDS cluster).
+func needsRouteCluster(rd *ir.RouteDestination) bool {
+	return len(rd.Settings) > 0 || len(rd.BackendClusterRefs) == 0
+}
+
 // tcpDestinationClusterName returns rd's single Envoy Cluster name. TCP/UDP/TLS routes have no
 // weighted-clusters mechanism, so a destination must resolve to exactly one cluster: its own
 // route-scoped name (non-merged, rd.Settings) or its one merged backend's name.

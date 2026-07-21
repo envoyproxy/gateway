@@ -1,7 +1,6 @@
 - circuitBreakers:
     thresholds:
-    - maxConnections: 1000
-      maxRetries: 1024
+    - maxRetries: 1024
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
@@ -24,8 +23,7 @@
   type: EDS
 - circuitBreakers:
     thresholds:
-    - maxConnections: 2000
-      maxRetries: 1024
+    - maxRetries: 1024
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED

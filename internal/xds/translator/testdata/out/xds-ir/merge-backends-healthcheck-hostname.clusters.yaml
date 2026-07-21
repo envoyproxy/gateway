@@ -9,13 +9,6 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: shared-cluster
-  healthChecks:
-  - healthyThreshold: 1
-    httpHealthCheck:
-      path: /healthz
-    interval: 5s
-    timeout: 1s
-    unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
