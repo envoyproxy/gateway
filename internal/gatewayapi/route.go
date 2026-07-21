@@ -261,26 +261,27 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			continue
 		}
 
-		// process each backendRef, and calculate the destination settings for this rule
-		destName := irRouteDestinationName(httpRoute, ruleIdx)
-		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-		var backendClusterRefs []*ir.BackendClusterRef
-		backendWeights := &ir.BackendWeights{}
-		var processDestinationError error
-		failedNoReadyEndpoints := false
-		hasDynamicResolver := false
-		backendRefNames := make([]string, len(rule.BackendRefs))
-		backendCustomRefs := make([]*ir.UnstructuredRef, 0, len(rule.BackendRefs))
+		var (
+			destName                = irRouteDestinationName(httpRoute, ruleIdx)
+			allDs                   = make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
+			backendClusterRefs      []*ir.BackendClusterRef
+			backendWeights          = &ir.BackendWeights{}
+			backendRefNames         = make([]string, len(rule.BackendRefs))
+			backendCustomRefs       = make([]*ir.UnstructuredRef, 0, len(rule.BackendRefs))
+			processDestinationError error
+			failedNoReadyEndpoints  bool
+			hasDynamicResolver      bool
+		)
 
-		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRuleBackendContext(httpRoute, parentRef, rule.Name)
-		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
+		gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(httpRoute, parentRef, rule.Name)
 
-		backendRefs := make([]gwapiv1.BackendObjectReference, len(rule.BackendRefs))
-		for i := range rule.BackendRefs {
-			backendRefs[i] = rule.BackendRefs[i].BackendObjectReference
+		var mergeIncompatible bool
+		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
+			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.HTTPBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
+			mergeIncompatible = t.mergeIncompatibleForWeightedRule(gatewayCtx, httpRoute, parentRef, rule.Name, backendRefs, rule.SessionPersistence != nil)
 		}
-		mergeIncompatible := t.mergeIncompatibleForWeightedRule(httpRoute, backendRefs, hasRouteLevelClusterSettings, rule.SessionPersistence != nil, gatewayCtx)
 
+		// process each backendRef, and calculate the destination settings for this rule
 		for i := range rule.BackendRefs {
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())
 			backendRefCtx := BackendRefWithFilters{
@@ -289,7 +290,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, cluster, unstructuredRef, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, httpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, backendClusterRef, unstructuredRef, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, httpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -308,9 +309,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					processDestinationError = err
 				}
 			}
+
 			if unstructuredRef != nil {
 				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
 			}
+
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
@@ -322,11 +325,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
-
 			backendWeights.AddWeighted(ds, ds.Weight)
-			if cluster.Merge {
-				backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-				backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
+
+			if backendClusterRef != nil {
+				backendClusterRefs = append(backendClusterRefs, backendClusterRef)
 			} else {
 				allDs = append(allDs, ds)
 			}
@@ -471,35 +473,46 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
-// resolveRuleBackendContext resolves the gateway, effective BTP RoutingType override (if any), and
-// whether a route-rule/route/listener-level BTP contributes cluster-scoped settings — the inputs
-// every caller needs to process a route rule's backendRefs.
+// resolveRuleBackendContext resolves the gateway and effective BTP RoutingType override (if any)
+// for a route rule — the inputs every caller needs to process its backendRefs, regardless of
+// MergeBackends.
 func (t *Translator) resolveRuleBackendContext(
 	route RouteContext,
 	parentRef *RouteParentContext,
 	routeRuleName *gwapiv1.SectionName,
-) (gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType, hasRouteLevelClusterSettings bool) {
+) (gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType) {
 	gatewayCtx = GetRouteParentContext(route, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
 	if gatewayCtx == nil {
-		return nil, nil, false
+		return nil, nil
 	}
-	routeNN := types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()}
-	gatewayNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
 	btpRoutingType = t.BTPRoutingTypeIndex.LookupBTPRoutingType(
 		route.GetRouteType(),
-		routeNN,
-		gatewayNN,
+		types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()},
+		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
 		parentRef.SectionName,
 		routeRuleName,
 	)
-	hasRouteLevelClusterSettings = t.BTPClusterSettingsIndex.HasRouteLevelClusterSettings(
-		route.GetRouteType(),
-		routeNN,
-		gatewayNN,
+	return gatewayCtx, btpRoutingType
+}
+
+// hasRouteLevelClusterSettings reports whether a route-rule/route/listener-level BTP contributes
+// cluster-scoped settings for this rule.
+func (t *Translator) hasRouteLevelClusterSettings(
+	gatewayCtx *GatewayContext,
+	routeCtx RouteContext,
+	parentRef *RouteParentContext,
+	routeRuleName *gwapiv1.SectionName,
+) bool {
+	if gatewayCtx == nil {
+		return false
+	}
+	return t.BTPClusterSettingsIndex.HasRouteLevelClusterSettings(
+		routeCtx.GetRouteType(),
+		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
+		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
 		parentRef.SectionName,
 		routeRuleName,
 	)
-	return gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings
 }
 
 // gatewayXdsIR resolves the *ir.Xds for gatewayCtx's gateway from xdsIR. Returns nil if
@@ -511,51 +524,25 @@ func (t *Translator) gatewayXdsIR(gatewayCtx *GatewayContext, xdsIR resource.Xds
 	return xdsIR[t.getIRKey(gatewayCtx.Gateway)]
 }
 
-// ResolvedBackendCluster groups the outcome of a merge-eligibility decision: the cache key to
-// find-or-create the cluster under, its name, and whether it participates in cluster deduplication.
-type ResolvedBackendCluster struct {
-	Key   *BackendClusterKey
-	Name  string
-	Merge bool
-}
-
-// resolveBackendCluster decides whether backendRef participates in cluster deduplication and, if
-// so, builds its fully-qualified cluster key and name in one place.
-//
-// When disabled, the returned key is never looked up in BackendClusterMap, so it only needs to
-// carry enough for cluster.Name/.Merge. When enabled, the backend's own identity (plus gateway)
-// is used, so routes referencing the same backend share one cluster.
-func (t *Translator) resolveBackendCluster(
-	ruleDestName string,
+// resolveBackendClusterKey decides whether backendRef is eligible for cluster deduplication and,
+// if so, returns its BackendClusterKey. Returns nil when it isn't, including when gatewayCtx is
+// nil (e.g. an unresolved parentRef).
+func (t *Translator) resolveBackendClusterKey(
 	gatewayCtx *GatewayContext,
 	btpRoutingType *egv1a1.RoutingType,
 	mergeIncompatible bool,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	ds *ir.DestinationSetting,
-) *ResolvedBackendCluster {
-	// No parent Gateway resolved for this route (e.g. an unresolved parentRef): merging never
-	// applies, so this rule gets its own cluster, keyed only by ruleDestName.
-	if gatewayCtx == nil {
-		return &ResolvedBackendCluster{Key: &BackendClusterKey{Name: ruleDestName}, Name: ruleDestName}
+) *BackendClusterKey {
+	if gatewayCtx == nil || !t.shouldMergeBackend(gatewayCtx, btpRoutingType, mergeIncompatible, backendRef, backendNamespace, ds) {
+		return nil
 	}
 
-	gwIRKey := t.getIRKey(gatewayCtx.Gateway)
-
-	if !t.shouldMergeBackend(gatewayCtx, btpRoutingType, mergeIncompatible, backendRef, backendNamespace, ds) {
-		return &ResolvedBackendCluster{Key: &BackendClusterKey{GatewayIRKey: gwIRKey, Name: ruleDestName}, Name: ruleDestName}
-	}
-
-	// Key by the owning Gateway's own identity, not the MergeGateways-collapsed one, so two
-	// Gateways never merge each other's backends.
 	identity := backendClusterIdentity(backendRef, backendNamespace)
 	identity.GatewayIRKey = irStringKey(gatewayCtx.Namespace, gatewayCtx.Name)
 	identity.Protocol = ds.Protocol
-	return &ResolvedBackendCluster{
-		Key:   &identity,
-		Name:  irBackendClusterName(&identity, t.MergeGateways),
-		Merge: true,
-	}
+	return &identity
 }
 
 // shouldMergeBackend decides whether a specific backend participates in cluster deduplication.
@@ -572,7 +559,7 @@ func (t *Translator) shouldMergeBackend(
 	if !t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 		return false
 	}
-	// Custom/extension-provided and dynamic-resolver backends can never safely share a merged cluster.
+	// Custom/extension-provided and dynamic-resolver backends can never safely share a cluster.
 	if !t.isMergeableBackendKind(backendRef, backendNamespace) {
 		return false
 	}
@@ -581,9 +568,9 @@ func (t *Translator) shouldMergeBackend(
 	if mergeIncompatible {
 		return false
 	}
-	// A merged cluster keeps only the first-registered backendRef's Filters, so any backendRef
-	// carrying filters that could legitimately differ per-backendRef (header modification, URL
-	// rewrite, CredentialInjection, etc.) must never share a cluster with a differently-configured one.
+	// A cluster keeps only the first-registered backendRef's Filters, so any backendRef carrying
+	// filters that could legitimately differ per-backendRef (header modification, URL rewrite,
+	// CredentialInjection, etc.) must never share one with a differently-configured backendRef.
 	if ds.Filters != nil {
 		return false
 	}
@@ -626,10 +613,9 @@ func (t *Translator) routingTypeDivergesForRule(gatewayCtx *GatewayContext, btpR
 	return baseline != effective
 }
 
-// processBackendRef processes backendRefContext into a DestinationSetting, resolves its backend
-// cluster key, name, and merge eligibility, and sets ds.Name accordingly — the full sequence every
-// caller needs for a single backendRef. Callers that must never merge (e.g. mirror backends) pass
-// mergeIncompatible: true unconditionally.
+// processBackendRef processes backendRefContext into a DestinationSetting and, if it's eligible
+// for cluster deduplication, resolves the shared BackendClusterRef it belongs to (nil otherwise).
+// Callers that must never merge (e.g. mirror backends) pass mergeIncompatible: true unconditionally.
 func (t *Translator) processBackendRef(
 	destName string,
 	backendIdx int,
@@ -641,16 +627,29 @@ func (t *Translator) processBackendRef(
 	btpRoutingType *egv1a1.RoutingType,
 	xdsIR resource.XdsIRMap,
 	mergeIncompatible bool,
-) (ds *ir.DestinationSetting, cluster *ResolvedBackendCluster, unstructuredRef *ir.UnstructuredRef, err status.Error) {
-	// ds.Name is set below once the real cluster name and merge decision are known.
+) (ds *ir.DestinationSetting, backendClusterRef *ir.BackendClusterRef, unstructuredRef *ir.UnstructuredRef, err status.Error) {
 	ds, unstructuredRef, err = t.processDestination(irDestinationSettingName(destName, backendIdx), backendRefContext, parentRef, route, resources, gatewayCtx, btpRoutingType, xdsIR)
 
 	backendRef := backendRefContext.GetBackendRef().BackendObjectReference
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 
-	cluster = t.resolveBackendCluster(destName, gatewayCtx, btpRoutingType, mergeIncompatible, backendRef, backendNamespace, ds)
-	ds.Name = backendClusterSettingName(destName, backendIdx, cluster.Name, cluster.Merge)
-	return ds, cluster, unstructuredRef, err
+	if key := t.resolveBackendClusterKey(gatewayCtx, btpRoutingType, mergeIncompatible, backendRef, backendNamespace, ds); key != nil {
+		backendCluster := t.getOrCreateBackendCluster(t.gatewayXdsIR(gatewayCtx, xdsIR), key, ds)
+		ds.Name = backendCluster.Name
+		backendClusterRef = &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight}
+	}
+
+	return ds, backendClusterRef, unstructuredRef, err
+}
+
+// toBackendObjectReferences projects a rule's route-kind-specific backendRefs (HTTPBackendRef,
+// GRPCBackendRef) down to their common BackendObjectReference.
+func toBackendObjectReferences[T any](refs []T, get func(T) gwapiv1.BackendObjectReference) []gwapiv1.BackendObjectReference {
+	out := make([]gwapiv1.BackendObjectReference, len(refs))
+	for i, ref := range refs {
+		out[i] = get(ref)
+	}
+	return out
 }
 
 // backendClusterIdentity builds the BackendClusterKey identifying a backendRef's target backend.
@@ -663,9 +662,8 @@ func backendClusterIdentity(backendRef gwapiv1.BackendObjectReference, backendNa
 	}
 }
 
-// isMergeableBackendKind reports whether backendRef could ever safely share an identity-merged
-// BackendCluster with another route. Dynamic-resolver and custom (extension-provided) backends
-// are excluded.
+// isMergeableBackendKind reports whether backendRef could ever safely share a BackendCluster with
+// another route. Dynamic-resolver and custom (extension-provided) backends are excluded.
 func (t *Translator) isMergeableBackendKind(backendRef gwapiv1.BackendObjectReference, backendNamespace string) bool {
 	kind := KindDerefOr(backendRef.Kind, resource.KindService)
 	if t.isCustomBackendResource(backendRef.Group, kind) {
@@ -696,15 +694,16 @@ func (t *Translator) isFallbackBackend(backendRef gwapiv1.BackendObjectReference
 // persistence, a fallback backend, or ConsistentHash load balancing. For HTTP/GRPC, whose
 // weighted-clusters route action can represent multiple distinct clusters in one rule.
 func (t *Translator) mergeIncompatibleForWeightedRule(
-	route RouteContext,
-	backendRefs []gwapiv1.BackendObjectReference,
-	hasRouteLevelClusterSettings bool,
-	sessionPersistent bool,
 	gatewayCtx *GatewayContext,
+	routeCtx RouteContext,
+	parentRef *RouteParentContext,
+	routeRuleName *gwapiv1.SectionName,
+	backendRefs []gwapiv1.BackendObjectReference,
+	sessionPersistent bool,
 ) bool {
 	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
 	// cluster shared with other routes if merged.
-	if hasRouteLevelClusterSettings {
+	if t.hasRouteLevelClusterSettings(gatewayCtx, routeCtx, parentRef, routeRuleName) {
 		return true
 	}
 	// A single backendRef has no multi-backend pool for the checks below to protect —
@@ -713,17 +712,42 @@ func (t *Translator) mergeIncompatibleForWeightedRule(
 		return false
 	}
 	// Delegate to the remaining multi-backendRef checks.
-	return t.weightedRuleBackendsMustBeInOneCluster(route, backendRefs, sessionPersistent, gatewayCtx)
+	return t.weightedRuleBackendsMustBeInOneCluster(routeCtx, backendRefs, sessionPersistent, gatewayCtx)
+}
+
+// mergeIncompatibleForSingleClusterRule reports whether a rule-level condition makes cluster
+// deduplication unsafe for a TCP/UDP/TLS rule. Unlike HTTP/GRPC, these route types have no
+// weighted-cluster mechanism at the listener layer, so a rule's backendRefs must always resolve
+// to a single cluster.
+func (t *Translator) mergeIncompatibleForSingleClusterRule(
+	gatewayCtx *GatewayContext,
+	routeCtx RouteContext,
+	parentRef *RouteParentContext,
+	routeRuleName *gwapiv1.SectionName,
+	backendRefs []gwapiv1.BackendObjectReference,
+) bool {
+	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
+	// cluster shared with other routes if merged.
+	if t.hasRouteLevelClusterSettings(gatewayCtx, routeCtx, parentRef, routeRuleName) {
+		return true
+	}
+	// This route type has no weighted-cluster mechanism at the listener layer, so a rule's
+	// backendRefs must always resolve to a single cluster — letting them merge independently
+	// could split the rule across clusters the listener can't reference together.
+	if len(backendRefs) > 1 {
+		return true
+	}
+	return false
 }
 
 // weightedRuleBackendsMustBeInOneCluster reports whether a feature on this multi-backendRef
 // HTTP/GRPC rule needs all its backends kept in one Envoy cluster, so they can't be split into
-// per-identity merged clusters.
+// per-identity clusters.
 //
 // Every feature whose behavior depends on the backends sharing one cluster — hash ring, priority
 // failover, session affinity — MUST be listed here.
 func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
-	route RouteContext,
+	routeCtx RouteContext,
 	backendRefs []gwapiv1.BackendObjectReference,
 	sessionPersistent bool,
 	gatewayCtx *GatewayContext,
@@ -734,7 +758,7 @@ func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
 	}
 	// A fallback backend relies on Envoy's priority-based failover within a single cluster.
 	for _, ref := range backendRefs {
-		if t.isFallbackBackend(ref, NamespaceDerefOr(ref.Namespace, route.GetNamespace())) {
+		if t.isFallbackBackend(ref, NamespaceDerefOr(ref.Namespace, routeCtx.GetNamespace())) {
 			return true
 		}
 	}
@@ -745,41 +769,11 @@ func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
 	return false
 }
 
-// mergeIncompatibleForSingleClusterRule reports whether a rule-level condition makes cluster
-// deduplication unsafe for a TCP/UDP/TLS rule. Unlike HTTP/GRPC, these route types have no
-// weighted-cluster mechanism at the listener layer, so a rule's backendRefs must always resolve
-// to a single cluster.
-func mergeIncompatibleForSingleClusterRule(hasRouteLevelClusterSettings bool, backendRefCount int) bool {
-	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
-	// cluster shared with other routes if merged.
-	if hasRouteLevelClusterSettings {
-		return true
-	}
-	// This route type has no weighted-cluster mechanism at the listener layer, so a rule's
-	// backendRefs must always resolve to a single cluster — letting them merge independently
-	// could split the rule across clusters the listener can't reference together.
-	if backendRefCount > 1 {
-		return true
-	}
-	return false
-}
-
-// backendClusterSettingName derives the DestinationSetting name for a backendRef: a merged
-// cluster shares its setting's name with the cluster; a route-scoped cluster keeps a
-// per-backendRef setting name.
-func backendClusterSettingName(destName string, backendIdx int, backendClusterName string, merge bool) string {
-	if merge {
-		return backendClusterName
-	}
-	return irDestinationSettingName(destName, backendIdx)
-}
-
-// getOrCreateBackendCluster finds or creates the merged BackendCluster for key, using
+// getOrCreateBackendCluster finds or creates the BackendCluster for key, using
 // t.BackendClusterMap as a find-or-create cache.
 func (t *Translator) getOrCreateBackendCluster(
 	gwIR *ir.Xds,
 	key *BackendClusterKey,
-	clusterName string,
 	ds *ir.DestinationSetting,
 ) *ir.BackendCluster {
 	if backendCluster, ok := t.BackendClusterMap[*key]; ok {
@@ -789,22 +783,26 @@ func (t *Translator) getOrCreateBackendCluster(
 		t.BackendClusterMap = make(map[BackendClusterKey]*ir.BackendCluster)
 	}
 
-	// Weight is per-route for a merged cluster, so clear it here to avoid a stale, misleading
-	// value on the shared Setting.
+	clusterName := irBackendClusterName(key, t.MergeGateways)
+
+	// A deduped cluster's real weight lives on its BackendClusterRef, one per referencing route,
+	// not on the shared Setting - clear it here to avoid a stale, misleading value. Its Name must
+	// match the BackendCluster's own, not whichever route-scoped name ds carried in with.
 	copied := *ds
 	copied.Weight = nil
+	copied.Name = clusterName
 
 	backendCluster := &ir.BackendCluster{
-		Name: clusterName,
-		// A merged cluster is shared across routes, so its Metadata must be the backend's own
-		// (invariant) identity rather than whichever route happens to register it first.
+		Name:     clusterName,
 		Setting:  &copied,
 		Metadata: ds.Metadata,
 	}
+
 	t.BackendClusterMap[*key] = backendCluster
 	if gwIR != nil {
 		gwIR.Backends = append(gwIR.Backends, backendCluster)
 	}
+
 	return backendCluster
 }
 
@@ -1345,25 +1343,26 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			continue
 		}
 
-		// process each backendRef, and calculate the destination settings for this rule
-		destName := irRouteDestinationName(grpcRoute, ruleIdx)
-		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-		var backendClusterRefs []*ir.BackendClusterRef
-		backendWeights := &ir.BackendWeights{}
-		var processDestinationError error
-		failedNoReadyEndpoints := false
-		routeRuleMetadata := buildResourceMetadata(grpcRoute, rule.Name)
+		var (
+			destName                = irRouteDestinationName(grpcRoute, ruleIdx)
+			allDs                   = make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
+			backendClusterRefs      []*ir.BackendClusterRef
+			backendWeights          = &ir.BackendWeights{}
+			backendRefNames         = make([]string, len(rule.BackendRefs))
+			processDestinationError error
+			failedNoReadyEndpoints  bool
+			routeRuleMetadata       = buildResourceMetadata(grpcRoute, rule.Name)
+		)
 
-		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRuleBackendContext(grpcRoute, parentRef, rule.Name)
-		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
+		gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(grpcRoute, parentRef, rule.Name)
 
-		backendRefs := make([]gwapiv1.BackendObjectReference, len(rule.BackendRefs))
-		for i := range rule.BackendRefs {
-			backendRefs[i] = rule.BackendRefs[i].BackendObjectReference
+		var mergeIncompatible bool
+		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
+			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.GRPCBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
+			mergeIncompatible = t.mergeIncompatibleForWeightedRule(gatewayCtx, grpcRoute, parentRef, rule.Name, backendRefs, false)
 		}
-		mergeIncompatible := t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, hasRouteLevelClusterSettings, false, gatewayCtx)
 
-		backendRefNames := make([]string, len(rule.BackendRefs))
+		// process each backendRef, and calculate the destination settings for this rule
 		for i := range rule.BackendRefs {
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, grpcRoute.GetNamespace())
 			backendRefCtx := BackendRefWithFilters{
@@ -1371,7 +1370,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				Filters:    rule.BackendRefs[i].Filters,
 			}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, grpcRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, backendClusterRef, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, grpcRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -1394,12 +1393,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
 			}
-			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 
+			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 			backendWeights.AddWeighted(ds, ds.Weight)
-			if cluster.Merge {
-				backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-				backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
+
+			if backendClusterRef != nil {
+				backendClusterRefs = append(backendClusterRefs, backendClusterRef)
 			} else {
 				allDs = append(allDs, ds)
 			}
@@ -1831,22 +1830,28 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
-			gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRuleBackendContext(tlsRoute, parentRef, rule.Name)
-			gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
-			mergeIncompatible := mergeIncompatibleForSingleClusterRule(hasRouteLevelClusterSettings, len(rule.BackendRefs))
+			gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(tlsRoute, parentRef, rule.Name)
+
+			var mergeIncompatible bool
+			if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
+				backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.BackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
+				mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, tlsRoute, parentRef, rule.Name, backendRefs)
+			}
+
 			for i := range rule.BackendRefs {
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
+
 				// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-				ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+				ds, backendClusterRef, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
 				}
+
 				// skip backendRefs with weight 0 as they do not affect the traffic distribution
 				if ds.Weight != nil && *ds.Weight > 0 {
-					if cluster.Merge {
-						backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-						backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
+					if backendClusterRef != nil {
+						backendClusterRefs = append(backendClusterRefs, backendClusterRef)
 					} else {
 						allDs = append(allDs, ds)
 					}
@@ -2021,13 +2026,19 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			routeRuleMetadata  = buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name)
 		)
 
-		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRuleBackendContext(udpRoute, parentRef, udpRoute.Spec.Rules[0].Name)
-		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
-		mergeIncompatible := mergeIncompatibleForSingleClusterRule(hasRouteLevelClusterSettings, len(udpRoute.Spec.Rules[0].BackendRefs))
+		gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(udpRoute, parentRef, udpRoute.Spec.Rules[0].Name)
+
+		var mergeIncompatible bool
+		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
+			backendRefs := toBackendObjectReferences(udpRoute.Spec.Rules[0].BackendRefs, func(r gwapiv1.BackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
+			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, udpRoute, parentRef, udpRoute.Spec.Rules[0].Name, backendRefs)
+		}
+
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
+
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, backendClusterRef, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
@@ -2035,9 +2046,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				if cluster.Merge {
-					backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-					backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
+				if backendClusterRef != nil {
+					backendClusterRefs = append(backendClusterRefs, backendClusterRef)
 				} else {
 					allDs = append(allDs, ds)
 				}
@@ -2182,22 +2192,27 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			routeRuleMetadata  = buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name)
 		)
 
-		gatewayCtx, btpRoutingType, hasRouteLevelClusterSettings := t.resolveRuleBackendContext(tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name)
-		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
-		mergeIncompatible := mergeIncompatibleForSingleClusterRule(hasRouteLevelClusterSettings, len(tcpRoute.Spec.Rules[0].BackendRefs))
+		gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name)
+
+		var mergeIncompatible bool
+		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
+			backendRefs := toBackendObjectReferences(tcpRoute.Spec.Rules[0].BackendRefs, func(r gwapiv1.BackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
+			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name, backendRefs)
+		}
+
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
-			ds, cluster, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, backendClusterRef, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
 			}
+
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				if cluster.Merge {
-					backendCluster := t.getOrCreateBackendCluster(gwIR, cluster.Key, cluster.Name, ds)
-					backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
+				if backendClusterRef != nil {
+					backendClusterRefs = append(backendClusterRefs, backendClusterRef)
 				} else {
 					allDs = append(allDs, ds)
 				}
