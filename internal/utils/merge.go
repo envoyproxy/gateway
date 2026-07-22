@@ -25,6 +25,17 @@ func MergeWithPatch[T any](original T, patch *egv1a1.KubernetesPatchSpec) (T, er
 		mergeType = *patch.Type
 	}
 
+	// Replace is only meaningful for the policy mergeType fields. It must not be
+	// used to patch a generated Kubernetes resource, where it would replace the
+	// entire object with the (usually partial) patch value and, for example,
+	// wipe a generated DaemonSet pod spec. Reject it here so that every resource
+	// patch path fails loudly instead of performing a silent, destructive
+	// replacement, regardless of per-resource admission validation coverage.
+	if mergeType == egv1a1.Replace {
+		var empty T
+		return empty, fmt.Errorf("unsupported merge type for Kubernetes patch: %v", mergeType)
+	}
+
 	return mergeInternal(original, patch.Value.Raw, mergeType)
 }
 

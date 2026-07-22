@@ -3836,7 +3836,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[MergeType](#mergetype)_ |  false  |  | Type is the type of merge operation to perform<br />By default, StrategicMerge is used as the patch type. |
+| `type` | _[MergeType](#mergetype)_ |  false  |  | Type is the type of merge operation to perform<br />By default, StrategicMerge is used as the patch type.<br />Replace is not supported for Kubernetes resource patches, as it would<br />replace the entire generated resource with the patch value. |
 | `value` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  true  |  | Object contains the raw configuration for merged object |
 
 
