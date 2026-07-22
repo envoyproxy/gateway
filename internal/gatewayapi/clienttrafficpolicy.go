@@ -77,8 +77,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
-	policyCopies := clientTrafficPolicyCopiesWithStatusDeepCopy(clientTrafficPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.ClientTrafficPolicy)
 	// Translate
 	// 1. First translate Policies with a sectionName set
@@ -93,7 +91,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			if hasSectionName(&targetRef) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = clientTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -209,7 +207,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = clientTrafficPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -1345,16 +1343,4 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	}
 
 	return addRequestHeaders, removeRequestHeaders, removeRequestHeadersOnMatch, errs
-}
-
-// clientTrafficPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func clientTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.ClientTrafficPolicy) []*egv1a1.ClientTrafficPolicy {
-	copies := make([]*egv1a1.ClientTrafficPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }
