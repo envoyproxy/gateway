@@ -15,6 +15,7 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	commondnsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/common/dns/v3"
 	dnsclusterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
@@ -1091,13 +1092,22 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
 		args.admissionControl != nil
 
+	var clusterHashPolicy []*routev3.RouteAction_HashPolicy
+	if !args.isRoute && args.loadBalancer != nil {
+		clusterHashPolicy = buildConsistentHashPolicy(args.loadBalancer.ConsistentHash)
+	}
+
 	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
-		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI || forceHTTP1UpstreamProtocol
+		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI ||
+		forceHTTP1UpstreamProtocol || len(clusterHashPolicy) > 0
 
 	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
 	}
 	protocolOptions := httpv3.HttpProtocolOptions{}
+	if len(clusterHashPolicy) > 0 {
+		protocolOptions.HashPolicy = clusterHashPolicy
+	}
 	if requiresCommonHTTPOptions {
 		protocolOptions.CommonHttpProtocolOptions = &corev3.HttpProtocolOptions{}
 		if args.timeout != nil && args.timeout.HTTP != nil {

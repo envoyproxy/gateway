@@ -708,7 +708,13 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 		return nil
 	}
 
-	ch := httpRoute.Traffic.LoadBalancer.ConsistentHash
+	return buildConsistentHashPolicy(httpRoute.Traffic.LoadBalancer.ConsistentHash)
+}
+
+func buildConsistentHashPolicy(ch *ir.ConsistentHash) []*routev3.RouteAction_HashPolicy {
+	if ch == nil {
+		return nil
+	}
 
 	switch {
 	case ch.Headers != nil:

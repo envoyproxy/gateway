@@ -107,6 +107,9 @@
         maxRequestsPerConnection: 1
       explicitHttpConfig:
         httpProtocolOptions: {}
+      hashPolicy:
+      - connectionProperties:
+          sourceIp: true
   upstreamConnectionOptions:
     tcpKeepalive:
       keepaliveInterval: 60
