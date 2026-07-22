@@ -821,7 +821,7 @@ func (t *Translator) getOrCreateBackendCluster(
 		t.BackendClusterMap = make(map[BackendClusterKey]*ir.BackendCluster)
 	}
 
-	clusterName := irBackendClusterName(key, t.MergeGateways)
+	clusterName := irBackendClusterName(key)
 
 	// A deduped cluster's real weight lives on its BackendClusterRef, one per referencing route,
 	// not on the shared Setting - clear it here to avoid a stale, misleading value. Its Name must

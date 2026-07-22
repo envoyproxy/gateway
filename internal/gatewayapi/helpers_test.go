@@ -1580,10 +1580,9 @@ func requirePolicyScopesEqual(t *testing.T, actual sets.Set[policyScope], expect
 
 func TestIrBackendClusterName(t *testing.T) {
 	tests := []struct {
-		name          string
-		key           *BackendClusterKey
-		mergeGateways bool
-		want          string
+		name string
+		key  *BackendClusterKey
+		want string
 	}{
 		{
 			name: "service with port, no protocol",
@@ -1600,21 +1599,10 @@ func TestIrBackendClusterName(t *testing.T) {
 			key:  &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080, Protocol: ir.GRPC},
 			want: "backend/service/default/service-1/8080/grpc",
 		},
-		{
-			name:          "mergeGateways appends the owning Gateway's identity",
-			key:           &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080, GatewayIRKey: "envoy-gateway/gateway-1"},
-			mergeGateways: true,
-			want:          "backend/service/default/service-1/8080/envoy-gateway/gateway-1",
-		},
-		{
-			name: "GatewayIRKey is ignored when mergeGateways is false",
-			key:  &BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080, GatewayIRKey: "envoy-gateway/gateway-1"},
-			want: "backend/service/default/service-1/8080",
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, irBackendClusterName(tc.key, tc.mergeGateways))
+			require.Equal(t, tc.want, irBackendClusterName(tc.key))
 		})
 	}
 }
