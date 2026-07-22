@@ -174,10 +174,12 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		pResources *message.ProviderResources
 		xdsIR      *message.XdsIR
 		infraIR    *message.InfraIR
+		xdsNACKs   *message.XdsNACKs
 	}{
 		pResources: new(message.ProviderResources),
 		xdsIR:      new(message.XdsIR),
 		infraIR:    new(message.InfraIR),
+		xdsNACKs:   new(message.XdsNACKs),
 	}
 
 	// The Elected channel is used to block the tasks that are waiting for the leader to be elected.
@@ -226,6 +228,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 				RunnerErrors:      runnerErrors,
 				XdsIR:             channels.xdsIR,
 				InfraIR:           channels.infraIR,
+				XdsNACKs:          channels.xdsNACKs,
 				ExtensionManager:  extMgr,
 			}),
 		},
@@ -240,6 +243,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 				ExtensionManager:  extMgr,
 				ProviderResources: channels.pResources,
 				RunnerErrors:      runnerErrors,
+				XdsNACKs:          channels.xdsNACKs,
 			}),
 		},
 		{

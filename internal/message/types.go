@@ -176,6 +176,51 @@ func (x *XdsIRWithContext) Equal(other *XdsIRWithContext) bool {
 	return reflect.DeepEqual(x.XdsIR, other.XdsIR)
 }
 
+// XdsNACKKey identifies a single data-plane rejection within an irKey: a given
+// proxy (NodeID) rejecting a given xDS resource type (TypeURL). A proxy can
+// reject several types independently, and several proxies under one irKey can
+// reject independently, so rejections are tracked per (NodeID, TypeURL).
+type XdsNACKKey struct {
+	NodeID  string
+	TypeURL string
+}
+
+// XdsNACKError is the gRPC status carried in DiscoveryRequest.
+type XdsNACKError struct {
+	Code    int32
+	Message string
+	Version string
+}
+
+// XdsNACK is the data-plane rejection state for a single irKey (Gateway in
+// per-gateway mode, GatewayClass in merge-gateways mode). It holds every active
+// rejection for that proxy group, keyed by the rejecting proxy and resource type
+// so that an ACK from one proxy (or for one resource type) does not clear an
+// unrelated rejection. An absent entry, or one with no rejections, means "no
+// active NACK".
+type XdsNACK struct {
+	Rejections map[XdsNACKKey]XdsNACKError
+}
+
+// DeepCopy returns a deep copy of the XdsNACK. Required by watchable.Map,
+// whose values must be deep-copiable (the Rejections map is a reference type,
+// so it must be copied rather than shared).
+func (n *XdsNACK) DeepCopy() *XdsNACK {
+	if n == nil {
+		return nil
+	}
+
+	out := &XdsNACK{}
+	if n.Rejections != nil {
+		out.Rejections = make(map[XdsNACKKey]XdsNACKError, len(n.Rejections))
+		for k, v := range n.Rejections {
+			out.Rejections[k] = v
+		}
+	}
+
+	return out
+}
+
 // XdsIR message
 type XdsIR struct {
 	watchable.Map[string, *XdsIRWithContext]
@@ -186,11 +231,18 @@ type InfraIR struct {
 	watchable.Map[string, *ir.Infra]
 }
 
+// XdsNACKs is keyed by irKey, matching XdsIR / the snapshot cache.
+type XdsNACKs struct {
+	watchable.Map[string, *XdsNACK]
+}
+
 type MessageName string
 
 const (
 	// XDSIRMessageName is a message containing xds-ir translated from provider-resources
 	XDSIRMessageName MessageName = "xds-ir"
+	// XdsNACKMessageName is a message containing xds-nack translated from provider-resources
+	XdsNACKMessageName MessageName = "xds-nack"
 	// InfraIRMessageName is a message containing infra-ir translated from provider-resources
 	InfraIRMessageName MessageName = "infra-ir"
 	// ProviderResourcesMessageName is a message containing gw-api and envoy gateway resources from the provider
