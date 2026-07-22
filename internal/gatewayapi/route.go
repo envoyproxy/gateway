@@ -273,7 +273,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			hasDynamicResolver      bool
 		)
 
-		gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(httpRoute, parentRef, rule.Name)
+		gatewayCtx := GetRouteParentContext(httpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
+		btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, httpRoute, parentRef, rule.Name)
 
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
@@ -473,26 +474,24 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
-// resolveRuleBackendContext resolves the gateway and effective BTP RoutingType override (if any)
-// for a route rule — the inputs every caller needs to process its backendRefs, regardless of
-// MergeBackends.
-func (t *Translator) resolveRuleBackendContext(
-	route RouteContext,
+// resolveBTPRoutingType resolves the effective BTP RoutingType override (if any) for a route
+// rule, given gatewayCtx already resolved.
+func (t *Translator) resolveBTPRoutingType(
+	gatewayCtx *GatewayContext,
+	routeCtx RouteContext,
 	parentRef *RouteParentContext,
 	routeRuleName *gwapiv1.SectionName,
-) (gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType) {
-	gatewayCtx = GetRouteParentContext(route, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
+) *egv1a1.RoutingType {
 	if gatewayCtx == nil {
-		return nil, nil
+		return nil
 	}
-	btpRoutingType = t.BTPRoutingTypeIndex.LookupBTPRoutingType(
-		route.GetRouteType(),
-		types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()},
+	return t.BTPRoutingTypeIndex.LookupBTPRoutingType(
+		routeCtx.GetRouteType(),
+		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
 		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
 		parentRef.SectionName,
 		routeRuleName,
 	)
-	return gatewayCtx, btpRoutingType
 }
 
 // hasRouteLevelClusterSettings reports whether a route-rule/route/listener-level BTP contributes
@@ -660,6 +659,23 @@ func backendClusterIdentity(backendRef gwapiv1.BackendObjectReference, backendNa
 		Name:      string(backendRef.Name),
 		Port:      ptr.Deref(backendRef.Port, 0),
 	}
+}
+
+// distinctBackendObjectReferences deduplicates refs by resolved backend identity, so multiple
+// refs targeting the same backend only count once.
+func distinctBackendObjectReferences(routeCtx RouteContext, refs []gwapiv1.BackendObjectReference) []gwapiv1.BackendObjectReference {
+	seen := make(map[BackendClusterKey]struct{}, len(refs))
+	out := make([]gwapiv1.BackendObjectReference, 0, len(refs))
+	for _, ref := range refs {
+		backendNamespace := NamespaceDerefOr(ref.Namespace, routeCtx.GetNamespace())
+		key := backendClusterIdentity(ref, backendNamespace)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, ref)
+	}
+	return out
 }
 
 // isMergeableBackendKind reports whether backendRef could ever safely share a BackendCluster with
@@ -1354,7 +1370,8 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			routeRuleMetadata       = buildResourceMetadata(grpcRoute, rule.Name)
 		)
 
-		gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(grpcRoute, parentRef, rule.Name)
+		gatewayCtx := GetRouteParentContext(grpcRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
+		btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, grpcRoute, parentRef, rule.Name)
 
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
@@ -1828,14 +1845,26 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			routeRuleMetadata  = buildResourceMetadata(tlsRoute, nil)
 		)
 
+		gatewayCtx := GetRouteParentContext(tlsRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
+		mergeBackendsEnabled := t.isMergeBackendsEnabledForGateway(gatewayCtx)
+
+		// TLSRouteRule has no match criteria, so every rule's backends pool into one destination -
+		// merge eligibility must account for the distinct backends across all rules, not just this one.
+		var allRuleBackendRefs []gwapiv1.BackendObjectReference
+		if mergeBackendsEnabled {
+			for _, rule := range tlsRoute.Spec.Rules {
+				allRuleBackendRefs = append(allRuleBackendRefs, toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.BackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })...)
+			}
+			allRuleBackendRefs = distinctBackendObjectReferences(tlsRoute, allRuleBackendRefs)
+		}
+
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
-			gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(tlsRoute, parentRef, rule.Name)
+			btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, tlsRoute, parentRef, rule.Name)
 
 			var mergeIncompatible bool
-			if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
-				backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.BackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-				mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, tlsRoute, parentRef, rule.Name, backendRefs)
+			if mergeBackendsEnabled {
+				mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, tlsRoute, parentRef, rule.Name, allRuleBackendRefs)
 			}
 
 			for i := range rule.BackendRefs {
@@ -2027,7 +2056,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			routeRuleMetadata  = buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name)
 		)
 
-		gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(udpRoute, parentRef, udpRoute.Spec.Rules[0].Name)
+		gatewayCtx := GetRouteParentContext(udpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
+		btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, udpRoute, parentRef, udpRoute.Spec.Rules[0].Name)
 
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
@@ -2192,7 +2222,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			routeRuleMetadata  = buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name)
 		)
 
-		gatewayCtx, btpRoutingType := t.resolveRuleBackendContext(tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name)
+		gatewayCtx := GetRouteParentContext(tcpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
+		btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name)
 
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
