@@ -1,0 +1,64 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1
+  spec:
+    headers:
+      earlyRequestHeaders:
+        mutations:
+        - write:
+            header:
+              name: "x-foo"
+              value: "1"
+            action: Overwrite
+        - write:
+            header:
+              name: "x-foo"
+              value: "2"
+            action: Append
+        - remove: "x-secret"
+        - removeOnMatch:
+            type: RegularExpression
+            value: "^x-internal-.*"
+        - write:
+            header:
+              name: "x-if-exists"
+              value: "override"
+            action: OverwriteIfExists
+        add:
+        - name: "x-legacy"
+          value: "legacy-value"
+      lateResponseHeaders:
+        mutations:
+        - write:
+            header:
+              name: "x-resp"
+              value: "a"
+            action: Overwrite
+        - write:
+            header:
+              name: "x-resp"
+              value: "b"
+            action: Append
+        - remove: "server"
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same

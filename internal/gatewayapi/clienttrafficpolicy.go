@@ -932,23 +932,19 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	var errs error
 
 	if headerSettings.EarlyRequestHeaders != nil {
-		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
+		mutations, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
-		httpIR.Headers.EarlyAddRequestHeaders = headersToAdd
-		httpIR.Headers.EarlyRemoveRequestHeaders = headersToRemove
-		httpIR.Headers.EarlyRemoveRequestHeadersOnMatch = removeOnMatch
+		httpIR.Headers.EarlyRequestHeaderMutations = mutations
 	}
 
 	if headerSettings.LateResponseHeaders != nil {
-		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.LateResponseHeaders, "LateResponseHeaders")
+		mutations, err := translateHeaderModifier(headerSettings.LateResponseHeaders, "LateResponseHeaders")
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
-		httpIR.Headers.LateAddResponseHeaders = headersToAdd
-		httpIR.Headers.LateRemoveResponseHeaders = headersToRemove
-		httpIR.Headers.LateRemoveResponseHeadersOnMatch = removeOnMatch
+		httpIR.Headers.LateResponseHeaderMutations = mutations
 	}
 
 	return errs
@@ -1336,16 +1332,72 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	return irConnection, nil
 }
 
-func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType string) ([]ir.AddHeader, []string, []*ir.StringMatch, error) {
+// translateHeaderModifier converts an HTTPHeaderFilter into a single, ordered
+// list of header mutations. The explicit Mutations field is emitted first and
+// verbatim, then the legacy Set/Add/AddIfAbsent/Remove/RemoveOnMatch fields are
+// converted into mutations and appended, preserving their historical ordering
+// (Add, then Set, then AddIfAbsent, then Remove, then RemoveOnMatch).
+func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType string) ([]ir.HeaderMutation, error) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
-		return nil, nil, nil, nil
+		return nil, nil
 	}
 	var errs error
+	var mutations []ir.HeaderMutation
 
-	var addRequestHeaders []ir.AddHeader
-	var removeRequestHeaders []string
-	var removeRequestHeadersOnMatch []*ir.StringMatch
+	// 1. Ordered mutations are applied first and verbatim (no de-duplication),
+	// mirroring Envoy's header mutation semantics.
+	for _, m := range headerModifier.Mutations {
+		switch {
+		case m.Write != nil:
+			name := string(m.Write.Header.Name)
+			value := m.Write.Header.Value
+			if name == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot write a header with an empty name", modType))
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(name, "/:") {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot write a header with a '/' or ':' character in them. Header: %q", modType, name))
+				continue
+			}
+			if !HeaderValueRegexp.MatchString(value) {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot write a header with an invalid value. Header: %q", modType, name))
+				continue
+			}
+			action := ir.HeaderWriteAppend
+			if m.Write.Action != "" {
+				action = ir.HeaderWriteAction(m.Write.Action)
+			}
+			mutations = append(mutations, ir.HeaderMutation{
+				Write: &ir.HeaderWrite{
+					Name:           name,
+					Value:          value,
+					Action:         action,
+					KeepEmptyValue: ptr.Deref(m.Write.KeepEmptyValue, value == ""),
+				},
+			})
+		case m.Remove != nil:
+			if *m.Remove == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty name", modType))
+				continue
+			}
+			removeName := *m.Remove
+			mutations = append(mutations, ir.HeaderMutation{Remove: &removeName})
+		case m.RemoveOnMatch != nil:
+			if m.RemoveOnMatch.Value == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty matcher value", modType))
+				continue
+			}
+			mutations = append(mutations, ir.HeaderMutation{RemoveOnMatch: irStringMatch("", *m.RemoveOnMatch)})
+		default:
+			errs = errors.Join(errs, fmt.Errorf("%s mutation must set one of write, remove or removeOnMatch", modType))
+		}
+	}
+
+	// 2. The legacy Set/Add/AddIfAbsent/Remove/RemoveOnMatch fields are converted
+	// into mutations and appended after the explicit Mutations above, preserving
+	// their historical iteration order and de-duplication (first wins by name).
 
 	// Add request headers
 	if headersToAdd := headerModifier.Add; headersToAdd != nil {
@@ -1368,8 +1420,8 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
-			for _, h := range addRequestHeaders {
-				if strings.EqualFold(h.Name, headerKey) {
+			for _, m := range mutations {
+				if m.Write != nil && strings.EqualFold(m.Write.Name, headerKey) {
 					canAddHeader = false
 					break
 				}
@@ -1379,13 +1431,14 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				continue
 			}
 
-			newHeader := ir.AddHeader{
-				Name:   headerKey,
-				Append: true,
-				Value:  []string{addHeader.Value},
-			}
-
-			addRequestHeaders = append(addRequestHeaders, newHeader)
+			mutations = append(mutations, ir.HeaderMutation{
+				Write: &ir.HeaderWrite{
+					Name:           headerKey,
+					Value:          addHeader.Value,
+					Action:         ir.HeaderWriteAppend,
+					KeepEmptyValue: addHeader.Value == "",
+				},
+			})
 		}
 	}
 
@@ -1411,8 +1464,8 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header to be set has already been configured
 			headerKey := string(setHeader.Name)
 			canAddHeader := true
-			for _, h := range addRequestHeaders {
-				if strings.EqualFold(h.Name, headerKey) {
+			for _, m := range mutations {
+				if m.Write != nil && strings.EqualFold(m.Write.Name, headerKey) {
 					canAddHeader = false
 					break
 				}
@@ -1420,13 +1473,14 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			if !canAddHeader {
 				continue
 			}
-			newHeader := ir.AddHeader{
-				Name:   string(setHeader.Name),
-				Append: false,
-				Value:  []string{setHeader.Value},
-			}
-
-			addRequestHeaders = append(addRequestHeaders, newHeader)
+			mutations = append(mutations, ir.HeaderMutation{
+				Write: &ir.HeaderWrite{
+					Name:           headerKey,
+					Value:          setHeader.Value,
+					Action:         ir.HeaderWriteOverwrite,
+					KeepEmptyValue: setHeader.Value == "",
+				},
+			})
 		}
 	}
 
@@ -1450,8 +1504,8 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
-			for _, h := range addRequestHeaders {
-				if strings.EqualFold(h.Name, headerKey) {
+			for _, m := range mutations {
+				if m.Write != nil && strings.EqualFold(m.Write.Name, headerKey) {
 					canAddHeader = false
 					break
 				}
@@ -1461,13 +1515,14 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				continue
 			}
 
-			newHeader := ir.AddHeader{
-				Name:        headerKey,
-				AddIfAbsent: true,
-				Value:       []string{addHeader.Value},
-			}
-
-			addRequestHeaders = append(addRequestHeaders, newHeader)
+			mutations = append(mutations, ir.HeaderMutation{
+				Write: &ir.HeaderWrite{
+					Name:           headerKey,
+					Value:          addHeader.Value,
+					Action:         ir.HeaderWriteAddIfAbsent,
+					KeepEmptyValue: addHeader.Value == "",
+				},
+			})
 		}
 	}
 
@@ -1482,8 +1537,8 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			}
 
 			canRemHeader := true
-			for _, h := range removeRequestHeaders {
-				if strings.EqualFold(h, removedHeader) {
+			for _, m := range mutations {
+				if m.Remove != nil && strings.EqualFold(*m.Remove, removedHeader) {
 					canRemHeader = false
 					break
 				}
@@ -1492,7 +1547,8 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				continue
 			}
 
-			removeRequestHeaders = append(removeRequestHeaders, removedHeader)
+			removeName := removedHeader
+			mutations = append(mutations, ir.HeaderMutation{Remove: &removeName})
 		}
 	}
 
@@ -1503,14 +1559,14 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty matcher value", modType))
 				continue
 			}
-			removeRequestHeadersOnMatch = append(removeRequestHeadersOnMatch, irStringMatch("", match))
+			mutations = append(mutations, ir.HeaderMutation{RemoveOnMatch: irStringMatch("", match)})
 		}
 	}
 
-	// Update the status if the filter failed to configure any valid headers to add/remove
-	if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 && len(removeRequestHeadersOnMatch) == 0 {
+	// Update the status if the filter failed to configure any valid header mutation
+	if len(mutations) == 0 {
 		errs = errors.Join(errs, fmt.Errorf("%s did not provide valid configuration to add/set/remove any headers", modType))
 	}
 
-	return addRequestHeaders, removeRequestHeaders, removeRequestHeadersOnMatch, errs
+	return mutations, errs
 }

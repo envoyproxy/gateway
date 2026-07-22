@@ -117,6 +117,51 @@ var HeaderSettingsTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
 		})
 
+		t.Run("Ordered early header mutations should apply in list order", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-with-ordered-headers", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "early-header-modifier-ctp", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expected := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/ordered-header",
+					Headers: map[string]string{
+						"x-ordered-header":   "client",
+						"x-ordered-recreate": "client",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/ordered-header",
+						Headers: map[string]string{
+							// mutations run in order: Overwrite client value to "1", then Append "2".
+							"x-ordered-header": "1,2",
+							// mutations run in order: Remove the client value, then Append a fresh
+							// one. Because the write uses Append (not Overwrite), the result is only
+							// "recreated" if the remove ran first; otherwise it would be
+							// "client,recreated". This proves the ordered execution.
+							"x-ordered-recreate": "recreated",
+						},
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
+		})
+
 		t.Run("Multi value header modifications should apply", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-multi-value-headers", Namespace: ns}
