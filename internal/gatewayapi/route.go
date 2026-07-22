@@ -514,6 +514,18 @@ func (t *Translator) hasRouteLevelClusterSettings(
 	)
 }
 
+// hasListenerLevelClusterSettings reports whether the route rule's attached listener has a
+// ClientTrafficPolicy setting a cluster-affecting field.
+func (t *Translator) hasListenerLevelClusterSettings(gatewayCtx *GatewayContext, parentRef *RouteParentContext) bool {
+	if gatewayCtx == nil {
+		return false
+	}
+	return t.CTPClusterSettingsIndex.HasListenerLevelClusterSettings(
+		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
+		parentRef.SectionName,
+	)
+}
+
 // gatewayXdsIR resolves the *ir.Xds for gatewayCtx's gateway from xdsIR. Returns nil if
 // gatewayCtx is nil or the gateway has no corresponding entry (e.g. a failed gateway).
 func (t *Translator) gatewayXdsIR(gatewayCtx *GatewayContext, xdsIR resource.XdsIRMap) *ir.Xds {
@@ -722,6 +734,11 @@ func (t *Translator) mergeIncompatibleForWeightedRule(
 	if t.hasRouteLevelClusterSettings(gatewayCtx, routeCtx, parentRef, routeRuleName) {
 		return true
 	}
+	// A listener-level ClientTrafficPolicy cluster-affecting setting would incorrectly apply to a
+	// cluster shared with routes under a different listener if merged.
+	if t.hasListenerLevelClusterSettings(gatewayCtx, parentRef) {
+		return true
+	}
 	// A single backendRef has no multi-backend pool for the checks below to protect —
 	// nothing to fragment, so it's always mergeable at this point.
 	if len(backendRefs) <= 1 {
@@ -745,6 +762,11 @@ func (t *Translator) mergeIncompatibleForSingleClusterRule(
 	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
 	// cluster shared with other routes if merged.
 	if t.hasRouteLevelClusterSettings(gatewayCtx, routeCtx, parentRef, routeRuleName) {
+		return true
+	}
+	// A listener-level ClientTrafficPolicy cluster-affecting setting would incorrectly apply to a
+	// cluster shared with routes under a different listener if merged.
+	if t.hasListenerLevelClusterSettings(gatewayCtx, parentRef) {
 		return true
 	}
 	// This route type has no weighted-cluster mechanism at the listener layer, so a rule's
