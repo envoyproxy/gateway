@@ -1,6 +1,8 @@
 tracing:
   serviceName: "fake-name.fake-ns"
   samplingRate: 90
+  clientSamplingRate: 20
+  overallSamplingRate: 30
   customTags:
     - key: "env1"
       value:

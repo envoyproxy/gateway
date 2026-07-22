@@ -10,10 +10,31 @@ import (
 )
 
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.optional) && has(self.failOpen))",message="optional and failOpen cannot both be set; failOpen already tolerates a missing JWT"
 type JWT struct {
 	// Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
-	// Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
+	// Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT
+	// is presented. See FailOpen if this is necessary for your use case.
+	//
+	// +optional
 	Optional *bool `json:"optional,omitempty"`
+
+	// FailOpen lets a request pass JWT authentication even when its JWT is
+	// missing or invalid, rather than being rejected. This helps when a header
+	// that clients use to carry a JWT may also legitimately hold a non-JWT value
+	// that the backend relies on.
+	//
+	// A valid JWT is still verified and its claims forwarded as usual; only the
+	// rejection of requests with a missing or invalid JWT is relaxed. Because this
+	// does not enforce authentication on its own, pair it with an Authorization
+	// policy when access needs to be restricted.
+	//
+	// This is broader than Optional (which tolerates a missing JWT but still
+	// rejects an invalid one) and takes precedence over it.
+	//
+	// +optional
+	FailOpen *bool `json:"failOpen,omitempty"`
 
 	// Providers defines the JSON Web Token (JWT) authentication provider type.
 	// When multiple JWT providers are specified, the JWT is considered valid if

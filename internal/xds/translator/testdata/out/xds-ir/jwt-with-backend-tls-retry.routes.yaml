@@ -30,4 +30,4 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+          requirementName: foobar_d74de7564544aa48
