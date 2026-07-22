@@ -15,11 +15,14 @@ import (
 	"time"
 
 	perr "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -39,6 +42,91 @@ const (
 	scopeEntireGateway     ctpAttachScope = iota
 	scopeEntireListenerSet ctpAttachScope = iota
 )
+
+// ctpSpecHasClusterScopedFields reports whether spec sets a listener-level HTTP1 field.
+func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
+	return spec != nil && spec.HTTP1 != nil
+}
+
+// ctpClusterSettingsKey identifies a ClientTrafficPolicy's Gateway/listener target.
+type ctpClusterSettingsKey struct {
+	Namespace, Name, SectionName string
+}
+
+// CTPClusterSettingsIndex holds, per gateway/listener target, whether a ClientTrafficPolicy sets a
+// cluster-affecting field.
+type CTPClusterSettingsIndex struct {
+	listenerLevel map[ctpClusterSettingsKey]bool
+	gatewayLevel  map[types.NamespacedName]bool
+}
+
+// HasListenerLevelClusterSettings reports whether gatewayNN/listenerName has a
+// ClientTrafficPolicy-sourced HTTP1 override.
+func (idx *CTPClusterSettingsIndex) HasListenerLevelClusterSettings(gatewayNN types.NamespacedName, listenerName *gwapiv1.SectionName) bool {
+	if idx == nil {
+		return false
+	}
+	if listenerName != nil {
+		key := ctpClusterSettingsKey{Namespace: gatewayNN.Namespace, Name: gatewayNN.Name, SectionName: string(*listenerName)}
+		if idx.listenerLevel[key] {
+			return true
+		}
+	}
+	return idx.gatewayLevel[gatewayNN]
+}
+
+// BuildCTPClusterSettingsIndex builds a CTPClusterSettingsIndex. ListenerSet targets aren't tracked.
+func BuildCTPClusterSettingsIndex(
+	ctps []*egv1a1.ClientTrafficPolicy,
+	gateways []*GatewayContext,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	namespaceLookup func(string) *corev1.Namespace,
+	mergeBackendsEnabled bool,
+) *CTPClusterSettingsIndex {
+	idx := &CTPClusterSettingsIndex{
+		listenerLevel: make(map[ctpClusterSettingsKey]bool),
+		gatewayLevel:  make(map[types.NamespacedName]bool),
+	}
+	// Moot when no accepted gateway can enable merging.
+	if !mergeBackendsEnabled {
+		return idx
+	}
+
+	gatewayTargets := make([]client.Object, len(gateways))
+	for i, gw := range gateways {
+		gatewayTargets[i] = gw
+	}
+
+	for _, ctp := range ctps {
+		if !ctpSpecHasClusterScopedFields(&ctp.Spec) {
+			continue
+		}
+
+		refs := resolvePolicyTargets(
+			ctp.Spec.PolicyTargetReferences,
+			gatewayTargets,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindClientTrafficPolicy,
+			ctp.Namespace,
+			namespaceLookup,
+		)
+
+		for _, ref := range refs {
+			if ref.Kind != resource.KindGateway {
+				continue
+			}
+			if ref.SectionName != nil {
+				key := ctpClusterSettingsKey{Namespace: string(ref.Namespace), Name: string(ref.Name), SectionName: string(*ref.SectionName)}
+				idx.listenerLevel[key] = true
+			} else {
+				idx.gatewayLevel[types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}] = true
+			}
+		}
+	}
+
+	return idx
+}
 
 func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
