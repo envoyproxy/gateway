@@ -197,12 +197,8 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 	return validSecrets, certs, nil
 }
 
-// filterValidCertificates filters out expired or not-yet-valid certificates from PEM encoded data.
-// It accepts certificate bundles (multiple PEM blocks) and returns only the valid certificates.
-// A certificate is considered valid if the current time is within its NotBefore and NotAfter period.
-//
-// Return a status.ListenerError with InvalidCertificateRef Condition if no valid certificates are found in the provided data,
-// Return a status.ListenerError with PartiallyInvalidCertificateRef Condition if some certificates are invalid but also valid certificates exist.
+// firstSupportedPrivateKeyBlock returns the first private key PEM block supported by the parsers below:
+// PKCS1, PKCS8, or EC. If none is found, it returns the first block so the caller can report its unsupported format.
 func firstSupportedPrivateKeyBlock(data []byte) *pem.Block {
 	var firstBlock *pem.Block
 	for len(data) > 0 {
@@ -222,6 +218,12 @@ func firstSupportedPrivateKeyBlock(data []byte) *pem.Block {
 	return firstBlock
 }
 
+// filterValidCertificates filters out expired or not-yet-valid certificates from PEM encoded data.
+// It accepts certificate bundles (multiple PEM blocks) and returns only the valid certificates.
+// A certificate is considered valid if the current time is within its NotBefore and NotAfter period.
+//
+// Return a status.ListenerError with InvalidCertificateRef Condition if no valid certificates are found in the provided data,
+// Return a status.ListenerError with PartiallyInvalidCertificateRef Condition if some certificates are invalid but also valid certificates exist.
 func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 	if len(data) == 0 {
 		return nil, status.NewListenerStatusError(
