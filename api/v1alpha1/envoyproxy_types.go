@@ -35,6 +35,7 @@ type EnvoyProxy struct {
 }
 
 // EnvoyProxySpec defines the desired state of EnvoyProxy.
+// +kubebuilder:validation:XValidation:message="mergeGateways and mergeBackends cannot both be enabled",rule="!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends) && has(self.mergeBackends.enabled) && self.mergeBackends.enabled)"
 type EnvoyProxySpec struct {
 	// Provider defines the desired resource provider and provider-specific configuration.
 	// If unspecified, the "Kubernetes" resource provider is used with default configuration
@@ -89,6 +90,8 @@ type EnvoyProxySpec struct {
 	// This means that the port, protocol and hostname tuple must be unique for every listener.
 	// If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
 	//
+	// Mutually exclusive with MergeBackends.
+	//
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
 
@@ -97,7 +100,8 @@ type EnvoyProxySpec struct {
 	// rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
 	// improves upstream connection pooling.
 	//
-	// This is an experimental optimization and is disabled when unset.
+	// This is an experimental optimization and is disabled when unset. Mutually exclusive with
+	// MergeGateways.
 	//
 	// +optional
 	MergeBackends *MergeBackendsConfig `json:"mergeBackends,omitempty"`

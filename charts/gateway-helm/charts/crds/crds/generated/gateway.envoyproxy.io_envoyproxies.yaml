@@ -784,7 +784,8 @@ spec:
                   rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
                   improves upstream connection pooling.
 
-                  This is an experimental optimization and is disabled when unset.
+                  This is an experimental optimization and is disabled when unset. Mutually exclusive with
+                  MergeGateways.
                 properties:
                   enabled:
                     default: false
@@ -801,6 +802,8 @@ spec:
                   Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.
                   This means that the port, protocol and hostname tuple must be unique for every listener.
                   If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
+
+                  Mutually exclusive with MergeBackends.
                 type: boolean
               mergeType:
                 description: |-
@@ -18129,6 +18132,10 @@ spec:
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
             type: object
+            x-kubernetes-validations:
+            - message: mergeGateways and mergeBackends cannot both be enabled
+              rule: '!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends)
+                && has(self.mergeBackends.enabled) && self.mergeBackends.enabled)'
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
             properties:
