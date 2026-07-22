@@ -3087,11 +3087,46 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `mutations` | _[HTTPHeaderMutation](#httpheadermutation) array_ |  false  |  | Mutations is an ordered list of header operations that are applied in<br />exactly the order specified. Use this field when the sequence of<br />operations matters, for example setting a header and then appending to<br />it, or removing a header and then re-adding it.<br />Mutations are always applied FIRST, in list order. The Set, Add,<br />AddIfAbsent, Remove and RemoveOnMatch fields below are then applied after<br />the mutations, preserving their existing ordering (Add, then Set, then<br />AddIfAbsent, then Remove, then RemoveOnMatch). |
 | `set` | _[HTTPHeader](#httpheader) array_ |  false  |  | Set overwrites the request with the given header (name, value)<br />before the action.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  set:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: bar |
 | `add` | _[HTTPHeader](#httpheader) array_ |  false  |  | Add adds the given header(s) (name, value) to the request<br />before the action. It appends to any existing values associated<br />with the header name.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  add:<br />  - name: "my-header"<br />    value: "bar,baz"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo,bar,baz |
 | `addIfAbsent` | _[HTTPHeader](#httpheader) array_ |  false  |  | AddIfAbsent adds the given header(s) (name, value) to the request/response<br />only if the header does not already exist. Unlike Add which appends to<br />existing values, this is a no-op if the header is already present.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  addIfAbsent:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo |
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
 | `removeOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | RemoveOnMatch removes headers whose names match the specified string matchers.<br />Matching is performed on the header name (case-insensitive). |
+
+
+#### HTTPHeaderMutation
+
+
+
+HTTPHeaderMutation defines a single header mutation operation.
+
+_Appears in:_
+- [HTTPHeaderFilter](#httpheaderfilter)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `write` | _[HTTPHeaderWrite](#httpheaderwrite)_ |  false  |  | Write adds or modifies a header using the specified action. |
+| `remove` | _string_ |  false  |  | Remove removes the named header if it exists. Header names are<br />case-insensitive. |
+| `removeOnMatch` | _[StringMatch](#stringmatch)_ |  false  |  | RemoveOnMatch removes every header whose name matches the specified string<br />matcher. Matching is performed on the header name (case-insensitive). |
+
+
+#### HTTPHeaderWrite
+
+
+
+HTTPHeaderWrite defines a header to write and how it should be applied when a
+header with the same name already exists. It mirrors Envoy's
+core.v3.HeaderValueOption.
+
+_Appears in:_
+- [HTTPHeaderMutation](#httpheadermutation)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `header` | _[HTTPHeader](#httpheader)_ |  true  |  | Header is the header name and value to write. |
+| `action` | _[HeaderWriteAction](#headerwriteaction)_ |  false  | Append | Action controls how the header value is written when a header with the<br />same name already exists. Defaults to Append. |
+| `keepEmptyValue` | _boolean_ |  false  |  | KeepEmptyValue controls whether a header with an empty value is kept.<br />When unset, an empty value is kept only if the provided value is empty. |
 
 
 #### HTTPHostnameModifier
@@ -3348,6 +3383,25 @@ _Appears in:_
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
 | `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header set by clients can be normalized. |
+
+
+#### HeaderWriteAction
+
+_Underlying type:_ _string_
+
+HeaderWriteAction controls how a header value is written when a header with
+the same name already exists. The values mirror Envoy's
+HeaderValueOption.HeaderAppendAction.
+
+_Appears in:_
+- [HTTPHeaderWrite](#httpheaderwrite)
+
+| Value | Description |
+| ----- | ----------- |
+| `Append` | HeaderWriteAppend appends the value if the header exists, or adds the<br />header otherwise. (Envoy: APPEND_IF_EXISTS_OR_ADD)<br /> | 
+| `Overwrite` | HeaderWriteOverwrite overwrites the value if the header exists, or adds<br />the header otherwise. (Envoy: OVERWRITE_IF_EXISTS_OR_ADD)<br /> | 
+| `AddIfAbsent` | HeaderWriteAddIfAbsent adds the header only if it is not already present.<br />(Envoy: ADD_IF_ABSENT)<br /> | 
+| `OverwriteIfExists` | HeaderWriteOverwriteIfExists overwrites the value only if the header is<br />already present, and does nothing otherwise. (Envoy: OVERWRITE_IF_EXISTS)<br /> | 
 
 
 #### HealthCheck
@@ -6086,6 +6140,7 @@ that need to match against a string.
 _Appears in:_
 - [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
+- [HTTPHeaderMutation](#httpheadermutation)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)
