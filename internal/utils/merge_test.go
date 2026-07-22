@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -84,4 +85,25 @@ func readObject[T client.Object](t *testing.T, path string) T {
 	err = yaml.Unmarshal(b, btp)
 	require.NoError(t, err)
 	return *btp
+}
+
+func TestMergeWithPatch(t *testing.T) {
+	original := map[string]any{"a": "original", "b": "keep"}
+	patch := apiextensionsv1.JSON{Raw: []byte(`{"a":"patched"}`)}
+
+	t.Run("json merge keeps unpatched fields", func(t *testing.T) {
+		mergeType := egv1a1.JSONMerge
+		got, err := MergeWithPatch(original, &egv1a1.KubernetesPatchSpec{Type: &mergeType, Value: patch})
+		require.NoError(t, err)
+		require.Equal(t, map[string]any{"a": "patched", "b": "keep"}, got)
+	})
+
+	t.Run("replace is rejected for Kubernetes patches", func(t *testing.T) {
+		// Replace must not reach mergeInternal for a Kubernetes resource patch,
+		// where it would replace the entire generated object with the partial
+		// patch value. It has to fail loudly instead.
+		mergeType := egv1a1.Replace
+		_, err := MergeWithPatch(original, &egv1a1.KubernetesPatchSpec{Type: &mergeType, Value: patch})
+		require.ErrorContains(t, err, "unsupported merge type for Kubernetes patch")
+	})
 }

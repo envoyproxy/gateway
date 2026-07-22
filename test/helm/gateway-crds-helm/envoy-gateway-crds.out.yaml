@@ -11135,6 +11135,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
@@ -16692,6 +16697,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
@@ -20840,6 +20850,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
@@ -20890,6 +20905,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
@@ -20981,6 +21001,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
