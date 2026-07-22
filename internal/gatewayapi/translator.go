@@ -298,6 +298,16 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
 	t.BTPLoadBalancerIndex = btpIndexes.LoadBalancer
 
+	// Pre-compute which gateways/listeners have a ClientTrafficPolicy-sourced
+	// cluster-affecting override, for O(1) lookup during route processing.
+	t.CTPClusterSettingsIndex = BuildCTPClusterSettingsIndex(
+		resources.ClientTrafficPolicies,
+		acceptedGateways,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
+
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
 
