@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1110,6 +1111,18 @@ func TestValidateEnvoyGatewayXDSServer(t *testing.T) {
 	t.Run("non positive", func(t *testing.T) {
 		age := gwapiv1.Duration("0s")
 		x := &egv1a1.XDSServer{MaxConnectionAgeGrace: &age}
+		require.Error(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("valid maxRecvMsgSize", func(t *testing.T) {
+		size := resource.MustParse("100Mi")
+		x := &egv1a1.XDSServer{MaxRecvMsgSize: &size}
+		require.NoError(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("invalid zero maxRecvMsgSize", func(t *testing.T) {
+		size := resource.MustParse("0")
+		x := &egv1a1.XDSServer{MaxRecvMsgSize: &size}
 		require.Error(t, validateEnvoyGatewayXDSServer(x))
 	})
 }
