@@ -16,7 +16,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -813,7 +812,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
 							Mutations: []egv1a1.HTTPHeaderMutation{
 								{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}, Action: egv1a1.HeaderWriteOverwrite}},
-								{Remove: ptr.To("x-baz")},
+								{Remove: new("x-baz")},
 							},
 						},
 					},
@@ -863,7 +862,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 							Mutations: []egv1a1.HTTPHeaderMutation{
 								{
 									Write:  &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}},
-									Remove: ptr.To("x-baz"),
+									Remove: new("x-baz"),
 								},
 							},
 						},
