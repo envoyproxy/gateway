@@ -151,6 +151,12 @@ type ListenerContext struct {
 	// Conflict detection should only consider listeners with specValid=true.
 	specValid bool
 
+	// protocolConflicted is set by validateConflictedProtocolsListeners when this
+	// listener loses a protocol conflict. Listeners with this flag must be excluded
+	// from subsequent hostname conflict resolution so they cannot steal a hostname
+	// slot from a valid same-hostname listener that uses the winner protocol.
+	protocolConflicted bool
+
 	tls ListenerTLSConfig
 
 	httpIR *ir.HTTPListener

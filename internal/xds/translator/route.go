@@ -708,7 +708,13 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 		return nil
 	}
 
-	ch := httpRoute.Traffic.LoadBalancer.ConsistentHash
+	return buildConsistentHashPolicy(httpRoute.Traffic.LoadBalancer.ConsistentHash)
+}
+
+func buildConsistentHashPolicy(ch *ir.ConsistentHash) []*routev3.RouteAction_HashPolicy {
+	if ch == nil {
+		return nil
+	}
 
 	switch {
 	case ch.Headers != nil:
@@ -877,7 +883,9 @@ func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
 	op, upstreamOp := buildTracingOperation(tracing.SpanName)
 
 	return &routev3.Tracing{
+		ClientSampling:    fractionalpercent.FromFractionOrZero(tracing.ClientSamplingFraction),
 		RandomSampling:    fractionalpercent.FromFraction(tracing.SamplingFraction),
+		OverallSampling:   fractionalpercent.FromFraction(tracing.OverallSamplingFraction),
 		CustomTags:        tags,
 		Operation:         op,
 		UpstreamOperation: upstreamOp,
