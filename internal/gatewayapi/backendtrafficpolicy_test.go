@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"math"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -2077,4 +2078,56 @@ func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
 		nil,
 		nil,
 	))
+}
+
+// TestBtpSpecHasClusterScopedFieldsExhaustive locks in today's field-by-field classification for
+// btpSpecHasClusterScopedFields, so a new field must be explicitly classified here too.
+func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
+	expected := map[string]bool{
+		"LoadBalancer":      true,
+		"Retry":             false,
+		"ProxyProtocol":     true,
+		"TCPKeepalive":      true,
+		"HealthCheck":       true,
+		"CircuitBreaker":    true,
+		"Timeout":           true,
+		"Connection":        true,
+		"DNS":               true,
+		"HTTP2":             true,
+		"MergeType":         false,
+		"RateLimit":         false,
+		"BandwidthLimit":    false,
+		"FaultInjection":    false,
+		"AdmissionControl":  true,
+		"UseClientProtocol": true,
+		"Compression":       false,
+		"Compressor":        false,
+		"ResponseOverride":  false,
+		"HTTPUpgrade":       false,
+		"RequestBuffer":     false,
+		"Telemetry":         false,
+		"RoutingType":       false,
+	}
+
+	actualFields := structFieldNames(reflect.TypeOf(egv1a1.BackendTrafficPolicySpec{}), map[string]bool{"PolicyTargetReferences": true})
+
+	for _, name := range actualFields {
+		want, ok := expected[name]
+		if !ok {
+			t.Fatalf("BackendTrafficPolicySpec field %q has no entry in this test's classification map - "+
+				"decide whether it must disqualify MergeBackends cluster deduplication (see "+
+				"btpSpecHasClusterScopedFields) and add it here", name)
+		}
+		t.Run(name, func(t *testing.T) {
+			spec := structWithFieldSet[egv1a1.BackendTrafficPolicySpec](name)
+			require.Equal(t, want, btpSpecHasClusterScopedFields(spec),
+				"btpSpecHasClusterScopedFields's behavior for field %q doesn't match this test's classification map", name)
+		})
+	}
+
+	for name := range expected {
+		if !slices.Contains(actualFields, name) {
+			t.Errorf("classification map has stale entry %q - field no longer exists on BackendTrafficPolicySpec", name)
+		}
+	}
 }

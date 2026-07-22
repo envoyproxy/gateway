@@ -6,12 +6,13 @@
 package gatewayapi
 
 import (
+	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -97,14 +98,14 @@ func TestBuildCTPClusterSettingsIndex(t *testing.T) {
 	require.True(t, idx.HasListenerLevelClusterSettings(
 		types.NamespacedName{Namespace: "default", Name: "gateway-1"}, &sectionName))
 	require.False(t, idx.HasListenerLevelClusterSettings(
-		types.NamespacedName{Namespace: "default", Name: "gateway-1"}, ptr.To(gwapiv1.SectionName("http-2"))))
+		types.NamespacedName{Namespace: "default", Name: "gateway-1"}, new(gwapiv1.SectionName("http-2"))))
 	require.False(t, idx.HasListenerLevelClusterSettings(
 		types.NamespacedName{Namespace: "default", Name: "gateway-2"}, &sectionName))
 
 	// Gateway-wide CTP (no SectionName): any listener under that gateway inherits the
 	// setting via the gatewayLevel fallback, and it's also reachable with listenerName == nil.
 	require.True(t, idx.HasListenerLevelClusterSettings(
-		types.NamespacedName{Namespace: "default", Name: "gateway-3"}, ptr.To(gwapiv1.SectionName("any-listener"))))
+		types.NamespacedName{Namespace: "default", Name: "gateway-3"}, new(gwapiv1.SectionName("any-listener"))))
 	require.True(t, idx.HasListenerLevelClusterSettings(
 		types.NamespacedName{Namespace: "default", Name: "gateway-3"}, nil))
 	// A different, untargeted gateway must not pick up the gateway-wide setting.
@@ -116,4 +117,49 @@ func TestBuildCTPClusterSettingsIndex(t *testing.T) {
 	emptyIdx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gatewayWithHTTP1}, nil, nil, false)
 	require.False(t, emptyIdx.HasListenerLevelClusterSettings(
 		types.NamespacedName{Namespace: "default", Name: "gateway-1"}, &sectionName))
+}
+
+// TestCtpSpecHasClusterScopedFieldsExhaustive locks in today's field-by-field classification for
+// ctpSpecHasClusterScopedFields, so a new field must be explicitly classified here too.
+func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
+	expected := map[string]bool{
+		"TCPKeepalive":        false,
+		"EnableProxyProtocol": false,
+		"ProxyProtocol":       false,
+		"ClientIPDetection":   false,
+		"TLS":                 false,
+		"Path":                false,
+		"Headers":             false,
+		"Timeout":             false,
+		"Connection":          false,
+		"HTTP1":               true,
+		"HTTP2":               false,
+		"HTTP3":               false,
+		"GRPC":                false,
+		"HealthCheck":         false,
+		"Scheme":              false,
+	}
+
+	actualFields := structFieldNames(reflect.TypeOf(egv1a1.ClientTrafficPolicySpec{}), map[string]bool{"PolicyTargetReferences": true})
+
+	for _, name := range actualFields {
+		want, ok := expected[name]
+		if !ok {
+			t.Fatalf("ClientTrafficPolicySpec field %q has no entry in this test's classification map - "+
+				"decide whether it, like HTTP1, gets mirrored onto a merged backend Cluster's upstream "+
+				"codec (must disqualify MergeBackends cluster deduplication, see "+
+				"ctpSpecHasClusterScopedFields) and add it here", name)
+		}
+		t.Run(name, func(t *testing.T) {
+			spec := structWithFieldSet[egv1a1.ClientTrafficPolicySpec](name)
+			require.Equal(t, want, ctpSpecHasClusterScopedFields(spec),
+				"ctpSpecHasClusterScopedFields's behavior for field %q doesn't match this test's classification map", name)
+		})
+	}
+
+	for name := range expected {
+		if !slices.Contains(actualFields, name) {
+			t.Errorf("classification map has stale entry %q - field no longer exists on ClientTrafficPolicySpec", name)
+		}
+	}
 }

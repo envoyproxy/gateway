@@ -12,6 +12,8 @@
 package gatewayapi
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -1667,4 +1669,40 @@ func TestIsMergeBackendsEnabled(t *testing.T) {
 			require.Equal(t, tc.want, IsMergeBackendsEnabled(tc.res))
 		})
 	}
+}
+
+// structFieldNames returns t's field names, flattening one level of anonymous/embedded struct
+// fields via Go's own field promotion, skipping any name in skip.
+func structFieldNames(t reflect.Type, skip map[string]bool) []string {
+	var names []string
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if skip[f.Name] {
+			continue
+		}
+		if f.Anonymous {
+			names = append(names, structFieldNames(f.Type, skip)...)
+			continue
+		}
+		names = append(names, f.Name)
+	}
+	return names
+}
+
+// structWithFieldSet returns a zero-value *T with only the named field set to a representative
+// non-nil/non-empty value, for behaviorally testing a "does this field affect X" classifier in
+// isolation from every other field.
+func structWithFieldSet[T any](fieldName string) *T {
+	specPtr := new(T)
+	v := reflect.ValueOf(specPtr).Elem()
+	field := v.FieldByName(fieldName)
+	switch field.Kind() {
+	case reflect.Ptr:
+		field.Set(reflect.New(field.Type().Elem()))
+	case reflect.Slice:
+		field.Set(reflect.MakeSlice(field.Type(), 1, 1))
+	default:
+		panic(fmt.Sprintf("structWithFieldSet: unsupported field kind %s for field %q", field.Kind(), fieldName))
+	}
+	return specPtr
 }
