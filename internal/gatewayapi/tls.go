@@ -197,9 +197,15 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 	return validSecrets, certs, nil
 }
 
-// firstSupportedPrivateKeyBlock returns the first private key PEM block supported by the parsers below:
-// PKCS1, PKCS8, or EC. If none is found, it returns the first block so the caller can report its unsupported format.
-func firstSupportedPrivateKeyBlock(data []byte) *pem.Block {
+// privateKeyBlock returns the private key PEM block from the given data, skipping
+// any preceding non-key blocks such as the "EC PARAMETERS" block that tools like
+// OpenSSL emit ahead of an "EC PRIVATE KEY".
+//
+// If no supported private key block is found, it falls back to returning the first
+// block of any type (or nil if the data contains no PEM blocks at all) so the caller
+// can report a meaningful error about the unexpected block type rather than a generic
+// decode failure.
+func privateKeyBlock(data []byte) *pem.Block {
 	var firstBlock *pem.Block
 	for len(data) > 0 {
 		block, rest := pem.Decode(data)
