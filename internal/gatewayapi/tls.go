@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -76,19 +77,18 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 	for _, secret := range secrets {
 		certData := secret.Data[corev1.TLSCertKey]
 
-		validData, listenerErr := filterValidCertificates(certData)
+		// A serving certificate chain is ordered and must stay intact: unlike a CA
+		// bundle (see filterValidCACertificates), an expired or malformed member is
+		// not dropped but rejects the whole secret, so a corrupted chain never
+		// reaches Envoy. The failure is isolated to the referencing listener.
+		canonicalChain, listenerErr := validateServingCertificateChain(certData)
 		if listenerErr != nil {
-			if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
-				errs = append(errs, fmt.Errorf("%s/%s must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: %s",
-					secret.Namespace, secret.Name, listenerErr.Error()))
-				continue
-			} else if listenerErr.Reason() == status.ListenerReasonPartiallyInvalidCertificateRef {
-				errs = append(errs, fmt.Errorf("%s/%s has some invalid certificates: %s",
-					secret.Namespace, secret.Name, listenerErr.Error()))
-			}
+			errs = append(errs, fmt.Errorf("%s/%s must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: %s",
+				secret.Namespace, secret.Name, listenerErr.Error()))
+			continue
 		}
 
-		certBlock, _ := pem.Decode(validData)
+		certBlock, _ := pem.Decode(canonicalChain)
 		if certBlock == nil {
 			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s",
 				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey))
@@ -109,6 +109,47 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 		if keyBlock == nil {
 			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s",
 				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
+			continue
+		}
+
+		switch keyBlock.Type {
+		case "PRIVATE KEY":
+			_, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS8 formatted private key in %s",
+					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
+				continue
+			}
+		case "RSA PRIVATE KEY":
+			_, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS1 formatted private key in %s",
+					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
+				continue
+			}
+		case "EC PRIVATE KEY":
+			_, err := x509.ParseECPrivateKey(keyBlock.Bytes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse EC formatted private key in %s",
+					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
+				continue
+			}
+		default:
+			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, %s key format found in %s, supported formats are PKCS1, PKCS8 or EC",
+				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, keyBlock.Type, corev1.TLSPrivateKeyKey))
+			continue
+		}
+
+		// Ensure the private key actually corresponds to the public key in the
+		// certificate. Validating the cert and key independently is not enough:
+		// a mismatched pair (e.g. a stale/rotated Secret) parses fine locally but
+		// is rejected by BoringSSL at the xDS layer with KEY_VALUES_MISMATCH. With
+		// mergeGateways enabled that NACKs the whole SDS push, breaking TLS for all
+		// Gateways sharing the proxy. Reject the bad Secret here so it never reaches
+		// Envoy and only the affected listener degrades.
+		if _, err := tls.X509KeyPair(canonicalChain, pem.EncodeToMemory(keyBlock)); err != nil {
+			errs = append(errs, fmt.Errorf("%s/%s must contain a matching tls.crt and tls.key: %w",
+				secret.Namespace, secret.Name, err))
 			continue
 		}
 
@@ -142,36 +183,9 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 			continue
 		}
 
-		switch keyBlock.Type {
-		case "PRIVATE KEY":
-			_, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS8 formatted private key in %s",
-					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
-				continue
-			}
-		case "RSA PRIVATE KEY":
-			_, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS1 formatted private key in %s",
-					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
-				continue
-			}
-		case "EC PRIVATE KEY":
-			_, err := x509.ParseECPrivateKey(keyBlock.Bytes)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse EC formatted private key in %s",
-					secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
-				continue
-			}
-		default:
-			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, %s key format found in %s, supported formats are PKCS1, PKCS8 or EC",
-				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, keyBlock.Type, corev1.TLSPrivateKeyKey))
-			continue
-		}
 		normalizedSecret := *secret
 		normalizedSecret.Data = maps.Clone(secret.Data)
-		normalizedSecret.Data[corev1.TLSCertKey] = validData
+		normalizedSecret.Data[corev1.TLSCertKey] = canonicalChain
 		normalizedSecret.Data[corev1.TLSPrivateKeyKey] = pem.EncodeToMemory(keyBlock)
 		validSecrets = append(validSecrets, &normalizedSecret)
 
@@ -197,15 +211,11 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 	return validSecrets, certs, nil
 }
 
-// privateKeyBlock returns the private key PEM block from the given data, skipping
-// any preceding non-key blocks such as the "EC PARAMETERS" block that tools like
-// OpenSSL emit ahead of an "EC PRIVATE KEY".
-//
-// If no supported private key block is found, it falls back to returning the first
-// block of any type (or nil if the data contains no PEM blocks at all) so the caller
-// can report a meaningful error about the unexpected block type rather than a generic
-// decode failure.
-func privateKeyBlock(data []byte) *pem.Block {
+// firstSupportedPrivateKeyBlock returns the first supported private key PEM block,
+// skipping preceding non-key blocks such as OpenSSL's "EC PARAMETERS" block.
+// It returns the first block when no supported key is found so the caller can
+// report the unexpected block type.
+func firstSupportedPrivateKeyBlock(data []byte) *pem.Block {
 	var firstBlock *pem.Block
 	for len(data) > 0 {
 		block, rest := pem.Decode(data)
@@ -224,13 +234,35 @@ func privateKeyBlock(data []byte) *pem.Block {
 	return firstBlock
 }
 
-// filterValidCertificates filters out expired or not-yet-valid certificates from PEM encoded data.
-// It accepts certificate bundles (multiple PEM blocks) and returns only the valid certificates.
-// A certificate is considered valid if the current time is within its NotBefore and NotAfter period.
-//
-// Return a status.ListenerError with InvalidCertificateRef Condition if no valid certificates are found in the provided data,
-// Return a status.ListenerError with PartiallyInvalidCertificateRef Condition if some certificates are invalid but also valid certificates exist.
-func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
+// validateCertBlock parses the certificate(s) in a single PEM block and returns
+// an error if the block is not a valid certificate or if any certificate in it
+// is expired or not yet valid (outside its NotBefore/NotAfter window).
+func validateCertBlock(block *pem.Block) error {
+	certs, err := x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	for _, cert := range certs {
+		if now.After(cert.NotAfter) {
+			return fmt.Errorf("certificate %s has expired since %v", cert.Subject.CommonName, cert.NotAfter)
+		}
+		if now.Before(cert.NotBefore) {
+			return fmt.Errorf("certificate %s will be valid after %v", cert.Subject.CommonName, cert.NotBefore)
+		}
+	}
+	return nil
+}
+
+// validateServingCertificateChain validates every certificate in a serving
+// certificate chain and returns the canonically re-encoded chain. Unlike a CA
+// bundle (see filterValidCACertificates), a serving chain is ordered and must stay
+// intact: if ANY certificate (leaf or intermediate) is expired, not yet valid,
+// or malformed, the whole secret is rejected. Dropping a member — e.g. an
+// expired leaf — would leave the private key matching a certificate that is no
+// longer served, which Envoy/BoringSSL rejects as KEY_VALUES_MISMATCH,
+// stalling the whole (merged) xDS config (#9225, #9473).
+func validateServingCertificateChain(data []byte) ([]byte, status.ListenerError) {
 	if len(data) == 0 {
 		return nil, status.NewListenerStatusError(
 			fmt.Errorf("no certificate data provided"),
@@ -238,11 +270,7 @@ func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 		)
 	}
 
-	now := time.Now()
-	var errs []error
-	validData := make([]byte, 0, len(data))
-
-	// Process each PEM block in the data
+	out := make([]byte, 0, len(data))
 	rest := data
 	for len(rest) > 0 {
 		block, remaining := pem.Decode(rest)
@@ -251,31 +279,57 @@ func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 		}
 		rest = remaining
 
-		// Parse all certificates in this PEM block
-		certs, err := x509.ParseCertificates(block.Bytes)
-		if err != nil {
+		// A serving chain must stay intact: reject the whole secret on the first
+		// invalid member instead of dropping it (cf. filterValidCACertificates).
+		if err := validateCertBlock(block); err != nil {
+			return nil, status.NewListenerStatusError(err, gwapiv1.ListenerReasonInvalidCertificateRef)
+		}
+		out = append(out, pem.EncodeToMemory(block)...)
+	}
+
+	if len(out) == 0 {
+		return nil, status.NewListenerStatusError(
+			fmt.Errorf("unable to decode pem data for certificate"),
+			gwapiv1.ListenerReasonInvalidCertificateRef,
+		)
+	}
+	return out, nil
+}
+
+// filterValidCACertificates filters out expired or not-yet-valid certificates from
+// a CA bundle. It accepts CA bundles (multiple independent PEM blocks) and
+// returns only the valid certificates; dropping an expired CA from a bundle of
+// trust anchors is safe.
+// A certificate is considered valid if the current time is within its NotBefore and NotAfter period.
+//
+// Return a status.ListenerError with InvalidCertificateRef Condition if no valid certificates are found in the provided data,
+// Return a status.ListenerError with PartiallyInvalidCertificateRef Condition if some certificates are invalid but also valid certificates exist.
+func filterValidCACertificates(data []byte) ([]byte, status.ListenerError) {
+	if len(data) == 0 {
+		return nil, status.NewListenerStatusError(
+			fmt.Errorf("no certificate data provided"),
+			gwapiv1.ListenerReasonInvalidCertificateRef,
+		)
+	}
+
+	var errs []error
+	validData := make([]byte, 0, len(data))
+
+	// Process each PEM block; a CA bundle is a set of independent trust anchors,
+	// so drop an invalid (malformed/expired) CA and keep the rest.
+	rest := data
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+
+		if err := validateCertBlock(block); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-
-		// Validate all certificates in this PEM block
-		blockValid := true
-		for _, cert := range certs {
-			if now.After(cert.NotAfter) {
-				errs = append(errs, fmt.Errorf("certificate %s has expired since %v", cert.Subject.CommonName, cert.NotAfter))
-				blockValid = false
-				break
-			}
-			if now.Before(cert.NotBefore) {
-				errs = append(errs, fmt.Errorf("certificate %s will be valid after %v", cert.Subject.CommonName, cert.NotBefore))
-				blockValid = false
-				break
-			}
-		}
-		// Only include this PEM block if all certificates in it are valid
-		if blockValid {
-			validData = append(validData, pem.EncodeToMemory(block)...)
-		}
+		validData = append(validData, pem.EncodeToMemory(block)...)
 	}
 
 	if len(validData) == 0 {
