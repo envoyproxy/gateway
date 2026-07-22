@@ -32,10 +32,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.0.0
+    helm.sh/chart: loki-7.1.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.7"
+    app.kubernetes.io/version: "3.6.8"
 automountServiceAccountToken: true
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/serviceaccount.yaml
@@ -197,10 +197,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.0.0
+    helm.sh/chart: loki-7.1.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.7"
+    app.kubernetes.io/version: "3.6.8"
 data:
   config.yaml: |
     
@@ -297,10 +297,10 @@ metadata:
   name: loki-runtime
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.0.0
+    helm.sh/chart: loki-7.1.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.7"
+    app.kubernetes.io/version: "3.6.8"
 data:
   runtime-config.yaml: |
     {}
@@ -9983,10 +9983,10 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: loki-7.0.0
+    helm.sh/chart: loki-7.1.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.7"
+    app.kubernetes.io/version: "3.6.8"
   name: loki-clusterrole
 rules:
 - apiGroups: [""] # "" indicates the core API group
@@ -10087,10 +10087,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: loki-clusterrolebinding
   labels:
-    helm.sh/chart: loki-7.0.0
+    helm.sh/chart: loki-7.1.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.7"
+    app.kubernetes.io/version: "3.6.8"
 subjects:
   - kind: ServiceAccount
     name: loki
@@ -10206,10 +10206,10 @@ metadata:
   name: loki-memberlist
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.0.0
+    helm.sh/chart: loki-7.1.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.7"
+    app.kubernetes.io/version: "3.6.8"
   annotations:
 spec:
   type: ClusterIP
@@ -10231,10 +10231,10 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.0.0
+    helm.sh/chart: loki-7.1.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.7"
+    app.kubernetes.io/version: "3.6.8"
     variant: headless
     prometheus.io/service-monitor: "false"
   annotations:
@@ -10256,10 +10256,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.0.0
+    helm.sh/chart: loki-7.1.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.7"
+    app.kubernetes.io/version: "3.6.8"
   annotations:
 spec:
   type: ClusterIP
@@ -10701,10 +10701,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.0.0
+    helm.sh/chart: loki-7.1.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.7"
+    app.kubernetes.io/version: "3.6.8"
     app.kubernetes.io/component: single-binary
     app.kubernetes.io/part-of: memberlist
 spec:
@@ -10744,7 +10744,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: loki
-          image: docker.io/grafana/loki:3.6.7
+          image: docker.io/grafana/loki:3.6.8
           imagePullPolicy: IfNotPresent
           args:
             - -config.file=/etc/loki/config/config.yaml
