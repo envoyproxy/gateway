@@ -842,23 +842,13 @@ type HeaderSettings struct {
 	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
 	RequestID *RequestIDAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
 
-	// EarlyAddRequestHeaders defines headers that would be added before envoy request processing.
-	EarlyAddRequestHeaders []AddHeader `json:"earlyAddRequestHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
+	// EarlyRequestHeaderMutations defines an ordered list of header mutations applied before envoy
+	// request processing (routing, tracing and built-in header manipulation).
+	EarlyRequestHeaderMutations []HeaderMutation `json:"earlyRequestHeaderMutations,omitempty" yaml:"earlyRequestHeaderMutations,omitempty"`
 
-	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
-	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
-
-	// EarlyRemoveRequestHeadersOnMatch defines header name matchers that would remove headers before envoy request processing.
-	EarlyRemoveRequestHeadersOnMatch []*StringMatch `json:"earlyRemoveRequestHeadersOnMatch,omitempty" yaml:"earlyRemoveRequestHeadersOnMatch,omitempty"`
-
-	// LateAddResponseHeaders defines headers that would be added after envoy response processing.
-	LateAddResponseHeaders []AddHeader `json:"lateAddResponseHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
-
-	// LateRemoveResponseHeaders defines headers that would be removed after envoy response processing.
-	LateRemoveResponseHeaders []string `json:"lateRemoveResponseHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
-
-	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
-	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
+	// LateResponseHeaderMutations defines an ordered list of header mutations applied after envoy
+	// response processing.
+	LateResponseHeaderMutations []HeaderMutation `json:"lateResponseHeaderMutations,omitempty" yaml:"lateResponseHeaderMutations,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -2184,6 +2174,43 @@ func (h AddHeader) Validate() error {
 
 	return errs
 }
+
+// HeaderMutation configures a single, ordered header mutation. Exactly one of
+// its fields is set. It maps directly to Envoy's mutation_rules HeaderMutation.
+// +k8s:deepcopy-gen=true
+type HeaderMutation struct {
+	// Write adds or modifies a header using the specified action.
+	Write *HeaderWrite `json:"write,omitempty" yaml:"write,omitempty"`
+	// Remove removes the named header if it exists.
+	Remove *string `json:"remove,omitempty" yaml:"remove,omitempty"`
+	// RemoveOnMatch removes headers whose name matches the matcher.
+	RemoveOnMatch *StringMatch `json:"removeOnMatch,omitempty" yaml:"removeOnMatch,omitempty"`
+}
+
+// HeaderWrite configures a header to be written and the action used when a
+// header with the same name already exists.
+// +k8s:deepcopy-gen=true
+type HeaderWrite struct {
+	Name           string            `json:"name" yaml:"name"`
+	Value          string            `json:"value,omitempty" yaml:"value,omitempty"`
+	Action         HeaderWriteAction `json:"action" yaml:"action"`
+	KeepEmptyValue bool              `json:"keepEmptyValue,omitempty" yaml:"keepEmptyValue,omitempty"`
+}
+
+// HeaderWriteAction controls how a header value is written when a header with
+// the same name already exists.
+type HeaderWriteAction string
+
+const (
+	// HeaderWriteAppend maps to Envoy APPEND_IF_EXISTS_OR_ADD.
+	HeaderWriteAppend HeaderWriteAction = "Append"
+	// HeaderWriteOverwrite maps to Envoy OVERWRITE_IF_EXISTS_OR_ADD.
+	HeaderWriteOverwrite HeaderWriteAction = "Overwrite"
+	// HeaderWriteAddIfAbsent maps to Envoy ADD_IF_ABSENT.
+	HeaderWriteAddIfAbsent HeaderWriteAction = "AddIfAbsent"
+	// HeaderWriteOverwriteIfExists maps to Envoy OVERWRITE_IF_EXISTS.
+	HeaderWriteOverwriteIfExists HeaderWriteAction = "OverwriteIfExists"
+)
 
 // URLRewrite holds the details for how to rewrite a request
 // +k8s:deepcopy-gen=true

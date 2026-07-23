@@ -7,21 +7,23 @@ clientTrafficPolicies:
   spec:
     headers:
       earlyRequestHeaders:
-        addIfAbsent:
-        - name: my-early-default-header
-          value: my-early-default-value
-        - name: my-early-default-header
-          value: duplicate-should-be-ignored
-        - name: another-early-default-header
-          value: another-early-value
-      lateResponseHeaders:
-        addIfAbsent:
-        - name: my-default-header
-          value: my-default-value
-        - name: my-default-header
-          value: duplicate-should-be-ignored
-        - name: another-default-header
-          value: another-value
+        mutations:
+        - write:
+            action: Overwrite
+            header:
+              name: Example/Header/1
+              value: valid
+        - write:
+            action: Append
+            header:
+              name: example-header-2
+              value: '  invalid'
+        - remove: ""
+        - write:
+            action: Append
+            header:
+              name: example-header-3
+              value: valid
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -35,9 +37,12 @@ clientTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: |-
+          Headers: EarlyRequestHeaders cannot write a header with a '/' or ':' character in them. Header: "Example/Header/1"
+          EarlyRequestHeaders cannot write a header with an invalid value. Header: "example-header-2"
+          EarlyRequestHeaders cannot remove a header with an empty name.
+        reason: Invalid
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: spec.targetRef is deprecated, use spec.targetRefs instead
@@ -136,22 +141,9 @@ xdsIR:
       headers:
         earlyRequestHeaderMutations:
         - write:
-            action: AddIfAbsent
-            name: my-early-default-header
-            value: my-early-default-value
-        - write:
-            action: AddIfAbsent
-            name: another-early-default-header
-            value: another-early-value
-        lateResponseHeaderMutations:
-        - write:
-            action: AddIfAbsent
-            name: my-default-header
-            value: my-default-value
-        - write:
-            action: AddIfAbsent
-            name: another-default-header
-            value: another-value
+            action: Append
+            name: example-header-3
+            value: valid
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
