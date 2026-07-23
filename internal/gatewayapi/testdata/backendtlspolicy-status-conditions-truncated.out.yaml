@@ -2267,7 +2267,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -2278,7 +2278,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -2364,7 +2364,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -2375,7 +2375,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -2461,7 +2461,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -2472,7 +2472,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -2558,7 +2558,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -2569,7 +2569,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -2655,7 +2655,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -2666,7 +2666,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -2752,7 +2752,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -2763,7 +2763,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -2849,7 +2849,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -2860,7 +2860,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -2946,7 +2946,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -2957,7 +2957,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3043,7 +3043,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3054,7 +3054,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3140,7 +3140,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3151,7 +3151,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3237,7 +3237,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3248,7 +3248,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3334,7 +3334,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3345,7 +3345,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3431,7 +3431,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3442,7 +3442,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3528,7 +3528,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3539,7 +3539,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3625,7 +3625,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3636,7 +3636,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3722,7 +3722,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3733,7 +3733,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3819,7 +3819,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3830,7 +3830,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -3916,7 +3916,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: backend/e0db738af011fed3
           settings:
           - addressType: IP
             endpoints:
@@ -3927,7 +3927,7 @@ xdsIR:
               name: http-backend
               namespace: envoy-gateway
               sectionName: "8443"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: backend/e0db738af011fed3
             protocol: HTTP
             tls:
               alpnProtocols: null

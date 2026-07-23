@@ -186,7 +186,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-btls
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-btls/rule/0
+          name: backend/3804884682a91024
           settings:
           - addressType: IP
             endpoints:
@@ -197,7 +197,7 @@ xdsIR:
               name: service-import-1
               namespace: default
               sectionName: "8080"
-            name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
+            name: backend/9f18f3dbdb00bf26
             protocol: HTTP2
             tls:
               alpnProtocols: null
@@ -217,7 +217,7 @@ xdsIR:
               name: service-import-1
               namespace: default
               sectionName: "9000"
-            name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
+            name: backend/03e79cc16fb15d3e
             protocol: GRPC
             tls:
               alpnProtocols: null

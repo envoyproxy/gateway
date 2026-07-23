@@ -6,6 +6,9 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -424,11 +427,20 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
 					continue
 				}
-				destination := &ir.RouteDestination{
-					Name:     destName,
-					Settings: allDs,
-					Metadata: routeRuleMetadata,
-				}
+				statName := routeDestinationStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames)
+				destination := stableClusterRouteDestination(
+					resource.KindHTTPRoute,
+					destName,
+					allDs,
+					irRoute.Traffic,
+					irRoute.UseClientProtocol,
+					routeRuleMetadata,
+					stableClusterRouteDestinationOptions{
+						StatName:         statName,
+						RouteHostname:    irRoute.Hostname,
+						HasExtensionRefs: len(irRoute.ExtensionRefs) > 0 || len(backendCustomRefs) > 0,
+					},
+				)
 				irRoute.Destination = destination
 			}
 		}
@@ -438,11 +450,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			// add custom backend refs if any
 			if len(backendCustomRefs) > 0 {
 				irRoute.ExtensionRefs = append(irRoute.ExtensionRefs, backendCustomRefs...)
-			}
-
-			// set the stat name for this route
-			if irRoute.Destination != nil && pattern != "" {
-				irRoute.Destination.StatName = new(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
 
@@ -1125,11 +1132,21 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
 					continue
 				}
-				destination := &ir.RouteDestination{
-					Name:     destName,
-					Settings: allDs,
-					Metadata: buildResourceMetadata(grpcRoute, rule.Name),
-				}
+				routeRuleMetadata := buildResourceMetadata(grpcRoute, rule.Name)
+				statName := routeDestinationStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames)
+				destination := stableClusterRouteDestination(
+					resource.KindGRPCRoute,
+					destName,
+					allDs,
+					irRoute.Traffic,
+					irRoute.UseClientProtocol,
+					routeRuleMetadata,
+					stableClusterRouteDestinationOptions{
+						StatName:         statName,
+						RouteHostname:    irRoute.Hostname,
+						HasExtensionRefs: len(irRoute.ExtensionRefs) > 0,
+					},
+				)
 				irRoute.Destination = destination
 			}
 
@@ -1138,11 +1155,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// finalize the IR routes for this rule
 		for _, irRoute := range ruleRoutes {
 			irRoute.IsHTTP2 = true
-
-			// set the stat name for this route
-			if irRoute.Destination != nil && pattern != "" {
-				irRoute.Destination.StatName = new(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
-			}
 		}
 
 		irRoutes = append(irRoutes, ruleRoutes...)
@@ -2036,6 +2048,330 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	ds.Weight = &weight
 	return ds, nil, nil
+}
+
+func stableClusterRouteDestination(
+	routeType gwapiv1.Kind,
+	fallbackName string,
+	settings []*ir.DestinationSetting,
+	traffic *ir.TrafficFeatures,
+	useClientProtocol *bool,
+	metadata *ir.ResourceMetadata,
+	options stableClusterRouteDestinationOptions,
+) *ir.RouteDestination {
+	copiedSettings := make([]*ir.DestinationSetting, 0, len(settings))
+	for _, setting := range settings {
+		if setting == nil {
+			copiedSettings = append(copiedSettings, nil)
+			continue
+		}
+		copiedSettings = append(copiedSettings, setting.DeepCopy())
+	}
+
+	destination := &ir.RouteDestination{
+		Name:     fallbackName,
+		StatName: options.StatName,
+		Settings: copiedSettings,
+		Metadata: metadata,
+	}
+
+	if !canUseStableClusterName(copiedSettings, options) {
+		return destination
+	}
+
+	settingNames := make([]string, 0, len(copiedSettings))
+	for _, setting := range copiedSettings {
+		name, ok := stableClusterName(routeType, []*ir.DestinationSetting{setting}, traffic, useClientProtocol, options)
+		if !ok {
+			return destination
+		}
+		settingNames = append(settingNames, name)
+	}
+
+	if len(copiedSettings) == 1 {
+		copiedSettings[0].Name = settingNames[0]
+		destination.Name = settingNames[0]
+		return destination
+	}
+
+	name, ok := stableClusterName(routeType, copiedSettings, traffic, useClientProtocol, options)
+	if !ok {
+		return destination
+	}
+	for idx, setting := range copiedSettings {
+		setting.Name = settingNames[idx]
+	}
+	destination.Name = name
+	return destination
+}
+
+type stableClusterRouteDestinationOptions struct {
+	StatName         *string
+	RouteHostname    string
+	HasExtensionRefs bool
+}
+
+func canUseStableClusterName(settings []*ir.DestinationSetting, options stableClusterRouteDestinationOptions) bool {
+	if options.HasExtensionRefs {
+		return false
+	}
+
+	for _, setting := range settings {
+		if setting == nil ||
+			setting.Invalid ||
+			setting.IsCustomBackend ||
+			setting.TLS == nil ||
+			setting.Filters != nil {
+			return false
+		}
+	}
+	return len(settings) > 0
+}
+
+func stableClusterName(
+	routeType gwapiv1.Kind,
+	settings []*ir.DestinationSetting,
+	traffic *ir.TrafficFeatures,
+	useClientProtocol *bool,
+	options stableClusterRouteDestinationOptions,
+) (string, bool) {
+	input := stableClusterNameInput{
+		RouteType:         routeType,
+		Settings:          make([]stableDestinationSetting, 0, len(settings)),
+		Traffic:           stableClusterTrafficConfig(traffic),
+		UseClientProtocol: useClientProtocol,
+		StatName:          options.StatName,
+	}
+	if healthCheckUsesRouteHostname(traffic) {
+		input.RouteHostname = options.RouteHostname
+	}
+	for _, setting := range settings {
+		input.Settings = append(input.Settings, stableDestinationSetting{
+			IsDynamicResolver: setting.IsDynamicResolver,
+			Weight:            setting.Weight,
+			Priority:          setting.Priority,
+			Protocol:          setting.Protocol,
+			ForceHTTP1:        setting.ForceHTTP1Upstream,
+			AddressType:       setting.AddressType,
+			IPFamily:          setting.IPFamily,
+			TLS:               stableTLSUpstreamConfig(setting.TLS),
+			PreferLocal:       setting.PreferLocal,
+			Metadata:          setting.Metadata,
+		})
+	}
+
+	data, err := json.Marshal(input)
+	if err != nil {
+		return "", false
+	}
+	sum := sha256.Sum256(data)
+	return "backend/" + hex.EncodeToString(sum[:8]), true
+}
+
+func routeDestinationStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, ruleIdx int, backendRefNames []string) *string {
+	if pattern == "" {
+		return nil
+	}
+	statName := buildStatName(pattern, route, ruleName, ruleIdx, backendRefNames)
+	return &statName
+}
+
+func healthCheckUsesRouteHostname(traffic *ir.TrafficFeatures) bool {
+	return traffic != nil &&
+		traffic.HealthCheck != nil &&
+		traffic.HealthCheck.Active != nil &&
+		traffic.HealthCheck.Active.HTTP != nil &&
+		traffic.HealthCheck.Active.HTTP.Host == ""
+}
+
+type stableClusterNameInput struct {
+	RouteType         gwapiv1.Kind               `json:"routeType"`
+	Settings          []stableDestinationSetting `json:"settings"`
+	Traffic           *stableClusterTraffic      `json:"traffic,omitempty"`
+	UseClientProtocol *bool                      `json:"useClientProtocol,omitempty"`
+	StatName          *string                    `json:"statName,omitempty"`
+	RouteHostname     string                     `json:"routeHostname,omitempty"`
+}
+
+type stableClusterTraffic struct {
+	LoadBalancer      *ir.LoadBalancer      `json:"loadBalancer,omitempty"`
+	ProxyProtocol     *ir.ProxyProtocol     `json:"proxyProtocol,omitempty"`
+	CircuitBreaker    *ir.CircuitBreaker    `json:"circuitBreaker,omitempty"`
+	HealthCheck       *ir.HealthCheck       `json:"healthCheck,omitempty"`
+	Timeout           *ir.Timeout           `json:"timeout,omitempty"`
+	TCPKeepalive      *ir.TCPKeepalive      `json:"tcpKeepalive,omitempty"`
+	BackendConnection *ir.BackendConnection `json:"backendConnection,omitempty"`
+	DNS               *ir.DNS               `json:"dns,omitempty"`
+	HTTP2             *ir.HTTP2Settings     `json:"http2,omitempty"`
+	AdmissionControl  *ir.AdmissionControl  `json:"admissionControl,omitempty"`
+}
+
+func stableClusterTrafficConfig(traffic *ir.TrafficFeatures) *stableClusterTraffic {
+	if traffic == nil {
+		return nil
+	}
+	clusterTraffic := &stableClusterTraffic{
+		LoadBalancer:      traffic.LoadBalancer,
+		ProxyProtocol:     traffic.ProxyProtocol,
+		CircuitBreaker:    traffic.CircuitBreaker,
+		HealthCheck:       traffic.HealthCheck,
+		Timeout:           traffic.Timeout,
+		TCPKeepalive:      traffic.TCPKeepalive,
+		BackendConnection: traffic.BackendConnection,
+		DNS:               traffic.DNS,
+		HTTP2:             traffic.HTTP2,
+		AdmissionControl:  traffic.AdmissionControl,
+	}
+	if clusterTraffic.LoadBalancer == nil &&
+		clusterTraffic.ProxyProtocol == nil &&
+		clusterTraffic.CircuitBreaker == nil &&
+		clusterTraffic.HealthCheck == nil &&
+		clusterTraffic.Timeout == nil &&
+		clusterTraffic.TCPKeepalive == nil &&
+		clusterTraffic.BackendConnection == nil &&
+		clusterTraffic.DNS == nil &&
+		clusterTraffic.HTTP2 == nil &&
+		clusterTraffic.AdmissionControl == nil {
+		return nil
+	}
+	return clusterTraffic
+}
+
+type stableDestinationSetting struct {
+	IsDynamicResolver bool                       `json:"isDynamicResolver,omitempty"`
+	Weight            *uint32                    `json:"weight,omitempty"`
+	Priority          *uint32                    `json:"priority,omitempty"`
+	Protocol          ir.AppProtocol             `json:"protocol,omitempty"`
+	ForceHTTP1        bool                       `json:"forceHTTP1,omitempty"`
+	AddressType       *ir.DestinationAddressType `json:"addressType,omitempty"`
+	IPFamily          *egv1a1.IPFamily           `json:"ipFamily,omitempty"`
+	TLS               *stableTLSUpstream         `json:"tls,omitempty"`
+	PreferLocal       *ir.PreferLocalZone        `json:"preferLocal,omitempty"`
+	Metadata          *ir.ResourceMetadata       `json:"metadata,omitempty"`
+}
+
+type stableTLSUpstream struct {
+	SNI                         *string                 `json:"sni,omitempty"`
+	AutoSNIFromEndpointHostname bool                    `json:"autoSNIFromEndpointHostname,omitempty"`
+	UseSystemTrustStore         bool                    `json:"useSystemTrustStore,omitempty"`
+	CACertificate               *stableTLSCACertificate `json:"caCertificate,omitempty"`
+	ClientCertificates          []stableTLSCertificate  `json:"clientCertificates,omitempty"`
+	RequireClientCertificate    bool                    `json:"requireClientCertificate,omitempty"`
+	ClientValidationEnabled     bool                    `json:"clientValidationEnabled,omitempty"`
+	AcceptUntrusted             bool                    `json:"acceptUntrusted,omitempty"`
+	AllowExpiredCertificate     bool                    `json:"allowExpiredCertificate,omitempty"`
+	VerifyCertificateSpki       []string                `json:"verifyCertificateSpki,omitempty"`
+	VerifyCertificateHash       []string                `json:"verifyCertificateHash,omitempty"`
+	Crl                         *stableTLSCrl           `json:"crl,omitempty"`
+	MatchTypedSubjectAltNames   []*ir.StringMatch       `json:"matchTypedSubjectAltNames,omitempty"`
+	MinVersion                  *ir.TLSVersion          `json:"minVersion,omitempty"`
+	MaxVersion                  *ir.TLSVersion          `json:"maxVersion,omitempty"`
+	Ciphers                     []string                `json:"ciphers,omitempty"`
+	ECDHCurves                  []string                `json:"ecdhCurves,omitempty"`
+	SignatureAlgorithms         []string                `json:"signatureAlgorithms,omitempty"`
+	ALPNProtocols               []string                `json:"alpnProtocols"`
+	StatelessSessionResumption  bool                    `json:"statelessSessionResumption,omitempty"`
+	StatefulSessionResumption   bool                    `json:"statefulSessionResumption,omitempty"`
+	Fingerprints                []ir.TLSFingerprintType `json:"fingerprints,omitempty"`
+	SubjectAltNames             []ir.SubjectAltName     `json:"subjectAltNames,omitempty"`
+	InsecureSkipVerify          bool                    `json:"insecureSkipVerify,omitempty"`
+}
+
+type stableTLSCertificate struct {
+	Name        string        `json:"name,omitempty"`
+	SDS         *ir.SDSConfig `json:"sds,omitempty"`
+	Certificate string        `json:"certificate,omitempty"`
+	PrivateKey  string        `json:"privateKey,omitempty"`
+	OCSPStaple  string        `json:"ocspStaple,omitempty"`
+}
+
+type stableTLSCACertificate struct {
+	Name        string        `json:"name,omitempty"`
+	Certificate string        `json:"certificate,omitempty"`
+	SDS         *ir.SDSConfig `json:"sds,omitempty"`
+}
+
+type stableTLSCrl struct {
+	Name                      string `json:"name,omitempty"`
+	Data                      string `json:"data,omitempty"`
+	OnlyVerifyLeafCertificate bool   `json:"onlyVerifyLeafCertificate,omitempty"`
+}
+
+func stableTLSUpstreamConfig(tlsConfig *ir.TLSUpstreamConfig) *stableTLSUpstream {
+	if tlsConfig == nil {
+		return nil
+	}
+
+	out := &stableTLSUpstream{
+		SNI:                         tlsConfig.SNI,
+		AutoSNIFromEndpointHostname: tlsConfig.AutoSNIFromEndpointHostname,
+		UseSystemTrustStore:         tlsConfig.UseSystemTrustStore,
+		CACertificate:               stableTLSCACertificateConfig(tlsConfig.CACertificate),
+		ClientCertificates:          make([]stableTLSCertificate, 0, len(tlsConfig.ClientCertificates)),
+		RequireClientCertificate:    tlsConfig.RequireClientCertificate,
+		ClientValidationEnabled:     tlsConfig.ClientValidationEnabled,
+		AcceptUntrusted:             tlsConfig.AcceptUntrusted,
+		AllowExpiredCertificate:     tlsConfig.AllowExpiredCertificate,
+		VerifyCertificateSpki:       tlsConfig.VerifyCertificateSpki,
+		VerifyCertificateHash:       tlsConfig.VerifyCertificateHash,
+		Crl:                         stableTLSCrlConfig(tlsConfig.Crl),
+		MatchTypedSubjectAltNames:   tlsConfig.MatchTypedSubjectAltNames,
+		MinVersion:                  tlsConfig.MinVersion,
+		MaxVersion:                  tlsConfig.MaxVersion,
+		Ciphers:                     tlsConfig.Ciphers,
+		ECDHCurves:                  tlsConfig.ECDHCurves,
+		SignatureAlgorithms:         tlsConfig.SignatureAlgorithms,
+		ALPNProtocols:               tlsConfig.ALPNProtocols,
+		StatelessSessionResumption:  tlsConfig.StatelessSessionResumption,
+		StatefulSessionResumption:   tlsConfig.StatefulSessionResumption,
+		Fingerprints:                tlsConfig.Fingerprints,
+		SubjectAltNames:             tlsConfig.SubjectAltNames,
+		InsecureSkipVerify:          tlsConfig.InsecureSkipVerify,
+	}
+	for idx := range tlsConfig.ClientCertificates {
+		out.ClientCertificates = append(out.ClientCertificates, stableTLSCertificateConfig(&tlsConfig.ClientCertificates[idx]))
+	}
+	return out
+}
+
+func stableTLSCertificateConfig(cert *ir.TLSCertificate) stableTLSCertificate {
+	return stableTLSCertificate{
+		Name:        cert.Name,
+		SDS:         cert.SDS,
+		Certificate: hashBytes(cert.Certificate),
+		PrivateKey:  hashBytes(cert.PrivateKey),
+		OCSPStaple:  hashBytes(cert.OCSPStaple),
+	}
+}
+
+func stableTLSCACertificateConfig(cert *ir.TLSCACertificate) *stableTLSCACertificate {
+	if cert == nil {
+		return nil
+	}
+	return &stableTLSCACertificate{
+		Name:        cert.Name,
+		Certificate: hashBytes(cert.Certificate),
+		SDS:         cert.SDS,
+	}
+}
+
+func stableTLSCrlConfig(crl *ir.TLSCrl) *stableTLSCrl {
+	if crl == nil {
+		return nil
+	}
+	return &stableTLSCrl{
+		Name:                      crl.Name,
+		Data:                      hashBytes(crl.Data),
+		OnlyVerifyLeafCertificate: crl.OnlyVerifyLeafCertificate,
+	}
+}
+
+func hashBytes(data []byte) string {
+	if len(data) == 0 {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
 }
 
 func validateDestinationSettings(destinationSettings *ir.DestinationSetting, isServiceRouting bool, kind *gwapiv1.Kind) status.Error {

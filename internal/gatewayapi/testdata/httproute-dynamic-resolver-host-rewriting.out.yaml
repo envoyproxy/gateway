@@ -343,10 +343,10 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-          name: httproute/default/httproute-1/rule/1
+          name: backend/e411993e8e438ccc
           settings:
           - isDynamicResolver: true
-            name: httproute/default/httproute-1/rule/1/backend/0
+            name: backend/e411993e8e438ccc
             protocol: HTTP
             tls:
               alpnProtocols: null

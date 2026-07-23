@@ -403,7 +403,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-backend-without-sni-and-btlsp
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-backend-without-sni-and-btlsp/rule/0
+          name: backend/d19836bf4df279ad
           settings:
           - addressType: IP
             endpoints:
@@ -413,7 +413,7 @@ xdsIR:
               kind: Backend
               name: backend-without-sni-and-btlsp
               namespace: backends
-            name: httproute/envoy-gateway/httproute-backend-without-sni-and-btlsp/rule/0/backend/0
+            name: backend/d19836bf4df279ad
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -442,7 +442,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-backend-with-sni-and-btlsp
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-backend-with-sni-and-btlsp/rule/0
+          name: backend/8c2f4b3afbcf010f
           settings:
           - addressType: IP
             endpoints:
@@ -452,7 +452,7 @@ xdsIR:
               kind: Backend
               name: backend-with-sni-and-btlsp
               namespace: backends
-            name: httproute/envoy-gateway/httproute-backend-with-sni-and-btlsp/rule/0/backend/0
+            name: backend/8c2f4b3afbcf010f
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -481,7 +481,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-backend-without-sni
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-backend-without-sni/rule/0
+          name: backend/cebb98a9bb4904c1
           settings:
           - addressType: IP
             endpoints:
@@ -491,7 +491,7 @@ xdsIR:
               kind: Backend
               name: backend-without-sni
               namespace: backends
-            name: httproute/envoy-gateway/httproute-backend-without-sni/rule/0/backend/0
+            name: backend/cebb98a9bb4904c1
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -517,7 +517,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-backend-with-sni
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-backend-with-sni/rule/0
+          name: backend/fdb1dc30d10c584d
           settings:
           - addressType: IP
             endpoints:
@@ -527,7 +527,7 @@ xdsIR:
               kind: Backend
               name: backend-with-sni
               namespace: backends
-            name: httproute/envoy-gateway/httproute-backend-with-sni/rule/0/backend/0
+            name: backend/fdb1dc30d10c584d
             protocol: HTTP
             tls:
               alpnProtocols: null
