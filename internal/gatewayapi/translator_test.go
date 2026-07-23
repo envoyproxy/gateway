@@ -100,21 +100,16 @@ func TestTranslate(t *testing.T) {
 			DeduplicateSystemTrustStore: true,
 		},
 		{
-			name:                        "envoyproxy-otel-backend-tls-dedup-disabled",
-			BackendEnabled:              true,
-			DeduplicateSystemTrustStore: false,
-		},
-		{
 			name:                        "envoyextensionpolicy-with-extproc-with-backendtlspolicy-dedup",
 			DeduplicateSystemTrustStore: true,
 		},
 		{
-			name:                        "backend-tls-settings-dedup",
+			name:                        "backend-system-truststore-dedup",
 			BackendEnabled:              true,
 			DeduplicateSystemTrustStore: true,
 		},
 		{
-			name:                        "backend-tls-settings-dedup-disabled",
+			name:                        "backend-system-truststore-dedup-disabled",
 			BackendEnabled:              true,
 			DeduplicateSystemTrustStore: false,
 		},
