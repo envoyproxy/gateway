@@ -55,14 +55,19 @@ func (m MutatorFunc) Mutate(old client.Object) client.Object {
 type UpdateHandler struct {
 	log           logr.Logger
 	client        client.Client
+	statusReader  client.Reader
 	updateChannel chan Update
 	wg            *sync.WaitGroup
 }
 
-func NewUpdateHandler(log logr.Logger, client client.Client) *UpdateHandler {
+func NewUpdateHandler(log logr.Logger, client client.Client, statusReader client.Reader) *UpdateHandler {
+	if statusReader == nil {
+		statusReader = client
+	}
 	u := &UpdateHandler{
 		log:           log,
 		client:        client,
+		statusReader:  statusReader,
 		updateChannel: make(chan Update, 1000),
 		wg:            new(sync.WaitGroup),
 	}
@@ -92,8 +97,10 @@ func (u *UpdateHandler) apply(update Update) {
 		}
 		return false
 	}, func() error {
-		// Get the resource.
-		if err := u.client.Get(context.Background(), update.NamespacedName, obj); err != nil {
+		// Get the resource directly from the API server when available. Using the
+		// informer-backed client here can compare against stale status and skip a
+		// required status update.
+		if err := u.statusReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
 			if kerrors.IsNotFound(err) {
 				return nil
 			}
