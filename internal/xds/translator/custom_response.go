@@ -77,7 +77,7 @@ func (c *customResponse) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *
 	return errs
 }
 
-// buildHCMCustomResponseFilter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
+// buildHCMCustomResponseFilter returns an Custom Response HTTP filter from the provided IR ResponseOverride.
 func (c *customResponse) buildHCMCustomResponseFilter(ro *ir.ResponseOverride) (*hcmv3.HttpFilter, error) {
 	config, err := c.customResponseConfig(ro)
 	if err != nil {
@@ -106,62 +106,48 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 
 	for _, r := range ro.Rules {
 		var (
-			action    *matcherv3.Matcher_OnMatch_Action
-			predicate *matcherv3.Matcher_MatcherList_Predicate
-			err       error
+			action     *matcherv3.Matcher_OnMatch_Action
+			predicates []*matcherv3.Matcher_MatcherList_Predicate
+			err        error
 		)
 
-		if action, err = c.buildAction(r); err != nil {
+		if action, err = c.buildAction(&r); err != nil {
 			return nil, err
 		}
 
-		switch {
-		case len(r.Match.StatusCodes) == 0:
-			// This is just a sanity check, as the CRD validation should have caught this.
-			return nil, fmt.Errorf("missing status code in response override rule")
-		case len(r.Match.StatusCodes) == 1:
-			if predicate, err = c.buildSinglePredicate(r.Match.StatusCodes[0]); err != nil {
+		if len(r.Match.StatusCodes) > 0 {
+			statusCodePredicate, err := c.buildStatusCodePredicate(r.Match.StatusCodes)
+			if err != nil {
 				return nil, err
 			}
-		case len(r.Match.StatusCodes) > 1:
-			var predicates []*matcherv3.Matcher_MatcherList_Predicate
-
-			for _, codeMatch := range r.Match.StatusCodes {
-				if predicate, err = c.buildSinglePredicate(codeMatch); err != nil {
-					return nil, err
-				}
-
-				predicates = append(predicates, predicate)
-			}
-
-			// Create a single predicate that ORs all the status code predicates together.
-			predicate = &matcherv3.Matcher_MatcherList_Predicate{
-				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
-					OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
-						Predicate: predicates,
-					},
-				},
-			}
+			predicates = append(predicates, statusCodePredicate)
 		}
 
-		// For Local or Backend sources, AND the status code predicate with a
-		// local_reply predicate so the rule only fires for the correct response origin.
+		if len(r.Match.ResponseHeaders) > 0 {
+			headerPredicate, err := c.buildResponseHeaderPredicate(r.Match.ResponseHeaders)
+			if err != nil {
+				return nil, err
+			}
+			predicates = append(predicates, headerPredicate)
+		}
+
+		if len(predicates) == 0 {
+			// This is just a sanity check, as the CRD validation should have caught this.
+			return nil, fmt.Errorf("missing match criteria in response override rule")
+		}
+
+		// For Local or Backend sources, AND a local_reply predicate so the rule
+		// only fires for the correct response origin.
 		if r.Source == egv1a1.ResponseOverrideSourceLocal || r.Source == egv1a1.ResponseOverrideSourceBackend {
 			localReplyPredicate, err := c.buildLocalReplyPredicate(r.Source == egv1a1.ResponseOverrideSourceLocal)
 			if err != nil {
 				return nil, err
 			}
-			predicate = &matcherv3.Matcher_MatcherList_Predicate{
-				MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
-					AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
-						Predicate: []*matcherv3.Matcher_MatcherList_Predicate{predicate, localReplyPredicate},
-					},
-				},
-			}
+			predicates = append(predicates, localReplyPredicate)
 		}
 
 		matchers = append(matchers, &matcherv3.Matcher_MatcherList_FieldMatcher{
-			Predicate: predicate,
+			Predicate: andPredicate(predicates),
 			OnMatch: &matcherv3.Matcher_OnMatch{
 				OnMatch: action,
 			},
@@ -183,7 +169,105 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 	return cr, nil
 }
 
-func (c *customResponse) buildSinglePredicate(codeMatch ir.StatusCodeMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+func andPredicate(predicates []*matcherv3.Matcher_MatcherList_Predicate) *matcherv3.Matcher_MatcherList_Predicate {
+	if len(predicates) == 1 {
+		return predicates[0]
+	}
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+			AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+				Predicate: predicates,
+			},
+		},
+	}
+}
+
+func (c *customResponse) buildStatusCodePredicate(codes []ir.StatusCodeMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	predicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(codes))
+	for _, codeMatch := range codes {
+		predicate, err := c.buildSingleStatusCodePredicate(codeMatch)
+		if err != nil {
+			return nil, err
+		}
+		predicates = append(predicates, predicate)
+	}
+
+	if len(predicates) == 1 {
+		return predicates[0], nil
+	}
+
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+			OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+				Predicate: predicates,
+			},
+		},
+	}, nil
+}
+
+func (c *customResponse) buildResponseHeaderPredicate(headers []ir.ResponseOverrideHeaderMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	predicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(headers))
+	for _, header := range headers {
+		input, err := c.buildResponseHeaderInput(header.Name)
+		if err != nil {
+			return nil, err
+		}
+		valueMatcher, err := buildStringMatcher(header.Value)
+		if err != nil {
+			return nil, err
+		}
+		predicates = append(predicates, &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+				SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+					Input: input,
+					Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+						ValueMatch: valueMatcher,
+					},
+				},
+			},
+		})
+	}
+
+	if len(predicates) == 1 {
+		return predicates[0], nil
+	}
+
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+			OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+				Predicate: predicates,
+			},
+		},
+	}, nil
+}
+
+func buildStringMatcher(irMatch ir.StringMatch) (*matcherv3.StringMatcher, error) {
+	switch {
+	case irMatch.Exact != nil:
+		return &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Exact{Exact: *irMatch.Exact},
+		}, nil
+	case irMatch.Prefix != nil:
+		return &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: *irMatch.Prefix},
+		}, nil
+	case irMatch.Suffix != nil:
+		return &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Suffix{Suffix: *irMatch.Suffix},
+		}, nil
+	case irMatch.SafeRegex != nil:
+		return &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_SafeRegex{SafeRegex: &matcherv3.RegexMatcher{
+				Regex:      *irMatch.SafeRegex,
+				EngineType: &matcherv3.RegexMatcher_GoogleRe2{GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{}},
+			}},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported string matcher")
+	}
+}
+
+func (c *customResponse) buildSingleStatusCodePredicate(codeMatch ir.StatusCodeMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
 	var (
 		httpAttributeCELInput *cncfv3.TypedExtensionConfig
 		statusCodeInput       *cncfv3.TypedExtensionConfig
@@ -262,6 +346,22 @@ func (c *customResponse) buildStatusCodeInput() (*cncfv3.TypedExtensionConfig, e
 
 	return &cncfv3.TypedExtensionConfig{
 		Name:        "http-response-status-code-match-input",
+		TypedConfig: pb,
+	}, nil
+}
+
+func (c *customResponse) buildResponseHeaderInput(headerName string) (*cncfv3.TypedExtensionConfig, error) {
+	var (
+		pb  *anypb.Any
+		err error
+	)
+
+	if pb, err = proto.ToAnyWithValidation(&envoymatcherv3.HttpResponseHeaderMatchInput{HeaderName: headerName}); err != nil {
+		return nil, err
+	}
+
+	return &cncfv3.TypedExtensionConfig{
+		Name:        "http-response-header-match-input",
 		TypedConfig: pb,
 	}, nil
 }
@@ -407,7 +507,7 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 	}, nil
 }
 
-func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matcher_OnMatch_Action, error) {
+func (c *customResponse) buildAction(r *ir.ResponseOverrideRule) (*matcherv3.Matcher_OnMatch_Action, error) {
 	var (
 		pb  *anypb.Any
 		err error
@@ -430,7 +530,7 @@ func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matc
 	}, nil
 }
 
-func (c *customResponse) buildRedirectAction(r ir.ResponseOverrideRule) (*anypb.Any, error) {
+func (c *customResponse) buildRedirectAction(r *ir.ResponseOverrideRule) (*anypb.Any, error) {
 	redirectAction := &routev3.RedirectAction{}
 	if r.Redirect.Scheme != nil {
 		redirectAction.SchemeRewriteSpecifier = &routev3.RedirectAction_SchemeRedirect{
@@ -458,7 +558,7 @@ func (c *customResponse) buildRedirectAction(r ir.ResponseOverrideRule) (*anypb.
 	return proto.ToAnyWithValidation(redirect)
 }
 
-func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.Any, error) {
+func (c *customResponse) buildResponseAction(r *ir.ResponseOverrideRule) (*anypb.Any, error) {
 	response := &policyv3.LocalResponsePolicy{}
 
 	if len(r.Response.Body) > 0 {

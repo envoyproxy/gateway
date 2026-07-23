@@ -2655,6 +2655,114 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "response header match in response override",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								ResponseHeaders: []egv1a1.ResponseOverrideHeaderMatch{
+									{
+										Name: "X-Custom-Header",
+										Value: egv1a1.StringMatch{
+											Type:  new(egv1a1.StringMatchExact),
+											Value: "custom-value",
+										},
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								Body: &egv1a1.CustomResponseBody{
+									Inline: new("foo"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "status code and response header match in response override",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: new(503),
+									},
+								},
+								ResponseHeaders: []egv1a1.ResponseOverrideHeaderMatch{
+									{
+										Name: "X-Error-Type",
+										Value: egv1a1.StringMatch{
+											Type:  new(egv1a1.StringMatchPrefix),
+											Value: "upstream-",
+										},
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								Body: &egv1a1.CustomResponseBody{
+									Inline: new("foo"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "neither status code nor response header in response override",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{},
+							Response: &egv1a1.CustomResponse{
+								Body: &egv1a1.CustomResponseBody{
+									Inline: new("foo"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"at least one of statusCodes or responseHeaders must be specified",
+			},
+		},
+		{
 			desc: "both targetref and targetrefs specified",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
