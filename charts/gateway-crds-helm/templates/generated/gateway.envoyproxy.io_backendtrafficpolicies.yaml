@@ -2288,9 +2288,6 @@ spec:
                         maxItems: 16
                         type: array
                         x-kubernetes-validations:
-                        - message: requests must be greater than 0 for local rate
-                            limits
-                          rule: self.all(r, r.limit.requests > 0)
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(r, !has(r.cost) || !has(r.cost.response))
                         - message: limit fromMetadata is not supported for Local Rate
