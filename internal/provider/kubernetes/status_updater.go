@@ -20,7 +20,6 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -223,14 +222,14 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case *gwapiv1a2.TCPRoute:
-		if b, ok := objB.(*gwapiv1a2.TCPRoute); ok {
+	case *gwapiv1.TCPRoute:
+		if b, ok := objB.(*gwapiv1.TCPRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
 		}
-	case *gwapiv1a2.UDPRoute:
-		if b, ok := objB.(*gwapiv1a2.UDPRoute); ok {
+	case *gwapiv1.UDPRoute:
+		if b, ok := objB.(*gwapiv1.UDPRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -324,9 +323,9 @@ func KindOf(obj interface{}) string {
 		kind = resource.KindHTTPRoute
 	case *gwapiv1.TLSRoute:
 		kind = resource.KindTLSRoute
-	case *gwapiv1a2.TCPRoute:
+	case *gwapiv1.TCPRoute:
 		kind = resource.KindTCPRoute
-	case *gwapiv1a2.UDPRoute:
+	case *gwapiv1.UDPRoute:
 		kind = resource.KindUDPRoute
 	case *gwapiv1.GRPCRoute:
 		kind = resource.KindGRPCRoute

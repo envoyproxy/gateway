@@ -70,10 +70,16 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
     clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
@@ -102,7 +108,6 @@
             localityWeightedLbConfig: {}
   name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   transportSocket:
     name: dummy.transport_socket
     typedConfig:
@@ -134,7 +139,6 @@
               ads: {}
               resourceApiVersion: V3
         sni: primary.foo.com
-  type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
@@ -148,10 +152,16 @@
       maxPendingRequests: 1024
       maxRequests: 1022
       maxRetries: 1023
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
     clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
@@ -176,5 +186,3 @@
             localityWeightedLbConfig: {}
   name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  type: STRICT_DNS

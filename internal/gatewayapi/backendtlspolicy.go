@@ -158,6 +158,15 @@ func (t *Translator) applyBackendTLSSetting(
 		mergedTLSConfig.TLSConfig = *mergedClientTLSConfig
 	}
 
+	// Set to the default TLS protocol versions (min 1.2, max 1.3) when
+	// not explicitly configured.
+	if mergedTLSConfig.MinVersion == nil {
+		mergedTLSConfig.MinVersion = new(ir.TLSv12)
+	}
+	if mergedTLSConfig.MaxVersion == nil {
+		mergedTLSConfig.MaxVersion = new(ir.TLSv13)
+	}
+
 	return mergedTLSConfig, nil
 }
 

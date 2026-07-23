@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -161,7 +162,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;DeduplicateSystemTrustStore
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;DeduplicateSystemTrustStore
 type RuntimeFlag string
 
 const (
@@ -169,7 +170,13 @@ const (
 	// * The listener name will be generated using the protocol and port of the listener.
 	XDSNameSchemeV2 RuntimeFlag = "XDSNameSchemeV2"
 
-	// DeduplicateSystemTrustStore consolidates per-policy system CA SDS secrets into a single
+	// EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.
+	// It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.
+	// If the additional controller memory usage for the indexes becomes a concern,
+	// consider disabling this flag.
+	EndpointSliceIndex RuntimeFlag = "EndpointSliceIndex"
+
+  // DeduplicateSystemTrustStore consolidates per-policy system CA SDS secrets into a single
 	// shared system_ca_certificates secret, reducing inotify watchers.
 	// Enabled by default.
 	DeduplicateSystemTrustStore RuntimeFlag = "DeduplicateSystemTrustStore"
@@ -681,15 +688,40 @@ type RedisTLSSettings struct {
 }
 
 // RateLimitRedisSettings defines the configuration for connecting to redis database.
+// +kubebuilder:validation:XValidation:rule="has(self.url) != has(self.urlRef)",message="exactly one of url or urlRef must be set"
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
 	// This can reference a single Redis host or a comma delimited list for Sentinel and Cluster deployments of Redis.
-	URL string `json:"url"`
+	// Mutually exclusive with URLRef.
+	//
+	// +optional
+	URL string `json:"url,omitempty"`
+
+	// URLRef sources the Redis URL from a Kubernetes Secret key. Use this for GitOps
+	// flows where the Redis endpoint is provisioned by an external controller.
+	// The referenced Secret must exist in the namespace of the Envoy Gateway rate limit
+	// deployment. Mutually exclusive with URL.
+	//
+	// +optional
+	URLRef *RedisURLSource `json:"urlRef,omitempty"`
 
 	// TLS defines TLS configuration for connecting to redis database.
 	//
 	// +optional
 	TLS *RedisTLSSettings `json:"tls,omitempty"`
+}
+
+// RedisURLSource specifies where to source the Redis URL from.
+// +kubebuilder:validation:XValidation:rule="!has(self.secretKeyRef.optional) || !self.secretKeyRef.optional",message="urlRef.secretKeyRef.optional must not be true; the Secret is required"
+type RedisURLSource struct {
+	// SecretKeyRef references the Secret and key that hold the Redis URL.
+	// The Secret must be in the same namespace as the Envoy Gateway rate limit deployment.
+	// The reference is always required: optional must not be set to true, otherwise
+	// the rate limit pod could start with an unset REDIS_URL instead of waiting for
+	// the externally provisioned Secret.
+	//
+	// +kubebuilder:validation:Required
+	SecretKeyRef *corev1.SecretKeySelector `json:"secretKeyRef"`
 }
 
 // ExtensionManager defines the configuration for registering an extension manager to

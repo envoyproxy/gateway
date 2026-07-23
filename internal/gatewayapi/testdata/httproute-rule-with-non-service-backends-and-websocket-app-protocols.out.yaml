@@ -285,6 +285,8 @@ xdsIR:
               alpnProtocols: null
               caCertificate:
                 name: backend-wss/default-ca
+              maxVersion: "1.3"
+              minVersion: "1.2"
               sni: websocket.example.com
               useSystemTrustStore: true
             weight: 1

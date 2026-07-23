@@ -1,0 +1,31 @@
+date: July 20, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  Moved EnvoyExtensionPolicy Lua source code from per-route `LuaPerRoute` overrides to listener-level Lua filters to avoid route-count-dependent memory growth. This changes generated xDS Lua filter names and configuration layout; EnvoyPatchPolicies and extension servers matching the previous `envoy.filters.http.lua/<index>` keys must be updated.
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Updated distroless base image.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed backend (upstream) TLS connections being capped at TLS 1.2 by default; they now default to a max of TLS 1.3 as documented.
+  Fixed TLS Secrets being pushed to Envoy and rejected by BoringSSL (KEY_VALUES_MISMATCH), which with mergeGateways enabled broke TLS for all Gateways sharing the proxy. A serving certificate chain that contains an expired (or malformed) certificate is now rejected during translation instead of having the expired member silently dropped (which corrupted the chain), and a Secret whose certificate and private key do not match is likewise rejected; both failures are isolated to the referencing listener. CA bundles used for client validation still drop expired CAs.
+  Fixed a data race that could crash envoy-gateway with `panic: reflect: slice index out of range` when the watchable coalesce goroutine compared the xDS IR with `reflect.DeepEqual` while the translator concurrently mutated resource status in place; the translator now isolates status mutations by deep-copying only the status field of each resource at the start of translation.
+  Fixed unreferenced Secret events triggering a full reconciliation whenever the HTTPRouteFilter CRD is installed. Every Secret write in the cluster previously enqueued a reconcile, causing sustained reconcile storms on clusters with high-frequency Secret writers (secret sync controllers, certificate rotation).
+  Fixed Wasm extensions remaining permanently failed after transient errors fetching the Wasm module. Envoy's built-in behavior only retried the fetch once after ~1 second and never re-attempted it, leaving the filter failed until the next configuration update. Envoy Gateway now configures the fetch with up to 10 retries using jittered exponential backoff (1s base interval, 30s max interval).
+  Fixed log timestamps regressing to Unix epoch floats (e.g. `1.784e+09`) since v1.8.0 by explicitly setting `ISO8601TimeEncoder` on the production zap encoder config, restoring the expected ISO 8601 format (e.g. `2026-07-14T17:44:06.617Z`).
+  Fixed IPv6 literal hosts (e.g. `[::1]`, `[2001:db8::1]`) not being detected in OIDC token/JWKS endpoints, which caused them to be built as STRICT_DNS clusters instead of static ones and bypassed the IP-literal check on the SecurityPolicy token endpoint.
+  Fixed the gateway-helm chart resolving the ratelimit image to an outdated build (`ff287602` instead of `1e50889b`) when `global.images.ratelimit.image` is set without a tag.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |

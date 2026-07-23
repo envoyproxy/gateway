@@ -82,11 +82,9 @@
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
-        name: envoy.load_balancing_policies.least_request
+        name: envoy.load_balancing_policies.maglev
         typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
-          localityLbConfig:
-            localityWeightedLbConfig: {}
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
   name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -97,6 +95,9 @@
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
+      hashPolicy:
+      - connectionProperties:
+          sourceIp: true
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
