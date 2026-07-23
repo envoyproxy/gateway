@@ -358,7 +358,7 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, xdsIR, resources); err != nil {
+	if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, gatewayMap[gatewayNN].attachedToListeners, xdsIR, resources); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -629,6 +629,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	target policyTargetReferenceWithSectionName,
 	gateway *GatewayContext,
+	attachedToListeners sets.Set[string],
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
 ) error {
@@ -665,7 +666,17 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
-	routesWithDirectResponse := sets.New[string]()
+	failed := luaError != nil
+	if wasmError != nil {
+		failed = failed || !wasmFailOpen
+	}
+	if extProcError != nil {
+		failed = failed || !extProcFailOpen
+	}
+	if dynamicModuleError != nil {
+		failed = true
+	}
+
 	for _, http := range x.HTTP {
 		gatewayName := extractGatewayNameFromListener(http.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
@@ -676,6 +687,29 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 			continue
 		}
 
+		// A Gateway-wide policy must not apply to a listener that already has its own,
+		// more-specific listener policy attached — even when that listener policy carries no
+		// Lua of its own. Otherwise a Gateway-wide Lua policy could still be installed on the
+		// listener's HCM and run on routes that the listener policy is meant to fully govern.
+		if target.SectionName == nil && attachedToListeners.Has(http.Metadata.SectionName) {
+			continue
+		}
+
+		// if already set - there's a specific level policy, so skip
+		if http.EnvoyExtensions != nil {
+			continue
+		}
+
+		// TODO: move other extensions to listener level.
+		// Only attach listener-level Lua when the policy succeeds; a fail-closed error in
+		// any other extension makes every route return a 500, so the Lua filter must not
+		// run on those synthetic error responses.
+		if len(luas) > 0 && !failed {
+			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+				Luas: luas,
+			}
+		}
+
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range http.Routes {
@@ -684,42 +718,19 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				continue
 			}
 
-			failRoute := false
-			// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
-			// TODO: we may also add fail open option for Lua extension to align with other extensions
-			if luaError != nil {
-				failRoute = true
-			}
-			if wasmError != nil {
-				failRoute = failRoute || !wasmFailOpen
-			}
-			if extProcError != nil {
-				failRoute = failRoute || !extProcFailOpen
-			}
-			if dynamicModuleError != nil {
-				failRoute = true
-			}
-			if failRoute {
+			if failed {
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
-				routesWithDirectResponse.Insert(r.Name)
 			} else {
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-					ExtProcs:       extProcs,
-					Wasms:          wasms,
-					Luas:           luas,
-					DynamicModules: dynamicModules,
+					ExtProcs:          extProcs,
+					Wasms:             wasms,
+					DynamicModules:    dynamicModules,
+					FromGatewayPolicy: new(true),
 				}
 			}
 		}
-	}
-	if len(routesWithDirectResponse) > 0 {
-		t.Logger.Info("setting 500 direct response in routes due to errors in EnvoyExtensionPolicy",
-			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
-			"routes", sets.List(routesWithDirectResponse),
-			"error", errs,
-		)
 	}
 
 	return errs

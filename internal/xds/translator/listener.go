@@ -1340,3 +1340,5 @@ func buildRequestIDExtension(requestID *ir.RequestIDExtensionAction) *hcmv3.Requ
 		TypedConfig: requestIDConfig,
 	}
 }
+
+const FilterChainFilterNamePrefixForEEP = "envoy.filters.http.filter_chain.eep."

@@ -234,3 +234,7 @@ func buildDFPLoopbackRBACPerRoute(irRoute *ir.HTTPRoute) (*rbacv3.RBACPerRoute, 
 		},
 	}, nil
 }
+
+func (*dynamicForwardProxy) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}

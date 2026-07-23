@@ -253,6 +253,11 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      envoyExtensions:
+        luas:
+        - code: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
+            end
+          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
       externalPort: 80
       hostnames:
       - '*'
@@ -289,11 +294,7 @@ xdsIR:
         directResponse:
           statusCode: 500
         envoyExtensions:
-          luas:
-          - Code: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+          fromGatewayPolicy: true
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -325,11 +326,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         envoyExtensions:
-          luas:
-          - Code: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+          fromGatewayPolicy: true
         hostname: www.example.com
         isHTTP2: false
         metadata:

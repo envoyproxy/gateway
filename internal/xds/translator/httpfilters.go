@@ -58,6 +58,11 @@ type httpFilter interface {
 	// patchRoute patches the provide Route with a filter's Route level configuration.
 	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error
 
+	// patchVirtualHost patches the provided VirtualHost with a filter's VirtualHost level configuration.
+	// Note: this method may be called multiple times for the same VirtualHost when multiple IR listeners
+	// share the same RouteConfiguration (cleartext listeners on the same port).
+	patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error
+
 	// patchResources adds all the other needed resources referenced by this
 	// filter to the resource version table.
 	// for example:
@@ -124,7 +129,12 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
 		order = 11
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 12 + mustGetFilterIndex(filter.Name)
+		if strings.Contains(filter.Name, "listener") {
+			// Listener-level Lua runs before route-level Lua.
+			order = 12
+		} else {
+			order = 62
+		}
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
@@ -339,12 +349,31 @@ func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, h
 	return nil
 }
 
+// patchVirtualHost calls each filter's patchVirtualHost to apply VirtualHost-level configuration.
+func patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error {
+	for _, filter := range httpFilters {
+		if err := filter.patchVirtualHost(vh, httpListener); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // isFilterType returns true if the filter is the provided filter type.
 func isFilterType(filter *hcmv3.HttpFilter, filterType egv1a1.EnvoyFilter) bool {
 	// Multiple filters of the same types are added to the HCM filter chain, one for each
 	// route. The filter name is prefixed with the filter type, for example:
 	// "envoy.filters.http.oauth2_first-route".
-	return strings.HasPrefix(filter.Name, string(filterType))
+	if strings.HasPrefix(filter.Name, string(filterType)) {
+		return true
+	}
+	// Lua is delivered via envoy.filters.http.filter_chain placeholder filters
+	// (luaFCFilterName/luaListenerFCFilterName) rather than under the envoy.filters.http.lua
+	// prefix, so FilterOrder entries that reference EnvoyFilterLua need to match those names too.
+	if filterType == egv1a1.EnvoyFilterLua {
+		return filter.Name == luaFCFilterName() || filter.Name == luaListenerFCFilterName()
+	}
+	return false
 }
 
 // mustGetFilterIndex returns the index of the filter in its filter type.

@@ -348,6 +348,7 @@ xdsIR:
             protocol: HTTP
             weight: 1
         envoyExtensions:
+          fromGatewayPolicy: true
           wasms:
           - config: null
             failOpen: false
