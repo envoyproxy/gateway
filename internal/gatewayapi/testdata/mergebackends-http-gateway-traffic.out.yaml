@@ -2,10 +2,11 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-gateway
+    name: btp-gateway-circuitbreaker
     namespace: envoy-gateway
   spec:
-    routingType: Service
+    circuitBreaker:
+      maxConnections: 1024
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -80,7 +81,8 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /route-1
+          value: /rule-1
+      name: rule-1
   status:
     parents:
     - conditions:
@@ -113,7 +115,8 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /route-2
+          value: /rule-1
+      name: rule-1
   status:
     parents:
     - conditions:
@@ -174,8 +177,9 @@ xdsIR:
         sectionName: "8080"
       name: backend/service/default/service-1/8080/http
       setting:
+        addressType: IP
         endpoints:
-        - host: 1.1.1.1
+        - host: 7.7.7.7
           port: 8080
         metadata:
           kind: Service
@@ -184,7 +188,9 @@ xdsIR:
           sectionName: "8080"
         name: backend/service/default/service-1/8080/http
         protocol: HTTP
-      traffic: {}
+      traffic:
+        circuitBreaker:
+          maxConnections: 1024
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -230,6 +236,7 @@ xdsIR:
             kind: HTTPRoute
             name: http-route-1
             namespace: default
+            sectionName: rule-1
           name: httproute/default/http-route-1/rule/0
         hostname: '*'
         isHTTP2: false
@@ -239,14 +246,17 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-gateway
+            name: btp-gateway-circuitbreaker
             namespace: envoy-gateway
+          sectionName: rule-1
         name: httproute/default/http-route-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route-1
-        traffic: {}
+          prefix: /rule-1
+        traffic:
+          circuitBreaker:
+            maxConnections: 1024
       - destination:
           backendClusterRefs:
           - name: backend/service/default/service-1/8080/http
@@ -255,6 +265,7 @@ xdsIR:
             kind: HTTPRoute
             name: http-route-2
             namespace: default
+            sectionName: rule-1
           name: httproute/default/http-route-2/rule/0
         hostname: '*'
         isHTTP2: false
@@ -264,14 +275,17 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-gateway
+            name: btp-gateway-circuitbreaker
             namespace: envoy-gateway
+          sectionName: rule-1
         name: httproute/default/http-route-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route-2
-        traffic: {}
+          prefix: /rule-1
+        traffic:
+          circuitBreaker:
+            maxConnections: 1024
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

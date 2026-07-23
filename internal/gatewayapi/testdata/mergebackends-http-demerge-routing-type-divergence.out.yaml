@@ -215,6 +215,7 @@ xdsIR:
           sectionName: "8080"
         name: backend/service/default/service-1/8080/http
         protocol: HTTP
+      traffic: {}
     globalResources:
       proxyServiceCluster:
         metadata:

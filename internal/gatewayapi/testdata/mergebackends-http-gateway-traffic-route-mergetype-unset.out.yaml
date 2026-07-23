@@ -2,10 +2,36 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-gateway
+    name: btp-rule-2-no-mergetype
+    namespace: default
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-route-1
+      sectionName: rule-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: btp-gateway-circuitbreaker
     namespace: envoy-gateway
   spec:
-    routingType: Service
+    circuitBreaker:
+      maxConnections: 1024
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -23,6 +49,12 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these routes: [default/http-route-1]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -41,7 +73,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -80,40 +112,15 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /route-1
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    name: http-route-2
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-    rules:
+          value: /rule-1
+      name: rule-1
     - backendRefs:
       - name: service-1
         port: 8080
       matches:
       - path:
-          value: /route-2
+          value: /rule-2
+      name: rule-2
   status:
     parents:
     - conditions:
@@ -174,8 +181,9 @@ xdsIR:
         sectionName: "8080"
       name: backend/service/default/service-1/8080/http
       setting:
+        addressType: IP
         endpoints:
-        - host: 1.1.1.1
+        - host: 7.7.7.7
           port: 8080
         metadata:
           kind: Service
@@ -184,7 +192,9 @@ xdsIR:
           sectionName: "8080"
         name: backend/service/default/service-1/8080/http
         protocol: HTTP
-      traffic: {}
+      traffic:
+        circuitBreaker:
+          maxConnections: 1024
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -230,6 +240,7 @@ xdsIR:
             kind: HTTPRoute
             name: http-route-1
             namespace: default
+            sectionName: rule-1
           name: httproute/default/http-route-1/rule/0
         hostname: '*'
         isHTTP2: false
@@ -239,38 +250,43 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-gateway
+            name: btp-gateway-circuitbreaker
             namespace: envoy-gateway
+          sectionName: rule-1
         name: httproute/default/http-route-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route-1
-        traffic: {}
+          prefix: /rule-1
+        traffic:
+          circuitBreaker:
+            maxConnections: 1024
       - destination:
           backendClusterRefs:
           - name: backend/service/default/service-1/8080/http
             weight: 1
           metadata:
             kind: HTTPRoute
-            name: http-route-2
+            name: http-route-1
             namespace: default
-          name: httproute/default/http-route-2/rule/0
+            sectionName: rule-2
+          name: httproute/default/http-route-1/rule/1
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: http-route-2
+          name: http-route-1
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-gateway
-            namespace: envoy-gateway
-        name: httproute/default/http-route-2/rule/0/match/0/*
+            name: btp-rule-2-no-mergetype
+            namespace: default
+          sectionName: rule-2
+        name: httproute/default/http-route-1/rule/1/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route-2
+          prefix: /rule-2
         traffic: {}
     readyListener:
       address: 0.0.0.0

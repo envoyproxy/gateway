@@ -1373,6 +1373,7 @@ type ExtraArgs struct {
 	extensionMgr     *extensionTypes.Manager
 	unstructuredRefs []*unstructured.Unstructured
 	logger           logging.Logger
+	traffic          *ir.TrafficFeatures
 }
 
 type clusterArgs interface {
@@ -1463,8 +1464,8 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	return clusterArgs
 }
 
-// BackendClusterTranslator implements clusterArgs for a merged backend cluster, which is shared
-// across routes — so route-specific values (hostname, traffic policy) are never used.
+// BackendClusterTranslator implements clusterArgs for a merged backend cluster, shared across
+// routes — so route-specific values are never used, but the shared gateway-level Traffic is.
 type BackendClusterTranslator struct{}
 
 func (BackendClusterTranslator) asClusterArgs(name string,
@@ -1472,7 +1473,7 @@ func (BackendClusterTranslator) asClusterArgs(name string,
 	extra *ExtraArgs,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
-	return &xdsClusterArgs{
+	clusterArgs := &xdsClusterArgs{
 		name:              name,
 		settings:          settings,
 		tSocket:           nil,
@@ -1489,6 +1490,10 @@ func (BackendClusterTranslator) asClusterArgs(name string,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
 	}
+
+	applyTraffic(clusterArgs, extra.traffic)
+
+	return clusterArgs
 }
 
 func buildHTTP1Settings(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {

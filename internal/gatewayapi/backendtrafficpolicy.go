@@ -1495,6 +1495,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		)
 	}
 
+	// Gateway-level Traffic is the only level safe to apply uniformly to a merged cluster.
+	if target.SectionName == nil && errs == nil {
+		for _, bc := range x.Backends {
+			bc.Traffic = tf.DeepCopy()
+		}
+	}
+
 	return errs
 }
 

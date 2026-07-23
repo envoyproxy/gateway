@@ -2070,6 +2070,9 @@ type BackendCluster struct {
 	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
 	// Metadata describes the backend resource (Service, Backend, etc.)
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// Traffic holds the accepted whole-gateway BackendTrafficPolicy's settings, if any -
+	// gateway level is the only one guaranteed uniform across a merged cluster's routes.
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 func (b *BackendCluster) Validate() error {

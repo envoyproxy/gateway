@@ -1,0 +1,45 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /rule-1
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: http-route-1
+              namespace: default
+              sectionName: rule-1
+      name: httproute/default/http-route-1/rule/0/match/0/*
+      route:
+        cluster: backend/service/default/service-1/8080/http
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /rule-1
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: http-route-2
+              namespace: default
+              sectionName: rule-1
+      name: httproute/default/http-route-2/rule/0/match/0/*
+      route:
+        cluster: backend/service/default/service-1/8080/http
+        upgradeConfigs:
+        - upgradeType: websocket

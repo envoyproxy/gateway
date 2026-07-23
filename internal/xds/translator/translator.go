@@ -500,6 +500,7 @@ func (t *Translator) processBackendClusters(tCtx *types.ResourceVersionTable, xd
 			ipFamily:     determineIPFamily([]*ir.DestinationSetting{bc.Setting}),
 			extensionMgr: t.ExtensionManager,
 			logger:       t.Logger,
+			traffic:      bc.Traffic,
 		}
 		if err := processXdsCluster(tCtx, bc.Name, []*ir.DestinationSetting{bc.Setting}, &BackendClusterTranslator{}, ea, bc.Metadata); err != nil {
 			errs = errors.Join(errs, err)

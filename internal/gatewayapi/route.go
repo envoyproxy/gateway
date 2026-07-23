@@ -551,7 +551,7 @@ func (t *Translator) resolveBackendClusterKey(
 	}
 
 	identity := backendClusterIdentity(backendRef, backendNamespace)
-	identity.GatewayIRKey = irStringKey(gatewayCtx.Namespace, gatewayCtx.Name)
+	identity.GatewayIRKey = t.getIRKey(gatewayCtx.Gateway)
 	identity.Protocol = ds.Protocol
 	return &identity
 }
