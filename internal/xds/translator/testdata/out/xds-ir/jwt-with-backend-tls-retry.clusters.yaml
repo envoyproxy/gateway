@@ -129,6 +129,9 @@
         idleTimeout: 16s
         maxConnectionDuration: 17s
         maxRequestsPerConnection: 1
+      hashPolicy:
+      - connectionProperties:
+          sourceIp: true
   upstreamConnectionOptions:
     tcpKeepalive:
       keepaliveInterval: 60
