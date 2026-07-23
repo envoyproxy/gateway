@@ -379,6 +379,52 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			expect:    true,
 		},
 		{
+			name: "references BackendTLSPolicy CA config map",
+			configs: []client.Object{
+				&gwapiv1.BackendTLSPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "btls",
+						Namespace: "default",
+					},
+					Spec: gwapiv1.BackendTLSPolicySpec{
+						Validation: gwapiv1.BackendTLSPolicyValidation{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{
+								{
+									Kind: gwapiv1.Kind(resource.KindConfigMap),
+									Name: gwapiv1.ObjectName("btls-ca"),
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Namespace: "default", Name: "btls-ca"}, make(map[string]string), make(map[string]string)),
+			expect:    true,
+		},
+		{
+			name: "config map not referenced by any BackendTLSPolicy",
+			configs: []client.Object{
+				&gwapiv1.BackendTLSPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "btls",
+						Namespace: "default",
+					},
+					Spec: gwapiv1.BackendTLSPolicySpec{
+						Validation: gwapiv1.BackendTLSPolicyValidation{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{
+								{
+									Kind: gwapiv1.Kind(resource.KindConfigMap),
+									Name: gwapiv1.ObjectName("btls-ca"),
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Namespace: "default", Name: "unrelated-cm"}, make(map[string]string), make(map[string]string)),
+			expect:    false,
+		},
+		{
 			name: "references EnvoyExtensionPolicy Lua config map",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
@@ -491,6 +537,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		classController:  egv1a1.GatewayControllerName,
 		log:              logger,
 		backendCRDExists: true,
+		btlsCRDExists:    true,
 		spCRDExists:      true,
 		eepCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
@@ -1489,6 +1536,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		mergeGateways:     sets.New("test-mg"),
 		resources:         &message.ProviderResources{},
 		tcpRouteCRDExists: true,
+		tlsRouteCRDExists: true,
 		udpRouteCRDExists: true,
 		spCRDExists:       true,
 		eepCRDExists:      true,
@@ -2015,6 +2063,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		classController:  egv1a1.GatewayControllerName,
 		log:              logger,
 		backendCRDExists: true,
+		btlsCRDExists:    true,
 		ctpCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
