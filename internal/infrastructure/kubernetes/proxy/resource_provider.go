@@ -244,9 +244,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	// Get service-specific labels
 	svcLabels := map[string]string{}
 	maps.Copy(svcLabels, infraLabels)
-	if envoyServiceConfig.Labels != nil {
-		maps.Copy(svcLabels, envoyServiceConfig.Labels)
-	}
+	utils.CopyStringMap(svcLabels, envoyServiceConfig.Labels)
 	if len(svcLabels) == 0 {
 		svcLabels = nil
 	}
@@ -677,7 +675,7 @@ func (r *ResourceRender) getLabels() (map[string]string, error) {
 
 func (r *ResourceRender) getPodLabels(pod *egv1a1.KubernetesPodSpec) map[string]string {
 	podLabels := r.infra.GetProxyMetadata().Labels
-	maps.Copy(podLabels, pod.Labels)
+	utils.CopyStringMap(podLabels, pod.Labels)
 
 	return r.envoyLabels(podLabels)
 }

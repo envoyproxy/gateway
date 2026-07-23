@@ -2485,6 +2485,104 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
+		{
+			desc: "valid pod labels",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Pod: &egv1a1.KubernetesPodSpec{
+									Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
+										"app.kubernetes.io/name": "envoy",
+										"custom-label":           "valid-value_1.2",
+										"empty-value":            "",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid pod label value",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Pod: &egv1a1.KubernetesPodSpec{
+									Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
+										"name": "test-wec1, test-wec2",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"in body should match '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$'"},
+		},
+		{
+			desc: "invalid pod label value too long",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
+								Pod: &egv1a1.KubernetesPodSpec{
+									Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
+										"custom-label": gwapiv1.LabelValue(strings.Repeat("a", 64)),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Too long"},
+		},
+		{
+			desc: "valid service labels",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
+									"team": "blue",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid service label value",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
+									"env": "not valid!",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"in body should match '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$'"},
+		},
 	}
 
 	for _, tc := range cases {

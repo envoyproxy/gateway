@@ -768,7 +768,7 @@ func TestDeployment(t *testing.T) {
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Pod: &egv1a1.KubernetesPodSpec{
-					Labels: map[string]string{
+					Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 						"app.kubernetes.io/name":       InfraName,
 						"app.kubernetes.io/component":  "ratelimit",
 						"app.kubernetes.io/managed-by": "envoy-gateway",

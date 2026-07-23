@@ -224,7 +224,7 @@ func TestDeployment(t *testing.T) {
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
-					Labels: map[string]string{
+					Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 						"foo.bar": "custom-label",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
@@ -512,7 +512,7 @@ func TestDeployment(t *testing.T) {
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
-					Labels: map[string]string{
+					Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 						"foo.bar": "custom-label",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
@@ -587,7 +587,7 @@ func TestDeployment(t *testing.T) {
 					Annotations: map[string]string{
 						"anno1": "value1-override",
 					},
-					Labels: map[string]string{
+					Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 						"label1": "value1-override",
 					},
 				},
@@ -811,7 +811,7 @@ func TestDaemonSet(t *testing.T) {
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
-					Labels: map[string]string{
+					Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 						"foo.bar": "custom-label",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
@@ -1078,7 +1078,7 @@ func TestDaemonSet(t *testing.T) {
 					Annotations: map[string]string{
 						"anno1": "value1-override",
 					},
-					Labels: map[string]string{
+					Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 						"label1": "value1-override",
 					},
 				},
@@ -1280,7 +1280,7 @@ func TestService(t *testing.T) {
 			caseName: "custom",
 			infra:    newTestInfra(),
 			service: &egv1a1.KubernetesServiceSpec{
-				Labels: map[string]string{
+				Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 					"key1": "value1",
 				},
 				Annotations: map[string]string{
@@ -1315,7 +1315,7 @@ func TestService(t *testing.T) {
 			caseName: "with-svc-labels",
 			infra:    newTestInfra(),
 			service: &egv1a1.KubernetesServiceSpec{
-				Labels: map[string]string{
+				Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 					"label1": "value1",
 					"label2": "value2",
 				},
@@ -1331,7 +1331,7 @@ func TestService(t *testing.T) {
 				"label2": "value2",
 			}),
 			service: &egv1a1.KubernetesServiceSpec{
-				Labels: map[string]string{
+				Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 					"label1": "value1-override",
 				},
 			},
