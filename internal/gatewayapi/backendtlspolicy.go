@@ -192,6 +192,11 @@ func mergeServerValidationTLSConfigs(
 
 	if btpValidationTLSConfig.CACertificate != nil {
 		mergedConfig.CACertificate = btpValidationTLSConfig.CACertificate
+		// If the BTLSP provides an explicit CA certificate, it overrides the backend's
+		// system trust store — clear UseSystemTrustStore so the IR is consistent.
+		if !btpValidationTLSConfig.UseSystemTrustStore {
+			mergedConfig.UseSystemTrustStore = false
+		}
 	}
 	if btpValidationTLSConfig.SNI != nil { // BTP takes precedence for SNI, if set, it will override Backend resource SNI and disable AutoSNIFromEndpointHostname
 		mergedConfig.SNI = btpValidationTLSConfig.SNI

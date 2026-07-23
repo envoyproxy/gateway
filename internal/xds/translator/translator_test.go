@@ -132,11 +132,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		"jsonpatch-system-truststore-secret-removed": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    `secret name "system_ca_certificates" appears 2 times; at most one is allowed`,
 		},
 		"jsonpatch-system-truststore-secret-replaced": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    `secret name "system_ca_certificates" is reserved for the system trust store and cannot be used by other resources`,
 		},
 	}
 

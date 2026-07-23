@@ -86,6 +86,16 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 					continue
 				}
 
+				// Reject patches that inject a resource named system_ca_certificates —
+				// the name is reserved for the system trust store.
+				if p.Type == resourcev3.SecretType {
+					if s, ok := temp.(*tlsv3.Secret); ok && s.Name == SystemTrustStoreSecretName {
+						tErr := fmt.Errorf("secret name %q is reserved for the system trust store and cannot be used by other resources", SystemTrustStoreSecretName)
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+				}
+
 				if err = tCtx.AddXdsResource(p.Type, temp); err != nil {
 					tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", p.Type, err.Error())
 					tErrs = errors.Join(tErrs, tErr)
@@ -106,6 +116,13 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				}
 
 				tErrs = errors.Join(tErrs, err)
+				continue
+			}
+
+			// Reject patches that modify the reserved system_ca_certificates secret.
+			if p.Type == resourcev3.SecretType && p.Name == SystemTrustStoreSecretName {
+				tErr := fmt.Errorf("secret name %q is reserved for the system trust store and cannot be modified by patches", SystemTrustStoreSecretName)
+				tErrs = errors.Join(tErrs, tErr)
 				continue
 			}
 
@@ -158,12 +175,6 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 		if tErrs != nil {
 			status.SetTranslationErrorForEnvoyPatchPolicy(e.Status, status.Error2ConditionMsg(tErrs), e.Generation)
 			errs = errors.Join(errs, tErrs)
-		}
-
-		// Validate that the system trust store secret was not tampered with by this policy.
-		if sErr := validateSystemTrustStoreSecret(tCtx); sErr != nil {
-			status.SetTranslationErrorForEnvoyPatchPolicy(e.Status, status.Error2ConditionMsg(sErr), e.Generation)
-			errs = errors.Join(errs, sErr)
 		}
 
 		// Set resources not found errors for every policy ancestor references

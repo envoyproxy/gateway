@@ -113,6 +113,16 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled:              true,
 			DeduplicateSystemTrustStore: false,
 		},
+		{
+			name:                        "backend-system-truststore-btlsp-override-dedup",
+			BackendEnabled:              true,
+			DeduplicateSystemTrustStore: true,
+		},
+		{
+			name:                        "backend-system-truststore-btlsp-override-dedup-disabled",
+			BackendEnabled:              true,
+			DeduplicateSystemTrustStore: false,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))

@@ -1227,8 +1227,8 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsCo
 		},
 		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
 	}
-	if !tlsConfig.UseSystemTrustStore && tlsConfig.CACertificate.SDS != nil {
-		// get secret from SDS
+	if tlsConfig.CACertificate.SDS != nil {
+		// CA certificate is served by an external SDS server; use its config.
 		sds := tlsConfig.CACertificate.SDS
 		clusterName := sdsClusterNameFromURL(sds.URL)
 		validationContext.ValidationContextSdsSecretConfig = sdsSecretConfig(sds.SecretName, clusterName)
