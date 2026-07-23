@@ -2052,7 +2052,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "local rate limit requests of zero is rejected",
+			desc: "local rate limit requests of zero is accepted",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -2078,9 +2078,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"requests must be greater than 0 for local rate limits",
-			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "valid connectionBufferLimitBytes format",
