@@ -75,7 +75,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-1
+    name: httproute-6
     namespace: envoy-gateway
   spec:
     hostnames:
@@ -446,9 +446,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: httproute-6
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: httproute/envoy-gateway/httproute-6/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -459,16 +459,16 @@ xdsIR:
               name: service-1
               namespace: envoy-gateway
               sectionName: "8080"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: httproute/envoy-gateway/httproute-6/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*.com'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-6
           namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_com
+        name: httproute/envoy-gateway/httproute-6/rule/0/match/0/*_com
         pathMatch:
           distinct: false
           name: ""
@@ -476,9 +476,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: httproute-6
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-1/rule/0
+          name: httproute/envoy-gateway/httproute-6/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -489,16 +489,16 @@ xdsIR:
               name: service-1
               namespace: envoy-gateway
               sectionName: "8080"
-            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            name: httproute/envoy-gateway/httproute-6/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*.net'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-6
           namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_net
+        name: httproute/envoy-gateway/httproute-6/rule/0/match/0/*_net
         pathMatch:
           distinct: false
           name: ""

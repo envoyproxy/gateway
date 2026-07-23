@@ -1,0 +1,30 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 8080
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: backend/service/default/service-3/8163/tcp
+        statPrefix: tcp-8080
+    name: tcproute/default/tcproute-1
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/tcp-1
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 8081
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: backend/service/default/service-3/8163/tcp
+        statPrefix: tcp-8081
+    name: tcproute/default/tcproute-2
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/tcp-2
+  perConnectionBufferLimitBytes: 32768

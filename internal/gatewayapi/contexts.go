@@ -868,16 +868,30 @@ type backendServiceKey struct {
 	name      string
 }
 
+// BackendClusterKey identifies a unique backend per gateway for cluster deduplication.
+type BackendClusterKey struct {
+	GatewayIRKey string
+	Kind         string
+	Namespace    string
+	Name         string
+	Port         int32
+	Protocol     ir.AppProtocol
+}
+
 type TranslatorContext struct {
-	NamespaceMap          map[types.NamespacedName]*corev1.Namespace
-	ServiceMap            map[types.NamespacedName]*corev1.Service
-	ServiceImportMap      map[types.NamespacedName]*mcsapiv1a1.ServiceImport
-	BackendMap            map[types.NamespacedName]*egv1a1.Backend
-	SecretMap             map[types.NamespacedName]*corev1.Secret
-	ConfigMapMap          map[types.NamespacedName]*corev1.ConfigMap
-	ClusterTrustBundleMap map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
-	EndpointSliceMap      map[backendServiceKey][]*discoveryv1.EndpointSlice
-	BTPRoutingTypeIndex   *BTPRoutingTypeIndex
+	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
+	ServiceMap              map[types.NamespacedName]*corev1.Service
+	ServiceImportMap        map[types.NamespacedName]*mcsapiv1a1.ServiceImport
+	BackendMap              map[types.NamespacedName]*egv1a1.Backend
+	SecretMap               map[types.NamespacedName]*corev1.Secret
+	ConfigMapMap            map[types.NamespacedName]*corev1.ConfigMap
+	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
+	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
+	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
+	BTPClusterSettingsIndex *BTPClusterSettingsIndex
+	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
+	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {

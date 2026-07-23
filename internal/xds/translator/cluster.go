@@ -1425,6 +1425,7 @@ type ExtraArgs struct {
 	extensionMgr     *extensionTypes.Manager
 	unstructuredRefs []*unstructured.Unstructured
 	logger           logging.Logger
+	traffic          *ir.TrafficFeatures
 }
 
 type clusterArgs interface {
@@ -1511,6 +1512,38 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 
 	// Populate traffic features.
 	applyTraffic(clusterArgs, httpRoute.Traffic)
+
+	return clusterArgs
+}
+
+// BackendClusterTranslator implements clusterArgs for a merged backend cluster, shared across
+// routes — so route-specific values are never used, but the shared gateway-level Traffic is.
+type BackendClusterTranslator struct{}
+
+func (BackendClusterTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
+) *xdsClusterArgs {
+	clusterArgs := &xdsClusterArgs{
+		name:              name,
+		settings:          settings,
+		tSocket:           nil,
+		endpointType:      buildEndpointType(settings),
+		routeHostname:     "",
+		metrics:           extra.metrics,
+		http1Settings:     extra.http1Settings,
+		http2Settings:     extra.http2Settings,
+		useClientProtocol: false,
+		ipFamily:          extra.ipFamily,
+		statName:          extra.statName,
+		metadata:          metadata,
+		extensionMgr:      extra.extensionMgr,
+		unstructuredRefs:  extra.unstructuredRefs,
+		logger:            extra.logger,
+	}
+
+	applyTraffic(clusterArgs, extra.traffic)
 
 	return clusterArgs
 }

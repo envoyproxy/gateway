@@ -1,0 +1,1 @@
+Added `EnvoyProxy.spec.mergeBackends` to let routes referencing the identical backend share a single Envoy cluster instead of generating one cluster per route rule, reducing xDS size, active health-check traffic, and stats cardinality. Disabled by default and marked experimental.

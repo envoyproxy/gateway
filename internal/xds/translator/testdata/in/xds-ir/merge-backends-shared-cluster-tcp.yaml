@@ -1,0 +1,75 @@
+# Real IR extracted from gatewayapi's mergebackends-tcp-shared-cluster.out.yaml:
+# two TCPRoutes on separate listeners share one merged BackendCluster with a
+# real multi-endpoint backend.
+tcp:
+- address: 0.0.0.0
+  externalPort: 8080
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: tcp-1
+  name: envoy-gateway/gateway-1/tcp-1
+  port: 8080
+  routes:
+  - destination:
+      backendClusterRefs:
+      - name: backend/service/default/service-3/8163/tcp
+        weight: 1
+      metadata:
+        kind: TCPRoute
+        name: tcproute-1
+        namespace: default
+      name: tcproute/default/tcproute-1/rule/-1
+    metadata:
+      kind: TCPRoute
+      name: tcproute-1
+      namespace: default
+    name: tcproute/default/tcproute-1
+- address: 0.0.0.0
+  externalPort: 8081
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: tcp-2
+  name: envoy-gateway/gateway-1/tcp-2
+  port: 8081
+  routes:
+  - destination:
+      backendClusterRefs:
+      - name: backend/service/default/service-3/8163/tcp
+        weight: 1
+      metadata:
+        kind: TCPRoute
+        name: tcproute-2
+        namespace: default
+      name: tcproute/default/tcproute-2/rule/-1
+    metadata:
+      kind: TCPRoute
+      name: tcproute-2
+      namespace: default
+    name: tcproute/default/tcproute-2
+backends:
+- metadata:
+    kind: TCPRoute
+    name: tcproute-1
+    namespace: default
+  name: backend/service/default/service-3/8163/tcp
+  setting:
+    addressType: IP
+    endpoints:
+    - host: 7.7.7.8
+      port: 8163
+    - host: 7.7.7.9
+      port: 8163
+    - host: 7.7.7.7
+      port: 8163
+    metadata:
+      kind: Service
+      name: service-3
+      namespace: default
+      sectionName: "8163"
+    name: backend/service/default/service-3/8163/tcp
+    protocol: TCP
+    weight: 1

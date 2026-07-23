@@ -120,7 +120,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-1
+    name: httproute-3
     namespace: default
   spec:
     parentRefs:
@@ -275,9 +275,9 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-3
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/1/*
+        name: httproute/default/httproute-3/rule/0/match/1/*
         pathMatch:
           distinct: false
           name: ""
@@ -332,9 +332,9 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-3
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
+        name: httproute/default/httproute-3/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -393,9 +393,9 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-3
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/3/*
+        name: httproute/default/httproute-3/rule/0/match/3/*
       - cookieMatches:
         - distinct: false
           exact: xxx
@@ -450,9 +450,9 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-3
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/2/*
+        name: httproute/default/httproute-3/rule/0/match/2/*
       - cookieMatches:
         - distinct: false
           exact: xxx

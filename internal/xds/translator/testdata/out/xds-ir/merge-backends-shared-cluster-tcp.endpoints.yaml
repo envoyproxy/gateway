@@ -1,0 +1,32 @@
+- clusterName: backend/service/default/service-3/8163/tcp
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.8
+            portValue: 8163
+      loadBalancingWeight: 1
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.9
+            portValue: 8163
+      loadBalancingWeight: 1
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8163
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: backend/service/default/service-3/8163/tcp
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: service-3
+            namespace: default
+            sectionName: "8163"

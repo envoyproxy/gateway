@@ -35,6 +35,7 @@ type EnvoyProxy struct {
 }
 
 // EnvoyProxySpec defines the desired state of EnvoyProxy.
+// +kubebuilder:validation:XValidation:message="mergeGateways and mergeBackends cannot both be enabled",rule="!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends) && has(self.mergeBackends.enabled) && self.mergeBackends.enabled)"
 type EnvoyProxySpec struct {
 	// Provider defines the desired resource provider and provider-specific configuration.
 	// If unspecified, the "Kubernetes" resource provider is used with default configuration
@@ -89,8 +90,21 @@ type EnvoyProxySpec struct {
 	// This means that the port, protocol and hostname tuple must be unique for every listener.
 	// If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
 	//
+	// Mutually exclusive with MergeBackends.
+	//
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
+
+	// MergeBackends configures cluster deduplication: routes that reference the same backend
+	// share a single Envoy cluster instead of Envoy Gateway generating one cluster per route
+	// rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
+	// improves upstream connection pooling.
+	//
+	// This is an experimental optimization and is disabled when unset. Mutually exclusive with
+	// MergeGateways.
+	//
+	// +optional
+	MergeBackends *MergeBackendsConfig `json:"mergeBackends,omitempty"`
 
 	// Shutdown defines configuration for graceful envoy shutdown process.
 	//
@@ -216,6 +230,18 @@ type EnvoyProxySpec struct {
 	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
+}
+
+// MergeBackendsConfig configures backend cluster deduplication (MergeBackends).
+type MergeBackendsConfig struct {
+	// Enabled toggles whether cluster deduplication is considered at all. Defaults to false.
+	//
+	// A backendRef is only merged into a shared cluster when safe to do so; otherwise it falls
+	// back to a dedicated per-route cluster.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.

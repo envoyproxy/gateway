@@ -1,0 +1,36 @@
+# A rule with two BackendClusterRefs forces the weighted path (buildXdsWeightedRouteAction)
+# even with no mixed endpoints. One ref resolves to a merged (shared) cluster, the other to
+# a route-scoped one - proving destinationSetting.Name naming holds for both in that path.
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "httproute/default/http-route-1/rule/0/match/0/*"
+    hostname: "*"
+    destination:
+      name: "httproute/default/http-route-1/rule/0"
+      backendClusterRefs:
+      - name: "backend/service/default/service-1/8080/http"
+        weight: 50
+      settings:
+      - name: "httproute/default/http-route-1/rule/0/backend/1"
+        weight: 50
+        endpoints:
+        - host: "8.8.8.8"
+          port: 8081
+backends:
+- name: "backend/service/default/service-1/8080/http"
+  setting:
+    name: "backend/service/default/service-1/8080/http"
+    weight: 50
+    endpoints:
+    - host: "7.7.7.7"
+      port: 8080
+    - host: "7.7.7.8"
+      port: 8080

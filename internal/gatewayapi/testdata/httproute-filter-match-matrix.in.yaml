@@ -94,7 +94,7 @@ httpRoutes:
     kind: HTTPRoute                         # This httproute should be rejected because it has two filters with Matches
     metadata:
       namespace: default
-      name: httproute-1
+      name: httproute-3
     spec:
       parentRefs:
         - namespace: envoy-gateway

@@ -81,6 +81,7 @@ var (
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
 	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
+	ErrBackendClusterMergedDynamicResolver      = errors.New("a BackendCluster must not be a dynamic resolver")
 
 	redacted = []byte("[redacted]")
 )
@@ -175,6 +176,9 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
+	// Backends holds every distinct merged BackendCluster for this gateway - the single source
+	// of truth for a cluster's Settings/Metadata.
+	Backends []*BackendCluster `json:"backends,omitempty" yaml:"backends,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -192,6 +196,11 @@ func (x *Xds) Validate() error {
 	}
 	for _, udp := range x.UDP {
 		if err := udp.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, bc := range x.Backends {
+		if err := bc.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -644,7 +653,6 @@ type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
 // BackendWeights stores the weights of valid, invalid and no endpoints backends for the route so that 500/503 error responses can be returned in the same proportions
 type BackendWeights struct {
-	Name        string `json:"name" yaml:"name"`
 	Valid       uint32 `json:"valid" yaml:"valid"`
 	Invalid     uint32 `json:"invalid" yaml:"invalid"`
 	NoEndpoints uint32 `json:"noEndpoints" yaml:"noEndpoints"`
@@ -652,6 +660,27 @@ type BackendWeights struct {
 
 func (b *BackendWeights) UnavailableWeight() uint32 {
 	return b.Invalid + b.NoEndpoints
+}
+
+// AddWeighted adds weight to b under the category that s's own status indicates (invalid,
+// dynamic-resolver, custom backend, has/no endpoints), independent of s.Weight.
+func (b *BackendWeights) AddWeighted(s *DestinationSetting, weight *uint32) {
+	if weight == nil {
+		return
+	}
+
+	switch {
+	case s.Invalid: // If invalid, add to invalid weight
+		b.Invalid += *weight
+	case s.IsDynamicResolver: // Dynamic resolver has no endpoints
+		b.Valid += *weight
+	case s.IsCustomBackend: // Custom backends has no endpoints
+		b.Valid += *weight
+	case len(s.Endpoints) > 0: // All other cases should have endpoints
+		b.Valid += *weight
+	default: // DestinationSetting with no endpoints
+		b.NoEndpoints += *weight
+	}
 }
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
@@ -984,8 +1013,10 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	return h.Destination.NeedsClusterPerSetting()
 }
 
+// IsDynamicResolverRoute reports whether h's destination is a dynamic resolver.
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
-	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
+	// Only checks Settings, never BackendClusterRefs: a dynamic-resolver backend is never
+	// merge-eligible, so its setting always lives in Settings.
 	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
 }
 
@@ -1910,16 +1941,23 @@ type RouteDestination struct {
 	// Name of the destination. This field allows the xds layer
 	// to check if this route destination already exists and can be
 	// reused
-	Name     string                `json:"name" yaml:"name"`
-	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
+	Name     string  `json:"name" yaml:"name"`
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
+	// Settings holds this destination's own, non-merged backends. Never shared with another
+	// route.
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// BackendClusterRefs holds references to backend clusters for this route rule. The
+	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
+	// never here.
+	BackendClusterRefs []*BackendClusterRef `json:"backendClusterRefs,omitempty" yaml:"backendClusterRefs,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
 	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
-// Validate the fields within the RouteDestination structure
+// Validate the fields within the RouteDestination structure. BackendCluster-level validation
+// happens once per distinct cluster, not here per-ref.
 func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
@@ -1930,7 +1968,11 @@ func (r *RouteDestination) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-
+	for _, ref := range r.BackendClusterRefs {
+		if len(ref.Name) == 0 {
+			errs = errors.Join(errs, ErrDestinationNameEmpty)
+		}
+	}
 	return errs
 }
 
@@ -2014,30 +2056,54 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
-	w := &BackendWeights{
-		Name: r.Name,
-	}
-
+	w := &BackendWeights{}
 	for _, s := range r.Settings {
-		if s.Weight == nil {
-			continue
-		}
+		w.AddWeighted(s, s.Weight)
+	}
+	return w
+}
 
-		switch {
-		case s.Invalid: // If invalid, add to invalid weight
-			w.Invalid += *s.Weight
-		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
-			w.Valid += *s.Weight
-		case s.IsCustomBackend: // Custom backends has no endpoints
-			w.Valid += *s.Weight
-		case len(s.Endpoints) > 0: // All other cases should have endpoints
-			w.Valid += *s.Weight
-		default: // DestinationSetting with no endpoints
-			w.NoEndpoints += *s.Weight
+// BackendCluster is a shared, identity-deduplicated backend: exactly one backend identity, one
+// setting. Only ever constructed for genuinely merged backends.
+// +kubebuilder:object:generate=true
+type BackendCluster struct {
+	// Name uniquely identifies this backend cluster.
+	Name string `json:"name" yaml:"name"`
+	// Setting holds this backend's own configuration. Always exactly one, since a merged
+	// cluster is by definition a single deduplicated backend identity.
+	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
+	// Metadata describes the backend resource (Service, Backend, etc.)
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// Traffic holds the accepted whole-gateway BackendTrafficPolicy's settings, if any -
+	// gateway level is the only one guaranteed uniform across a merged cluster's routes.
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+}
+
+func (b *BackendCluster) Validate() error {
+	var errs error
+	if len(b.Name) == 0 {
+		errs = errors.Join(errs, ErrDestinationNameEmpty)
+	}
+	if b.Setting != nil {
+		if err := b.Setting.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if b.Setting.IsDynamicResolver {
+			errs = errors.Join(errs, ErrBackendClusterMergedDynamicResolver)
 		}
 	}
+	return errs
+}
 
-	return w
+// BackendClusterRef is a reference from a route rule to a backend cluster, identified by name.
+// The referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
+// never here.
+// +kubebuilder:object:generate=true
+type BackendClusterRef struct {
+	// Name identifies the referenced BackendCluster in the owning Xds's Backends registry.
+	Name string `json:"name" yaml:"name"`
+	// Weight for weighted routing across multiple BackendRefs.
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 }
 
 // DestinationSetting holds the settings associated with the destination

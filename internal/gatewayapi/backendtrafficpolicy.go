@@ -53,87 +53,14 @@ type BTPRoutingTypeIndex struct {
 	gatewayLevel   map[btpRoutingKey]*egv1a1.RoutingType
 }
 
-// BuildBTPRoutingTypeIndex builds a pre-computed index of RoutingType values
-// from BackendTrafficPolicies, organized by priority-level.
-// BTPs are pre-sorted by the provider layer, so first-write-wins respects priority.
-func hasBTPRoutingType(btps []*egv1a1.BackendTrafficPolicy) bool {
-	for _, btp := range btps {
-		if btp.Spec.RoutingType != nil {
-			return true
-		}
-	}
-
-	return false
-}
-
-func BuildBTPRoutingTypeIndex(
-	btps []*egv1a1.BackendTrafficPolicy,
-	routes []client.Object,
-	gateways []*GatewayContext,
-	referenceGrants []*gwapiv1b1.ReferenceGrant,
-	namespaceLookup func(string) *corev1.Namespace,
-) *BTPRoutingTypeIndex {
-	idx := &BTPRoutingTypeIndex{
+// btpRoutingTypeIndexMaps allocates BTPRoutingTypeIndex's maps.
+func btpRoutingTypeIndexMaps() *BTPRoutingTypeIndex {
+	return &BTPRoutingTypeIndex{
 		routeRuleLevel: make(map[btpRoutingKey]*egv1a1.RoutingType),
 		routeLevel:     make(map[btpRoutingKey]*egv1a1.RoutingType),
 		listenerLevel:  make(map[btpRoutingKey]*egv1a1.RoutingType),
 		gatewayLevel:   make(map[btpRoutingKey]*egv1a1.RoutingType),
 	}
-
-	// Combine routes and gateways into a single target slice for getPolicyTargetRefs.
-	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
-	allTargets = append(allTargets, routes...)
-	for _, gw := range gateways {
-		allTargets = append(allTargets, gw)
-	}
-
-	for _, btp := range btps {
-		if btp.Spec.RoutingType == nil {
-			continue
-		}
-		refs := resolvePolicyTargets(
-			btp.Spec.PolicyTargetReferences,
-			allTargets,
-			referenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindBackendTrafficPolicy,
-			btp.Namespace,
-			namespaceLookup,
-		)
-		for _, ref := range refs {
-			kind := string(ref.Kind)
-			key := btpRoutingKey{
-				Kind:        kind,
-				Namespace:   string(ref.Namespace),
-				Name:        string(ref.Name),
-				SectionName: string(ptr.Deref(ref.SectionName, "")),
-			}
-
-			if kind == resource.KindGateway {
-				if ref.SectionName != nil {
-					if _, exists := idx.listenerLevel[key]; !exists {
-						idx.listenerLevel[key] = btp.Spec.RoutingType
-					}
-				} else {
-					if _, exists := idx.gatewayLevel[key]; !exists {
-						idx.gatewayLevel[key] = btp.Spec.RoutingType
-					}
-				}
-			} else {
-				if ref.SectionName != nil {
-					if _, exists := idx.routeRuleLevel[key]; !exists {
-						idx.routeRuleLevel[key] = btp.Spec.RoutingType
-					}
-				} else {
-					if _, exists := idx.routeLevel[key]; !exists {
-						idx.routeLevel[key] = btp.Spec.RoutingType
-					}
-				}
-			}
-		}
-	}
-
-	return idx
 }
 
 // LookupBTPRoutingType resolves the RoutingType for a specific route rule
@@ -188,6 +115,17 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	}
 
 	// 4. Gateway level (least specific)
+	return idx.LookupGatewayBTRoutingType(gatewayNN)
+}
+
+// LookupGatewayBTRoutingType resolves the RoutingType from a gateway-level BTP only, ignoring any
+// listener/route/route-rule level override. Returns nil if no matching BTP RoutingType is found,
+// or if the index is nil.
+func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.NamespacedName) *egv1a1.RoutingType {
+	if idx == nil {
+		return nil
+	}
+
 	gwKey := btpRoutingKey{
 		Kind:      resource.KindGateway,
 		Namespace: gatewayNN.Namespace,
@@ -198,6 +136,230 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	}
 
 	return nil
+}
+
+// btpSpecHasClusterScopedFields reports whether spec sets any backend-cluster-scoped (CDS) field —
+// either directly inside its embedded ClusterSettings, or via a sibling field on the spec that also
+// affects the generated Cluster resource.
+func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
+	if spec == nil {
+		return false
+	}
+	return spec.LoadBalancer != nil ||
+		spec.ProxyProtocol != nil ||
+		spec.HealthCheck != nil ||
+		spec.CircuitBreaker != nil ||
+		spec.Timeout != nil ||
+		spec.TCPKeepalive != nil ||
+		spec.Connection != nil ||
+		spec.HTTP2 != nil ||
+		spec.DNS != nil ||
+		spec.AdmissionControl != nil ||
+		spec.UseClientProtocol != nil
+}
+
+// BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
+// BackendTrafficPolicy contributes backend-cluster-scoped (CDS) settings.
+type BTPClusterSettingsIndex struct {
+	routeRuleLevel map[btpRoutingKey]bool
+	routeLevel     map[btpRoutingKey]bool
+	listenerLevel  map[btpRoutingKey]bool
+}
+
+// btpClusterSettingsIndexMaps allocates BTPClusterSettingsIndex's maps.
+func btpClusterSettingsIndexMaps() *BTPClusterSettingsIndex {
+	return &BTPClusterSettingsIndex{
+		routeRuleLevel: make(map[btpRoutingKey]bool),
+		routeLevel:     make(map[btpRoutingKey]bool),
+		listenerLevel:  make(map[btpRoutingKey]bool),
+	}
+}
+
+// BTPLoadBalancerIndex reports, per gateway, whether a BackendTrafficPolicy attached to it sets
+// LoadBalancer to ConsistentHash.
+type BTPLoadBalancerIndex struct {
+	gatewayLevel map[types.NamespacedName]bool
+}
+
+// btpLoadBalancerIndexMaps allocates BTPLoadBalancerIndex's maps.
+func btpLoadBalancerIndexMaps() *BTPLoadBalancerIndex {
+	return &BTPLoadBalancerIndex{
+		gatewayLevel: make(map[types.NamespacedName]bool),
+	}
+}
+
+// BTPIndexes groups the three pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
+// together in one pass over btps.
+type BTPIndexes struct {
+	RoutingType     *BTPRoutingTypeIndex
+	ClusterSettings *BTPClusterSettingsIndex
+	LoadBalancer    *BTPLoadBalancerIndex
+}
+
+// BuildBTPIndexes builds BTPIndexes, resolving each BackendTrafficPolicy's targets at most once.
+func BuildBTPIndexes(
+	btps []*egv1a1.BackendTrafficPolicy,
+	routes []client.Object,
+	gateways []*GatewayContext,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	namespaceLookup func(string) *corev1.Namespace,
+	mergeBackendsEnabled bool,
+) *BTPIndexes {
+	routingTypeIdx := btpRoutingTypeIndexMaps()
+	clusterSettingsIdx := btpClusterSettingsIndexMaps()
+	loadBalancerIdx := btpLoadBalancerIndexMaps()
+
+	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
+	allTargets = append(allTargets, routes...)
+	for _, gw := range gateways {
+		allTargets = append(allTargets, gw)
+	}
+
+	for _, btp := range btps {
+		hasRoutingType := btp.Spec.RoutingType != nil
+		// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
+		// accepted gateway can enable merging; RoutingType applies regardless of MergeBackends.
+		hasClusterScoped := mergeBackendsEnabled && btpSpecHasClusterScopedFields(&btp.Spec)
+		hasLoadBalancer := mergeBackendsEnabled && btp.Spec.LoadBalancer != nil
+
+		if !hasRoutingType && !hasClusterScoped && !hasLoadBalancer {
+			continue
+		}
+
+		refs := resolvePolicyTargets(
+			btp.Spec.PolicyTargetReferences,
+			allTargets,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
+			btp.Namespace,
+			namespaceLookup,
+		)
+
+		for _, ref := range refs {
+			kind := string(ref.Kind)
+			key := btpRoutingKey{
+				Kind:        kind,
+				Namespace:   string(ref.Namespace),
+				Name:        string(ref.Name),
+				SectionName: string(ptr.Deref(ref.SectionName, "")),
+			}
+
+			if hasRoutingType {
+				switch {
+				case kind == resource.KindGateway && ref.SectionName != nil:
+					if _, exists := routingTypeIdx.listenerLevel[key]; !exists {
+						routingTypeIdx.listenerLevel[key] = btp.Spec.RoutingType
+					}
+				case kind == resource.KindGateway:
+					if _, exists := routingTypeIdx.gatewayLevel[key]; !exists {
+						routingTypeIdx.gatewayLevel[key] = btp.Spec.RoutingType
+					}
+				case ref.SectionName != nil:
+					if _, exists := routingTypeIdx.routeRuleLevel[key]; !exists {
+						routingTypeIdx.routeRuleLevel[key] = btp.Spec.RoutingType
+					}
+				default:
+					if _, exists := routingTypeIdx.routeLevel[key]; !exists {
+						routingTypeIdx.routeLevel[key] = btp.Spec.RoutingType
+					}
+				}
+			}
+
+			if hasClusterScoped {
+				switch {
+				case kind == resource.KindGateway && ref.SectionName != nil:
+					clusterSettingsIdx.listenerLevel[key] = true
+				case kind == resource.KindGateway:
+					// Gateway-level settings apply uniformly to every route sharing a merged
+					// cluster, so they don't disqualify merging - no entry needed.
+				case ref.SectionName != nil:
+					clusterSettingsIdx.routeRuleLevel[key] = true
+				default:
+					clusterSettingsIdx.routeLevel[key] = true
+				}
+			}
+
+			if hasLoadBalancer {
+				switch {
+				case kind == resource.KindGateway && ref.SectionName == nil:
+					gwKey := types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}
+					if _, exists := loadBalancerIdx.gatewayLevel[gwKey]; !exists {
+						loadBalancerIdx.gatewayLevel[gwKey] = btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType
+					}
+				default:
+					// A listener/route-rule/route-level LoadBalancer setting already disqualifies
+					// its own rule from merging on its own, so it's never looked up here.
+				}
+			}
+		}
+	}
+
+	return &BTPIndexes{
+		RoutingType:     routingTypeIdx,
+		ClusterSettings: clusterSettingsIdx,
+		LoadBalancer:    loadBalancerIdx,
+	}
+}
+
+// HasRouteLevelClusterSettings reports whether a route-rule, route, or listener-level
+// BackendTrafficPolicy contributes backend-cluster-scoped settings for the given target. A
+// gateway-level setting isn't checked: it applies uniformly to every route sharing a merged
+// cluster, so it can't cause a divergence.
+func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
+	routeKind gwapiv1.Kind,
+	routeNN types.NamespacedName,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	routeRuleName *gwapiv1.SectionName,
+) bool {
+	if idx == nil {
+		return false
+	}
+
+	if routeRuleName != nil {
+		key := btpRoutingKey{
+			Kind:        string(routeKind),
+			Namespace:   routeNN.Namespace,
+			Name:        routeNN.Name,
+			SectionName: string(*routeRuleName),
+		}
+		if idx.routeRuleLevel[key] {
+			return true
+		}
+	}
+
+	routeKey := btpRoutingKey{
+		Kind:      string(routeKind),
+		Namespace: routeNN.Namespace,
+		Name:      routeNN.Name,
+	}
+	if idx.routeLevel[routeKey] {
+		return true
+	}
+
+	if listenerName != nil {
+		listenerKey := btpRoutingKey{
+			Kind:        resource.KindGateway,
+			Namespace:   gatewayNN.Namespace,
+			Name:        gatewayNN.Name,
+			SectionName: string(*listenerName),
+		}
+		if idx.listenerLevel[listenerKey] {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsConsistentHash reports whether gatewayNN has a BackendTrafficPolicy setting LoadBalancer to
+// ConsistentHash.
+func (idx *BTPLoadBalancerIndex) IsConsistentHash(gatewayNN types.NamespacedName) bool {
+	if idx == nil {
+		return false
+	}
+	return idx.gatewayLevel[gatewayNN]
 }
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
@@ -1331,6 +1493,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			"routes", sets.List(routesWithDirectResponse),
 			"error", errs,
 		)
+	}
+
+	// Gateway-level Traffic is the only level safe to apply uniformly to a merged cluster.
+	if target.SectionName == nil && errs == nil {
+		for _, bc := range x.Backends {
+			bc.Traffic = tf.DeepCopy()
+		}
 	}
 
 	return errs

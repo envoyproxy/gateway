@@ -45,7 +45,7 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*routev3.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex) (*routev3.Route, error) {
 	connectMatch := trafficUpgradeConnect(httpRoute.Traffic)
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
@@ -74,7 +74,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch, backendIndex)
 		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
@@ -86,7 +86,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		routeAction := buildXdsRouteAction(httpRoute)
+		routeAction := buildXdsRouteAction(httpRoute, backendIndex)
 		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 
 		if httpRoute.Mirrors != nil {
@@ -324,21 +324,35 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
-	backendWeights := route.Destination.ToBackendWeights()
-	if route.NeedsClusterPerSetting() {
-		return buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
+func buildXdsRouteAction(route *ir.HTTPRoute, backendIndex backendClusterIndex) *routev3.RouteAction {
+	backendClusters := resolveBackendClusters(route.Destination, backendIndex)
+
+	clusterCount := len(backendClusters)
+	if len(route.Destination.Settings) > 0 {
+		clusterCount++
 	}
 
+	// Weighted routing is needed whenever there's more than one cluster to route between.
+	if route.NeedsClusterPerSetting() || clusterCount > 1 {
+		return buildXdsWeightedRouteAction(route.Destination, backendClusters)
+	}
+
+	// Defaults to the destination's own name; a single backend cluster overrides it.
+	clusterName := route.Destination.Name
+	if len(backendClusters) == 1 {
+		clusterName = backendClusters[0].Name
+	}
 	return &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: backendWeights.Name,
+			Cluster: clusterName,
 		},
 	}
 }
 
-func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
-	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0, len(settings))
+func buildXdsWeightedRouteAction(destination *ir.RouteDestination, backendClusters []*ir.BackendCluster) *routev3.RouteAction {
+	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0)
+
+	backendWeights := destination.ToBackendWeights()
 	if backendWeights.UnavailableWeight() > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
@@ -347,41 +361,33 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 		weightedClusters = append(weightedClusters, invalidCluster)
 	}
 
-	for _, destinationSetting := range settings {
+	// Each Setting gets its own weighted entry, using its own Weight.
+	for _, destinationSetting := range destination.Settings {
 		if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
 				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
-
-			if destinationSetting.Filters != nil {
-				if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
-					validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
-				}
-
-				if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
-					validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
-				}
-
-				if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
-					validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
-				}
-
-				if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
-					validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
-				}
-
-				if destinationSetting.Filters.URLRewrite != nil &&
-					destinationSetting.Filters.URLRewrite.Host != nil &&
-					destinationSetting.Filters.URLRewrite.Host.Name != nil {
-					validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
-						HostRewriteLiteral: *destinationSetting.Filters.URLRewrite.Host.Name,
-					}
-				}
-			}
-
+			applyWeightedClusterFilters(validCluster, destinationSetting.Filters)
 			weightedClusters = append(weightedClusters, validCluster)
 		}
+	}
+
+	// Each backend cluster gets its own weighted entry, using its own per-route
+	// BackendClusterRef.Weight (a BackendCluster's own Setting.Weight is always nil).
+	for _, bc := range backendClusters {
+		ref := backendClusterRef(destination, bc)
+		if ref == nil || ref.Weight == nil {
+			continue
+		}
+		validCluster := &routev3.WeightedCluster_ClusterWeight{
+			Name:   bc.Name,
+			Weight: &wrapperspb.UInt32Value{Value: *ref.Weight},
+		}
+		if bc.Setting != nil {
+			applyWeightedClusterFilters(validCluster, bc.Setting.Filters)
+		}
+		weightedClusters = append(weightedClusters, validCluster)
 	}
 
 	// According to the Gateway API:
@@ -401,6 +407,37 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 				Clusters: weightedClusters,
 			},
 		},
+	}
+}
+
+// applyWeightedClusterFilters applies a DestinationSetting's filters to its WeightedCluster_ClusterWeight entry.
+func applyWeightedClusterFilters(validCluster *routev3.WeightedCluster_ClusterWeight, filters *ir.DestinationFilters) {
+	if filters == nil {
+		return
+	}
+
+	if len(filters.AddRequestHeaders) > 0 {
+		validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(filters.AddRequestHeaders)...)
+	}
+
+	if len(filters.RemoveRequestHeaders) > 0 {
+		validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, filters.RemoveRequestHeaders...)
+	}
+
+	if len(filters.AddResponseHeaders) > 0 {
+		validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(filters.AddResponseHeaders)...)
+	}
+
+	if len(filters.RemoveResponseHeaders) > 0 {
+		validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, filters.RemoveResponseHeaders...)
+	}
+
+	if filters.URLRewrite != nil &&
+		filters.URLRewrite.Host != nil &&
+		filters.URLRewrite.Host.Name != nil {
+		validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
+			HostRewriteLiteral: *filters.URLRewrite.Host.Name,
+		}
 	}
 }
 
@@ -531,19 +568,8 @@ func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
 	}
 }
 
-func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
-	backendWeights := route.Destination.ToBackendWeights()
-	// only use weighted cluster when there are invalid weights
-	var routeAction *routev3.RouteAction
-	if route.NeedsClusterPerSetting() {
-		routeAction = buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
-	} else {
-		routeAction = &routev3.RouteAction{
-			ClusterSpecifier: &routev3.RouteAction_Cluster{
-				Cluster: backendWeights.Name,
-			},
-		}
-	}
+func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch, backendIndex backendClusterIndex) *routev3.RouteAction {
+	routeAction := buildXdsRouteAction(route, backendIndex)
 
 	if urlRewrite.Path != nil {
 		switch {

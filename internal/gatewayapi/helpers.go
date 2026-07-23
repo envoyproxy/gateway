@@ -517,6 +517,16 @@ func irDestinationSettingName(destName string, backendIdx int) string {
 	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
 }
 
+// irBackendClusterName names a BackendCluster shared across routes that reference the same
+// backend.
+func irBackendClusterName(key *BackendClusterKey) string {
+	base := fmt.Sprintf("backend/%s/%s/%s/%d", strings.ToLower(key.Kind), key.Namespace, key.Name, key.Port)
+	if key.Protocol == "" {
+		return base
+	}
+	return base + "/" + strings.ToLower(string(key.Protocol))
+}
+
 func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 	return fmt.Sprintf("%s/%s/rule/%d", policyNamespace, policyName, ruleIndex)
 }
@@ -635,6 +645,22 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	if resources.EnvoyProxyDefaultSpec != nil &&
 		resources.EnvoyProxyDefaultSpec.MergeGateways != nil {
 		return *resources.EnvoyProxyDefaultSpec.MergeGateways
+	}
+
+	return false
+}
+
+func IsMergeBackendsEnabled(resources *resource.Resources) bool {
+	// Check GatewayClass-level EnvoyProxy first (higher priority)
+	if resources.EnvoyProxyForGatewayClass != nil &&
+		resources.EnvoyProxyForGatewayClass.Spec.MergeBackends != nil {
+		return ptr.Deref(resources.EnvoyProxyForGatewayClass.Spec.MergeBackends.Enabled, false)
+	}
+
+	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
+	if resources.EnvoyProxyDefaultSpec != nil &&
+		resources.EnvoyProxyDefaultSpec.MergeBackends != nil {
+		return ptr.Deref(resources.EnvoyProxyDefaultSpec.MergeBackends.Enabled, false)
 	}
 
 	return false

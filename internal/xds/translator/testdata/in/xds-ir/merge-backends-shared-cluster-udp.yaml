@@ -1,0 +1,67 @@
+# Real IR extracted from gatewayapi's mergebackends-udp-shared-cluster.out.yaml:
+# two UDPRoutes on separate listeners share one merged BackendCluster with a
+# real multi-endpoint backend.
+udp:
+- address: 0.0.0.0
+  externalPort: 80
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: udp-1
+  name: envoy-gateway/gateway-1/udp-1
+  port: 10080
+  route:
+    destination:
+      backendClusterRefs:
+      - name: backend/service/default/service-2/8162/udp
+        weight: 1
+      metadata:
+        kind: UDPRoute
+        name: udproute-1
+        namespace: default
+      name: udproute/default/udproute-1/rule/-1
+    name: udproute/default/udproute-1
+- address: 0.0.0.0
+  externalPort: 81
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: udp-2
+  name: envoy-gateway/gateway-1/udp-2
+  port: 10081
+  route:
+    destination:
+      backendClusterRefs:
+      - name: backend/service/default/service-2/8162/udp
+        weight: 1
+      metadata:
+        kind: UDPRoute
+        name: udproute-2
+        namespace: default
+      name: udproute/default/udproute-2/rule/-1
+    name: udproute/default/udproute-2
+backends:
+- metadata:
+    kind: UDPRoute
+    name: udproute-1
+    namespace: default
+  name: backend/service/default/service-2/8162/udp
+  setting:
+    addressType: IP
+    endpoints:
+    - host: 7.7.7.8
+      port: 8162
+    - host: 7.7.7.9
+      port: 8162
+    - host: 7.7.7.7
+      port: 8162
+    metadata:
+      kind: Service
+      name: service-2
+      namespace: default
+      sectionName: "8162"
+    name: backend/service/default/service-2/8162/udp
+    protocol: UDP
+    weight: 1

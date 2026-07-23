@@ -1,0 +1,73 @@
+# Real IR extracted from gatewayapi's mergebackends-tls-shared-cluster.out.yaml:
+# two TLSRoutes on one listener, distinguished by SNI, share one merged
+# BackendCluster with a real multi-endpoint backend.
+tcp:
+- address: 0.0.0.0
+  externalPort: 91
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: tls
+  name: envoy-gateway/gateway-1/tls
+  port: 10091
+  routes:
+  - destination:
+      backendClusterRefs:
+      - name: backend/service/default/service-3/8163/tcp
+        weight: 1
+      metadata:
+        kind: TLSRoute
+        name: tlsroute-1
+        namespace: default
+      name: tlsroute/default/tlsroute-1/rule/-1
+    metadata:
+      kind: TLSRoute
+      name: tlsroute-1
+      namespace: default
+    name: tlsroute/default/tlsroute-1
+    tls:
+      inspector:
+        snis:
+        - foo.com
+  - destination:
+      backendClusterRefs:
+      - name: backend/service/default/service-3/8163/tcp
+        weight: 1
+      metadata:
+        kind: TLSRoute
+        name: tlsroute-2
+        namespace: default
+      name: tlsroute/default/tlsroute-2/rule/-1
+    metadata:
+      kind: TLSRoute
+      name: tlsroute-2
+      namespace: default
+    name: tlsroute/default/tlsroute-2
+    tls:
+      inspector:
+        snis:
+        - bar.com
+backends:
+- metadata:
+    kind: TLSRoute
+    name: tlsroute-1
+    namespace: default
+  name: backend/service/default/service-3/8163/tcp
+  setting:
+    addressType: IP
+    endpoints:
+    - host: 7.7.7.8
+      port: 8163
+    - host: 7.7.7.9
+      port: 8163
+    - host: 7.7.7.7
+      port: 8163
+    metadata:
+      kind: Service
+      name: service-3
+      namespace: default
+      sectionName: "8163"
+    name: backend/service/default/service-3/8163/tcp
+    protocol: TCP
+    weight: 1

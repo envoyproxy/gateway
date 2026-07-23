@@ -13,6 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -532,4 +534,451 @@ func TestIsServiceHeadless(t *testing.T) {
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestResolveBackendClusterKey(t *testing.T) {
+	serviceBackendRef := gwapiv1.BackendObjectReference{Name: "service-1", Port: PortNumPtr(8080)}
+	emptyDS := &ir.DestinationSetting{}
+
+	t.Run("nil gatewayCtx is not eligible", func(t *testing.T) {
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
+		key := tr.resolveBackendClusterKey(nil, nil, false, serviceBackendRef, "default", emptyDS)
+		require.Nil(t, key)
+	})
+
+	t.Run("disabled for this gateway is not eligible", func(t *testing.T) {
+		tr := &Translator{MergeBackends: false, TranslatorContext: &TranslatorContext{}}
+		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+		key := tr.resolveBackendClusterKey(gwCtx, nil, false, serviceBackendRef, "default", emptyDS)
+		require.Nil(t, key)
+	})
+
+	t.Run("eligible resolves to the backend's own identity", func(t *testing.T) {
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
+		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+		key := tr.resolveBackendClusterKey(gwCtx, nil, false, serviceBackendRef, "default", emptyDS)
+		require.NotNil(t, key)
+		require.Equal(t, "Service", key.Kind)
+		require.Equal(t, "service-1", key.Name)
+	})
+
+	t.Run("eligible never collides across gateways", func(t *testing.T) {
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
+		gwCtx1 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
+		gwCtx2 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-2"}}}
+		key1 := tr.resolveBackendClusterKey(gwCtx1, nil, false, serviceBackendRef, "default", emptyDS)
+		key2 := tr.resolveBackendClusterKey(gwCtx2, nil, false, serviceBackendRef, "default", emptyDS)
+		require.NotEqual(t, *key1, *key2, "the same backend under two different gateways must not collide in BackendClusterMap")
+	})
+
+	t.Run("incompatible is not eligible even when routing type matches", func(t *testing.T) {
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
+		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+		key := tr.resolveBackendClusterKey(gwCtx, nil, true, serviceBackendRef, "default", emptyDS)
+		require.Nil(t, key)
+	})
+
+	t.Run("dynamic resolver backend is not eligible", func(t *testing.T) {
+		dynamicResolverType := egv1a1.BackendTypeDynamicResolver
+		dynamicBackendRef := gwapiv1.BackendObjectReference{
+			Group: GroupPtr(egv1a1.GroupName),
+			Kind:  KindPtr(egv1a1.KindBackend),
+			Name:  "be-dynamic",
+		}
+		backendMap := map[types.NamespacedName]*egv1a1.Backend{
+			{Namespace: "default", Name: "be-dynamic"}: {
+				ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default"},
+				Spec:       egv1a1.BackendSpec{Type: &dynamicResolverType},
+			},
+		}
+		tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{BackendMap: backendMap}}
+		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+		key := tr.resolveBackendClusterKey(gwCtx, nil, false, dynamicBackendRef, "default", emptyDS)
+		require.Nil(t, key)
+	})
+}
+
+func TestShouldMergeBackend(t *testing.T) {
+	gwNN := types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"}
+	gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: gwNN.Namespace, Name: gwNN.Name}}}
+	serviceRT := egv1a1.ServiceRoutingType
+	endpointRT := egv1a1.EndpointRoutingType
+	dynamicResolverType := egv1a1.BackendTypeDynamicResolver
+
+	serviceBackendRef := gwapiv1.BackendObjectReference{Name: "service-1"}
+	dynamicResolverBackendRef := gwapiv1.BackendObjectReference{
+		Group: GroupPtr(egv1a1.GroupName),
+		Kind:  KindPtr(egv1a1.KindBackend),
+		Name:  "be-dynamic",
+	}
+	dynamicResolverBackend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default"},
+		Spec:       egv1a1.BackendSpec{Type: &dynamicResolverType},
+	}
+
+	tests := []struct {
+		name              string
+		mergeEnabled      bool
+		gatewayEnvoyProxy *egv1a1.EnvoyProxy
+		gatewayBaselineRT *egv1a1.RoutingType
+		effectiveRT       *egv1a1.RoutingType
+		mergeIncompatible bool
+		backendRef        gwapiv1.BackendObjectReference
+		backend           *egv1a1.Backend
+		filters           *ir.DestinationFilters
+		want              bool
+	}{
+		{
+			name:         "disabled globally never merges",
+			mergeEnabled: false,
+			backendRef:   serviceBackendRef,
+			want:         false,
+		},
+		{
+			name:         "disabled globally, but Gateway-level EnvoyProxy enables it",
+			mergeEnabled: false,
+			gatewayEnvoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{MergeBackends: &egv1a1.MergeBackendsConfig{Enabled: new(true)}},
+			},
+			backendRef: serviceBackendRef,
+			want:       true,
+		},
+		{
+			name:         "enabled globally, but Gateway-level EnvoyProxy disables it",
+			mergeEnabled: true,
+			gatewayEnvoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{MergeBackends: &egv1a1.MergeBackendsConfig{Enabled: new(false)}},
+			},
+			backendRef: serviceBackendRef,
+			want:       false,
+		},
+		{
+			name:         "enabled, no routing type anywhere: baseline == effective (both Endpoint)",
+			mergeEnabled: true,
+			backendRef:   serviceBackendRef,
+			want:         true,
+		},
+		{
+			name:              "enabled, uniform gateway-level routing type: baseline == effective",
+			mergeEnabled:      true,
+			gatewayBaselineRT: &serviceRT,
+			effectiveRT:       &serviceRT,
+			backendRef:        serviceBackendRef,
+			want:              true,
+		},
+		{
+			name:              "enabled, route-rule overrides routing type away from gateway baseline: diverges",
+			mergeEnabled:      true,
+			gatewayBaselineRT: &endpointRT,
+			effectiveRT:       &serviceRT,
+			backendRef:        serviceBackendRef,
+			want:              false,
+		},
+		{
+			name:              "enabled, uniform routing but marked merge-incompatible (route-level cluster settings, session persistence, ConsistentHash, or fallback): excluded",
+			mergeEnabled:      true,
+			mergeIncompatible: true,
+			backendRef:        serviceBackendRef,
+			want:              false,
+		},
+		{
+			name:         "dynamic resolver backend never merges even when otherwise eligible",
+			mergeEnabled: true,
+			backendRef:   dynamicResolverBackendRef,
+			backend:      dynamicResolverBackend,
+			want:         false,
+		},
+		{
+			name:         "CredentialInjection-filtered backendRef never merges even when otherwise eligible",
+			mergeEnabled: true,
+			backendRef:   serviceBackendRef,
+			filters:      &ir.DestinationFilters{CredentialInjection: &ir.CredentialInjection{}},
+			want:         false,
+		},
+		{
+			name:         "any other per-backendRef filter (e.g. header modification) never merges either",
+			mergeEnabled: true,
+			backendRef:   serviceBackendRef,
+			filters:      &ir.DestinationFilters{AddRequestHeaders: []ir.AddHeader{{Name: "x-foo", Value: []string{"bar"}}}},
+			want:         false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			backendMap := map[types.NamespacedName]*egv1a1.Backend{}
+			if tc.backend != nil {
+				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
+			}
+			tr := &Translator{
+				MergeBackends: tc.mergeEnabled,
+				TranslatorContext: &TranslatorContext{
+					BackendMap: backendMap,
+					BTPRoutingTypeIndex: &BTPRoutingTypeIndex{
+						gatewayLevel: map[btpRoutingKey]*egv1a1.RoutingType{
+							{Kind: "Gateway", Namespace: gwNN.Namespace, Name: gwNN.Name}: tc.gatewayBaselineRT,
+						},
+					},
+				},
+			}
+			testGwCtx := gwCtx
+			if tc.gatewayEnvoyProxy != nil {
+				testGwCtx = &GatewayContext{Gateway: gwCtx.Gateway, envoyProxy: tc.gatewayEnvoyProxy}
+			}
+			got := tr.shouldMergeBackend(testGwCtx, tc.effectiveRT, tc.mergeIncompatible, tc.backendRef, "default", &ir.DestinationSetting{Filters: tc.filters})
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestIsMergeableBackendKind(t *testing.T) {
+	dynamicResolverType := egv1a1.BackendTypeDynamicResolver
+	tests := []struct {
+		name                string
+		backendRef          gwapiv1.BackendObjectReference
+		backend             *egv1a1.Backend
+		extensionGroupKinds []schema.GroupKind
+		want                bool
+	}{
+		{
+			name:       "service is mergeable",
+			backendRef: gwapiv1.BackendObjectReference{Name: "service-1"},
+			want:       true,
+		},
+		{
+			name: "backend CR is mergeable",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr(egv1a1.GroupName),
+				Kind:  KindPtr(egv1a1.KindBackend),
+				Name:  "be-1",
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{Name: "be-1", Namespace: "default"},
+			},
+			want: true,
+		},
+		{
+			name: "dynamic resolver backend is never mergeable",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr(egv1a1.GroupName),
+				Kind:  KindPtr(egv1a1.KindBackend),
+				Name:  "be-dynamic",
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default"},
+				Spec:       egv1a1.BackendSpec{Type: &dynamicResolverType},
+			},
+			want: false,
+		},
+		{
+			name: "custom backend is never mergeable",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr("example.io"),
+				Kind:  KindPtr("Foo"),
+				Name:  "custom-1",
+			},
+			extensionGroupKinds: []schema.GroupKind{{Group: "example.io", Kind: "Foo"}},
+			want:                false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{ExtensionGroupKinds: tc.extensionGroupKinds}
+			backendMap := map[types.NamespacedName]*egv1a1.Backend{}
+			if tc.backend != nil {
+				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
+			}
+			tr.TranslatorContext = &TranslatorContext{BackendMap: backendMap}
+			require.Equal(t, tc.want, tr.isMergeableBackendKind(tc.backendRef, "default"))
+		})
+	}
+}
+
+func TestIsFallbackBackend(t *testing.T) {
+	fallbackTrue := true
+	tests := []struct {
+		name       string
+		backendRef gwapiv1.BackendObjectReference
+		backend    *egv1a1.Backend
+		want       bool
+	}{
+		{
+			name:       "service backendRef is never a fallback backend",
+			backendRef: gwapiv1.BackendObjectReference{Name: "service-1"},
+			want:       false,
+		},
+		{
+			name: "backend CR with Fallback true",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr(egv1a1.GroupName),
+				Kind:  KindPtr(egv1a1.KindBackend),
+				Name:  "be-fallback",
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{Name: "be-fallback", Namespace: "default"},
+				Spec:       egv1a1.BackendSpec{Fallback: &fallbackTrue},
+			},
+			want: true,
+		},
+		{
+			name: "backend CR without Fallback set",
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr(egv1a1.GroupName),
+				Kind:  KindPtr(egv1a1.KindBackend),
+				Name:  "be-plain",
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{Name: "be-plain", Namespace: "default"},
+			},
+			want: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			backendMap := map[types.NamespacedName]*egv1a1.Backend{}
+			if tc.backend != nil {
+				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
+			}
+			tr := &Translator{TranslatorContext: &TranslatorContext{BackendMap: backendMap}}
+			got := tr.isFallbackBackend(tc.backendRef, "default")
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestMergeIncompatibleForWeightedRule(t *testing.T) {
+	fallbackTrue := true
+	fallbackBackend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{Name: "be-fallback", Namespace: "default"},
+		Spec:       egv1a1.BackendSpec{Fallback: &fallbackTrue},
+	}
+	fallbackRef := gwapiv1.BackendObjectReference{
+		Group: GroupPtr(egv1a1.GroupName),
+		Kind:  KindPtr(egv1a1.KindBackend),
+		Name:  "be-fallback",
+	}
+	serviceRef1 := gwapiv1.BackendObjectReference{Name: "service-1"}
+	serviceRef2 := gwapiv1.BackendObjectReference{Name: "service-2"}
+
+	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route-1"}}}
+	gatewayCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
+	parentRef := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{}}
+
+	// consistentHashIdx forces IsConsistentHash to return true for gatewayCtx's gateway.
+	consistentHashIdx := &BTPLoadBalancerIndex{
+		gatewayLevel: map[types.NamespacedName]bool{
+			{Namespace: "envoy-gateway", Name: "gateway-1"}: true,
+		},
+	}
+
+	// clusterSettingsIdx forces HasRouteLevelClusterSettings to return true for route's own target.
+	clusterSettingsIdx := &BTPClusterSettingsIndex{
+		routeLevel: map[btpRoutingKey]bool{
+			{Kind: "HTTPRoute", Namespace: "default", Name: "route-1"}: true,
+		},
+	}
+
+	tests := []struct {
+		name               string
+		backendRefs        []gwapiv1.BackendObjectReference
+		clusterSettingsIdx *BTPClusterSettingsIndex
+		sessionPersistent  bool
+		gatewayCtx         *GatewayContext
+		lbIndex            *BTPLoadBalancerIndex
+		want               bool
+	}{
+		{
+			name:               "route-level cluster settings short-circuits regardless of backendRefs",
+			backendRefs:        []gwapiv1.BackendObjectReference{serviceRef1},
+			clusterSettingsIdx: clusterSettingsIdx,
+			gatewayCtx:         gatewayCtx,
+			want:               true,
+		},
+		{
+			name:        "single backendRef is always compatible",
+			backendRefs: []gwapiv1.BackendObjectReference{fallbackRef},
+			want:        false,
+		},
+		{
+			name:              "multiple backendRefs with session persistence",
+			backendRefs:       []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
+			sessionPersistent: true,
+			want:              true,
+		},
+		{
+			name:        "multiple backendRefs with a fallback backend",
+			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, fallbackRef},
+			want:        true,
+		},
+		{
+			name:        "multiple plain backendRefs with ConsistentHash",
+			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
+			gatewayCtx:  gatewayCtx,
+			lbIndex:     consistentHashIdx,
+			want:        true,
+		},
+		{
+			name:        "multiple plain backendRefs with ConsistentHash but nil gatewayCtx",
+			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
+			gatewayCtx:  nil,
+			lbIndex:     consistentHashIdx,
+			want:        false,
+		},
+		{
+			name:        "multiple plain backendRefs, no incompatibility",
+			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
+			gatewayCtx:  gatewayCtx,
+			want:        false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{TranslatorContext: &TranslatorContext{
+				BackendMap:              map[types.NamespacedName]*egv1a1.Backend{{Namespace: "default", Name: "be-fallback"}: fallbackBackend},
+				BTPLoadBalancerIndex:    tc.lbIndex,
+				BTPClusterSettingsIndex: tc.clusterSettingsIdx,
+			}}
+			got := tr.mergeIncompatibleForWeightedRule(tc.gatewayCtx, route, parentRef, nil, tc.backendRefs, tc.sessionPersistent)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestGetOrCreateBackendCluster(t *testing.T) {
+	key := BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
+	ds1 := &ir.DestinationSetting{Name: "ds-1"}
+	ds2 := &ir.DestinationSetting{Name: "ds-2"}
+
+	t.Run("cache miss creates and registers into gwIR.Backends", func(t *testing.T) {
+		tr := &Translator{TranslatorContext: &TranslatorContext{BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{}}}
+		gwIR := &ir.Xds{}
+		bc := tr.getOrCreateBackendCluster(gwIR, &key, ds1)
+		require.Len(t, gwIR.Backends, 1)
+		require.Same(t, bc, gwIR.Backends[0])
+		require.Equal(t, "backend/service/default/service-1/8080", bc.Name)
+		require.Equal(t, bc.Name, bc.Setting.Name, "the shared Setting's Name must match the BackendCluster's own, not whichever route-scoped ds.Name it was built from")
+	})
+
+	t.Run("cache hit returns the existing cluster without replacing its setting", func(t *testing.T) {
+		tr := &Translator{TranslatorContext: &TranslatorContext{BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{}}}
+		gwIR := &ir.Xds{}
+		first := tr.getOrCreateBackendCluster(gwIR, &key, ds1)
+		second := tr.getOrCreateBackendCluster(gwIR, &key, ds2)
+		require.Same(t, first, second)
+		require.Equal(t, first.Name, second.Setting.Name)
+		require.Len(t, gwIR.Backends, 1)
+	})
+}
+
+func TestBackendClusterKeyProtocolDivergence(t *testing.T) {
+	tr := &Translator{MergeBackends: true, TranslatorContext: &TranslatorContext{}}
+	gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+	serviceBackendRef := gwapiv1.BackendObjectReference{Name: "service-1"}
+
+	key1 := tr.resolveBackendClusterKey(gwCtx, nil, false, serviceBackendRef, "default", &ir.DestinationSetting{Protocol: ir.HTTP})
+	require.NotNil(t, key1)
+
+	key2 := tr.resolveBackendClusterKey(gwCtx, nil, false, serviceBackendRef, "default", &ir.DestinationSetting{Protocol: ir.GRPC})
+	require.NotNil(t, key2)
+
+	require.NotEqual(t, *key1, *key2, "an HTTPRoute and a GRPCRoute targeting the same backend must not share a BackendClusterKey")
 }

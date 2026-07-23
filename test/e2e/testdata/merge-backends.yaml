@@ -1,0 +1,68 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: merge-backends-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: merge-backends-envoy-proxy
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: merge-backends-envoy-proxy
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  mergeBackends:
+    enabled: true
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+# Both routes reference the same backend, so mergeBackends should dedupe it into one shared xDS
+# Cluster referenced by both routes, instead of a separate Cluster per route.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: merge-backends-route-a
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: merge-backends-gtw
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /merge-backends-a
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: merge-backends-route-b
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: merge-backends-gtw
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /merge-backends-b
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

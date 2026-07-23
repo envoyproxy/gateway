@@ -1,0 +1,32 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10091
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - foo.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: backend/service/default/service-3/8163/tcp
+        statPrefix: tls-passthrough-10091
+    name: tlsroute/default/tlsroute-1
+  - filterChainMatch:
+      serverNames:
+      - bar.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: backend/service/default/service-3/8163/tcp
+        statPrefix: tls-passthrough-10091
+    name: tlsroute/default/tlsroute-2
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/tls
+  perConnectionBufferLimitBytes: 32768
