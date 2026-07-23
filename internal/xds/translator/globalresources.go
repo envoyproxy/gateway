@@ -69,13 +69,16 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 	return false
 }
 
-// ensureSystemTrustStoreSecret creates the shared system trust store SDS secret if not yet present.
-func ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
-	if findXdsSecret(tCtx, SystemTrustStoreSecretName) != nil {
+// ensureSystemTrustStoreSecret ensures a system CA trust store SDS secret with the given name
+// is present, creating it if not. When dedup is enabled, name is SystemTrustStoreSecretName and
+// a single shared secret is used; when dedup is disabled, name is a per-policy name and each
+// cluster gets its own idempotently-created copy pointing at the same system CA file path.
+func ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable, name string) error {
+	if findXdsSecret(tCtx, name) != nil {
 		return nil
 	}
-	if err := tCtx.AddXdsResource(resourcev3.SecretType, &tlsv3.Secret{
-		Name: SystemTrustStoreSecretName,
+	secret := &tlsv3.Secret{
+		Name: name,
 		Type: &tlsv3.Secret_ValidationContext{
 			ValidationContext: &tlsv3.CertificateValidationContext{
 				TrustedCa: &corev3.DataSource{
@@ -83,10 +86,13 @@ func ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
 				},
 			},
 		},
-	}); err != nil {
+	}
+	if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 		return err
 	}
-	tCtx.SystemTrustStore = true
+	if name == SystemTrustStoreSecretName {
+		tCtx.SystemTrustStore = true
+	}
 	return nil
 }
 

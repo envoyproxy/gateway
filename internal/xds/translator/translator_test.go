@@ -126,6 +126,11 @@ func TestTranslateXds(t *testing.T) {
 				Disabled: []egv1a1.RuntimeFlag{egv1a1.DeduplicateSystemTrustStore},
 			},
 		},
+		"http-route-multiple-system-truststore-dedup-disabled": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Disabled: []egv1a1.RuntimeFlag{egv1a1.DeduplicateSystemTrustStore},
+			},
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
