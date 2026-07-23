@@ -168,7 +168,7 @@ func TestBuildWasmWithTLS(t *testing.T) {
 				},
 			}
 
-			_, err := translator.buildWasm("test-wasm", tt.wasm, policy, 0, tt.resources)
+			_, err := translator.buildWasm("test-wasm", tt.wasm, policy, 0, tt.resources, nil)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {

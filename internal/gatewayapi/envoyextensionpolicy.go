@@ -518,17 +518,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	resources *resource.Resources,
 ) error {
 	var (
-		wasms                                                 []ir.Wasm
 		luas                                                  []ir.Lua
-		wasmFailOpen, extProcFailOpen                         bool
-		wasmError, luaError, extProcError, dynamicModuleError error
+		extProcFailOpen                                       bool
+		luaError, extProcError, dynamicModuleError, wasmError error
 		errs                                                  error
 	)
-
-	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
-		wasmError = perr.WithMessage(wasmError, "Wasm")
-		errs = errors.Join(errs, wasmError)
-	}
 
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
@@ -544,6 +538,19 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx == nil {
 			continue
+		}
+
+		var (
+			wasms        []ir.Wasm
+			wasmFailOpen bool
+		)
+		// Built per parent Gateway because EnvoyProxyModule Wasm resolves against
+		// that Gateway's EnvoyProxy.wasmModules. HTTP/Image call WasmCache.Get
+		// here; IfNotPresent is a cache hit on repeats, Always may re-fetch
+		// once per parentRef (same placement as Lua and DynamicModules).
+		if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources, gtwCtx.envoyProxy); wasmError != nil {
+			wasmError = perr.WithMessage(wasmError, "Wasm")
+			errs = errors.Join(errs, wasmError)
 		}
 
 		if luas, luaError = t.buildLuas(policy, gtwCtx.envoyProxy); luaError != nil {
@@ -646,7 +653,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		extProcError = perr.WithMessage(extProcError, "ExtProc")
 		errs = errors.Join(errs, extProcError)
 	}
-	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
+	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources, gateway.envoyProxy); wasmError != nil {
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
@@ -957,30 +964,35 @@ func irConfigNameForLua(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
 func (t *Translator) buildWasms(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) ([]ir.Wasm, error, bool) {
 	var (
 		failOpen bool
 		errs     error
 	)
 
-	if len(policy.Spec.Wasm) == 0 {
+	if policy == nil || len(policy.Spec.Wasm) == 0 {
 		return nil, nil, failOpen
 	}
 
 	wasmIRList := make([]ir.Wasm, 0, len(policy.Spec.Wasm))
 
-	if t.WasmCache == nil {
-		return nil, fmt.Errorf("wasm cache is not initialized"), failOpen
+	// EnvoyProxyModule sources resolve from EnvoyProxy and skip the control-plane cache.
+	needsCache := false
+	for _, wasm := range policy.Spec.Wasm {
+		if wasm.Code.Type == egv1a1.HTTPWasmCodeSourceType || wasm.Code.Type == egv1a1.ImageWasmCodeSourceType {
+			needsCache = true
+			break
+		}
 	}
-
-	if policy == nil {
-		return nil, nil, failOpen
+	if needsCache && t.WasmCache == nil {
+		return nil, fmt.Errorf("wasm cache is not initialized"), failOpen
 	}
 
 	hasFailClose := false
 	for idx, wasm := range policy.Spec.Wasm {
 		name := irConfigNameForWasm(policy, idx)
-		wasmIR, err := t.buildWasm(name, &wasm, policy, idx, resources)
+		wasmIR, err := t.buildWasm(name, &wasm, policy, idx, resources, envoyProxy)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if wasm.FailOpen == nil || !*wasm.FailOpen {
@@ -1005,10 +1017,12 @@ func (t *Translator) buildWasm(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	idx int,
 	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.Wasm, error) {
 	var (
 		failOpen   = false
 		code       *ir.HTTPWasmCode
+		localPath  string
 		pullPolicy wasm.PullPolicy
 		// the checksum provided by the user, it's used to validate the wasm module
 		// downloaded from the original HTTP server or the OCI registry
@@ -1034,6 +1048,42 @@ func (t *Translator) buildWasm(
 	}
 
 	switch config.Code.Type {
+	case egv1a1.EnvoyProxyModuleWasmCodeSourceType:
+		// Sanity check; CEL validation should have caught this.
+		if config.Code.EnvoyProxyModule == nil {
+			return nil, fmt.Errorf("missing EnvoyProxyModule field in Wasm code source")
+		}
+		moduleName := config.Code.EnvoyProxyModule.Name
+		if moduleName == "" {
+			return nil, fmt.Errorf("EnvoyProxyModule name must not be empty")
+		}
+
+		var entry *egv1a1.WasmModuleEntry
+		if envoyProxy != nil {
+			for i := range envoyProxy.Spec.WasmModules {
+				if envoyProxy.Spec.WasmModules[i].Name == moduleName {
+					entry = &envoyProxy.Spec.WasmModules[i]
+					break
+				}
+			}
+		}
+		if entry == nil {
+			return nil, fmt.Errorf("wasm module %q is not registered in the EnvoyProxy wasmModules allowlist", moduleName)
+		}
+
+		switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalWasmModuleSourceType); sourceType {
+		case egv1a1.LocalWasmModuleSourceType:
+			if entry.Source.Local == nil {
+				return nil, fmt.Errorf("wasm module %q has no local source configured", moduleName)
+			}
+			if entry.Source.Local.Path == "" {
+				return nil, fmt.Errorf("wasm module %q has empty path", moduleName)
+			}
+			localPath = entry.Source.Local.Path
+		default:
+			return nil, fmt.Errorf("wasm module %q has unsupported source type %q", moduleName, sourceType)
+		}
+
 	case egv1a1.HTTPWasmCodeSourceType:
 		var checksum string
 
@@ -1171,6 +1221,7 @@ func (t *Translator) buildWasm(
 		Config:   config.Config,
 		FailOpen: failOpen,
 		Code:     code,
+		Path:     localPath,
 	}
 
 	if config.Env != nil && len(config.Env.HostKeys) > 0 {
