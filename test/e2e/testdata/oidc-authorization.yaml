@@ -1,0 +1,70 @@
+# Combines OIDC authentication with an authentication-independent authorization
+# deny rule (clientCIDRs) on the same route, to verify that the deny is enforced
+# before the OIDC filter can redirect the client to the identity provider.
+# See https://github.com/envoyproxy/gateway/issues/8913
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-oidc-authz
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /protected-oidc
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: gateway-conformance-infra
+  name: oidc-authz-secret
+data:
+  client-secret: b2lkY3Rlc3QtZm9vLWNsaWVudC1zZWNyZXQ=  # base64 of "oidctest-foo-client-secret"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-authz
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-oidc-authz
+  # Authentication-independent deny rule: must be enforced before OIDC so that a
+  # client in the denied CIDR receives 403 instead of a 302 redirect to the IdP.
+  authorization:
+    defaultAction: Allow
+    rules:
+      - name: "deny-sanctioned-cidr"
+        action: Deny
+        principal:
+          clientCIDRs:
+            - 192.168.1.0/24
+  oidc:
+    provider:
+      issuer: "http://keycloak.gateway-conformance-infra/realms/master"
+      authorizationEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"
+      endSessionEndpoint: "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/logout"
+    clientID: "oidctest-foo"
+    clientSecret:
+      name: "oidc-authz-secret"
+    redirectURL: "http://www.example.com/protected-oidc/oauth2/callback"
+    logoutPath: "/protected-oidc/logout"
+    forwardAccessToken: true
+    passThroughAuthHeader: true
+  jwt:
+    providers:
+      - name: "keycloak"  # This is needed so JWTs generated through the OIDC flow can be validated
+        remoteJWKS:
+          uri: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/certs"
+          cacheDuration: 300s

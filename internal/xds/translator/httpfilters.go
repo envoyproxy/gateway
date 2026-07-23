@@ -109,30 +109,43 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, egv1a1.EnvoyFilterHeaderMutation):
 		// Ensure header mutation run before ext auth which might consume the header.
 		order = 4
-	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
+	// GeoIP populates the geo metadata headers consumed by the RBAC filters. It
+	// must run before the pre-auth RBAC filter (and therefore before the
+	// authentication filters) so that authentication-independent geo/IP deny
+	// rules can be enforced before authentication.
+	case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
 		order = 5
-	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
+	// The pre-auth RBAC filter enforces authentication-independent authorization
+	// rules (e.g. clientIPGeoLocations, clientCIDRs) before the authentication
+	// filters, so that a denied client is rejected with 403 before OAuth2/ext_authz
+	// can redirect or challenge it (issue #8913). Its name is deliberately chosen
+	// so that it does not share the main RBAC filter's prefix
+	// (envoy.filters.http.rbac); this keeps the two filters independently
+	// orderable and ensures a user filterOrder targeting RBAC does not move it.
+	case strings.HasPrefix(filter.Name, rbacPreAuthFilterName):
 		order = 6
-	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
+	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 7
-	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
+	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
 		order = 8
-	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
+	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
 		order = 9
-	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
+	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
 		order = 10
-	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
 		order = 11
+	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
+		order = 12
+	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+		order = 13
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 12 + mustGetFilterIndex(filter.Name)
+		order = 14 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
 		order = 200 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterDynamicModules):
 		order = 250 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
-		order = 300
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
 		order = 301
 	case isFilterType(filter, egv1a1.EnvoyFilterLocalRateLimit):

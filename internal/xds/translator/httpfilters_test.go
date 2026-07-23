@@ -68,6 +68,52 @@ func Test_sortHTTPFilters(t *testing.T) {
 			},
 		},
 		{
+			name: "geoip and pre-auth rbac are ordered before authentication filters",
+			filters: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
+				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+			},
+			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+			},
+		},
+		{
+			name: "custom filter order for rbac does not move pre-auth rbac",
+			filters: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+			},
+			filterOrder: []egv1a1.FilterPosition{
+				{
+					Name:   egv1a1.EnvoyFilterRBAC,
+					Before: new(egv1a1.EnvoyFilterCORS),
+				},
+			},
+			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+			},
+		},
+		{
 			name: "custom filter order-singleton filter",
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
