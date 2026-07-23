@@ -610,6 +610,20 @@ type ProxyProtocolSettings struct {
 	// If set to false, the listener will reject requests without a Proxy Protocol header.
 	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
 	Optional bool `json:"optional,omitempty" yaml:"optional,omitempty"`
+	// ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+	// destination port. Only takes effect when PROXY protocol is enabled.
+	// +optional
+	ForwardProto *ForwardProtoConfig `json:"forwardProtoConfig,omitempty" yaml:"forwardProtoConfig,omitempty"`
+}
+
+// ForwardProtoConfig holds configuration for inferring the x-forwarded-proto header
+// from the PROXY protocol destination port.
+// +k8s:deepcopy-gen=true
+type ForwardProtoConfig struct {
+	// HTTPSDestinationPorts are the destination ports treated as HTTPS.
+	HTTPSDestinationPorts []uint32 `json:"httpsDestinationPorts,omitempty" yaml:"httpsDestinationPorts,omitempty"`
+	// HTTPDestinationPorts are the destination ports treated as HTTP.
+	HTTPDestinationPorts []uint32 `json:"httpDestinationPorts,omitempty" yaml:"httpDestinationPorts,omitempty"`
 }
 
 type WithUnderscoresAction egv1a1.WithUnderscoresAction

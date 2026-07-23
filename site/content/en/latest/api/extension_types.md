@@ -2623,6 +2623,25 @@ _Appears in:_
 | `minEndpointsInZoneThreshold` | _integer_ |  false  |  | MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone<br />override. This is useful for protecting zones with fewer endpoints. |
 
 
+#### ForwardProtoConfig
+
+
+
+ForwardProtoConfig configures the ports used to infer the x-forwarded-proto
+header from the PROXY protocol destination port. When the restored local address
+(populated by the PROXY protocol listener filter) has a destination port matching
+one of these lists, the x-forwarded-proto header is set to the corresponding scheme.
+At least one of httpsDestinationPorts or httpDestinationPorts must be set.
+
+_Appears in:_
+- [ProxyProtocolSettings](#proxyprotocolsettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `httpsDestinationPorts` | _integer array_ |  false  |  | HTTPSDestinationPorts are the destination ports treated as HTTPS.<br />When the PROXY protocol destination port matches one of these, the<br />x-forwarded-proto header is set to "https".<br />Common values: 443, 8443. |
+| `httpDestinationPorts` | _integer array_ |  false  |  | HTTPDestinationPorts are the destination ports treated as HTTP.<br />When the PROXY protocol destination port matches one of these, the<br />x-forwarded-proto header is set to "http".<br />Common values: 80, 8080. |
+
+
 #### GRPCActiveHealthChecker
 
 
@@ -4991,6 +5010,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `optional` | _boolean_ |  false  |  | Optional allows requests without a Proxy Protocol header to be proxied.<br />If set to true, the listener will accept requests without a Proxy Protocol header.<br />If set to false, the listener will reject requests without a Proxy Protocol header.<br />If not set, the default behavior is to reject requests without a Proxy Protocol header.<br />Warning: Optional breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.<br />For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt |
+| `forwardProtoConfig` | _[ForwardProtoConfig](#forwardprotoconfig)_ |  false  |  | ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol<br />destination port. Only takes effect when PROXY protocol is enabled.<br />This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and<br />forwards traffic to Envoy over PROXY protocol, so that Envoy can set the correct<br />scheme for the forwarded request. |
 
 
 #### ProxyProtocolVersion

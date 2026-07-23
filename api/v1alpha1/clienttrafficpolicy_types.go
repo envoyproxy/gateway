@@ -460,6 +460,46 @@ type ProxyProtocolSettings struct {
 	//
 	// +optional
 	Optional *bool `json:"optional,omitempty"`
+	// ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+	// destination port. Only takes effect when PROXY protocol is enabled.
+	//
+	// This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and
+	// forwards traffic to Envoy over PROXY protocol, so that Envoy can set the correct
+	// scheme for the forwarded request.
+	//
+	// +optional
+	ForwardProto *ForwardProtoConfig `json:"forwardProtoConfig,omitempty"`
+}
+
+// ForwardProtoConfig configures the ports used to infer the x-forwarded-proto
+// header from the PROXY protocol destination port. When the restored local address
+// (populated by the PROXY protocol listener filter) has a destination port matching
+// one of these lists, the x-forwarded-proto header is set to the corresponding scheme.
+// At least one of httpsDestinationPorts or httpDestinationPorts must be set.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.httpsDestinationPorts) ? self.httpsDestinationPorts.size() : 0) + (has(self.httpDestinationPorts) ? self.httpDestinationPorts.size() : 0) >= 1",message="at least one of httpsDestinationPorts or httpDestinationPorts must be set"
+// +kubebuilder:validation:XValidation:rule="!(has(self.httpsDestinationPorts) && has(self.httpDestinationPorts) && self.httpsDestinationPorts.exists(p, p in self.httpDestinationPorts))",message="httpsDestinationPorts and httpDestinationPorts must be disjoint"
+type ForwardProtoConfig struct {
+	// HTTPSDestinationPorts are the destination ports treated as HTTPS.
+	// When the PROXY protocol destination port matches one of these, the
+	// x-forwarded-proto header is set to "https".
+	// Common values: 443, 8443.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:items:XValidation:rule="self >= 1 && self <= 65535",message="port must be in the range [1, 65535]"
+	HTTPSDestinationPorts []int32 `json:"httpsDestinationPorts,omitempty"`
+	// HTTPDestinationPorts are the destination ports treated as HTTP.
+	// When the PROXY protocol destination port matches one of these, the
+	// x-forwarded-proto header is set to "http".
+	// Common values: 80, 8080.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:items:XValidation:rule="self >= 1 && self <= 65535",message="port must be in the range [1, 65535]"
+	HTTPDestinationPorts []int32 `json:"httpDestinationPorts,omitempty"`
 }
 
 //+kubebuilder:object:root=true

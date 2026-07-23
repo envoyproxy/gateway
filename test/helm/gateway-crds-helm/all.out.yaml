@@ -29386,6 +29386,56 @@ spec:
                   If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
                 minProperties: 0
                 properties:
+                  forwardProtoConfig:
+                    description: |-
+                      ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+                      destination port. Only takes effect when PROXY protocol is enabled.
+
+                      This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and
+                      forwards traffic to Envoy over PROXY protocol, so that Envoy can set the correct
+                      scheme for the forwarded request.
+                    properties:
+                      httpDestinationPorts:
+                        description: |-
+                          HTTPDestinationPorts are the destination ports treated as HTTP.
+                          When the PROXY protocol destination port matches one of these, the
+                          x-forwarded-proto header is set to "http".
+                          Common values: 80, 8080.
+                        items:
+                          format: int32
+                          type: integer
+                          x-kubernetes-validations:
+                          - message: port must be in the range [1, 65535]
+                            rule: self >= 1 && self <= 65535
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                      httpsDestinationPorts:
+                        description: |-
+                          HTTPSDestinationPorts are the destination ports treated as HTTPS.
+                          When the PROXY protocol destination port matches one of these, the
+                          x-forwarded-proto header is set to "https".
+                          Common values: 443, 8443.
+                        items:
+                          format: int32
+                          type: integer
+                          x-kubernetes-validations:
+                          - message: port must be in the range [1, 65535]
+                            rule: self >= 1 && self <= 65535
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                    type: object
+                    x-kubernetes-validations:
+                    - message: at least one of httpsDestinationPorts or httpDestinationPorts
+                        must be set
+                      rule: '(has(self.httpsDestinationPorts) ? self.httpsDestinationPorts.size()
+                        : 0) + (has(self.httpDestinationPorts) ? self.httpDestinationPorts.size()
+                        : 0) >= 1'
+                    - message: httpsDestinationPorts and httpDestinationPorts must
+                        be disjoint
+                      rule: '!(has(self.httpsDestinationPorts) && has(self.httpDestinationPorts)
+                        && self.httpsDestinationPorts.exists(p, p in self.httpDestinationPorts))'
                   optional:
                     description: |-
                       Optional allows requests without a Proxy Protocol header to be proxied.
