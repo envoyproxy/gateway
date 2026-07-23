@@ -282,7 +282,7 @@ func (t *Translator) processServerValidationTLSSettings(
 		tlsConfig.UseSystemTrustStore = ptr.Deref(backend.Spec.TLS.WellKnownCACertificates, "") == gwapiv1.WellKnownCACertificatesSystem
 		if tlsConfig.UseSystemTrustStore {
 			name := fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace)
-			if t.DeduplicateSystemTrustStore {
+			if !t.PerResourceSystemCASecret {
 				name = ir.SystemTrustStoreSecretName
 			}
 			tlsConfig.CACertificate = &ir.TLSCACertificate{
@@ -514,7 +514,7 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 	}
 	if tlsBundle.UseSystemTrustStore {
 		name := fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
-		if t.DeduplicateSystemTrustStore {
+		if !t.PerResourceSystemCASecret {
 			name = ir.SystemTrustStoreSecretName
 		}
 		tlsBundle.CACertificate = &ir.TLSCACertificate{

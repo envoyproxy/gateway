@@ -154,6 +154,15 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				continue
 			}
 
+			// Reject a patch that renames any secret to the reserved system trust store name.
+			if p.Type == resourcev3.SecretType {
+				if s, ok := temp.(*tlsv3.Secret); ok && s.Name == SystemTrustStoreSecretName && p.Name != SystemTrustStoreSecretName {
+					tErr := fmt.Errorf("secret name %q is reserved for the system trust store and cannot be used by other resources", SystemTrustStoreSecretName)
+					tErrs = errors.Join(tErrs, tErr)
+					continue
+				}
+			}
+
 			// Validate the patched resource
 			validator, ok := temp.(interface{ Validate() error })
 			if ok {

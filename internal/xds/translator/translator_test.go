@@ -120,15 +120,18 @@ func TestTranslateXds(t *testing.T) {
 				Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
 			},
 		},
-		"http-route-with-tls-system-truststore-dedup-disabled": {
+		"http-route-with-tls-system-truststore-per-resource-secret": {
 			runtimeFlags: &egv1a1.RuntimeFlags{
-				Disabled: []egv1a1.RuntimeFlag{egv1a1.DeduplicateSystemTrustStore},
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.PerResourceSystemCASecret},
 			},
 		},
-		"http-route-multiple-system-truststore-dedup-disabled": {
+		"http-route-multiple-system-truststore-per-resource-secret": {
 			runtimeFlags: &egv1a1.RuntimeFlags{
-				Disabled: []egv1a1.RuntimeFlag{egv1a1.DeduplicateSystemTrustStore},
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.PerResourceSystemCASecret},
 			},
+		},
+		"jsonpatch-system-truststore-secret-renamed": {
+			requireEnvoyPatchPolicies: true,
 		},
 		"jsonpatch-system-truststore-secret-removed": {
 			requireEnvoyPatchPolicies: true,

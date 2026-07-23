@@ -246,7 +246,7 @@ xdsIR:
             tls:
               alpnProtocols: null
               caCertificate:
-                name: backend-with-system-ca/default-ca
+                name: system_ca_certificates
               maxVersion: "1.3"
               minVersion: "1.2"
               useSystemTrustStore: true

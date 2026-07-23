@@ -162,7 +162,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;DeduplicateSystemTrustStore
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret
 type RuntimeFlag string
 
 const (
@@ -176,10 +176,13 @@ const (
 	// consider disabling this flag.
 	EndpointSliceIndex RuntimeFlag = "EndpointSliceIndex"
 
-	// DeduplicateSystemTrustStore consolidates per-policy system CA SDS secrets into a single
-	// shared system_ca_certificates secret, reducing inotify watchers.
-	// Enabled by default.
-	DeduplicateSystemTrustStore RuntimeFlag = "DeduplicateSystemTrustStore"
+	// PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per
+	// BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead
+	// of sharing a single system_ca_certificates secret across all of them.
+	// Disabled by default (i.e. the shared secret is used). Enable this flag to opt out during
+	// upgrades — Envoy must warm the new system_ca_certificates secret before clusters can use
+	// it, which may cause a brief disruption to new connections on first enable.
+	PerResourceSystemCASecret RuntimeFlag = "PerResourceSystemCASecret" //nolint:gosec // not a credential
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.

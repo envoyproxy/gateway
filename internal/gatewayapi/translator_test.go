@@ -56,7 +56,7 @@ func TestTranslate(t *testing.T) {
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
-		DeduplicateSystemTrustStore     bool
+		PerResourceSystemCASecret       bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -95,33 +95,34 @@ func TestTranslate(t *testing.T) {
 			SDSEnabled:     true,
 		},
 		{
-			name:                        "envoyproxy-otel-backend-tls-dedup",
-			BackendEnabled:              true,
-			DeduplicateSystemTrustStore: true,
+			name: "envoyextensionpolicy-with-extproc-with-backendtlspolicy-shared-secret",
 		},
 		{
-			name:                        "envoyextensionpolicy-with-extproc-with-backendtlspolicy-dedup",
-			DeduplicateSystemTrustStore: true,
+			name:                      "envoyproxy-otel-backend-tls-per-resource-secret",
+			BackendEnabled:            true,
+			PerResourceSystemCASecret: true,
 		},
 		{
-			name:                        "backend-system-truststore-dedup",
-			BackendEnabled:              true,
-			DeduplicateSystemTrustStore: true,
+			name:                      "envoyextensionpolicy-with-extproc-with-backendtlspolicy-per-resource-secret",
+			PerResourceSystemCASecret: true,
 		},
 		{
-			name:                        "backend-system-truststore-dedup-disabled",
-			BackendEnabled:              true,
-			DeduplicateSystemTrustStore: false,
+			name:           "backend-system-truststore-shared-secret",
+			BackendEnabled: true,
 		},
 		{
-			name:                        "backend-system-truststore-btlsp-override-dedup",
-			BackendEnabled:              true,
-			DeduplicateSystemTrustStore: true,
+			name:                      "backend-system-truststore-per-resource-secret",
+			BackendEnabled:            true,
+			PerResourceSystemCASecret: true,
 		},
 		{
-			name:                        "backend-system-truststore-btlsp-override-dedup-disabled",
-			BackendEnabled:              true,
-			DeduplicateSystemTrustStore: false,
+			name:           "backend-system-truststore-btlsp-override-shared-secret",
+			BackendEnabled: true,
+		},
+		{
+			name:                      "backend-system-truststore-btlsp-override-per-resource-secret",
+			BackendEnabled:            true,
+			PerResourceSystemCASecret: true,
 		},
 	}
 
@@ -148,7 +149,7 @@ func TestTranslate(t *testing.T) {
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
-			deduplicateSystemTrustStore := false
+			perResourceSystemCASecret := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -158,7 +159,7 @@ func TestTranslate(t *testing.T) {
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
-					deduplicateSystemTrustStore = config.DeduplicateSystemTrustStore
+					perResourceSystemCASecret = config.PerResourceSystemCASecret
 				}
 			}
 
@@ -169,7 +170,7 @@ func TestTranslate(t *testing.T) {
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
-				DeduplicateSystemTrustStore:     deduplicateSystemTrustStore,
+				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,
