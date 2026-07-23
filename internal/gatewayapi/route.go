@@ -321,6 +321,18 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		case processFilterError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
+				// If the route already has a redirect configured by a valid filter, the error-generated
+				// direct response (e.g. from an invalid/unsupported filter) must be dropped, otherwise it
+				// would take precedence over the redirect in xDS and the redirect would be silently lost.
+				if irRoute.Redirect != nil {
+					irRoute.DirectResponse = nil
+					continue
+				}
+				// If the route already has a direct response configured by a filter, keep it and skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil {
+					continue
+				}
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
@@ -1044,9 +1056,16 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		case processFilterError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
-				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// If the route already has a redirect configured by a valid filter, the error-generated
+				// direct response (e.g. from an invalid/unsupported filter) must be dropped, otherwise it
+				// would take precedence over the redirect in xDS and the redirect would be silently lost.
+				if irRoute.Redirect != nil {
+					irRoute.DirectResponse = nil
+					continue
+				}
+				// If the route already has a direct response configured by a filter, keep it and skip
 				// the direct response from errors.
-				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+				if irRoute.DirectResponse != nil {
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
