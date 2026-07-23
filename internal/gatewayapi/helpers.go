@@ -517,7 +517,10 @@ func irDestinationSettingName(destName string, backendIdx int) string {
 	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
 }
 
-func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
+func irRuleName(policyNamespace, policyName string, ruleIndex int, ruleName *string) string {
+	if ruleName != nil && *ruleName != "" {
+		return fmt.Sprintf("%s/%s/rule/%s", policyNamespace, policyName, *ruleName)
+	}
 	return fmt.Sprintf("%s/%s/rule/%d", policyNamespace, policyName, ruleIndex)
 }
 

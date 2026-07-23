@@ -1422,8 +1422,8 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 		if err != nil {
 			return nil, err
 		}
-		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
-		irRule.Name = irRuleName(policy.Namespace, policy.Name, i)
+		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-name-or-index>
+		irRule.Name = irRuleName(policy.Namespace, policy.Name, i, rule.Name)
 		irRules = append(irRules, irRule)
 	}
 
@@ -1460,8 +1460,8 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 		if err != nil {
 			return nil, err
 		}
-		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
-		irRules[i].Name = irRuleName(policy.Namespace, policy.Name, i)
+		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-name-or-index>
+		irRules[i].Name = irRuleName(policy.Namespace, policy.Name, i, rule.Name)
 	}
 
 	return rateLimit, nil
