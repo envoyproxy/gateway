@@ -2136,3 +2136,95 @@ func writeTestDataToFile(filename string, resources []any) error {
 
 	return os.WriteFile(filename, combinedYAML, 0o600)
 }
+
+// TestGatewayNameLabelPropagation verifies the gateway-name label is on
+// resources in default mode, omitted for merged gateways, and never on the
+// (immutable) default-mode selector.
+func TestGatewayNameLabelPropagation(t *testing.T) {
+	newRender := func(gatewayNamespaceMode bool, metaLabels map[string]string) *ResourceRender {
+		i := ir.NewInfra()
+		i.Proxy.Name = "default/eg"
+		i.Proxy.GetProxyMetadata().Labels = metaLabels
+		return &ResourceRender{
+			infra:                i.GetProxyInfra(),
+			GatewayNamespaceMode: gatewayNamespaceMode,
+		}
+	}
+
+	t.Run("default mode, single gateway: label on resources, not on selector", func(t *testing.T) {
+		r := newRender(false, map[string]string{
+			gatewayapi.OwningGatewayNameLabel:      "eg",
+			gatewayapi.OwningGatewayNamespaceLabel: "default",
+		})
+
+		objLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
+		require.Equal(t, "eg", objLabels[gatewayapi.GatewayNameLabel],
+			"generated resources must carry the standard gateway-name label")
+
+		selector := r.stableSelector().MatchLabels
+		require.NotContains(t, selector, gatewayapi.GatewayNameLabel,
+			"gateway-name must NOT be part of the immutable selector in default mode")
+	})
+
+	t.Run("merged gateways: label omitted", func(t *testing.T) {
+		r := newRender(false, map[string]string{
+			gatewayapi.OwningGatewayClassLabel: "eg-class",
+		})
+
+		objLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
+		require.NotContains(t, objLabels, gatewayapi.GatewayNameLabel,
+			"merged fleets belong to the GatewayClass; the per-Gateway label must be omitted")
+	})
+
+	t.Run("gateway namespace mode: unchanged (label on resources and selector)", func(t *testing.T) {
+		r := newRender(true, map[string]string{
+			gatewayapi.OwningGatewayNameLabel:      "eg",
+			gatewayapi.OwningGatewayNamespaceLabel: "default",
+		})
+
+		objLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
+		require.Contains(t, objLabels, gatewayapi.GatewayNameLabel)
+
+		selector := r.stableSelector().MatchLabels
+		require.Contains(t, selector, gatewayapi.GatewayNameLabel,
+			"gateway namespace mode keeps its existing selector behavior")
+	})
+}
+
+// TestServiceSelectorGatewayName guards against gateway-name leaking into the
+// Service selector, which is built independently of stableSelector.
+func TestServiceSelectorGatewayName(t *testing.T) {
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	t.Run("default mode: gateway-name on metadata, not on selector", func(t *testing.T) {
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newTestInfra())
+		require.NoError(t, err)
+		svc, err := r.Service()
+		require.NoError(t, err)
+
+		require.Contains(t, svc.Labels, gatewayapi.GatewayNameLabel,
+			"Service metadata must carry the standard gateway-name label")
+		require.NotContains(t, svc.Spec.Selector, gatewayapi.GatewayNameLabel,
+			"gateway-name must NOT leak into the Service selector in default mode")
+	})
+
+	t.Run("gateway namespace mode: gateway-name on selector", func(t *testing.T) {
+		cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+			Type: egv1a1.ProviderTypeKubernetes,
+			Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+				Deploy: &egv1a1.KubernetesDeployMode{
+					Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+				},
+			},
+		}
+		infra := newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"})
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+		require.NoError(t, err)
+		svc, err := r.Service()
+		require.NoError(t, err)
+
+		require.Contains(t, svc.Spec.Selector, gatewayapi.GatewayNameLabel,
+			"gateway namespace mode keeps gateway-name in the Service selector")
+	})
+}
