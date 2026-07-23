@@ -1020,6 +1020,10 @@ type CookieBasedSessionPersistence struct {
 	Name string `json:"name"`
 
 	TTL *metav1.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
+
+	// Path overrides the Path attribute of the session persistence cookie.
+	// When nil, the cookie Path is derived from the matched route path.
+	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
 // HeaderBasedSessionPersistence defines the configuration for header-based session persistence.

@@ -151,6 +151,42 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	RoutingType *RoutingType `json:"routingType,omitempty"`
+
+	// SessionPersistence overrides session persistence attributes that cannot be
+	// expressed through the Gateway API HTTPRoute sessionPersistence field, such as
+	// the session cookie Path.
+	//
+	// This only affects routes that already enable session persistence via the
+	// Gateway API HTTPRoute sessionPersistence field. It does not enable session
+	// persistence on its own.
+	//
+	// +optional
+	SessionPersistence *SessionPersistenceOverride `json:"sessionPersistence,omitempty"`
+}
+
+// SessionPersistenceOverride defines overrides for session persistence attributes.
+type SessionPersistenceOverride struct {
+	// Cookie defines overrides for cookie-based session persistence.
+	//
+	// +optional
+	Cookie *SessionPersistenceCookieOverride `json:"cookie,omitempty"`
+}
+
+// SessionPersistenceCookieOverride defines overrides for the attributes of the
+// session persistence cookie.
+type SessionPersistenceCookieOverride struct {
+	// Path overrides the Path attribute of the session persistence cookie.
+	//
+	// By default, Envoy Gateway derives the cookie Path from the matched HTTPRoute
+	// path. This breaks sticky sessions when the request path is rewritten by an
+	// upstream proxy before it reaches Envoy Gateway, because the derived Path no
+	// longer matches the client-facing URL. Setting this field pins the cookie Path
+	// to a fixed value (for example "/") regardless of the matched route path.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	// +optional
+	Path *string `json:"path,omitempty"`
 }
 
 type BackendTelemetry struct {

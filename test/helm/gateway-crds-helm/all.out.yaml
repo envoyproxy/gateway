@@ -27471,6 +27471,34 @@ spec:
                   When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.
                   If not specified, the EnvoyProxy-level setting is used.
                 type: string
+              sessionPersistence:
+                description: |-
+                  SessionPersistence overrides session persistence attributes that cannot be
+                  expressed through the Gateway API HTTPRoute sessionPersistence field, such as
+                  the session cookie Path.
+
+                  This only affects routes that already enable session persistence via the
+                  Gateway API HTTPRoute sessionPersistence field. It does not enable session
+                  persistence on its own.
+                properties:
+                  cookie:
+                    description: Cookie defines overrides for cookie-based session
+                      persistence.
+                    properties:
+                      path:
+                        description: |-
+                          Path overrides the Path attribute of the session persistence cookie.
+
+                          By default, Envoy Gateway derives the cookie Path from the matched HTTPRoute
+                          path. This breaks sticky sessions when the request path is rewritten by an
+                          upstream proxy before it reaches Envoy Gateway, because the derived Path no
+                          longer matches the client-facing URL. Setting this field pins the cookie Path
+                          to a fixed value (for example "/") regardless of the matched route path.
+                        maxLength: 1024
+                        minLength: 1
+                        type: string
+                    type: object
+                type: object
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
