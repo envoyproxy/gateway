@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -161,6 +162,61 @@ var GatewayNamespaceOwnership = suite.ConformanceTest{
 					return apierrors.IsNotFound(err), nil
 				}))
 			require.NoError(t, suite.Client.Get(ctx, client.ObjectKey{Namespace: ns, Name: gwName}, &corev1.ConfigMap{}))
+		})
+
+		t.Run("Deployment", func(t *testing.T) {
+			gwName := "ownership-collision-deploy"
+			ctx := t.Context()
+
+			// A pre-existing, unmanaged Deployment that shares the Gateway's name — the
+			// nginx scenario from #9132. It has a different selector and no envoy-gateway
+			// ownership labels. replicas=0 keeps it inert: the ownership-collision
+			// behavior under test needs no Pods to run, so we avoid scheduling/image-pull.
+			preExistingDeploy := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      gwName,
+					Labels:    map[string]string{"app": "pre-existing"},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32),
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "pre-existing"}},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "pre-existing"}},
+						Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}}},
+					},
+				},
+			}
+			require.NoError(t, suite.Client.Create(ctx, preExistingDeploy))
+			t.Cleanup(func() {
+				cleanupCtx := context.Background()
+				_ = suite.Client.Delete(cleanupCtx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+				_ = suite.Client.Delete(cleanupCtx, &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: gwName}})
+			})
+
+			gw := newCollisionGateway(ns, gwName, suite.GatewayClassName)
+			require.NoError(t, suite.Client.Create(ctx, gw))
+
+			gwNN := types.NamespacedName{Name: gwName, Namespace: ns}
+			waitForSettled(t, gwNN)
+
+			fetchedDeploy := &appsv1.Deployment{}
+			require.NoError(t, suite.Client.Get(ctx, client.ObjectKey{Namespace: ns, Name: gwName}, fetchedDeploy))
+			for _, ref := range fetchedDeploy.OwnerReferences {
+				assert.NotEqual(t, "Gateway", ref.Kind,
+					"pre-existing Deployment must not have a Gateway ownerReference injected")
+			}
+			assert.Equal(t, map[string]string{"app": "pre-existing"}, fetchedDeploy.Labels,
+				"pre-existing Deployment labels must not be modified")
+
+			// Ensure deleting the Gateway does not garbage-collect the pre-existing Deployment.
+			require.NoError(t, suite.Client.Delete(ctx, gw))
+			require.NoError(t, wait.PollUntilContextTimeout(ctx, time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true,
+				func(ctx context.Context) (bool, error) {
+					err := suite.Client.Get(ctx, gwNN, &gwapiv1.Gateway{})
+					return apierrors.IsNotFound(err), nil
+				}))
+			require.NoError(t, suite.Client.Get(ctx, client.ObjectKey{Namespace: ns, Name: gwName}, &appsv1.Deployment{}))
 		})
 	},
 }
