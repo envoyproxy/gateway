@@ -1,0 +1,1 @@
+Added `spec.oidc.forwardIDToken` to SecurityPolicy, allowing the OIDC ID token to be forwarded to the upstream on a configurable request header. When the header is `Authorization`, the ID token is forwarded using the `Bearer ` prefix; for any other header the raw token value is set.

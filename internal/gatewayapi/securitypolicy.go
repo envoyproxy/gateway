@@ -925,6 +925,30 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		if !hasValidJwtExtractor {
 			return errors.New("the OIDC.PassThroughAuthHeader setting must be used in conjunction with a JWT provider that is configured to read from a header")
 		}
+
+		// Envoy rejects (NACKs) an OAuth2 config whose pass_through_matcher keys on the
+		// forward_id_token header. EG builds the pass_through_matcher from
+		// the JWT providers' extractFrom headers (defaulting to "Authorization"), so
+		// reject the equivalent collision here to surface a clear policy error instead
+		// of a listener NACK.
+		if oidc.ForwardIDToken != nil {
+			fwdHeader := oidc.ForwardIDToken.Header
+			for _, provider := range jwt.Providers {
+				// When ExtractFrom is not specified, JWT (and the pass-through matcher)
+				// falls back to the "Authorization" header.
+				if provider.ExtractFrom == nil {
+					if strings.EqualFold(fwdHeader, "Authorization") {
+						return fmt.Errorf("the OIDC.ForwardIDToken header %q cannot be the Authorization header when passThroughAuthHeader is enabled and a JWT provider reads from it", fwdHeader)
+					}
+					continue
+				}
+				for _, h := range provider.ExtractFrom.Headers {
+					if strings.EqualFold(fwdHeader, h.Name) {
+						return fmt.Errorf("the OIDC.ForwardIDToken header %q cannot be the same as a JWT provider extractFrom header when passThroughAuthHeader is enabled", fwdHeader)
+					}
+				}
+			}
+		}
 	}
 
 	basicAuth := p.Spec.BasicAuth
@@ -2016,6 +2040,7 @@ func (t *Translator) buildOIDC(
 		redirectPath           = defaultRedirectPath
 		logoutPath             = defaultLogoutPath
 		forwardAccessToken     = defaultForwardAccessToken
+		forwardIDTokenHeader   *string
 		refreshToken           = defaultRefreshToken
 		passThroughAuthHeader  = defaultPassThroughAuthHeader
 		disableTokenEncryption = false
@@ -2085,6 +2110,9 @@ func (t *Translator) buildOIDC(
 	if oidc.ForwardAccessToken != nil {
 		forwardAccessToken = *oidc.ForwardAccessToken
 	}
+	if oidc.ForwardIDToken != nil {
+		forwardIDTokenHeader = &oidc.ForwardIDToken.Header
+	}
 	if oidc.RefreshToken != nil {
 		refreshToken = *oidc.RefreshToken
 	}
@@ -2128,6 +2156,7 @@ func (t *Translator) buildOIDC(
 		RedirectPath:           redirectPath,
 		LogoutPath:             logoutPath,
 		ForwardAccessToken:     forwardAccessToken,
+		ForwardIDTokenHeader:   forwardIDTokenHeader,
 		RefreshToken:           refreshToken,
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,

@@ -692,6 +692,57 @@ func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 			}),
 			wantError: false,
 		},
+		{
+			name: "forwardIDToken on a header not used by any JWT provider is ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+				ForwardIDToken:        &egv1a1.OIDCTokenForwarding{Header: "X-Id-Token"},
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "X-Jwt"}},
+						},
+					},
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "forwardIDToken on a custom JWT extractFrom header is rejected",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+				ForwardIDToken:        &egv1a1.OIDCTokenForwarding{Header: "X-Jwt"},
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							// Case-insensitive collision with the forwardIDToken header.
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "x-jwt"}},
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "forwardIDToken on Authorization is rejected when a JWT provider defaults to it",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+				ForwardIDToken:        &egv1a1.OIDCTokenForwarding{Header: "authorization"},
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					// No ExtractFrom -> defaults to the Authorization header.
+					{Name: "test"},
+				},
+			},
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {
