@@ -440,6 +440,8 @@ Here is an example of a rate limit implemented by the application developer to l
 value in the `x-user-id` header. Here, user `one` (recognised from the traffic flow using the header `x-user-id` and value `one`) will be rate limited at 3 requests/hour
 and so will user `two` (recognised from the traffic flow using the header `x-user-id` and value `two`). But if `x-user-id` is `admin`, it will not be rate limited even beyond 3 requests/hour.
 
+The `invert: true` field inverts the header match condition. Instead of matching requests where `x-user-id` is `admin`, it matches requests where `x-user-id` is **not** `admin`. In this example, the rate limit applies to all distinct users except `admin`.
+
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
 
