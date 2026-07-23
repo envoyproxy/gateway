@@ -181,7 +181,9 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	// Single check: verify system_ca_certificates content wasn't altered by patches or extensions.
+	// Final check: verify system_ca_certificates wasn't tampered with by the extension
+	// post-translation hook (EnvoyPatchPolicy tampering is caught per-policy inside
+	// processJSONPatches and attributed to the offending policy's status).
 	if err := validateSystemTrustStoreSecret(tCtx); err != nil {
 		errs = errors.Join(errs, err)
 	}

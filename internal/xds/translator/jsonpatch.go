@@ -160,6 +160,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			errs = errors.Join(errs, tErrs)
 		}
 
+		// Validate that the system trust store secret was not tampered with by this policy.
+		if sErr := validateSystemTrustStoreSecret(tCtx); sErr != nil {
+			status.SetTranslationErrorForEnvoyPatchPolicy(e.Status, status.Error2ConditionMsg(sErr), e.Generation)
+			errs = errors.Join(errs, sErr)
+		}
+
 		// Set resources not found errors for every policy ancestor references
 		if len(notFoundResources) > 0 {
 			status.SetResourceNotFoundErrorForEnvoyPatchPolicy(e.Status, notFoundResources, e.Generation)

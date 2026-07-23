@@ -176,7 +176,7 @@ const (
 	// consider disabling this flag.
 	EndpointSliceIndex RuntimeFlag = "EndpointSliceIndex"
 
-  // DeduplicateSystemTrustStore consolidates per-policy system CA SDS secrets into a single
+	// DeduplicateSystemTrustStore consolidates per-policy system CA SDS secrets into a single
 	// shared system_ca_certificates secret, reducing inotify watchers.
 	// Enabled by default.
 	DeduplicateSystemTrustStore RuntimeFlag = "DeduplicateSystemTrustStore"

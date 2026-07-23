@@ -130,6 +130,14 @@ func TestTranslateXds(t *testing.T) {
 				Disabled: []egv1a1.RuntimeFlag{egv1a1.DeduplicateSystemTrustStore},
 			},
 		},
+		"jsonpatch-system-truststore-secret-removed": {
+			requireEnvoyPatchPolicies: true,
+			errMsg:                    `secret name "system_ca_certificates" appears 2 times; at most one is allowed`,
+		},
+		"jsonpatch-system-truststore-secret-replaced": {
+			requireEnvoyPatchPolicies: true,
+			errMsg:                    `secret name "system_ca_certificates" is reserved for the system trust store and cannot be used by other resources`,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))

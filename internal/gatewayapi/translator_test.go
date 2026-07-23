@@ -108,6 +108,16 @@ func TestTranslate(t *testing.T) {
 			name:                        "envoyextensionpolicy-with-extproc-with-backendtlspolicy-dedup",
 			DeduplicateSystemTrustStore: true,
 		},
+		{
+			name:                        "backend-tls-settings-dedup",
+			BackendEnabled:              true,
+			DeduplicateSystemTrustStore: true,
+		},
+		{
+			name:                        "backend-tls-settings-dedup-disabled",
+			BackendEnabled:              true,
+			DeduplicateSystemTrustStore: false,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
