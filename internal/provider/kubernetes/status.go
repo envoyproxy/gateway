@@ -746,8 +746,8 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 	}
 
 	// Get service
-	svc, err := r.envoyServiceForGateway(ctx, gtw)
-	if err != nil {
+	svc, svcErr := r.envoyServiceForGateway(ctx, gtw)
+	if svcErr != nil {
 		r.log.Info("failed to get Service for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
 	}
@@ -758,8 +758,13 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		// TODO (huabing): this is tricky and confusing for later readers, we should remove this and set the accepted condition
 		// to true in the Gateway API translator
 		status.UpdateGatewayStatusAccepted(gtw)
-		// update address field and programmed condition
-		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses())
+		// Only recompute the address field and Programmed condition when the Service
+		// lookup returned a definitive result. On a lookup error the read is
+		// inconclusive; recomputing with svc == nil would wipe a previously-assigned
+		// address and flip the Gateway to AddressNotAssigned.
+		if svcErr == nil {
+			status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses())
+		}
 	}
 
 	key := utils.NamespacedName(gtw)

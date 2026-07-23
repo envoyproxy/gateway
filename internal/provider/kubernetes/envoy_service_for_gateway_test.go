@@ -12,10 +12,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -82,5 +84,26 @@ func TestEnvoyServiceForGatewayUncachedFallback(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, svc)
 		require.Equal(t, svcName, svc.Name)
+	})
+
+	t.Run("uncached confirmation error is propagated, not treated as absent", func(t *testing.T) {
+		listErr := apierrors.NewServiceUnavailable("apiserver unavailable")
+		r := &gatewayAPIReconciler{
+			log:           logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+			namespace:     envoyNS,
+			mergeGateways: sets.New[string](),
+			client: fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).Build(),
+			apiReader: fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithInterceptorFuncs(interceptor.Funcs{
+					List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+						return listErr
+					},
+				}).Build(),
+		}
+		svc, err := r.envoyServiceForGateway(context.Background(), gw)
+		require.Error(t, err)
+		require.Nil(t, svc)
 	})
 }
