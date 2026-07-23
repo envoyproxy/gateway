@@ -25719,6 +25719,36 @@ spec:
                         items:
                           type: string
                         type: array
+                      oob:
+                        description: |-
+                          OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                          server-streaming gRPC connection to each endpoint's
+                          xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                          reports periodically, instead of relying on in-band ORCA metrics
+                          carried in response headers/trailers.
+
+                          The backend must implement OpenRcaService for this to take effect.
+                        properties:
+                          authority:
+                            description: Authority overrides the :authority header
+                              on the OOB gRPC stream.
+                            pattern: ^[^\x00\n\r]*$
+                            type: string
+                          port:
+                            description: |-
+                              Port overrides the port used for the OOB reporting connection, e.g. to
+                              reach a separate reporting sidecar. Defaults to the endpoint's port.
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          reportingPeriod:
+                            description: |-
+                              ReportingPeriod is how often Envoy requests load reports from the server.
+                              If omitted, uses Envoy's default of 10s.
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                            type: string
+                        type: object
                       weightExpirationPeriod:
                         description: If a given endpoint has not reported load metrics
                           in this long, stop using the reported weight. Defaults to
@@ -31559,6 +31589,36 @@ spec:
                                   items:
                                     type: string
                                   type: array
+                                oob:
+                                  description: |-
+                                    OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                    server-streaming gRPC connection to each endpoint's
+                                    xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                    reports periodically, instead of relying on in-band ORCA metrics
+                                    carried in response headers/trailers.
+
+                                    The backend must implement OpenRcaService for this to take effect.
+                                  properties:
+                                    authority:
+                                      description: Authority overrides the :authority
+                                        header on the OOB gRPC stream.
+                                      pattern: ^[^\x00\n\r]*$
+                                      type: string
+                                    port:
+                                      description: |-
+                                        Port overrides the port used for the OOB reporting connection, e.g. to
+                                        reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                      format: int32
+                                      maximum: 65535
+                                      minimum: 1
+                                      type: integer
+                                    reportingPeriod:
+                                      description: |-
+                                        ReportingPeriod is how often Envoy requests load reports from the server.
+                                        If omitted, uses Envoy's default of 10s.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                      type: string
+                                  type: object
                                 weightExpirationPeriod:
                                   description: If a given endpoint has not reported
                                     load metrics in this long, stop using the reported
@@ -46073,6 +46133,37 @@ spec:
                                                     items:
                                                       type: string
                                                     type: array
+                                                  oob:
+                                                    description: |-
+                                                      OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                                      server-streaming gRPC connection to each endpoint's
+                                                      xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                                      reports periodically, instead of relying on in-band ORCA metrics
+                                                      carried in response headers/trailers.
+
+                                                      The backend must implement OpenRcaService for this to take effect.
+                                                    properties:
+                                                      authority:
+                                                        description: Authority overrides
+                                                          the :authority header on
+                                                          the OOB gRPC stream.
+                                                        pattern: ^[^\x00\n\r]*$
+                                                        type: string
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the port used for the OOB reporting connection, e.g. to
+                                                          reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                      reportingPeriod:
+                                                        description: |-
+                                                          ReportingPeriod is how often Envoy requests load reports from the server.
+                                                          If omitted, uses Envoy's default of 10s.
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                        type: string
+                                                    type: object
                                                   weightExpirationPeriod:
                                                     description: If a given endpoint
                                                       has not reported load metrics
@@ -47652,6 +47743,37 @@ spec:
                                                     items:
                                                       type: string
                                                     type: array
+                                                  oob:
+                                                    description: |-
+                                                      OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                                      server-streaming gRPC connection to each endpoint's
+                                                      xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                                      reports periodically, instead of relying on in-band ORCA metrics
+                                                      carried in response headers/trailers.
+
+                                                      The backend must implement OpenRcaService for this to take effect.
+                                                    properties:
+                                                      authority:
+                                                        description: Authority overrides
+                                                          the :authority header on
+                                                          the OOB gRPC stream.
+                                                        pattern: ^[^\x00\n\r]*$
+                                                        type: string
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the port used for the OOB reporting connection, e.g. to
+                                                          reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                      reportingPeriod:
+                                                        description: |-
+                                                          ReportingPeriod is how often Envoy requests load reports from the server.
+                                                          If omitted, uses Envoy's default of 10s.
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                        type: string
+                                                    type: object
                                                   weightExpirationPeriod:
                                                     description: If a given endpoint
                                                       has not reported load metrics
@@ -49397,6 +49519,37 @@ spec:
                                               items:
                                                 type: string
                                               type: array
+                                            oob:
+                                              description: |-
+                                                OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                                server-streaming gRPC connection to each endpoint's
+                                                xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                                reports periodically, instead of relying on in-band ORCA metrics
+                                                carried in response headers/trailers.
+
+                                                The backend must implement OpenRcaService for this to take effect.
+                                              properties:
+                                                authority:
+                                                  description: Authority overrides
+                                                    the :authority header on the OOB
+                                                    gRPC stream.
+                                                  pattern: ^[^\x00\n\r]*$
+                                                  type: string
+                                                port:
+                                                  description: |-
+                                                    Port overrides the port used for the OOB reporting connection, e.g. to
+                                                    reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                                  format: int32
+                                                  maximum: 65535
+                                                  minimum: 1
+                                                  type: integer
+                                                reportingPeriod:
+                                                  description: |-
+                                                    ReportingPeriod is how often Envoy requests load reports from the server.
+                                                    If omitted, uses Envoy's default of 10s.
+                                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                  type: string
+                                              type: object
                                             weightExpirationPeriod:
                                               description: If a given endpoint has
                                                 not reported load metrics in this
@@ -51090,6 +51243,36 @@ spec:
                                         items:
                                           type: string
                                         type: array
+                                      oob:
+                                        description: |-
+                                          OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                          server-streaming gRPC connection to each endpoint's
+                                          xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                          reports periodically, instead of relying on in-band ORCA metrics
+                                          carried in response headers/trailers.
+
+                                          The backend must implement OpenRcaService for this to take effect.
+                                        properties:
+                                          authority:
+                                            description: Authority overrides the :authority
+                                              header on the OOB gRPC stream.
+                                            pattern: ^[^\x00\n\r]*$
+                                            type: string
+                                          port:
+                                            description: |-
+                                              Port overrides the port used for the OOB reporting connection, e.g. to
+                                              reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                            format: int32
+                                            maximum: 65535
+                                            minimum: 1
+                                            type: integer
+                                          reportingPeriod:
+                                            description: |-
+                                              ReportingPeriod is how often Envoy requests load reports from the server.
+                                              If omitted, uses Envoy's default of 10s.
+                                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                            type: string
+                                        type: object
                                       weightExpirationPeriod:
                                         description: If a given endpoint has not reported
                                           load metrics in this long, stop using the
@@ -54274,6 +54457,36 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  oob:
+                                    description: |-
+                                      OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                      server-streaming gRPC connection to each endpoint's
+                                      xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                      reports periodically, instead of relying on in-band ORCA metrics
+                                      carried in response headers/trailers.
+
+                                      The backend must implement OpenRcaService for this to take effect.
+                                    properties:
+                                      authority:
+                                        description: Authority overrides the :authority
+                                          header on the OOB gRPC stream.
+                                        pattern: ^[^\x00\n\r]*$
+                                        type: string
+                                      port:
+                                        description: |-
+                                          Port overrides the port used for the OOB reporting connection, e.g. to
+                                          reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                      reportingPeriod:
+                                        description: |-
+                                          ReportingPeriod is how often Envoy requests load reports from the server.
+                                          If omitted, uses Envoy's default of 10s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                    type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported
@@ -55719,6 +55932,36 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  oob:
+                                    description: |-
+                                      OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                      server-streaming gRPC connection to each endpoint's
+                                      xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                      reports periodically, instead of relying on in-band ORCA metrics
+                                      carried in response headers/trailers.
+
+                                      The backend must implement OpenRcaService for this to take effect.
+                                    properties:
+                                      authority:
+                                        description: Authority overrides the :authority
+                                          header on the OOB gRPC stream.
+                                        pattern: ^[^\x00\n\r]*$
+                                        type: string
+                                      port:
+                                        description: |-
+                                          Port overrides the port used for the OOB reporting connection, e.g. to
+                                          reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                      reportingPeriod:
+                                        description: |-
+                                          ReportingPeriod is how often Envoy requests load reports from the server.
+                                          If omitted, uses Envoy's default of 10s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                    type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported
@@ -57472,6 +57715,37 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        oob:
+                                          description: |-
+                                            OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                            server-streaming gRPC connection to each endpoint's
+                                            xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                            reports periodically, instead of relying on in-band ORCA metrics
+                                            carried in response headers/trailers.
+
+                                            The backend must implement OpenRcaService for this to take effect.
+                                          properties:
+                                            authority:
+                                              description: Authority overrides the
+                                                :authority header on the OOB gRPC
+                                                stream.
+                                              pattern: ^[^\x00\n\r]*$
+                                              type: string
+                                            port:
+                                              description: |-
+                                                Port overrides the port used for the OOB reporting connection, e.g. to
+                                                reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                              format: int32
+                                              maximum: 65535
+                                              minimum: 1
+                                              type: integer
+                                            reportingPeriod:
+                                              description: |-
+                                                ReportingPeriod is how often Envoy requests load reports from the server.
+                                                If omitted, uses Envoy's default of 10s.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                          type: object
                                         weightExpirationPeriod:
                                           description: If a given endpoint has not
                                             reported load metrics in this long, stop
@@ -59232,6 +59506,36 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  oob:
+                                    description: |-
+                                      OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                      server-streaming gRPC connection to each endpoint's
+                                      xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                      reports periodically, instead of relying on in-band ORCA metrics
+                                      carried in response headers/trailers.
+
+                                      The backend must implement OpenRcaService for this to take effect.
+                                    properties:
+                                      authority:
+                                        description: Authority overrides the :authority
+                                          header on the OOB gRPC stream.
+                                        pattern: ^[^\x00\n\r]*$
+                                        type: string
+                                      port:
+                                        description: |-
+                                          Port overrides the port used for the OOB reporting connection, e.g. to
+                                          reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                      reportingPeriod:
+                                        description: |-
+                                          ReportingPeriod is how often Envoy requests load reports from the server.
+                                          If omitted, uses Envoy's default of 10s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                    type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported
