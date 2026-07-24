@@ -27,6 +27,18 @@
       - header:
           key: mock-extension-was-here-extensionRef-apiversion
           value: foo.example.io/v1alpha1
+      - header:
+          key: mock-extension-was-here-extensionPolicy-name
+          value: policy-on-route
+      - header:
+          key: mock-extension-was-here-extensionPolicy-namespace
+          value: extensions
+      - header:
+          key: mock-extension-was-here-extensionPolicy-kind
+          value: ExamplePolicy
+      - header:
+          key: mock-extension-was-here-extensionPolicy-apiversion
+          value: foo.example.io/v1alpha1
       route:
         cluster: first-route-dest
         upgradeConfigs:

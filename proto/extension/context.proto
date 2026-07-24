@@ -18,6 +18,10 @@ message PostRouteExtensionContext {
 
     // hostnames are the fully qualified domain names attached to the HTTPRoute
     repeated string hostnames = 2;
+
+    // Policies introduced by the extension that are targeting this route
+    // (via HTTPRoute / GRPCRoute or rule targetRef).
+    repeated ExtensionResource extension_policies = 3;
 }
 
 

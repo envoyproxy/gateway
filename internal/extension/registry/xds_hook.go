@@ -46,9 +46,13 @@ func translateUnstructuredToUnstructuredBytes(e []*unstructured.Unstructured) ([
 	return extensionResourceBytes, nil
 }
 
-func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, error) {
-	// Take all of the unstructured resources for the extension and package them into bytes
+func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources, extensionPolicies []*unstructured.Unstructured) (*route.Route, error) {
+	// Take all of the unstructured resources and policies for the extension and package them into bytes
 	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
+	if err != nil {
+		return route, err
+	}
+	extensionPolicyBytes, err := translateUnstructuredToUnstructuredBytes(extensionPolicies)
 	if err != nil {
 		return route, err
 	}
@@ -61,6 +65,7 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 			PostRouteContext: &extension.PostRouteExtensionContext{
 				Hostnames:          routeHostnames,
 				ExtensionResources: extensionResourceBytes,
+				ExtensionPolicies:  extensionPolicyBytes,
 			},
 		})
 	if err != nil {

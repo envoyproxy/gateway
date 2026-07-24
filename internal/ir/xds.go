@@ -936,6 +936,10 @@ type HTTPRoute struct {
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and
+	// target this route: either the whole HTTPRoute/GRPCRoute (targetRef without sectionName) or one
+	// of its rules (targetRef with a sectionName matching the rule).
+	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	// Security holds the features associated with SecurityPolicy
