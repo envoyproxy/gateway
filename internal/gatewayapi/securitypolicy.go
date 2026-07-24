@@ -87,6 +87,9 @@ func (t *Translator) ProcessSecurityPolicies(
 	// The failed fetches will be retried in the next translation when the provider resources are reconciled again.
 	t.oidcDiscoveryCache = newOIDCDiscoveryCache()
 
+	// Tracking is only valid during one translation across multiple routes and gateways.
+	t.replacedSecurityPolicyRoutes = sets.New[string]()
+
 	// SecurityPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
@@ -1341,6 +1344,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		switch route.GetRouteType() {
 		case resource.KindTCPRoute:
+			// A policy with mergeType Replace discards the parent policy configuration
+			// entirely, so claim the matched TCP routes to prevent the parent
+			// Gateway/Listener policy from re-applying an authorization this policy omitted.
+			replaceClaimsRoutes := policy.Spec.MergeType != nil && *policy.Spec.MergeType == egv1a1.Replace
+			if replaceClaimsRoutes && t.replacedSecurityPolicyRoutes == nil {
+				t.replacedSecurityPolicyRoutes = sets.New[string]()
+			}
 			for _, listener := range parentRefCtx.listeners {
 				// If targetListener is set, only apply to that exact listener.
 				if targetListener != nil && targetListenerName != irListenerName(listener) {
@@ -1353,6 +1363,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					// routes the section name is currently stored on r.Destination.Metadata.SectionName.
 					if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
 						continue
+					}
+
+					// Only claim IR routes that belong to the targeted route:
+					// other routes on the same listener must keep inheriting
+					// the parent policy's authorization.
+					if replaceClaimsRoutes && strings.HasPrefix(r.Destination.Name, prefix) {
+						t.replacedSecurityPolicyRoutes.Insert(replacedRouteKey(tl.Name, r.Destination.Name))
 					}
 
 					if r.Authorization != nil {
@@ -1718,6 +1735,11 @@ func (t *Translator) translateSecurityPolicyForListeners(
 			// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 			// targeting a lesser specific scope(Gateway).
 			for _, r := range tl.Routes {
+				// Skip routes claimed by a route-scoped policy with mergeType Replace,
+				// which discards the parent policy configuration entirely.
+				if t.replacedSecurityPolicyRoutes.Has(replacedRouteKey(tl.Name, r.Destination.Name)) {
+					continue
+				}
 				// if already set - there's a specific level policy, so skip.
 				if r.Authorization != nil {
 					continue

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -70,6 +71,46 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"ClusterIP\", \"LoadBalancer\", \"NodePort\""},
+		},
+		{
+			desc: "daemonset patch with Replace merge type is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				replace := egv1a1.Replace
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type:  &replace,
+									Value: apiextensionsv1.JSON{Raw: []byte("{}")},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Unsupported value: \"Replace\": supported values: \"StrategicMerge\", \"JSONMerge\""},
+		},
+		{
+			desc: "deployment patch with StrategicMerge merge type is accepted",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				strategic := egv1a1.StrategicMerge
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type:  &strategic,
+									Value: apiextensionsv1.JSON{Raw: []byte("{}")},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "allocateLoadBalancerNodePorts-pass-case1",
