@@ -18,6 +18,13 @@ __Note:__  The Request duration must be >= BackendRequest duration
 
 ## Verification
 
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
+Quickstart instructions to set the variable.
+
+```shell
+echo $GATEWAY_HOST
+```
+
 backend has the ability to delay responses; we use it as the backend to control response time.
 
 ### request timeout
