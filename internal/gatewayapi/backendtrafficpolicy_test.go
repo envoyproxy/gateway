@@ -215,7 +215,7 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 			},
 		}
 
-		tf, err := tr.buildTrafficFeatures(policy, nil)
+		tf, err := tr.buildTrafficFeatures(policy, nil, nil)
 		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})
