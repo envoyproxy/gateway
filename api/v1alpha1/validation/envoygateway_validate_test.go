@@ -1114,15 +1114,15 @@ func TestValidateEnvoyGatewayXDSServer(t *testing.T) {
 		require.Error(t, validateEnvoyGatewayXDSServer(x))
 	})
 
-	t.Run("valid maxRecvMsgSize", func(t *testing.T) {
+	t.Run("valid maxReceiveMessageSize", func(t *testing.T) {
 		size := resource.MustParse("100Mi")
-		x := &egv1a1.XDSServer{MaxRecvMsgSize: &size}
+		x := &egv1a1.XDSServer{MaxReceiveMessageSize: &size}
 		require.NoError(t, validateEnvoyGatewayXDSServer(x))
 	})
 
-	t.Run("invalid zero maxRecvMsgSize", func(t *testing.T) {
+	t.Run("invalid zero maxReceiveMessageSize", func(t *testing.T) {
 		size := resource.MustParse("0")
-		x := &egv1a1.XDSServer{MaxRecvMsgSize: &size}
+		x := &egv1a1.XDSServer{MaxReceiveMessageSize: &size}
 		require.Error(t, validateEnvoyGatewayXDSServer(x))
 	})
 }

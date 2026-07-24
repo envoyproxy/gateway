@@ -1,1 +1,1 @@
-Added `xdsServer.maxRecvMsgSize` field to the EnvoyGateway API, allowing operators to increase the xDS gRPC server's maximum receive message size when large xDS snapshots at scale exceed the default 4MiB limit, which previously caused "received message larger than max" stream errors.
+Added `xdsServer.maxReceiveMessageSize` field to the EnvoyGateway API, allowing operators to increase the xDS gRPC server's maximum receive message size when large xDS snapshots at scale exceed the default 4MiB limit, which previously caused "received message larger than max" stream errors.

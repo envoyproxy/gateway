@@ -220,13 +220,13 @@ type XDSServer struct {
 	// +optional
 	MaxConnectionAgeGrace *gwapiv1.Duration `json:"maxConnectionAgeGrace,omitempty"`
 
-	// MaxRecvMsgSize defines the maximum message size in bytes the xDS gRPC server will accept from Envoy proxies.
+	// MaxReceiveMessageSize defines the maximum message size in bytes the xDS gRPC server will accept from Envoy proxies.
 	// Increasing this is necessary at scale when the xDS snapshot exceeds the default 4MiB gRPC receive limit,
 	// which manifests as "received message larger than max" errors in the xDS stream.
 	// If unspecified, the default gRPC receive limit applies (4MiB).
 	//
 	// +optional
-	MaxRecvMsgSize *resource.Quantity `json:"maxRecvMsgSize,omitempty"`
+	MaxReceiveMessageSize *resource.Quantity `json:"maxReceiveMessageSize,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
