@@ -19,7 +19,6 @@ new features: |
   Added support for `ListenerSet` as a `targetRef` kind in `ClientTrafficPolicy`, allowing client traffic settings to be applied to a named group of listeners without a gateway-wide policy.
   Added a `fromMetadata` field to global rate limit `limit` in `BackendTrafficPolicy`, allowing the limit value to be sourced from per-request dynamic metadata (e.g. set by an upstream ext_proc), falling back to the static `requests`/`unit` when the metadata is absent.
   Added `spec.clientIPDetection.xForwardedFor.disableXForwardedForAppend` to ClientTrafficPolicy to disable Envoy's automatic X-Forwarded-For append behavior when using XFF-based client IP detection.
-  Added support for all RFC 3986 compliant URL schemes to SecurityPolicy.spec.cors.allowedOrigins's validation pattern
 
 bug fixes: |
   Fixed HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, and UDPRoute Accepted condition being set to False when an attached listener is not programmed due to a missing TLS certificate ref; listener programmed state is now correctly separated from route acceptance.
@@ -43,6 +42,7 @@ bug fixes: |
   Fixed ListenerSet hostname conflict resolution to apply listener precedence: Gateway-owned listeners win over ListenerSet listeners, and among ListenerSet listeners the first in processing order wins. Conflicted ListenerSet listeners now correctly report Accepted=False with the conflict reason. The Gateway's AttachedListenerSets count now only reflects ListenerSets with at least one accepted listener.
   Fixed EnvoyGateway config hot-reload to apply defaults before validation, so validators always run against a fully-defaulted struct on both the startup and reload paths.
   Fixed deduplicate CA certificates in ClientTrafficPolicy mTLS.
+  Fixed the CORS `allowedOrigins` validation pattern in `SecurityPolicy` rejecting valid origins that use non-HTTP schemes; the pattern now allows all RFC 3986 compliant URL schemes (e.g. `moz-extension://example.com`).
 
 # Enhancements that improve performance.
 performance improvements: |
