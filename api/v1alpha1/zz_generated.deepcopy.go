@@ -8810,8 +8810,8 @@ func (in *XDSServer) DeepCopyInto(out *XDSServer) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.MaxRecvMsgSize != nil {
-		in, out := &in.MaxRecvMsgSize, &out.MaxRecvMsgSize
+	if in.MaxReceiveMessageSize != nil {
+		in, out := &in.MaxReceiveMessageSize, &out.MaxReceiveMessageSize
 		x := (*in).DeepCopy()
 		*out = &x
 	}

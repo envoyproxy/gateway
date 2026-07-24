@@ -340,7 +340,7 @@ func TestRunner(t *testing.T) {
 	}, time.Second*5, time.Millisecond*50)
 }
 
-func TestRunner_withMaxRecvMsgSize(t *testing.T) {
+func TestRunner_withMaxReceiveMessageSize(t *testing.T) {
 	caFile, certFile, keyFile, cleanup := setupTLSCerts(t)
 	defer cleanup()
 
@@ -351,7 +351,7 @@ func TestRunner_withMaxRecvMsgSize(t *testing.T) {
 
 	size := resource.MustParse("100Mi")
 	cfg.EnvoyGateway.XDSServer = &egv1a1.XDSServer{
-		MaxRecvMsgSize: &size,
+		MaxReceiveMessageSize: &size,
 	}
 
 	r := New(&Config{
