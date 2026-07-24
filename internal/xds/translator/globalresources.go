@@ -70,11 +70,11 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 	return false
 }
 
-// ensureSystemTrustStoreSecret ensures a system CA trust store SDS secret with the given name
+// emitSystemTrustStoreSecret ensures a system CA trust store SDS secret with the given name
 // is present, creating it if not. When dedup is enabled, name is SystemTrustStoreSecretName and
 // a single shared secret is used; when dedup is disabled, name is a per-policy name and each
 // cluster gets its own idempotently-created copy pointing at the same system CA file path.
-func ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable, name string) error {
+func emitSystemTrustStoreSecret(tCtx *types.ResourceVersionTable, name string) error {
 	if findXdsSecret(tCtx, name) != nil {
 		return nil
 	}
@@ -103,11 +103,11 @@ func systemTrustStoreValidationContext() *tlsv3.CertificateValidationContext {
 	}
 }
 
-// validateSystemTrustStoreSecret verifies system_ca_certificates is present and unmodified
-// if it was emitted during translation. A no-op if the secret was never emitted.
-// The full proto is compared against the canonical form so any field mutation by
-// an extension or EnvoyPatchPolicy (e.g. adding trustChainVerification, SAN matchers,
-// or other validation-context fields) is detected, not just filename changes.
+// validateSystemTrustStoreSecret checks whether system_ca_certificates is present and
+// unmodified. Returns an error if it was tampered with (wrong content, duplicate, or removed).
+// A no-op if the secret was never emitted. The full proto is compared against the canonical
+// form so any field mutation (trust chain verification flags, SAN matchers, CRL config, etc.)
+// is detected, not just filename changes.
 func validateSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
 	if !tCtx.SystemTrustStore {
 		return nil
@@ -122,13 +122,12 @@ func validateSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
 	case 0:
 		return fmt.Errorf("secret %q was removed by a patch or extension but is still referenced by clusters", SystemTrustStoreSecretName)
 	case 1:
-		canonical := canonicalSystemTrustStoreSecret()
-		if !proto.Equal(matches[0], canonical) {
-			return fmt.Errorf("secret name %q is reserved for the system trust store and cannot be modified by patches or extensions", SystemTrustStoreSecretName)
+		if !proto.Equal(matches[0], canonicalSystemTrustStoreSecret()) {
+			return fmt.Errorf("secret %q was modified by a patch or extension", SystemTrustStoreSecretName)
 		}
 		return nil
 	default:
-		return fmt.Errorf("secret name %q appears %d times; at most one is allowed", SystemTrustStoreSecretName, len(matches))
+		return fmt.Errorf("secret %q appears %d times; at most one is allowed", SystemTrustStoreSecretName, len(matches))
 	}
 }
 

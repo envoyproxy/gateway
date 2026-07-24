@@ -181,14 +181,39 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	// Final check: verify system_ca_certificates wasn't tampered with by the extension
-	// post-translation hook (EnvoyPatchPolicy tampering is caught per-policy inside
-	// processJSONPatches and attributed to the offending policy's status).
-	if err := validateSystemTrustStoreSecret(tCtx); err != nil {
-		errs = errors.Join(errs, err)
-	}
+	// Heal system_ca_certificates if it was tampered with by the extension post-translation
+	// hook. EnvoyPatchPolicy tampering is caught per-policy inside processJSONPatches.
+	// Healing keeps the snapshot publishable; the logger carries the forensic detail.
+	t.ensureSystemTrustStoreSecret(tCtx)
 
 	return tCtx, errs
+}
+
+// ensureSystemTrustStoreSecret detects and repairs any tampering with system_ca_certificates
+// by a post-translation extension hook. If an error is detected the secret is restored to
+// the canonical form and a warning is logged. The snapshot is always published — the log
+// entry is the operator's signal that something modified the secret.
+func (t *Translator) ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) {
+	err := validateSystemTrustStoreSecret(tCtx)
+	if err == nil {
+		return
+	}
+	t.Logger.Error(err, "system trust store secret was tampered with by extension; restoring")
+	// Remove all existing copies (handles modified and duplicate cases).
+	if tCtx.XdsResources != nil {
+		secrets := tCtx.XdsResources[resourcev3.SecretType]
+		filtered := secrets[:0]
+		for _, r := range secrets {
+			if s, ok := r.(*tlsv3.Secret); ok && s.Name == SystemTrustStoreSecretName {
+				continue
+			}
+			filtered = append(filtered, r)
+		}
+		tCtx.XdsResources[resourcev3.SecretType] = filtered
+	}
+	// Re-emit the canonical secret.
+	tCtx.SystemTrustStore = false // reset so emitSystemTrustStoreSecret re-emits
+	_ = emitSystemTrustStoreSecret(tCtx, SystemTrustStoreSecretName)
 }
 
 func findIRListenersByXDSListener(xdsIR *ir.Xds, listener *listenerv3.Listener) []ir.Listener {
@@ -1132,7 +1157,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 				// Ensure the system CA secret exists under the name already set in the IR.
 				// When dedup is on this is SystemTrustStoreSecretName (shared); when off
 				// it is a per-policy name and each cluster gets its own idempotent copy.
-				if err := ensureSystemTrustStoreSecret(tCtx, ds.TLS.CACertificate.Name); err != nil {
+				if err := emitSystemTrustStoreSecret(tCtx, ds.TLS.CACertificate.Name); err != nil {
 					return err
 				}
 			} else {
