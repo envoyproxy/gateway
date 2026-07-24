@@ -233,6 +233,9 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 			continue
 		}
 
+		// Append policy extension server policy list for related gateway.
+		gwXDS.ExtensionServerPolicies = appendUnstructuredRefIfAbsent(gwXDS.ExtensionServerPolicies, policy)
+
 		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
 		gatewayNN := utils.NamespacedName(gtwCtx)
 		ancestorRef := getAncestorRefForPolicy(gatewayNN, p.SectionName)

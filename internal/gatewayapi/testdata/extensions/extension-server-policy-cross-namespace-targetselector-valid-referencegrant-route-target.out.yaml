@@ -135,6 +135,39 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionServerPolicies:
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: cross-ns-selector-policy
+          namespace: policy-ns
+        spec:
+          targetSelectors:
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
+            matchLabels:
+              team: blue
+            namespaces:
+              from: Selector
+              selector:
+                matchLabels:
+                  team: blue
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: test-gateway
+              namespace: gateway-ns
+              sectionName: http
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:
         metadata:

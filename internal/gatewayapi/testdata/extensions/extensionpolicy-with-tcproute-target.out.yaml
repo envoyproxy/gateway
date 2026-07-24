@@ -121,6 +121,34 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionServerPolicies:
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: policy-1
+          namespace: default
+        spec:
+          data: targets an unsupported route kind
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: TCPRoute
+            name: tcproute-1
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+              sectionName: tcp
+            conditions:
+            - lastTransitionTime: null
+              message: ExtensionServerPolicy does not support targeting TCPRoute
+              reason: Invalid
+              status: "False"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:
         metadata:
