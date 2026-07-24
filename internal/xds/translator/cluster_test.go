@@ -17,6 +17,7 @@ import (
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
 	wrr_localityv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/wrr_locality/v3"
+	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -293,6 +294,53 @@ func TestBuildClusterWithBackendUtilization(t *testing.T) {
 	require.Equal(t, "envoy.load_balancing_policies.client_side_weighted_round_robin", policy.TypedExtensionConfig.Name)
 	require.NotNil(t, policy.TypedExtensionConfig.TypedConfig)
 	require.Equal(t, "type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin", policy.TypedExtensionConfig.TypedConfig.TypeUrl)
+}
+
+func TestBuildXdsClusterWithClusterLevelHashPolicy(t *testing.T) {
+	sourceIP := true
+	args := &xdsClusterArgs{
+		name:         "test-cluster-consistent-hash",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{
+			ConsistentHash: &ir.ConsistentHash{
+				SourceIP: &sourceIP,
+			},
+		},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+
+	options := &httpv3.HttpProtocolOptions{}
+	require.NotNil(t, result.cluster.TypedExtensionProtocolOptions)
+	require.NoError(t, result.cluster.TypedExtensionProtocolOptions[extensionOptionsKey].UnmarshalTo(options))
+	require.Len(t, options.HashPolicy, 1)
+	require.True(t, options.HashPolicy[0].GetConnectionProperties().GetSourceIp())
+}
+
+func TestBuildXdsRouteClusterWithoutClusterLevelHashPolicy(t *testing.T) {
+	sourceIP := true
+	args := &xdsClusterArgs{
+		name:         "test-route-cluster-consistent-hash",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{
+			ConsistentHash: &ir.ConsistentHash{
+				SourceIP: &sourceIP,
+			},
+		},
+		isRoute: true,
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+
+	require.Nil(t, result.cluster.TypedExtensionProtocolOptions)
 }
 
 func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
