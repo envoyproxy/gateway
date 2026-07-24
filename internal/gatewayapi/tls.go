@@ -166,8 +166,16 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 		}
 
 		// Check uniqueness for each domain in the certificate with this algorithm
+		// Dedupe SANs within this single cert first - RFC 5280 4.2.1.6 permits
+		// repeated entries in a GeneralNames sequence
+		seenDomains := sets.New[string]()
 		hasConflictDomainAlgorithm := false
 		for _, domain := range certDomains {
+			if seenDomains.Has(domain) {
+				continue
+			}
+			seenDomains.Insert(domain)
+
 			pkaSecretKey := fmt.Sprintf("%s/%s", publicKeyAlgorithm, domain)
 
 			// Check whether the public key algorithm and certificate domain are unique
