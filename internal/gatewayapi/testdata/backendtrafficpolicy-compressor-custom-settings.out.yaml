@@ -2,16 +2,32 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: route-compressor-policy-switch-to-brotli-and-zstd
+    name: policy-for-route
     namespace: default
   spec:
     compressor:
-    - type: Gzip
-    - brotli: {}
+    - brotli:
+        chunkSize: 8192
+        disableLiteralContextModeling: true
+        encoderMode: Text
+        inputBlockBits: 16
+        quality: 11
+        windowBits: 24
       type: Brotli
+    - gzip:
+        chunkSize: 8192
+        compressionLevel: 9
+        compressionStrategy: RLE
+        memoryLevel: 8
+        windowBits: 15
+      minContentLength: "64"
+      type: Gzip
     - type: Zstd
-      zstd: {}
-    mergeType: JSONMerge
+      zstd:
+        chunkSize: 65536
+        compressionLevel: 22
+        enableChecksum: true
+        strategy: BTUltra2
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -26,11 +42,6 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/gateway-compressor-policy
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -40,44 +51,6 @@ backendTrafficPolicies:
         reason: DeprecatedField
         status: "True"
         type: Warning
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    name: gateway-compressor-policy
-    namespace: envoy-gateway
-  spec:
-    compressor:
-    - gzip: {}
-      type: Gzip
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
-        message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/httproute-1]'
-        reason: Merged
-        status: "True"
-        type: Merged
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -245,7 +218,7 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: route-compressor-policy-switch-to-brotli-and-zstd
+            name: policy-for-route
             namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
@@ -254,10 +227,29 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - brotli: {}
+          - brotli:
+              chunkSize: 8192
+              disableLiteralContextModeling: true
+              encoderMode: Text
+              inputBlockBits: 16
+              quality: 11
+              windowBits: 24
+            chooseFirst: true
             type: Brotli
+          - gzip:
+              chunkSize: 8192
+              compressionLevel: 9
+              compressionStrategy: RLE
+              memoryLevel: 8
+              windowBits: 15
+            minContentLength: 64
+            type: Gzip
           - type: Zstd
-            zstd: {}
+            zstd:
+              chunkSize: 65536
+              compressionLevel: 22
+              enableChecksum: true
+              strategy: BTUltra2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

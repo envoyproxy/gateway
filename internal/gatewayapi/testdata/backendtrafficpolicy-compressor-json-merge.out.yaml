@@ -254,7 +254,8 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - type: Brotli
+          - brotli: {}
+            type: Brotli
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

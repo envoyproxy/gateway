@@ -3321,6 +3321,108 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid compressor with custom settings",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+							Gzip: &egv1a1.GzipCompressor{
+								CompressionLevel:    new(uint32(9)),
+								CompressionStrategy: new(egv1a1.GzipCompressionStrategyRLE),
+								MemoryLevel:         new(uint32(8)),
+								WindowBits:          new(uint32(15)),
+								ChunkSize:           new(uint32(8192)),
+							},
+						},
+						{
+							Type: egv1a1.BrotliCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{
+								Quality:                       new(uint32(11)),
+								EncoderMode:                   new(egv1a1.BrotliEncoderModeText),
+								WindowBits:                    new(uint32(24)),
+								InputBlockBits:                new(uint32(16)),
+								ChunkSize:                     new(uint32(4096)),
+								DisableLiteralContextModeling: new(true),
+							},
+						},
+						{
+							Type: egv1a1.ZstdCompressorType,
+							Zstd: &egv1a1.ZstdCompressor{
+								CompressionLevel: new(uint32(22)),
+								EnableChecksum:   new(true),
+								Strategy:         new(egv1a1.ZstdCompressionStrategyBTUltra2),
+								ChunkSize:        new(uint32(65536)),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "compressor settings out of range - should fail",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+							Gzip: &egv1a1.GzipCompressor{
+								CompressionLevel: new(uint32(10)),
+								MemoryLevel:      new(uint32(0)),
+								WindowBits:       new(uint32(16)),
+								ChunkSize:        new(uint32(1024)),
+							},
+						},
+						{
+							Type: egv1a1.BrotliCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{
+								Quality:        new(uint32(12)),
+								WindowBits:     new(uint32(25)),
+								InputBlockBits: new(uint32(15)),
+							},
+						},
+						{
+							Type: egv1a1.ZstdCompressorType,
+							Zstd: &egv1a1.ZstdCompressor{
+								CompressionLevel: new(uint32(23)),
+								ChunkSize:        new(uint32(65537)),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.compressor[0].gzip.compressionLevel: Invalid value: 10: spec.compressor[0].gzip.compressionLevel in body should be less than or equal to 9",
+				"spec.compressor[0].gzip.memoryLevel: Invalid value: 0: spec.compressor[0].gzip.memoryLevel in body should be greater than or equal to 1",
+				"spec.compressor[0].gzip.windowBits: Invalid value: 16: spec.compressor[0].gzip.windowBits in body should be less than or equal to 15",
+				"spec.compressor[0].gzip.chunkSize: Invalid value: 1024: spec.compressor[0].gzip.chunkSize in body should be greater than or equal to 4096",
+				"spec.compressor[1].brotli.quality: Invalid value: 12: spec.compressor[1].brotli.quality in body should be less than or equal to 11",
+				"spec.compressor[1].brotli.windowBits: Invalid value: 25: spec.compressor[1].brotli.windowBits in body should be less than or equal to 24",
+				"spec.compressor[1].brotli.inputBlockBits: Invalid value: 15: spec.compressor[1].brotli.inputBlockBits in body should be greater than or equal to 16",
+				"spec.compressor[2].zstd.compressionLevel: Invalid value: 23: spec.compressor[2].zstd.compressionLevel in body should be less than or equal to 22",
+				"spec.compressor[2].zstd.chunkSize: Invalid value: 65537: spec.compressor[2].zstd.chunkSize in body should be less than or equal to 65536",
+			},
+		},
+		{
 			desc: "both compression and compressor fields specified - should fail",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

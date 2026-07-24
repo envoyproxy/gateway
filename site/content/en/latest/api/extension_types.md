@@ -792,6 +792,31 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `quality` | _integer_ |  false  |  | Quality controls the main compression speed-density lever, from 0 to 11.<br />The higher the quality, the slower the compression. If not set, defaults to 3. |
+| `encoderMode` | _[BrotliEncoderMode](#brotliencodermode)_ |  false  |  | EncoderMode tunes the encoder for a specific input.<br />If not set, defaults to Default. |
+| `windowBits` | _integer_ |  false  |  | WindowBits represents the base two logarithm of the compressor's window size,<br />from 10 to 24. Larger window results in better compression at the expense of<br />memory usage. If not set, defaults to 18. |
+| `inputBlockBits` | _integer_ |  false  |  | InputBlockBits represents the base two logarithm of the compressor's input block<br />size, from 16 to 24. Larger input block results in better compression at the<br />expense of memory usage. If not set, defaults to 24. |
+| `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of the compressor's next output buffer, from<br />4096 to 65536. If not set, defaults to 4096. |
+| `disableLiteralContextModeling` | _boolean_ |  false  |  | DisableLiteralContextModeling disables the "literal context modeling" format<br />feature. This flag is a "decoding-speed vs compression ratio" trade-off.<br />If not set, defaults to false. |
+
+
+#### BrotliEncoderMode
+
+_Underlying type:_ _string_
+
+BrotliEncoderMode defines the modes to tune the Brotli encoder for a specific input.
+
+_Appears in:_
+- [BrotliCompressor](#brotlicompressor)
+
+| Value | Description |
+| ----- | ----------- |
+| `Default` | BrotliEncoderModeDefault is the default encoder mode.<br /> | 
+| `Generic` | BrotliEncoderModeGeneric tunes the encoder for any input.<br /> | 
+| `Text` | BrotliEncoderModeText tunes the encoder for UTF-8 formatted text input.<br /> | 
+| `Font` | BrotliEncoderModeFont tunes the encoder for WOFF 2.0 font input.<br /> | 
 
 
 #### CELExpression
@@ -2871,6 +2896,24 @@ _Appears in:_
 | `kind` | _string_ |  true  |  |  |
 
 
+#### GzipCompressionStrategy
+
+_Underlying type:_ _string_
+
+GzipCompressionStrategy defines the zlib compression strategies supported by the Gzip compressor.
+
+_Appears in:_
+- [GzipCompressor](#gzipcompressor)
+
+| Value | Description |
+| ----- | ----------- |
+| `Default` | GzipCompressionStrategyDefault is the default zlib compression strategy,<br />suitable for most of the content.<br /> | 
+| `Filtered` | GzipCompressionStrategyFiltered is a compression strategy for data produced<br />by a filter or predictor.<br /> | 
+| `HuffmanOnly` | GzipCompressionStrategyHuffmanOnly is a compression strategy that only uses<br />Huffman encoding.<br /> | 
+| `RLE` | GzipCompressionStrategyRLE is a compression strategy that limits match<br />distances to one (run-length encoding), designed for image data.<br /> | 
+| `Fixed` | GzipCompressionStrategyFixed is a compression strategy that prevents the<br />use of dynamic Huffman codes.<br /> | 
+
+
 #### GzipCompressor
 
 
@@ -2882,6 +2925,13 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/c
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `compressionLevel` | _integer_ |  false  |  | CompressionLevel sets the zlib compression level, from 1 (fastest compression,<br />lowest compression ratio) to 9 (slowest compression, best compression ratio).<br />If not set, Envoy uses the zlib default level, which is equivalent to level 6. |
+| `compressionStrategy` | _[GzipCompressionStrategy](#gzipcompressionstrategy)_ |  false  |  | CompressionStrategy selects the zlib compression strategy, which is directly<br />related to the characteristics of the content. Most of the time "Default" is<br />the best choice. If not set, defaults to Default. |
+| `memoryLevel` | _integer_ |  false  |  | MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.<br />Higher values use more memory, but are faster and produce better compression<br />results. If not set, defaults to 5. |
+| `windowBits` | _integer_ |  false  |  | WindowBits represents the base two logarithm of the compressor's window size,<br />from 9 to 15. Larger window results in better compression at the expense of<br />memory usage. If not set, defaults to 12, which will produce a 4096 bytes window. |
+| `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.<br />If not set, defaults to 4096. |
 
 
 #### HTTP10Settings
@@ -6754,6 +6804,31 @@ _Appears in:_
 | `weightedZones` | _[WeightedZoneConfig](#weightedzoneconfig) array_ |  false  |  | WeightedZones configures weight-based traffic distribution across locality zones.<br />Traffic is distributed proportionally based on the sum of all zone weights. |
 
 
+#### ZstdCompressionStrategy
+
+_Underlying type:_ _string_
+
+ZstdCompressionStrategy defines the compression strategies supported by the Zstd compressor.
+The higher the value of the selected strategy, the more complex it is, resulting in stronger
+and slower compression.
+
+_Appears in:_
+- [ZstdCompressor](#zstdcompressor)
+
+| Value | Description |
+| ----- | ----------- |
+| `Default` |  | 
+| `Fast` |  | 
+| `DFast` |  | 
+| `Greedy` |  | 
+| `Lazy` |  | 
+| `Lazy2` |  | 
+| `BTLazy2` |  | 
+| `BTOpt` |  | 
+| `BTUltra` |  | 
+| `BTUltra2` |  | 
+
+
 #### ZstdCompressor
 
 
@@ -6765,5 +6840,11 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/c
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `compressionLevel` | _integer_ |  false  |  | CompressionLevel sets the compression parameters according to the pre-defined<br />zstd compression level table, from 1 to 22. Note that the exact compression<br />parameters are dynamically determined, depending on both compression level and<br />source content size (when known). If not set, defaults to 3. |
+| `enableChecksum` | _boolean_ |  false  |  | EnableChecksum specifies whether a 32-bits checksum of the content is written<br />at the end of the frame. If not set, defaults to false. |
+| `strategy` | _[ZstdCompressionStrategy](#zstdcompressionstrategy)_ |  false  |  | Strategy selects the zstd compression strategy. The higher the value of the<br />selected strategy, the more complex it is, resulting in stronger and slower<br />compression. If not set, defaults to Default. |
+| `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of the compressor's next output buffer, from<br />4096 to 65536. If not set, defaults to 4096. |
 
 
