@@ -177,6 +177,12 @@ func (r *Runner) Start(ctx context.Context) error {
 		grpc.KeepaliveParams(keepaliveParams),
 	}
 
+	if r.EnvoyGateway.XDSServer != nil && r.EnvoyGateway.XDSServer.MaxReceiveMessageSize != nil {
+		maxReceiveMessageSize, _ := r.EnvoyGateway.XDSServer.MaxReceiveMessageSize.AsInt64()
+		baseKeepaliveOptions = append(baseKeepaliveOptions, grpc.MaxRecvMsgSize(int(maxReceiveMessageSize)))
+		r.Logger.Info("configured gRPC max receive message size", "maxReceiveMessageSize", maxReceiveMessageSize)
+	}
+
 	grpcOpts := append([]grpc.ServerOption{}, baseKeepaliveOptions...)
 	grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(tlsConfig)))
 

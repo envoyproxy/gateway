@@ -333,6 +333,13 @@ func validateEnvoyGatewayXDSServer(xdsServer *egv1a1.XDSServer) error {
 		}
 	}
 
+	if xdsServer.MaxReceiveMessageSize != nil {
+		v, ok := xdsServer.MaxReceiveMessageSize.AsInt64()
+		if !ok || v <= 0 {
+			return fmt.Errorf("xdsServer.maxReceiveMessageSize must be greater than zero")
+		}
+	}
+
 	return nil
 }
 
