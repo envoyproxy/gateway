@@ -25,6 +25,7 @@ data:
         # The type of hooks that should be invoked
         xdsTranslator:
           post:
+          - Route
           - HTTPListener
           - Translation
           # Enable listeners and routes in PostTranslateModifyHook
