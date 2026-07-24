@@ -3214,8 +3214,9 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 			}
 			_, foundTargetRef := policySpec["targetRef"]
 			_, foundTargetRefs := policySpec["targetRefs"]
-			if !foundTargetRef && !foundTargetRefs {
-				return fmt.Errorf("not a policy object - no targetRef or targetRefs found in %s.%s %s",
+			_, foundTargetSelectors := policySpec["targetSelectors"]
+			if !foundTargetRef && !foundTargetRefs && !foundTargetSelectors {
+				return fmt.Errorf("not a policy object - no targetRef or targetRefs or targetSelectors found in %s.%s %s",
 					policy.GetAPIVersion(), policy.GetKind(), policy.GetName())
 			}
 
