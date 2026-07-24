@@ -19,6 +19,7 @@ import (
 	"net/mail"
 	"net/netip"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -1768,8 +1769,12 @@ func containsWildcard(s string) bool {
 }
 
 func wildcard2regex(wildcard string) string {
-	regexStr := strings.ReplaceAll(wildcard, ".", "\\.")
-	regexStr = strings.ReplaceAll(regexStr, "*", ".*")
+	// Escape every regex metacharacter so that characters that are valid in an
+	// origin but special in a regex (e.g. '.', and '+' which is allowed in
+	// RFC 3986 schemes such as "git+ssh") are matched literally. QuoteMeta
+	// escapes '*' as "\*", so translate those back into the ".*" wildcard.
+	regexStr := regexp.QuoteMeta(wildcard)
+	regexStr = strings.ReplaceAll(regexStr, `\*`, ".*")
 	return regexStr
 }
 
