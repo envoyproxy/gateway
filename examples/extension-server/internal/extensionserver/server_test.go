@@ -87,6 +87,11 @@ func TestPostRouteModify_WithInferencePool(t *testing.T) {
 		t.Fatal("expected route to be returned")
 	}
 
+	// The route should not have any added response headers
+	if len(resp.Route.GetResponseHeadersToAdd()) != 0 {
+		t.Errorf("expected no response header additions, got %v", resp.Route.GetResponseHeadersToAdd())
+	}
+
 	// Check that the cluster was changed to the expected InferencePool cluster name
 	expectedClusterName := "endpointpicker_test-inference-pool_default_original_dst"
 	if resp.Route.GetRoute().GetCluster() != expectedClusterName {
@@ -175,6 +180,97 @@ func TestPostRouteModify_WithInvalidExtensionResource(t *testing.T) {
 	}
 
 	// Note: PostRouteModify no longer returns clusters - they are handled by PostClusterModify hook
+}
+
+func TestPostRouteModify_WithExtensionPolicy(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	server := New(logger)
+
+	// Marshal a RouteContextExample policy to JSON as unstructured
+	policyObj := map[string]interface{}{
+		"kind":       "RouteContextExample",
+		"apiVersion": "example.extensions.io/v1alpha1",
+		"metadata": map[string]interface{}{
+			"name":      "test-route-policy",
+			"namespace": "default",
+		},
+		"spec": map[string]interface{}{
+			"targetRefs": []map[string]interface{}{
+				{
+					"group": "gateway.networking.k8s.io",
+					"kind":  "HTTPRoute",
+					"name":  "test-httproute",
+				},
+			},
+			"responseHeaderName":  "X-Route-Example",
+			"responseHeaderValue": "modified-by-extension-server",
+		},
+	}
+
+	policyBytes, err := json.Marshal(policyObj)
+	if err != nil {
+		t.Fatalf("failed to marshal RouteContextExample: %v", err)
+	}
+
+	// Create a test route
+	testRoute := &routev3.Route{
+		Name: "test-route",
+		Match: &routev3.RouteMatch{
+			PathSpecifier: &routev3.RouteMatch_Prefix{
+				Prefix: "/",
+			},
+		},
+		Action: &routev3.Route_Route{
+			Route: &routev3.RouteAction{
+				ClusterSpecifier: &routev3.RouteAction_Cluster{
+					Cluster: "original-cluster",
+				},
+			},
+		},
+	}
+
+	// Create the request
+	req := &pb.PostRouteModifyRequest{
+		Route: testRoute,
+		PostRouteContext: &pb.PostRouteExtensionContext{
+			ExtensionPolicies: []*pb.ExtensionResource{
+				{
+					UnstructuredBytes: policyBytes,
+				},
+			},
+			Hostnames: []string{"example.com"},
+		},
+	}
+
+	// Call PostRouteModify
+	resp, err := server.PostRouteModify(context.Background(), req)
+	if err != nil {
+		t.Fatalf("PostRouteModify failed: %v", err)
+	}
+
+	// Verify the response
+	if resp.Route == nil {
+		t.Fatal("expected route to be returned")
+	}
+
+	// The route should not have been rewritten to an InferencePool cluster.
+	if resp.Route.GetRoute().GetCluster() != "original-cluster" {
+		t.Errorf("expected cluster to remain 'original-cluster', got %s", resp.Route.GetRoute().GetCluster())
+	}
+
+	// The policy should have injected the configured response header.
+	var found bool
+	for _, h := range resp.Route.GetResponseHeadersToAdd() {
+		if h.GetHeader().GetKey() == "X-Route-Example" {
+			found = true
+			if got := h.GetHeader().GetValue(); got != "modified-by-extension-server" {
+				t.Errorf("expected header value 'modified-by-extension-server', got %s", got)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected response header 'X-Route-Example' to be added by the extension policy")
+	}
 }
 
 func TestPostClusterModify_WithInferencePool(t *testing.T) {

@@ -12,7 +12,9 @@ import (
 	"log/slog"
 	"time"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	"github.com/exampleorg/envoygateway-extension/api/v1alpha1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -28,6 +30,10 @@ import (
 // an original_destination_cluster for routing.
 func (s *Server) PostRouteModify(ctx context.Context, req *pb.PostRouteModifyRequest) (*pb.PostRouteModifyResponse, error) {
 	s.log.Info("postRouteModify callback was invoked")
+
+	// Apply any extension server policies (RouteContextExample) targeting this
+	// route via an HTTPRoute / GRPCRoute or one of its rule targetRefs.
+	s.applyRoutePolicies(req.Route, req.PostRouteContext.ExtensionPolicies)
 
 	// Check if there are any InferencePool extension resources
 	var hasInferencePool bool
@@ -97,6 +103,31 @@ func (s *Server) PostRouteModify(ctx context.Context, req *pb.PostRouteModifyReq
 	return &pb.PostRouteModifyResponse{
 		Route: modifiedRoute,
 	}, nil
+}
+
+// applyRoutePolicies adds a response header to the route for every
+// RouteContextExample policy that targets it.
+func (s *Server) applyRoutePolicies(route *routev3.Route, policies []*pb.ExtensionResource) {
+	for _, ext := range policies {
+		var routeContext v1alpha1.RouteContextExample
+		if err := json.Unmarshal(ext.GetUnstructuredBytes(), &routeContext); err != nil {
+			s.log.Error("failed to unmarshal the extension policy", slog.String("error", err.Error()))
+			continue
+		}
+		if routeContext.Spec.ResponseHeaderName == "" || routeContext.Spec.ResponseHeaderValue == "" {
+			continue
+		}
+		s.log.Info("processing an extension policy",
+			slog.String("policy", routeContext.GetName()),
+			slog.String("route", route.GetName()),
+			slog.String("header", routeContext.Spec.ResponseHeaderName))
+		route.ResponseHeadersToAdd = append(route.ResponseHeadersToAdd, &corev3.HeaderValueOption{
+			Header: &corev3.HeaderValue{
+				Key:   routeContext.Spec.ResponseHeaderName,
+				Value: routeContext.Spec.ResponseHeaderValue,
+			},
+		})
+	}
 }
 
 // Note: buildExtProcCluster function removed as cluster creation is now handled by PostClusterModify hook
