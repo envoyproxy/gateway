@@ -745,15 +745,32 @@ func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gatew
 	var services corev1.ServiceList
 	merged := r.isGatewayClassMerged(string(gateway.Spec.GatewayClassName))
 	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, merged)))
-	if err := r.client.List(ctx, &services, &client.ListOptions{
+	listOpts := &client.ListOptions{
 		LabelSelector: labelSelector,
 		Namespace:     envoyObjectNamespace(r, gateway),
-	}); err != nil {
+	}
+	if err := r.client.List(ctx, &services, listOpts); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
+
+	// A transient empty result from the cached client (e.g. an informer cache
+	// that has not yet observed the Service, or a relist window) must not be
+	// treated as "the Service no longer exists". The caller wipes the Gateway's
+	// status addresses and flips Programmed to AddressNotAssigned whenever this
+	// returns nil, so confirm against the API server with an uncached read
+	// before concluding the Service is gone.
+	if len(services.Items) == 0 && r.apiReader != nil {
+		if err := r.apiReader.List(ctx, &services, listOpts); err != nil {
+			if kerrors.IsNotFound(err) {
+				return nil, nil
+			}
+			return nil, err
+		}
+	}
+
 	if len(services.Items) == 0 {
 		return nil, nil
 	}

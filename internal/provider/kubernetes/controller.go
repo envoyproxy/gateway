@@ -63,6 +63,7 @@ var tracer = otel.Tracer("envoy-gateway/provider/runner")
 
 type gatewayAPIReconciler struct {
 	client               client.Client
+	apiReader            client.Reader
 	log                  logging.Logger
 	statusUpdater        Updater
 	classController      gwapiv1.GatewayController
@@ -159,6 +160,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 
 	r := &gatewayAPIReconciler{
 		client:               mgr.GetClient(),
+		apiReader:            mgr.GetAPIReader(),
 		log:                  cfg.Logger,
 		classController:      gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		namespace:            cfg.ControllerNamespace,
