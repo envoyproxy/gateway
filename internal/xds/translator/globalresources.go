@@ -13,6 +13,7 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	proto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -80,11 +81,7 @@ func ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable, name string)
 	secret := &tlsv3.Secret{
 		Name: name,
 		Type: &tlsv3.Secret_ValidationContext{
-			ValidationContext: &tlsv3.CertificateValidationContext{
-				TrustedCa: &corev3.DataSource{
-					Specifier: &corev3.DataSource_Filename{Filename: cert.SystemCertPath},
-				},
-			},
+			ValidationContext: systemTrustStoreValidationContext(),
 		},
 	}
 	if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
@@ -96,8 +93,21 @@ func ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable, name string)
 	return nil
 }
 
+// systemTrustStoreValidationContext returns the canonical ValidationContext for the system CA trust store.
+// Used both when emitting the secret and when validating it hasn't been tampered with.
+func systemTrustStoreValidationContext() *tlsv3.CertificateValidationContext {
+	return &tlsv3.CertificateValidationContext{
+		TrustedCa: &corev3.DataSource{
+			Specifier: &corev3.DataSource_Filename{Filename: cert.SystemCertPath},
+		},
+	}
+}
+
 // validateSystemTrustStoreSecret verifies system_ca_certificates is present and unmodified
 // if it was emitted during translation. A no-op if the secret was never emitted.
+// The full proto is compared against the canonical form so any field mutation by
+// an extension or EnvoyPatchPolicy (e.g. adding trustChainVerification, SAN matchers,
+// or other validation-context fields) is detected, not just filename changes.
 func validateSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
 	if !tCtx.SystemTrustStore {
 		return nil
@@ -112,13 +122,24 @@ func validateSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
 	case 0:
 		return fmt.Errorf("secret %q was removed by a patch or extension but is still referenced by clusters", SystemTrustStoreSecretName)
 	case 1:
-		vc := matches[0].GetValidationContext()
-		if vc == nil || vc.GetTrustedCa().GetFilename() != cert.SystemCertPath {
-			return fmt.Errorf("secret name %q is reserved for the system trust store and cannot be used by other resources", SystemTrustStoreSecretName)
+		canonical := canonicalSystemTrustStoreSecret()
+		if !proto.Equal(matches[0], canonical) {
+			return fmt.Errorf("secret name %q is reserved for the system trust store and cannot be modified by patches or extensions", SystemTrustStoreSecretName)
 		}
 		return nil
 	default:
 		return fmt.Errorf("secret name %q appears %d times; at most one is allowed", SystemTrustStoreSecretName, len(matches))
+	}
+}
+
+// canonicalSystemTrustStoreSecret returns the exact proto that validateSystemTrustStoreSecret
+// expects to find for system_ca_certificates. Any deviation is rejected.
+func canonicalSystemTrustStoreSecret() *tlsv3.Secret {
+	return &tlsv3.Secret{
+		Name: SystemTrustStoreSecretName,
+		Type: &tlsv3.Secret_ValidationContext{
+			ValidationContext: systemTrustStoreValidationContext(),
+		},
 	}
 }
 
