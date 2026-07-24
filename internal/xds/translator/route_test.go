@@ -363,3 +363,60 @@ func TestBuildXdsURLRewriteAction_AppendXForwardedHost(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildXdsURLRewriteAction_PathRegexHostRewrite(t *testing.T) {
+	baseRoute := &ir.HTTPRoute{
+		Name: "test-route",
+		Destination: &ir.RouteDestination{
+			Name: "test-dest",
+			Settings: []*ir.DestinationSetting{
+				{
+					Endpoints: []*ir.DestinationEndpoint{
+						{Host: "1.2.3.4", Port: 8080},
+					},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name                     string
+		appendXForwardedHost     *bool
+		wantAppendXForwardedHost bool
+	}{
+		{
+			name:                     "nil defaults to true",
+			appendXForwardedHost:     nil,
+			wantAppendXForwardedHost: true,
+		},
+		{
+			name:                     "explicit false",
+			appendXForwardedHost:     new(false),
+			wantAppendXForwardedHost: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			urlRewrite := &ir.URLRewrite{
+				Host: &ir.HTTPHostModifier{
+					PathRegex: &ir.RegexMatchReplace{
+						Pattern:      "^/node/([0-9]+)/api.*",
+						Substitution: "backend-\\1.service.namespace.svc.cluster.local",
+					},
+				},
+				AppendXForwardedHost: tt.appendXForwardedHost,
+			}
+			got := buildXdsURLRewriteAction(baseRoute, urlRewrite, nil)
+			if got.AppendXForwardedHost != tt.wantAppendXForwardedHost {
+				t.Errorf("AppendXForwardedHost = %v, want %v", got.AppendXForwardedHost, tt.wantAppendXForwardedHost)
+			}
+			if got.GetHostRewritePathRegex().GetPattern().GetRegex() != "^/node/([0-9]+)/api.*" {
+				t.Errorf("HostRewritePathRegex pattern = %v, want %v", got.GetHostRewritePathRegex().GetPattern().GetRegex(), "^/node/([0-9]+)/api.*")
+			}
+			if got.GetHostRewritePathRegex().GetSubstitution() != "backend-\\1.service.namespace.svc.cluster.local" {
+				t.Errorf("HostRewritePathRegex substitution = %v, want %v", got.GetHostRewritePathRegex().GetSubstitution(), "backend-\\1.service.namespace.svc.cluster.local")
+			}
+		})
+	}
+}
