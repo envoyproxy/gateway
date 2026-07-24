@@ -1661,7 +1661,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					OIDC: &egv1a1.OIDC{
 						Provider: egv1a1.OIDCProvider{
 							BackendCluster: egv1a1.BackendCluster{
-								BackendSettings: &egv1a1.ClusterSettings{
+								BackendSettings: &egv1a1.BackendSettings{
 									Retry: &egv1a1.Retry{
 										NumRetries: new(int32(3)),
 										PerRetry: &egv1a1.PerRetryPolicy{
@@ -1709,7 +1709,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					OIDC: &egv1a1.OIDC{
 						Provider: egv1a1.OIDCProvider{
 							BackendCluster: egv1a1.BackendCluster{
-								BackendSettings: &egv1a1.ClusterSettings{
+								BackendSettings: &egv1a1.BackendSettings{
 									Retry: &egv1a1.Retry{
 										NumRetries: new(int32(3)),
 										PerRetry: &egv1a1.PerRetryPolicy{

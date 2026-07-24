@@ -639,23 +639,16 @@ type BackendCluster struct {
 	// to the backend.
 	//
 	// +optional
-	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
+	BackendSettings *BackendSettings `json:"backendSettings,omitempty"`
 }
 
-// ClusterSettings provides the various knobs that can be set to control how traffic to a given
-// backend will be configured.
-//
+// ClusterSettings contains CDS-only fields that configure the upstream Envoy Cluster.
 // +kubebuilder:validation:XValidation:rule="!((has(self.connection) && has(self.connection.preconnect) && has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer) && has(self.loadBalancer.type) && self.loadBalancer.type in ['Random', 'RoundRobin']))",message="predictivePercent in preconnect policy only works with RoundRobin or Random load balancers"
 type ClusterSettings struct {
 	// LoadBalancer policy to apply when routing traffic from the gateway to
 	// the backend endpoints. Defaults to `LeastRequest`.
 	// +optional
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
-
-	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
-	// If not set, retry will be disabled.
-	// +optional
-	Retry *Retry `json:"retry,omitempty"`
 
 	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
 	// +optional
@@ -697,6 +690,18 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+}
+
+// BackendSettings provides the various knobs that can be set to control how traffic to a given
+// backend will be configured. It embeds ClusterSettings (CDS-only fields) and adds
+// route-level fields like Retry.
+type BackendSettings struct {
+	ClusterSettings `json:",inline"`
+
+	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
+	// If not set, retry will be disabled.
+	// +optional
+	Retry *Retry `json:"retry,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.

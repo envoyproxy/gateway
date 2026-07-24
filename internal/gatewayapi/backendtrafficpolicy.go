@@ -1014,7 +1014,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 					}
 				}
 
-				if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
+				if localTo, err := buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err == nil {
 					r.Traffic.Timeout = localTo
 				}
 
@@ -1087,13 +1087,13 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 			errs = errors.Join(errs, err)
 		}
 	}
-	if lb, err = buildLoadBalancer(&policy.Spec.ClusterSettings); err != nil {
+	if lb, err = buildLoadBalancer(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
 	}
-	pp = buildProxyProtocol(&policy.Spec.ClusterSettings)
-	hc = buildHealthCheck(&policy.Spec.ClusterSettings)
-	if cb, err = buildCircuitBreaker(&policy.Spec.ClusterSettings); err != nil {
+	pp = buildProxyProtocol(&policy.Spec.BackendSettings)
+	hc = buildHealthCheck(&policy.Spec.BackendSettings)
+	if cb, err = buildCircuitBreaker(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "CircuitBreaker")
 		errs = errors.Join(errs, err)
 	}
@@ -1103,7 +1103,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 	if policy.Spec.AdmissionControl != nil {
 		ac = t.buildAdmissionControl(policy)
 	}
-	if ka, err = buildTCPKeepAlive(&policy.Spec.ClusterSettings); err != nil {
+	if ka, err = buildTCPKeepAlive(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "TCPKeepalive")
 		errs = errors.Join(errs, err)
 	}
@@ -1113,12 +1113,12 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	if to, err = buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err != nil {
+	if to, err = buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
 
-	if bc, err = buildBackendConnection(&policy.Spec.ClusterSettings); err != nil {
+	if bc, err = buildBackendConnection(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "BackendConnection")
 		errs = errors.Join(errs, err)
 	}
@@ -1151,7 +1151,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
+	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
 		RateLimit:         rl,
@@ -1314,7 +1314,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = tf.DeepCopy()
-			if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
+			if localTo, err := buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err == nil {
 				r.Traffic.Timeout = localTo
 			}
 
