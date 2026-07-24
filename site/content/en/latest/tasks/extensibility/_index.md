@@ -17,3 +17,4 @@ Envoy Gateway provides several ways to extend its functionality beyond the built
 - [External Processing](ext-proc) - Call external gRPC services during request processing
 - [Lua Extensions](lua) - Write lightweight scripting extensions
 - [Dynamic Modules](dynamic-modules) - Load custom C++ modules at runtime for advanced extensibility
+- [Remote Infrastructure Provider](remote-infrastructure-provider) - Defer Envoy data plane management to a custom infrastructure provider.

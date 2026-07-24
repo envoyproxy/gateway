@@ -717,8 +717,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: "foobar",
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: "foobar",
+								},
 							},
 						},
 					},
@@ -734,9 +736,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
-								Namespaces: []string{"foo"},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
+									Namespaces: []string{"foo"},
+								},
 							},
 						},
 					},
@@ -752,9 +756,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
-								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
+									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+								},
 							},
 						},
 					},
@@ -770,9 +776,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
-								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+								},
 							},
 						},
 					},
@@ -788,8 +796,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+								},
 							},
 						},
 					},
@@ -1188,10 +1198,12 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Replicas:  nil,
-			Pod:       nil,
-			Container: nil,
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Replicas:  nil,
+				Pod:       nil,
+				Container: nil,
+			},
 		},
 	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
@@ -1200,12 +1212,14 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Pod: nil,
-			Container: &egv1a1.KubernetesContainerSpec{
-				Resources:       nil,
-				SecurityContext: nil,
-				Image:           nil,
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Pod: nil,
+				Container: &egv1a1.KubernetesContainerSpec{
+					Resources:       nil,
+					SecurityContext: nil,
+					Image:           nil,
+				},
 			},
 		},
 	}
@@ -1567,7 +1581,7 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateEnvoyGatewayRateLimit(tc.rateLimit)
+			err := validateEnvoyGatewayKubernetesRateLimit(tc.rateLimit)
 			if tc.expectErr {
 				require.Error(t, err)
 			} else {

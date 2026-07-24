@@ -47,16 +47,12 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
 
 	var p provider.Provider
+
 	switch r.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
 		p, err = r.createKubernetesProvider(ctx, errNotifier)
 		if err != nil {
 			return fmt.Errorf("failed to create kubernetes provider: %w", err)
-		}
-		if kubeProvider, ok := p.(*kubernetes.Provider); ok {
-			// Store the Kubernetes client created by the provider in the server config so that it can be used by the
-			// infrastructure runner to reconcile the Envoy Proxy and rate limit infra resources.
-			r.KubernetesClient.Set(kubeProvider.GetClient())
 		}
 	case egv1a1.ProviderTypeCustom:
 		p, err = r.createCustomResourceProvider(ctx, errNotifier)
@@ -89,6 +85,10 @@ func (r *Runner) createKubernetesProvider(ctx context.Context, errors message.Ru
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}
 
+	// Store the Kubernetes client created by the provider in the server config so that it can be used by the
+	// infrastructure runner to reconcile the Envoy Proxy and rate limit infra resources.
+	r.KubernetesClient.Set(p.GetClient())
+
 	return p, err
 }
 
@@ -100,7 +100,8 @@ func (r *Runner) createCustomResourceProvider(ctx context.Context, errors messag
 			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
 		}
 		return p, err
-
+	case egv1a1.ResourceProviderTypeKubernetes:
+		return r.createKubernetesProvider(ctx, errors)
 	default:
 		return nil, fmt.Errorf("unsupported resource provider type")
 	}
