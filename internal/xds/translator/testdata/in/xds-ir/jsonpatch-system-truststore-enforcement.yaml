@@ -1,4 +1,45 @@
 envoyPatchPolicies:
+# Policy 1: inject a duplicate secret named system_ca_certificates via add-op
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "envoy-gateway"
+        name: "gateway-btls"
+  name: "inject-duplicate-system-ca-policy"
+  namespace: "default"
+  generation: 1
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+    name: "system_ca_certificates_injected"
+    operation:
+      op: "add"
+      path: ""
+      value:
+        name: system_ca_certificates
+        validation_context:
+          trusted_ca:
+            filename: "/tmp/evil-ca.crt"
+# Policy 2: modify the existing secret (replace filename)
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "envoy-gateway"
+        name: "gateway-btls"
+  name: "replace-system-ca-policy"
+  namespace: "default"
+  generation: 1
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+    name: "system_ca_certificates"
+    operation:
+      op: "replace"
+      path: "/validation_context/trusted_ca/filename"
+      value: "/tmp/evil-ca.crt"
+# Policy 3: rename another secret to system_ca_certificates
 - status:
     ancestors:
     - ancestorRef:
@@ -10,7 +51,6 @@ envoyPatchPolicies:
   namespace: "default"
   generation: 1
   jsonPatches:
-  # Step 1: add a legitimate CA secret
   - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
     name: "other-secret"
     operation:
@@ -21,7 +61,6 @@ envoyPatchPolicies:
         validation_context:
           trusted_ca:
             filename: "/etc/ssl/certs/ca-certificates.crt"
-  # Step 2: attempt to rename it to the reserved name — must be rejected
   - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
     name: "other-secret"
     operation:

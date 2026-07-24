@@ -130,13 +130,7 @@ func TestTranslateXds(t *testing.T) {
 				Enabled: []egv1a1.RuntimeFlag{egv1a1.PerResourceSystemCASecret},
 			},
 		},
-		"jsonpatch-system-truststore-secret-renamed": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"jsonpatch-system-truststore-secret-removed": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"jsonpatch-system-truststore-secret-replaced": {
+		"jsonpatch-system-truststore-enforcement": {
 			requireEnvoyPatchPolicies: true,
 		},
 	}
