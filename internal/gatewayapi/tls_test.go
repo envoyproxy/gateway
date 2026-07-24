@@ -352,6 +352,37 @@ func TestValidateTLSSecretsData(t *testing.T) {
 	}
 }
 
+func TestValidateTLSSecretsDataWithECParameters(t *testing.T) {
+	const ecParametersPEM = "-----BEGIN EC PARAMETERS-----\nBggqhkjOPQMBBw==\n-----END EC PARAMETERS-----\n"
+
+	t.Run("ec-parameters-before-private-key", func(t *testing.T) {
+		secrets := createTestSecrets(t, []string{"ecdsa-p256-cert.pem"}, []string{"ecdsa-p256.key"})
+		keyData := append([]byte(nil), secrets[0].Data[corev1.TLSPrivateKeyKey]...)
+		secrets[0].Data[corev1.TLSPrivateKeyKey] = append([]byte(ecParametersPEM), keyData...)
+
+		validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
+		require.NoError(t, err)
+		require.Len(t, validSecrets, 1)
+		require.Len(t, certs, 1)
+
+		keyBlock, _ := pem.Decode(keyData)
+		require.NotNil(t, keyBlock)
+		require.Equal(t, pem.EncodeToMemory(keyBlock), validSecrets[0].Data[corev1.TLSPrivateKeyKey])
+	})
+
+	t.Run("ec-parameters-without-private-key", func(t *testing.T) {
+		secrets := createTestSecrets(t, []string{"ecdsa-p256-cert.pem"}, []string{"ecdsa-p256.key"})
+		secrets[0].Data[corev1.TLSPrivateKeyKey] = []byte(ecParametersPEM)
+
+		validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
+		require.Error(t, err)
+		require.Equal(t, "test/secret must contain valid tls.crt and tls.key, EC PARAMETERS key format found in tls.key, supported formats are PKCS1, PKCS8 or EC", err.Error())
+		require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, err.Reason())
+		require.Empty(t, validSecrets)
+		require.Empty(t, certs)
+	})
+}
+
 func TestFilterValidCertificates(t *testing.T) {
 	type testCase struct {
 		Name              string
