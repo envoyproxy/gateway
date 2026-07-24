@@ -21,11 +21,6 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
           for these routes: [envoy-gateway/httproute-1 envoy-gateway/httproute-2]'
         reason: Overridden
