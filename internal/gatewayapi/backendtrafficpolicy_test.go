@@ -397,6 +397,23 @@ func TestBuildCompression(t *testing.T) {
 			},
 		},
 		{
+			name: "compressor with contentTypes",
+			compressor: []*egv1a1.Compression{
+				{
+					Type:         egv1a1.GzipCompressorType,
+					Gzip:         &egv1a1.GzipCompressor{},
+					ContentTypes: []string{"application/json", "text/html"},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:         egv1a1.GzipCompressorType,
+					ChooseFirst:  true,
+					ContentTypes: []string{"application/json", "text/html"},
+				},
+			},
+		},
+		{
 			name: "multiple compressors with different minContentLength",
 			compressor: []*egv1a1.Compression{
 				{
@@ -424,19 +441,38 @@ func TestBuildCompression(t *testing.T) {
 			},
 		},
 		{
-			name: "compressor takes priority over compression",
-			compression: []*egv1a1.Compression{
-				{
-					Type:             egv1a1.GzipCompressorType,
-					Gzip:             &egv1a1.GzipCompressor{},
-					MinContentLength: new(resource.MustParse("100")),
-				},
-			},
+			name: "compressor with minContentLength and contentTypes",
 			compressor: []*egv1a1.Compression{
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					Brotli:           &egv1a1.BrotliCompressor{},
 					MinContentLength: new(resource.MustParse("200")),
+					ContentTypes:     []string{"application/json"},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.BrotliCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: new(uint32(200)),
+					ContentTypes:     []string{"application/json"},
+				},
+			},
+		},
+		{
+			name: "compressor takes priority over compression",
+			compressor: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.BrotliCompressorType,
+					Brotli:           &egv1a1.BrotliCompressor{},
+					MinContentLength: new(resource.MustParse("200")),
+				},
+			},
+			compression: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.GzipCompressorType,
+					Gzip:             &egv1a1.GzipCompressor{},
+					MinContentLength: new(resource.MustParse("100")),
 				},
 			},
 			expected: []*ir.Compression{

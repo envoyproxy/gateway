@@ -98,6 +98,30 @@ spec:
       minContentLength: 1024
 ```
 
+### Configuring Content Types
+
+You can configure which response `Content-Type` values are eligible for compression using the `contentTypes` field. When set, only responses whose `Content-Type` matches one of the listed values are compressed.
+
+If not specified, Envoy's default content types are used: `application/javascript`, `application/json`, `application/xhtml+xml`, `image/svg+xml`, `text/css`, `text/html`, `text/plain`, and `text/xml`.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-compression
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  compressor:
+    - type: Gzip
+      gzip: {}
+      contentTypes:
+        - application/json
+        - application/xml
+```
+
 ### Deprecated Configuration
 
 The following configuration uses the deprecated `compression` field. While still supported, it's recommended to migrate to the `compressor` field:

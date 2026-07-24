@@ -1038,6 +1038,8 @@ type Compression struct {
 	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
 	// MinContentLength defines the minimum response size in bytes to apply compression.
 	MinContentLength *uint32 `json:"minContentLength,omitempty" yaml:"minContentLength,omitempty"`
+	// ContentTypes defines the set of response Content-Types that will trigger compression.
+	ContentTypes []string `json:"contentTypes,omitempty" yaml:"contentTypes,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.

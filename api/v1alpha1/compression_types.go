@@ -68,4 +68,13 @@ type Compression struct {
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	MinContentLength *resource.Quantity `json:"minContentLength,omitempty"`
+
+	// ContentTypes defines the set of response Content-Types that will trigger compression.
+	// When set, only responses whose Content-Type matches one of these values are compressed.
+	// If not specified, Envoy's default content types are used:
+	// application/javascript, application/json, application/xhtml+xml, image/svg+xml,
+	// text/css, text/html, text/plain, text/xml.
+	//
+	// +optional
+	ContentTypes []string `json:"contentTypes,omitempty"`
 }

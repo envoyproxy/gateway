@@ -2092,17 +2092,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
 				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
 				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
-				irCompression := ir.Compression{
-					Type:        c.Type,
-					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
-				}
-				if c.MinContentLength != nil {
-					minContentLength, ok := c.MinContentLength.AsInt64()
-					if ok {
-						irCompression.MinContentLength = new(uint32(minContentLength))
-					}
-				}
-				result = append(result, &irCompression)
+				result = append(result, buildIRCompression(c, i == 0))
 			}
 		}
 		return result
@@ -2114,20 +2104,27 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 	}
 	result := make([]*ir.Compression, 0, len(compression))
 	for i, c := range compression {
-		irCompression := ir.Compression{
-			Type:        c.Type,
-			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
-		}
-		if c.MinContentLength != nil {
-			minContentLength, ok := c.MinContentLength.AsInt64()
-			if ok {
-				irCompression.MinContentLength = new(uint32(minContentLength))
-			}
-		}
-		result = append(result, &irCompression)
+		result = append(result, buildIRCompression(c, i == 0))
 	}
 
 	return result
+}
+
+func buildIRCompression(c *egv1a1.Compression, chooseFirst bool) *ir.Compression {
+	irCompression := &ir.Compression{
+		Type:        c.Type,
+		ChooseFirst: chooseFirst, // only the first compressor is marked as ChooseFirst
+	}
+	if c.MinContentLength != nil {
+		minContentLength, ok := c.MinContentLength.AsInt64()
+		if ok {
+			irCompression.MinContentLength = new(uint32(minContentLength))
+		}
+	}
+	if len(c.ContentTypes) > 0 {
+		irCompression.ContentTypes = append([]string{}, c.ContentTypes...)
+	}
+	return irCompression
 }
 
 func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.HTTPUpgradeConfig {
