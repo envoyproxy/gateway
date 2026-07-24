@@ -27,6 +27,21 @@ const (
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
 )
 
+const (
+	// maxPolicyAncestors is the Gateway API CRD limit on the number of entries
+	// allowed in status.ancestors.
+	maxPolicyAncestors = 16
+
+	// policyAncestorsSoftCap bounds policyStatus.Ancestors as entries are added, so
+	// SetConditionForPolicyAncestor stays O(1) instead of O(N) at scale (see #9539). It is
+	// intentionally one slot above the CRD limit: keeping a single extra ancestor lets the
+	// post-processing TruncatePolicyAncestors still observe len > maxPolicyAncestors, sort, cut to
+	// maxPolicyAncestors, and stamp the Aggregated condition. Since the best maxPolicyAncestors
+	// ancestors are a subset of the best policyAncestorsSoftCap, the final survivors match the
+	// unbounded behavior for policies whose conditions do not change rank across passes.
+	policyAncestorsSoftCap = maxPolicyAncestors + 1
+)
+
 type PolicyResolveError struct {
 	Reason  gwapiv1.PolicyConditionReason
 	Message string
@@ -166,6 +181,32 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorR
 		ControllerName: gwapiv1a2.GatewayController(controllerName),
 		Conditions:     []metav1.Condition{cond},
 	})
+
+	// Keep the ancestor list bounded as entries are added so this stays O(1) even when a policy is
+	// referenced by a very large number of ancestors (see #9539).
+	boundPolicyAncestors(policyStatus)
+}
+
+// boundPolicyAncestors keeps policyStatus.Ancestors within policyAncestorsSoftCap entries by
+// evicting the single lowest-priority ancestor, using the same ordering as TruncatePolicyAncestors.
+// It is called as each ancestor is added so status building stays O(1) per insert. Because eviction
+// happens before an ancestor's rank is necessarily final, a truncated ancestor that later becomes
+// higher-priority (e.g. Overridden) is re-added carrying only that later condition; the redundant
+// Accepted condition is lost for policies with more than maxPolicyAncestors ancestors. The one slot
+// above the CRD limit lets the post-processing TruncatePolicyAncestors still stamp Aggregated.
+func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
+	if len(policyStatus.Ancestors) <= policyAncestorsSoftCap {
+		return
+	}
+
+	// Find the lowest-priority ancestor: the one no other ancestor ranks below.
+	worst := 0
+	for i := 1; i < len(policyStatus.Ancestors); i++ {
+		if lessPolicyAncestor(&policyStatus.Ancestors[worst], &policyStatus.Ancestors[i]) {
+			worst = i
+		}
+	}
+	policyStatus.Ancestors = append(policyStatus.Ancestors[:worst], policyStatus.Ancestors[worst+1:]...)
 }
 
 // buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to their alternatives.
@@ -243,42 +284,22 @@ func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {
 // The first 15 ancestors are shown as is.
 // The last 16th ancestor is shown as is and add Aggregated condition.
 func TruncatePolicyAncestors(policyStatus *gwapiv1.PolicyStatus, controllerName string, generation int64) {
-	if len(policyStatus.Ancestors) <= 16 {
+	if len(policyStatus.Ancestors) <= maxPolicyAncestors {
 		return
 	}
 
-	// we need to truncate policy ancestor status due to the item limit (max 16).
-	// so we are choosing to preserve the 16 most important ancestors.
+	// we need to truncate policy ancestor status due to the item limit (max maxPolicyAncestors).
+	// so we are choosing to preserve the maxPolicyAncestors most important ancestors.
 	// negative polarity (Conflicted, Overridden...) should be clearly indicated to the user.
 	sort.Slice(policyStatus.Ancestors, func(i, j int) bool {
-		a, b := policyStatus.Ancestors[i], policyStatus.Ancestors[j]
-		aRank := sortRankForPolicyAncestor(&a)
-		bRank := sortRankForPolicyAncestor(&b)
-
-		if aRank != bRank {
-			return aRank < bRank
-		}
-		// First compare by namespace, then by name
-		aNamespace := ""
-		if a.AncestorRef.Namespace != nil {
-			aNamespace = string(*a.AncestorRef.Namespace)
-		}
-		bNamespace := ""
-		if b.AncestorRef.Namespace != nil {
-			bNamespace = string(*b.AncestorRef.Namespace)
-		}
-
-		if aNamespace != bNamespace {
-			return aNamespace < bNamespace
-		}
-		return string(a.AncestorRef.Name) < string(b.AncestorRef.Name)
+		return lessPolicyAncestor(&policyStatus.Ancestors[i], &policyStatus.Ancestors[j])
 	})
 
 	aggregatedMessage := "Ancestors have been truncated because the number of policy ancestors exceeds 16."
 
-	policyStatus.Ancestors = policyStatus.Ancestors[:16]
+	policyStatus.Ancestors = policyStatus.Ancestors[:maxPolicyAncestors]
 	SetConditionForPolicyAncestor(policyStatus,
-		&policyStatus.Ancestors[15].AncestorRef,
+		&policyStatus.Ancestors[maxPolicyAncestors-1].AncestorRef,
 		controllerName,
 		egv1a1.PolicyConditionAggregated,
 		metav1.ConditionTrue,
@@ -286,6 +307,31 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1.PolicyStatus, controllerName 
 		aggregatedMessage,
 		generation,
 	)
+}
+
+// lessPolicyAncestor reports whether ancestor a should be ordered before ancestor b when deciding
+// which ancestors to preserve under the CRD limit: by sort rank (negative polarity first), then
+// namespace, then name.
+func lessPolicyAncestor(a, b *gwapiv1.PolicyAncestorStatus) bool {
+	aRank := sortRankForPolicyAncestor(a)
+	bRank := sortRankForPolicyAncestor(b)
+	if aRank != bRank {
+		return aRank < bRank
+	}
+	// First compare by namespace, then by name
+	aNamespace := ""
+	if a.AncestorRef.Namespace != nil {
+		aNamespace = string(*a.AncestorRef.Namespace)
+	}
+	bNamespace := ""
+	if b.AncestorRef.Namespace != nil {
+		bNamespace = string(*b.AncestorRef.Namespace)
+	}
+
+	if aNamespace != bNamespace {
+		return aNamespace < bNamespace
+	}
+	return string(a.AncestorRef.Name) < string(b.AncestorRef.Name)
 }
 
 // sortRankForPolicyAncestor returns an integer sort key.

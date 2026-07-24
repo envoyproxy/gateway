@@ -14,6 +14,10 @@ spec:
 {{- if not .Values.hpa.enabled }}
   replicas: {{ .Values.deployment.replicas }}
 {{- end }}
+{{- with .Values.deployment.envoyGateway.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+{{- end }}
   selector:
     matchLabels:
       control-plane: envoy-gateway
@@ -69,12 +73,10 @@ spec:
         {{- end }}
         image: {{ include "eg.image" . }}
         imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
+        startupProbe:
+          {{- toYaml .Values.deployment.envoyGateway.startupProbe | nindent 10 }}
         livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
+          {{- toYaml .Values.deployment.envoyGateway.livenessProbe | nindent 10 }}
         name: envoy-gateway
         ports:
         {{- range .Values.deployment.ports }}
@@ -86,11 +88,7 @@ spec:
           containerPort: 9443
         {{- end }}
         readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
+          {{- toYaml .Values.deployment.envoyGateway.readinessProbe | nindent 10 }}
         resources:
           {{- toYaml .Values.deployment.envoyGateway.resources | nindent 10 }}
         securityContext:
@@ -102,6 +100,8 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+        - mountPath: /var/lib/eg/wasm
+          name: wasm-cache
         {{- with .Values.deployment.pod.extraVolumeMounts }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -119,6 +119,14 @@ spec:
       - name: certs
         secret:
           secretName: envoy-gateway
+      # Writable cache for Wasm modules; required because the controller's
+      # root filesystem is read-only by default (readOnlyRootFilesystem).
+      - name: wasm-cache
+        {{- with .Values.deployment.envoyGateway.wasmCacheVolume }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
       {{- with .Values.deployment.pod.extraVolumes }}
       {{- toYaml . | nindent 6 }}
       {{- end }}

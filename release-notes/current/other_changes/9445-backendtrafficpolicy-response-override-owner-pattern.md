@@ -1,0 +1,1 @@
+Refactored BackendTrafficPolicy merging to use the field-owner pattern already used for SecurityPolicy, resolving the response override body reference against the owning policy's namespace instead of mutating the shared policy's `Spec` before merge.

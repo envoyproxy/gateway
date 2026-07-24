@@ -59,6 +59,7 @@ func init() {
 		RateLimitGlobalMergeTest,
 		RateLimitGlobalShadowModeTest,
 		RateLimitQueryParametersTest,
+		RateLimitGlobalSharedWithCost,
 	)
 }
 
@@ -1673,6 +1674,99 @@ var RateLimitQueryParametersTest = suite.ConformanceTest{
 			if err := GotExactExpectedResponseExceptErrors(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
 				t.Errorf("failed to get expected responses for the request: %v", err)
 			}
+		})
+	},
+}
+
+var RateLimitGlobalSharedWithCost = suite.ConformanceTest{
+	ShortName:   "RateLimitGlobalSharedWithCost",
+	Description: "Shared global rate limit with a fixed request cost applies the cost multiplier across multiple routes",
+	Manifests:   []string{"testdata/ratelimit-global-shared-gateway-cost.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("shared rate limit with cost=2 across routes", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			route1NN := types.NamespacedName{Name: "cost-ratelimit-1", Namespace: ns}
+			route2NN := types.NamespacedName{Name: "cost-ratelimit-2", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "eg-shared-cost-ratelimit", Namespace: ns}
+
+			gwAddr1 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
+			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
+
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
+				types.NamespacedName{Name: "ratelimit-shared-gateway-cost", Namespace: ns},
+				suite.ControllerName, gwapiv1.ParentReference{
+					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+					Kind:      gatewayapi.KindPtr(resource.KindGateway),
+					Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+					Name:      gwapiv1.ObjectName(gwNN.Name),
+				})
+
+			requestHeaders := map[string]string{"x-user-id": "cost-test"}
+
+			ratelimitHeader := make(map[string]string)
+			expectOkResp1 := http.ExpectedResponse{
+				Request: http.Request{
+					Path:    "/foo",
+					Headers: requestHeaders,
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
+				},
+				Namespace: ns,
+			}
+			// limit=4, cost=2, so X-Ratelimit-Limit reflects the bucket size of 4
+			expectOkResp1.Response.Headers["X-Ratelimit-Limit"] = "4, 4;w=3600"
+
+			expectOkResp2 := http.ExpectedResponse{
+				Request: http.Request{
+					Path:    "/bar",
+					Headers: requestHeaders,
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path:    "/bar",
+					Headers: requestHeaders,
+				},
+				Response: http.Response{
+					StatusCodes: []int{429},
+				},
+				Namespace: ns,
+			}
+
+			req2 := http.MakeRequest(t, &expectOkResp2, gwAddr2, "HTTP", "http")
+			limitReq := http.MakeRequest(t, &expectLimitResp, gwAddr2, "HTTP", "http")
+
+			// Wait for the rate limit config to be ready and consume the first token (costs 2 of 4)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectOkResp1)
+
+			// Second request to /bar (costs 2 more, total 4 consumed — bucket exhausted)
+			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, req2, expectOkResp2); err != nil {
+				t.Errorf("failed to get expected response for second request to /bar: %v", err)
+			}
+
+			// Third request must be rate limited: shared bucket is exhausted across both routes
+			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, limitReq, expectLimitResp); err != nil {
+				t.Errorf("expected 429 after cost exhausted shared bucket across routes: %v", err)
+			}
+
+			// Requests without the matching header are not affected
+			expectNoMatchResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/foo",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectNoMatchResp)
 		})
 	},
 }

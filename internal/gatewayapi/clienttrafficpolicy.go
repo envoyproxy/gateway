@@ -96,8 +96,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		listenerSetMap[key] = ls
 	}
 
-	policyCopies := clientTrafficPolicyCopiesWithStatusDeepCopy(clientTrafficPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.ClientTrafficPolicy)
 	// Translate
 	// 1. First translate Policies with a sectionName set
@@ -112,7 +110,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			if hasSectionName(&targetRef) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = clientTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -228,23 +226,28 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		}
 	}
 
+	// Resolve each policy's targets.
+	policyTargets := make([][]policyTargetReferenceWithSectionName, len(clientTrafficPolicies))
+	for i, currPolicy := range clientTrafficPolicies {
+		policyTargets[i] = resolvePolicyTargetsForGatewayAndListenerSet(
+			currPolicy.Spec.PolicyTargetReferences,
+			gateways,
+			resources.ListenerSets,
+			resources.ReferenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindClientTrafficPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace,
+		)
+	}
+
 	// Policy with no section set (targeting all sections of a Gateway or ListenerSet).
 	// ListenerSet-wide policies are processed before Gateway-wide so that the more specific
 	// target always wins regardless of input order.
 	for _, passKind := range []gwapiv1.Kind{resource.KindListenerSet, resource.KindGateway} {
 		for i, currPolicy := range clientTrafficPolicies {
 			policyName := utils.NamespacedName(currPolicy)
-			targetRefs := resolvePolicyTargetsForGatewayAndListenerSet(
-				currPolicy.Spec.PolicyTargetReferences,
-				gateways,
-				resources.ListenerSets,
-				resources.ReferenceGrants,
-				egv1a1.GroupName,
-				egv1a1.KindClientTrafficPolicy,
-				currPolicy.Namespace,
-				t.GetNamespace,
-			)
-			for _, currTarget := range targetRefs {
+			for _, currTarget := range policyTargets[i] {
 				if !hasSectionName(&currTarget) {
 
 					if currTarget.Kind != passKind {
@@ -253,7 +256,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 					policy, found := handledPolicies[policyName]
 					if !found {
-						policy = policyCopies[i]
+						policy = clientTrafficPolicies[i]
 						res = append(res, policy)
 						handledPolicies[policyName] = policy
 					}
@@ -920,6 +923,12 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		}
 	}
 
+	if headerSettings.Host != nil && headerSettings.Host.StripTrailingHostDot != nil {
+		httpIR.Host = &ir.HostSettings{
+			StripTrailingHostDot: *headerSettings.Host.StripTrailingHostDot,
+		}
+	}
+
 	var errs error
 
 	if headerSettings.EarlyRequestHeaders != nil {
@@ -1127,7 +1136,7 @@ func (t *Translator) buildListenerTLSParameters(
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
-			validCaCertBytes, listenerErr := filterValidCertificates(caCertBytes)
+			validCaCertBytes, listenerErr := filterValidCACertificates(caCertBytes)
 			if listenerErr != nil {
 				if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
 					return irTLSConfig, fmt.Errorf("no valid certificates exist in %s: %w", caCertRef.Name, listenerErr)
@@ -1240,6 +1249,9 @@ func setTLSClientValidationContext(tlsClientValidation *egv1a1.ClientValidationC
 	}
 	if len(tlsClientValidation.CertificateHashes) > 0 {
 		irTLSConfig.VerifyCertificateHash = append(irTLSConfig.VerifyCertificateHash, tlsClientValidation.CertificateHashes...)
+	}
+	if tlsClientValidation.AllowExpiredCertificate != nil && *tlsClientValidation.AllowExpiredCertificate {
+		irTLSConfig.AllowExpiredCertificate = true
 	}
 	if tlsClientValidation.SubjectAltNames != nil {
 		for _, match := range tlsClientValidation.SubjectAltNames.DNSNames {
@@ -1501,16 +1513,4 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	}
 
 	return addRequestHeaders, removeRequestHeaders, removeRequestHeadersOnMatch, errs
-}
-
-// clientTrafficPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func clientTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.ClientTrafficPolicy) []*egv1a1.ClientTrafficPolicy {
-	copies := make([]*egv1a1.ClientTrafficPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

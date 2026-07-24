@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io/foobar:
+              foobar_14d5b09b29e54e96:
                 audiences:
                 - foo.bar.com
                 claimToHeaders:
@@ -32,7 +32,8 @@
                   - scp
                 payloadInMetadata: foobar
                 remoteJwks:
-                  asyncFetch: {}
+                  asyncFetch:
+                    failedRefetchDuration: 30s
                   cacheDuration: 300s
                   httpUri:
                     cluster: securitypolicy/default/policy-for-route/jwt/0
@@ -45,8 +46,8 @@
                       maxInterval: 5s
                     retryOn: 5xx,gateway-error,reset
             requirementMap:
-              httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io:
-                providerName: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io/foobar
+              foobar_d74de7564544aa48:
+                providerName: foobar_14d5b09b29e54e96
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

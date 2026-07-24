@@ -10,12 +10,12 @@ global:
   # Override image-specific values directly if a global override is not desired.
   images:
     envoyGateway:
-      # This is the full image name including the hub, repo, and tag.
+      # -- Full image for the Envoy Gateway control plane Deployment installed by this chart.
       image: ${GatewayImage}
-      # Specify image pull policy if default behavior isn't desired.
+      # -- Image pull policy for the Envoy Gateway control plane Deployment.
       # Default behavior: latest images will be Always else IfNotPresent.
       pullPolicy: ${GatewayImagePullPolicy}
-      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      # -- Pull secrets for the Envoy Gateway control plane Deployment.
       pullSecrets: []
     ratelimit:
       # This is the full image name including the hub, repo, and tag.
@@ -26,14 +26,21 @@ global:
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
     envoyProxy:
-      # This is the full image name including the hub, repo, and tag for the Envoy Proxy data plane.
-      # If not specified, uses the default image built into envoy-gateway.
+      # -- Full image for the managed Envoy Proxy data plane.
+      # This updates the generated `envoyProxy` config and does not change the `envoy-gateway`
+      # control plane Deployment image. If not specified, the default image built into
+      # `envoy-gateway` is used.
       image: ""
-      # Specify image pull policy if default behavior isn't desired.
+      # -- Image pull policy for the managed Envoy Proxy data plane.
       # Default behavior: IfNotPresent.
       pullPolicy: ""
-      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      # -- Pull secrets for the managed Envoy Proxy data plane.
       pullSecrets: []
+
+# Values for CRDs dependency
+crds:
+  # -- Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately.
+  enabled: true
 
 # -- Labels to apply to all resources
 commonLabels: {}
@@ -65,11 +72,44 @@ deployment:
         drop:
         - ALL
       privileged: false
+      readOnlyRootFilesystem: true
       runAsNonRoot: true
       runAsGroup: 65532
       runAsUser: 65532
       seccompProfile:
         type: RuntimeDefault
+    # -- Volume source for the Wasm module cache mounted at /var/lib/eg/wasm. Defaults to an emptyDir when left empty.
+    # Example: persist the Wasm module cache across controller restarts by backing it with a PersistentVolumeClaim:
+    #   wasmCacheVolume:
+    #     persistentVolumeClaim:
+    #       claimName: envoy-gateway-wasm-cache
+    strategy: {}
+    wasmCacheVolume: {}
+    # Kubernetes best practice for controllers: use a startupProbe with a generous
+    # failure threshold to avoid premature liveness/readiness failures during initialization.
+    # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes
+    startupProbe:
+      httpGet:
+        path: /healthz
+        port: 8081
+      failureThreshold: 30
+      periodSeconds: 1
+      successThreshold: 1
+      timeoutSeconds: 1
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8081
+      periodSeconds: 20
+      successThreshold: 1
+      timeoutSeconds: 1
+    readinessProbe:
+      httpGet:
+        path: /readyz
+        port: 8081
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 1
   ports:
     - name: grpc
       port: 18000
@@ -108,6 +148,7 @@ deployment:
       runAsNonRoot: true
       runAsGroup: 65532
       runAsUser: 65532
+      fsGroup: 65532
       seccompProfile:
         type: RuntimeDefault
 
@@ -155,6 +196,13 @@ certgen:
     pod:
       annotations: {}
       labels: {}
+      securityContext:
+        runAsNonRoot: true
+        runAsGroup: 65532
+        runAsUser: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
     resources: {}
     affinity: {}
     tolerations: []

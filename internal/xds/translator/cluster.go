@@ -15,6 +15,9 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	commondnsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/common/dns/v3"
+	dnsclusterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
 	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
@@ -58,6 +61,10 @@ const (
 	tcpClusterPerConnectTimeout             = 10 * time.Second
 	dfpClusterTypeName                      = "envoy.clusters.dynamic_forward_proxy"
 	dfpDNSCacheName                         = "envoy-gateway-dfp-cache"
+	// dnsClusterTypeName is the registered name of Envoy's DNS cluster extension factory
+	// (envoy.extensions.clusters.dns.v3.DnsCluster). Note the singular "cluster": this is the
+	// factory name set in Envoy's ConfigurableClusterFactoryBase ctor, not the plural extension key.
+	dnsClusterTypeName = "envoy.cluster.dns"
 )
 
 type xdsClusterArgs struct {
@@ -167,6 +174,25 @@ func computeDNSLookupFamily(ipFamily *egv1a1.IPFamily, dns *ir.DNS) clusterv3.Cl
 	}
 
 	return dnsLookupFamily
+}
+
+// toCommonDNSLookupFamily maps the deprecated config.cluster.v3.Cluster_DnsLookupFamily enum to its
+// equivalent in extensions.clusters.common.dns.v3, used by the envoy.cluster.dns extension. The two
+// enums are NOT integer-compatible: the common enum has an extra UNSPECIFIED=0 value, so it is offset
+// by one. Mapping is done by name; any unknown value defaults to AUTO (the DnsCluster default).
+func toCommonDNSLookupFamily(f clusterv3.Cluster_DnsLookupFamily) commondnsv3.DnsLookupFamily {
+	switch f {
+	case clusterv3.Cluster_V4_ONLY:
+		return commondnsv3.DnsLookupFamily_V4_ONLY
+	case clusterv3.Cluster_V6_ONLY:
+		return commondnsv3.DnsLookupFamily_V6_ONLY
+	case clusterv3.Cluster_V4_PREFERRED:
+		return commondnsv3.DnsLookupFamily_V4_PREFERRED
+	case clusterv3.Cluster_ALL:
+		return commondnsv3.DnsLookupFamily_ALL
+	default:
+		return commondnsv3.DnsLookupFamily_AUTO
+	}
 }
 
 func dfpCacheName(ipFamily *egv1a1.IPFamily, dns *ir.DNS) string {
@@ -331,8 +357,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Set TypedExtensionProtocolOptions if not using Proxy Protocol
-	if !proxyProtocolEnabled && epo != nil {
+	if epo != nil {
 		cluster.TypedExtensionProtocolOptions = epo
 	}
 
@@ -516,16 +541,33 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			},
 		}
 	default:
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
-		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
-		cluster.RespectDnsTtl = true
+		// DNS-based endpoints use Envoy's DNS cluster extension (envoy.cluster.dns) instead of the
+		// deprecated top-level Cluster.dns_refresh_rate / respect_dns_ttl fields. Leaving
+		// all_addresses_in_single_endpoint unset (false) is equivalent to the legacy STRICT_DNS type.
+		dnsCluster := &dnsclusterv3.DnsCluster{
+			DnsRefreshRate: durationpb.New(30 * time.Second),
+			RespectDnsTtl:  true,
+			// When cluster_type is set, Envoy reads dns_lookup_family from the DnsCluster extension and
+			// ignores the top-level Cluster.dns_lookup_family, so carry it over here to preserve behavior.
+			DnsLookupFamily: toCommonDNSLookupFamily(dnsLookupFamily),
+		}
 		if args.dns != nil {
 			if args.dns.DNSRefreshRate != nil {
-				cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
+				dnsCluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
 			}
 			if args.dns.RespectDNSTTL != nil {
-				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
+				dnsCluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
 			}
+		}
+		dnsClusterAny, err := proto.ToAnyWithValidation(dnsCluster)
+		if err != nil {
+			return nil, err
+		}
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_ClusterType{
+			ClusterType: &clusterv3.Cluster_CustomClusterType{
+				Name:        dnsClusterTypeName,
+				TypedConfig: dnsClusterAny,
+			},
 		}
 	}
 
@@ -1050,13 +1092,22 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
 		args.admissionControl != nil
 
+	var clusterHashPolicy []*routev3.RouteAction_HashPolicy
+	if !args.isRoute && args.loadBalancer != nil {
+		clusterHashPolicy = buildConsistentHashPolicy(args.loadBalancer.ConsistentHash)
+	}
+
 	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
-		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI || forceHTTP1UpstreamProtocol
+		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI ||
+		forceHTTP1UpstreamProtocol || len(clusterHashPolicy) > 0
 
 	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
 	}
 	protocolOptions := httpv3.HttpProtocolOptions{}
+	if len(clusterHashPolicy) > 0 {
+		protocolOptions.HashPolicy = clusterHashPolicy
+	}
 	if requiresCommonHTTPOptions {
 		protocolOptions.CommonHttpProtocolOptions = &corev3.HttpProtocolOptions{}
 		if args.timeout != nil && args.timeout.HTTP != nil {
