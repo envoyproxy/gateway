@@ -353,6 +353,9 @@ func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 	tlsCtxProto := &tlsv3.UpstreamTlsContext{
 		Sni: sni,
 		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsParams: &tlsv3.TlsParameters{
+				TlsMaximumProtocolVersion: tlsv3.TlsParameters_TLSv1_3,
+			},
 			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
 				ValidationContext: &tlsv3.CertificateValidationContext{
 					TrustedCa: &corev3.DataSource{
