@@ -153,7 +153,16 @@ func buildJWTRequirements(jwt *ir.JWT) (map[string]*jwtauthnv3.JwtProvider, []*j
 		})
 	}
 
-	if jwt.AllowMissing {
+	// AllowMissingOrFailed supersedes AllowMissing: it tolerates a missing or
+	// invalid token, whereas AllowMissing still rejects an invalid one.
+	switch {
+	case jwt.AllowMissingOrFailed:
+		reqs = append(reqs, &jwtauthnv3.JwtRequirement{
+			RequiresType: &jwtauthnv3.JwtRequirement_AllowMissingOrFailed{
+				AllowMissingOrFailed: &emptypb.Empty{},
+			},
+		})
+	case jwt.AllowMissing:
 		reqs = append(reqs, &jwtauthnv3.JwtRequirement{
 			RequiresType: &jwtauthnv3.JwtRequirement_AllowMissing{
 				AllowMissing: &emptypb.Empty{},
@@ -303,9 +312,10 @@ func jwtProviderName(providerName string, provider *jwtauthnv3.JwtProvider) (str
 }
 
 // jwtRequirementName returns a deterministic name for a JWT requirement. The
-// name combines the referenced IR provider names (plus "missing" when missing
-// tokens are allowed) with a hash of the generated Envoy requirement config, so
-// identical requirements are deduplicated while the name stays human readable.
+// name combines the referenced IR provider names (plus "missing" or
+// "missing-or-failed" when such tokens are tolerated) with a hash of the
+// generated Envoy requirement config, so identical requirements are
+// deduplicated while the name stays human readable.
 func jwtRequirementName(jwt *ir.JWT, requirement *jwtauthnv3.JwtRequirement) (string, error) {
 	hash, err := protoHash(requirement)
 	if err != nil {
@@ -315,7 +325,10 @@ func jwtRequirementName(jwt *ir.JWT, requirement *jwtauthnv3.JwtRequirement) (st
 	for i := range jwt.Providers {
 		names = append(names, jwt.Providers[i].Name)
 	}
-	if jwt.AllowMissing {
+	switch {
+	case jwt.AllowMissingOrFailed:
+		names = append(names, "missing-or-failed")
+	case jwt.AllowMissing:
 		names = append(names, "missing")
 	}
 	return boundedJWTName(strings.Join(names, "-or-"), hash), nil

@@ -401,6 +401,11 @@ func (t *Translator) addHCMToXDSListener(
 		RequestIdExtension:            buildRequestIDExtension(irListener.RequestID),
 	}
 
+	// Normalize the Host/Authority header if configured.
+	if irListener.Host != nil {
+		mgr.StripTrailingHostDot = irListener.Host.StripTrailingHostDot
+	}
+
 	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
 	// This ensures the correct scheme is sent to backends using TLS when enabled.
 	if irListener.MatchBackendScheme {

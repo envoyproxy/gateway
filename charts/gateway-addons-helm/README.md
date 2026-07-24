@@ -24,7 +24,7 @@ An Add-ons Helm chart for Envoy Gateway
 | https://fluent.github.io/helm-charts | fluent-bit | 0.56.0 |
 | https://grafana.github.io/helm-charts | alloy | 1.10.1 |
 | https://grafana.github.io/helm-charts | grafana | 10.5.15 |
-| https://grafana.github.io/helm-charts | loki | 7.0.0 |
+| https://grafana.github.io/helm-charts | loki | 7.1.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
 | https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.165.0 |
 | https://prometheus-community.github.io/helm-charts | prometheus | 29.10.1 |

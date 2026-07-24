@@ -120,8 +120,6 @@ func (t *Translator) ProcessSecurityPolicies(
 		listenerSetMap[key] = &policyListenerSetTargetContext{ListenerSet: ls}
 	}
 
-	policyCopies := securityPolicyCopiesWithStatusDeepCopy(securityPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy, policyMapSize)
 
 	// Map of attached Policy to Gateway. Used for policy merge process.
@@ -160,7 +158,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -184,7 +182,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -202,7 +200,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListenerSetListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -227,7 +225,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListenerSet(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -245,7 +243,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -270,7 +268,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -1813,8 +1811,9 @@ func (t *Translator) buildJWT(
 	}
 
 	return &ir.JWT{
-		AllowMissing: ptr.Deref(policy.Spec.JWT.Optional, false),
-		Providers:    providers,
+		AllowMissing:         ptr.Deref(policy.Spec.JWT.Optional, false),
+		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.FailOpen, false),
+		Providers:            providers,
 	}, nil
 }
 
@@ -3158,16 +3157,4 @@ func buildExtAuthContextExtensionOwners(route, parent *egv1a1.SecurityPolicy) ma
 		}
 	}
 	return owners
-}
-
-// securityPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func securityPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.SecurityPolicy) []*egv1a1.SecurityPolicy {
-	copies := make([]*egv1a1.SecurityPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

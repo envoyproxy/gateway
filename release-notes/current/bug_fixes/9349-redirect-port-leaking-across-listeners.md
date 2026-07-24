@@ -1,0 +1,1 @@
+Fixed redirect port leaking across multiple listeners when an HTTPRoute with a redirect filter (without explicit port) is attached to multiple Gateway listeners with different ports; each listener now correctly derives its own redirect port instead of reusing the first listener's port.

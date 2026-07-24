@@ -864,6 +864,52 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
 			expect: true,
 		},
+		{
+			name: "references HTTPRouteFilter credential injection secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.HTTPRouteFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "credential-injection",
+					},
+					Spec: egv1a1.HTTPRouteFilterSpec{
+						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+							Credential: egv1a1.InjectedCredential{
+								ValueRef: gwapiv1.SecretObjectReference{
+									Name: "secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "secret not referenced by any HTTPRouteFilter",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.HTTPRouteFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "credential-injection",
+					},
+					Spec: egv1a1.HTTPRouteFilterSpec{
+						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+							Credential: egv1a1.InjectedCredential{
+								ValueRef: gwapiv1.SecretObjectReference{
+									Name: "secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "unrelated-secret"}),
+			expect: false,
+		},
 	}
 
 	// Create the reconciler.
@@ -876,6 +922,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		spCRDExists:      true,
 		epCRDExists:      true,
 		eepCRDExists:     true,
+		hrfCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
@@ -894,6 +941,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
 			WithIndex(&egv1a1.Backend{}, secretBackendIndex, secretBackendIndexFunc).
+			WithIndex(&egv1a1.HTTPRouteFilter{}, secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
