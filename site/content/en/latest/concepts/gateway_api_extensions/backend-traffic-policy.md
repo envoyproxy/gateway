@@ -149,6 +149,72 @@ In this example, `alpha-policy` would take precedence due to its earlier creatio
 
 When the `mergeType` field is unset, no merging occurs and only the most specific configuration takes effect. However, policies can be configured to merge with parent policies using the `mergeType` field (see [Policy Merging](#policy-merging) section below).
 
+## Backend Protocol Selection
+
+`BackendTrafficPolicy` configures an upstream connection after Envoy Gateway
+selects its protocol. For example, the `http2` field tunes an HTTP/2 connection
+but does not select HTTP/2 by itself.
+
+Envoy Gateway can select HTTP/2 for an upstream connection in the following
+ways:
+
+- Set the Kubernetes Service port's
+  [`appProtocol`][Kubernetes Service appProtocol] to `kubernetes.io/h2c` for
+  cleartext HTTP/2.
+- Use a [`GRPCRoute`][GRPC Routing]. Because gRPC uses HTTP/2, its backend
+  connections use HTTP/2 automatically.
+- Configure backend TLS with a [`BackendTLSPolicy`][Backend TLS]. For
+  HTTP-based routes, Envoy can negotiate HTTP/2 with the backend through ALPN.
+- Set `useClientProtocol: true` in a `BackendTrafficPolicy` to use the same
+  protocol for the upstream connection as the downstream request. This selects
+  HTTP/2 only when the downstream request uses HTTP/2.
+
+{{% alert title="HTTP/2 settings do not select HTTP/2" color="warning" %}}
+
+Setting `spec.http2`, including `http2: {}`, does not enable HTTP/2 for a
+backend. Envoy Gateway applies these settings only when one of the mechanisms
+above selects HTTP/2.
+
+{{% /alert %}}
+
+This separation lets a platform team define HTTP/2 connection defaults at the
+Gateway level without forcing every application backend to use HTTP/2.
+Application teams can opt in per backend by setting `appProtocol` on their
+Service port or by using a `GRPCRoute`.
+
+In the following example, the Gateway-level policy sets HTTP/2 defaults. The
+Service selects cleartext HTTP/2 for routes that reference its `grpc` port:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: example-backend
+spec:
+  selector:
+    app: example-backend
+  ports:
+  - name: grpc
+    port: 8080
+    targetPort: 8080
+    appProtocol: kubernetes.io/h2c
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: gateway-http2-defaults
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  http2:
+    maxConcurrentStreams: 200
+    connectionKeepalive:
+      interval: 30s
+      timeout: 10s
+```
+
 ## Policy Merging
 
 BackendTrafficPolicy supports merging configurations using the `mergeType` field, which allows route-level or route rule-level policies to combine with gateway-level or listener-level policies rather than completely overriding them. This enables layered policy strategies where platform teams can set baseline configurations at the Gateway level, while application teams can add specific policies for their routes.
@@ -231,3 +297,7 @@ In this example, the route-level policy merges with the gateway-level policy, re
 - [Response Compression](../../tasks/traffic/response-compression)
 - [Response Override](../../tasks/traffic/response-override)
 - [BackendTrafficPolicy API Reference](../../api/extension_types#backendtrafficpolicy)
+
+[Backend TLS]: ../../tasks/security/backend-tls
+[GRPC Routing]: ../../tasks/traffic/grpc-routing
+[Kubernetes Service appProtocol]: https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol
