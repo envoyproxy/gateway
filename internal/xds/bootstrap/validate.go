@@ -61,9 +61,12 @@ func Validate(boostrapConfig *egv1a1.ProxyBootstrap) error {
 	}
 
 	// Ensure dynamic resources config is same except for initial_fetch_timeout
+	// and max_receive_message_length on the xDS gRPC service (allows tuning the
+	// gRPC receive buffer when the xDS snapshot grows large at scale).
 	if userBootstrap.DynamicResources == nil ||
 		cmp.Diff(userBootstrap.DynamicResources, defaultBootstrap.DynamicResources, protocmp.Transform(),
-			protocmp.IgnoreFields(&corev3.ConfigSource{}, "initial_fetch_timeout")) != "" {
+			protocmp.IgnoreFields(&corev3.ConfigSource{}, "initial_fetch_timeout"),
+			protocmp.IgnoreFields(&corev3.GrpcService_EnvoyGrpc{}, "max_receive_message_length")) != "" {
 		return fmt.Errorf("dynamic_resources cannot be modified")
 	}
 

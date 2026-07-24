@@ -47,6 +47,13 @@ func TestApplyBootstrapConfig(t *testing.T) {
 			defaultBootstrap: str,
 		},
 		{
+			name: "merge-max-receive-message-length",
+			boostrapConfig: &egv1a1.ProxyBootstrap{
+				Type: new(egv1a1.BootstrapTypeJSONPatch),
+			},
+			defaultBootstrap: str,
+		},
+		{
 			name: "patch-global-config",
 			boostrapConfig: &egv1a1.ProxyBootstrap{
 				Type: new(egv1a1.BootstrapTypeJSONPatch),
