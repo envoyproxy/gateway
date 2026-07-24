@@ -107,6 +107,16 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways
 	return relevantGRPCRoutes
 }
 
+// gatewayAcceptedMsg returns the message embedding the Gateway's generation
+// so that a gateway-only update changes the message text and breaks the watchable DeepEqual gate
+// observedGeneration stays as the route's own generation to remain spec-compliant.
+func (t *Translator) gatewayMsg(gw *GatewayContext, base string) string {
+	if gw != nil && gw.GetGeneration() > 0 {
+		return fmt.Sprintf("%s (gateway generation: %d)", base, gw.GetGeneration())
+	}
+	return base
+}
+
 func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range httpRoute.ParentRefs {
 		// Need to compute Route rules within the parentRef loop because
@@ -187,7 +197,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
-				"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
+				t.gatewayMsg(parentRef.GetGateway(), "There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s)."),
 			)
 		}
 
@@ -206,7 +216,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 	}
@@ -927,7 +937,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
-				"There were no hostname intersections between the GRPCRoute and this parent ref's Listener(s).",
+				t.gatewayMsg(parentRef.GetGateway(), "There were no hostname intersections between the GRPCRoute and this parent ref's Listener(s)."),
 			)
 		}
 
@@ -941,7 +951,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 
@@ -1565,7 +1575,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
-				"There were no hostname intersections between the TLSRoute and this parent ref's Listener(s).",
+				t.gatewayMsg(parentRef.GetGateway(), "There were no hostname intersections between the TLSRoute and this parent ref's Listener(s)."),
 			)
 		}
 
@@ -1584,7 +1594,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 	}
@@ -1723,7 +1733,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 
@@ -1735,7 +1745,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonUnsupportedValue,
-				"Multiple routes on the same UDP listener",
+				t.gatewayMsg(parentRef.GetGateway(), "Multiple routes on the same UDP listener"),
 			)
 		}
 	}
@@ -1883,7 +1893,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 		if !accepted {
@@ -1894,7 +1904,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonUnsupportedValue,
-				"Multiple routes on the same TCP listener",
+				t.gatewayMsg(parentRef.GetGateway(), "Multiple routes on the same TCP listener"),
 			)
 		}
 
@@ -2357,7 +2367,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingParent,
-				"No listeners match this parent ref",
+				t.gatewayMsg(parentRefCtx.GetGateway(), "No listeners match this parent ref"),
 			)
 			continue
 		}
@@ -2371,6 +2381,11 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			}
 		}
 
+		var selectedGateway *GatewayContext
+		if len(selectedListeners) > 0 {
+			selectedGateway = selectedListeners[0].gateway
+		}
+
 		if len(allowedListeners) == 0 {
 			routeStatus := GetRouteStatus(routeContext)
 			status.SetRouteStatusCondition(routeStatus,
@@ -2379,7 +2394,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNotAllowedByListeners,
-				"No listeners included by this parent ref allowed this attachment.",
+				t.gatewayMsg(selectedGateway, "No listeners included by this parent ref allowed this attachment."),
 			)
 			continue
 		}
@@ -2392,7 +2407,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			gwapiv1.RouteConditionAccepted,
 			metav1.ConditionTrue,
 			gwapiv1.RouteReasonAccepted,
-			"Route is accepted",
+			t.gatewayMsg(parentRefCtx.GetGateway(), "Route is accepted"),
 		)
 	}
 	return relevantRoute
