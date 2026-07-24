@@ -955,6 +955,49 @@ func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
 	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cached error")
 }
 
+func TestTranslatorFetchEndpointsFromIssuerPersistentFallback(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		server    *httptest.Server
+		serverURL string
+	)
+
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, serverURL+"/token", serverURL+"/authorize")
+	}))
+	serverURL = server.URL
+
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+
+	// Round 1: Successful discovery stores result in persistent cache.
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+	cfg, err := tr.fetchEndpointsFromIssuer(serverURL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	require.Equal(t, int32(1), callCount.Load())
+	require.NotNil(t, oidcDiscoverySuccessCache, "success cache should be initialized")
+	require.Contains(t, oidcDiscoverySuccessCache, serverURL, "success should be stored in persistent cache")
+
+	// Simulate a new translation round: fresh per-round cache.
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	// Now make discovery fail by closing the server.
+	server.Close()
+
+	// Round 2: Discovery fails, but persistent cache has a successful result.
+	cfg, err = tr.fetchEndpointsFromIssuer(serverURL, nil)
+	require.NoError(t, err, "should fall back to persistent cache on failure")
+	require.NotNil(t, cfg, "should return cached configuration")
+	require.Equal(t, int32(1), callCount.Load(), "should not re-fetch after persistent cache hit")
+}
+
 // / tiny helper to build a minimal SecurityPolicy
 func sp(ns, name string) *egv1a1.SecurityPolicy {
 	return &egv1a1.SecurityPolicy{
