@@ -474,4 +474,4 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 [command line options]: ../operations/customize-envoyproxy/#customize-envoyproxy-command-line-options
 [network policies]: https://kubernetes.io/docs/concepts/services-networking/network-policies/
 [SecurityPolicy]: /latest/api/extension_types/#securitypolicy
-[ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
+[ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#referencegrant
