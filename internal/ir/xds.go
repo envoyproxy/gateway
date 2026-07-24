@@ -32,6 +32,10 @@ import (
 
 const (
 	EmptyPath = ""
+
+	// SystemTrustStoreSecretName is the shared SDS secret name used by all clusters that reference
+	// the system CA trust store when backend cluster deduplication is enabled.
+	SystemTrustStoreSecretName = "system_ca_certificates" //nolint:gosec // not a credential
 )
 
 var (

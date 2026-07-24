@@ -1055,7 +1055,7 @@ xdsIR:
               - HTTP/1.1
               - HTTP/2
               caCertificate:
-                name: policy-btls-for-backend-1/default-ca
+                name: system_ca_certificates
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384
@@ -1161,7 +1161,7 @@ xdsIR:
               - HTTP/1.1
               - HTTP/2
               caCertificate:
-                name: policy-btls-for-backend-3/default-ca
+                name: system_ca_certificates
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384
@@ -1213,7 +1213,7 @@ xdsIR:
               - HTTP/1.1
               - HTTP/2
               caCertificate:
-                name: policy-btls-for-backend-4/default-ca
+                name: system_ca_certificates
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384
@@ -1290,7 +1290,7 @@ xdsIR:
               alpnProtocols:
               - HTTP/2
               caCertificate:
-                name: backend-7/envoy-gateway-ca
+                name: system_ca_certificates
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384
@@ -1339,7 +1339,7 @@ xdsIR:
             tls:
               alpnProtocols: []
               caCertificate:
-                name: backend-9/envoy-gateway-ca
+                name: system_ca_certificates
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384
@@ -1434,7 +1434,7 @@ xdsIR:
             tls:
               alpnProtocols: null
               caCertificate:
-                name: policy-btls-for-backend-8/envoy-gateway-ca
+                name: system_ca_certificates
               clientCertificates:
               - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lVU3JTYktMZjBiTEVHb2dXeC9nQ3cyR0N0dnhFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lWR1Z6ZENCSmJtTXdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVRNUkV3RHdZRFZRUUREQWhVWlhOMElFbHVZekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBSzFKempQSWlXZzNxb0hTckFkZGtlSmphTVA5aXlNVGkvQlBvOWNKUG9SRThaaTcKV2FwVXJYTC85QTlyK2pITXlHSVpOWk5kY1o1Y1kyWHYwTFA4WnhWeTJsazArM3d0WXpIbnBHWUdWdHlxMnRldApEaEZzaVBsODJZUmpDMG16V2E0UU16NFNYekZITmdJRHBSZGhmcm92bXNldVdHUUU4cFY0VWQ5VUsvU0tpbE1PCnF0QjVKaXJMUDJWczVUMW9XaWNXTFF2ZmJHd3Y3c0ZEZHI5YkcwWHRTUXAxN0hTZ281MFNERTUrQmpTbXB0RncKMVZjS0xscWFoTVhCRERpb3Jnd2hJaEdHS3BFU2VNMFA3YkZoVm1rTTNhc2gyeFNUQnVGVUJEbEU0Sk9haHp3cwpEWHJ1cFVoRGRTMWhkYzJmUHJqaEZBbEpmV0VZWjZCbFpqeXNpVlVDQXdFQUFhTndNRzR3SFFZRFZSME9CQllFCkZCUXVmSzFMaWJ1Vm05VHMvVmpCeDhMM3VpTmVNQjhHQTFVZEl3UVlNQmFBRkJRdWZLMUxpYnVWbTlUcy9WakIKeDhMM3VpTmVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdHd1lEVlIwUkJCUXdFb0lCS29JTktpNWxlR0Z0Y0d4bApMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWZQUzQxYWdldldNVjNaWHQwQ09GRzN1WWZQRlhuVnc2ClA0MXA5TzZHa2RZc3VxRnZQZVR5eUgyL2RBSUtLd1N6TS9wdGhnOEtuOExabG1KeUZObkExc3RKeG41WGRiVjEKcFBxajhVdllDQnp5ak1JcW1SeW9peUxpUWxib2hNYTBVZEVCS2NIL1BkTEU5SzhUR0pyWmdvR1hxcTFXbWl0RAozdmNQalNlUEtFaVVKVlM5bENoeVNzMEtZNUIraFVRRDBKajZucEZENFprMHhxZHhoMHJXdWVDcXE3dmpxRVl6CnBqNFB3cnVmbjFQQlRtZnhNdVYvVUpWNWViaWtldVpQMzVrV3pMUjdaV0FMN3d1RGRXcC82bzR5azNRTGFuRFEKQ3dnQ0ZjWCtzcyswVnl1TTNZZXJUT1VVOFFWSkp4NFVaQU5aeDYrNDNwZEpaT2NudFBaNENBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
                 name: envoy-gateway/gateway-client-auth
@@ -1524,7 +1524,7 @@ xdsIR:
             tls:
               alpnProtocols: null
               caCertificate:
-                name: backend-10/envoy-gateway-ca
+                name: system_ca_certificates
               maxVersion: "1.3"
               minVersion: "1.2"
               useSystemTrustStore: true

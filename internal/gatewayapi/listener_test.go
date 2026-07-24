@@ -1433,7 +1433,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	backendMetadata := &ir.ResourceMetadata{Name: backendName, Namespace: ns}
 	backendPolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel.example.com"), UseSystemTrustStore: true,
-		CACertificate: &ir.TLSCACertificate{Name: "otel-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
 		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
 	}
 
@@ -1472,7 +1472,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	serviceMetadata := &ir.ResourceMetadata{Name: serviceName, Namespace: ns, SectionName: "4317"}
 	servicePolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel-svc.example.com"), UseSystemTrustStore: true,
-		CACertificate: &ir.TLSCACertificate{Name: "otel-svc-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
 		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
 	}
 

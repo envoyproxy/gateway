@@ -13,9 +13,11 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	proto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -27,13 +29,15 @@ const (
 	wasmHTTPServicePort              = 18002
 )
 
-// patchGlobalResources builds and appends the global resources that are shared across listeners and routes.
-// for example, the envoy client certificate and the OIDC HMAC secret.
+// SystemTrustStoreSecretName is re-exported from ir for use within the xDS translator package.
+const SystemTrustStoreSecretName = ir.SystemTrustStoreSecretName
+
+// patchGlobalResources builds and appends global resources shared across listeners and routes.
 func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXds *ir.Xds) error {
 	var errs error
 
 	if irXds.GlobalResources != nil && irXds.GlobalResources.EnvoyClientCertificate != nil {
-		// Create the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components.
+		// Create the envoy client TLS secret for control plane connections (rate limit, wasm).
 		if err := createEnvoyClientTLSCertSecret(tCtx, irXds.GlobalResources); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -64,6 +68,78 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 		}
 	}
 	return false
+}
+
+// emitSystemTrustStoreSecret ensures a system CA trust store SDS secret with the given name
+// is present, creating it if not. When dedup is enabled, name is SystemTrustStoreSecretName and
+// a single shared secret is used; when dedup is disabled, name is a per-policy name and each
+// cluster gets its own idempotently-created copy pointing at the same system CA file path.
+func emitSystemTrustStoreSecret(tCtx *types.ResourceVersionTable, name string) error {
+	if findXdsSecret(tCtx, name) != nil {
+		return nil
+	}
+	secret := &tlsv3.Secret{
+		Name: name,
+		Type: &tlsv3.Secret_ValidationContext{
+			ValidationContext: systemTrustStoreValidationContext(),
+		},
+	}
+	if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+		return err
+	}
+	if name == SystemTrustStoreSecretName {
+		tCtx.SystemTrustStore = true
+	}
+	return nil
+}
+
+// systemTrustStoreValidationContext returns the canonical ValidationContext for the system CA trust store.
+// Used both when emitting the secret and when validating it hasn't been tampered with.
+func systemTrustStoreValidationContext() *tlsv3.CertificateValidationContext {
+	return &tlsv3.CertificateValidationContext{
+		TrustedCa: &corev3.DataSource{
+			Specifier: &corev3.DataSource_Filename{Filename: cert.SystemCertPath},
+		},
+	}
+}
+
+// validateSystemTrustStoreSecret checks whether system_ca_certificates is present and
+// unmodified. Returns an error if it was tampered with (wrong content, duplicate, or removed).
+// A no-op if the secret was never emitted. The full proto is compared against the canonical
+// form so any field mutation (trust chain verification flags, SAN matchers, CRL config, etc.)
+// is detected, not just filename changes.
+func validateSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
+	if !tCtx.SystemTrustStore {
+		return nil
+	}
+	var matches []*tlsv3.Secret
+	for _, r := range tCtx.XdsResources[resourcev3.SecretType] {
+		if s, ok := r.(*tlsv3.Secret); ok && s.Name == SystemTrustStoreSecretName {
+			matches = append(matches, s)
+		}
+	}
+	switch len(matches) {
+	case 0:
+		return fmt.Errorf("secret %q was removed by a patch or extension but is still referenced by clusters", SystemTrustStoreSecretName)
+	case 1:
+		if !proto.Equal(matches[0], canonicalSystemTrustStoreSecret()) {
+			return fmt.Errorf("secret %q was modified by a patch or extension", SystemTrustStoreSecretName)
+		}
+		return nil
+	default:
+		return fmt.Errorf("secret %q appears %d times; at most one is allowed", SystemTrustStoreSecretName, len(matches))
+	}
+}
+
+// canonicalSystemTrustStoreSecret returns the exact proto that validateSystemTrustStoreSecret
+// expects to find for system_ca_certificates. Any deviation is rejected.
+func canonicalSystemTrustStoreSecret() *tlsv3.Secret {
+	return &tlsv3.Secret{
+		Name: SystemTrustStoreSecretName,
+		Type: &tlsv3.Secret_ValidationContext{
+			ValidationContext: systemTrustStoreValidationContext(),
+		},
+	}
 }
 
 func createEnvoyClientTLSCertSecret(tCtx *types.ResourceVersionTable, globalResources *ir.GlobalResources) error {

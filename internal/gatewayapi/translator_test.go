@@ -56,6 +56,7 @@ func TestTranslate(t *testing.T) {
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
+		PerResourceSystemCASecret       bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -93,6 +94,36 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled: true,
 			SDSEnabled:     true,
 		},
+		{
+			name: "envoyextensionpolicy-with-extproc-with-backendtlspolicy-shared-secret",
+		},
+		{
+			name:                      "envoyproxy-otel-backend-tls-per-resource-secret",
+			BackendEnabled:            true,
+			PerResourceSystemCASecret: true,
+		},
+		{
+			name:                      "envoyextensionpolicy-with-extproc-with-backendtlspolicy-per-resource-secret",
+			PerResourceSystemCASecret: true,
+		},
+		{
+			name:           "backend-system-truststore-shared-secret",
+			BackendEnabled: true,
+		},
+		{
+			name:                      "backend-system-truststore-per-resource-secret",
+			BackendEnabled:            true,
+			PerResourceSystemCASecret: true,
+		},
+		{
+			name:           "backend-system-truststore-btlsp-override-shared-secret",
+			BackendEnabled: true,
+		},
+		{
+			name:                      "backend-system-truststore-btlsp-override-per-resource-secret",
+			BackendEnabled:            true,
+			PerResourceSystemCASecret: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -118,6 +149,7 @@ func TestTranslate(t *testing.T) {
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
+			perResourceSystemCASecret := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -127,6 +159,7 @@ func TestTranslate(t *testing.T) {
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
+					perResourceSystemCASecret = config.PerResourceSystemCASecret
 				}
 			}
 
@@ -137,6 +170,7 @@ func TestTranslate(t *testing.T) {
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
+				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,

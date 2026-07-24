@@ -40,6 +40,8 @@ tcp:
                 subjectAltNames:
                   - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
                   - hostname: subdomain.secondexample.com
+                CACertificate:
+                  name: system_ca_certificates
                 useSystemTrustStore: true
               weight: 1
         metadata:
