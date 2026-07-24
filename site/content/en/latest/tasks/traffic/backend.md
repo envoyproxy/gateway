@@ -359,6 +359,83 @@ spec:
                 - forbidden.com
 ```
 
+#### SNI Based Forwarding
+
+A `DynamicResolver` `Backend` can also be referenced by a [TLSRoute][] to forward TLS traffic based on the Server Name
+Indication (SNI) of the incoming connection. Envoy Gateway resolves the upstream host from the SNI and forwards the
+TLS bytes unchanged (TLS passthrough), without needing prior knowledge of the destination hostnames.
+
+Under the hood, Envoy Gateway uses the Envoy [SNI Dynamic Forward Proxy](https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/network_filters/sni_dynamic_forward_proxy_filter)
+network filter. The upstream connection always targets port `443`. Loopback hostnames/addresses (for example `localhost`,
+`127.0.0.1`, `::1`) presented as the SNI are denied by default so they cannot route to the proxy's own loopback interface.
+
+The referenced `Backend` must be the only backend of the route, and the parent Gateway listener must use TLS `Passthrough`
+mode.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: sni-dynamic-forward-proxy
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "foo.example.com"
+    - "bar.example.com"
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-dynamic-resolver
+spec:
+  type: DynamicResolver
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: sni-dynamic-forward-proxy
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "foo.example.com"
+    - "bar.example.com"
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-dynamic-resolver
+spec:
+  type: DynamicResolver
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 [Backend]: ../../../api/extension_types#backend
 [routing to cluster-external backends]: ./../../tasks/traffic/routing-outside-kubernetes.md
 [BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#backendobjectreference
