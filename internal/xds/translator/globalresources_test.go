@@ -36,7 +36,7 @@ func newTCtxWithSystemTrustStore(t *testing.T) *xtypes.ResourceVersionTable {
 func TestEnsureSystemTrustStoreSecret_NoOp(t *testing.T) {
 	tCtx := newTCtxWithSystemTrustStore(t)
 	tr := newTestTranslator()
-	tr.ensureSystemTrustStoreSecret(tCtx)
+	require.NoError(t, tr.ensureSystemTrustStoreSecret(tCtx))
 	// Secret should still be present and unchanged.
 	require.NoError(t, validateSystemTrustStoreSecret(tCtx))
 }
@@ -46,7 +46,7 @@ func TestEnsureSystemTrustStoreSecret_Removed(t *testing.T) {
 	// Simulate extension hook removing the secret.
 	tCtx.XdsResources[resourcev3.SecretType] = nil
 	tr := newTestTranslator()
-	tr.ensureSystemTrustStoreSecret(tCtx)
+	require.NoError(t, tr.ensureSystemTrustStoreSecret(tCtx))
 	// Secret should be restored.
 	require.NoError(t, validateSystemTrustStoreSecret(tCtx))
 }
@@ -66,7 +66,7 @@ func TestEnsureSystemTrustStoreSecret_Modified(t *testing.T) {
 		}
 	}
 	tr := newTestTranslator()
-	tr.ensureSystemTrustStoreSecret(tCtx)
+	require.NoError(t, tr.ensureSystemTrustStoreSecret(tCtx))
 	// Secret should be restored to canonical form.
 	require.NoError(t, validateSystemTrustStoreSecret(tCtx))
 }
@@ -78,7 +78,7 @@ func TestEnsureSystemTrustStoreSecret_Duplicated(t *testing.T) {
 	_ = tCtx.AddXdsResource(resourcev3.SecretType, duplicate)
 	require.Error(t, validateSystemTrustStoreSecret(tCtx)) // two copies → error
 	tr := newTestTranslator()
-	tr.ensureSystemTrustStoreSecret(tCtx)
+	require.NoError(t, tr.ensureSystemTrustStoreSecret(tCtx))
 	// Exactly one canonical copy should remain.
 	require.NoError(t, validateSystemTrustStoreSecret(tCtx))
 }
@@ -87,6 +87,6 @@ func TestEnsureSystemTrustStoreSecret_NotEmitted(t *testing.T) {
 	// If the secret was never emitted (no system trust store in use), ensure is a no-op.
 	tCtx := new(xtypes.ResourceVersionTable)
 	tr := newTestTranslator()
-	tr.ensureSystemTrustStoreSecret(tCtx)
+	require.NoError(t, tr.ensureSystemTrustStoreSecret(tCtx))
 	require.Nil(t, tCtx.XdsResources)
 }

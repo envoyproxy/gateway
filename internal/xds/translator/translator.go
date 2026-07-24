@@ -175,30 +175,33 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		}
 	}
 
+	// Repair system_ca_certificates before validation so the restored canonical secret
+	// passes ValidateAll and the snapshot remains publishable.
+	// EnvoyPatchPolicy tampering is caught earlier per-policy inside processJSONPatches.
+	if err := t.ensureSystemTrustStoreSecret(tCtx); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	// Validate all the xds resources in the table before returning
 	// This is necessary to catch any misconfigurations that might have been missed during translation
 	if err := tCtx.ValidateAll(); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	// Heal system_ca_certificates if it was tampered with by the extension post-translation
-	// hook. EnvoyPatchPolicy tampering is caught per-policy inside processJSONPatches.
-	// Healing keeps the snapshot publishable; the logger carries the forensic detail.
-	t.ensureSystemTrustStoreSecret(tCtx)
-
 	return tCtx, errs
 }
 
 // ensureSystemTrustStoreSecret detects and repairs any tampering with system_ca_certificates
-// by a post-translation extension hook. If an error is detected the secret is restored to
-// the canonical form and a warning is logged. The snapshot is always published — the log
-// entry is the operator's signal that something modified the secret.
-func (t *Translator) ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) {
+// by a post-translation extension hook. If tampering is detected the secret is restored to
+// the canonical form and a warning is logged. Returns an error only if re-emission fails —
+// in that case the snapshot would have clusters referencing a missing secret, so the caller
+// should propagate the error to block publishing.
+func (t *Translator) ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
 	err := validateSystemTrustStoreSecret(tCtx)
 	if err == nil {
-		return
+		return nil
 	}
-	t.Logger.Error(err, "system trust store secret was tampered with by extension; restoring")
+	t.Logger.Info("system trust store secret was tampered with by extension; restoring", "reason", err.Error())
 	// Remove all existing copies (handles modified and duplicate cases).
 	if tCtx.XdsResources != nil {
 		secrets := tCtx.XdsResources[resourcev3.SecretType]
@@ -213,7 +216,10 @@ func (t *Translator) ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTab
 	}
 	// Re-emit the canonical secret.
 	tCtx.SystemTrustStore = false // reset so emitSystemTrustStoreSecret re-emits
-	_ = emitSystemTrustStoreSecret(tCtx, SystemTrustStoreSecretName)
+	if emitErr := emitSystemTrustStoreSecret(tCtx, SystemTrustStoreSecretName); emitErr != nil {
+		return fmt.Errorf("failed to restore system trust store secret after tampering: %w", emitErr)
+	}
+	return nil
 }
 
 func findIRListenersByXDSListener(xdsIR *ir.Xds, listener *listenerv3.Listener) []ir.Listener {
