@@ -28,6 +28,8 @@
         upgradeConfigs:
         - upgradeType: websocket
       tracing:
+        clientSampling:
+          numerator: 2
         customTags:
         - environment:
             defaultValue: '-'
@@ -40,5 +42,7 @@
             defaultValue: '-'
             name: X-Request-Id
           tag: req1
+        overallSampling:
+          numerator: 3
         randomSampling:
           numerator: 1

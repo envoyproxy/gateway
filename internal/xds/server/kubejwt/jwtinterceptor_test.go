@@ -16,7 +16,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -42,85 +44,96 @@ func (m *mockServerStream) RecvMsg(_ any) error      { return nil }
 // authTestCase defines a single test case for the authenticate method.
 // The same cases are run against both the stream (RecvMsg) and unary interceptor paths.
 type authTestCase struct {
-	name    string
-	msg     any
-	ctx     context.Context
-	wantErr string
+	name     string
+	msg      any
+	ctx      context.Context
+	wantErr  string
+	wantCode codes.Code
 }
 
 func authTestCases() []authTestCase {
 	return []authTestCase{
 		{
-			name:    "unknown message type is rejected (fail-closed)",
-			msg:     &discoveryv3.DiscoveryResponse{},
-			ctx:     context.Background(),
-			wantErr: "unexpected message type",
+			name:     "unknown message type is rejected (fail-closed)",
+			msg:      &discoveryv3.DiscoveryResponse{},
+			ctx:      context.Background(),
+			wantErr:  "unexpected message type",
+			wantCode: codes.InvalidArgument,
 		},
 		{
-			name:    "nil message is rejected",
-			msg:     nil,
-			ctx:     context.Background(),
-			wantErr: "unexpected message type",
+			name:     "nil message is rejected",
+			msg:      nil,
+			ctx:      context.Background(),
+			wantErr:  "unexpected message type",
+			wantCode: codes.InvalidArgument,
 		},
 		{
-			name:    "DeltaDiscoveryRequest with nil node is rejected",
-			msg:     &discoveryv3.DeltaDiscoveryRequest{},
-			ctx:     context.Background(),
-			wantErr: "missing node ID",
+			name:     "DeltaDiscoveryRequest with nil node is rejected",
+			msg:      &discoveryv3.DeltaDiscoveryRequest{},
+			ctx:      context.Background(),
+			wantErr:  "missing node ID",
+			wantCode: codes.InvalidArgument,
 		},
 		{
-			name:    "DiscoveryRequest with nil node is rejected",
-			msg:     &discoveryv3.DiscoveryRequest{},
-			ctx:     context.Background(),
-			wantErr: "missing node ID",
+			name:     "DiscoveryRequest with nil node is rejected",
+			msg:      &discoveryv3.DiscoveryRequest{},
+			ctx:      context.Background(),
+			wantErr:  "missing node ID",
+			wantCode: codes.InvalidArgument,
 		},
 		{
 			name: "DeltaDiscoveryRequest with empty node ID is rejected",
 			msg: &discoveryv3.DeltaDiscoveryRequest{
 				Node: &corev3.Node{Id: ""},
 			},
-			ctx:     context.Background(),
-			wantErr: "missing node ID",
+			ctx:      context.Background(),
+			wantErr:  "missing node ID",
+			wantCode: codes.InvalidArgument,
 		},
 		{
 			name: "DiscoveryRequest with empty node ID is rejected",
 			msg: &discoveryv3.DiscoveryRequest{
 				Node: &corev3.Node{Id: ""},
 			},
-			ctx:     context.Background(),
-			wantErr: "missing node ID",
+			ctx:      context.Background(),
+			wantErr:  "missing node ID",
+			wantCode: codes.InvalidArgument,
 		},
 		{
 			name: "DeltaDiscoveryRequest without metadata is rejected",
 			msg: &discoveryv3.DeltaDiscoveryRequest{
 				Node: &corev3.Node{Id: "pod-1"},
 			},
-			ctx:     context.Background(),
-			wantErr: "missing metadata",
+			ctx:      context.Background(),
+			wantErr:  "missing metadata",
+			wantCode: codes.Unauthenticated,
 		},
 		{
 			name: "DiscoveryRequest without metadata is rejected",
 			msg: &discoveryv3.DiscoveryRequest{
 				Node: &corev3.Node{Id: "pod-1"},
 			},
-			ctx:     context.Background(),
-			wantErr: "missing metadata",
+			ctx:      context.Background(),
+			wantErr:  "missing metadata",
+			wantCode: codes.Unauthenticated,
 		},
 		{
 			name: "DeltaDiscoveryRequest without auth header is rejected",
 			msg: &discoveryv3.DeltaDiscoveryRequest{
 				Node: &corev3.Node{Id: "pod-1"},
 			},
-			ctx:     metadata.NewIncomingContext(context.Background(), metadata.MD{}),
-			wantErr: "missing authorization token",
+			ctx:      metadata.NewIncomingContext(context.Background(), metadata.MD{}),
+			wantErr:  "missing authorization header",
+			wantCode: codes.Unauthenticated,
 		},
 		{
 			name: "DiscoveryRequest without auth header is rejected",
 			msg: &discoveryv3.DiscoveryRequest{
 				Node: &corev3.Node{Id: "pod-1"},
 			},
-			ctx:     metadata.NewIncomingContext(context.Background(), metadata.MD{}),
-			wantErr: "missing authorization token",
+			ctx:      metadata.NewIncomingContext(context.Background(), metadata.MD{}),
+			wantErr:  "missing authorization header",
+			wantCode: codes.Unauthenticated,
 		},
 	}
 }
@@ -141,6 +154,7 @@ func TestAuthenticate_Stream(t *testing.T) {
 			err := ws.RecvMsg(tt.msg)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.wantErr)
+			assert.Equal(t, tt.wantCode, status.Code(err), "unexpected gRPC status code")
 		})
 	}
 }
@@ -157,6 +171,7 @@ func TestAuthenticate_Unary(t *testing.T) {
 			_, err := unary(tt.ctx, tt.msg, &grpc.UnaryServerInfo{}, handler)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.wantErr)
+			assert.Equal(t, tt.wantCode, status.Code(err), "unexpected gRPC status code")
 		})
 	}
 }
