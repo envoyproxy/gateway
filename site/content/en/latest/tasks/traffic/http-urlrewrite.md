@@ -87,10 +87,11 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-filter-url-rewrite -o yaml
 ```
 
-Get the Gateway's address:
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
+Quickstart instructions to set the variable.
 
 ```shell
-export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+echo $GATEWAY_HOST
 ```
 
 Querying `http://${GATEWAY_HOST}/get/origin/path` should rewrite to

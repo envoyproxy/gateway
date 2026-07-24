@@ -402,9 +402,34 @@ is taking traffic for port `8088` from outside the cluster and `bar` service tak
 
 Before testing, please get the tcp-gateway [Gateway][]'s address first:
 
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/tcp-gateway -o jsonpath='{.status.addresses[0].value}')
 ```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
+Get the name of the Envoy service created by the tcp-gateway Gateway:
+
+```shell
+export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=tcp-gateway -o jsonpath='{.items[0].metadata.name}')
+```
+
+Port forward to the Envoy service:
+
+```shell
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8088:8088 8089:8089 &
+```
+
+```shell
+export GATEWAY_HOST=localhost
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 You can try to use nc to test the TCP connections of envoy gateway with different ports, and you can see them succeeded:
 
