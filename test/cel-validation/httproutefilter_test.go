@@ -133,6 +133,25 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "invalid PathRegex substitution with control characters",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.PathRegexHTTPHostnameModifier,
+							PathRegex: &egv1a1.HostnamePathRegexRewrite{
+								Pattern:      "^/node/([0-9]+)/api.*",
+								Substitution: "backend-\\1.service\r\n.local",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.urlRewrite.hostname.pathRegex.substitution in body should match '^[^\\r\\n\\x00]*$'",
+			},
+		},
+		{
 			desc: "Valid appendXForwardedHost false",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{

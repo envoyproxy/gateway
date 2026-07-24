@@ -154,7 +154,12 @@ type HostnamePathRegexRewrite struct {
 	//
 	// The resulting value is used as the upstream Host header and should be constrained to a valid
 	// DNS hostname by using explicit regex capture groups in Pattern.
+	//
+	// The NUL, CR, and LF characters are not allowed: they are invalid in an HTTP header value and are
+	// rejected by the Envoy proto (well_known_regex HTTP_HEADER_VALUE), which would otherwise cause the
+	// generated configuration to be rejected by the data plane.
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^[^\r\n\x00]*$`
 	Substitution string `json:"substitution"`
 }
 
