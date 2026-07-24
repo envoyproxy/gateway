@@ -1948,14 +1948,27 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		envoyProxy = gatewayCtx.envoyProxy
 	}
 
-	// Resolve BTP RoutingType for this route/gateway combination
+	// Resolve BTP RoutingType for this route/listenerset/gateway combination
 	var btpRoutingType *egv1a1.RoutingType
 	if gatewayCtx != nil {
+		var listenerSetNN *types.NamespacedName
+		if parentRef.Kind != nil && *parentRef.Kind == resource.KindListenerSet {
+			parentNamespace := route.GetNamespace()
+			if parentRef.Namespace != nil {
+				parentNamespace = string(*parentRef.Namespace)
+			}
+			listenerSetNN = &types.NamespacedName{
+				Namespace: parentNamespace,
+				Name:      string(parentRef.Name),
+			}
+		}
+
 		btpRoutingType = t.BTPRoutingTypeIndex.LookupBTPRoutingType(
 			route.GetRouteType(),
 			types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()},
 			types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
 			parentRef.SectionName,
+			listenerSetNN,
 			routeRuleName,
 		)
 	}
