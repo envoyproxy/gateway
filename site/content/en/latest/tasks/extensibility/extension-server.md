@@ -122,6 +122,8 @@ which hooks receive the policy:
 | `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |
 | `HTTPRoute` / `GRPCRoute` | Rule name (`sectionName`) | A single route rule | `PostRouteModifyHook` (routes generated from that rule only) |
 
+**Important**: Policies targeting a `Gateway` and policies targeting an `HTTPRoute` or `GRPCRoute` are evaluated independently. Envoy Gateway does not merge, override, or resolve conflicts between them. For example, a policy attached to an `HTTPRoute` does not override a policy of the same kind attached to its `Gateway`. Any merging, overriding, or conflict resolution behavior must be implemented by the Extension Server.
+
 #### Status reporting
 
 Envoy Gateway records the outcome of attachment in the policy's `status.ancestors` conditions (the ancestor is the
