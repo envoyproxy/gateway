@@ -702,31 +702,67 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 }
 
 func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {
-	var err error
+	var (
+		err      error
+		warnings []error
+	)
 	envoyProxy := proxyInfra.Config
 
+	// Invalid telemetry backendRefs must not degrade the Gateway. Instead, the affected telemetry feature is skipped and a warning msg is added
+	// on the EnvoyProxy status.
 	xdsIR.AccessLog, err = t.processAccessLog(gwCtx, envoyProxy, resources)
 	if err != nil {
-		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
-			fmt.Sprintf("Invalid access log backendRefs in the referenced EnvoyProxy: %v", err))
-		return
+		warnings = append(warnings, fmt.Errorf("invalid access log backendRefs in the referenced EnvoyProxy: %w", err))
 	}
 
 	xdsIR.Tracing, err = t.processTracing(gwCtx, envoyProxy, t.MergeGateways, resources)
 	if err != nil {
-		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
-			fmt.Sprintf("Invalid tracing backendRefs in the referenced EnvoyProxy: %v", err))
-		return
+		warnings = append(warnings, fmt.Errorf("invalid tracing backendRefs in the referenced EnvoyProxy: %w", err))
 	}
 
 	var resolvedSinks []ir.ResolvedMetricSink
 	xdsIR.Metrics, resolvedSinks, err = t.processMetrics(gwCtx, envoyProxy, resources)
 	if err != nil {
-		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
-			fmt.Sprintf("Invalid metrics backendRefs in the referenced EnvoyProxy: %v", err))
+		warnings = append(warnings, fmt.Errorf("invalid metrics backendRefs in the referenced EnvoyProxy: %w", err))
+	} else {
+		proxyInfra.ResolvedMetricSinks = resolvedSinks
+	}
+
+	if len(warnings) > 0 {
+		msg := utilerrors.NewAggregate(warnings).Error()
+		t.Logger.Info("skipping invalid telemetry configuration in the referenced EnvoyProxy",
+			"namespace", gwCtx.Namespace, "name", gwCtx.Name, "warning", msg)
+		t.setEnvoyProxyObservabilityWarning(gwCtx, resources, msg)
+	}
+}
+
+// setEnvoyProxyObservabilityWarning adds telemetry misconfigurations as a warning on the
+// EnvoyProxy status. The EnvoyProxy remains Accepted so that the Gateway keeps running,
+// only the affected telemetry feature is skipped.
+func (t *Translator) setEnvoyProxyObservabilityWarning(gwCtx *GatewayContext, resources *resource.Resources, msg string) {
+	warning := fmt.Sprintf("EnvoyProxy has been accepted, but the following telemetry configuration was ignored: %s", msg)
+
+	// EnvoyProxy attached directly to the Gateway via its infrastructure parametersRef.
+	if gwCtx.envoyProxyFromGateway && gwCtx.envoyProxy != nil {
+		ancestor := &gwapiv1.ParentReference{
+			Group:     GroupPtr(gwapiv1.GroupName),
+			Kind:      KindPtr(resource.KindGateway),
+			Name:      gwapiv1.ObjectName(gwCtx.Name),
+			Namespace: NamespacePtr(gwCtx.Namespace),
+		}
+		status.UpdateEnvoyProxyStatusAccepted(gwCtx.envoyProxy, ancestor, egv1a1.EnvoyProxyReasonAccepted, warning)
 		return
 	}
-	proxyInfra.ResolvedMetricSinks = resolvedSinks
+
+	// EnvoyProxy inherited from the GatewayClass parametersRef.
+	if ep := resources.EnvoyProxyForGatewayClass; ep != nil && resources.GatewayClass != nil {
+		ancestor := &gwapiv1.ParentReference{
+			Group: GroupPtr(gwapiv1.GroupName),
+			Kind:  KindPtr(resource.KindGatewayClass),
+			Name:  gwapiv1.ObjectName(resources.GatewayClass.Name),
+		}
+		status.UpdateEnvoyProxyStatusAccepted(ep, ancestor, egv1a1.EnvoyProxyReasonAccepted, warning)
+	}
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
@@ -815,7 +851,11 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 			validExprs = append(validExprs, expr)
 		}
 		if len(errs) > 0 {
-			return nil, utilerrors.NewAggregate(errs)
+			// Per the AccessLog API, invalid CEL match expressions are ignored:
+			// only the invalid ones are dropped, the rest of the config is kept.
+			t.Logger.Info("ignoring invalid CEL match expressions in the EnvoyProxy access log configuration",
+				"namespace", envoyproxy.Namespace, "name", envoyproxy.Name,
+				"error", utilerrors.NewAggregate(errs).Error())
 		}
 
 		if len(accessLog.Sinks) == 0 {
