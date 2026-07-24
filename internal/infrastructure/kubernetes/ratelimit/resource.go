@@ -381,8 +381,8 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 			redisURLEnv.ValueFrom = &corev1.EnvVarSource{
 				SecretKeyRef: rateLimit.Backend.Redis.URLRef.SecretKeyRef,
 			}
-		} else {
-			redisURLEnv.Value = rateLimit.Backend.Redis.URL
+		} else if rateLimit.Backend.Redis.URL != nil {
+			redisURLEnv.Value = *rateLimit.Backend.Redis.URL
 		}
 		env = append(env, []corev1.EnvVar{
 			{

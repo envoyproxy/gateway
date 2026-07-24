@@ -690,7 +690,7 @@ type RateLimitRedisSettings struct {
 	// Mutually exclusive with URLRef.
 	//
 	// +optional
-	URL string `json:"url,omitempty"`
+	URL *string `json:"url,omitempty"`
 
 	// URLRef sources the Redis URL from a Kubernetes Secret key. Use this for GitOps
 	// flows where the Redis endpoint is provisioned by an external controller.
