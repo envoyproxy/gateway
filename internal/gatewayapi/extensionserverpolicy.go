@@ -213,7 +213,7 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 
 	// We only handle HTTPRoute/GRPCRoute for now
 	routeType := targetedRoute.GetRouteType()
-	supportedRouteType := routeType == resource.KindHTTPRoute || routeType == resource.KindGRPCRoute
+	supportedRouteKind := routeType == resource.KindHTTPRoute || routeType == resource.KindGRPCRoute
 
 	parentRefs := GetParentReferences(targetedRoute)
 
@@ -233,21 +233,11 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 			continue
 		}
 
-		// Append policy extension server policy list for related gateway.
-		gwXDS.ExtensionServerPolicies = appendUnstructuredRefIfAbsent(gwXDS.ExtensionServerPolicies, policy)
-
 		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
 		gatewayNN := utils.NamespacedName(gtwCtx)
 		ancestorRef := getAncestorRefForPolicy(gatewayNN, p.SectionName)
 
-		// The targetRef specified a sectionName (rule) that does not exist on the route.
-		if resolveErr != nil {
-			status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
-			policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
-			continue
-		}
-
-		if !supportedRouteType {
+		if !supportedRouteKind {
 			status.SetTranslationErrorForPolicyAncestor(
 				&policyStatus,
 				&ancestorRef,
@@ -255,6 +245,16 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 				policy.GetGeneration(),
 				fmt.Sprintf("ExtensionServerPolicy does not support targeting %s", routeType),
 			)
+			policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+			continue
+		}
+
+		// Append policy extension server policy list for related gateway.
+		gwXDS.ExtensionServerPolicies = appendUnstructuredRefIfAbsent(gwXDS.ExtensionServerPolicies, policy)
+
+		// The targetRef specified a sectionName (rule) that does not exist on the route.
+		if resolveErr != nil {
+			status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
 			policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
 			continue
 		}
