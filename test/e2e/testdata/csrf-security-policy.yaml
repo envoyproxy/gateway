@@ -64,8 +64,10 @@ spec:
     kind: HTTPRoute
     name: http-with-csrf-shadow
   csrf:
-    filterEnabled: 0
-    shadowEnabled: 100
+    enforcedFraction:
+      numerator: 0
+    shadowFraction:
+      numerator: 100
     additionalOrigins:
     - type: Exact
       value: "www.example.com"

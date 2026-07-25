@@ -39,8 +39,11 @@ http:
         name: "second-route-dest/backend/0"
     security:
       csrf:
-        filterEnabled: 50
-        shadowEnabled: 25
+        enforcedFraction:
+          numerator: 50
+        shadowFraction:
+          numerator: 25
+          denominator: 1000
         additionalOrigins:
         - exact: staging.example.com
 

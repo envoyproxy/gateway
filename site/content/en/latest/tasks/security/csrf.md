@@ -23,8 +23,9 @@ Note: Envoy's CSRF filter compares against the host and port of the origin only 
 before matching). Additional origins must be specified as `host` or `host:port` values, not full URLs.
 For example, use `www.example.com` instead of `https://www.example.com`.
 
-The filter supports gradual rollout via `filterEnabled` (percentage of requests enforced, defaults to 100)
-and `shadowEnabled` (percentage of requests evaluated in dry-run mode without enforcing).
+The filter supports gradual rollout via `enforcedFraction` (the fraction of requests for which the policy is
+enforced, defaults to 100%) and `shadowFraction` (the fraction of requests evaluated in dry-run mode without
+enforcing). Both are expressed as a `numerator` and an optional `denominator` that defaults to `100`.
 
 The below example defines a SecurityPolicy that enables CSRF protection and allows additional origins
 matching `www.example.com` exactly and any subdomain of `trusted.com` via regex.
@@ -87,8 +88,8 @@ With this configuration:
 
 ### Shadow mode (dry-run)
 
-To evaluate CSRF policies without enforcing them (useful for gradual rollout), set `filterEnabled` to 0
-and `shadowEnabled` to the desired percentage:
+To evaluate CSRF policies without enforcing them (useful for gradual rollout), set `enforcedFraction` to 0
+and `shadowFraction` to the desired fraction:
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -101,8 +102,10 @@ spec:
     kind: HTTPRoute
     name: backend
   csrf:
-    filterEnabled: 0
-    shadowEnabled: 100
+    enforcedFraction:
+      numerator: 0
+    shadowFraction:
+      numerator: 100
     additionalOrigins:
     - type: Exact
       value: "www.example.com"

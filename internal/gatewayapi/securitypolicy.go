@@ -1753,13 +1753,13 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 }
 
 func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
-	var additionalOrigins []*ir.StringMatch
+	additionalOrigins := make([]*ir.StringMatch, 0, len(csrf.AdditionalOrigins))
 	for _, origin := range csrf.AdditionalOrigins {
 		additionalOrigins = append(additionalOrigins, irStringMatch("csrf", origin))
 	}
 	return &ir.CSRF{
-		FilterEnabled:     csrf.FilterEnabled,
-		ShadowEnabled:     csrf.ShadowEnabled,
+		EnforcedFraction:  csrf.EnforcedFraction,
+		ShadowFraction:    csrf.ShadowFraction,
 		AdditionalOrigins: additionalOrigins,
 	}
 }

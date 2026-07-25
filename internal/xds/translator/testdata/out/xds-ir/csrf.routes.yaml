@@ -41,4 +41,5 @@
               numerator: 50
           shadowEnabled:
             defaultValue:
-              numerator: 25
+              denominator: TEN_THOUSAND
+              numerator: 250

@@ -103,8 +103,6 @@ securityPolicies:
     namespace: default
   spec:
     csrf:
-      filterEnabled: 80
-      shadowEnabled: 20
       additionalOrigins:
       - type: Exact
         value: www.example.com
@@ -114,6 +112,10 @@ securityPolicies:
         value: .trusted.com
       - type: RegularExpression
         value: .*\.partner\.com$
+      enforcedFraction:
+        numerator: 80
+      shadowFraction:
+        numerator: 20
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -212,8 +214,6 @@ xdsIR:
           prefix: /
         security:
           csrf:
-            filterEnabled: 80
-            shadowEnabled: 20
             additionalOrigins:
             - distinct: false
               exact: www.example.com
@@ -227,6 +227,10 @@ xdsIR:
             - distinct: false
               name: csrf
               safeRegex: .*\.partner\.com$
+            enforcedFraction:
+              numerator: 80
+            shadowFraction:
+              numerator: 20
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

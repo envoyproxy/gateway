@@ -29431,9 +29431,10 @@ spec:
                 properties:
                   additionalOrigins:
                     description: |-
-                      AdditionalOrigins specifies additional origins that are allowed to make requests.
-                      These are checked against the Origin header and if matched, the request is allowed.
-                      Each origin can be an exact, prefix, suffix, or regex match using StringMatch.
+                      AdditionalOrigins specifies additional origins that are allowed to make requests,
+                      beyond the destination origin. These are checked against the Origin header (host:port only,
+                      not the full URL) and if matched, the request is allowed.
+                      Each origin supports Exact, Prefix, Suffix, and RegularExpression matching.
                     items:
                       description: |-
                         StringMatch defines how to match any strings.
@@ -29458,7 +29459,55 @@ spec:
                       required:
                       - value
                       type: object
+                    maxItems: 16
                     type: array
+                  enforcedFraction:
+                    description: |-
+                      EnforcedFraction represents the fraction of requests for which the CSRF
+                      policy is enforced. Requests that are not selected are allowed through
+                      without any origin validation.
+                      Defaults to 100% (all requests are enforced) if not specified.
+                    properties:
+                      denominator:
+                        default: 100
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      numerator:
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    required:
+                    - numerator
+                    type: object
+                    x-kubernetes-validations:
+                    - message: numerator must be less than or equal to denominator
+                      rule: self.numerator <= self.denominator
+                  shadowFraction:
+                    description: |-
+                      ShadowFraction represents the fraction of requests for which the CSRF
+                      policy is evaluated in shadow (dry-run) mode. In this mode, the filter
+                      evaluates requests and tracks whether they would be allowed or rejected in
+                      the `csrf.request_invalid` and `csrf.request_valid` stats, but does not
+                      enforce the policy. This is useful for rolling out CSRF protection
+                      gradually while monitoring the impact.
+                      Only takes effect for requests that are not selected by EnforcedFraction.
+                    properties:
+                      denominator:
+                        default: 100
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      numerator:
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    required:
+                    - numerator
+                    type: object
+                    x-kubernetes-validations:
+                    - message: numerator must be less than or equal to denominator
+                      rule: self.numerator <= self.denominator
                 type: object
               extAuth:
                 description: ExtAuth defines the configuration for External Authorization.

@@ -13,11 +13,11 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	csrfv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/csrf/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 const csrfFilterName = "envoy.filters.http.csrf"
@@ -70,10 +70,7 @@ func (*csrf) patchHCM(
 func buildHCMCSRFFilter() (*hcmv3.HttpFilter, error) {
 	csrfProto := &csrfv3.CsrfPolicy{
 		FilterEnabled: &corev3.RuntimeFractionalPercent{
-			DefaultValue: &xdstype.FractionalPercent{
-				Numerator:   0,
-				Denominator: xdstype.FractionalPercent_HUNDRED,
-			},
+			DefaultValue: fractionalpercent.FromIn32(0),
 		},
 	}
 
@@ -145,27 +142,21 @@ func (*csrf) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error 
 
 // buildXdsCSRFPolicy builds the full Envoy CSRF policy from the IR.
 func buildXdsCSRFPolicy(csrf *ir.CSRF) *csrfv3.CsrfPolicy {
-	// Default to 100% enabled.
-	filterEnabledNumerator := uint32(100)
-	if csrf.FilterEnabled != nil {
-		filterEnabledNumerator = uint32(*csrf.FilterEnabled) //nolint:gosec
+	// Default to 100% enforced.
+	enforcedFraction := fractionalpercent.FromIn32(100)
+	if csrf.EnforcedFraction != nil {
+		enforcedFraction = fractionalpercent.FromFraction(csrf.EnforcedFraction)
 	}
 
 	policy := &csrfv3.CsrfPolicy{
 		FilterEnabled: &corev3.RuntimeFractionalPercent{
-			DefaultValue: &xdstype.FractionalPercent{
-				Numerator:   filterEnabledNumerator,
-				Denominator: xdstype.FractionalPercent_HUNDRED,
-			},
+			DefaultValue: enforcedFraction,
 		},
 	}
 
-	if csrf.ShadowEnabled != nil {
+	if csrf.ShadowFraction != nil {
 		policy.ShadowEnabled = &corev3.RuntimeFractionalPercent{
-			DefaultValue: &xdstype.FractionalPercent{
-				Numerator:   uint32(*csrf.ShadowEnabled), //nolint:gosec
-				Denominator: xdstype.FractionalPercent_HUNDRED,
-			},
+			DefaultValue: fractionalpercent.FromFraction(csrf.ShadowFraction),
 		}
 	}
 

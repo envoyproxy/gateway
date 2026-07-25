@@ -5,6 +5,10 @@
 
 package v1alpha1
 
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
 // CSRF defines the configuration for the Cross-Site Request Forgery (CSRF) filter.
 // The CSRF filter checks that the Origin header in HTTP requests matches the destination,
 // preventing cross-origin mutating requests (POST, PUT, DELETE, PATCH) from being processed.
@@ -15,25 +19,24 @@ package v1alpha1
 // host or host:port values, not full URLs. For example, use "www.example.com"
 // instead of "https://www.example.com".
 type CSRF struct {
-	// FilterEnabled specifies the percentage of requests for which the CSRF filter is enabled.
-	// When set, only the given percentage of requests will have CSRF protection enforced.
-	// Defaults to 100 (fully enabled) if not specified.
+	// EnforcedFraction represents the fraction of requests for which the CSRF
+	// policy is enforced. Requests that are not selected are allowed through
+	// without any origin validation.
+	// Defaults to 100% (all requests are enforced) if not specified.
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=100
-	FilterEnabled *int32 `json:"filterEnabled,omitempty"`
+	EnforcedFraction *gwapiv1.Fraction `json:"enforcedFraction,omitempty"`
 
-	// ShadowEnabled specifies the percentage of requests for which the CSRF filter is in
-	// shadow/dry-run mode. In this mode, the filter evaluates requests and tracks whether
-	// they would be allowed or rejected, but does not enforce the policy.
-	// This is useful for rolling out CSRF protection gradually while monitoring the impact.
-	// Only takes effect when FilterEnabled is not set or is 0.
+	// ShadowFraction represents the fraction of requests for which the CSRF
+	// policy is evaluated in shadow (dry-run) mode. In this mode, the filter
+	// evaluates requests and tracks whether they would be allowed or rejected in
+	// the `csrf.request_invalid` and `csrf.request_valid` stats, but does not
+	// enforce the policy. This is useful for rolling out CSRF protection
+	// gradually while monitoring the impact.
+	// Only takes effect for requests that are not selected by EnforcedFraction.
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=100
-	ShadowEnabled *int32 `json:"shadowEnabled,omitempty"`
+	ShadowFraction *gwapiv1.Fraction `json:"shadowFraction,omitempty"`
 
 	// AdditionalOrigins specifies additional origins that are allowed to make requests,
 	// beyond the destination origin. These are checked against the Origin header (host:port only,
