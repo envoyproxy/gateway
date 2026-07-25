@@ -1,0 +1,106 @@
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: tlsroute-with-dynamic-resolver-backend
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+    sectionName: tls
+  hostnames:
+  - "tls-dfp-backend.gateway-conformance-infra.svc.cluster.local"
+  rules:
+  - backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-dynamic-resolver
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-dynamic-resolver
+  namespace: gateway-conformance-infra
+spec:
+  type: DynamicResolver
+---
+# Self-signed certificate valid for the backend in-cluster FQDN. As this is a TLS passthrough route,
+# the client validates the backend certificate directly, so the certificate SAN must match the SNI
+# used to route (and to dynamically resolve the upstream).
+# openssl req -x509 -sha256 -nodes -days 36500 -newkey rsa:2048 \
+#   -subj '/O=example organization/CN=tls-dfp-backend' \
+#   -addext 'subjectAltName=DNS:tls-dfp-backend,DNS:tls-dfp-backend.gateway-conformance-infra,DNS:tls-dfp-backend.gateway-conformance-infra.svc.cluster.local' \
+#   -keyout tls.key -out tls.crt
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tls-dfp-backend-cert
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQzRENDQXNTZ0F3SUJBZ0lVVHQ1V003VjI0SG9yVU9qcy9hTUIrUE5TNndJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd09URWRNQnNHQTFVRUNnd1VaWGhoYlhCc1pTQnZjbWRoYm1sNllYUnBiMjR4R0RBV0JnTlZCQU1NRDNScwpjeTFrWm5BdFltRmphMlZ1WkRBZ0Z3MHlOakEyTURreU1URXlOVEJhR0E4eU1USTJNRFV4TmpJeE1USTFNRm93Ck9URWRNQnNHQTFVRUNnd1VaWGhoYlhCc1pTQnZjbWRoYm1sNllYUnBiMjR4R0RBV0JnTlZCQU1NRDNSc2N5MWsKWm5BdFltRmphMlZ1WkRDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTW5MTjJrOQpqR3F5SlA4WDkxK3I1aFM5T2hZU0FZYXVxcldTQndZVHM1dGkwd1N1TXlJS0FHbGxIWFh2dm5mczhDbC9wd3pyCnhtb2l6YnBVWmdUejloZ3U1WTVveDJib3Z2b2V3OGM1bWFCWFBhNzlyRXRHTjlPcVJsbi9TY2N0OThOUGIzUS8KQnE3aHJkd2pJcTNGOFNQSFlCeUxSQmcvOUE3ckRVdGxGU1lzV1gzc1U2RlhDS0NDZkVIODgzaUwzUHF4TVI1NwpaTUdnYkpnUUZsVGJuSkEvaFMxN2dOazR2TEZpOUZzdEMzbkxKakszTy9WUklOS01TSkdTTTZRMjYzclNpSitoClZiTHNxa2VwMmh5TFJBYzBrenpRYXJKaVFnS0V0UktMQkpmNGNBZnptRE9PcndreWl6OGpidGxzWjc2dHhkMVAKelQrZ2xudGdLYkVsUm9VQ0F3RUFBYU9CMlRDQjFqQWRCZ05WSFE0RUZnUVVkYlBYa3N2UmdMTmJVbnpGZkk4cgpibE5kT093d0h3WURWUjBqQkJnd0ZvQVVkYlBYa3N2UmdMTmJVbnpGZkk4cmJsTmRPT3d3RHdZRFZSMFRBUUgvCkJBVXdBd0VCL3pDQmdnWURWUjBSQkhzd2VZSVBkR3h6TFdSbWNDMWlZV05yWlc1a2dpbDBiSE10Wkdad0xXSmgKWTJ0bGJtUXVaMkYwWlhkaGVTMWpiMjVtYjNKdFlXNWpaUzFwYm1aeVlZSTdkR3h6TFdSbWNDMWlZV05yWlc1awpMbWRoZEdWM1lYa3RZMjl1Wm05eWJXRnVZMlV0YVc1bWNtRXVjM1pqTG1Oc2RYTjBaWEl1Ykc5allXd3dEUVlKCktvWklodmNOQVFFTEJRQURnZ0VCQUlYMVk2a2tBQUJ1MkpNdUNSNlM0UDhwTklCcmx0NkNmYnMxZmcwY25yUWEKSS82MHdGTG8zWTlyZ3hvR1gvNkk2MXhKRGRCVGpCMEtveHNjSC9qM2toRTYxMWhKN0FDRXphWDJHdmd6b202eQplcVJ1bkRDbDJzYWNJZ0U1bVB5aGliby91bS9XK3J4ck5raHZkeloyVjdiYlNWYm5DTklzYmdydDJhbFBDV2QvCmd6MmkrTkRHc0YvVnlUUTVWNUU0c3JXbCtMNGRYb0Z0YlVDRU40Vk42c2o0RG4zV3dRWFNUSHN1WUtGQ0h3K0oKWEZRV0tnVnRPa2pQTWZBSU9TNGoraFV4YmNUM0w4eEIrMExZdU5iTERBTmViS20yWjNXdkpZWU9zQUpHTk5QUwpqQUxBb2hhWVRuM1Z4SDFCcVk4VnY1K1dnT0VaNUxPaHpjSGVLYU5qUjZvPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRREp5emRwUFl4cXNpVC8KRi9kZnErWVV2VG9XRWdHR3JxcTFrZ2NHRTdPYll0TUVyak1pQ2dCcFpSMTE3NzUzN1BBcGY2Y002OFpxSXMyNgpWR1lFOC9ZWUx1V09hTWRtNkw3NkhzUEhPWm1nVnoydS9heExSamZUcWtaWi8wbkhMZmZEVDI5MFB3YXU0YTNjCkl5S3R4ZkVqeDJBY2kwUVlQL1FPNncxTFpSVW1MRmw5N0ZPaFZ3aWdnbnhCL1BONGk5ejZzVEVlZTJUQm9HeVkKRUJaVTI1eVFQNFV0ZTREWk9MeXhZdlJiTFF0NXl5WXl0enYxVVNEU2pFaVJrak9rTnV0NjBvaWZvVld5N0twSApxZG9jaTBRSE5KTTgwR3F5WWtJQ2hMVVNpd1NYK0hBSDg1Z3pqcThKTW9zL0kyN1piR2UrcmNYZFQ4MC9vSlo3CllDbXhKVWFGQWdNQkFBRUNnZ0VBQmt2MkRhMmkvUTFVQkRXK1BWa0MwL0RYcUNxbHE0czF2bmF4QzJwLzkwQk4KTDE4MEwwSzZvbzlLTFF6dkY1VG9KWk5iSmhjUldPeC9HT3BiU0pwSU9wYjBDTTZTTWs3ZTdyVVpETlZxU3N1TwpIRERFT0pFWFd0NThWWUNXejhWS2J1akNwSkQyNTJ3WlhiNG03ZDg0V0JKM21FeHNNb21FVnhiVWtsNjBHejNHCjAxbm9XRHhBOXZPMHVURG91N1RRUEVLUnVMTEE1NTJEYW9RZjRSL2ltclJPblNUSEl5d0FkMnRjSjFUaHlHS3EKZFcxcE5qUWl0RHVXLzBjVTFvU1F2bXcvTk15alh5eW9qTVhkYThDVU85UTBMbERDaThRUlRvcGhlNWs1NkhrYwo2TjRVN0tneE50RVN2akphMnhNb1Nhd0crWVN2OWFXVitCQ3hLbmFyZlFLQmdRRHhURkMvVHVvRHJDclgzeHR5Ckh2WXdiL0xnZE54QXgwbTk2S2pLTjI0eTBnWDJsR0VxeUs0M2hsMWQ2UnlrSU1SaTliUTJFSXFkUzdGMnFod1EKMzJtWjBZUC9tVXgxb3BZSEF0ckg5YWJMaHA2M01JQU9QSXprN3lBd3RMRyt5ZXVXeWpsRW5Ua3gyTEs2c21CUgpQNExvbFI2Nk9aQ1lxUWJ2SDJhUEtFaC9Zd0tCZ1FEV0Zyb0plY2lnNkQybEJtcVhMaFBkdXRhYVhMTVlLaHMzClliamVEQzU2MGNPNE9rby9DWU51Rk9MWEZDd09EdnlrYm5tOTlpSG93UWM3TXpBRXhtRUFxMCtWU1hNRjVJVTkKa041UnF2WC9oaW56UkdkSmZlVEFoVGt6WUNOeGFBWHFaTWsvMTBvZERDaitGVE1sNzBrWGFCeHI5bWtFK2cxLwpHQXI1cDQySzl3S0JnUUROWFBjb0t1Q042Wnk1QnlCVHV6Z3FOMDBOYlVmN05lRno2S3luRmhBSzNxYkdtcmdyCjhvb2JwWmFYRTR3VnYvR0VpN3NwZkdDTXlOd3JzMUdacHBzNGw1RnhHeVp3dzhST0NVYnNnZ3pJRVRYSmtWU2IKU1R0Y3FJdk1DQzF5eEdWbWU0dkw4c2UzdmNjM2tCTGJjMk5WMFh4S1lDM0pUNm9nSDZobzFJOEhJd0tCZ0NQZApiTThYa3MrNStGSEVFR2xCTTl6S1p4YzIvbDNHK0FaQUhiczlLVEEwSWVpa0F6b3FPdFZmTkYwNXFPTzJDUWIyCjV2ZzIycGxtZFBLcThabHJMbWJ4VEFURGFEeU5ldkRFYXlvZFROYkF3QmhiMWozT2xGcllOcXZ2cUNCZ2Y5VXoKaXk5aHZxMjlFc1QyQWpxUnFwbjhPLzZ1S2d2R1pDcHRlYkUzSzVRakFvR0FMTWJmZG1xVHM4UUhlWU04MHdqZQpwVUV6MEFyV1k4QWtUVDJzZTljdmhCeG5YMFdFbzFjMGtycFJxVWFXeWhSZ3I5MGxxRzNQZ3JzY3ZuOWZHdjlsCkwxcElDOUVXNUFXVC9CYWllSGU5Uk9sWEJHT2oxUnpGdXdJVHBOU1NyL3VxbWlQaDFQbHFud2FidzdmYVQ0OFMKVTMxOWdNbTJMRFMzV2hBU2xYNFBnRnM9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tls-dfp-backend
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: tls-dfp-backend
+  ports:
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 8443
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tls-dfp-backend
+  namespace: gateway-conformance-infra
+  labels:
+    app: tls-dfp-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tls-dfp-backend
+  template:
+    metadata:
+      labels:
+        app: tls-dfp-backend
+    spec:
+      containers:
+      - name: tls-backend
+        image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        volumeMounts:
+        - name: secret-volume
+          mountPath: /etc/secret-volume
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: tls-dfp-backend
+        - name: TLS_SERVER_CERT
+          value: /etc/secret-volume/crt
+        - name: TLS_SERVER_PRIVKEY
+          value: /etc/secret-volume/key
+        resources:
+          requests:
+            cpu: 10m
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: tls-dfp-backend-cert
+          items:
+          - key: tls.crt
+            path: crt
+          - key: tls.key
+            path: key
