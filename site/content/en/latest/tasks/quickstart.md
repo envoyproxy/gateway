@@ -87,10 +87,14 @@ Port forward to the Envoy service:
 kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
 ```
 
+```shell
+export GATEWAY_HOST=localhost:8888
+```
+
 Curl the example app through Envoy proxy:
 
 ```shell
-curl --verbose --header "Host: www.example.com" http://localhost:8888/get
+curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
 
 {{% /tab %}}
