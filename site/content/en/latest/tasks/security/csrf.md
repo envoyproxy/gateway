@@ -21,7 +21,8 @@ Non-mutating requests (GET, HEAD, OPTIONS) are not affected.
 
 Note: Envoy's CSRF filter compares against the host and port of the origin only (the scheme is stripped
 before matching). Additional origins must be specified as `host` or `host:port` values, not full URLs.
-For example, use `www.example.com` instead of `https://www.example.com`.
+For example, use `www.example.com` instead of `https://www.example.com`. A SecurityPolicy whose
+`additionalOrigins` contain a scheme or a path is rejected at admission, since such a value could never match.
 
 The filter supports gradual rollout via `enforcedFraction` (the fraction of requests for which the policy is
 enforced, defaults to 100%) and `shadowFraction` (the fraction of requests evaluated in dry-run mode without
@@ -116,6 +117,6 @@ so you can monitor the impact before enabling enforcement.
 
 [csrf]: https://owasp.org/www-community/attacks/csrf
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/

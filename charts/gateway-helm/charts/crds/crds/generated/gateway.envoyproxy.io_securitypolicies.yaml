@@ -777,6 +777,11 @@ spec:
                     - message: numerator must be less than or equal to denominator
                       rule: self.numerator <= self.denominator
                 type: object
+                x-kubernetes-validations:
+                - message: additionalOrigins must be host or host:port values without
+                    a scheme or path, for example www.example.com instead of https://www.example.com
+                  rule: '!has(self.additionalOrigins) || self.additionalOrigins.all(o,
+                    !o.value.contains(''/''))'
               extAuth:
                 description: ExtAuth defines the configuration for External Authorization.
                 properties:

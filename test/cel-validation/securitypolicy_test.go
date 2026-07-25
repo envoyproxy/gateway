@@ -627,6 +627,84 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 		},
 
+		// csrf
+		{
+			desc: "csrf additionalOrigins valid with host and host:port",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CSRF: &egv1a1.CSRF{
+						AdditionalOrigins: []egv1a1.StringMatch{
+							{Type: new(egv1a1.StringMatchExact), Value: "www.example.com"},
+							{Type: new(egv1a1.StringMatchExact), Value: "www.example.com:8080"},
+							{Type: new(egv1a1.StringMatchSuffix), Value: ".trusted.com"},
+							{Type: new(egv1a1.StringMatchRegularExpression), Value: `.*\.partner\.com$`},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "csrf additionalOrigins invalid with scheme",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CSRF: &egv1a1.CSRF{
+						AdditionalOrigins: []egv1a1.StringMatch{
+							// invalid, Envoy strips the scheme from the Origin header
+							// before matching, so this could never match.
+							{Type: new(egv1a1.StringMatchExact), Value: "https://www.example.com"},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"additionalOrigins must be host or host:port values without a scheme or path, for example www.example.com instead of https://www.example.com",
+			},
+		},
+		{
+			desc: "csrf additionalOrigins invalid with path",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CSRF: &egv1a1.CSRF{
+						AdditionalOrigins: []egv1a1.StringMatch{
+							// invalid, the Origin header never carries a path.
+							{Type: new(egv1a1.StringMatchPrefix), Value: "www.example.com/app"},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"additionalOrigins must be host or host:port values without a scheme or path, for example www.example.com instead of https://www.example.com",
+			},
+		},
+
 		// ExtAuth
 		{
 			desc: "GRPC external auth service",

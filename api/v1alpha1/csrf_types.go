@@ -18,6 +18,8 @@ import (
 // (the scheme is stripped before matching). Additional origins must be specified as
 // host or host:port values, not full URLs. For example, use "www.example.com"
 // instead of "https://www.example.com".
+//
+// +kubebuilder:validation:XValidation:message="additionalOrigins must be host or host:port values without a scheme or path, for example www.example.com instead of https://www.example.com",rule="!has(self.additionalOrigins) || self.additionalOrigins.all(o, !o.value.contains('/'))"
 type CSRF struct {
 	// EnforcedFraction represents the fraction of requests for which the CSRF
 	// policy is enforced. Requests that are not selected are allowed through
