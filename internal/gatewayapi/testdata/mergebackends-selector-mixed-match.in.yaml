@@ -6,7 +6,6 @@ envoyProxyForGatewayClass:
     name: test
   spec:
     mergeBackends:
-      enabled: true
       selector:
         matchLabels:
           mergebackends-selector: enabled
