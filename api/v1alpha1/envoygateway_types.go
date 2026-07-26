@@ -220,10 +220,19 @@ type XDSServer struct {
 	// +optional
 	MaxConnectionAgeGrace *gwapiv1.Duration `json:"maxConnectionAgeGrace,omitempty"`
 
-	// MaxReceiveMessageSize defines the maximum message size in bytes the xDS gRPC server will accept from Envoy proxies.
-	// Increasing this is necessary at scale when the xDS snapshot exceeds the default 4MiB gRPC receive limit,
-	// which manifests as "received message larger than max" errors in the xDS stream.
-	// If unspecified, the default gRPC receive limit applies (4MiB).
+	// MaxReceiveMessageSize defines the maximum size of a single xDS message that the xDS gRPC
+	// server will accept from an Envoy proxy.
+	//
+	// Envoy's requests grow with the number of resources it holds: on every stream (re)connect,
+	// the first delta xDS request for each resource type echoes back the name and version of
+	// every resource the proxy currently has. At a large enough scale this exceeds the 4MiB
+	// default, and the stream fails immediately with "received message larger than max", leaving
+	// the proxy stuck on its last known-good configuration.
+	//
+	// Note this limit applies only to what Envoy Gateway receives; the configuration it sends to
+	// Envoy is not bounded by it.
+	//
+	// If unspecified, the gRPC default of 4MiB applies.
 	//
 	// +optional
 	MaxReceiveMessageSize *resource.Quantity `json:"maxReceiveMessageSize,omitempty"`
