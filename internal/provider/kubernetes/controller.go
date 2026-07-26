@@ -85,7 +85,9 @@ type gatewayAPIReconciler struct {
 	eepCRDExists           bool
 	epCRDExists            bool
 	eppCRDExists           bool
+	grpcRouteCRDExists     bool
 	hrfCRDExists           bool
+	listenerSetCRDExists   bool
 	serviceImportCRDExists bool
 	spCRDExists            bool
 	tcpRouteCRDExists      bool
@@ -1878,11 +1880,13 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		gtwNamespacedName := utils.NamespacedName(gtw).String()
 
 		// ListenerSet Processing (must be done before route processing)
-		if err := r.processListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			if isTransientError(err) {
-				return err
+		if r.listenerSetCRDExists {
+			if err := r.processListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				if isTransientError(err) {
+					return err
+				}
+				r.log.Error(err, "failed to process ListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 			}
-			r.log.Error(err, "failed to process ListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		}
 
 		// Route Processing
@@ -1897,9 +1901,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			return err
 		}
 
-		// Get GRPCRoute objects and check if it exists.
-		if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			return err
+		if r.grpcRouteCRDExists {
+			// Get GRPCRoute objects and check if it exists.
+			if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
+			}
 		}
 
 		if r.tcpRouteCRDExists {
@@ -2301,25 +2307,41 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	xlsPredicates := []predicate.TypedPredicate[*gwapiv1.ListenerSet]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1.ListenerSet]{},
+	// Some managed Kubernetes offerings install a curated subset of the Gateway API standard channel
+	// CRDs and don't allow users to add the missing ones: for example, GKE's managed gateway-api-crds
+	// addon ships Gateway API v1.5 without ListenerSet and GRPCRoute, because the GKE Gateway
+	// controller doesn't implement them. Keep the ListenerSet and GRPCRoute watches optional so that
+	// Envoy Gateway starts on those clusters instead of crash-looping: the absent kind can't be used
+	// there anyway, so its absence should disable the feature, not take down the controller.
+	// TODO: remove these checks once ListenerSet and GRPCRoute are included in the Gateway API CRD
+	// bundles shipped by the major managed Kubernetes offerings.
+	r.listenerSetCRDExists, err = checkCRD(resource.KindListenerSet, gwapiv1.GroupVersion.String())
+	if err != nil {
+		return err
 	}
-	if r.namespaceLabel != nil {
-		xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
-			return r.hasMatchingNamespaceLabels(obj)
-		}))
-	}
+	if !r.listenerSetCRDExists {
+		r.log.Info("ListenerSet CRD not found, skipping ListenerSet watch")
+	} else {
+		xlsPredicates := []predicate.TypedPredicate[*gwapiv1.ListenerSet]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1.ListenerSet]{},
+		}
+		if r.namespaceLabel != nil {
+			xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
+				return r.hasMatchingNamespaceLabels(obj)
+			}))
+		}
 
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.ListenerSet{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *gwapiv1.ListenerSet) []reconcile.Request {
-				return r.enqueueClass(ctx, obj)
-			}),
-			xlsPredicates...)); err != nil {
-		return err
-	}
-	if err := addListenerSetIndexers(ctx, mgr); err != nil {
-		return err
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.ListenerSet{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *gwapiv1.ListenerSet) []reconcile.Request {
+					return r.enqueueClass(ctx, obj)
+				}),
+				xlsPredicates...)); err != nil {
+			return err
+		}
+		if err := addListenerSetIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
@@ -2341,23 +2363,32 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch GRPCRoute CRUDs and process affected Gateways.
-	grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
-	if r.namespaceLabel != nil {
-		grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
-			return r.hasMatchingNamespaceLabels(grpc)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, route)
-			}),
-			grpcrPredicates...)); err != nil {
+	// See the comment on the ListenerSet watch above for why this watch is optional.
+	r.grpcRouteCRDExists, err = checkCRD(resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
+	if err != nil {
 		return err
 	}
-	if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
-		return err
+	if !r.grpcRouteCRDExists {
+		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
+	} else {
+		// Watch GRPCRoute CRUDs and process affected Gateways.
+		grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
+		if r.namespaceLabel != nil {
+			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
+				return r.hasMatchingNamespaceLabels(grpc)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
+					return r.enqueueClass(ctx, route)
+				}),
+				grpcrPredicates...)); err != nil {
+			return err
+		}
+		if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	// Watch TLSRoute CRUDs and process affected Gateways.

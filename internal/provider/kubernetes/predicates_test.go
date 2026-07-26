@@ -1154,10 +1154,13 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 
 	testCases := []struct {
-		name    string
-		configs []client.Object
-		service client.Object
-		expect  bool
+		name string
+		// grpcRouteCRDAbsent simulates a cluster whose Gateway API CRD bundle doesn't
+		// include GRPCRoute, e.g. GKE's managed gateway-api-crds addon.
+		grpcRouteCRDAbsent bool
+		configs            []client.Object
+		service            client.Object
+		expect             bool
 	}{
 		{
 			name: "gateway service but deployment or daemonset does not exist",
@@ -1241,6 +1244,17 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
+		},
+		{
+			name:               "grpc route service routes exist but GRPCRoute CRD is absent",
+			grpcRouteCRDAbsent: true,
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				sampleGateway,
+				test.GetGRPCRoute(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
+			expect:  false,
 		},
 		{
 			name: "tls route service routes exist",
@@ -1496,6 +1510,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.grpcRouteCRDExists = !tc.grpcRouteCRDAbsent
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -1846,10 +1861,13 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	sampleHTTPRouteFilter := test.GetHTTPRouteFilter(types.NamespacedName{Name: "httproutefilter"})
 
 	testCases := []struct {
-		name            string
-		configs         []client.Object
-		httpRouteFilter client.Object
-		expect          bool
+		name string
+		// grpcRouteCRDAbsent simulates a cluster whose Gateway API CRD bundle doesn't
+		// include GRPCRoute, e.g. GKE's managed gateway-api-crds addon.
+		grpcRouteCRDAbsent bool
+		configs            []client.Object
+		httpRouteFilter    client.Object
+		expect             bool
 	}{
 		{
 			name: "httproutefilter but not referenced by route",
@@ -1886,6 +1904,19 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 			httpRouteFilter: sampleHTTPRouteFilter,
 			expect:          true,
 		},
+		{
+			name:               "httproutefilter referenced by grpcroute but GRPCRoute CRD is absent",
+			grpcRouteCRDAbsent: true,
+			configs: []client.Object{
+				sampleGWC,
+				sampleGateway,
+				sampleService,
+				sampleHTTPRouteFilter,
+				test.GetGRPCRouteWithHTTPRouteFilter(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80, "httproutefilter"),
+			},
+			httpRouteFilter: sampleHTTPRouteFilter,
+			expect:          false,
+		},
 	}
 
 	// Create the reconciler.
@@ -1897,6 +1928,7 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.grpcRouteCRDExists = !tc.grpcRouteCRDAbsent
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
