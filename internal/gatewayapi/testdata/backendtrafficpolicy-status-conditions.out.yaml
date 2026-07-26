@@ -93,7 +93,20 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: unknown-httproute
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: unknown-httproute
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: The BackendTrafficPolicy target HTTPRoute envoy-gateway/unknown-httproute
+          was not found
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -105,7 +118,20 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: not-same-namespace-httproute
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: not-same-namespace-httproute
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: The BackendTrafficPolicy target HTTPRoute envoy-gateway/not-same-namespace-httproute
+          was not found
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -177,7 +203,20 @@ backendTrafficPolicies:
       kind: Gateway
       name: unknown-gateway
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: unknown-gateway
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: The BackendTrafficPolicy target Gateway envoy-gateway/unknown-gateway
+          was not found
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -189,7 +228,20 @@ backendTrafficPolicies:
       kind: Gateway
       name: not-same-namespace-gateway
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: not-same-namespace-gateway
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: The BackendTrafficPolicy target Gateway envoy-gateway/not-same-namespace-gateway
+          was not found
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway

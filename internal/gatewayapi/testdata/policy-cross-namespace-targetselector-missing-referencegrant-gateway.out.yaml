@@ -1,3 +1,32 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: cross-ns-policy
+    namespace: policy-ns
+  spec:
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      matchLabels:
+        policy: selected
+      namespaces:
+        from: All
+    useClientProtocol: true
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.envoyproxy.io
+        kind: BackendTrafficPolicy
+        name: cross-ns-policy
+        namespace: policy-ns
+      conditions:
+      - lastTransitionTime: null
+        message: The BackendTrafficPolicy targetSelectors did not match any target
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
