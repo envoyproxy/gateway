@@ -38,6 +38,6 @@
               namespace: default
       name: httproute/default/http-route-1/rule/0/match/0/*
       route:
-        cluster: backend/service/default/service-selected/8080/http
+        cluster: service/default/service-selected/8080/http
         upgradeConfigs:
         - upgradeType: websocket

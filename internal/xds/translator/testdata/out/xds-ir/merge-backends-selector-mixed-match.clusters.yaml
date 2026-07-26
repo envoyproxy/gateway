@@ -38,7 +38,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: backend/service/default/service-selected/8080/http
+    serviceName: service/default/service-selected/8080/http
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -56,6 +56,6 @@
           name: service-selected
           namespace: default
           sectionName: "8080"
-  name: backend/service/default/service-selected/8080/http
+  name: service/default/service-selected/8080/http
   perConnectionBufferLimitBytes: 32768
   type: EDS
