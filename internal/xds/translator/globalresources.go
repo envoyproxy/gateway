@@ -75,6 +75,11 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 // a single shared secret is used; when dedup is disabled, name is a per-policy name and each
 // cluster gets its own idempotently-created copy pointing at the same system CA file path.
 func emitSystemTrustStoreSecret(tCtx *types.ResourceVersionTable, name string) error {
+	// Fast path for the shared secret: the SystemTrustStore flag is set on first emission,
+	// so subsequent calls can skip the O(secrets) findXdsSecret scan.
+	if name == SystemTrustStoreSecretName && tCtx.SystemTrustStore {
+		return nil
+	}
 	if findXdsSecret(tCtx, name) != nil {
 		return nil
 	}
