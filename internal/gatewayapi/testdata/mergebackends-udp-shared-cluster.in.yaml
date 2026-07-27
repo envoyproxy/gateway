@@ -1,0 +1,85 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends:
+      enabled: true
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: udp-1
+          protocol: UDP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+            kinds:
+              - kind: UDPRoute
+        - name: udp-2
+          protocol: UDP
+          port: 81
+          allowedRoutes:
+            namespaces:
+              from: All
+            kinds:
+              - kind: UDPRoute
+udpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: UDPRoute
+    metadata:
+      namespace: default
+      name: udproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: udp-1
+      rules:
+        - backendRefs:
+            - name: service-2
+              port: 8162
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: UDPRoute
+    metadata:
+      namespace: default
+      name: udproute-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: udp-2
+      rules:
+        - backendRefs:
+            - name: service-2
+              port: 8162
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-2
+      namespace: default
+      labels:
+        kubernetes.io/service-name: service-2
+    addressType: IPv4
+    ports:
+      - name: udp
+        protocol: UDP
+        port: 8162
+    endpoints:
+      - addresses:
+          - "7.7.7.8"
+        conditions:
+          ready: true
+      - addresses:
+          - "7.7.7.9"
+        conditions:
+          ready: true
