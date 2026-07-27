@@ -182,7 +182,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				if isListenerSetListener(currTarget) {
 					policy, found := handledPolicies[policyName]
 					if !found {
-						policy = policyCopies[i]
+						policy = envoyExtensionPolicies[i]
 						res = append(res, policy)
 						handledPolicies[policyName] = policy
 					}
@@ -209,7 +209,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				if isListenerSet(currTarget) {
 					policy, found := handledPolicies[policyName]
 					if !found {
-						policy = policyCopies[i]
+						policy = envoyExtensionPolicies[i]
 						res = append(res, policy)
 						handledPolicies[policyName] = policy
 					}
