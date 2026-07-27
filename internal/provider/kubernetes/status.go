@@ -118,7 +118,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       h.Spec,
 							Status: gwapiv1.HTTPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(h.Namespace, h.Status.Parents, valCopy.Parents),
+									Parents: mergeRouteParentStatus(h.Namespace, h.Status.Parents, valCopy.Parents, h.Spec.ParentRefs),
 								},
 							},
 						}
@@ -160,7 +160,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       g.Spec,
 							Status: gwapiv1.GRPCRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(g.Namespace, g.Status.Parents, valCopy.Parents),
+									Parents: mergeRouteParentStatus(g.Namespace, g.Status.Parents, valCopy.Parents, g.Spec.ParentRefs),
 								},
 							},
 						}
@@ -202,7 +202,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       t.Spec,
 							Status: gwapiv1.TLSRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(t.Namespace, t.Status.Parents, valCopy.Parents),
+									Parents: mergeRouteParentStatus(t.Namespace, t.Status.Parents, valCopy.Parents, t.Spec.ParentRefs),
 								},
 							},
 						}
@@ -244,7 +244,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       t.Spec,
 							Status: gwapiv1.TCPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(t.Namespace, t.Status.Parents, valCopy.Parents),
+									Parents: mergeRouteParentStatus(t.Namespace, t.Status.Parents, valCopy.Parents, t.Spec.ParentRefs),
 								},
 							},
 						}
@@ -286,7 +286,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       u.Spec,
 							Status: gwapiv1.UDPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(u.Namespace, u.Status.Parents, valCopy.Parents),
+									Parents: mergeRouteParentStatus(u.Namespace, u.Status.Parents, valCopy.Parents, u.Spec.ParentRefs),
 								},
 							},
 						}
@@ -692,15 +692,20 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 // mergeRouteParentStatus merges the old and new RouteParentStatus.
 // This is needed because the RouteParentStatus doesn't support strategic merge patch yet.
-func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []gwapiv1.RouteParentStatus {
+// specParentRefs is the route's current spec.ParentRefs, used to tell an old parent status
+// that simply wasn't part of this reconciliation batch (keep it) apart from one whose
+// parentRef has been removed from the route entirely (drop it, it's stale).
+func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus, specParentRefs []gwapiv1.ParentReference) []gwapiv1.RouteParentStatus {
 	// Allocating with worst-case capacity to avoid reallocation.
 	merged := make([]gwapiv1.RouteParentStatus, 0, len(old)+len(new))
 
 	// Range over old status parentRefs in order:
 	// 1. The parentRef exists in the new status: append the new one to the final status.
-	// 2. The parentRef doesn't exist in the new status and it's not our controller: append it to the final status.
-	// 3. The parentRef doesn't exist in the new status, and it is our controller: keep it in the final status.
-	//    This is important for routes with multiple parent references - not all parents are updated in each reconciliation.
+	// 2. The parentRef doesn't exist in the new status but is still present in the route's
+	//    spec.ParentRefs: keep it. This is important for routes with multiple parent
+	//    references - not all parents are updated in each reconciliation.
+	// 3. The parentRef doesn't exist in the new status and is no longer present in the
+	//    route's spec.ParentRefs: drop it, it's a stale status left over from a removed parentRef.
 	for _, oldP := range old {
 		found := -1
 		for newI, newP := range new {
@@ -711,11 +716,14 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 		}
 		if found >= 0 {
 			merged = append(merged, new[found])
-		} else {
-			// Keep all old parent statuses, regardless of controller.
-			// For routes with multiple parents managed by the same controller,
-			// not all parents are necessarily updated in each reconciliation.
-			merged = append(merged, oldP)
+			continue
+		}
+
+		for _, specRef := range specParentRefs {
+			if gatewayapi.IsParentRefEqual(oldP.ParentRef, specRef, ns) {
+				merged = append(merged, oldP)
+				break
+			}
 		}
 	}
 

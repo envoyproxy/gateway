@@ -167,8 +167,9 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 
 func Test_mergeRouteParentStatus(t *testing.T) {
 	type args struct {
-		old []gwapiv1.RouteParentStatus
-		new []gwapiv1.RouteParentStatus
+		old            []gwapiv1.RouteParentStatus
+		new            []gwapiv1.RouteParentStatus
+		specParentRefs []gwapiv1.ParentReference
 	}
 	tests := []struct {
 		name string
@@ -238,6 +239,15 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 							},
 						},
 					},
+				},
+				specParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:        "gateway1",
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
+					},
+					{Name: "gateway2"},
 				},
 			},
 			want: []gwapiv1.RouteParentStatus{
@@ -364,6 +374,16 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						},
 					},
 				},
+				specParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:        "gateway1",
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
+					},
+					{Name: "gateway2"},
+					{Name: "gateway3"},
+				},
 			},
 			want: []gwapiv1.RouteParentStatus{
 				{
@@ -489,6 +509,16 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						},
 					},
 				},
+				specParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:        "gateway1",
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
+					},
+					{Name: "gateway2"},
+					{Name: "gateway3"},
+				},
 			},
 			want: []gwapiv1.RouteParentStatus{
 				{
@@ -550,15 +580,11 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 				},
 			},
 		},
-		// Practically this will never occur, since having no parentRefs in the new
-		// status means the route doesn't attach (in the spec) to any of our gateways.
-		//
-		// But then we'd consider it irrelevant before ever computing such status for it, i.e, the
-		// route will forever have a dangling status parentRef referencing us that will not be removed.
-		//
-		// TODO: maybe this needs to be fixed.
+		// Regression test for https://github.com/envoyproxy/gateway/issues/774: a parentRef
+		// that has been removed from the route's spec must not leave a stale status entry
+		// behind, even though other, still-referenced, parentRefs are preserved.
 		{
-			name: "old contains one parentRef of ours and one of another controller's, ours gets dropped in new.",
+			name: "old contains one parentRef of ours and one of another controller's, ours is removed from the route's spec.",
 			args: args{
 				old: []gwapiv1.RouteParentStatus{
 					{
@@ -602,6 +628,16 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					},
 				},
 				new: []gwapiv1.RouteParentStatus{},
+				// gateway2 was removed from the route's spec.parentRefs; gateway1 (managed by
+				// another controller) is still referenced.
+				specParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:        "gateway1",
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
+					},
+				},
 			},
 			want: []gwapiv1.RouteParentStatus{
 				{
@@ -611,24 +647,6 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						Namespace:   new(gwapiv1.Namespace("default")),
 						SectionName: new(gwapiv1.SectionName("listener1")),
 						Port:        new(gwapiv1.PortNumber(80)),
-					},
-					Conditions: []metav1.Condition{
-						{
-							Type:   string(gwapiv1.RouteConditionAccepted),
-							Status: metav1.ConditionTrue,
-							Reason: "Accepted",
-						},
-						{
-							Type:   string(gwapiv1.RouteConditionResolvedRefs),
-							Status: metav1.ConditionTrue,
-							Reason: "ResolvedRefs",
-						},
-					},
-				},
-				{
-					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
-					ParentRef: gwapiv1.ParentReference{
-						Name: "gateway2",
 					},
 					Conditions: []metav1.Condition{
 						{
@@ -688,6 +706,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 							},
 						},
 					},
+				},
+				specParentRefs: []gwapiv1.ParentReference{
+					{Name: "gateway2"},
 				},
 			},
 			want: []gwapiv1.RouteParentStatus{
@@ -772,6 +793,10 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						},
 					},
 				},
+				specParentRefs: []gwapiv1.ParentReference{
+					{Name: "gateway2"},
+					{Name: "gateway3"},
+				},
 			},
 			want: []gwapiv1.RouteParentStatus{
 				{
@@ -855,6 +880,10 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						},
 					},
 				},
+				specParentRefs: []gwapiv1.ParentReference{
+					{Name: "gateway2"},
+					{Name: "gateway3"},
+				},
 			},
 			want: []gwapiv1.RouteParentStatus{
 				{
@@ -921,6 +950,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					},
 				},
 				new: []gwapiv1.RouteParentStatus{},
+				specParentRefs: []gwapiv1.ParentReference{
+					{Name: "gateway2"},
+				},
 			},
 			want: []gwapiv1.RouteParentStatus{
 				{
@@ -995,6 +1027,15 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						},
 					},
 				},
+				specParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:        "gateway1",
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
+					},
+					{Name: "gateway2"},
+				},
 			},
 			want: []gwapiv1.RouteParentStatus{
 				{
@@ -1033,7 +1074,7 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mergeRouteParentStatus("default", tt.args.old, tt.args.new); !reflect.DeepEqual(got, tt.want) {
+			if got := mergeRouteParentStatus("default", tt.args.old, tt.args.new, tt.args.specParentRefs); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mergeRouteParentStatus() = %v, want %v", got, tt.want)
 			}
 		})
