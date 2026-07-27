@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,9 @@ type oidcRouteTestCase struct {
 	securityPolicyName string
 	testURL            string
 	logoutURL          string
+	// forwardedIDTokenHeader, when set, is the request header that EG is configured
+	// to forward the OIDC ID token on. The test verifies the upstream receives it.
+	forwardedIDTokenHeader string
 }
 
 func init() {
@@ -73,17 +77,18 @@ var OIDCTest = suite.ConformanceTest{
 				logoutURL:          "http://www.example.com/foo/logout",
 			},
 			{
-				routeName:          "http-with-oidc-bar",
-				securityPolicyName: "oidc-test-bar",
-				testURL:            "http://www.example.com/bar",
-				logoutURL:          "http://www.example.com/bar/logout",
+				routeName:              "http-with-oidc-bar",
+				securityPolicyName:     "oidc-test-bar",
+				testURL:                "http://www.example.com/bar",
+				logoutURL:              "http://www.example.com/bar/logout",
+				forwardedIDTokenHeader: "X-Id-Token",
 			},
 		}
 
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
 			for _, tc := range urlBackedCases {
 				t.Run(tc.routeName, func(t *testing.T) {
-					testOIDC(t, suite, tc, "testdata/oidc-securitypolicy.yaml")
+					testOIDC(t, suite, &tc, "testdata/oidc-securitypolicy.yaml")
 				})
 			}
 		})
@@ -159,7 +164,7 @@ var OIDCTest = suite.ConformanceTest{
 		// Apply the security policy that configures OIDC authentication with BackendCluster.
 		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy-backendcluster.yaml", true)
 		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
-			testOIDC(t, suite, oidcRouteTestCase{
+			testOIDC(t, suite, &oidcRouteTestCase{
 				routeName:          "http-with-oidc",
 				securityPolicyName: "oidc-test",
 				testURL:            "http://www.example.com/myapp",
@@ -169,7 +174,7 @@ var OIDCTest = suite.ConformanceTest{
 	},
 }
 
-func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc oidcRouteTestCase, securityPolicyManifest string) {
+func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc *oidcRouteTestCase, securityPolicyManifest string) {
 	const ns = "gateway-conformance-infra"
 
 	routeNN := types.NamespacedName{Name: tc.routeName, Namespace: ns}
@@ -248,6 +253,15 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc oidcRouteTestC
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, res.StatusCode)
 	require.Contains(t, string(body), "infra-backend-v1", "Expected response from the application")
+
+	// When ID token forwarding is configured, the upstream (an echo server that
+	// reflects the received request) must report the configured header. The test
+	// client never sends this header itself, so its presence proves EG forwarded
+	// the OIDC ID token from the validated cookie.
+	if tc.forwardedIDTokenHeader != "" {
+		require.Contains(t, strings.ToLower(string(body)), strings.ToLower(tc.forwardedIDTokenHeader),
+			"Expected the upstream to receive the forwarded ID token header %q", tc.forwardedIDTokenHeader)
+	}
 
 	// Verify that we can access the application without logging in again
 	res, err = oidcClient.Get(tc.testURL, false)
