@@ -92,6 +92,20 @@ func Test_wildcard2regex(t *testing.T) {
 			origin:   "http://foo.example.com",
 			want:     1,
 		},
+		{
+			// A scheme containing '+' (valid per RFC 3986, e.g. "git+ssh") must be
+			// matched literally and not treated as a regex quantifier.
+			name:     "scheme with plus and wildcard host matches",
+			wildcard: "git+ssh://*.example.com",
+			origin:   "git+ssh://foo.example.com",
+			want:     1,
+		},
+		{
+			name:     "scheme with plus does not match quantifier expansion",
+			wildcard: "git+ssh://*.example.com",
+			origin:   "gitssh://foo.example.com",
+			want:     0,
+		},
 	}
 
 	for _, tt := range tests {
