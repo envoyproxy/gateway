@@ -42,7 +42,7 @@ dependencies:
     version: 1.10.1
     condition: alloy.enabled
   - name: loki
-    version: 7.0.0
+    version: 7.1.0
     repository: https://grafana.github.io/helm-charts
     condition: loki.enabled
   - name: tempo

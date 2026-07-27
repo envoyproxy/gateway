@@ -1828,7 +1828,7 @@ spec:
                                     cost-based rate limiting) allowed per Unit.
                                   format: int64
                                   maximum: 4294967295
-                                  minimum: 1
+                                  minimum: 0
                                   type: integer
                                 unit:
                                   description: |-
@@ -2239,7 +2239,7 @@ spec:
                                     cost-based rate limiting) allowed per Unit.
                                   format: int64
                                   maximum: 4294967295
-                                  minimum: 1
+                                  minimum: 0
                                   type: integer
                                 unit:
                                   description: |-

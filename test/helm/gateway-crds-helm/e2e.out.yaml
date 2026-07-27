@@ -2384,7 +2384,7 @@ spec:
                                     cost-based rate limiting) allowed per Unit.
                                   format: int64
                                   maximum: 4294967295
-                                  minimum: 1
+                                  minimum: 0
                                   type: integer
                                 unit:
                                   description: |-
@@ -2795,7 +2795,7 @@ spec:
                                     cost-based rate limiting) allowed per Unit.
                                   format: int64
                                   maximum: 4294967295
-                                  minimum: 1
+                                  minimum: 0
                                   type: integer
                                 unit:
                                   description: |-
@@ -29229,9 +29229,11 @@ spec:
                         - http://foo.example.com:8080
                         - http://*.example.com:8080
                         - https://*
+                        - moz-extension://example.com
+                        - foo://*.example.com:8080
                       maxLength: 253
                       minLength: 1
-                      pattern: ^(\*|https?:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$
+                      pattern: ^(\*|[A-Za-z][A-Za-z0-9+.-]*:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$
                       type: string
                     type: array
                   exposeHeaders:
