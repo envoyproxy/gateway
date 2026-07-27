@@ -847,7 +847,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 		}
 		if cert.SDS != nil {
 			// Use external SDS server instead of ADS
-			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			clusterName := sdsClusterNameFromURL(cert.SDS.GetURL())
 			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
 		}
 		tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
@@ -890,7 +890,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 		}
 		if cert.SDS != nil {
 			// Use external SDS server instead of ADS
-			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			clusterName := sdsClusterNameFromURL(cert.SDS.GetURL())
 			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
 		}
 		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
@@ -970,7 +970,7 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 
 	if tlsConfig.CACertificate.SDS != nil {
 		// Use external SDS server instead of ADS
-		clusterName := sdsClusterNameFromURL(tlsConfig.CACertificate.SDS.URL)
+		clusterName := sdsClusterNameFromURL(tlsConfig.CACertificate.SDS.GetURL())
 		sdsConfig = sdsSecretConfig(tlsConfig.CACertificate.SDS.SecretName, clusterName)
 	}
 
