@@ -9,11 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -38,13 +36,11 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
-	policyCopies := extensionServerPolicyCopiesWithStatusDeepCopy(policies)
-
 	var errs error
 	// Process the policies targeting Gateways. Only update the policy status if it was accepted.
 	// A policy is considered accepted if at least one targetRef contained inside matched a listener.
 	for i := range policies {
-		policy := policyCopies[i]
+		policy := policies[i]
 		var policyStatus gwapiv1.PolicyStatus
 		accepted := false
 		targetRefs, err := extractTargetRefs(&policy, gateways)
@@ -191,18 +187,4 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		found = true
 	}
 	return found
-}
-
-// extensionServerPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied status entries.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func extensionServerPolicyCopiesWithStatusDeepCopy(policies []unstructured.Unstructured) []unstructured.Unstructured {
-	copies := make([]unstructured.Unstructured, len(policies))
-	for i, p := range policies {
-		p.Object = maps.Clone(p.Object) // shallow copy map - no shared ref for "status" key
-		if statusObj, ok := policies[i].Object["status"].(map[string]any); ok {
-			p.Object["status"] = runtime.DeepCopyJSON(statusObj)
-		}
-		copies[i] = p
-	}
-	return copies
 }

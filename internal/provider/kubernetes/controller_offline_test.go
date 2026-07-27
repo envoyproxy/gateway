@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
@@ -140,10 +141,17 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("ListenerSet index", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1.ListenerSetList{}, client.MatchingFields{gatewayListenerSetIndex: "any"})
+		require.NoError(t, err)
+	})
+
 	t.Run("HTTPRoute indices", func(t *testing.T) {
 		err := cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{gatewayHTTPRouteIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{backendHTTPRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{listenerSetHTTPRouteIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{httpRouteFilterHTTPRouteIndex: "any"})
 		require.NoError(t, err)
@@ -154,12 +162,16 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.GRPCRouteList{}, client.MatchingFields{backendGRPCRouteIndex: "any"})
 		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.GRPCRouteList{}, client.MatchingFields{listenerSetGRPCRouteIndex: "any"})
+		require.NoError(t, err)
 	})
 
 	t.Run("TCPRoute indices", func(t *testing.T) {
 		err := cli.List(context.Background(), &gwapiv1.TCPRouteList{}, client.MatchingFields{gatewayTCPRouteIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.TCPRouteList{}, client.MatchingFields{backendTCPRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.TCPRouteList{}, client.MatchingFields{listenerSetTCPRouteIndex: "any"})
 		require.NoError(t, err)
 	})
 
@@ -168,12 +180,23 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.UDPRouteList{}, client.MatchingFields{backendUDPRouteIndex: "any"})
 		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.UDPRouteList{}, client.MatchingFields{listenerSetUDPRouteIndex: "any"})
+		require.NoError(t, err)
 	})
 
 	t.Run("TLSRoute indices", func(t *testing.T) {
 		err := cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{gatewayTLSRouteIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{backendTLSRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{listenerSetTLSRouteIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("EndpointSlice indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &discoveryv1.EndpointSliceList{}, client.MatchingFields{serviceEndpointSliceIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &discoveryv1.EndpointSliceList{}, client.MatchingFields{serviceImportEndpointSliceIndex: "any"})
 		require.NoError(t, err)
 	})
 
@@ -213,6 +236,8 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		err = cli.List(context.Background(), &egv1a1.EnvoyExtensionPolicyList{}, client.MatchingFields{secretEnvoyExtensionPolicyIndex: "any"})
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &egv1a1.EnvoyExtensionPolicyList{}, client.MatchingFields{configMapEepIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.EnvoyExtensionPolicyList{}, client.MatchingFields{clusterTrustBundleEepIndex: "any"})
 		require.NoError(t, err)
 	})
 

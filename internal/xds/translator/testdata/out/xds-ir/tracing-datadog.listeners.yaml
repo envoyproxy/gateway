@@ -29,8 +29,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         tracing:
-          clientSampling:
-            value: 100
+          clientSampling: {}
           customTags:
           - environment:
               defaultValue: '-'

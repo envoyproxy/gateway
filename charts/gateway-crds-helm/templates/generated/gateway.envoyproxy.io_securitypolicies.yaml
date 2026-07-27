@@ -349,7 +349,8 @@ spec:
 
                                 If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 
-                                The client IP is inferred from the X-Forwarded-For header or a custom header.
+                                The client IP is inferred from the X-Forwarded-For header, a custom header, or the
+                                direct downstream connection source address (the TCP peer of the connection terminated by Envoy).
                                 You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
                               items:
                                 description: ClientIPGeoLocation specifies geolocation-based
@@ -668,9 +669,11 @@ spec:
                         - http://foo.example.com:8080
                         - http://*.example.com:8080
                         - https://*
+                        - moz-extension://example.com
+                        - foo://*.example.com:8080
                       maxLength: 253
                       minLength: 1
-                      pattern: ^(\*|https?:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$
+                      pattern: ^(\*|[A-Za-z][A-Za-z0-9+.-]*:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$
                       type: string
                     type: array
                   exposeHeaders:
@@ -3795,10 +3798,26 @@ spec:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
                 properties:
+                  failOpen:
+                    description: |-
+                      FailOpen lets a request pass JWT authentication even when its JWT is
+                      missing or invalid, rather than being rejected. This helps when a header
+                      that clients use to carry a JWT may also legitimately hold a non-JWT value
+                      that the backend relies on.
+
+                      A valid JWT is still verified and its claims forwarded as usual; only the
+                      rejection of requests with a missing or invalid JWT is relaxed. Because this
+                      does not enforce authentication on its own, pair it with an Authorization
+                      policy when access needs to be restricted.
+
+                      This is broader than Optional (which tolerates a missing JWT but still
+                      rejects an invalid one) and takes precedence over it.
+                    type: boolean
                   optional:
                     description: |-
                       Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
-                      Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT is presented.
+                      Note: Even if optional is set to true, JWT authentication will still fail if an invalid JWT
+                      is presented. See FailOpen if this is necessary for your use case.
                     type: boolean
                   providers:
                     description: |-
@@ -5458,6 +5477,10 @@ spec:
                 required:
                 - providers
                 type: object
+                x-kubernetes-validations:
+                - message: optional and failOpen cannot both be set; failOpen already
+                    tolerates a missing JWT
+                  rule: '!(has(self.optional) && has(self.failOpen))'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing SecurityPolicy

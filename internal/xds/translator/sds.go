@@ -50,9 +50,16 @@ func sdsSecretConfig(secretName, clusterName string) *tlsv3.SdsSecretConfig {
 // sdsClusterNameFromURL generates a unique cluster name from an SDS URL
 func sdsClusterNameFromURL(url string) string {
 	// Sanitize the URL to create a valid cluster name
-	// For Unix domain sockets like "/var/run/sds", create a meaningful name
+	// For Unix domain sockets like "unix:///var/run/sds" or "/var/run/sds", create a meaningful name
+	if strings.HasPrefix(url, "unix://") {
+		// Unix domain socket with scheme - extract the path
+		path := strings.TrimPrefix(url, "unix://")
+		sanitized := strings.ReplaceAll(path, "/", "_")
+		sanitized = strings.Trim(sanitized, "_")
+		return fmt.Sprintf("sds_%s", sanitized)
+	}
 	if strings.HasPrefix(url, "/") {
-		// Unix domain socket path
+		// Unix domain socket path without scheme
 		sanitized := strings.ReplaceAll(url, "/", "_")
 		sanitized = strings.Trim(sanitized, "_")
 		return fmt.Sprintf("sds_%s", sanitized)
@@ -77,6 +84,12 @@ func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
 	}
 
 	// Create the cluster based on the URL type
+	pipePath := sdsURL
+	// Extract path for Unix domain sockets
+	if strings.HasPrefix(sdsURL, "unix://") {
+		pipePath = strings.TrimPrefix(sdsURL, "unix://")
+	}
+
 	c := &cluster.Cluster{
 		Name: clusterName,
 		ClusterDiscoveryType: &cluster.Cluster_Type{
@@ -93,7 +106,7 @@ func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
 									Address: &corev3.Address{
 										Address: &corev3.Address_Pipe{
 											Pipe: &corev3.Pipe{
-												Path: sdsURL,
+												Path: pipePath,
 											},
 										},
 									},
@@ -128,14 +141,14 @@ func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 				if dest.TLS != nil {
 					// Check CA certificate
 					if caCert := dest.TLS.CACertificate; caCert != nil {
-						if caCert.SDS != nil && caCert.SDS.URL != "" {
-							sdsURLs[caCert.SDS.URL] = true
+						if caCert.SDS != nil && caCert.SDS.GetURL() != "" {
+							sdsURLs[caCert.SDS.GetURL()] = true
 						}
 					}
 					// Check client certificates
 					for _, cert := range dest.TLS.ClientCertificates {
-						if cert.SDS != nil && cert.SDS.URL != "" {
-							sdsURLs[cert.SDS.URL] = true
+						if cert.SDS != nil && cert.SDS.GetURL() != "" {
+							sdsURLs[cert.SDS.GetURL()] = true
 						}
 					}
 				}
@@ -153,14 +166,14 @@ func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 				if dest.TLS != nil {
 					// Check CA certificate
 					if caCert := dest.TLS.CACertificate; caCert != nil {
-						if caCert.SDS != nil && caCert.SDS.URL != "" {
-							sdsURLs[caCert.SDS.URL] = true
+						if caCert.SDS != nil && caCert.SDS.GetURL() != "" {
+							sdsURLs[caCert.SDS.GetURL()] = true
 						}
 					}
 					// Check client certificates
 					for _, cert := range dest.TLS.ClientCertificates {
-						if cert.SDS != nil && cert.SDS.URL != "" {
-							sdsURLs[cert.SDS.URL] = true
+						if cert.SDS != nil && cert.SDS.GetURL() != "" {
+							sdsURLs[cert.SDS.GetURL()] = true
 						}
 					}
 				}

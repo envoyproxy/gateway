@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -24,6 +25,15 @@ import (
 
 const (
 	vmRuntimeV8 = "envoy.wasm.runtime.v8"
+
+	// Envoy's built-in retry policy for remote Wasm code is a single retry with
+	// a ~1s backoff, after which the fetch is never re-attempted and the filter
+	// stays failed until the next config update. Use a more generous jittered
+	// exponential backoff so the fetch survives transient unavailability of the
+	// Wasm HTTP service (e.g. slow module downloads or pod startup).
+	wasmFetchNumRetries   = uint32(10)
+	wasmFetchBaseInterval = 1 * time.Second
+	wasmFetchMaxInterval  = 30 * time.Second
 )
 
 func init() {
@@ -128,6 +138,13 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 					},
 					Sha256: wasm.Code.SHA256,
+					RetryPolicy: &corev3.RetryPolicy{
+						NumRetries: wrapperspb.UInt32(wasmFetchNumRetries),
+						RetryBackOff: &corev3.BackoffStrategy{
+							BaseInterval: durationpb.New(wasmFetchBaseInterval),
+							MaxInterval:  durationpb.New(wasmFetchMaxInterval),
+						},
+					},
 				},
 			},
 		},

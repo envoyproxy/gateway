@@ -1,0 +1,1 @@
+Fixed the standalone offline controller used by the File provider to register the missing ListenerSet, ListenerSet-owned route, and ClusterTrustBundle EnvoyExtensionPolicy indexes so reconciliation no longer fails with unregistered index errors.

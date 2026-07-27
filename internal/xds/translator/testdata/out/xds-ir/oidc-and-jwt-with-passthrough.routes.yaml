@@ -15,7 +15,7 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: httproute/default/httproute-1/rule/0/match/0/www_example_com
+          requirementName: example1-or-example2-or-example3-or-example4_f1dce4fcb58e4627
         envoy.filters.http.oauth2:
           '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
           config:

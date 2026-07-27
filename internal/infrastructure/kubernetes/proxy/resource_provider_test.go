@@ -455,6 +455,16 @@ func TestDeployment(t *testing.T) {
 			bootstrap: `test bootstrap config`,
 		},
 		{
+			caseName: "component-level-off",
+			infra:    newTestInfra(),
+			deploy:   nil,
+			proxyLogging: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+				egv1a1.LogComponentDefault: egv1a1.LogLevelOff,
+				egv1a1.LogComponentFilter:  egv1a1.LogLevelCritical,
+			},
+			bootstrap: `test bootstrap config`,
+		},
+		{
 			caseName: "disable-prometheus",
 			infra:    newTestInfra(),
 			telemetry: &egv1a1.ProxyTelemetry{

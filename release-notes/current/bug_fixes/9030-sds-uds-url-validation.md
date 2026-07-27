@@ -1,0 +1,1 @@
+Added validation for the SDS (Secret Discovery Service) cluster URI to ensure Unix Domain Socket (`unix://`) URLs are well-formed, rejecting a host component and requiring a path, instead of silently producing an invalid or unintended socket address.

@@ -72,12 +72,44 @@ deployment:
         drop:
         - ALL
       privileged: false
+      readOnlyRootFilesystem: true
       runAsNonRoot: true
       runAsGroup: 65532
       runAsUser: 65532
       seccompProfile:
         type: RuntimeDefault
+    # -- Volume source for the Wasm module cache mounted at /var/lib/eg/wasm. Defaults to an emptyDir when left empty.
+    # Example: persist the Wasm module cache across controller restarts by backing it with a PersistentVolumeClaim:
+    #   wasmCacheVolume:
+    #     persistentVolumeClaim:
+    #       claimName: envoy-gateway-wasm-cache
     strategy: {}
+    wasmCacheVolume: {}
+    # Kubernetes best practice for controllers: use a startupProbe with a generous
+    # failure threshold to avoid premature liveness/readiness failures during initialization.
+    # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes
+    startupProbe:
+      httpGet:
+        path: /healthz
+        port: 8081
+      failureThreshold: 30
+      periodSeconds: 1
+      successThreshold: 1
+      timeoutSeconds: 1
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8081
+      periodSeconds: 20
+      successThreshold: 1
+      timeoutSeconds: 1
+    readinessProbe:
+      httpGet:
+        path: /readyz
+        port: 8081
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 1
   ports:
     - name: grpc
       port: 18000
@@ -116,6 +148,7 @@ deployment:
       runAsNonRoot: true
       runAsGroup: 65532
       runAsUser: 65532
+      fsGroup: 65532
       seccompProfile:
         type: RuntimeDefault
 
@@ -163,6 +196,13 @@ certgen:
     pod:
       annotations: {}
       labels: {}
+      securityContext:
+        runAsNonRoot: true
+        runAsGroup: 65532
+        runAsUser: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
     resources: {}
     affinity: {}
     tolerations: []

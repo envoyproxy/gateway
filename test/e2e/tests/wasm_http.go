@@ -8,16 +8,23 @@
 package tests
 
 import (
+	"context"
+	"runtime"
 	"testing"
+	"time"
 
+	"github.com/prometheus/common/model"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 func init() {
@@ -65,6 +72,40 @@ var HTTPWasmTest = suite.ConformanceTest{
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		// Unlike the shared/bounded Lua VM count (see the "lua vm count stays bounded" check in
+		// lua_http.go), wasmConfig() in internal/xds/translator/wasm.go sets VmId to a name that
+		// is unique per EnvoyExtensionPolicy wasm entry ("Do not share VMs across different
+		// filters"), so each of the 2 wasm-configured routes above gets its own dedicated Wasm
+		// filter/VM even though both reference the same underlying .wasm module. The
+		// process-wide "wasm.wasm_vm_count" gauge should therefore read exactly 3* worker thread.
+		t.Run("wasm vm count is per-route", func(t *testing.T) {
+			promQL := `sum(envoy_wasm_wasm_vm_count{app_kubernetes_io_component="proxy", app_kubernetes_io_managed_by="envoy-gateway", app_kubernetes_io_name="envoy", gateway_envoyproxy_io_owning_gateway_name="same-namespace"})`
+			// 3 is the count of routes
+			expectedCount := model.SampleValue(3 * runtime.NumCPU())
+			tlog.Logf(t, "expected to got %v", expectedCount)
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(_ context.Context) (done bool, err error) {
+					v, err := prometheus.QueryPrometheus(suite.Client, promQL)
+					if err != nil {
+						tlog.Logf(t, "failed to query prometheus: %v", err)
+						return false, nil
+					}
+					if v != nil {
+						vectorVal := v.(model.Vector)
+						if len(vectorVal) == 1 && vectorVal[0].Value == expectedCount {
+							tlog.Logf(t, "got expected wasm_vm_count value: %v", vectorVal[0].Value)
+							return true, nil
+						} else {
+							tlog.Logf(t, "got metric: %v", vectorVal)
+						}
+					}
+
+					return false, nil
+				}); err != nil {
+				t.Errorf("failed to get expected wasm_vm_count metric: %v", err)
+			}
 		})
 	},
 }

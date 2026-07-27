@@ -18,7 +18,27 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              first-route-www.test.com/example:
+              example_7e0f64f43618ad77:
+                audiences:
+                - foo.com
+                claimToHeaders:
+                - claimName: claim.neteased.key
+                  headerName: second-route-example-key1
+                forward: true
+                issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                  - scp
+                payloadInMetadata: example
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_80
+                    timeout: 10s
+                    uri: http://localhost/jwt/public-key/jwks.json
+              example_c464f1a4e10c61a2:
                 audiences:
                 - foo.com
                 claimToHeaders:
@@ -38,7 +58,7 @@
                     cluster: localhost_80
                     timeout: 10s
                     uri: http://localhost/jwt/public-key/jwks.json
-              first-route-www.test.com/example2:
+              example2_9fb53f4aa4426db0:
                 audiences:
                 - one.foo.com
                 - two.foo.com
@@ -65,27 +85,7 @@
                   - scope
                   - scp
                 payloadInMetadata: example2
-              second-route-www.test.com/example:
-                audiences:
-                - foo.com
-                claimToHeaders:
-                - claimName: claim.neteased.key
-                  headerName: second-route-example-key1
-                forward: true
-                issuer: https://www.example.com
-                normalizePayloadInMetadata:
-                  spaceDelimitedClaims:
-                  - scope
-                  - scp
-                payloadInMetadata: example
-                remoteJwks:
-                  asyncFetch: {}
-                  cacheDuration: 300s
-                  httpUri:
-                    cluster: localhost_80
-                    timeout: 10s
-                    uri: http://localhost/jwt/public-key/jwks.json
-              second-route-www.test.com/example2:
+              example2_e2fe046d94962359:
                 audiences:
                 - one.foo.com
                 - two.foo.com
@@ -104,16 +104,16 @@
                     timeout: 10s
                     uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
             requirementMap:
-              first-route-www.test.com:
+              example-or-example2_32d8e7367a44f94f:
                 requiresAny:
                   requirements:
-                  - providerName: first-route-www.test.com/example
-                  - providerName: first-route-www.test.com/example2
-              second-route-www.test.com:
+                  - providerName: example_7e0f64f43618ad77
+                  - providerName: example2_e2fe046d94962359
+              example-or-example2_6521f40c1fdcd711:
                 requiresAny:
                   requirements:
-                  - providerName: second-route-www.test.com/example
-                  - providerName: second-route-www.test.com/example2
+                  - providerName: example_c464f1a4e10c61a2
+                  - providerName: example2_9fb53f4aa4426db0
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
