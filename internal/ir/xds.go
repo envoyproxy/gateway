@@ -1236,10 +1236,8 @@ type CORS struct {
 //
 // +k8s:deepcopy-gen=true
 type CSRF struct {
-	// EnforcedFraction is the fraction of requests for which CSRF is enforced.
-	// nil means 100%.
-	EnforcedFraction *gwapiv1.Fraction `json:"enforcedFraction,omitempty" yaml:"enforcedFraction,omitempty"`
 	// ShadowFraction is the fraction of requests evaluated in shadow/dry-run mode.
+	// The remaining requests are enforced. nil means 0%, i.e. everything is enforced.
 	ShadowFraction *gwapiv1.Fraction `json:"shadowFraction,omitempty" yaml:"shadowFraction,omitempty"`
 	// AdditionalOrigins specifies additional origins that are allowed.
 	AdditionalOrigins []*StringMatch `json:"additionalOrigins,omitempty" yaml:"additionalOrigins,omitempty"`

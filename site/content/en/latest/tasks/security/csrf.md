@@ -24,9 +24,9 @@ before matching). Additional origins must be specified as `host` or `host:port` 
 For example, use `www.example.com` instead of `https://www.example.com`. A SecurityPolicy whose
 `additionalOrigins` contain a scheme or a path is rejected at admission, since such a value could never match.
 
-The filter supports gradual rollout via `enforcedFraction` (the fraction of requests for which the policy is
-enforced, defaults to 100%) and `shadowFraction` (the fraction of requests evaluated in dry-run mode without
-enforcing). Both are expressed as a `numerator` and an optional `denominator` that defaults to `100`.
+The filter supports gradual rollout via `shadowFraction`: the fraction of requests that are evaluated in
+dry-run mode instead of being enforced. It is expressed as a `numerator` and an optional `denominator` that
+defaults to `100`, and defaults to 0%, i.e. all requests are enforced.
 
 The below example defines a SecurityPolicy that enables CSRF protection and allows additional origins
 matching `www.example.com` exactly and any subdomain of `trusted.com` via regex.
@@ -89,8 +89,7 @@ With this configuration:
 
 ### Shadow mode (dry-run)
 
-To evaluate CSRF policies without enforcing them (useful for gradual rollout), set `enforcedFraction` to 0
-and `shadowFraction` to the desired fraction:
+To evaluate CSRF policies without enforcing them, set `shadowFraction` to 100%:
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -103,8 +102,6 @@ spec:
     kind: HTTPRoute
     name: backend
   csrf:
-    enforcedFraction:
-      numerator: 0
     shadowFraction:
       numerator: 100
     additionalOrigins:
@@ -114,6 +111,10 @@ spec:
 
 In this mode, all requests are allowed but Envoy tracks CSRF metrics (`request_valid` / `request_invalid`)
 so you can monitor the impact before enabling enforcement.
+
+Requests that are not selected for shadowing are enforced, so `shadowFraction` also doubles as the knob for
+rolling enforcement out gradually: `numerator: 25` shadows a quarter of the requests and enforces the
+remaining three quarters. Lower it towards 0 as the metrics confirm that no legitimate origin is rejected.
 
 [csrf]: https://owasp.org/www-community/attacks/csrf
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy

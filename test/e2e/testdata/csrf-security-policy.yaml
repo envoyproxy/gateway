@@ -64,8 +64,6 @@ spec:
     kind: HTTPRoute
     name: http-with-csrf-shadow
   csrf:
-    enforcedFraction:
-      numerator: 0
     shadowFraction:
       numerator: 100
     additionalOrigins:

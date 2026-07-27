@@ -112,8 +112,6 @@ securityPolicies:
         value: .trusted.com
       - type: RegularExpression
         value: .*\.partner\.com$
-      enforcedFraction:
-        numerator: 80
       shadowFraction:
         numerator: 20
     targetRef:
@@ -227,8 +225,6 @@ xdsIR:
             - distinct: false
               name: csrf
               safeRegex: .*\.partner\.com$
-            enforcedFraction:
-              numerator: 80
             shadowFraction:
               numerator: 20
     readyListener:

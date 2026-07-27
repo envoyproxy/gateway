@@ -1,1 +1,1 @@
-Added `csrf` field to `SecurityPolicy` for native Cross-Site Request Forgery protection, validating the `Origin` header of mutating requests against the destination and any `additionalOrigins`, with gradual rollout via `enforcedFraction` and `shadowFraction`.
+Added `csrf` field to `SecurityPolicy` for native Cross-Site Request Forgery protection, validating the `Origin` header of mutating requests against the destination and any `additionalOrigins`, with gradual rollout via `shadowFraction`.

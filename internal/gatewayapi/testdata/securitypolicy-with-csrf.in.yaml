@@ -10,8 +10,6 @@ securityPolicies:
       kind: HTTPRoute
       name: httproute-1
     csrf:
-      enforcedFraction:
-        numerator: 80
       shadowFraction:
         numerator: 20
       additionalOrigins:

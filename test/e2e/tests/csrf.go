@@ -175,7 +175,7 @@ var CSRFFromSecurityPolicyTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
-		// Shadow mode tests: enforcedFraction=0, shadowFraction=100
+		// Shadow mode tests: shadowFraction=100, so nothing is enforced.
 		// Requests should be allowed regardless of Origin (dry-run mode)
 		shadowRouteNN := types.NamespacedName{Name: "http-with-csrf-shadow", Namespace: ns}
 		shadowGwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, shadowRouteNN)

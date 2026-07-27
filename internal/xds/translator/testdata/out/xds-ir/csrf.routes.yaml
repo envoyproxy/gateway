@@ -38,7 +38,8 @@
           - exact: staging.example.com
           filterEnabled:
             defaultValue:
-              numerator: 50
+              denominator: TEN_THOUSAND
+              numerator: 9750
           shadowEnabled:
             defaultValue:
               denominator: TEN_THOUSAND

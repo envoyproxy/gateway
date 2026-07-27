@@ -21,21 +21,16 @@ import (
 //
 // +kubebuilder:validation:XValidation:message="additionalOrigins must be host or host:port values without a scheme or path, for example www.example.com instead of https://www.example.com",rule="!has(self.additionalOrigins) || self.additionalOrigins.all(o, !o.value.contains('/'))"
 type CSRF struct {
-	// EnforcedFraction represents the fraction of requests for which the CSRF
-	// policy is enforced. Requests that are not selected are allowed through
-	// without any origin validation.
-	// Defaults to 100% (all requests are enforced) if not specified.
+	// ShadowFraction represents the fraction of requests for which the CSRF policy is
+	// evaluated in shadow (dry-run) mode. For these requests, the filter records whether
+	// the request would have been allowed or rejected in the `csrf.request_valid` and
+	// `csrf.request_invalid` stats, but always lets the request through. The remaining
+	// requests are enforced, i.e. a mutating request with a missing or non-matching
+	// Origin header is rejected with a 403.
 	//
-	// +optional
-	EnforcedFraction *gwapiv1.Fraction `json:"enforcedFraction,omitempty"`
-
-	// ShadowFraction represents the fraction of requests for which the CSRF
-	// policy is evaluated in shadow (dry-run) mode. In this mode, the filter
-	// evaluates requests and tracks whether they would be allowed or rejected in
-	// the `csrf.request_invalid` and `csrf.request_valid` stats, but does not
-	// enforce the policy. This is useful for rolling out CSRF protection
-	// gradually while monitoring the impact.
-	// Only takes effect for requests that are not selected by EnforcedFraction.
+	// Defaults to 0% (all requests are enforced) if not specified. Set it to 100% to
+	// dry run the filter, watch the stats to find origins that would be rejected, then
+	// lower it to roll enforcement out gradually.
 	//
 	// +optional
 	ShadowFraction *gwapiv1.Fraction `json:"shadowFraction,omitempty"`

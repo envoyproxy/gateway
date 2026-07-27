@@ -14,6 +14,8 @@ import (
 	csrfv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/csrf/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -142,22 +144,24 @@ func (*csrf) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error 
 
 // buildXdsCSRFPolicy builds the full Envoy CSRF policy from the IR.
 func buildXdsCSRFPolicy(csrf *ir.CSRF) *csrfv3.CsrfPolicy {
-	// Default to 100% enforced.
+	// Envoy only lets an invalid request through in shadow mode if that request wasn't
+	// also selected by FilterEnabled, so enforcement is set to the complement of the
+	// shadow fraction: every request is either enforced or observed, never neither.
+	// With no shadow fraction, all requests are enforced.
 	enforcedFraction := fractionalpercent.FromIn32(100)
-	if csrf.EnforcedFraction != nil {
-		enforcedFraction = fractionalpercent.FromFraction(csrf.EnforcedFraction)
+	var shadowEnabled *corev3.RuntimeFractionalPercent
+	if csrf.ShadowFraction != nil {
+		enforcedFraction = fractionalpercent.FromFraction(complementFraction(csrf.ShadowFraction))
+		shadowEnabled = &corev3.RuntimeFractionalPercent{
+			DefaultValue: fractionalpercent.FromFraction(csrf.ShadowFraction),
+		}
 	}
 
 	policy := &csrfv3.CsrfPolicy{
 		FilterEnabled: &corev3.RuntimeFractionalPercent{
 			DefaultValue: enforcedFraction,
 		},
-	}
-
-	if csrf.ShadowFraction != nil {
-		policy.ShadowEnabled = &corev3.RuntimeFractionalPercent{
-			DefaultValue: fractionalpercent.FromFraction(csrf.ShadowFraction),
-		}
+		ShadowEnabled: shadowEnabled,
 	}
 
 	// Values are passed directly to Envoy without transformation. Users must provide
@@ -168,4 +172,14 @@ func buildXdsCSRFPolicy(csrf *ir.CSRF) *csrfv3.CsrfPolicy {
 	}
 
 	return policy
+}
+
+// complementFraction returns the remainder of the given fraction, i.e. 1 - fraction.
+// The numerator is never greater than the denominator, so the result is never negative.
+func complementFraction(fraction *gwapiv1.Fraction) *gwapiv1.Fraction {
+	denominator := ptr.Deref(fraction.Denominator, fractionalpercent.Hundred)
+	return &gwapiv1.Fraction{
+		Numerator:   denominator - fraction.Numerator,
+		Denominator: ptr.To(denominator),
+	}
 }

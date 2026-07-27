@@ -1758,7 +1758,6 @@ func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
 		additionalOrigins = append(additionalOrigins, irStringMatch("csrf", origin))
 	}
 	return &ir.CSRF{
-		EnforcedFraction:  csrf.EnforcedFraction,
 		ShadowFraction:    csrf.ShadowFraction,
 		AdditionalOrigins: additionalOrigins,
 	}
