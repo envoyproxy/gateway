@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/api/resource"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -261,6 +262,65 @@ func Test_buildServiceConfig(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("buildServiceConfig() got = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestGetExtensionServerAddress(t *testing.T) {
+	tests := []struct {
+		Name     string
+		Service  *egv1a1.ExtensionService
+		Expected string
+	}{
+		{
+			Name: "has an FQDN",
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					FQDN: &egv1a1.FQDNEndpoint{
+						Hostname: "extserver.svc.cluster.local",
+						Port:     5050,
+					},
+				},
+			},
+			Expected: "extserver.svc.cluster.local:5050",
+		},
+		{
+			Name: "has an IP",
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					IP: &egv1a1.IPEndpoint{
+						Address: "10.10.10.10",
+						Port:    5050,
+					},
+				},
+			},
+			Expected: "10.10.10.10:5050",
+		},
+		{
+			Name: "has a Unix path",
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					Unix: &egv1a1.UnixSocket{
+						Path: "/some/path",
+					},
+				},
+			},
+			Expected: "unix:///some/path",
+		},
+		{
+			Name: "has a Unix path",
+			Service: &egv1a1.ExtensionService{
+				Host: "foo.bar",
+				Port: 5050,
+			},
+			Expected: "foo.bar:5050",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.Name, func(t *testing.T) {
+			out := GetExtensionServerAddress(tc.Service)
+			require.Equal(t, tc.Expected, out)
 		})
 	}
 }

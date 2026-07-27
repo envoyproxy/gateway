@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -198,21 +197,6 @@ func (m *Manager) HasExtension(g gwapiv1.Group, k gwapiv1.Kind) bool {
 	return false
 }
 
-func getExtensionServerAddress(service *egv1a1.ExtensionService) string {
-	var serverAddr string
-	switch {
-	case service.FQDN != nil:
-		serverAddr = net.JoinHostPort(service.FQDN.Hostname, strconv.Itoa(int(service.FQDN.Port)))
-	case service.IP != nil:
-		serverAddr = net.JoinHostPort(service.IP.Address, strconv.Itoa(int(service.IP.Port)))
-	case service.Unix != nil:
-		serverAddr = fmt.Sprintf("unix://%s", service.Unix.Path)
-	case service.Host != "":
-		serverAddr = net.JoinHostPort(service.Host, strconv.Itoa(int(service.Port)))
-	}
-	return serverAddr
-}
-
 // GetPreXDSHookClient checks if the registered extension makes use of a particular hook type that modifies inputs
 // that are used to generate an xDS resource.
 // If the extension makes use of the hook then the XDS Hook Client is returned. If it does not support
@@ -240,7 +224,7 @@ func (m *Manager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (ext
 	}
 
 	if m.extensionConnCache == nil {
-		serverAddr := getExtensionServerAddress(ext.Service)
+		serverAddr := grpcExtension.GetExtensionServerAddress(ext.Service)
 
 		opts, err := grpcExtension.GenerateGRPCOptions(ctx, m.k8sClient, ext.Service, ext.MaxMessageSize, serviceName, m.namespace)
 		if err != nil {
@@ -289,7 +273,7 @@ func (m *Manager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (ex
 	}
 
 	if m.extensionConnCache == nil {
-		serverAddr := getExtensionServerAddress(ext.Service)
+		serverAddr := grpcExtension.GetExtensionServerAddress(ext.Service)
 
 		opts, err := grpcExtension.GenerateGRPCOptions(ctx, m.k8sClient, ext.Service, ext.MaxMessageSize, serviceName, m.namespace)
 		if err != nil {
