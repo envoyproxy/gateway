@@ -295,3 +295,138 @@ func TestWatchesNamespaces(t *testing.T) {
 		})
 	}
 }
+
+func TestGetKubernetesConfiguration(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider EnvoyGatewayProvider
+		expected EnvoyGatewayKubernetesConfiguration
+	}{
+		{
+			name: "Kubernetes provider with nil sub-provider does not panic",
+			provider: EnvoyGatewayProvider{
+				Type:       ProviderTypeKubernetes,
+				Kubernetes: nil,
+			},
+			expected: EnvoyGatewayKubernetesConfiguration{},
+		},
+		{
+			name: "Kubernetes provider with populated sub-provider returns config",
+			provider: EnvoyGatewayProvider{
+				Type: ProviderTypeKubernetes,
+				Kubernetes: &EnvoyGatewayKubernetesProvider{
+					EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
+						Watch: &KubernetesWatchMode{Type: KubernetesWatchModeTypeNamespaces},
+					},
+				},
+			},
+			expected: EnvoyGatewayKubernetesConfiguration{
+				Watch: &KubernetesWatchMode{Type: KubernetesWatchModeTypeNamespaces},
+			},
+		},
+		{
+			name: "Custom provider with kubernetes resource type but nil sub-provider does not panic",
+			provider: EnvoyGatewayProvider{
+				Type: ProviderTypeCustom,
+				Custom: &EnvoyGatewayCustomProvider{
+					Resource: EnvoyGatewayResourceProvider{
+						Type:       ResourceProviderTypeKubernetes,
+						Kubernetes: nil,
+					},
+				},
+			},
+			expected: EnvoyGatewayKubernetesConfiguration{},
+		},
+		{
+			name: "Custom provider with populated kubernetes resource returns config",
+			provider: EnvoyGatewayProvider{
+				Type: ProviderTypeCustom,
+				Custom: &EnvoyGatewayCustomProvider{
+					Resource: EnvoyGatewayResourceProvider{
+						Type: ResourceProviderTypeKubernetes,
+						Kubernetes: &EnvoyGatewayKubernetesCustomProvider{
+							EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
+								Watch: &KubernetesWatchMode{Type: KubernetesWatchModeTypeNamespaceSelector},
+							},
+						},
+					},
+				},
+			},
+			expected: EnvoyGatewayKubernetesConfiguration{
+				Watch: &KubernetesWatchMode{Type: KubernetesWatchModeTypeNamespaceSelector},
+			},
+		},
+		{
+			name: "Custom provider with file resource type returns zero value",
+			provider: EnvoyGatewayProvider{
+				Type: ProviderTypeCustom,
+				Custom: &EnvoyGatewayCustomProvider{
+					Resource: EnvoyGatewayResourceProvider{
+						Type: ResourceProviderTypeFile,
+					},
+				},
+			},
+			expected: EnvoyGatewayKubernetesConfiguration{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got EnvoyGatewayKubernetesConfiguration
+			assert.NotPanics(t, func() {
+				got = tt.provider.GetKubernetesConfiguration()
+			})
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestGetKubernetesInfrastructureConfiguration(t *testing.T) {
+	deploy := &KubernetesDeployMode{}
+	tests := []struct {
+		name     string
+		provider EnvoyGatewayProvider
+		expected EnvoyGatewayKubernetesInfrastructureConfiguration
+	}{
+		{
+			name: "Kubernetes provider with nil sub-provider does not panic",
+			provider: EnvoyGatewayProvider{
+				Type:       ProviderTypeKubernetes,
+				Kubernetes: nil,
+			},
+			expected: EnvoyGatewayKubernetesInfrastructureConfiguration{},
+		},
+		{
+			name: "Kubernetes provider with populated sub-provider returns config",
+			provider: EnvoyGatewayProvider{
+				Type: ProviderTypeKubernetes,
+				Kubernetes: &EnvoyGatewayKubernetesProvider{
+					EnvoyGatewayKubernetesInfrastructureConfiguration: EnvoyGatewayKubernetesInfrastructureConfiguration{
+						Deploy: deploy,
+					},
+				},
+			},
+			expected: EnvoyGatewayKubernetesInfrastructureConfiguration{Deploy: deploy},
+		},
+		{
+			name: "Custom provider returns zero value",
+			provider: EnvoyGatewayProvider{
+				Type: ProviderTypeCustom,
+				Custom: &EnvoyGatewayCustomProvider{
+					Resource: EnvoyGatewayResourceProvider{
+						Type: ResourceProviderTypeKubernetes,
+					},
+				},
+			},
+			expected: EnvoyGatewayKubernetesInfrastructureConfiguration{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got EnvoyGatewayKubernetesInfrastructureConfiguration
+			assert.NotPanics(t, func() {
+				got = tt.provider.GetKubernetesInfrastructureConfiguration()
+			})
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}

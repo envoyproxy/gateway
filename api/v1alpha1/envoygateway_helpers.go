@@ -413,18 +413,20 @@ func (r *EnvoyGatewayProvider) IsRunningOnHost() bool {
 }
 
 func (r *EnvoyGatewayProvider) GetKubernetesConfiguration() EnvoyGatewayKubernetesConfiguration {
-	if r.Type == ProviderTypeKubernetes {
+	if r.Type == ProviderTypeKubernetes && r.Kubernetes != nil {
 		return r.Kubernetes.EnvoyGatewayKubernetesConfiguration
 	}
 
-	if r.Type == ProviderTypeCustom && r.Custom != nil && r.Custom.Resource.Type == ResourceProviderTypeKubernetes {
+	if r.Type == ProviderTypeCustom && r.Custom != nil &&
+		r.Custom.Resource.Type == ResourceProviderTypeKubernetes &&
+		r.Custom.Resource.Kubernetes != nil {
 		return r.Custom.Resource.Kubernetes.EnvoyGatewayKubernetesConfiguration
 	}
 	return EnvoyGatewayKubernetesConfiguration{}
 }
 
 func (r *EnvoyGatewayProvider) GetKubernetesInfrastructureConfiguration() EnvoyGatewayKubernetesInfrastructureConfiguration {
-	if r.Type == ProviderTypeKubernetes {
+	if r.Type == ProviderTypeKubernetes && r.Kubernetes != nil {
 		return r.Kubernetes.EnvoyGatewayKubernetesInfrastructureConfiguration
 	}
 	return EnvoyGatewayKubernetesInfrastructureConfiguration{}
