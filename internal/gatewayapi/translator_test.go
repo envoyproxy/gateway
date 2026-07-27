@@ -1121,36 +1121,6 @@ func TestServicePortToContainerPort(t *testing.T) {
 		},
 		{
 			servicePort:   99,
-			containerPort: 10099,
-			envoyProxy: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.EnvoyProxyProviderTypeRemote,
-						Remote: &egv1a1.EnvoyProxyRemoteProvider{
-							UseListenerPortAsContainerPort: new(false),
-						},
-					},
-				},
-			},
-			infraManagedRemotely: true,
-		},
-		{
-			servicePort:   99,
-			containerPort: 99,
-			envoyProxy: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.EnvoyProxyProviderTypeRemote,
-						Remote: &egv1a1.EnvoyProxyRemoteProvider{
-							UseListenerPortAsContainerPort: new(true),
-						},
-					},
-				},
-			},
-			infraManagedRemotely: true,
-		},
-		{
-			servicePort:   99,
 			containerPort: 99,
 			runningOnHost: true,
 		},

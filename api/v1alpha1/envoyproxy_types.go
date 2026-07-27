@@ -566,15 +566,7 @@ type EnvoyProxyHostProvider struct {
 }
 
 // EnvoyProxyRemoteProvider defines configuration for the "Remote" resource provider.
-type EnvoyProxyRemoteProvider struct {
-	// UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
-	// When set to false, if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.
-	// This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability.
-	// The default value is True, which means no port shifting occurs.
-	//
-	// +optional
-	UseListenerPortAsContainerPort *bool `json:"useListenerPortAsContainerPort,omitempty"`
-}
+type EnvoyProxyRemoteProvider struct{}
 
 type KubernetesServiceAccountSpec struct {
 	// Name of the Service Account.
