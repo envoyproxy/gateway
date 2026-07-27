@@ -232,7 +232,7 @@ type XDSServer struct {
 	// Note this limit applies only to what Envoy Gateway receives; the configuration it sends to
 	// Envoy is not bounded by it.
 	//
-	// If unspecified, the gRPC default of 4MiB applies.
+	// If unspecified, defaults to 32MiB.
 	//
 	// +optional
 	MaxReceiveMessageSize *resource.Quantity `json:"maxReceiveMessageSize,omitempty"`
