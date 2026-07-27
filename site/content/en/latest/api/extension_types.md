@@ -4375,20 +4375,6 @@ _Appears in:_
 | `header` | _string_ |  true  |  | Header is the upstream request header that will carry the ID token.<br />It must be a valid HTTP header name. Pseudo-headers (names starting with ":")<br />and the "Host" header are not allowed. |
 
 
-#### OOBReporting
-
-
-
-OOBReporting configures out-of-band ORCA load reporting for the
-BackendUtilization load balancer.
-
-_Appears in:_
-- [BackendUtilization](#backendutilization)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-
-
 #### OTelSampler
 
 
@@ -4516,6 +4502,20 @@ _Appears in:_
 | `oid` | _string_ |  true  |  | OID Value |
 | `type` | _[StringMatchType](#stringmatchtype)_ |  false  | Exact | Type specifies how to match against a string. |
 | `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
+
+
+#### OutOfBandReporting
+
+
+
+OutOfBandReporting configures out-of-band ORCA load reporting for the
+BackendUtilization load balancer.
+
+_Appears in:_
+- [BackendUtilization](#backendutilization)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### PassiveHealthCheck

@@ -841,7 +841,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "backendUtilization with OOB fields is valid",
+			desc: "backendUtilization with OutOfBand fields is valid",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -857,7 +857,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.BackendUtilizationLoadBalancerType,
 							BackendUtilization: &egv1a1.BackendUtilization{
-								OOB: &egv1a1.OOBReporting{
+								OutOfBand: &egv1a1.OutOfBandReporting{
 									ReportingPeriod: new(gwapiv1.Duration("5s")),
 									Port:            new(uint32(9001)),
 									Authority:       new("orca.local"),
@@ -870,7 +870,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "backendUtilization OOB port zero is rejected",
+			desc: "backendUtilization OutOfBand port zero is rejected",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -886,16 +886,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.BackendUtilizationLoadBalancerType,
 							BackendUtilization: &egv1a1.BackendUtilization{
-								OOB: &egv1a1.OOBReporting{Port: new(uint32(0))},
+								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(uint32(0))},
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.loadBalancer.backendUtilization.oob.port"},
+			wantErrors: []string{"spec.loadBalancer.backendUtilization.outOfBand.port"},
 		},
 		{
-			desc: "backendUtilization OOB port above max is rejected",
+			desc: "backendUtilization OutOfBand port above max is rejected",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -911,16 +911,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.BackendUtilizationLoadBalancerType,
 							BackendUtilization: &egv1a1.BackendUtilization{
-								OOB: &egv1a1.OOBReporting{Port: new(uint32(70000))},
+								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(uint32(70000))},
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.loadBalancer.backendUtilization.oob.port"},
+			wantErrors: []string{"spec.loadBalancer.backendUtilization.outOfBand.port"},
 		},
 		{
-			desc: "backendUtilization OOB authority with newline is rejected",
+			desc: "backendUtilization OutOfBand authority with newline is rejected",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -936,13 +936,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.BackendUtilizationLoadBalancerType,
 							BackendUtilization: &egv1a1.BackendUtilization{
-								OOB: &egv1a1.OOBReporting{Authority: new("foo\nbar")},
+								OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("foo\nbar")},
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.loadBalancer.backendUtilization.oob.authority"},
+			wantErrors: []string{"spec.loadBalancer.backendUtilization.outOfBand.authority"},
 		},
 		{
 			desc: "backendUtilization field nil when type is BackendUtilization",

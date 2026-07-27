@@ -12315,9 +12315,9 @@ spec:
                                                     items:
                                                       type: string
                                                     type: array
-                                                  oob:
+                                                  outOfBand:
                                                     description: |-
-                                                      OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                                      OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
                                                       server-streaming gRPC connection to each endpoint's
                                                       xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
                                                       reports periodically, instead of relying on in-band ORCA metrics
@@ -12328,12 +12328,12 @@ spec:
                                                       authority:
                                                         description: Authority overrides
                                                           the :authority header on
-                                                          the OOB gRPC stream.
+                                                          the OutOfBand gRPC stream.
                                                         pattern: ^[^\x00\n\r]*$
                                                         type: string
                                                       port:
                                                         description: |-
-                                                          Port overrides the port used for the OOB reporting connection, e.g. to
+                                                          Port overrides the port used for the OutOfBand reporting connection, e.g. to
                                                           reach a separate reporting sidecar. Defaults to the endpoint's port.
                                                         format: int32
                                                         maximum: 65535
@@ -13925,9 +13925,9 @@ spec:
                                                     items:
                                                       type: string
                                                     type: array
-                                                  oob:
+                                                  outOfBand:
                                                     description: |-
-                                                      OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                                      OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
                                                       server-streaming gRPC connection to each endpoint's
                                                       xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
                                                       reports periodically, instead of relying on in-band ORCA metrics
@@ -13938,12 +13938,12 @@ spec:
                                                       authority:
                                                         description: Authority overrides
                                                           the :authority header on
-                                                          the OOB gRPC stream.
+                                                          the OutOfBand gRPC stream.
                                                         pattern: ^[^\x00\n\r]*$
                                                         type: string
                                                       port:
                                                         description: |-
-                                                          Port overrides the port used for the OOB reporting connection, e.g. to
+                                                          Port overrides the port used for the OutOfBand reporting connection, e.g. to
                                                           reach a separate reporting sidecar. Defaults to the endpoint's port.
                                                         format: int32
                                                         maximum: 65535
@@ -15701,9 +15701,9 @@ spec:
                                               items:
                                                 type: string
                                               type: array
-                                            oob:
+                                            outOfBand:
                                               description: |-
-                                                OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                                OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
                                                 server-streaming gRPC connection to each endpoint's
                                                 xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
                                                 reports periodically, instead of relying on in-band ORCA metrics
@@ -15713,13 +15713,13 @@ spec:
                                               properties:
                                                 authority:
                                                   description: Authority overrides
-                                                    the :authority header on the OOB
+                                                    the :authority header on the OutOfBand
                                                     gRPC stream.
                                                   pattern: ^[^\x00\n\r]*$
                                                   type: string
                                                 port:
                                                   description: |-
-                                                    Port overrides the port used for the OOB reporting connection, e.g. to
+                                                    Port overrides the port used for the OutOfBand reporting connection, e.g. to
                                                     reach a separate reporting sidecar. Defaults to the endpoint's port.
                                                   format: int32
                                                   maximum: 65535
@@ -17425,9 +17425,9 @@ spec:
                                         items:
                                           type: string
                                         type: array
-                                      oob:
+                                      outOfBand:
                                         description: |-
-                                          OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                          OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
                                           server-streaming gRPC connection to each endpoint's
                                           xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
                                           reports periodically, instead of relying on in-band ORCA metrics
@@ -17437,12 +17437,12 @@ spec:
                                         properties:
                                           authority:
                                             description: Authority overrides the :authority
-                                              header on the OOB gRPC stream.
+                                              header on the OutOfBand gRPC stream.
                                             pattern: ^[^\x00\n\r]*$
                                             type: string
                                           port:
                                             description: |-
-                                              Port overrides the port used for the OOB reporting connection, e.g. to
+                                              Port overrides the port used for the OutOfBand reporting connection, e.g. to
                                               reach a separate reporting sidecar. Defaults to the endpoint's port.
                                             format: int32
                                             maximum: 65535

@@ -230,7 +230,7 @@ type BackendUtilization struct {
 	// +kubebuilder:default=false
 	KeepResponseHeaders *bool `json:"keepResponseHeaders,omitempty"`
 
-	// OOB enables out-of-band ORCA load reporting. When set, Envoy opens a
+	// OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
 	// server-streaming gRPC connection to each endpoint's
 	// xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
 	// reports periodically, instead of relying on in-band ORCA metrics
@@ -239,21 +239,21 @@ type BackendUtilization struct {
 	// The backend must implement OpenRcaService for this to take effect.
 	// +optional
 	// +notImplementedHide
-	OOB *OOBReporting `json:"oob,omitempty"`
+	OutOfBand *OutOfBandReporting `json:"outOfBand,omitempty"`
 }
 
-// OOBReporting configures out-of-band ORCA load reporting for the
+// OutOfBandReporting configures out-of-band ORCA load reporting for the
 // BackendUtilization load balancer.
 //
 // +notImplementedHide
-type OOBReporting struct {
+type OutOfBandReporting struct {
 	// ReportingPeriod is how often Envoy requests load reports from the server.
 	// If omitted, uses Envoy's default of 10s.
 	// +optional
 	// +notImplementedHide
 	ReportingPeriod *gwapiv1.Duration `json:"reportingPeriod,omitempty"`
 
-	// Port overrides the port used for the OOB reporting connection, e.g. to
+	// Port overrides the port used for the OutOfBand reporting connection, e.g. to
 	// reach a separate reporting sidecar. Defaults to the endpoint's port.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
@@ -261,7 +261,7 @@ type OOBReporting struct {
 	// +notImplementedHide
 	Port *uint32 `json:"port,omitempty"`
 
-	// Authority overrides the :authority header on the OOB gRPC stream.
+	// Authority overrides the :authority header on the OutOfBand gRPC stream.
 	//
 	// +kubebuilder:validation:Pattern=`^[^\x00\n\r]*$`
 	// +optional
