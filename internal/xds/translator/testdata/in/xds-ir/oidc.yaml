@@ -39,6 +39,9 @@ http:
         logoutPath: "/foo/logout"
         cookieSuffix: 5F93C2E4
         forwardAccessToken: true
+        # Forward the ID token on a custom header. This coexists with
+        # forwardAccessToken (which forwards the access token on Authorization).
+        forwardIDTokenHeader: X-ID-Token
         defaultTokenTTL: 1h
         refreshToken: true
         defaultRefreshTokenTTL: 48h
@@ -95,3 +98,7 @@ http:
         cookieDomain: "example.com"
         disableTokenEncryption: true
         refreshToken: false
+        # Forward the ID token on the Authorization header. Because this route does
+        # not forward the access token, preserveAuthorizationHeader must be forced
+        # to false so Envoy sets Authorization from the validated ID token.
+        forwardIDTokenHeader: Authorization
