@@ -28,6 +28,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	httputils "github.com/envoyproxy/gateway/internal/utils/http"
+	netutil "github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 const (
@@ -492,11 +493,21 @@ type TLSCertificate struct {
 type SDSConfig struct {
 	// SecretName is an identifier for the SDS configuration.
 	SecretName string `json:"secretName" yaml:"secretName"`
-	// URL is the URL of the SDS server
-	URL string `json:"url" yaml:"url"`
+	// Scheme is the communication scheme to use when connecting to the SDS server (e.g., "http", "https", or "unix").
+	Scheme string `json:"scheme" yaml:"scheme"`
+	// Address is the host and port of the SDS server
+	Address string `json:"address" yaml:"address"`
 
 	// TODO: support additional SDS configuration options
 	// such as TLS settings for the SDS server, or authentication credentials if needed.
+}
+
+func (s *SDSConfig) GetURL() string {
+	if s.Scheme == "" {
+		return s.Address
+	}
+
+	return fmt.Sprintf("%s://%s", s.Scheme, s.Address)
 }
 
 func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
@@ -509,10 +520,15 @@ func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
 	if !hasURL || len(sdsURLBytes) == 0 {
 		return nil, fmt.Errorf("no url found in SDS reference secret %s/%s", s.Namespace, s.Name)
 	}
+	scheme, hostAndPort, err := netutil.ParseURL(string(sdsURLBytes)) // validate the URL format
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL in SDS reference secret %s/%s: %w", s.Namespace, s.Name, err)
+	}
 
 	return &SDSConfig{
 		SecretName: string(sdsSecretName),
-		URL:        string(sdsURLBytes),
+		Scheme:     scheme,
+		Address:    hostAndPort,
 	}, nil
 }
 

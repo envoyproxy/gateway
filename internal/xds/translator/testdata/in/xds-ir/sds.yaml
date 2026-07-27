@@ -38,11 +38,13 @@ http:
                 caCertificate:
                   sds:
                     secretName: ROOTCA
-                    url: /var/run/secrets/workload-spiffe-uds/socket
+                    scheme: unix
+                    address: /var/run/secrets/workload-spiffe-uds/socket
                 clientCertificates:
                   - sds:
                       secretName: default
-                      url: /var/run/secrets/workload-spiffe-uds/socket
+                      scheme: unix
+                      address: /var/run/secrets/workload-spiffe-uds/socket
                 sni: example.com
               weight: 1
         hostname: "*"
