@@ -4480,6 +4480,8 @@ For example, the following are valid origins:
 - http://foo.example.com:8080
 - http://*.example.com:8080
 - https://*
+- moz-extension://example.com
+- foo://*.example.com:8080
 
 _Appears in:_
 - [CORS](#cors)
