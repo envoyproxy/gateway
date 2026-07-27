@@ -70,6 +70,6 @@ spec:
     - name: wasm-filter
       rootID: my_root_id
       code:
-        type: EnvoyProxyModule
-        envoyProxyModule:
+        type: EnvoyProxy
+        envoyProxy:
           name: example-filter

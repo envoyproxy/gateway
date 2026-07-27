@@ -11,9 +11,9 @@ envoyExtensionPolicies:
       name: httproute-1
     wasm:
     - code:
-        envoyProxyModule:
+        envoyProxy:
           name: metrics-filter
-        type: EnvoyProxyModule
+        type: EnvoyProxy
       failOpen: true
       name: wasm-filter-2
       rootID: my-root-id
@@ -49,9 +49,9 @@ envoyExtensionPolicies:
       name: gateway-1
     wasm:
     - code:
-        envoyProxyModule:
+        envoyProxy:
           name: security-filter
-        type: EnvoyProxyModule
+        type: EnvoyProxy
       config:
         mode: enforce
       name: wasm-filter-1

@@ -89,8 +89,8 @@ envoyextensionpolicies:
     wasm:
     - name: wasm-filter-1
       code:
-        type: EnvoyProxyModule
-        envoyProxyModule:
+        type: EnvoyProxy
+        envoyProxy:
           name: security-filter
       config:
         mode: enforce
@@ -108,7 +108,7 @@ envoyextensionpolicies:
     - name: wasm-filter-2
       rootID: my-root-id
       code:
-        type: EnvoyProxyModule
-        envoyProxyModule:
+        type: EnvoyProxy
+        envoyProxy:
           name: metrics-filter
       failOpen: true

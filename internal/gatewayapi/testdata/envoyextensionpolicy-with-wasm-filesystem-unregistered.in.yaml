@@ -65,6 +65,6 @@ envoyextensionpolicies:
     wasm:
     - name: wasm-filter-missing
       code:
-        type: EnvoyProxyModule
-        envoyProxyModule:
+        type: EnvoyProxy
+        envoyProxy:
           name: not-registered

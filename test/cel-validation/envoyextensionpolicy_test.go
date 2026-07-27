@@ -964,17 +964,17 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				": Exactly one of inline or valueRef must be set with correct type.",
 			},
 		},
-		// Wasm EnvoyProxyModule code source
+		// Wasm EnvoyProxy code source
 		{
-			desc: "valid Wasm EnvoyProxyModule code source",
+			desc: "valid Wasm EnvoyProxy code source",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
 							Name: new("wasm-filter"),
 							Code: egv1a1.WasmCodeSource{
-								Type: egv1a1.EnvoyProxyModuleWasmCodeSourceType,
-								EnvoyProxyModule: &egv1a1.EnvoyProxyModuleWasmCodeSource{
+								Type: egv1a1.EnvoyProxyWasmCodeSourceType,
+								EnvoyProxy: &egv1a1.EnvoyProxyWasmCodeSource{
 									Name: "security-filter",
 								},
 							},
@@ -994,13 +994,13 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "Wasm EnvoyProxyModule without envoyProxyModule field",
+			desc: "Wasm EnvoyProxy without envoyProxy field",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
 							Code: egv1a1.WasmCodeSource{
-								Type: egv1a1.EnvoyProxyModuleWasmCodeSourceType,
+								Type: egv1a1.EnvoyProxyWasmCodeSourceType,
 							},
 						},
 					},
@@ -1015,10 +1015,10 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"If type is EnvoyProxyModule, envoyProxyModule field needs to be set"},
+			wantErrors: []string{"If type is EnvoyProxy, envoyProxy field needs to be set"},
 		},
 		{
-			desc: "Wasm HTTP with envoyProxyModule field set",
+			desc: "Wasm HTTP with envoyProxy field set",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
@@ -1028,7 +1028,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									URL: "https://example.com/filter.wasm",
 								},
-								EnvoyProxyModule: &egv1a1.EnvoyProxyModuleWasmCodeSource{
+								EnvoyProxy: &egv1a1.EnvoyProxyWasmCodeSource{
 									Name: "security-filter",
 								},
 							},
@@ -1045,17 +1045,17 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"If type is EnvoyProxyModule, envoyProxyModule field needs to be set"},
+			wantErrors: []string{"If type is EnvoyProxy, envoyProxy field needs to be set"},
 		},
 		{
-			desc: "Wasm EnvoyProxyModule with pullPolicy set",
+			desc: "Wasm EnvoyProxy with pullPolicy set",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
 							Code: egv1a1.WasmCodeSource{
-								Type: egv1a1.EnvoyProxyModuleWasmCodeSourceType,
-								EnvoyProxyModule: &egv1a1.EnvoyProxyModuleWasmCodeSource{
+								Type: egv1a1.EnvoyProxyWasmCodeSourceType,
+								EnvoyProxy: &egv1a1.EnvoyProxyWasmCodeSource{
 									Name: "security-filter",
 								},
 								PullPolicy: new(egv1a1.ImagePullPolicyAlways),
@@ -1076,14 +1076,14 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			wantErrors: []string{"PullPolicy is only valid for HTTP and Image code sources"},
 		},
 		{
-			desc: "Wasm EnvoyProxyModule with empty module name",
+			desc: "Wasm EnvoyProxy with empty module name",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
 							Code: egv1a1.WasmCodeSource{
-								Type: egv1a1.EnvoyProxyModuleWasmCodeSourceType,
-								EnvoyProxyModule: &egv1a1.EnvoyProxyModuleWasmCodeSource{
+								Type: egv1a1.EnvoyProxyWasmCodeSourceType,
+								EnvoyProxy: &egv1a1.EnvoyProxyWasmCodeSource{
 									Name: "",
 								},
 							},
@@ -1101,7 +1101,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.wasm[0].code.envoyProxyModule.name: Invalid value:",
+				"spec.wasm[0].code.envoyProxy.name: Invalid value:",
 				"should be at least 1 chars long",
 			},
 		},

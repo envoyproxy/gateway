@@ -22,15 +22,15 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, WasmEnvoyProxyModuleTest)
+	ConformanceTests = append(ConformanceTests, WasmEnvoyProxyTest)
 }
 
-// WasmEnvoyProxyModuleTest loads Wasm from a local path registered on EnvoyProxy.
+// WasmEnvoyProxyTest loads Wasm from a local path registered on EnvoyProxy.
 // The Envoy image (envoyproxy/gateway-wasm-module-test) embeds the example .wasm.
-var WasmEnvoyProxyModuleTest = suite.ConformanceTest{
-	ShortName:   "WasmEnvoyProxyModule",
-	Description: "Test EnvoyProxyModule Wasm source that loads a local module and adds response headers",
-	Manifests:   []string{"testdata/wasm-envoyproxy-module.yaml"},
+var WasmEnvoyProxyTest = suite.ConformanceTest{
+	ShortName:   "WasmEnvoyProxy",
+	Description: "Test EnvoyProxy Wasm source that loads a local module and adds response headers",
+	Manifests:   []string{"testdata/wasm-envoyproxy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with envoy proxy module wasm", func(t *testing.T) {
 			ns := "gateway-conformance-infra"

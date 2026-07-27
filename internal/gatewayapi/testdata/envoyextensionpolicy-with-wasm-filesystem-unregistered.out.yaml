@@ -11,9 +11,9 @@ envoyExtensionPolicies:
       name: httproute-1
     wasm:
     - code:
-        envoyProxyModule:
+        envoyProxy:
           name: not-registered
-        type: EnvoyProxyModule
+        type: EnvoyProxy
       name: wasm-filter-missing
   status:
     ancestors:
