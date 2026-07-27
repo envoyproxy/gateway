@@ -19,6 +19,7 @@ import (
 	"net/mail"
 	"net/netip"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -120,8 +121,6 @@ func (t *Translator) ProcessSecurityPolicies(
 		listenerSetMap[key] = &policyListenerSetTargetContext{ListenerSet: ls}
 	}
 
-	policyCopies := securityPolicyCopiesWithStatusDeepCopy(securityPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy, policyMapSize)
 
 	// Map of attached Policy to Gateway. Used for policy merge process.
@@ -160,7 +159,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -184,7 +183,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -202,7 +201,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListenerSetListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -227,7 +226,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListenerSet(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -245,7 +244,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -270,7 +269,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -1722,8 +1721,12 @@ func containsWildcard(s string) bool {
 }
 
 func wildcard2regex(wildcard string) string {
-	regexStr := strings.ReplaceAll(wildcard, ".", "\\.")
-	regexStr = strings.ReplaceAll(regexStr, "*", ".*")
+	// Escape every regex metacharacter so that characters that are valid in an
+	// origin but special in a regex (e.g. '.', and '+' which is allowed in
+	// RFC 3986 schemes such as "git+ssh") are matched literally. QuoteMeta
+	// escapes '*' as "\*", so translate those back into the ".*" wildcard.
+	regexStr := regexp.QuoteMeta(wildcard)
+	regexStr = strings.ReplaceAll(regexStr, `\*`, ".*")
 	return regexStr
 }
 
@@ -1765,8 +1768,9 @@ func (t *Translator) buildJWT(
 	}
 
 	return &ir.JWT{
-		AllowMissing: ptr.Deref(policy.Spec.JWT.Optional, false),
-		Providers:    providers,
+		AllowMissing:         ptr.Deref(policy.Spec.JWT.Optional, false),
+		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.FailOpen, false),
+		Providers:            providers,
 	}, nil
 }
 
@@ -2420,10 +2424,8 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		return fmt.Errorf("error parsing token endpoint URL: %w", err)
 	}
 
-	if ip, err := netip.ParseAddr(parsedURL.Hostname()); err == nil {
-		if ip.Unmap().Is4() {
-			return fmt.Errorf("token endpoint URL must be a domain name: %s", tokenEndpoint)
-		}
+	if _, err := netip.ParseAddr(parsedURL.Hostname()); err == nil {
+		return fmt.Errorf("token endpoint URL must be a domain name: %s", tokenEndpoint)
 	}
 
 	if parsedURL.Port() != "" {
@@ -2906,6 +2908,20 @@ func validateAuthorizationGeoIP(
 		return nil, errors.New("authorization clientIPGeoLocations requires ClientTrafficPolicy.spec.clientIPDetection to be configured")
 	}
 
+	modeCount := 0
+	if clientIPDetection.XForwardedFor != nil {
+		modeCount++
+	}
+	if clientIPDetection.CustomHeader != nil {
+		modeCount++
+	}
+	if clientIPDetection.DirectSourceIP != nil {
+		modeCount++
+	}
+	if modeCount != 1 {
+		return nil, errors.New("authorization clientIPGeoLocations requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}")
+	}
+
 	if clientIPDetection.XForwardedFor != nil &&
 		len(clientIPDetection.XForwardedFor.TrustedCIDRs) > 0 {
 		return nil, errors.New("authorization clientIPGeoLocations does not support ClientIPDetection.XForwardedFor.TrustedCIDRs")
@@ -3098,16 +3114,4 @@ func buildExtAuthContextExtensionOwners(route, parent *egv1a1.SecurityPolicy) ma
 		}
 	}
 	return owners
-}
-
-// securityPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func securityPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.SecurityPolicy) []*egv1a1.SecurityPolicy {
-	copies := make([]*egv1a1.SecurityPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

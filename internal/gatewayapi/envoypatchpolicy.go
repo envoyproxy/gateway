@@ -19,11 +19,10 @@ import (
 
 func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR resource.XdsIRMap) []*egv1a1.EnvoyPatchPolicy {
 	// EnvoyPatchPolicies are already sorted by the provider layer (priority, then timestamp, then name)
-	policyCopies := envoyPatchPolicyCopiesWithStatusDeepCopy(envoyPatchPolicies)
 	res := make([]*egv1a1.EnvoyPatchPolicy, 0, len(envoyPatchPolicies))
 
 	for i := range envoyPatchPolicies {
-		policy := policyCopies[i]
+		policy := envoyPatchPolicies[i]
 		res = append(res, policy)
 		var (
 			ancestorRef gwapiv1.ParentReference
@@ -145,16 +144,4 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	}
 
 	return res
-}
-
-// envoyPatchPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func envoyPatchPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyPatchPolicy) []*egv1a1.EnvoyPatchPolicy {
-	copies := make([]*egv1a1.EnvoyPatchPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

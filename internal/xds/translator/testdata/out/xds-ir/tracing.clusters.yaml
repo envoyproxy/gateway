@@ -25,10 +25,16 @@
     thresholds:
     - maxConnections: 2048
       maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 15s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
     clusterName: tracing-0
@@ -61,8 +67,6 @@
     interval: 5s
     maxEjectionPercent: 10
   perConnectionBufferLimitBytes: 20971520
-  respectDnsTtl: true
-  type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions

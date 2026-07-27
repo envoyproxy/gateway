@@ -10,10 +10,65 @@ import (
 	"testing"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"github.com/stretchr/testify/require"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
+
+func TestBuildRouteTracingSampling(t *testing.T) {
+	tests := []struct {
+		name               string
+		clientSampling     *gwapiv1.Fraction
+		wantClientSampling *xdstype.FractionalPercent
+	}{
+		{
+			name: "client sampling configured",
+			clientSampling: &gwapiv1.Fraction{
+				Numerator:   2,
+				Denominator: new(int32(100)),
+			},
+			wantClientSampling: &xdstype.FractionalPercent{Numerator: 2},
+		},
+		{
+			name: "client sampling defaults to zero",
+			wantClientSampling: &xdstype.FractionalPercent{
+				Numerator:   0,
+				Denominator: xdstype.FractionalPercent_HUNDRED,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			httpRoute := &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					Telemetry: &ir.BackendTelemetry{
+						Tracing: &ir.BackendTracing{
+							SamplingFraction: &gwapiv1.Fraction{
+								Numerator:   1,
+								Denominator: new(int32(100)),
+							},
+							ClientSamplingFraction: tc.clientSampling,
+							OverallSamplingFraction: &gwapiv1.Fraction{
+								Numerator:   3,
+								Denominator: new(int32(100)),
+							},
+						},
+					},
+				},
+			}
+
+			got, err := buildRouteTracing(httpRoute)
+			require.NoError(t, err)
+			require.Equal(t, &xdstype.FractionalPercent{Numerator: 1}, got.RandomSampling)
+			require.Equal(t, tc.wantClientSampling, got.ClientSampling)
+			require.Equal(t, &xdstype.FractionalPercent{Numerator: 3}, got.OverallSampling)
+		})
+	}
+}
 
 func TestBuildHashPolicy(t *testing.T) {
 	tests := []struct {

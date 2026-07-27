@@ -92,6 +92,20 @@ func Test_wildcard2regex(t *testing.T) {
 			origin:   "http://foo.example.com",
 			want:     1,
 		},
+		{
+			// A scheme containing '+' (valid per RFC 3986, e.g. "git+ssh") must be
+			// matched literally and not treated as a regex quantifier.
+			name:     "scheme with plus and wildcard host matches",
+			wildcard: "git+ssh://*.example.com",
+			origin:   "git+ssh://foo.example.com",
+			want:     1,
+		},
+		{
+			name:     "scheme with plus does not match quantifier expansion",
+			wildcard: "git+ssh://*.example.com",
+			origin:   "gitssh://foo.example.com",
+			want:     0,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1394,6 +1408,38 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 				CountryDBSource: countryDB,
 			}),
 			wantErr: "requires ClientTrafficPolicy.spec.clientIPDetection to be configured",
+		},
+		{
+			name:          "empty client ip detection rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{},
+			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}",
+		},
+		{
+			name:          "multiple client ip detection modes rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				CustomHeader:   &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
+				DirectSourceIP: &egv1a1.DirectSourceIPSettings{},
+			},
+			wantErr: "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directSourceIP}",
+		},
+		{
+			name:          "direct source ip accepted",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				DirectSourceIP: &egv1a1.DirectSourceIPSettings{},
+			},
+			wantProvider: true,
 		},
 		{
 			name:          "trusted cidrs rejected",

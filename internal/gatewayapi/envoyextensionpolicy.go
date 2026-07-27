@@ -109,8 +109,6 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 		listenerSetMap[key] = &policyListenerSetTargetContext{ListenerSet: ls}
 	}
 
-	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
 
 	// overrides records child scopes whose policies displace policies attached
@@ -134,7 +132,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -160,7 +158,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -232,7 +230,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -258,7 +256,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -1167,6 +1165,10 @@ func (t *Translator) buildExtProc(
 		extProcIR.MessageTimeout = ir.MetaV1DurationPtr(d)
 	}
 
+	if extProc.ShadowMode != nil {
+		extProcIR.ShadowMode = extProc.ShadowMode
+	}
+
 	if extProc.FailOpen != nil {
 		extProcIR.FailOpen = extProc.FailOpen
 	}
@@ -1558,16 +1560,4 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
-}
-
-// envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func envoyExtensionPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyExtensionPolicy) []*egv1a1.EnvoyExtensionPolicy {
-	copies := make([]*egv1a1.EnvoyExtensionPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

@@ -45,3 +45,5 @@ extensionManager:
 runtimeFlags:
   enabled:
     - XDSNameSchemeV2
+  disabled:
+    - EndpointSliceIndex

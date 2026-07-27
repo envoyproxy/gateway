@@ -442,6 +442,9 @@ func TestDecode(t *testing.T) {
 						Enabled: []egv1a1.RuntimeFlag{
 							"XDSNameSchemeV2",
 						},
+						Disabled: []egv1a1.RuntimeFlag{
+							"EndpointSliceIndex",
+						},
 					},
 				},
 			},
