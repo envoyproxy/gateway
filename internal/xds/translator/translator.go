@@ -1224,7 +1224,7 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsCo
 	if tlsConfig.CACertificate.SDS != nil {
 		// get secret from SDS
 		sds := tlsConfig.CACertificate.SDS
-		clusterName := sdsClusterNameFromURL(sds.URL)
+		clusterName := sdsClusterNameFromURL(sds.GetURL())
 		validationContext.ValidationContextSdsSecretConfig = sdsSecretConfig(sds.SecretName, clusterName)
 	}
 	hasSANValidations := false
@@ -1319,7 +1319,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 
 	for _, clientCert := range tlsConfig.ClientCertificates {
 		if sds := clientCert.SDS; sds != nil {
-			clusterName := sdsClusterNameFromURL(sds.URL)
+			clusterName := sdsClusterNameFromURL(sds.GetURL())
 			sds := sdsSecretConfig(sds.SecretName, clusterName)
 			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs, sds)
 			continue

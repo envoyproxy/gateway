@@ -228,13 +228,15 @@ xdsIR:
               caCertificate:
                 name: policy-btls/default-ca
                 sds:
+                  address: /var/run/secrets/workload-spiffe-uds/socket
+                  scheme: unix
                   secretName: ROOTCA
-                  url: /var/run/secrets/workload-spiffe-uds/socket
               clientCertificates:
               - name: ""
                 sds:
+                  address: /var/run/secrets/workload-spiffe-uds/socket
+                  scheme: unix
                   secretName: default
-                  url: /var/run/secrets/workload-spiffe-uds/socket
               maxVersion: "1.3"
               minVersion: "1.2"
               sni: example.com
