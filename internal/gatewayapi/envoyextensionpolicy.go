@@ -171,49 +171,54 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 		}
 	}
 
-	// Process the policies targeting ListenerSet Listeners
-	for i, currPolicy := range envoyExtensionPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
-		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
-		for _, currTarget := range targetRefs {
-			if isListenerSetListener(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = policyCopies[i]
-					res = append(res, policy)
-					handledPolicies[policyName] = policy
-				}
+	// Only run the ListenerSet-specific　translation when at least one ListenerSet exists.
+	// When none are present, no policy can successfully attach to a ListenerSet (the target resolves to
+	// nil and processing returns early), so these loops would be pure overhead.
+	if len(resources.ListenerSets) > 0 {
+		// Process the policies targeting ListenerSet Listeners
+		for i, currPolicy := range envoyExtensionPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+			targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+			for _, currTarget := range targetRefs {
+				if isListenerSetListener(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = policyCopies[i]
+						res = append(res, policy)
+						handledPolicies[policyName] = policy
+					}
 
-				t.processEnvoyExtensionPolicyForListenerSet(resources, xdsIR,
-					gatewayMap, listenerSetMap, overrides, policy, currTarget)
+					t.processEnvoyExtensionPolicyForListenerSet(resources, xdsIR,
+						gatewayMap, listenerSetMap, overrides, policy, currTarget)
+				}
 			}
 		}
-	}
 
-	// Process the policies targeting ListenerSets
-	for i, currPolicy := range envoyExtensionPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := resolvePolicyTargets(
-			currPolicy.Spec.PolicyTargetReferences,
-			resources.ListenerSets,
-			resources.ReferenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindEnvoyExtensionPolicy,
-			currPolicy.Namespace,
-			t.GetNamespace,
-		)
-		for _, currTarget := range targetRefs {
-			if isListenerSet(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = policyCopies[i]
-					res = append(res, policy)
-					handledPolicies[policyName] = policy
+		// Process the policies targeting ListenerSets
+		for i, currPolicy := range envoyExtensionPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			targetRefs := resolvePolicyTargets(
+				currPolicy.Spec.PolicyTargetReferences,
+				resources.ListenerSets,
+				resources.ReferenceGrants,
+				egv1a1.GroupName,
+				egv1a1.KindEnvoyExtensionPolicy,
+				currPolicy.Namespace,
+				t.GetNamespace,
+			)
+			for _, currTarget := range targetRefs {
+				if isListenerSet(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = policyCopies[i]
+						res = append(res, policy)
+						handledPolicies[policyName] = policy
+					}
+
+					t.processEnvoyExtensionPolicyForListenerSet(resources, xdsIR,
+						gatewayMap, listenerSetMap, overrides, policy, currTarget)
 				}
-
-				t.processEnvoyExtensionPolicyForListenerSet(resources, xdsIR,
-					gatewayMap, listenerSetMap, overrides, policy, currTarget)
 			}
 		}
 	}
