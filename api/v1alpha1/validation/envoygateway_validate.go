@@ -40,9 +40,6 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		if err := validateEnvoyGatewayKubernetesProvider(eg.Provider.Kubernetes); err != nil {
 			return err
 		}
-		if err := validateEnvoyGatewayKubernetesRateLimit(eg.RateLimit); err != nil {
-			return err
-		}
 	case egv1a1.ProviderTypeCustom:
 		if err := validateEnvoyGatewayCustomProvider(eg.Provider.Custom); err != nil {
 			return err
@@ -52,6 +49,10 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	}
 
 	if err := validateEnvoyGatewayLogging(eg.Logging); err != nil {
+		return err
+	}
+
+	if err := validateEnvoyGatewayRateLimit(eg.RateLimit); err != nil {
 		return err
 	}
 
@@ -217,7 +218,7 @@ func validateEnvoyGatewayLogging(logging *egv1a1.EnvoyGatewayLogging) error {
 	return nil
 }
 
-func validateEnvoyGatewayKubernetesRateLimit(rateLimit *egv1a1.RateLimit) error {
+func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 	if rateLimit == nil {
 		return nil
 	}

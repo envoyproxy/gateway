@@ -1594,7 +1594,7 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateEnvoyGatewayKubernetesRateLimit(tc.rateLimit)
+			err := validateEnvoyGatewayRateLimit(tc.rateLimit)
 			if tc.expectErr {
 				require.Error(t, err)
 			} else {
