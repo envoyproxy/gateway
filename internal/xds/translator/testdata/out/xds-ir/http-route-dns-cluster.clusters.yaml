@@ -1,10 +1,16 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
     clusterName: first-route-dest
@@ -35,5 +41,3 @@
             localityWeightedLbConfig: {}
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  type: STRICT_DNS

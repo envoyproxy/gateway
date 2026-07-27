@@ -28,6 +28,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	httputils "github.com/envoyproxy/gateway/internal/utils/http"
+	netutil "github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 const (
@@ -316,6 +317,8 @@ type HTTPListener struct {
 	GeoIPProvider *GeoIPProvider `json:"geoIPProvider,omitempty" yaml:"geoIPProvider,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
+	// Host contains settings for Host/Authority header normalization
+	Host *HostSettings `json:"host,omitempty" yaml:"host,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
@@ -490,11 +493,21 @@ type TLSCertificate struct {
 type SDSConfig struct {
 	// SecretName is an identifier for the SDS configuration.
 	SecretName string `json:"secretName" yaml:"secretName"`
-	// URL is the URL of the SDS server
-	URL string `json:"url" yaml:"url"`
+	// Scheme is the communication scheme to use when connecting to the SDS server (e.g., "http", "https", or "unix").
+	Scheme string `json:"scheme" yaml:"scheme"`
+	// Address is the host and port of the SDS server
+	Address string `json:"address" yaml:"address"`
 
 	// TODO: support additional SDS configuration options
 	// such as TLS settings for the SDS server, or authentication credentials if needed.
+}
+
+func (s *SDSConfig) GetURL() string {
+	if s.Scheme == "" {
+		return s.Address
+	}
+
+	return fmt.Sprintf("%s://%s", s.Scheme, s.Address)
 }
 
 func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
@@ -507,10 +520,15 @@ func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
 	if !hasURL || len(sdsURLBytes) == 0 {
 		return nil, fmt.Errorf("no url found in SDS reference secret %s/%s", s.Namespace, s.Name)
 	}
+	scheme, hostAndPort, err := netutil.ParseURL(string(sdsURLBytes)) // validate the URL format
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL in SDS reference secret %s/%s: %w", s.Namespace, s.Name, err)
+	}
 
 	return &SDSConfig{
 		SecretName: string(sdsSecretName),
-		URL:        string(sdsURLBytes),
+		Scheme:     scheme,
+		Address:    hostAndPort,
 	}, nil
 }
 
@@ -591,6 +609,13 @@ const (
 type PathSettings struct {
 	MergeSlashes         bool                   `json:"mergeSlashes" yaml:"mergeSlashes"`
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
+}
+
+// HostSettings holds configuration for Host/Authority header normalization
+// +k8s:deepcopy-gen=true
+type HostSettings struct {
+	// StripTrailingHostDot strips the trailing dot from the Host/Authority header before processing.
+	StripTrailingHostDot bool `json:"stripTrailingHostDot,omitempty" yaml:"stripTrailingHostDot,omitempty"`
 }
 
 // ProxyProtocolSettings holds configuration for proxy protocol
@@ -1086,10 +1111,12 @@ type BackendTelemetry struct {
 // BackendTracing defines the tracing configuration for the backend.
 // +k8s:deepcopy-gen=true
 type BackendTracing struct {
-	SamplingFraction *gwapiv1.Fraction       `json:"samplingFraction,omitempty" yaml:"samplingFraction,omitempty"`
-	CustomTags       []CustomTagMapEntry     `json:"customTags,omitempty" yaml:"customTags,omitempty"`
-	Tags             []MapEntry              `json:"tags,omitempty" yaml:"tags,omitempty"`
-	SpanName         *egv1a1.TracingSpanName `json:"spanName,omitempty" yaml:"spanName,omitempty"`
+	SamplingFraction        *gwapiv1.Fraction       `json:"samplingFraction,omitempty" yaml:"samplingFraction,omitempty"`
+	ClientSamplingFraction  *gwapiv1.Fraction       `json:"clientSamplingFraction,omitempty" yaml:"clientSamplingFraction,omitempty"`
+	OverallSamplingFraction *gwapiv1.Fraction       `json:"overallSamplingFraction,omitempty" yaml:"overallSamplingFraction,omitempty"`
+	CustomTags              []CustomTagMapEntry     `json:"customTags,omitempty" yaml:"customTags,omitempty"`
+	Tags                    []MapEntry              `json:"tags,omitempty" yaml:"tags,omitempty"`
+	SpanName                *egv1a1.TracingSpanName `json:"spanName,omitempty" yaml:"spanName,omitempty"`
 }
 
 // BackendMetrics defines the metrics configuration for the backend.
@@ -1207,6 +1234,10 @@ type JWT struct {
 	// AllowMissing determines whether a missing JWT is acceptable.
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
 
+	// AllowMissingOrFailed determines whether a missing or invalid JWT is tolerated.
+	// When true it supersedes AllowMissing and maps to Envoy's `allow_missing_or_failed`.
+	AllowMissingOrFailed bool `json:"allowMissingOrFailed,omitempty" yaml:"allowMissingOrFailed,omitempty"`
+
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
@@ -1319,6 +1350,10 @@ type OIDC struct {
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
 	// via the Authorization header Bearer scheme to the upstream.
 	ForwardAccessToken bool `json:"forwardAccessToken,omitempty"`
+
+	// ForwardIDTokenHeader is the upstream request header on which the OIDC ID token
+	// is forwarded. If nil, the ID token is not forwarded.
+	ForwardIDTokenHeader *string `json:"forwardIDTokenHeader,omitempty"`
 
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
 	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
@@ -2439,6 +2474,12 @@ type TCPRoute struct {
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
+// IsDynamicResolverRoute returns true if the TCPRoute routes to a dynamic resolver backend.
+func (t *TCPRoute) IsDynamicResolverRoute() bool {
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation.
+	return t.Destination != nil && len(t.Destination.Settings) == 1 && t.Destination.Settings[0].IsDynamicResolver
+}
+
 // TLS holds information for configuring TLS on a listener
 // +k8s:deepcopy-gen=true
 type TLS struct {
@@ -2995,17 +3036,19 @@ func (o *JSONPatchOperation) Validate() error {
 // Tracing defines the configuration for tracing a Envoy xDS Resource
 // +k8s:deepcopy-gen=true
 type Tracing struct {
-	ServiceName        string                  `json:"serviceName"`
-	Authority          string                  `json:"authority,omitempty"`
-	SamplingRate       float64                 `json:"samplingRate,omitempty"`
-	CustomTags         []CustomTagMapEntry     `json:"customTags,omitempty"`
-	Tags               []MapEntry              `json:"tags,omitempty"`
-	ResourceAttributes []MapEntry              `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
-	Destination        RouteDestination        `json:"destination,omitempty"`
-	Traffic            *TrafficFeatures        `json:"traffic,omitempty"`
-	Provider           egv1a1.TracingProvider  `json:"provider"`
-	Headers            []gwapiv1.HTTPHeader    `json:"headers,omitempty" yaml:"headers,omitempty"`
-	SpanName           *egv1a1.TracingSpanName `json:"spanName,omitempty"`
+	ServiceName         string                  `json:"serviceName"`
+	Authority           string                  `json:"authority,omitempty"`
+	SamplingRate        float64                 `json:"samplingRate,omitempty"`
+	ClientSamplingRate  *float64                `json:"clientSamplingRate,omitempty"`
+	OverallSamplingRate *float64                `json:"overallSamplingRate,omitempty"`
+	CustomTags          []CustomTagMapEntry     `json:"customTags,omitempty"`
+	Tags                []MapEntry              `json:"tags,omitempty"`
+	ResourceAttributes  []MapEntry              `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
+	Destination         RouteDestination        `json:"destination,omitempty"`
+	Traffic             *TrafficFeatures        `json:"traffic,omitempty"`
+	Provider            egv1a1.TracingProvider  `json:"provider"`
+	Headers             []gwapiv1.HTTPHeader    `json:"headers,omitempty" yaml:"headers,omitempty"`
+	SpanName            *egv1a1.TracingSpanName `json:"spanName,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
@@ -3683,6 +3726,10 @@ type ExtProc struct {
 
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	MessageTimeout *metav1.Duration `json:"messageTimeout,omitempty" yaml:"messageTimeout,omitempty"`
+
+	// ShadowMode sets if envoy gateway should treat this external processor as "send and go".
+	// Maps to Envoy's `observability_mode` on the ext_proc filter.
+	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
 
 	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
 	// external processor are terminated or passed-through.

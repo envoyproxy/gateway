@@ -1015,12 +1015,14 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	return &ir.Tracing{
-		Authority:          authority,
-		ServiceName:        serviceName,
-		SamplingRate:       proxySamplingRate(tracing),
-		CustomTags:         ir.CustomTagMapToSlice(tracing.CustomTags),
-		Tags:               ir.MapToSlice(tracing.Tags),
-		ResourceAttributes: ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
+		Authority:           authority,
+		ServiceName:         serviceName,
+		SamplingRate:        proxySamplingRate(tracing.SamplingRate, tracing.SamplingFraction),
+		ClientSamplingRate:  proxySamplingFractionPtr(tracing.ClientSamplingFraction),
+		OverallSamplingRate: proxySamplingFractionPtr(tracing.OverallSamplingFraction),
+		CustomTags:          ir.CustomTagMapToSlice(tracing.CustomTags),
+		Tags:                ir.MapToSlice(tracing.Tags),
+		ResourceAttributes:  ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
 		Destination: ir.RouteDestination{
 			Name:     destName,
 			Settings: ds,
@@ -1033,20 +1035,29 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}, nil
 }
 
-func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
-	rate := 100.0
-	if tracing.SamplingRate != nil {
-		rate = float64(*tracing.SamplingRate)
-	} else if tracing.SamplingFraction != nil {
-		numerator := float64(tracing.SamplingFraction.Numerator)
-		denominator := ptr.Deref(tracing.SamplingFraction.Denominator, 100)
-
-		rate = numerator * 100 / float64(denominator)
-		// Identifies a percentage, in the range [0.0, 100.0]
-		rate = math.Max(0, rate)
-		rate = math.Min(100, rate)
+func proxySamplingFractionPtr(fraction *gwapiv1.Fraction) *float64 {
+	if fraction == nil {
+		return nil
 	}
-	return rate
+	return new(proxySamplingRate(nil, fraction))
+}
+
+func proxySamplingRate(rate *uint32, fraction *gwapiv1.Fraction) float64 {
+	if rate != nil {
+		return float64(*rate)
+	}
+	if fraction == nil {
+		return 100.0
+	}
+
+	numerator := float64(fraction.Numerator)
+	denominator := ptr.Deref(fraction.Denominator, 100)
+
+	value := numerator * 100 / float64(denominator)
+	// Identifies a percentage, in the range [0.0, 100.0]
+	value = math.Max(0, value)
+	value = math.Min(100, value)
+	return value
 }
 
 // getAuthorityFromDestination extracts the gRPC authority from a destination setting.

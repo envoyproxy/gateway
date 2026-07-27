@@ -1,0 +1,1 @@
+Fixed the CORS `allowedOrigins` validation pattern in `SecurityPolicy` rejecting valid origins that use non-HTTP schemes; the pattern now allows all RFC 3986 compliant URL schemes (e.g. `moz-extension://example.com`).
