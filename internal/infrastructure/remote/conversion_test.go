@@ -75,6 +75,8 @@ func fullyPopulatedInfra() *ir.Infra {
 							ContainerPort: 8443,
 						},
 					},
+					// HTTP3 carries no fields; its presence enables HTTP/3.
+					HTTP3: &ir.HTTP3Settings{},
 				},
 				{
 					Name: "listener-2",
@@ -167,6 +169,32 @@ func TestInfraProtoRoundTrip(t *testing.T) {
 		out, err := protoToInfra(pbInfra)
 		require.NoError(t, err)
 
+		assert.Equal(t, in, out)
+	})
+
+	// HTTP3 is an empty message whose presence is the signal, so verify both
+	// that a nil HTTP3 stays nil and that a non-nil one survives the round trip
+	// and sets the proto field.
+	t.Run("listener_http3", func(t *testing.T) {
+		in := &ir.Infra{
+			Proxy: &ir.ProxyInfra{
+				Name:      "proxy",
+				Namespace: "ns",
+				Listeners: []*ir.ProxyListener{
+					{Name: "with-http3", HTTP3: &ir.HTTP3Settings{}},
+					{Name: "without-http3"},
+				},
+			},
+		}
+
+		pbInfra, err := infraToProto(in)
+		require.NoError(t, err)
+		require.Len(t, pbInfra.GetProxy().GetListeners(), 2)
+		assert.NotNil(t, pbInfra.GetProxy().GetListeners()[0].GetHttp3())
+		assert.Nil(t, pbInfra.GetProxy().GetListeners()[1].GetHttp3())
+
+		out, err := protoToInfra(pbInfra)
+		require.NoError(t, err)
 		assert.Equal(t, in, out)
 	})
 }

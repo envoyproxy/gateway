@@ -626,7 +626,10 @@ type ProxyListener struct {
 	// name of the ProxyListener.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// ports define network ports of the listener.
-	Ports         []*ListenerPort `protobuf:"bytes,2,rep,name=ports,proto3" json:"ports,omitempty"`
+	Ports []*ListenerPort `protobuf:"bytes,2,rep,name=ports,proto3" json:"ports,omitempty"`
+	// http3 provides HTTP/3 configuration on the listener. Its presence enables
+	// HTTP/3; the message itself carries no fields.
+	Http3         *HTTP3Settings `protobuf:"bytes,3,opt,name=http3,proto3,oneof" json:"http3,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -675,6 +678,52 @@ func (x *ProxyListener) GetPorts() []*ListenerPort {
 	return nil
 }
 
+func (x *ProxyListener) GetHttp3() *HTTP3Settings {
+	if x != nil {
+		return x.Http3
+	}
+	return nil
+}
+
+// HTTP3Settings provides HTTP/3 configuration on the listener. It mirrors
+// ir.HTTP3Settings and carries no fields; its presence signals that HTTP/3 is
+// enabled.
+type HTTP3Settings struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HTTP3Settings) Reset() {
+	*x = HTTP3Settings{}
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HTTP3Settings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HTTP3Settings) ProtoMessage() {}
+
+func (x *HTTP3Settings) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HTTP3Settings.ProtoReflect.Descriptor instead.
+func (*HTTP3Settings) Descriptor() ([]byte, []int) {
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{11}
+}
+
 // ListenerPort defines a network port of a listener. It mirrors
 // ir.ListenerPort.
 type ListenerPort struct {
@@ -693,7 +742,7 @@ type ListenerPort struct {
 
 func (x *ListenerPort) Reset() {
 	*x = ListenerPort{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[11]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -705,7 +754,7 @@ func (x *ListenerPort) String() string {
 func (*ListenerPort) ProtoMessage() {}
 
 func (x *ListenerPort) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[11]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -718,7 +767,7 @@ func (x *ListenerPort) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListenerPort.ProtoReflect.Descriptor instead.
 func (*ListenerPort) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{11}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListenerPort) GetName() string {
@@ -772,7 +821,7 @@ type ResolvedMetricSink struct {
 
 func (x *ResolvedMetricSink) Reset() {
 	*x = ResolvedMetricSink{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[12]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -784,7 +833,7 @@ func (x *ResolvedMetricSink) String() string {
 func (*ResolvedMetricSink) ProtoMessage() {}
 
 func (x *ResolvedMetricSink) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[12]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -797,7 +846,7 @@ func (x *ResolvedMetricSink) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolvedMetricSink.ProtoReflect.Descriptor instead.
 func (*ResolvedMetricSink) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{12}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ResolvedMetricSink) GetDestination() *RouteDestination {
@@ -856,7 +905,7 @@ type HTTPHeader struct {
 
 func (x *HTTPHeader) Reset() {
 	*x = HTTPHeader{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[13]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -868,7 +917,7 @@ func (x *HTTPHeader) String() string {
 func (*HTTPHeader) ProtoMessage() {}
 
 func (x *HTTPHeader) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[13]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -881,7 +930,7 @@ func (x *HTTPHeader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HTTPHeader.ProtoReflect.Descriptor instead.
 func (*HTTPHeader) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{13}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *HTTPHeader) GetName() string {
@@ -910,7 +959,7 @@ type RouteDestination struct {
 
 func (x *RouteDestination) Reset() {
 	*x = RouteDestination{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[14]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -922,7 +971,7 @@ func (x *RouteDestination) String() string {
 func (*RouteDestination) ProtoMessage() {}
 
 func (x *RouteDestination) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[14]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -935,7 +984,7 @@ func (x *RouteDestination) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RouteDestination.ProtoReflect.Descriptor instead.
 func (*RouteDestination) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{14}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RouteDestination) GetSettings() []*DestinationSetting {
@@ -959,7 +1008,7 @@ type DestinationSetting struct {
 
 func (x *DestinationSetting) Reset() {
 	*x = DestinationSetting{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[15]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -971,7 +1020,7 @@ func (x *DestinationSetting) String() string {
 func (*DestinationSetting) ProtoMessage() {}
 
 func (x *DestinationSetting) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[15]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -984,7 +1033,7 @@ func (x *DestinationSetting) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DestinationSetting.ProtoReflect.Descriptor instead.
 func (*DestinationSetting) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{15}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DestinationSetting) GetEndpoints() []*DestinationEndpoint {
@@ -1016,7 +1065,7 @@ type DestinationEndpoint struct {
 
 func (x *DestinationEndpoint) Reset() {
 	*x = DestinationEndpoint{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[16]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1028,7 +1077,7 @@ func (x *DestinationEndpoint) String() string {
 func (*DestinationEndpoint) ProtoMessage() {}
 
 func (x *DestinationEndpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[16]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1041,7 +1090,7 @@ func (x *DestinationEndpoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DestinationEndpoint.ProtoReflect.Descriptor instead.
 func (*DestinationEndpoint) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{16}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DestinationEndpoint) GetHost() string {
@@ -1074,7 +1123,7 @@ type TLSUpstreamConfig struct {
 
 func (x *TLSUpstreamConfig) Reset() {
 	*x = TLSUpstreamConfig{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[17]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1086,7 +1135,7 @@ func (x *TLSUpstreamConfig) String() string {
 func (*TLSUpstreamConfig) ProtoMessage() {}
 
 func (x *TLSUpstreamConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[17]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1099,7 +1148,7 @@ func (x *TLSUpstreamConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TLSUpstreamConfig.ProtoReflect.Descriptor instead.
 func (*TLSUpstreamConfig) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{17}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *TLSUpstreamConfig) GetSni() string {
@@ -1135,7 +1184,7 @@ type TLSConfig struct {
 
 func (x *TLSConfig) Reset() {
 	*x = TLSConfig{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[18]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1147,7 +1196,7 @@ func (x *TLSConfig) String() string {
 func (*TLSConfig) ProtoMessage() {}
 
 func (x *TLSConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[18]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1160,7 +1209,7 @@ func (x *TLSConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TLSConfig.ProtoReflect.Descriptor instead.
 func (*TLSConfig) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{18}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TLSConfig) GetCaCertificate() *TLSCACertificate {
@@ -1182,7 +1231,7 @@ type TLSCACertificate struct {
 
 func (x *TLSCACertificate) Reset() {
 	*x = TLSCACertificate{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[19]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1194,7 +1243,7 @@ func (x *TLSCACertificate) String() string {
 func (*TLSCACertificate) ProtoMessage() {}
 
 func (x *TLSCACertificate) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[19]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1207,7 +1256,7 @@ func (x *TLSCACertificate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TLSCACertificate.ProtoReflect.Descriptor instead.
 func (*TLSCACertificate) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{19}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *TLSCACertificate) GetCertificate() []byte {
@@ -1225,7 +1274,7 @@ type CreateOrUpdateRateLimitInfraRequest struct {
 
 func (x *CreateOrUpdateRateLimitInfraRequest) Reset() {
 	*x = CreateOrUpdateRateLimitInfraRequest{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[20]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1237,7 +1286,7 @@ func (x *CreateOrUpdateRateLimitInfraRequest) String() string {
 func (*CreateOrUpdateRateLimitInfraRequest) ProtoMessage() {}
 
 func (x *CreateOrUpdateRateLimitInfraRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[20]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1250,7 +1299,7 @@ func (x *CreateOrUpdateRateLimitInfraRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use CreateOrUpdateRateLimitInfraRequest.ProtoReflect.Descriptor instead.
 func (*CreateOrUpdateRateLimitInfraRequest) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{20}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{21}
 }
 
 type CreateOrUpdateRateLimitInfraResponse struct {
@@ -1261,7 +1310,7 @@ type CreateOrUpdateRateLimitInfraResponse struct {
 
 func (x *CreateOrUpdateRateLimitInfraResponse) Reset() {
 	*x = CreateOrUpdateRateLimitInfraResponse{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[21]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1273,7 +1322,7 @@ func (x *CreateOrUpdateRateLimitInfraResponse) String() string {
 func (*CreateOrUpdateRateLimitInfraResponse) ProtoMessage() {}
 
 func (x *CreateOrUpdateRateLimitInfraResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[21]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1286,7 +1335,7 @@ func (x *CreateOrUpdateRateLimitInfraResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use CreateOrUpdateRateLimitInfraResponse.ProtoReflect.Descriptor instead.
 func (*CreateOrUpdateRateLimitInfraResponse) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{21}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{22}
 }
 
 type DeleteRateLimitInfraRequest struct {
@@ -1297,7 +1346,7 @@ type DeleteRateLimitInfraRequest struct {
 
 func (x *DeleteRateLimitInfraRequest) Reset() {
 	*x = DeleteRateLimitInfraRequest{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[22]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1309,7 +1358,7 @@ func (x *DeleteRateLimitInfraRequest) String() string {
 func (*DeleteRateLimitInfraRequest) ProtoMessage() {}
 
 func (x *DeleteRateLimitInfraRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[22]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1322,7 +1371,7 @@ func (x *DeleteRateLimitInfraRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRateLimitInfraRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRateLimitInfraRequest) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{22}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{23}
 }
 
 type DeleteRateLimitInfraResponse struct {
@@ -1333,7 +1382,7 @@ type DeleteRateLimitInfraResponse struct {
 
 func (x *DeleteRateLimitInfraResponse) Reset() {
 	*x = DeleteRateLimitInfraResponse{}
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[23]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1345,7 +1394,7 @@ func (x *DeleteRateLimitInfraResponse) String() string {
 func (*DeleteRateLimitInfraResponse) ProtoMessage() {}
 
 func (x *DeleteRateLimitInfraResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_remoteinfra_service_proto_msgTypes[23]
+	mi := &file_proto_remoteinfra_service_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1358,7 +1407,7 @@ func (x *DeleteRateLimitInfraResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRateLimitInfraResponse.ProtoReflect.Descriptor instead.
 func (*DeleteRateLimitInfraResponse) Descriptor() ([]byte, []int) {
-	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{23}
+	return file_proto_remoteinfra_service_proto_rawDescGZIP(), []int{24}
 }
 
 var File_proto_remoteinfra_service_proto protoreflect.FileDescriptor
@@ -1459,13 +1508,19 @@ var file_proto_remoteinfra_service_proto_rawDesc = string([]byte{
 	0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
 	0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63,
 	0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61,
-	0x63, 0x65, 0x22, 0x61, 0x0a, 0x0d, 0x50, 0x72, 0x6f, 0x78, 0x79, 0x4c, 0x69, 0x73, 0x74, 0x65,
-	0x6e, 0x65, 0x72, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x3c, 0x0a, 0x05, 0x70, 0x6f, 0x72, 0x74, 0x73,
-	0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61,
-	0x74, 0x65, 0x77, 0x61, 0x79, 0x2e, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x69, 0x6e, 0x66, 0x72,
-	0x61, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x65, 0x6e, 0x65, 0x72, 0x50, 0x6f, 0x72, 0x74, 0x52, 0x05,
-	0x70, 0x6f, 0x72, 0x74, 0x73, 0x22, 0x88, 0x01, 0x0a, 0x0c, 0x4c, 0x69, 0x73, 0x74, 0x65, 0x6e,
+	0x63, 0x65, 0x22, 0xaf, 0x01, 0x0a, 0x0d, 0x50, 0x72, 0x6f, 0x78, 0x79, 0x4c, 0x69, 0x73, 0x74,
+	0x65, 0x6e, 0x65, 0x72, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x3c, 0x0a, 0x05, 0x70, 0x6f, 0x72, 0x74,
+	0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67,
+	0x61, 0x74, 0x65, 0x77, 0x61, 0x79, 0x2e, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x69, 0x6e, 0x66,
+	0x72, 0x61, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x65, 0x6e, 0x65, 0x72, 0x50, 0x6f, 0x72, 0x74, 0x52,
+	0x05, 0x70, 0x6f, 0x72, 0x74, 0x73, 0x12, 0x42, 0x0a, 0x05, 0x68, 0x74, 0x74, 0x70, 0x33, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x27, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61, 0x74,
+	0x65, 0x77, 0x61, 0x79, 0x2e, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x69, 0x6e, 0x66, 0x72, 0x61,
+	0x2e, 0x48, 0x54, 0x54, 0x50, 0x33, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73, 0x48, 0x00,
+	0x52, 0x05, 0x68, 0x74, 0x74, 0x70, 0x33, 0x88, 0x01, 0x01, 0x42, 0x08, 0x0a, 0x06, 0x5f, 0x68,
+	0x74, 0x74, 0x70, 0x33, 0x22, 0x0f, 0x0a, 0x0d, 0x48, 0x54, 0x54, 0x50, 0x33, 0x53, 0x65, 0x74,
+	0x74, 0x69, 0x6e, 0x67, 0x73, 0x22, 0x88, 0x01, 0x0a, 0x0c, 0x4c, 0x69, 0x73, 0x74, 0x65, 0x6e,
 	0x65, 0x72, 0x50, 0x6f, 0x72, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x72,
 	0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x70, 0x72,
@@ -1613,7 +1668,7 @@ func file_proto_remoteinfra_service_proto_rawDescGZIP() []byte {
 	return file_proto_remoteinfra_service_proto_rawDescData
 }
 
-var file_proto_remoteinfra_service_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_proto_remoteinfra_service_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_proto_remoteinfra_service_proto_goTypes = []any{
 	(*CreateOrUpdateProxyInfraRequest)(nil),      // 0: envoygateway.remoteinfra.CreateOrUpdateProxyInfraRequest
 	(*CreateOrUpdateProxyInfraResponse)(nil),     // 1: envoygateway.remoteinfra.CreateOrUpdateProxyInfraResponse
@@ -1626,22 +1681,23 @@ var file_proto_remoteinfra_service_proto_goTypes = []any{
 	(*MapEntry)(nil),                             // 8: envoygateway.remoteinfra.MapEntry
 	(*PolicyMetadata)(nil),                       // 9: envoygateway.remoteinfra.PolicyMetadata
 	(*ProxyListener)(nil),                        // 10: envoygateway.remoteinfra.ProxyListener
-	(*ListenerPort)(nil),                         // 11: envoygateway.remoteinfra.ListenerPort
-	(*ResolvedMetricSink)(nil),                   // 12: envoygateway.remoteinfra.ResolvedMetricSink
-	(*HTTPHeader)(nil),                           // 13: envoygateway.remoteinfra.HTTPHeader
-	(*RouteDestination)(nil),                     // 14: envoygateway.remoteinfra.RouteDestination
-	(*DestinationSetting)(nil),                   // 15: envoygateway.remoteinfra.DestinationSetting
-	(*DestinationEndpoint)(nil),                  // 16: envoygateway.remoteinfra.DestinationEndpoint
-	(*TLSUpstreamConfig)(nil),                    // 17: envoygateway.remoteinfra.TLSUpstreamConfig
-	(*TLSConfig)(nil),                            // 18: envoygateway.remoteinfra.TLSConfig
-	(*TLSCACertificate)(nil),                     // 19: envoygateway.remoteinfra.TLSCACertificate
-	(*CreateOrUpdateRateLimitInfraRequest)(nil),  // 20: envoygateway.remoteinfra.CreateOrUpdateRateLimitInfraRequest
-	(*CreateOrUpdateRateLimitInfraResponse)(nil), // 21: envoygateway.remoteinfra.CreateOrUpdateRateLimitInfraResponse
-	(*DeleteRateLimitInfraRequest)(nil),          // 22: envoygateway.remoteinfra.DeleteRateLimitInfraRequest
-	(*DeleteRateLimitInfraResponse)(nil),         // 23: envoygateway.remoteinfra.DeleteRateLimitInfraResponse
-	nil,                                          // 24: envoygateway.remoteinfra.InfraMetadata.AnnotationsEntry
-	nil,                                          // 25: envoygateway.remoteinfra.InfraMetadata.LabelsEntry
-	nil,                                          // 26: envoygateway.remoteinfra.ResolvedMetricSink.ResourceAttributesEntry
+	(*HTTP3Settings)(nil),                        // 11: envoygateway.remoteinfra.HTTP3Settings
+	(*ListenerPort)(nil),                         // 12: envoygateway.remoteinfra.ListenerPort
+	(*ResolvedMetricSink)(nil),                   // 13: envoygateway.remoteinfra.ResolvedMetricSink
+	(*HTTPHeader)(nil),                           // 14: envoygateway.remoteinfra.HTTPHeader
+	(*RouteDestination)(nil),                     // 15: envoygateway.remoteinfra.RouteDestination
+	(*DestinationSetting)(nil),                   // 16: envoygateway.remoteinfra.DestinationSetting
+	(*DestinationEndpoint)(nil),                  // 17: envoygateway.remoteinfra.DestinationEndpoint
+	(*TLSUpstreamConfig)(nil),                    // 18: envoygateway.remoteinfra.TLSUpstreamConfig
+	(*TLSConfig)(nil),                            // 19: envoygateway.remoteinfra.TLSConfig
+	(*TLSCACertificate)(nil),                     // 20: envoygateway.remoteinfra.TLSCACertificate
+	(*CreateOrUpdateRateLimitInfraRequest)(nil),  // 21: envoygateway.remoteinfra.CreateOrUpdateRateLimitInfraRequest
+	(*CreateOrUpdateRateLimitInfraResponse)(nil), // 22: envoygateway.remoteinfra.CreateOrUpdateRateLimitInfraResponse
+	(*DeleteRateLimitInfraRequest)(nil),          // 23: envoygateway.remoteinfra.DeleteRateLimitInfraRequest
+	(*DeleteRateLimitInfraResponse)(nil),         // 24: envoygateway.remoteinfra.DeleteRateLimitInfraResponse
+	nil,                                          // 25: envoygateway.remoteinfra.InfraMetadata.AnnotationsEntry
+	nil,                                          // 26: envoygateway.remoteinfra.InfraMetadata.LabelsEntry
+	nil,                                          // 27: envoygateway.remoteinfra.ResolvedMetricSink.ResourceAttributesEntry
 }
 var file_proto_remoteinfra_service_proto_depIdxs = []int32{
 	4,  // 0: envoygateway.remoteinfra.CreateOrUpdateProxyInfraRequest.infra:type_name -> envoygateway.remoteinfra.Infra
@@ -1649,34 +1705,35 @@ var file_proto_remoteinfra_service_proto_depIdxs = []int32{
 	5,  // 2: envoygateway.remoteinfra.Infra.proxy:type_name -> envoygateway.remoteinfra.ProxyInfra
 	6,  // 3: envoygateway.remoteinfra.ProxyInfra.metadata:type_name -> envoygateway.remoteinfra.InfraMetadata
 	10, // 4: envoygateway.remoteinfra.ProxyInfra.listeners:type_name -> envoygateway.remoteinfra.ProxyListener
-	12, // 5: envoygateway.remoteinfra.ProxyInfra.resolved_metric_sinks:type_name -> envoygateway.remoteinfra.ResolvedMetricSink
-	24, // 6: envoygateway.remoteinfra.InfraMetadata.annotations:type_name -> envoygateway.remoteinfra.InfraMetadata.AnnotationsEntry
-	25, // 7: envoygateway.remoteinfra.InfraMetadata.labels:type_name -> envoygateway.remoteinfra.InfraMetadata.LabelsEntry
+	13, // 5: envoygateway.remoteinfra.ProxyInfra.resolved_metric_sinks:type_name -> envoygateway.remoteinfra.ResolvedMetricSink
+	25, // 6: envoygateway.remoteinfra.InfraMetadata.annotations:type_name -> envoygateway.remoteinfra.InfraMetadata.AnnotationsEntry
+	26, // 7: envoygateway.remoteinfra.InfraMetadata.labels:type_name -> envoygateway.remoteinfra.InfraMetadata.LabelsEntry
 	7,  // 8: envoygateway.remoteinfra.InfraMetadata.owner_reference:type_name -> envoygateway.remoteinfra.ResourceMetadata
 	8,  // 9: envoygateway.remoteinfra.ResourceMetadata.annotations:type_name -> envoygateway.remoteinfra.MapEntry
 	9,  // 10: envoygateway.remoteinfra.ResourceMetadata.policies:type_name -> envoygateway.remoteinfra.PolicyMetadata
-	11, // 11: envoygateway.remoteinfra.ProxyListener.ports:type_name -> envoygateway.remoteinfra.ListenerPort
-	14, // 12: envoygateway.remoteinfra.ResolvedMetricSink.destination:type_name -> envoygateway.remoteinfra.RouteDestination
-	13, // 13: envoygateway.remoteinfra.ResolvedMetricSink.headers:type_name -> envoygateway.remoteinfra.HTTPHeader
-	26, // 14: envoygateway.remoteinfra.ResolvedMetricSink.resource_attributes:type_name -> envoygateway.remoteinfra.ResolvedMetricSink.ResourceAttributesEntry
-	15, // 15: envoygateway.remoteinfra.RouteDestination.settings:type_name -> envoygateway.remoteinfra.DestinationSetting
-	16, // 16: envoygateway.remoteinfra.DestinationSetting.endpoints:type_name -> envoygateway.remoteinfra.DestinationEndpoint
-	17, // 17: envoygateway.remoteinfra.DestinationSetting.tls:type_name -> envoygateway.remoteinfra.TLSUpstreamConfig
-	18, // 18: envoygateway.remoteinfra.TLSUpstreamConfig.tls_config:type_name -> envoygateway.remoteinfra.TLSConfig
-	19, // 19: envoygateway.remoteinfra.TLSConfig.ca_certificate:type_name -> envoygateway.remoteinfra.TLSCACertificate
-	0,  // 20: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.CreateOrUpdateProxyInfra:input_type -> envoygateway.remoteinfra.CreateOrUpdateProxyInfraRequest
-	2,  // 21: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.DeleteProxyInfra:input_type -> envoygateway.remoteinfra.DeleteProxyInfraRequest
-	20, // 22: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.CreateOrUpdateRateLimitInfra:input_type -> envoygateway.remoteinfra.CreateOrUpdateRateLimitInfraRequest
-	22, // 23: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.DeleteRateLimitInfra:input_type -> envoygateway.remoteinfra.DeleteRateLimitInfraRequest
-	1,  // 24: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.CreateOrUpdateProxyInfra:output_type -> envoygateway.remoteinfra.CreateOrUpdateProxyInfraResponse
-	3,  // 25: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.DeleteProxyInfra:output_type -> envoygateway.remoteinfra.DeleteProxyInfraResponse
-	21, // 26: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.CreateOrUpdateRateLimitInfra:output_type -> envoygateway.remoteinfra.CreateOrUpdateRateLimitInfraResponse
-	23, // 27: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.DeleteRateLimitInfra:output_type -> envoygateway.remoteinfra.DeleteRateLimitInfraResponse
-	24, // [24:28] is the sub-list for method output_type
-	20, // [20:24] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	12, // 11: envoygateway.remoteinfra.ProxyListener.ports:type_name -> envoygateway.remoteinfra.ListenerPort
+	11, // 12: envoygateway.remoteinfra.ProxyListener.http3:type_name -> envoygateway.remoteinfra.HTTP3Settings
+	15, // 13: envoygateway.remoteinfra.ResolvedMetricSink.destination:type_name -> envoygateway.remoteinfra.RouteDestination
+	14, // 14: envoygateway.remoteinfra.ResolvedMetricSink.headers:type_name -> envoygateway.remoteinfra.HTTPHeader
+	27, // 15: envoygateway.remoteinfra.ResolvedMetricSink.resource_attributes:type_name -> envoygateway.remoteinfra.ResolvedMetricSink.ResourceAttributesEntry
+	16, // 16: envoygateway.remoteinfra.RouteDestination.settings:type_name -> envoygateway.remoteinfra.DestinationSetting
+	17, // 17: envoygateway.remoteinfra.DestinationSetting.endpoints:type_name -> envoygateway.remoteinfra.DestinationEndpoint
+	18, // 18: envoygateway.remoteinfra.DestinationSetting.tls:type_name -> envoygateway.remoteinfra.TLSUpstreamConfig
+	19, // 19: envoygateway.remoteinfra.TLSUpstreamConfig.tls_config:type_name -> envoygateway.remoteinfra.TLSConfig
+	20, // 20: envoygateway.remoteinfra.TLSConfig.ca_certificate:type_name -> envoygateway.remoteinfra.TLSCACertificate
+	0,  // 21: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.CreateOrUpdateProxyInfra:input_type -> envoygateway.remoteinfra.CreateOrUpdateProxyInfraRequest
+	2,  // 22: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.DeleteProxyInfra:input_type -> envoygateway.remoteinfra.DeleteProxyInfraRequest
+	21, // 23: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.CreateOrUpdateRateLimitInfra:input_type -> envoygateway.remoteinfra.CreateOrUpdateRateLimitInfraRequest
+	23, // 24: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.DeleteRateLimitInfra:input_type -> envoygateway.remoteinfra.DeleteRateLimitInfraRequest
+	1,  // 25: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.CreateOrUpdateProxyInfra:output_type -> envoygateway.remoteinfra.CreateOrUpdateProxyInfraResponse
+	3,  // 26: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.DeleteProxyInfra:output_type -> envoygateway.remoteinfra.DeleteProxyInfraResponse
+	22, // 27: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.CreateOrUpdateRateLimitInfra:output_type -> envoygateway.remoteinfra.CreateOrUpdateRateLimitInfraResponse
+	24, // 28: envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider.DeleteRateLimitInfra:output_type -> envoygateway.remoteinfra.DeleteRateLimitInfraResponse
+	25, // [25:29] is the sub-list for method output_type
+	21, // [21:25] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_proto_remoteinfra_service_proto_init() }
@@ -1684,14 +1741,15 @@ func file_proto_remoteinfra_service_proto_init() {
 	if File_proto_remoteinfra_service_proto != nil {
 		return
 	}
-	file_proto_remoteinfra_service_proto_msgTypes[17].OneofWrappers = []any{}
+	file_proto_remoteinfra_service_proto_msgTypes[10].OneofWrappers = []any{}
+	file_proto_remoteinfra_service_proto_msgTypes[18].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_remoteinfra_service_proto_rawDesc), len(file_proto_remoteinfra_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

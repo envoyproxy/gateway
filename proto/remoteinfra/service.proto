@@ -118,6 +118,15 @@ message ProxyListener {
   string name = 1;
   // ports define network ports of the listener.
   repeated ListenerPort ports = 2;
+  // http3 provides HTTP/3 configuration on the listener. Its presence enables
+  // HTTP/3; the message itself carries no fields.
+  optional HTTP3Settings http3 = 3;
+}
+
+// HTTP3Settings provides HTTP/3 configuration on the listener. It mirrors
+// ir.HTTP3Settings and carries no fields; its presence signals that HTTP/3 is
+// enabled.
+message HTTP3Settings {
 }
 
 // ListenerPort defines a network port of a listener. It mirrors

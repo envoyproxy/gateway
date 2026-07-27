@@ -121,6 +121,11 @@ func proxyListenerToProto(l *ir.ProxyListener) *remoteinfra.ProxyListener {
 		Name: l.Name,
 	}
 
+	// HTTP3 carries no fields; its presence signals that HTTP/3 is enabled.
+	if l.HTTP3 != nil {
+		out.Http3 = &remoteinfra.HTTP3Settings{}
+	}
+
 	for _, port := range l.Ports {
 		out.Ports = append(out.Ports, &remoteinfra.ListenerPort{
 			Name:          port.Name,
@@ -346,6 +351,11 @@ func protoToResourceMetadata(m *remoteinfra.ResourceMetadata) *ir.ResourceMetada
 func protoToProxyListener(l *remoteinfra.ProxyListener) *ir.ProxyListener {
 	out := &ir.ProxyListener{
 		Name: l.GetName(),
+	}
+
+	// HTTP3 carries no fields; its presence signals that HTTP/3 is enabled.
+	if l.GetHttp3() != nil {
+		out.HTTP3 = &ir.HTTP3Settings{}
 	}
 
 	for _, port := range l.GetPorts() {
