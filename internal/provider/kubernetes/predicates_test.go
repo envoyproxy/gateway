@@ -1155,9 +1155,11 @@ func TestValidateServiceForReconcile(t *testing.T) {
 
 	testCases := []struct {
 		name string
-		// grpcRouteCRDAbsent simulates a cluster whose Gateway API CRD bundle doesn't
-		// include GRPCRoute, e.g. GKE's managed gateway-api-crds addon.
+		// grpcRouteCRDAbsent and tlsRouteCRDAbsent simulate a cluster whose Gateway API
+		// CRD bundle doesn't include GRPCRoute or TLSRoute, e.g. GKE's managed
+		// gateway-api-crds addon.
 		grpcRouteCRDAbsent bool
+		tlsRouteCRDAbsent  bool
 		configs            []client.Object
 		service            client.Object
 		expect             bool
@@ -1266,6 +1268,18 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
+		},
+		{
+			name:              "tls route service routes exist but TLSRoute CRD is absent",
+			tlsRouteCRDAbsent: true,
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				sampleGateway,
+				test.GetTLSRoute(types.NamespacedName{Name: "tlsroute-test"}, "scheduled-status-test",
+					types.NamespacedName{Name: "service"}, 443),
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
+			expect:  false,
 		},
 		{
 			name: "udp route service routes exist",
@@ -1511,6 +1525,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 
 	for _, tc := range testCases {
 		r.grpcRouteCRDExists = !tc.grpcRouteCRDAbsent
+		r.tlsRouteCRDExists = !tc.tlsRouteCRDAbsent
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).

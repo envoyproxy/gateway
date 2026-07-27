@@ -91,6 +91,7 @@ type gatewayAPIReconciler struct {
 	serviceImportCRDExists bool
 	spCRDExists            bool
 	tcpRouteCRDExists      bool
+	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
 
 	clusterTrustBundleExits bool
@@ -1900,9 +1901,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 		// Route Processing
 
-		// Get TLSRoute objects and check if it exists.
-		if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			return err
+		if r.tlsRouteCRDExists {
+			// Get TLSRoute objects and check if it exists.
+			if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
+			}
 		}
 
 		// Get HTTPRoute objects and check if it exists.
@@ -2316,14 +2319,17 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Some managed Kubernetes offerings install a curated subset of the Gateway API standard channel
-	// CRDs and don't allow users to add the missing ones: for example, GKE's managed gateway-api-crds
-	// addon ships Gateway API v1.5 without ListenerSet and GRPCRoute, because the GKE Gateway
-	// controller doesn't implement them. Keep the ListenerSet and GRPCRoute watches optional so that
-	// Envoy Gateway starts on those clusters instead of crash-looping: the absent kind can't be used
-	// there anyway, so its absence should disable the feature, not take down the controller.
-	// TODO: remove these checks once ListenerSet and GRPCRoute are included in the Gateway API CRD
-	// bundles shipped by the major managed Kubernetes offerings.
+	// The watches for ListenerSet, GRPCRoute, TLSRoute, TCPRoute and UDPRoute are all optional. These
+	// kinds are in the Gateway API standard channel today (ListenerSet and TLSRoute graduated in
+	// v1.5, TCPRoute and UDPRoute in v1.6), but they are still not guaranteed to be installed:
+	//   - The cluster may run an older Gateway API bundle, or a standard channel bundle from before
+	//     the kind graduated, so the kind is simply not there.
+	//   - Some managed Kubernetes offerings install only a curated subset of the standard channel and
+	//     don't let users add the missing CRDs. For example, GKE's managed gateway-api-crds addon
+	//     ships Gateway API v1.5 without ListenerSet and GRPCRoute, because the GKE Gateway
+	//     controller doesn't implement them.
+	// Envoy Gateway must start on those clusters instead of crash-looping: an absent kind can't be
+	// used there anyway, so its absence should disable the feature, not take down the controller.
 	r.listenerSetCRDExists, err = checkCRD(resource.KindListenerSet, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
@@ -2372,7 +2378,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// See the comment on the ListenerSet watch above for why this watch is optional.
 	r.grpcRouteCRDExists, err = checkCRD(resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
@@ -2399,24 +2404,31 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			return err
 		}
 	}
-
-	// Watch TLSRoute CRUDs and process affected Gateways.
-	tlsrPredicates := commonPredicates[*gwapiv1.TLSRoute]()
-	if r.namespaceLabel != nil {
-		tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TLSRoute) bool {
-			return r.hasMatchingNamespaceLabels(route)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.TLSRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.TLSRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, route)
-			}),
-			tlsrPredicates...)); err != nil {
+	r.tlsRouteCRDExists, err = checkCRD(resource.KindTLSRoute, gwapiv1.GroupVersion.String())
+	if err != nil {
 		return err
 	}
-	if err := addTLSRouteIndexers(ctx, mgr); err != nil {
-		return err
+	if !r.tlsRouteCRDExists {
+		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
+	} else {
+		// Watch TLSRoute CRUDs and process affected Gateways.
+		tlsrPredicates := commonPredicates[*gwapiv1.TLSRoute]()
+		if r.namespaceLabel != nil {
+			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TLSRoute) bool {
+				return r.hasMatchingNamespaceLabels(route)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.TLSRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.TLSRoute) []reconcile.Request {
+					return r.enqueueClass(ctx, route)
+				}),
+				tlsrPredicates...)); err != nil {
+			return err
+		}
+		if err := addTLSRouteIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	r.udpRouteCRDExists, err = checkCRD(resource.KindUDPRoute, gwapiv1.GroupVersion.String())
