@@ -583,6 +583,7 @@ xds:
                   rds:
                     configSource:
                       ads: {}
+                      initialFetchTimeout: 0s
                       resourceApiVersion: V3
                     routeConfigName: default/eg/http
                   serverHeaderTransformation: PASS_THROUGH
@@ -695,6 +696,7 @@ xds:
                   rds:
                     configSource:
                       ads: {}
+                      initialFetchTimeout: 0s
                       resourceApiVersion: V3
                     routeConfigName: default/eg/grpc
                   serverHeaderTransformation: PASS_THROUGH

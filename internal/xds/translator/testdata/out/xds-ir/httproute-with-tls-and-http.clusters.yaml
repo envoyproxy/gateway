@@ -49,6 +49,7 @@
               name: policy-btls-for-backend-1/default-ca
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: example.com
   type: EDS
