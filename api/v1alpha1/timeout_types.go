@@ -71,14 +71,6 @@ type ClientTimeout struct {
 	//
 	// +optional
 	HTTP *HTTPClientTimeout `json:"http,omitempty"`
-
-	// ConnectionInspectionTimeout is the maximum time to wait for initial inspection
-	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.
-	// If exceeded, the connection is dropped.
-	// Default: 15 seconds.
-	//
-	// +optional
-	ConnectionInspectionTimeout  *gwapiv1.Duration `json:"connectionInspectionTimeout,omitempty"`
 }
 
 // TCPClientTimeout only provides timeout configuration on the listener whose protocol is TCP or TLS.
@@ -97,6 +89,14 @@ type TCPClientTimeout struct {
 	//
 	// +optional
 	HandshakeTimeout  *gwapiv1.Duration `json:"handshakeTimeout,omitempty"`
+
+	// ConnectionInspectionTimeout is the maximum time to wait for initial inspection
+	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.
+	// If exceeded, the connection is dropped.
+	// Default: 15 seconds.
+	//
+	// +optional
+	ConnectionInspectionTimeout  *gwapiv1.Duration `json:"connectionInspectionTimeout,omitempty"`
 }
 
 type HTTPClientTimeout struct {
