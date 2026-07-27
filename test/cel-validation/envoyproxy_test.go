@@ -2646,17 +2646,17 @@ func TestProxyHealthCheckLog(t *testing.T) {
 			},
 		},
 		{
-			desc: "valid - FailureTransition and SuccessTransition",
+			desc: "valid - FailureSeriesStart and HealthyTransition",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
 				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
-				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart, egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
 			},
 		},
 		{
-			desc: "valid - Failure and SuccessTransition",
+			desc: "valid - Failure and HealthyTransition",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
 				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
-				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
 			},
 		},
 		{
@@ -2695,17 +2695,17 @@ func TestProxyHealthCheckLog(t *testing.T) {
 			expectedError: "path",
 		},
 		{
-			desc: "valid - Failure and FailureTransition together (treated as Failure)",
+			desc: "valid - Failure and FailureSeriesStart together (treated as Failure)",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
 				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
-				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
 			},
 		},
 		{
-			desc: "valid - Success and SuccessTransition together (treated as Success)",
+			desc: "valid - Success and HealthyTransition together (treated as Success)",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
 				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
-				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess, egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
 			},
 		},
 		{
@@ -2720,7 +2720,7 @@ func TestProxyHealthCheckLog(t *testing.T) {
 			desc: "invalid - success type without failure type",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
 				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
-				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
 			},
 			expectedError: "a failure type and a success type must both be specified together",
 		},

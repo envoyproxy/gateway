@@ -24318,9 +24318,9 @@ spec:
                             health check probe outcomes produce a log entry.
                           enum:
                           - Failure
-                          - FailureTransition
+                          - FailureSeriesStart
                           - Success
-                          - SuccessTransition
+                          - HealthyTransition
                           type: string
                         maxItems: 4
                         type: array
@@ -24328,8 +24328,8 @@ spec:
                         x-kubernetes-validations:
                         - message: a failure type and a success type must both be
                             specified together
-                          rule: self.exists(e, e == 'Failure' || e == 'FailureTransition')
-                            == self.exists(e, e == 'Success' || e == 'SuccessTransition')
+                          rule: self.exists(e, e == 'Failure' || e == 'FailureSeriesStart')
+                            == self.exists(e, e == 'Success' || e == 'HealthyTransition')
                       sinks:
                         description: |-
                           Sinks defines where health check events are written.

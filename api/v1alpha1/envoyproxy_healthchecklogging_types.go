@@ -26,7 +26,7 @@ type ProxyHealthCheckLog struct {
 	// specified then a success type must also be specified, and vice versa.
 	//
 	// +kubebuilder:validation:MaxItems=4
-	// +kubebuilder:validation:XValidation:rule="self.exists(e, e == 'Failure' || e == 'FailureTransition') == self.exists(e, e == 'Success' || e == 'SuccessTransition')",message="a failure type and a success type must both be specified together"
+	// +kubebuilder:validation:XValidation:rule="self.exists(e, e == 'Failure' || e == 'FailureSeriesStart') == self.exists(e, e == 'Success' || e == 'HealthyTransition')",message="a failure type and a success type must both be specified together"
 	// +listType=set
 	// +optional
 	Matches []ProxyHealthCheckLogEventType `json:"matches,omitempty"`
@@ -34,25 +34,28 @@ type ProxyHealthCheckLog struct {
 
 // ProxyHealthCheckLogEventType specifies which health check probe outcomes produce a log entry.
 //
-// +kubebuilder:validation:Enum=Failure;FailureTransition;Success;SuccessTransition
+// +kubebuilder:validation:Enum=Failure;FailureSeriesStart;Success;HealthyTransition
 type ProxyHealthCheckLogEventType string
 
 const (
 	// ProxyHealthCheckLogEventTypeFailure logs every failed probe regardless of
-	// the host's current health state.
+	// the host's current health state (Envoy's always_log_health_check_failures=true).
 	ProxyHealthCheckLogEventTypeFailure ProxyHealthCheckLogEventType = "Failure"
 
-	// ProxyHealthCheckLogEventTypeFailureTransition logs only when a host
-	// transitions from healthy to unhealthy.
-	ProxyHealthCheckLogEventTypeFailureTransition ProxyHealthCheckLogEventType = "FailureTransition"
+	// ProxyHealthCheckLogEventTypeFailureSeriesStart logs only the first failed probe
+	// of a consecutive failure run — the probe that starts a potential healthy→unhealthy
+	// transition, regardless of whether unhealthyThreshold is ultimately reached
+	// (Envoy's always_log_health_check_failures=false).
+	ProxyHealthCheckLogEventTypeFailureSeriesStart ProxyHealthCheckLogEventType = "FailureSeriesStart"
 
 	// ProxyHealthCheckLogEventTypeSuccess logs every successful probe regardless
-	// of the host's current health state.
+	// of the host's current health state (Envoy's always_log_health_check_success=true).
 	ProxyHealthCheckLogEventTypeSuccess ProxyHealthCheckLogEventType = "Success"
 
-	// ProxyHealthCheckLogEventTypeSuccessTransition logs only when a host
-	// transitions from unhealthy to healthy.
-	ProxyHealthCheckLogEventTypeSuccessTransition ProxyHealthCheckLogEventType = "SuccessTransition"
+	// ProxyHealthCheckLogEventTypeHealthyTransition logs the first successful probe of
+	// a consecutive success run AND when the host reaches the healthy threshold and
+	// transitions back to healthy (Envoy's always_log_health_check_success=false).
+	ProxyHealthCheckLogEventTypeHealthyTransition ProxyHealthCheckLogEventType = "HealthyTransition"
 )
 
 // ProxyHealthCheckLogSinkType is the type of a ProxyHealthCheckLog sink.

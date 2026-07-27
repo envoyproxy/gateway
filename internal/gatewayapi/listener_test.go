@@ -1611,10 +1611,10 @@ func TestTranslateHealthCheckLog(t *testing.T) {
 			},
 		},
 		{
-			name: "FailureTransition and SuccessTransition",
+			name: "FailureSeriesStart and HealthyTransition",
 			input: &egv1a1.ProxyHealthCheckLog{
 				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
-				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart, egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
 			},
 			expected: &ir.ProxyHealthCheckLog{
 				FileSinks: []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
@@ -1622,10 +1622,10 @@ func TestTranslateHealthCheckLog(t *testing.T) {
 			},
 		},
 		{
-			name: "Failure OR FailureTransition ORed to Failure",
+			name: "Failure OR FailureSeriesStart ORed to Failure",
 			input: &egv1a1.ProxyHealthCheckLog{
 				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
-				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
 			},
 			expected: &ir.ProxyHealthCheckLog{
 				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
@@ -1634,10 +1634,10 @@ func TestTranslateHealthCheckLog(t *testing.T) {
 			},
 		},
 		{
-			name: "Success OR SuccessTransition ORed to Success",
+			name: "Success OR HealthyTransition ORed to Success",
 			input: &egv1a1.ProxyHealthCheckLog{
 				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
-				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess, egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
 			},
 			expected: &ir.ProxyHealthCheckLog{
 				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
@@ -1646,15 +1646,15 @@ func TestTranslateHealthCheckLog(t *testing.T) {
 			},
 		},
 		{
-			name: "Failure and SuccessTransition",
+			name: "Failure and HealthyTransition",
 			input: &egv1a1.ProxyHealthCheckLog{
 				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
-				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
 			},
 			expected: &ir.ProxyHealthCheckLog{
 				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
 				AlwaysLogHealthCheckFailures: true,
-				// SuccessTransition alone: AlwaysLogHealthCheckSuccess stays false.
+				// HealthyTransition alone: AlwaysLogHealthCheckSuccess stays false.
 			},
 		},
 	}

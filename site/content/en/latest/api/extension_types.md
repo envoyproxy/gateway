@@ -4896,10 +4896,10 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Failure` | ProxyHealthCheckLogEventTypeFailure logs every failed probe regardless of<br />the host's current health state.<br /> | 
-| `FailureTransition` | ProxyHealthCheckLogEventTypeFailureTransition logs only when a host<br />transitions from healthy to unhealthy.<br /> | 
-| `Success` | ProxyHealthCheckLogEventTypeSuccess logs every successful probe regardless<br />of the host's current health state.<br /> | 
-| `SuccessTransition` | ProxyHealthCheckLogEventTypeSuccessTransition logs only when a host<br />transitions from unhealthy to healthy.<br /> | 
+| `Failure` | ProxyHealthCheckLogEventTypeFailure logs every failed probe regardless of<br />the host's current health state (Envoy's always_log_health_check_failures=true).<br /> | 
+| `FailureSeriesStart` | ProxyHealthCheckLogEventTypeFailureSeriesStart logs only the first failed probe<br />of a consecutive failure run — the probe that starts a potential healthy→unhealthy<br />transition, regardless of whether unhealthyThreshold is ultimately reached<br />(Envoy's always_log_health_check_failures=false).<br /> | 
+| `Success` | ProxyHealthCheckLogEventTypeSuccess logs every successful probe regardless<br />of the host's current health state (Envoy's always_log_health_check_success=true).<br /> | 
+| `HealthyTransition` | ProxyHealthCheckLogEventTypeHealthyTransition logs the first successful probe of<br />a consecutive success run AND when the host reaches the healthy threshold and<br />transitions back to healthy (Envoy's always_log_health_check_success=false).<br /> | 
 
 
 #### ProxyHealthCheckLogSink

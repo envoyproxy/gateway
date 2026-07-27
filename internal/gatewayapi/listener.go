@@ -738,9 +738,10 @@ func translateHealthCheckLog(hcLogging *egv1a1.ProxyHealthCheckLog) *ir.ProxyHea
 
 	// Translate Matches to the two Envoy booleans.
 	// Empty/omitted Matches means log everything (both always-log flags true).
-	// Failure sets AlwaysLogHealthCheckFailures; FailureTransition leaves it false
-	// (Envoy logs transitions by default). Same for Success/SuccessTransition.
-	// Both variants may coexist: Failure OR FailureTransition resolves to Failure.
+	// Failure sets AlwaysLogHealthCheckFailures=true (every probe logged).
+	// FailureSeriesStart leaves it false (only the first of a failure run is logged).
+	// Failure OR FailureSeriesStart resolves to Failure.
+	// Same logic applies for Success/HealthyTransition.
 	if len(hcLogging.Matches) == 0 {
 		irHCLogging.AlwaysLogHealthCheckFailures = true
 		irHCLogging.AlwaysLogHealthCheckSuccess = true
