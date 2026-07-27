@@ -88,10 +88,6 @@ func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, hook 
 		return err
 	}
 
-	// cfg.Logger is mutated concurrently on reload, so keep our own reference
-	// and update it only via l.LoggerUpdates() below, never read cfg.Logger again.
-	logger := cfg.Logger
-
 	l := loader.New(cfgPath, cfg, hook)
 	if err := l.Start(ctx, stdout); err != nil {
 		return err
@@ -103,20 +99,20 @@ func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, hook 
 
 	for {
 		select {
-		// Pick up the latest logger whenever a config reload replaces it.
-		case newLogger := <-l.LoggerUpdates():
-			logger = newLogger
 		// Exit if the config loader fails to start the runners.
 		// Continuing with failed runners would cause EG to function incorrectly.
 		case err := <-l.Errors():
-			logger.Error(err, "failed to start runners")
+			// Read the logger through the loader so the read is guarded by the
+			// same mutex the reload path holds while replacing it. Reading
+			// cfg.Logger directly here races with that swap.
+			l.Logger().Error(err, "failed to start runners")
 			// Wait for runners to finish before shutting down.
 			// This is to make sure no orphaned runner process is left running in standalone mode.
 			l.Wait()
 			return err
 		// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
 		case <-ctx.Done():
-			logger.Info("shutting down")
+			l.Logger().Info("shutting down")
 			// Wait for runners to finish before shutting down.
 			// This is to make sure no orphaned runner process is left running in standalone mode.
 			l.Wait()

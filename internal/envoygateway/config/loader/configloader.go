@@ -29,21 +29,17 @@ type Loader struct {
 	hook      HookFunc
 	hookErr   chan error
 
-	// loggerUpdates publishes the logger on each config reload; see LoggerUpdates.
-	loggerUpdates chan logging.Logger
-
 	w filewatcher.FileWatcher
 }
 
 func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 	return &Loader{
-		cfgPath:       cfgPath,
-		cfg:           cfg,
-		logger:        cfg.Logger.WithName("config-loader"),
-		hook:          f,
-		hookErr:       make(chan error, 1),
-		loggerUpdates: make(chan logging.Logger, 1),
-		w:             filewatcher.NewWatcher(),
+		cfgPath: cfgPath,
+		cfg:     cfg,
+		logger:  cfg.Logger.WithName("config-loader"),
+		hook:    f,
+		hookErr: make(chan error, 1),
+		w:       filewatcher.NewWatcher(),
 	}
 }
 
@@ -89,13 +85,11 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 					continue
 				}
 
-				newLogger := logging.NewLogger(logOut, eg.Logging)
 				r.cfgMu.Lock()
 				r.cfg.EnvoyGateway = eg
 				// update cfg logger
-				r.cfg.Logger = newLogger
+				r.cfg.Logger = logging.NewLogger(logOut, eg.Logging)
 				r.cfgMu.Unlock()
-				r.publishLogger(newLogger)
 
 				// cancel last
 				if r.cancel != nil {
@@ -148,20 +142,12 @@ func (r *Loader) Errors() <-chan error {
 	return r.hookErr
 }
 
-// LoggerUpdates returns a channel that receives the latest logger on each config reload.
-func (r *Loader) LoggerUpdates() <-chan logging.Logger {
-	return r.loggerUpdates
-}
-
-func (r *Loader) publishLogger(l logging.Logger) {
-	select {
-	case <-r.loggerUpdates: // drain a stale, unconsumed value, if any
-	default:
-	}
-	select {
-	case r.loggerUpdates <- l:
-	default:
-	}
+// Logger returns the current logger, safe to call concurrently with a config
+// reload replacing it.
+func (r *Loader) Logger() logging.Logger {
+	r.cfgMu.RLock()
+	defer r.cfgMu.RUnlock()
+	return r.cfg.Logger
 }
 
 // Wait returns when success to acquire mutex, which means no hook is running.
