@@ -76,7 +76,7 @@ func newManagerForCustom(ctx context.Context, cfg *config.Server, logger logging
 				return nil, fmt.Errorf("kubernetes client not found in server config")
 			}
 		}
-		return remote.NewInfra(cfg, remote.DefaultInfraClientFactory(cfg, k8sClient), errors), nil
+		return remote.NewInfra(remote.DefaultInfraClientFactory(cfg, k8sClient)), nil
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", infra.Type)
 	}

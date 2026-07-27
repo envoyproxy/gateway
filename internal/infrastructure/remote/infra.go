@@ -9,11 +9,7 @@ import (
 	"context"
 	"sync"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/envoyproxy/gateway/internal/message"
 )
 
 // Infra manages the creation and deletion of remotely managed proxy and rate
@@ -24,14 +20,6 @@ import (
 // Kubernetes secrets during process startup, where failures would crash the
 // pod before validation that the remote provider is actually being used.
 type Infra struct {
-	// EnvoyGateway is the configuration used to startup Envoy Gateway.
-	EnvoyGateway *egv1a1.EnvoyGateway
-
-	logger logging.Logger
-
-	// errors is the notifier used to send async errors to the main control loop.
-	errors message.RunnerErrorNotifier
-
 	// factory builds the InfraClient on demand. It must not be nil.
 	factory InfraClientFactory
 
@@ -42,12 +30,9 @@ type Infra struct {
 // NewInfra returns a new Infra that will lazily build its InfraClient via the
 // provided factory. The factory is invoked at most once for a successful
 // construction; if it returns an error, the next call will retry.
-func NewInfra(cfg *config.Server, factory InfraClientFactory, errors message.RunnerErrorNotifier) *Infra {
+func NewInfra(factory InfraClientFactory) *Infra {
 	return new(Infra{
-		EnvoyGateway: cfg.EnvoyGateway,
-		logger:       cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
-		errors:       errors,
-		factory:      factory,
+		factory: factory,
 	})
 }
 

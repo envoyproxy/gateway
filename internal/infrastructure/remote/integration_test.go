@@ -9,7 +9,6 @@ package remote
 
 import (
 	"context"
-	"io"
 	"net"
 	"sync"
 	"testing"
@@ -23,10 +22,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/proto/remoteinfra"
 )
 
@@ -152,45 +149,11 @@ func startLocalRemoteInfraServer(t *testing.T, srv *recordingRemoteInfraServer) 
 	}
 }
 
-func newIntegrationConfig(t *testing.T) *config.Server {
-	t.Helper()
-
-	cfg, err := config.New(io.Discard, io.Discard)
-	require.NoError(t, err)
-
-	cfg.ControllerNamespace = config.DefaultNamespace
-	cfg.EnvoyGateway.Provider = new(egv1a1.EnvoyGatewayProvider{
-		Type: egv1a1.ProviderTypeCustom,
-		Custom: new(egv1a1.EnvoyGatewayCustomProvider{
-			Resource: egv1a1.EnvoyGatewayResourceProvider{
-				Type: egv1a1.ResourceProviderTypeKubernetes,
-			},
-			Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
-				Type: egv1a1.InfrastructureProviderTypeRemote,
-				Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
-					Service: new(egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 1}),
-						},
-					}),
-				}),
-			}),
-		}),
-	})
-
-	return cfg
-}
-
 // newTestInfra returns an *Infra wired to the provided factory.
-func newTestInfra(t *testing.T, cfg *config.Server, factory InfraClientFactory) *Infra {
+func newTestInfra(t *testing.T, factory InfraClientFactory) *Infra {
 	t.Helper()
 
-	notifier := message.RunnerErrorNotifier{
-		RunnerName:   "infrastructure",
-		RunnerErrors: new(message.RunnerErrors{}),
-	}
-
-	infra := NewInfra(cfg, factory, notifier)
+	infra := NewInfra(factory)
 	t.Cleanup(func() {
 		_ = infra.Close()
 	})
@@ -205,8 +168,7 @@ func TestRemoteInfraIntegration(t *testing.T) {
 	srv := new(recordingRemoteInfraServer{})
 	factory := startLocalRemoteInfraServer(t, srv)
 
-	cfg := newIntegrationConfig(t)
-	infra := newTestInfra(t, cfg, factory)
+	infra := newTestInfra(t, factory)
 
 	t.Run("create_or_update_proxy_infra", func(t *testing.T) {
 		input := new(ir.Infra{
@@ -310,8 +272,7 @@ func TestRemoteInfraIntegration_ServerErrorPropagates(t *testing.T) {
 	})
 	factory := startLocalRemoteInfraServer(t, srv)
 
-	cfg := newIntegrationConfig(t)
-	infra := newTestInfra(t, cfg, factory)
+	infra := newTestInfra(t, factory)
 
 	err := infra.CreateOrUpdateProxyInfra(t.Context(), new(ir.Infra{
 		Proxy: new(ir.ProxyInfra{Name: "p", Namespace: "ns"}),

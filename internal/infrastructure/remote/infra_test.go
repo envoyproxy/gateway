@@ -8,15 +8,12 @@ package remote
 import (
 	"context"
 	"errors"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/message"
 )
 
 // fakeInfraClient is a stub implementation of InfraClient used to verify that
@@ -86,30 +83,15 @@ func (f *fakeFactory) build(_ context.Context) (InfraClient, error) {
 // newInfraWithFake returns an Infra wired to a factory that returns fc.
 func newInfraWithFake(t *testing.T, fc *fakeInfraClient) (*Infra, *fakeFactory) {
 	t.Helper()
-	cfg, err := config.New(io.Discard, io.Discard)
-	require.NoError(t, err)
-	notifier := new(message.RunnerErrorNotifier{
-		RunnerName:   "infrastructure",
-		RunnerErrors: new(message.RunnerErrors{}),
-	})
 	ff := new(fakeFactory{client: fc})
-	return NewInfra(cfg, ff.build, *notifier), ff
+	return NewInfra(ff.build), ff
 }
 
 func TestNewInfra(t *testing.T) {
 	t.Run("does_not_invoke_factory", func(t *testing.T) {
-		cfg, err := config.New(io.Discard, io.Discard)
-		require.NoError(t, err)
-		notifier := message.RunnerErrorNotifier{
-			RunnerName:   "infrastructure",
-			RunnerErrors: new(message.RunnerErrors{}),
-		}
-
 		ff := new(fakeFactory{client: new(fakeInfraClient{})})
-		infra := NewInfra(cfg, ff.build, notifier)
+		infra := NewInfra(ff.build)
 		require.NotNil(t, infra)
-		assert.Equal(t, cfg.EnvoyGateway, infra.EnvoyGateway)
-		assert.NotNil(t, infra.logger)
 		assert.Equal(t, 0, ff.calls,
 			"factory must not be invoked at construction time")
 	})
@@ -177,15 +159,9 @@ func TestInfra_LazyClientConstruction(t *testing.T) {
 	t.Run("factory_error_propagates_and_retries", func(t *testing.T) {
 		buildErr := errors.New("dial failed")
 		ff := new(fakeFactory{err: buildErr})
-		cfg, err := config.New(io.Discard, io.Discard)
-		require.NoError(t, err)
-		notifier := message.RunnerErrorNotifier{
-			RunnerName:   "infrastructure",
-			RunnerErrors: new(message.RunnerErrors{}),
-		}
-		infra := NewInfra(cfg, ff.build, notifier)
+		infra := NewInfra(ff.build)
 
-		err = infra.CreateOrUpdateRateLimitInfra(context.Background())
+		err := infra.CreateOrUpdateRateLimitInfra(context.Background())
 		require.ErrorIs(t, err, buildErr)
 		err = infra.CreateOrUpdateRateLimitInfra(context.Background())
 		require.ErrorIs(t, err, buildErr)
