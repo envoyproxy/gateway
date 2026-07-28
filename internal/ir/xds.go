@@ -1042,9 +1042,10 @@ type HTTPRoute struct {
 	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
 	// IsHTTP2 is set if the route is configured to serve HTTP2 traffic
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
-	// Priority is an explicit matching priority for this route. Higher values
-	// are matched ahead of lower ones, before Gateway API specificity ordering.
-	// Defaults to 0, which preserves specificity-based ordering.
+	// Priority is an explicit matching priority for this route, honored only
+	// when the listener has PreserveRouteOrder set. Higher values are matched
+	// first; routes of equal priority keep their user-defined order. Defaults
+	// to 0 and has no effect under the default specificity-based ordering.
 	Priority uint32 `json:"priority,omitempty" yaml:"priority,omitempty"`
 	// PathMatch defines the match conditions on the path.
 	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
