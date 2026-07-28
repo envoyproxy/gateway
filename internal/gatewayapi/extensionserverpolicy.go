@@ -301,7 +301,7 @@ func (t *Translator) processExtensionServerPolicyForGateway(
 
 	// Append policy extension server policy list for related gateway.
 	gatewayKey := t.getIRKey(gateway.Gateway)
-	xdsIR[gatewayKey].ExtensionServerPolicies = append(xdsIR[gatewayKey].ExtensionServerPolicies, &ir.UnstructuredRef{Object: policy})
+	xdsIR[gatewayKey].ExtensionServerPolicies = appendUnstructuredRefIfAbsent(xdsIR[gatewayKey].ExtensionServerPolicies, policy)
 
 	if t.translateExtServerPolicyForGateway(policy, gateway, currTarget, xdsIR) {
 		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
