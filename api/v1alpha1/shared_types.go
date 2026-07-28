@@ -19,19 +19,10 @@ const (
 	// SDSSecretType is the type for secrets that reference SDS configuration
 	SDSSecretType = "gateway.envoyproxy.io/sds"
 
-	// RoutePriorityAnnotation is an optional annotation on an HTTPRoute that
-	// assigns an explicit matching priority to every route rule it produces.
-	// The value is a non-negative integer; higher values are matched first.
-	//
-	// It is honored only on listeners that have opted out of Gateway API
-	// specificity sorting via EnvoyProxy.spec.preserveRouteOrder. In that mode,
-	// routes are ordered by this priority (higher first), and routes of equal
-	// priority keep their existing user-defined order. It has no effect under
-	// the default specificity-based ordering, so behavior is unchanged unless
-	// both preserveRouteOrder and this annotation are set.
-	//
-	// This lets single-owner gateways migrating from priority-based load
-	// balancers (ALB/nginx/HAProxy) state route order explicitly, rather than
+	// RoutePriorityAnnotation sets an explicit match priority (non-negative
+	// integer, higher wins) on every rule an HTTPRoute produces. Honored only
+	// under EnvoyProxy.spec.preserveRouteOrder; inert under the default
+	// specificity sort. Lets owners state route order explicitly instead of
 	// relying on preserveRouteOrder's creationTimestamp/name tie-break.
 	RoutePriorityAnnotation = "gateway.envoyproxy.io/route-priority"
 
