@@ -7,8 +7,7 @@ envoyProxyForGatewayClass:
   spec:
     mergeGateways: true
 envoyProxyDefaultSpec:
-  mergeBackends:
-    enabled: true
+  mergeBackends: {}
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway

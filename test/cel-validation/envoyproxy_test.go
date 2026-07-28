@@ -2486,34 +2486,19 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
 		{
-			desc: "mergeBackends with everything unset defaults to disabled and is valid",
+			desc: "mergeBackends present (empty) is valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: "mergeBackends enabled is valid",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: new(true)}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "mergeGateways and mergeBackends both enabled is invalid",
+			desc: "mergeGateways and mergeBackends both set is invalid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec.MergeGateways = new(true)
-				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: new(true)}
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
 			},
 			wantErrors: []string{"mergeGateways and mergeBackends cannot both be enabled"},
-		},
-		{
-			desc: "mergeGateways enabled with mergeBackends disabled is valid",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec.MergeGateways = new(true)
-				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: new(false)}
-			},
-			wantErrors: []string{},
 		},
 		{
 			desc: "mergeGateways enabled with mergeBackends unset is valid",
@@ -2523,10 +2508,10 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "mergeGateways disabled with mergeBackends enabled is valid",
+			desc: "mergeGateways disabled with mergeBackends set is valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec.MergeGateways = new(false)
-				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{Enabled: new(true)}
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
 			},
 			wantErrors: []string{},
 		},

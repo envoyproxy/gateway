@@ -702,13 +702,12 @@ func IsMergeBackendsEnabled(resources *resource.Resources) bool {
 	// Check GatewayClass-level EnvoyProxy first (higher priority)
 	if resources.EnvoyProxyForGatewayClass != nil &&
 		resources.EnvoyProxyForGatewayClass.Spec.MergeBackends != nil {
-		return ptr.Deref(resources.EnvoyProxyForGatewayClass.Spec.MergeBackends.Enabled, false)
+		return true
 	}
 
 	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
-	if resources.EnvoyProxyDefaultSpec != nil &&
-		resources.EnvoyProxyDefaultSpec.MergeBackends != nil {
-		return ptr.Deref(resources.EnvoyProxyDefaultSpec.MergeBackends.Enabled, false)
+	if resources.EnvoyProxyDefaultSpec != nil {
+		return resources.EnvoyProxyDefaultSpec.MergeBackends != nil
 	}
 
 	return false

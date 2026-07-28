@@ -610,19 +610,10 @@ func TestShouldMergeBackend(t *testing.T) {
 			name:         "disabled globally, but Gateway-level EnvoyProxy enables it",
 			mergeEnabled: false,
 			gatewayEnvoyProxy: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{MergeBackends: &egv1a1.MergeBackendsConfig{Enabled: new(true)}},
+				Spec: egv1a1.EnvoyProxySpec{MergeBackends: &egv1a1.MergeBackendsConfig{}},
 			},
 			backendRef: serviceBackendRef,
 			want:       true,
-		},
-		{
-			name:         "enabled globally, but Gateway-level EnvoyProxy disables it",
-			mergeEnabled: true,
-			gatewayEnvoyProxy: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{MergeBackends: &egv1a1.MergeBackendsConfig{Enabled: new(false)}},
-			},
-			backendRef: serviceBackendRef,
-			want:       false,
 		},
 		{
 			name:         "enabled, no routing type anywhere: baseline == effective (both Endpoint)",

@@ -582,7 +582,7 @@ func (t *Translator) shouldMergeBackend(
 // override (via gatewayCtx.envoyProxy) win over t.MergeBackends' GatewayClass/default value.
 func (t *Translator) isMergeBackendsEnabledForGateway(gatewayCtx *GatewayContext) bool {
 	if gatewayCtx != nil && gatewayCtx.envoyProxy != nil && gatewayCtx.envoyProxy.Spec.MergeBackends != nil {
-		return ptr.Deref(gatewayCtx.envoyProxy.Spec.MergeBackends.Enabled, false)
+		return true
 	}
 	return t.MergeBackends
 }

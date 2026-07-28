@@ -35,7 +35,7 @@ type EnvoyProxy struct {
 }
 
 // EnvoyProxySpec defines the desired state of EnvoyProxy.
-// +kubebuilder:validation:XValidation:message="mergeGateways and mergeBackends cannot both be enabled",rule="!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends) && has(self.mergeBackends.enabled) && self.mergeBackends.enabled)"
+// +kubebuilder:validation:XValidation:message="mergeGateways and mergeBackends cannot both be enabled",rule="!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends))"
 type EnvoyProxySpec struct {
 	// Provider defines the desired resource provider and provider-specific configuration.
 	// If unspecified, the "Kubernetes" resource provider is used with default configuration
@@ -100,7 +100,8 @@ type EnvoyProxySpec struct {
 	// rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
 	// improves upstream connection pooling.
 	//
-	// Disabled when unset. Mutually exclusive with MergeGateways.
+	// Disabled when unset; specifying this field at all (even without further configuration)
+	// enables it. Mutually exclusive with MergeGateways.
 	//
 	// +optional
 	MergeBackends *MergeBackendsConfig `json:"mergeBackends,omitempty"`
@@ -231,17 +232,10 @@ type EnvoyProxySpec struct {
 	MergeType *MergeType `json:"mergeType,omitempty"`
 }
 
-// MergeBackendsConfig configures backend cluster deduplication (MergeBackends).
-type MergeBackendsConfig struct {
-	// Enabled toggles whether cluster deduplication is considered at all. Defaults to false.
-	//
-	// A backendRef is only merged into a shared cluster when safe to do so; otherwise it falls
-	// back to a dedicated per-route cluster.
-	//
-	// +optional
-	// +kubebuilder:default=false
-	Enabled *bool `json:"enabled,omitempty"`
-}
+// MergeBackendsConfig configures backend cluster deduplication (MergeBackends). Its mere
+// presence on EnvoyProxySpec enables it; a backendRef is only merged into a shared cluster when
+// safe to do so, otherwise it falls back to a dedicated per-route cluster.
+type MergeBackendsConfig struct{}
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
 type EnvoyProxyGeoIP struct {

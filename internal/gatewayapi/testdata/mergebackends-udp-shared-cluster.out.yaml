@@ -76,8 +76,7 @@ infraIR:
           namespace: envoy-gateway-system
         spec:
           logging: {}
-          mergeBackends:
-            enabled: true
+          mergeBackends: {}
         status: {}
       listeners:
       - name: envoy-gateway/gateway-1/udp-1

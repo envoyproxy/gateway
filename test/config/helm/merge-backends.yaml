@@ -1,5 +1,4 @@
 config:
   envoyGateway:
     envoyProxy:
-      mergeBackends:
-        enabled: true
+      mergeBackends: {}

@@ -1608,8 +1608,7 @@ func TestIrBackendClusterName(t *testing.T) {
 }
 
 func TestIsMergeBackendsEnabled(t *testing.T) {
-	enabled := &egv1a1.MergeBackendsConfig{Enabled: new(true)}
-	disabled := &egv1a1.MergeBackendsConfig{Enabled: new(false)}
+	enabled := &egv1a1.MergeBackendsConfig{}
 
 	tests := []struct {
 		name string
@@ -1629,14 +1628,6 @@ func TestIsMergeBackendsEnabled(t *testing.T) {
 				EnvoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{MergeBackends: enabled},
 			},
 			want: true,
-		},
-		{
-			name: "gatewayclass envoyproxy takes precedence over default spec",
-			res: &resource.Resources{
-				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{MergeBackends: disabled}},
-				EnvoyProxyDefaultSpec:     &egv1a1.EnvoyProxySpec{MergeBackends: enabled},
-			},
-			want: false,
 		},
 		{
 			name: "gatewayclass envoyproxy set but MergeBackends nil falls back to default spec",

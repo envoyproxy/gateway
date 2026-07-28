@@ -5,8 +5,7 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
     name: test
   spec:
-    mergeBackends:
-      enabled: true
+    mergeBackends: {}
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway

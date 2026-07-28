@@ -145,8 +145,7 @@ infraIR:
           namespace: envoy-gateway-system
         spec:
           logging: {}
-          mergeBackends:
-            enabled: true
+          mergeBackends: {}
         status: {}
       listeners:
       - name: default/gateway-1/http-1
