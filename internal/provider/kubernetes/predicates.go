@@ -742,35 +742,43 @@ func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gatewa
 
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
-	var services corev1.ServiceList
 	merged := r.isGatewayClassMerged(string(gateway.Spec.GatewayClassName))
-	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, merged)))
 	listOpts := &client.ListOptions{
-		LabelSelector: labelSelector,
+		LabelSelector: labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, merged))),
 		Namespace:     envoyObjectNamespace(r, gateway),
 	}
-	if err := r.client.List(ctx, &services, listOpts); err != nil {
+
+	// Fast path: cached read.
+	svc, err := listEnvoyService(ctx, r.client, listOpts)
+	if err != nil || svc != nil {
+		return svc, err
+	}
+
+	// The cached List *succeeded* but returned zero items. This is NOT an
+	// IsNotFound error: client.List over a collection returns an empty list,
+	// never IsNotFound, when nothing matches. An empty result may therefore be a
+	// transient informer miss (cache not yet synced, or a relist window) rather
+	// than a real deletion. Since the caller wipes the Gateway's status addresses
+	// and flips Programmed to AddressNotAssigned whenever this returns nil,
+	// confirm against the API server with an uncached read before concluding the
+	// Service is gone.
+	if r.apiReader == nil {
+		return nil, nil
+	}
+	return listEnvoyService(ctx, r.apiReader, listOpts)
+}
+
+// listEnvoyService returns the first Envoy Service matching listOpts, or (nil, nil)
+// when the List succeeds with zero items. Only a genuine API error other than
+// NotFound is propagated; a NotFound is reported as "not found" (nil).
+func listEnvoyService(ctx context.Context, reader client.Reader, listOpts *client.ListOptions) (*corev1.Service, error) {
+	var services corev1.ServiceList
+	if err := reader.List(ctx, &services, listOpts); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
-
-	// A transient empty result from the cached client (e.g. an informer cache
-	// that has not yet observed the Service, or a relist window) must not be
-	// treated as "the Service no longer exists". The caller wipes the Gateway's
-	// status addresses and flips Programmed to AddressNotAssigned whenever this
-	// returns nil, so confirm against the API server with an uncached read
-	// before concluding the Service is gone.
-	if len(services.Items) == 0 && r.apiReader != nil {
-		if err := r.apiReader.List(ctx, &services, listOpts); err != nil {
-			if kerrors.IsNotFound(err) {
-				return nil, nil
-			}
-			return nil, err
-		}
-	}
-
 	if len(services.Items) == 0 {
 		return nil, nil
 	}

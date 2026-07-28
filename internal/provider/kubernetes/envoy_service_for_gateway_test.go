@@ -106,4 +106,33 @@ func TestEnvoyServiceForGatewayUncachedFallback(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, svc)
 	})
+
+	t.Run("nil apiReader with empty cache returns nil without confirming", func(t *testing.T) {
+		r := &gatewayAPIReconciler{
+			log:           logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+			namespace:     envoyNS,
+			mergeGateways: sets.New[string](),
+			client: fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).Build(),
+			apiReader: nil,
+		}
+		svc, err := r.envoyServiceForGateway(context.Background(), gw)
+		require.NoError(t, err)
+		require.Nil(t, svc)
+	})
+
+	t.Run("nil apiReader still returns Service present in cache", func(t *testing.T) {
+		r := &gatewayAPIReconciler{
+			log:           logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+			namespace:     envoyNS,
+			mergeGateways: sets.New[string](),
+			client: fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).WithObjects(newEnvoySvc()).Build(),
+			apiReader: nil,
+		}
+		svc, err := r.envoyServiceForGateway(context.Background(), gw)
+		require.NoError(t, err)
+		require.NotNil(t, svc)
+		require.Equal(t, svcName, svc.Name)
+	})
 }
