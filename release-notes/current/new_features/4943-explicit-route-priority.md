@@ -1,0 +1,1 @@
+Added an optional `gateway.envoyproxy.io/route-priority` HTTPRoute annotation that sets an explicit route matching priority (higher wins) when `EnvoyProxy.spec.preserveRouteOrder` is enabled, letting users order routes across HTTPRoutes explicitly instead of relying on the creationTimestamp/name tie-break.
