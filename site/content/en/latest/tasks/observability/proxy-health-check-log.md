@@ -218,9 +218,9 @@ be specified together.
 | Value | Logged when |
 |---|---|
 | `Failure` | Every failed probe, regardless of current health state |
-| `FailureTransition` | Only when a host transitions from healthy → unhealthy |
+| `FailureSeriesStart` | Only the first failed probe of a consecutive failure run (starts a potential healthy→unhealthy transition) |
 | `Success` | Every successful probe, regardless of current health state |
-| `SuccessTransition` | Only when a host transitions from unhealthy → healthy |
+| `HealthyTransition` | First success of a consecutive success run, and when the host reaches the healthy threshold (transitions back to healthy) |
 
 To log only on state transitions (the most conservative setting):
 
@@ -238,8 +238,8 @@ spec:
   telemetry:
     healthCheckLog:
       matches:
-        - FailureTransition
-        - SuccessTransition
+        - FailureSeriesStart
+        - HealthyTransition
 EOF
 ```
 
@@ -258,8 +258,8 @@ spec:
   telemetry:
     healthCheckLog:
       matches:
-        - FailureTransition
-        - SuccessTransition
+        - FailureSeriesStart
+        - HealthyTransition
 ```
 
 {{% /tab %}}
