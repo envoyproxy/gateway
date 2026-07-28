@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/envoyproxy/gateway-remote-infra/pb"
+	pb "github.com/envoyproxy/gateway-remote-infra/pb"
 	"github.com/envoyproxy/gateway-remote-infra/synthesizer"
 )
 

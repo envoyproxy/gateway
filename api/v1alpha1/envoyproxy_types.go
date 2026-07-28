@@ -413,7 +413,7 @@ type ProxyTelemetry struct {
 
 // EnvoyProxyProviderType defines the types of providers supported by Envoy Proxy.
 //
-// +kubebuilder:validation:Enum=Kubernetes;Host;Remote
+// +kubebuilder:validation:Enum=Kubernetes;Host
 type EnvoyProxyProviderType string
 
 const (
@@ -422,9 +422,6 @@ const (
 
 	// EnvoyProxyProviderTypeHost defines the "Host" provider.
 	EnvoyProxyProviderTypeHost EnvoyProxyProviderType = "Host"
-
-	// EnvoyProxyProviderTypeRemote defines the "Remote" provider.
-	EnvoyProxyProviderTypeRemote EnvoyProxyProviderType = "Remote"
 )
 
 // RequestIDSettings defines configuration for Envoy's UUID request ID extension.
@@ -470,7 +467,7 @@ const (
 type EnvoyProxyProvider struct {
 	// Type is the type of resource provider to use. A resource provider provides
 	// infrastructure resources for running the data plane, e.g. Envoy proxy, and
-	// optional auxiliary control planes. Supported types are "Kubernetes", "Remote', and "Host".
+	// optional auxiliary control planes. Supported types are "Kubernetes" and "Host".
 	//
 	// +unionDiscriminator
 	Type EnvoyProxyProviderType `json:"type"`
@@ -488,12 +485,6 @@ type EnvoyProxyProvider struct {
 	//
 	// +optional
 	Host *EnvoyProxyHostProvider `json:"host,omitempty"`
-	// Remote defers runtime deployment of the data plane to another process.
-	// If unspecified and type is "Remote", default settings for the custom provider
-	// are applied.
-	//
-	// +optional
-	Remote *EnvoyProxyRemoteProvider `json:"remote,omitempty"`
 }
 
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
@@ -564,9 +555,6 @@ type EnvoyProxyHostProvider struct {
 	// +optional
 	EnvoyVersion *string `json:"envoyVersion,omitempty"`
 }
-
-// EnvoyProxyRemoteProvider defines configuration for the "Remote" resource provider.
-type EnvoyProxyRemoteProvider struct{}
 
 type KubernetesServiceAccountSpec struct {
 	// Name of the Service Account.
