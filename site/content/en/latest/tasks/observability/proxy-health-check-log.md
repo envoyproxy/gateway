@@ -14,6 +14,10 @@ extension.
 > including route backends with active health checks configured via a [BackendTrafficPolicy][] and extension backends such as
 > those referenced by an [EnvoyExtensionPolicy][] or [SecurityPolicy][].
 
+> **Limitation:** Health check event logging is **not** propagated to routes attached via a
+> [ListenerSet][]. The [BackendTrafficPolicy][] health check configuration still applies to those
+> routes, but the HC event logger configured in `spec.telemetry.healthCheckLog` will not take effect.
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}

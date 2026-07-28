@@ -452,6 +452,9 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// parentRefCtxs holds parent gateway/listener contexts for using in policy merge logic.
 	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
 	for _, p := range parentRefs {
+		// Only Gateway-kind parent refs are collected here; ListenerSet parents are not
+		// yet supported for gateway-level context (e.g. telemetry) propagation.
+		// TODO: add ListenerSet parent handling (see SecurityPolicy for the pattern).
 		if p.Kind == nil || *p.Kind == resource.KindGateway {
 			namespace := targetedRoute.GetNamespace()
 			if p.Namespace != nil {
@@ -495,22 +498,40 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	}
 
 	if policy.Spec.MergeType == nil {
-		// Iterate per parent gateway so each gateway's clusters get the correct
-		// telemetry (e.g. HC event logger) from its own EnvoyProxy.
-		for i, parentRefCtx := range parentRefCtxs {
-			gtwCtx := parentRefCtx.GetGateway()
-			if gtwCtx == nil {
-				continue
+		if len(parentRefCtxs) > 0 {
+			// Iterate per parent gateway so each gateway's clusters get the correct
+			// telemetry (e.g. HC event logger) from its own EnvoyProxy.
+			for i, parentRefCtx := range parentRefCtxs {
+				gtwCtx := parentRefCtx.GetGateway()
+				if gtwCtx == nil {
+					continue
+				}
+				gwNN := utils.NamespacedName(gtwCtx.Gateway)
+				if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, nil, gtwCtx); err != nil {
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						ancestorRefs[i],
+						t.GatewayControllerName,
+						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+						egv1a1.PolicyReasonInvalid,
+						status.Error2ConditionMsg(err),
+						policy.Generation,
+					)
+				}
 			}
-			gwNN := utils.NamespacedName(gtwCtx.Gateway)
-			if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, nil, gtwCtx); err != nil {
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					ancestorRefs[i],
+		} else {
+			// No Gateway-kind parent refs — the route is attached only via ListenerSet(s).
+			// Fall back to the all-IR path so the BTP (health check, circuit breaker, etc.)
+			// still applies. Gateway-level context (e.g. EnvoyProxy telemetry for HC event
+			// logging) is NOT propagated in this path because ListenerSet parents are not
+			// currently threaded through here.
+			// TODO: support gateway-level context propagation for ListenerSet-attached routes
+			//       in BackendTrafficPolicy (symmetric with SecurityPolicy's listenerSetMap handling).
+			if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil, nil, nil); err != nil {
+				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+					ancestorRefs,
 					t.GatewayControllerName,
-					gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-					egv1a1.PolicyReasonInvalid,
-					status.Error2ConditionMsg(err),
 					policy.Generation,
+					status.Error2ConditionMsg(err),
 				)
 			}
 		}
