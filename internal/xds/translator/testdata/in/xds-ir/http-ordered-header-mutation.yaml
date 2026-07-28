@@ -1,0 +1,68 @@
+http:
+- name: "early-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  headers:
+    earlyRequestHeaderMutations:
+    - write:
+        name: "x-foo"
+        value: "1"
+        action: Overwrite
+    - write:
+        name: "x-foo"
+        value: "2"
+        action: Append
+    - remove: "x-secret"
+    - removeOnMatch:
+        name: ""
+        safeRegex: "^x-internal-.*"
+    - write:
+        name: "x-secret"
+        value: "regenerated"
+        action: Overwrite
+    - write:
+        name: "x-if-absent"
+        value: "default"
+        action: AddIfAbsent
+    - write:
+        name: "x-if-exists"
+        value: "override"
+        action: OverwriteIfExists
+  routes:
+  - name: "early-route"
+    hostname: "*"
+    destination:
+      name: "early-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "early-route-dest/backend/0"
+- name: "late-listener"
+  address: "::"
+  port: 10081
+  hostnames:
+  - "*"
+  headers:
+    lateResponseHeaderMutations:
+    - write:
+        name: "x-resp"
+        value: "a"
+        action: Overwrite
+    - write:
+        name: "x-resp"
+        value: "b"
+        action: Append
+    - remove: "server"
+  routes:
+  - name: "late-route"
+    hostname: "*"
+    destination:
+      name: "late-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.5"
+          port: 50000
+        name: "late-route-dest/backend/0"
