@@ -1,0 +1,1 @@
+Fixed a route-rule/route-targeted BackendTrafficPolicy with both `routingType` and `mergeType` unset incorrectly inheriting `routingType` from its resolved gateway/listener parent instead of using its own default.
