@@ -73,13 +73,15 @@ var CSRFFromSecurityPolicyTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
-		t.Run("should allow POST with matching prefix Origin", func(t *testing.T) {
+		// The configured origin carries the https scheme, but the CSRF filter only ever
+		// matches the host and port, so an http request from the same host is allowed too.
+		t.Run("should allow POST with matching Origin on a different scheme", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path:   "/csrf",
 					Method: "POST",
 					Headers: map[string]string{
-						"Origin": "https://app.example.org",
+						"Origin": "http://www.example.com",
 					},
 				},
 				Response: http.Response{
@@ -90,7 +92,24 @@ var CSRFFromSecurityPolicyTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
-		t.Run("should allow POST with matching suffix Origin", func(t *testing.T) {
+		t.Run("should allow POST with matching Origin including port", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path:   "/csrf",
+					Method: "POST",
+					Headers: map[string]string{
+						"Origin": "http://www.example.com:8080",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("should allow POST with Origin matching a wildcard subdomain", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path:   "/csrf",
@@ -107,19 +126,29 @@ var CSRFFromSecurityPolicyTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
-		t.Run("should allow POST with matching regex Origin", func(t *testing.T) {
+		// "https://*.trusted.com" allows subdomains only, so the apex domain is rejected:
+		// the wildcard label is anchored on the separating dot and cannot be elided.
+		t.Run("should reject POST with the apex domain of a wildcard Origin", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path:   "/csrf",
 					Method: "POST",
 					Headers: map[string]string{
-						"Origin": "https://api.partner.com",
+						"Origin": "https://trusted.com",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host:    "",
+						Method:  "POST",
+						Path:    "",
+						Headers: nil,
 					},
 				},
 				Response: http.Response{
-					StatusCodes: []int{200},
+					StatusCodes: []int{403},
 				},
-				Namespace: ns,
+				Namespace: "",
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})

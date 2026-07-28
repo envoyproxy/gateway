@@ -23,9 +23,8 @@ http:
       csrf:
         additionalOrigins:
         - exact: www.example.com
-        - prefix: app.example
-        - suffix: .trusted.com
-        - safeRegex: .*\.partner\.com$
+        - exact: www.example.com:8080
+        - safeRegex: .*\.trusted\.com
   - name: "second-route"
     hostname: "*"
     pathMatch:

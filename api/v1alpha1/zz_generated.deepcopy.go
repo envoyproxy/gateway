@@ -1162,10 +1162,8 @@ func (in *CSRF) DeepCopyInto(out *CSRF) {
 	}
 	if in.AdditionalOrigins != nil {
 		in, out := &in.AdditionalOrigins, &out.AdditionalOrigins
-		*out = make([]StringMatch, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+		*out = make([]Origin, len(*in))
+		copy(*out, *in)
 	}
 }
 

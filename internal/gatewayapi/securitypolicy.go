@@ -1753,14 +1753,37 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 }
 
 func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
-	additionalOrigins := make([]*ir.StringMatch, 0, len(csrf.AdditionalOrigins))
+	var additionalOrigins []*ir.StringMatch
+
 	for _, origin := range csrf.AdditionalOrigins {
-		additionalOrigins = append(additionalOrigins, irStringMatch("csrf", origin))
+		// Envoy's CSRF filter matches the host and port of the Origin header against the
+		// target host, so the scheme is dropped before the matcher is built.
+		hostAndPort := originHostAndPort(string(origin))
+		if containsWildcard(hostAndPort) {
+			regexStr := wildcard2regex(hostAndPort)
+			additionalOrigins = append(additionalOrigins, &ir.StringMatch{
+				SafeRegex: &regexStr,
+			})
+		} else {
+			additionalOrigins = append(additionalOrigins, &ir.StringMatch{
+				Exact: &hostAndPort,
+			})
+		}
 	}
+
 	return &ir.CSRF{
 		ShadowFraction:    csrf.ShadowFraction,
 		AdditionalOrigins: additionalOrigins,
 	}
+}
+
+// originHostAndPort strips the scheme from an Origin, leaving its host and optional port.
+// A bare "*" carries no scheme and is returned as is.
+func originHostAndPort(origin string) string {
+	if _, hostAndPort, found := strings.Cut(origin, "://"); found {
+		return hostAndPort
+	}
+	return origin
 }
 
 func containsWildcard(s string) bool {

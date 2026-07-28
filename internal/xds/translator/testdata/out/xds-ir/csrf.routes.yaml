@@ -17,10 +17,9 @@
           '@type': type.googleapis.com/envoy.extensions.filters.http.csrf.v3.CsrfPolicy
           additionalOrigins:
           - exact: www.example.com
-          - prefix: app.example
-          - suffix: .trusted.com
+          - exact: www.example.com:8080
           - safeRegex:
-              regex: .*\.partner\.com$
+              regex: .*\.trusted\.com
           filterEnabled:
             defaultValue:
               numerator: 100

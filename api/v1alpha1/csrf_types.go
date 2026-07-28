@@ -13,13 +13,6 @@ import (
 // The CSRF filter checks that the Origin header in HTTP requests matches the destination,
 // preventing cross-origin mutating requests (POST, PUT, DELETE, PATCH) from being processed.
 // GET and HEAD requests are always allowed.
-//
-// Note: Envoy's CSRF filter compares against the host and port of the origin only
-// (the scheme is stripped before matching). Additional origins must be specified as
-// host or host:port values, not full URLs. For example, use "www.example.com"
-// instead of "https://www.example.com".
-//
-// +kubebuilder:validation:XValidation:message="additionalOrigins must be host or host:port values without a scheme or path, for example www.example.com instead of https://www.example.com",rule="!has(self.additionalOrigins) || self.additionalOrigins.all(o, !o.value.contains('/'))"
 type CSRF struct {
 	// ShadowFraction represents the fraction of requests for which the CSRF policy is
 	// evaluated in shadow (dry-run) mode. For these requests, the filter records whether
@@ -35,12 +28,17 @@ type CSRF struct {
 	// +optional
 	ShadowFraction *gwapiv1.Fraction `json:"shadowFraction,omitempty"`
 
-	// AdditionalOrigins specifies additional origins that are allowed to make requests,
-	// beyond the destination origin. These are checked against the Origin header (host:port only,
-	// not the full URL) and if matched, the request is allowed.
-	// Each origin supports Exact, Prefix, Suffix, and RegularExpression matching.
+	// AdditionalOrigins specifies additional origins that are allowed to make mutating
+	// requests, beyond the destination origin. A request whose Origin header matches one
+	// of them is allowed. The value "*" allows any origin, which effectively disables
+	// origin validation.
+	//
+	// Note: Envoy's CSRF filter compares the host and port of the origin only, so the
+	// scheme is ignored: "https://www.example.com" and "http://www.example.com" are
+	// equivalent here, and both allow the request regardless of the scheme the client
+	// used.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	AdditionalOrigins []StringMatch `json:"additionalOrigins,omitempty"`
+	AdditionalOrigins []Origin `json:"additionalOrigins,omitempty"`
 }

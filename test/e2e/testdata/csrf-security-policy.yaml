@@ -27,14 +27,9 @@ spec:
     name: http-with-csrf
   csrf:
     additionalOrigins:
-    - type: Exact
-      value: "www.example.com"
-    - type: Prefix
-      value: "app.example"
-    - type: Suffix
-      value: ".trusted.com"
-    - type: RegularExpression
-      value: ".*\\.partner\\.com$"
+    - "https://www.example.com"
+    - "http://www.example.com:8080"
+    - "https://*.trusted.com"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -67,5 +62,4 @@ spec:
     shadowFraction:
       numerator: 100
     additionalOrigins:
-    - type: Exact
-      value: "www.example.com"
+    - "https://www.example.com"

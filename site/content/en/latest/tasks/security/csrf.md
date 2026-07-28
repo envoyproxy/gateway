@@ -19,17 +19,21 @@ When CSRF protection is enabled, the Envoy CSRF filter validates that the `Origi
 (POST, PUT, DELETE, PATCH) matches the destination or one of the configured additional origins.
 Non-mutating requests (GET, HEAD, OPTIONS) are not affected.
 
-Note: Envoy's CSRF filter compares against the host and port of the origin only (the scheme is stripped
-before matching). Additional origins must be specified as `host` or `host:port` values, not full URLs.
-For example, use `www.example.com` instead of `https://www.example.com`. A SecurityPolicy whose
-`additionalOrigins` contain a scheme or a path is rejected at admission, since such a value could never match.
+`additionalOrigins` uses the same origin syntax as [`cors.allowOrigins`](./cors): a full origin such as
+`https://www.example.com`, a single wildcard label such as `https://*.trusted.com`, an explicit port such as
+`http://www.example.com:8080`, or `*` to allow any origin.
+
+Note: Envoy's CSRF filter compares against the host and port of the origin only, so the scheme is ignored.
+`https://www.example.com` and `http://www.example.com` are equivalent, and either one allows the request
+whichever scheme the client used. The scheme is still required by the syntax so that origins read the same
+way here as they do in `cors.allowOrigins`.
 
 The filter supports gradual rollout via `shadowFraction`: the fraction of requests that are evaluated in
 dry-run mode instead of being enforced. It is expressed as a `numerator` and an optional `denominator` that
 defaults to `100`, and defaults to 0%, i.e. all requests are enforced.
 
-The below example defines a SecurityPolicy that enables CSRF protection and allows additional origins
-matching `www.example.com` exactly and any subdomain of `trusted.com` via regex.
+The below example defines a SecurityPolicy that enables CSRF protection and allows `www.example.com` and any
+subdomain of `trusted.com` as additional origins.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -47,10 +51,8 @@ spec:
     name: backend
   csrf:
     additionalOrigins:
-    - type: Exact
-      value: "www.example.com"
-    - type: RegularExpression
-      value: ".*\\.trusted\\.com$"
+    - "https://www.example.com"
+    - "https://*.trusted.com"
 EOF
 ```
 
@@ -71,10 +73,8 @@ spec:
     name: backend
   csrf:
     additionalOrigins:
-    - type: Exact
-      value: "www.example.com"
-    - type: RegularExpression
-      value: ".*\\.trusted\\.com$"
+    - "https://www.example.com"
+    - "https://*.trusted.com"
 ```
 
 {{% /tab %}}
@@ -83,7 +83,9 @@ spec:
 With this configuration:
 
 - A `POST` request with `Origin: https://www.example.com` will be **allowed** (Envoy extracts `www.example.com` and matches the exact origin).
-- A `POST` request with `Origin: https://app.trusted.com` will be **allowed** (Envoy extracts `app.trusted.com` which matches the regex).
+- A `POST` request with `Origin: http://www.example.com` will also be **allowed**, since the scheme is not compared.
+- A `POST` request with `Origin: https://app.trusted.com` will be **allowed** (Envoy extracts `app.trusted.com` which matches the wildcard).
+- A `POST` request with `Origin: https://trusted.com` will be **rejected**: the wildcard matches subdomains, not the apex domain.
 - A `POST` request with `Origin: https://www.malicious.com` will be **rejected** with a `403 Forbidden`.
 - A `GET` request from any origin will be **allowed** (non-mutating).
 
@@ -105,8 +107,7 @@ spec:
     shadowFraction:
       numerator: 100
     additionalOrigins:
-    - type: Exact
-      value: "www.example.com"
+    - "https://www.example.com"
 ```
 
 In this mode, all requests are allowed but Envoy tracks CSRF metrics (`request_valid` / `request_invalid`)

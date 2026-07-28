@@ -104,14 +104,11 @@ securityPolicies:
   spec:
     csrf:
       additionalOrigins:
-      - type: Exact
-        value: www.example.com
-      - type: Prefix
-        value: app.example
-      - type: Suffix
-        value: .trusted.com
-      - type: RegularExpression
-        value: .*\.partner\.com$
+      - https://www.example.com
+      - http://www.example.com:8080
+      - https://*.trusted.com
+      - https://*
+      - '*'
       shadowFraction:
         numerator: 20
     targetRef:
@@ -215,16 +212,19 @@ xdsIR:
             additionalOrigins:
             - distinct: false
               exact: www.example.com
-              name: csrf
+              name: ""
             - distinct: false
-              name: csrf
-              prefix: app.example
+              exact: www.example.com:8080
+              name: ""
             - distinct: false
-              name: csrf
-              suffix: .trusted.com
+              name: ""
+              safeRegex: .*\.trusted\.com
             - distinct: false
-              name: csrf
-              safeRegex: .*\.partner\.com$
+              name: ""
+              safeRegex: .*
+            - distinct: false
+              name: ""
+              safeRegex: .*
             shadowFraction:
               numerator: 20
     readyListener:

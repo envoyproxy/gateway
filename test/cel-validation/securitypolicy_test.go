@@ -629,15 +629,15 @@ func TestSecurityPolicyTarget(t *testing.T) {
 
 		// csrf
 		{
-			desc: "csrf additionalOrigins valid with host and host:port",
+			desc: "csrf additionalOrigins valid",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					CSRF: &egv1a1.CSRF{
-						AdditionalOrigins: []egv1a1.StringMatch{
-							{Type: new(egv1a1.StringMatchExact), Value: "www.example.com"},
-							{Type: new(egv1a1.StringMatchExact), Value: "www.example.com:8080"},
-							{Type: new(egv1a1.StringMatchSuffix), Value: ".trusted.com"},
-							{Type: new(egv1a1.StringMatchRegularExpression), Value: `.*\.partner\.com$`},
+						AdditionalOrigins: []egv1a1.Origin{
+							"https://www.example.com",
+							"http://www.example.com:8080",
+							"https://*.trusted.com",
+							"*",
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -654,15 +654,13 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "csrf additionalOrigins invalid with scheme",
+			desc: "csrf additionalOrigins invalid without scheme",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					CSRF: &egv1a1.CSRF{
-						AdditionalOrigins: []egv1a1.StringMatch{
-							// invalid, Envoy strips the scheme from the Origin header
-							// before matching, so this could never match.
-							{Type: new(egv1a1.StringMatchExact), Value: "https://www.example.com"},
-						},
+						// invalid, an origin is scheme://host even though the CSRF filter
+						// only ever matches on the host and port.
+						AdditionalOrigins: []egv1a1.Origin{"www.example.com"},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
@@ -676,7 +674,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"additionalOrigins must be host or host:port values without a scheme or path, for example www.example.com instead of https://www.example.com",
+				"spec.csrf.additionalOrigins[0]: Invalid value: \"www.example.com\": spec.csrf.additionalOrigins[0] in body should match '^(\\*|[A-Za-z][A-Za-z0-9+.-]*:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
 			},
 		},
 		{
@@ -684,10 +682,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					CSRF: &egv1a1.CSRF{
-						AdditionalOrigins: []egv1a1.StringMatch{
-							// invalid, the Origin header never carries a path.
-							{Type: new(egv1a1.StringMatchPrefix), Value: "www.example.com/app"},
-						},
+						// invalid, the Origin header never carries a path.
+						AdditionalOrigins: []egv1a1.Origin{"https://www.example.com/app"},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
@@ -701,7 +697,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"additionalOrigins must be host or host:port values without a scheme or path, for example www.example.com instead of https://www.example.com",
+				"spec.csrf.additionalOrigins[0]: Invalid value: \"https://www.example.com/app\": spec.csrf.additionalOrigins[0] in body should match '^(\\*|[A-Za-z][A-Za-z0-9+.-]*:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
 			},
 		},
 

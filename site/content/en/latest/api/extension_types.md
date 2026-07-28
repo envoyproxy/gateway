@@ -846,18 +846,13 @@ The CSRF filter checks that the Origin header in HTTP requests matches the desti
 preventing cross-origin mutating requests (POST, PUT, DELETE, PATCH) from being processed.
 GET and HEAD requests are always allowed.
 
-Note: Envoy's CSRF filter compares against the host and port of the origin only
-(the scheme is stripped before matching). Additional origins must be specified as
-host or host:port values, not full URLs. For example, use "www.example.com"
-instead of "https://www.example.com".
-
 _Appears in:_
 - [SecurityPolicySpec](#securitypolicyspec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `shadowFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#fraction)_ |  false  |  | ShadowFraction represents the fraction of requests for which the CSRF policy is<br />evaluated in shadow (dry-run) mode. For these requests, the filter records whether<br />the request would have been allowed or rejected in the `csrf.request_valid` and<br />`csrf.request_invalid` stats, but always lets the request through. The remaining<br />requests are enforced, i.e. a mutating request with a missing or non-matching<br />Origin header is rejected with a 403.<br />Defaults to 0% (all requests are enforced) if not specified. Set it to 100% to<br />dry run the filter, watch the stats to find origins that would be rejected, then<br />lower it to roll enforcement out gradually. |
-| `additionalOrigins` | _[StringMatch](#stringmatch) array_ |  false  |  | AdditionalOrigins specifies additional origins that are allowed to make requests,<br />beyond the destination origin. These are checked against the Origin header (host:port only,<br />not the full URL) and if matched, the request is allowed.<br />Each origin supports Exact, Prefix, Suffix, and RegularExpression matching. |
+| `additionalOrigins` | _[Origin](#origin) array_ |  false  |  | AdditionalOrigins specifies additional origins that are allowed to make mutating<br />requests, beyond the destination origin. A request whose Origin header matches one<br />of them is allowed. The value "*" allows any origin, which effectively disables<br />origin validation.<br />Note: Envoy's CSRF filter compares the host and port of the origin only, so the<br />scheme is ignored: "https://www.example.com" and "http://www.example.com" are<br />equivalent here, and both allow the request regardless of the scheme the client<br />used. |
 
 
 #### CircuitBreaker
@@ -4592,6 +4587,7 @@ For example, the following are valid origins:
 
 _Appears in:_
 - [CORS](#cors)
+- [CSRF](#csrf)
 
 
 
@@ -6212,7 +6208,6 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
-- [CSRF](#csrf)
 - [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
