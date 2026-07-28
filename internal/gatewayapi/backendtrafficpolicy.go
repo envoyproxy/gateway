@@ -1496,6 +1496,11 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 
 	// Gateway-level Traffic is the only level safe to apply uniformly to a merged cluster.
+	// TODO(#9588): unsound for a route/rule-targeted BackendTrafficPolicy with mergeType unset
+	// (the default) that sets no cluster-scoped field of its own - it should fully replace the
+	// gateway's cluster settings for its own routes, but merge-eligibility here only checks
+	// whether a policy sets a cluster-scoped field, not whether it merges with a parent at all,
+	// so those routes stay on this shared cluster and incorrectly inherit it anyway.
 	if target.SectionName == nil && errs == nil {
 		for _, bc := range x.BackendClusters {
 			bc.Traffic = tf.DeepCopy()
