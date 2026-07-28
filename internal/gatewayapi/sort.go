@@ -17,6 +17,13 @@ type XdsIRRoutes []*ir.HTTPRoute
 func (x XdsIRRoutes) Len() int      { return len(x) }
 func (x XdsIRRoutes) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 func (x XdsIRRoutes) Less(i, j int) bool {
+	// 0. Sort based on explicit route priority (higher wins). Routes default to
+	// priority 0, so this is a no-op unless the priority annotation is set and
+	// otherwise falls through to Gateway API specificity ordering below.
+	if x[i].Priority != x[j].Priority {
+		return x[i].Priority < x[j].Priority
+	}
+
 	// 1. Sort based on path match type
 	// Exact > RegularExpression > PathPrefix
 	if x[i].PathMatch != nil {

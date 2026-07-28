@@ -199,6 +199,42 @@ func TestXdsIRRoutesSort(t *testing.T) {
 			},
 			expectedOrder: []string{"with-query", "no-query"},
 		},
+		{
+			name: "higher priority wins over specificity",
+			routes: []*ir.HTTPRoute{
+				{
+					Name:      "specific-low-priority",
+					PathMatch: &ir.StringMatch{Prefix: new("/api")},
+					HeaderMatches: []*ir.StringMatch{
+						{Name: "h1", Exact: new("v1")},
+						{Name: "h2", Exact: new("v2")},
+					},
+				},
+				{
+					Name:      "unspecific-high-priority",
+					Priority:  10,
+					PathMatch: &ir.StringMatch{Prefix: new("/")},
+				},
+			},
+			expectedOrder: []string{"unspecific-high-priority", "specific-low-priority"},
+		},
+		{
+			name: "priority ordering among explicit routes",
+			routes: []*ir.HTTPRoute{
+				{Name: "p1", Priority: 1, PathMatch: &ir.StringMatch{Prefix: new("/api")}},
+				{Name: "p3", Priority: 3, PathMatch: &ir.StringMatch{Prefix: new("/api")}},
+				{Name: "p2", Priority: 2, PathMatch: &ir.StringMatch{Prefix: new("/api")}},
+			},
+			expectedOrder: []string{"p3", "p2", "p1"},
+		},
+		{
+			name: "equal priority falls through to specificity",
+			routes: []*ir.HTTPRoute{
+				{Name: "short", Priority: 5, PathMatch: &ir.StringMatch{Prefix: new("/a")}},
+				{Name: "long", Priority: 5, PathMatch: &ir.StringMatch{Prefix: new("/api/v1")}},
+			},
+			expectedOrder: []string{"long", "short"},
+		},
 	}
 
 	for _, tc := range cases {

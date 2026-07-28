@@ -801,7 +801,37 @@ func (t *Translator) processHTTPRouteRule(
 		}
 	}
 
+	priority, err := routePriority(httpRoute)
+	if err != nil {
+		return nil, err
+	}
+	if priority != nil {
+		for _, r := range ruleRoutes {
+			r.Priority = *priority
+		}
+	}
+
 	return ruleRoutes, nil
+}
+
+// routePriority reads the optional RoutePriorityAnnotation from the HTTPRoute
+// and returns the parsed value, or nil when the annotation is absent. Higher
+// values are matched ahead of Gateway API specificity ordering; see the sort
+// comparator in sort.go.
+func routePriority(httpRoute *HTTPRouteContext) (*uint32, status.Error) {
+	val, ok := httpRoute.Annotations[egv1a1.RoutePriorityAnnotation]
+	if !ok {
+		return nil, nil
+	}
+	parsed, parseErr := strconv.ParseUint(strings.TrimSpace(val), 10, 32)
+	if parseErr != nil {
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("invalid %s value %q: must be a non-negative 32-bit integer", egv1a1.RoutePriorityAnnotation, val),
+			gwapiv1.RouteReasonUnsupportedValue,
+		)
+	}
+	priority := uint32(parsed)
+	return &priority, nil
 }
 
 func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
