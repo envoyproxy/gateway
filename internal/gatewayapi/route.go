@@ -801,11 +801,7 @@ func (t *Translator) processHTTPRouteRule(
 		}
 	}
 
-	priority, err := routePriority(httpRoute)
-	if err != nil {
-		return nil, err
-	}
-	if priority != nil {
+	if priority := t.routePriority(httpRoute); priority != nil {
 		for _, r := range ruleRoutes {
 			r.Priority = *priority
 		}
@@ -814,22 +810,23 @@ func (t *Translator) processHTTPRouteRule(
 	return ruleRoutes, nil
 }
 
-// routePriority parses RoutePriorityAnnotation, returning nil when absent.
-// Only affects ordering under PreserveRouteOrder; see sortXdsIRMap.
-func routePriority(httpRoute *HTTPRouteContext) (*uint32, status.Error) {
+// routePriority parses RoutePriorityAnnotation, returning nil when absent. The
+// annotation only affects ordering under PreserveRouteOrder (see sortXdsIRMap),
+// so an invalid value is ignored with a warning rather than failing the route.
+func (t *Translator) routePriority(httpRoute *HTTPRouteContext) *uint32 {
 	val, ok := httpRoute.Annotations[egv1a1.RoutePriorityAnnotation]
 	if !ok {
-		return nil, nil
+		return nil
 	}
-	parsed, parseErr := strconv.ParseUint(strings.TrimSpace(val), 10, 32)
-	if parseErr != nil {
-		return nil, status.NewRouteStatusError(
-			fmt.Errorf("invalid %s value %q: must be a non-negative 32-bit integer", egv1a1.RoutePriorityAnnotation, val),
-			gwapiv1.RouteReasonUnsupportedValue,
-		)
+	parsed, err := strconv.ParseUint(strings.TrimSpace(val), 10, 32)
+	if err != nil {
+		t.Logger.Info("ignoring invalid route priority annotation, expected a non-negative 32-bit integer",
+			"httproute", httpRoute.Name, "namespace", httpRoute.Namespace,
+			egv1a1.RoutePriorityAnnotation, val)
+		return nil
 	}
 	priority := uint32(parsed)
-	return &priority, nil
+	return &priority
 }
 
 func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
