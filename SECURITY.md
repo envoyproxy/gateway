@@ -36,7 +36,7 @@ We announce advisories and patched releases through:
 
 - [GitHub Security Advisories](https://github.com/envoyproxy/gateway/security/advisories)
 - The [GitHub Releases page](https://github.com/envoyproxy/gateway/releases)
-- The `#gateway-users` channel in the [Envoy Slack workspace](https://communityinviter.com/apps/envoyproxy/envoy)
+- The `#gateway-users` channel in the [Envoy Slack workspace](https://www.envoyproxy.io/slack)
 - The [envoy-gateway-announce mailing list](https://groups.google.com/g/envoy-gateway-announce)
 
 Security fixes are merged into active, non-EOL release branches as patch releases when the affected versions are still supported. See the [release matrix](https://gateway.envoyproxy.io/news/releases/matrix/) for support windows and the [patch release process](https://gateway.envoyproxy.io/community/releasing/#patch-release) for release mechanics.
