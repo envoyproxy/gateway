@@ -7,12 +7,13 @@ package kubejwt
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -51,18 +52,20 @@ func (i *JWTAuthInterceptor) authenticate(ctx context.Context, msg any) error {
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return fmt.Errorf("missing metadata")
+		return status.Errorf(codes.Unauthenticated, "missing metadata for node %s", nodeID)
 	}
 
 	authHeader := md.Get("authorization")
 	if len(authHeader) == 0 {
-		return fmt.Errorf("missing authorization token in metadata: %s", md)
+		return status.Errorf(codes.Unauthenticated, "missing authorization header for node %s", nodeID)
 	}
 	token := strings.TrimPrefix(authHeader[0], "Bearer ")
 
 	if err := i.validateKubeJWT(ctx, token, nodeID); err != nil {
-		i.logger.Error(err, "failed to validate token")
-		return fmt.Errorf("failed to validate token: %w", err)
+		if s, ok := status.FromError(err); ok {
+			return status.Errorf(s.Code(), "failed to validate the token for node %s: %s", nodeID, s.Message())
+		}
+		return status.Errorf(codes.Unauthenticated, "failed to validate the token for node %s: %v", nodeID, err)
 	}
 
 	return nil
@@ -109,15 +112,15 @@ func extractNodeID(m any) (string, error) {
 	switch req := m.(type) {
 	case *discoveryv3.DeltaDiscoveryRequest:
 		if req.Node == nil || req.Node.Id == "" {
-			return "", fmt.Errorf("missing node ID")
+			return "", status.Error(codes.InvalidArgument, "missing node ID")
 		}
 		return req.Node.Id, nil
 	case *discoveryv3.DiscoveryRequest:
 		if req.Node == nil || req.Node.Id == "" {
-			return "", fmt.Errorf("missing node ID")
+			return "", status.Error(codes.InvalidArgument, "missing node ID")
 		}
 		return req.Node.Id, nil
 	default:
-		return "", fmt.Errorf("unexpected message type: %T", m)
+		return "", status.Errorf(codes.InvalidArgument, "unexpected message type: %T", m)
 	}
 }

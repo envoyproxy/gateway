@@ -719,6 +719,14 @@ func (t *Translator) addXdsTCPFilterChain(
 		return err
 	}
 
+	// The SNI dynamic forward proxy relies on the SNI extracted by the tls_inspector listener
+	// filter, so ensure it is present even when no explicit SNI hostnames are configured for matching.
+	if isSNIDynamicForwardProxyRoute(irRoute) {
+		if err := addXdsTLSInspectorFilter(xdsListener, nil); err != nil {
+			return err
+		}
+	}
+
 	if isTLSTerminate {
 		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)
 		if err != nil {
@@ -761,6 +769,22 @@ func buildTCPFilterChain(
 		} else {
 			return nil, err
 		}
+	}
+
+	// SNI based dynamic forward proxy: deny loopback SNIs, then resolve the upstream host from the
+	// SNI extracted by the tls_inspector listener filter. Both filters run before the tcp_proxy.
+	if isSNIDynamicForwardProxyRoute(irRoute) {
+		loopbackRBAC, err := buildDFPLoopbackNetworkRBAC(statPrefix)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, loopbackRBAC)
+
+		sniDFP, err := buildSNIDynamicForwardProxyFilter(irRoute)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, sniDFP)
 	}
 
 	// TCP proxy last
@@ -853,7 +877,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 		}
 		if cert.SDS != nil {
 			// Use external SDS server instead of ADS
-			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			clusterName := sdsClusterNameFromURL(cert.SDS.GetURL())
 			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
 		}
 		tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
@@ -896,7 +920,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 		}
 		if cert.SDS != nil {
 			// Use external SDS server instead of ADS
-			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			clusterName := sdsClusterNameFromURL(cert.SDS.GetURL())
 			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
 		}
 		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
@@ -980,7 +1004,7 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 
 	if tlsConfig.CACertificate.SDS != nil {
 		// Use external SDS server instead of ADS
-		clusterName := sdsClusterNameFromURL(tlsConfig.CACertificate.SDS.URL)
+		clusterName := sdsClusterNameFromURL(tlsConfig.CACertificate.SDS.GetURL())
 		sdsConfig = sdsSecretConfig(tlsConfig.CACertificate.SDS.SecretName, clusterName)
 	}
 
