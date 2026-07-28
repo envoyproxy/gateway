@@ -304,7 +304,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// ancestor status and override relationship.
 	parentRefs := GetManagedParentReferences(targetedRoute)
 	routeNN := utils.NamespacedName(targetedRoute)
-	routeAsChildScope := routeScope(routeNN)
+	routeAsChildScope := routeScope(routeNN, string(targetedRoute.GetRouteType()))
 	for _, p := range parentRefs {
 		parentNamespace := targetedRoute.GetNamespace()
 		if p.Namespace != nil {
