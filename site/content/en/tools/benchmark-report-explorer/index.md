@@ -38,7 +38,7 @@ includeBenchmark: true
   <p class="bt-description">
     Explore benchmark results from Envoy Gateway Releleases. The test code is open source and available for you to run and contribute to.
   </p>
-  <p class="bt-description">Curious to learn more? Join the conversation in <code>#gateway-users</code> channel in <a href="https://communityinviter.com/apps/envoyproxy/envoy">Envoy Slack</a></p>
+  <p class="bt-description">Curious to learn more? Join the conversation in <code>#gateway-users</code> channel in <a href="https://www.envoyproxy.io/slack">Envoy Slack</a></p>
 
   {{< benchmark-dashboard
     version="latest"
