@@ -17,13 +17,6 @@ type XdsIRRoutes []*ir.HTTPRoute
 func (x XdsIRRoutes) Len() int      { return len(x) }
 func (x XdsIRRoutes) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 func (x XdsIRRoutes) Less(i, j int) bool {
-	// 0. Sort based on explicit route priority (higher wins). Routes default to
-	// priority 0, so this is a no-op unless the priority annotation is set and
-	// otherwise falls through to Gateway API specificity ordering below.
-	if x[i].Priority != x[j].Priority {
-		return x[i].Priority < x[j].Priority
-	}
-
 	// 1. Sort based on path match type
 	// Exact > RegularExpression > PathPrefix
 	if x[i].PathMatch != nil {
@@ -136,10 +129,19 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 func sortXdsIRMap(xdsIR resource.XdsIRMap) {
 	for _, irItem := range xdsIR {
 		for _, http := range irItem.HTTP {
-			if !http.PreserveRouteOrder {
-				// descending order
-				sort.Stable(sort.Reverse(XdsIRRoutes(http.Routes)))
+			if http.PreserveRouteOrder {
+				// The owner opted out of Gateway API specificity sorting. Honor
+				// explicit per-route priority (higher first) as the only key,
+				// keeping the existing user-defined/insertion order for routes
+				// of equal priority. With no priorities set this is a no-op and
+				// insertion order is preserved, as before.
+				sort.SliceStable(http.Routes, func(i, j int) bool {
+					return http.Routes[i].Priority > http.Routes[j].Priority
+				})
+				continue
 			}
+			// descending order
+			sort.Stable(sort.Reverse(XdsIRRoutes(http.Routes)))
 		}
 	}
 }

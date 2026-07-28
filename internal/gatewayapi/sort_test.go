@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -199,42 +200,6 @@ func TestXdsIRRoutesSort(t *testing.T) {
 			},
 			expectedOrder: []string{"with-query", "no-query"},
 		},
-		{
-			name: "higher priority wins over specificity",
-			routes: []*ir.HTTPRoute{
-				{
-					Name:      "specific-low-priority",
-					PathMatch: &ir.StringMatch{Prefix: new("/api")},
-					HeaderMatches: []*ir.StringMatch{
-						{Name: "h1", Exact: new("v1")},
-						{Name: "h2", Exact: new("v2")},
-					},
-				},
-				{
-					Name:      "unspecific-high-priority",
-					Priority:  10,
-					PathMatch: &ir.StringMatch{Prefix: new("/")},
-				},
-			},
-			expectedOrder: []string{"unspecific-high-priority", "specific-low-priority"},
-		},
-		{
-			name: "priority ordering among explicit routes",
-			routes: []*ir.HTTPRoute{
-				{Name: "p1", Priority: 1, PathMatch: &ir.StringMatch{Prefix: new("/api")}},
-				{Name: "p3", Priority: 3, PathMatch: &ir.StringMatch{Prefix: new("/api")}},
-				{Name: "p2", Priority: 2, PathMatch: &ir.StringMatch{Prefix: new("/api")}},
-			},
-			expectedOrder: []string{"p3", "p2", "p1"},
-		},
-		{
-			name: "equal priority falls through to specificity",
-			routes: []*ir.HTTPRoute{
-				{Name: "short", Priority: 5, PathMatch: &ir.StringMatch{Prefix: new("/a")}},
-				{Name: "long", Priority: 5, PathMatch: &ir.StringMatch{Prefix: new("/api/v1")}},
-			},
-			expectedOrder: []string{"long", "short"},
-		},
 	}
 
 	for _, tc := range cases {
@@ -244,6 +209,77 @@ func TestXdsIRRoutesSort(t *testing.T) {
 
 			gotOrder := make([]string, len(routes))
 			for i, r := range routes {
+				gotOrder[i] = r.Name
+			}
+			require.Equal(t, tc.expectedOrder, gotOrder)
+		})
+	}
+}
+
+func TestSortXdsIRMapPreserveRouteOrderPriority(t *testing.T) {
+	cases := []struct {
+		name               string
+		preserveRouteOrder bool
+		routes             []*ir.HTTPRoute
+		expectedOrder      []string
+	}{
+		{
+			name:               "priority orders routes when preserveRouteOrder is set",
+			preserveRouteOrder: true,
+			routes: []*ir.HTTPRoute{
+				{Name: "low", Priority: 1},
+				{Name: "high", Priority: 10},
+				{Name: "mid", Priority: 5},
+			},
+			expectedOrder: []string{"high", "mid", "low"},
+		},
+		{
+			name:               "equal priority keeps insertion order when preserveRouteOrder is set",
+			preserveRouteOrder: true,
+			routes: []*ir.HTTPRoute{
+				{Name: "first", Priority: 5},
+				{Name: "second", Priority: 5},
+				{Name: "third", Priority: 5},
+			},
+			expectedOrder: []string{"first", "second", "third"},
+		},
+		{
+			name:               "no priorities preserves insertion order when preserveRouteOrder is set",
+			preserveRouteOrder: true,
+			routes: []*ir.HTTPRoute{
+				{Name: "a"},
+				{Name: "b"},
+				{Name: "c"},
+			},
+			expectedOrder: []string{"a", "b", "c"},
+		},
+		{
+			name:               "priority is ignored under default specificity ordering",
+			preserveRouteOrder: false,
+			routes: []*ir.HTTPRoute{
+				{Name: "specific", PathMatch: &ir.StringMatch{Prefix: new("/api/v1")}, Priority: 1},
+				{Name: "unspecific", PathMatch: &ir.StringMatch{Prefix: new("/")}, Priority: 100},
+			},
+			expectedOrder: []string{"specific", "unspecific"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			xdsIR := resource.XdsIRMap{
+				"gw": &ir.Xds{
+					HTTP: []*ir.HTTPListener{
+						{
+							PreserveRouteOrder: tc.preserveRouteOrder,
+							Routes:             tc.routes,
+						},
+					},
+				},
+			}
+			sortXdsIRMap(xdsIR)
+
+			gotOrder := make([]string, len(tc.routes))
+			for i, r := range xdsIR["gw"].HTTP[0].Routes {
 				gotOrder[i] = r.Name
 			}
 			require.Equal(t, tc.expectedOrder, gotOrder)

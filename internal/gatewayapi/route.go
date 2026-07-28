@@ -815,9 +815,9 @@ func (t *Translator) processHTTPRouteRule(
 }
 
 // routePriority reads the optional RoutePriorityAnnotation from the HTTPRoute
-// and returns the parsed value, or nil when the annotation is absent. Higher
-// values are matched ahead of Gateway API specificity ordering; see the sort
-// comparator in sort.go.
+// and returns the parsed value, or nil when the annotation is absent. The
+// value only affects ordering on listeners with PreserveRouteOrder set; see
+// sortXdsIRMap in sort.go.
 func routePriority(httpRoute *HTTPRouteContext) (*uint32, status.Error) {
 	val, ok := httpRoute.Annotations[egv1a1.RoutePriorityAnnotation]
 	if !ok {

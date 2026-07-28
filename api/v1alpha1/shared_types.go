@@ -21,14 +21,18 @@ const (
 
 	// RoutePriorityAnnotation is an optional annotation on an HTTPRoute that
 	// assigns an explicit matching priority to every route rule it produces.
-	// The value is a non-negative integer; higher values are matched first,
-	// ahead of Gateway API specificity ordering. Routes without the annotation
-	// default to priority 0 and retain specificity-based ordering among
-	// themselves, so behavior is unchanged unless the annotation is set.
+	// The value is a non-negative integer; higher values are matched first.
 	//
-	// This is intended for single-owner gateways migrating from priority-based
-	// load balancers (ALB/nginx/HAProxy) where declared rule order, not
-	// specificity, determines the winner.
+	// It is honored only on listeners that have opted out of Gateway API
+	// specificity sorting via EnvoyProxy.spec.preserveRouteOrder. In that mode,
+	// routes are ordered by this priority (higher first), and routes of equal
+	// priority keep their existing user-defined order. It has no effect under
+	// the default specificity-based ordering, so behavior is unchanged unless
+	// both preserveRouteOrder and this annotation are set.
+	//
+	// This lets single-owner gateways migrating from priority-based load
+	// balancers (ALB/nginx/HAProxy) state route order explicitly, rather than
+	// relying on preserveRouteOrder's creationTimestamp/name tie-break.
 	RoutePriorityAnnotation = "gateway.envoyproxy.io/route-priority"
 
 	// DefaultDeploymentReplicas is the default number of deployment replicas.
