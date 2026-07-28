@@ -130,11 +130,9 @@ func sortXdsIRMap(xdsIR resource.XdsIRMap) {
 	for _, irItem := range xdsIR {
 		for _, http := range irItem.HTTP {
 			if http.PreserveRouteOrder {
-				// The owner opted out of Gateway API specificity sorting. Honor
-				// explicit per-route priority (higher first) as the only key,
-				// keeping the existing user-defined/insertion order for routes
-				// of equal priority. With no priorities set this is a no-op and
-				// insertion order is preserved, as before.
+				// Specificity sort is opted out: order by explicit priority
+				// (higher first) only, keeping insertion order on ties. No-op
+				// when no priorities are set.
 				sort.SliceStable(http.Routes, func(i, j int) bool {
 					return http.Routes[i].Priority > http.Routes[j].Priority
 				})
