@@ -381,7 +381,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isListenerSetListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -407,7 +407,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if isListenerSet(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
