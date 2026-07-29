@@ -273,6 +273,17 @@ data:
     				},
     			}
     			break
+    		case *envoy_service_proc_v3.ProcessingRequest_RequestBody:
+    			resp = &envoy_service_proc_v3.ProcessingResponse{
+    				Response: &envoy_service_proc_v3.ProcessingResponse_RequestBody{
+    					RequestBody: &envoy_service_proc_v3.BodyResponse{
+    						Response: &envoy_service_proc_v3.CommonResponse{
+    							Status: envoy_service_proc_v3.CommonResponse_CONTINUE,
+    						},
+    					},
+    				},
+    			}
+    			break
     		case *envoy_service_proc_v3.ProcessingRequest_ResponseHeaders:
     			rhq := &envoy_service_proc_v3.HeadersResponse{
     				Response: &envoy_service_proc_v3.CommonResponse{
@@ -291,6 +302,17 @@ data:
     			resp = &envoy_service_proc_v3.ProcessingResponse{
     				Response: &envoy_service_proc_v3.ProcessingResponse_ResponseHeaders{
     					ResponseHeaders: rhq,
+    				},
+    			}
+    			break
+    		case *envoy_service_proc_v3.ProcessingRequest_ResponseBody:
+    			resp = &envoy_service_proc_v3.ProcessingResponse{
+    				Response: &envoy_service_proc_v3.ProcessingResponse_ResponseBody{
+    					ResponseBody: &envoy_service_proc_v3.BodyResponse{
+    						Response: &envoy_service_proc_v3.CommonResponse{
+    							Status: envoy_service_proc_v3.CommonResponse_CONTINUE,
+    						},
+    					},
     				},
     			}
     			break

@@ -86,6 +86,7 @@ type gatewayAPIReconciler struct {
 	eepCRDExists           bool
 	epCRDExists            bool
 	eppCRDExists           bool
+	grpcRouteCRDExists     bool
 	hrfCRDExists           bool
 	listenerSetCRDExists   bool
 	serviceImportCRDExists bool
@@ -1644,6 +1645,9 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 	for _, gateway := range resourceTree.Gateways {
 		targetNamespaces.Insert(gateway.Namespace)
 	}
+	for _, listenerSet := range resourceTree.ListenerSets {
+		targetNamespaces.Insert(listenerSet.Namespace)
+	}
 	for _, route := range resourceTree.HTTPRoutes {
 		targetNamespaces.Insert(route.Namespace)
 	}
@@ -1683,9 +1687,13 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 	}
 
 	allowedTargetKinds := map[string]sets.Set[string]{
-		resource.KindClientTrafficPolicy: sets.New[string](resource.KindGateway),
+		resource.KindClientTrafficPolicy: sets.New[string](
+			resource.KindGateway,
+			resource.KindListenerSet,
+		),
 		resource.KindBackendTrafficPolicy: sets.New[string](
 			resource.KindGateway,
+			resource.KindListenerSet,
 			resource.KindHTTPRoute,
 			resource.KindGRPCRoute,
 			resource.KindTLSRoute,
@@ -1694,6 +1702,7 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 		),
 		resource.KindEnvoyExtensionPolicy: sets.New[string](
 			resource.KindGateway,
+			resource.KindListenerSet,
 			resource.KindHTTPRoute,
 			resource.KindGRPCRoute,
 			resource.KindTLSRoute,
@@ -1702,6 +1711,7 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 		),
 		resource.KindSecurityPolicy: sets.New[string](
 			resource.KindGateway,
+			resource.KindListenerSet,
 			resource.KindHTTPRoute,
 			resource.KindGRPCRoute,
 			resource.KindTCPRoute,
@@ -1894,8 +1904,8 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 		// Route Processing
 
-		// Get TLSRoute objects and check if it exists.
 		if r.tlsRouteCRDExists {
+			// Get TLSRoute objects and check if it exists.
 			if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
 				return err
 			}
@@ -1906,9 +1916,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			return err
 		}
 
-		// Get GRPCRoute objects and check if it exists.
-		if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			return err
+		if r.grpcRouteCRDExists {
+			// Get GRPCRoute objects and check if it exists.
+			if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
+			}
 		}
 
 		if r.tcpRouteCRDExists {
@@ -2310,6 +2322,17 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// The watches for ListenerSet, GRPCRoute, TLSRoute, TCPRoute and UDPRoute are all optional. These
+	// kinds are in the Gateway API standard channel today (ListenerSet and TLSRoute graduated in
+	// v1.5, TCPRoute and UDPRoute in v1.6), but they are still not guaranteed to be installed:
+	//   - The cluster may run an older Gateway API bundle, or a standard channel bundle from before
+	//     the kind graduated, so the kind is simply not there.
+	//   - Some managed Kubernetes offerings install only a curated subset of the standard channel and
+	//     don't let users add the missing CRDs. For example, GKE's managed gateway-api-crds addon
+	//     ships Gateway API v1.5 without ListenerSet and GRPCRoute, because the GKE Gateway
+	//     controller doesn't implement them.
+	// Envoy Gateway must start on those clusters instead of crash-looping: an absent kind can't be
+	// used there anyway, so its absence should disable the feature, not take down the controller.
 	r.listenerSetCRDExists, err = checkCRD(resource.KindListenerSet, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
@@ -2358,26 +2381,32 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch GRPCRoute CRUDs and process affected Gateways.
-	grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
-	if r.namespaceLabel != nil {
-		grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
-			return r.hasMatchingNamespaceLabels(grpc)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, route)
-			}),
-			grpcrPredicates...)); err != nil {
+	r.grpcRouteCRDExists, err = checkCRD(resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
+	if err != nil {
 		return err
 	}
-	if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
-		return err
+	if !r.grpcRouteCRDExists {
+		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
+	} else {
+		// Watch GRPCRoute CRUDs and process affected Gateways.
+		grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
+		if r.namespaceLabel != nil {
+			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
+				return r.hasMatchingNamespaceLabels(grpc)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
+					return r.enqueueClass(ctx, route)
+				}),
+				grpcrPredicates...)); err != nil {
+			return err
+		}
+		if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
-
-	// Watch TLSRoute CRUDs and process affected Gateways.
 	r.tlsRouteCRDExists, err = checkCRD(resource.KindTLSRoute, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
@@ -2385,6 +2414,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	if !r.tlsRouteCRDExists {
 		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
+		// Watch TLSRoute CRUDs and process affected Gateways.
 		tlsrPredicates := commonPredicates[*gwapiv1.TLSRoute]()
 		if r.namespaceLabel != nil {
 			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TLSRoute) bool {
@@ -2803,7 +2833,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	// Watch BackendTLSPolicy
+	// BackendTLSPolicy is in the standard channel from Gateway API v1.4 onwards,
+	// but a cluster can still be serving an older standard bundle without it.
 	r.btlsCRDExists, err = checkCRD(resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
@@ -2811,6 +2842,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	if !r.btlsCRDExists {
 		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
 	} else {
+		// Watch BackendTLSPolicy
 		btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
 			predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
 		}

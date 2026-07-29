@@ -1,0 +1,288 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eep-listenerset-policy
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18190
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: eep-listenerset-policy-ls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: eep-listenerset-policy
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: ls-http
+    port: 18191
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: eep-listenerset-gateway-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: eep-listenerset-policy
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /gateway-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: eep-listenerset-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: eep-listenerset-policy-ls
+    sectionName: ls-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /listenerset-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: eep-listenerset-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: eep-listenerset-policy-ls
+  extProc:
+  - backendRefs:
+    - name: grpc-ext-proc
+      namespace: gateway-conformance-infra
+      port: 9002
+    processingMode:
+      request: {}
+      response: {}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eep-listener-policy-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18192
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: eep-listener-policy-ls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: eep-listener-policy-gateway
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: section-http
+    port: 18193
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+  - name: other-http
+    port: 18194
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: eep-listener-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: eep-listener-policy-ls
+    sectionName: section-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /listener-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: eep-listener-policy-other-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: eep-listener-policy-ls
+    sectionName: other-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /listener-policy-other
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: eep-listener-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: eep-listener-policy-ls
+    sectionName: section-http
+  extProc:
+  - backendRefs:
+    - name: grpc-ext-proc
+      namespace: gateway-conformance-infra
+      port: 9002
+    processingMode:
+      request: {}
+      response: {}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eep-route-policy-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18195
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: eep-route-policy-ls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: eep-route-policy-gateway
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: route-http
+    port: 18196
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: eep-route-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: eep-route-policy-ls
+    sectionName: route-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /route-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: eep-route-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: eep-route-policy-route
+  extProc:
+  - backendRefs:
+    - name: grpc-ext-proc
+      namespace: gateway-conformance-infra
+      port: 9002
+    processingMode:
+      request: {}
+      response: {}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: grpc-ext-proc-btls
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: ''
+    kind: Service
+    name: grpc-ext-proc
+    sectionName: grpc
+  validation:
+    caCertificateRefs:
+    - name: grpc-ext-proc-ca
+      group: ''
+      kind: ConfigMap
+    hostname: grpc-ext-proc.envoygateway

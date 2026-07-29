@@ -183,6 +183,11 @@ type HeaderSettings struct {
 	//
 	// +optional
 	LateResponseHeaders *HTTPHeaderFilter `json:"lateResponseHeaders,omitempty"`
+
+	// Host enables managing how the Host/Authority header set by clients can be normalized.
+	//
+	// +optional
+	Host *HostSettings `json:"host,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores

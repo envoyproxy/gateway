@@ -12,6 +12,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -189,11 +190,42 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 	if rateLimit.Backend.Type != egv1a1.RedisBackendType {
 		return fmt.Errorf("unsupported ratelimit backend %v", rateLimit.Backend.Type)
 	}
-	if rateLimit.Backend.Redis == nil || rateLimit.Backend.Redis.URL == "" {
+	redis := rateLimit.Backend.Redis
+	if redis == nil {
 		return fmt.Errorf("empty ratelimit redis settings")
 	}
-	redisHosts := strings.Split(rateLimit.Backend.Redis.URL, ",")
-	for _, host := range redisHosts {
+
+	hasURL := ptr.Deref(redis.URL, "") != ""
+	hasURLRef := redis.URLRef != nil
+	if hasURL == hasURLRef {
+		return fmt.Errorf("exactly one of ratelimit redis url or urlRef must be set")
+	}
+
+	if hasURLRef {
+		ref := redis.URLRef.SecretKeyRef
+		if ref == nil || ref.Name == "" || ref.Key == "" {
+			return fmt.Errorf("ratelimit redis urlRef.secretKeyRef must set both name and key")
+		}
+		// The Secret is required: the rate limit pod must wait for an
+		// externally provisioned Secret rather than start with an unset
+		// REDIS_URL. An optional reference would let the container boot
+		// nonfunctional, so reject optional=true.
+		if ref.Optional != nil && *ref.Optional {
+			return fmt.Errorf("ratelimit redis urlRef.secretKeyRef.optional must not be true; the Secret is required")
+		}
+		return nil
+	}
+
+	return ValidateRedisURL(*redis.URL)
+}
+
+// ValidateRedisURL validates a ratelimit Redis URL string, which may be a single
+// host or a comma-delimited list of hosts for Sentinel and Cluster deployments.
+func ValidateRedisURL(redisURL string) error {
+	if redisURL == "" {
+		return fmt.Errorf("ratelimit redis url is empty")
+	}
+	for _, host := range strings.Split(redisURL, ",") {
 		if _, err := url.Parse(host); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}
@@ -299,6 +331,13 @@ func validateEnvoyGatewayXDSServer(xdsServer *egv1a1.XDSServer) error {
 		}
 		if d <= 0 {
 			return fmt.Errorf("xdsServer.maxConnectionAgeGrace must be greater than zero")
+		}
+	}
+
+	if xdsServer.MaxReceiveMessageSize != nil {
+		v, ok := xdsServer.MaxReceiveMessageSize.AsInt64()
+		if !ok || v <= 0 {
+			return fmt.Errorf("xdsServer.maxReceiveMessageSize must be greater than zero")
 		}
 	}
 

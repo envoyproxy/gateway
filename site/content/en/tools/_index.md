@@ -25,7 +25,7 @@ description = "Explore tools available on Envoy Gateway site"
         <p class="text-center mb-5 lead">
                 Our tools ecosystem is new and evolving and we welcome your contributions!<br/>
                 Get involved with the Envoy Gateway community and expand our tooling library.<br/>
-                Join us on <a href="https://communityinviter.com/apps/envoyproxy/envoy"><i class="fab fa-slack me-2"></i>Slack</a> and <a href="https://github.com/envoyproxy/gateway"> <i class="fab fa-github me-2"></i>GitHub</a>.
+                Join us on <a href="https://www.envoyproxy.io/slack"><i class="fab fa-slack me-2"></i>Slack</a> and <a href="https://github.com/envoyproxy/gateway"> <i class="fab fa-github me-2"></i>GitHub</a>.
         </p>
 
 </div>

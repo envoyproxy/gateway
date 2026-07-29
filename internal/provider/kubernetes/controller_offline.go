@@ -102,20 +102,21 @@ func NewOfflineGatewayAPIController(
 		extServerPolicies: extServerPoliciesGVKs,
 		extBackendGVKs:    extBackendPoliciesGVKs,
 		// We assume all CRDs are available in offline mode.
+		btlsCRDExists:          true,
 		btpCRDExists:           true,
 		ctpCRDExists:           true,
 		eepCRDExists:           true,
 		epCRDExists:            true,
 		eppCRDExists:           true,
+		grpcRouteCRDExists:     true,
 		hrfCRDExists:           true,
+		listenerSetCRDExists:   true,
 		serviceImportCRDExists: true,
 		spCRDExists:            true,
 		tcpRouteCRDExists:      true,
+		tlsRouteCRDExists:      true,
 		udpRouteCRDExists:      true,
 		backendCRDExists:       true,
-		btlsCRDExists:          true,
-		listenerSetCRDExists:   true,
-		tlsRouteCRDExists:      true,
 	}
 
 	r.log.Info("created offline gatewayapi controller")
