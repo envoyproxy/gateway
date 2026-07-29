@@ -841,6 +841,110 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "backendUtilization with OutOfBand fields is valid",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{
+									ReportingPeriod: new(gwapiv1.Duration("5s")),
+									Port:            new(int32(9001)),
+									Authority:       new("orca.local"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "backendUtilization OutOfBand port zero is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(0))},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.loadBalancer.backendUtilization.outOfBand.port"},
+		},
+		{
+			desc: "backendUtilization OutOfBand port above max is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(70000))},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.loadBalancer.backendUtilization.outOfBand.port"},
+		},
+		{
+			desc: "backendUtilization OutOfBand authority with newline is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("foo\nbar")},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.loadBalancer.backendUtilization.outOfBand.authority"},
+		},
+		{
 			desc: "backendUtilization field nil when type is BackendUtilization",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

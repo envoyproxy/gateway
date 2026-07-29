@@ -4587,6 +4587,20 @@ _Appears in:_
 | `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
 
 
+#### OutOfBandReporting
+
+
+
+OutOfBandReporting configures out-of-band ORCA load reporting for the
+BackendUtilization load balancer.
+
+_Appears in:_
+- [BackendUtilization](#backendutilization)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
 #### PassiveHealthCheck
 
 
