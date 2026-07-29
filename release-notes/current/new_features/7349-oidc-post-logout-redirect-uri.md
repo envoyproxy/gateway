@@ -1,0 +1,1 @@
+Added `spec.oidc.postLogoutRedirect` to SecurityPolicy to configure the `post_logout_redirect_uri` parameter EG sends to the OIDC Provider during RP-Initiated Logout, either by setting an explicit `uri` or by setting `disabled` to omit the parameter entirely.
