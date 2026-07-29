@@ -255,6 +255,8 @@ type OutOfBandReporting struct {
 
 	// Port overrides the port used for the OutOfBand reporting connection, e.g. to
 	// reach a separate reporting sidecar. Defaults to the endpoint's port.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
 	// +optional
 	// +notImplementedHide
 	Port *gwapiv1.PortNumber `json:"port,omitempty"`
