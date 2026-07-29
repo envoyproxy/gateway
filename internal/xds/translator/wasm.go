@@ -108,6 +108,47 @@ func wasmFilterName(wasm *ir.Wasm) string {
 	return perRouteFilterName(egv1a1.EnvoyFilterWasm, wasm.Name)
 }
 
+// wasmCodeSource builds the AsyncDataSource for a Wasm filter.
+// Filesystem sources use a local path on the Envoy proxy; HTTP/Image sources use
+// the EG-served remote URL.
+func wasmCodeSource(wasm *ir.Wasm) (*corev3.AsyncDataSource, error) {
+	if wasm.Path != "" {
+		return &corev3.AsyncDataSource{
+			Specifier: &corev3.AsyncDataSource_Local{
+				Local: &corev3.DataSource{
+					Specifier: &corev3.DataSource_Filename{
+						Filename: wasm.Path,
+					},
+				},
+			},
+		}, nil
+	}
+	if wasm.Code == nil {
+		return nil, errors.New("wasm code source is missing")
+	}
+	return &corev3.AsyncDataSource{
+		Specifier: &corev3.AsyncDataSource_Remote{
+			Remote: &corev3.RemoteDataSource{
+				HttpUri: &corev3.HttpUri{
+					Uri: wasm.Code.ServingURL,
+					HttpUpstreamType: &corev3.HttpUri_Cluster{
+						Cluster: wasmHTTPServiceClusterName,
+					},
+					Timeout: durationpb.New(defaultExtServiceRequestTimeout),
+				},
+				Sha256: wasm.Code.SHA256,
+				RetryPolicy: &corev3.RetryPolicy{
+					NumRetries: wrapperspb.UInt32(wasmFetchNumRetries),
+					RetryBackOff: &corev3.BackoffStrategy{
+						BaseInterval: durationpb.New(wasmFetchBaseInterval),
+						MaxInterval:  durationpb.New(wasmFetchMaxInterval),
+					},
+				},
+			},
+		},
+	}, nil
+}
+
 func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 	var (
 		pluginConfig = ""
@@ -124,30 +165,15 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 		return nil, err
 	}
 
+	codeSource, err := wasmCodeSource(wasm)
+	if err != nil {
+		return nil, err
+	}
+
 	vmConfig := &wasmv3.VmConfig{
 		VmId:    wasm.Name, // Do not share VMs across different filters
 		Runtime: vmRuntimeV8,
-		Code: &corev3.AsyncDataSource{
-			Specifier: &corev3.AsyncDataSource_Remote{
-				Remote: &corev3.RemoteDataSource{
-					HttpUri: &corev3.HttpUri{
-						Uri: wasm.Code.ServingURL,
-						HttpUpstreamType: &corev3.HttpUri_Cluster{
-							Cluster: wasmHTTPServiceClusterName,
-						},
-						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
-					},
-					Sha256: wasm.Code.SHA256,
-					RetryPolicy: &corev3.RetryPolicy{
-						NumRetries: wrapperspb.UInt32(wasmFetchNumRetries),
-						RetryBackOff: &corev3.BackoffStrategy{
-							BaseInterval: durationpb.New(wasmFetchBaseInterval),
-							MaxInterval:  durationpb.New(wasmFetchMaxInterval),
-						},
-					},
-				},
-			},
-		},
+		Code:    codeSource,
 	}
 
 	if wasm.HostKeys != nil {
