@@ -3148,13 +3148,26 @@ type Random struct{}
 // BackendUtilization load balancer settings
 // +k8s:deepcopy-gen=true
 type BackendUtilization struct {
-	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
-	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
-	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
-	ErrorUtilizationPenaltyPercent     *uint32          `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
-	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
-	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
-	KeepResponseHeaders                *bool            `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+	BlackoutPeriod                     *metav1.Duration    `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
+	WeightExpirationPeriod             *metav1.Duration    `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
+	WeightUpdatePeriod                 *metav1.Duration    `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
+	ErrorUtilizationPenaltyPercent     *uint32             `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
+	MetricNamesForComputingUtilization []string            `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
+	SlowStart                          *SlowStart          `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	KeepResponseHeaders                *bool               `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+	OutOfBand                          *OutOfBandReporting `json:"outOfBand,omitempty" yaml:"outOfBand,omitempty"`
+}
+
+// OutOfBandReporting configures out-of-band ORCA load reporting for the
+// BackendUtilization load balancer.
+// +k8s:deepcopy-gen=true
+type OutOfBandReporting struct {
+	// ReportingPeriod is how often Envoy requests load reports from the server.
+	ReportingPeriod *metav1.Duration `json:"reportingPeriod,omitempty" yaml:"reportingPeriod,omitempty"`
+	// Port overrides the port used for the out-of-band reporting connection.
+	Port *int32 `json:"port,omitempty" yaml:"port,omitempty"`
+	// Authority overrides the :authority header on the out-of-band gRPC stream.
+	Authority *string `json:"authority,omitempty" yaml:"authority,omitempty"`
 }
 
 // ConsistentHash load balancer settings

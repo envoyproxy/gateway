@@ -47,6 +47,7 @@ func init() {
 		MultiHeaderConsistentHashHeaderLoadBalancing,
 		QueryParamsBasedConsistentHashLoadBalancing,
 		BackendUtilizationLoadBalancingTest,
+		BackendUtilizationOutOfBandLoadBalancingTest,
 		BackendUtilizationWeightedZonesLoadBalancingTest,
 	)
 }
@@ -129,6 +130,94 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 				}), nil
 			}); err != nil {
 				tlog.Errorf(t, "failed to run backend utilization load balancing test: %v", err)
+			}
+		})
+	},
+}
+
+var BackendUtilizationOutOfBandLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "BackendUtilizationOutOfBandLoadBalancing",
+	Description: "Test that BackendUtilization shifts traffic using out-of-band ORCA reports pulled from the endpoint's OpenRcaService",
+	Manifests: []string{
+		"testdata/load_balancing_backend_utilization_out_of_band.yaml",
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const (
+			warmupRequests = 20
+			sendRequests   = 100
+			lowUtilMinPct  = 80 // ORCA utilization split is 90:10 but gives a 10% buffer
+			// The policy asks for a report every 1s and Envoy delays the first
+			// stream by a random fraction of that period, so allow a few periods
+			// before expecting weights to be in effect.
+			reportSettleTime = 5 * time.Second
+		)
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "backend-utilization-oob-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: SameNamespaceGateway.Name, Namespace: ns}
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-utilization-oob-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-utilization-oob"}, corev1.PodRunning, &PodReady)
+
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/backend-utilization-oob",
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+		// Identify which pod is low-util vs high-util by deployment name prefix.
+		isLowUtil := func(podName string) bool {
+			return strings.Contains(podName, "lb-backend-oob-low-util")
+		}
+
+		t.Run("warmup until both backends are hit", func(t *testing.T) {
+			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
+				return runTrafficTest(t, suite, &req, &expectedResponse, warmupRequests, func(trafficMap map[string]int) bool {
+					return len(trafficMap) >= 2
+				}), nil
+			}); err != nil {
+				tlog.Errorf(t, "failed to hit both backends during warmup: %v", err)
+			}
+		})
+
+		// The backends report only out-of-band (ORCA_INBAND=false), so any skew
+		// below can only come from the OpenRcaService stream.
+		time.Sleep(reportSettleTime)
+
+		t.Run("traffic should skew toward low-utilization backend", func(t *testing.T) {
+			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
+				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
+					lowCount := 0
+					total := 0
+					for podName, count := range trafficMap {
+						total += count
+						if isLowUtil(podName) {
+							lowCount += count
+						}
+					}
+					if total == 0 {
+						return false
+					}
+					lowPct := (lowCount * 100) / total
+					tlog.Logf(t, "oob traffic distribution: low-util=%d/%d (%d%%), high-util=%d/%d",
+						lowCount, total, lowPct, total-lowCount, total)
+					return lowPct >= lowUtilMinPct
+				}), nil
+			}); err != nil {
+				tlog.Errorf(t, "failed to run out-of-band backend utilization load balancing test: %v", err)
 			}
 		})
 	},
