@@ -204,6 +204,30 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 		},
 		{
+			name: "Nodeport svc with externalTrafficPolicy Local uses pre-filtered addresses",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				nodeAddresses: NodeAddresses{
+					IPv4: []string{"1.1.1.1"},
+				},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeNodePort,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
+						ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  new(gwapiv1.IPAddressType),
+					Value: "1.1.1.1",
+				},
+			},
+		},
+		{
 			name: "Nodeport svc",
 			args: args{
 				gw: &gwapiv1.Gateway{},
