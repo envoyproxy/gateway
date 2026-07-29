@@ -94,6 +94,20 @@ type OIDC struct {
 	// If not specified, uses a default logout path "/logout"
 	LogoutPath *string `json:"logoutPath,omitempty"`
 
+	// PostLogoutRedirect configures the `post_logout_redirect_uri` parameter that EG sends to the
+	// OIDC Provider's end session endpoint when a user accesses the logout path.
+	//
+	// This only applies when the OIDC Provider's end session endpoint is configured or discovered,
+	// i.e. when RP-Initiated Logout is in use. It is ignored otherwise.
+	//
+	// If not specified, Envoy sends the root of the request's host, "<scheme>://<host>/".
+	// Note that many OIDC Providers require the post logout redirect URI to be pre-registered for
+	// the client and reject the logout request otherwise. If the default value is not registered,
+	// set an explicit uri here, or set disabled to true to omit the parameter altogether.
+	//
+	// +optional
+	PostLogoutRedirect *OIDCPostLogoutRedirect `json:"postLogoutRedirect,omitempty"`
+
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
 	// via the Authorization header Bearer scheme to the upstream.
 	// If not specified, defaults to false.
@@ -231,6 +245,44 @@ type OIDCDenyRedirectHeader struct {
 	// +kubebuilder:validation:MinLength=1
 	Name        string `json:"name"`
 	StringMatch `json:",inline"`
+}
+
+// OIDCPostLogoutRedirect configures the `post_logout_redirect_uri` parameter used in OIDC
+// [RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) requests.
+//
+// Exactly one of uri or disabled must be set.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.uri) != has(self.disabled)",message="exactly one of uri or disabled must be set"
+type OIDCPostLogoutRedirect struct {
+	// URI is sent as the `post_logout_redirect_uri` parameter to the OIDC Provider's end session
+	// endpoint. The provider redirects the user to this URI after the logout completes, so it
+	// usually must be pre-registered for the client with the provider.
+	//
+	// The URI may contain the Envoy "%REQ(header)%"
+	// [command operator](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+	// to build the URI from the request, for example
+	// "%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout". Envoy Gateway accepts only that
+	// operator here, since it is the only one meaningful in a URI derived from the request, and
+	// rejects any other so that a typo surfaces on this policy instead of being rejected by Envoy
+	// as an invalid configuration. A literal percent is written as "%%".
+	//
+	// The scheme must be http, https, or a "%REQ(header)%" command operator. The URI is
+	// percent-encoded automatically when the logout URL is built, so do not pre-encode it.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=2048
+	URI *string `json:"uri,omitempty"`
+
+	// Disabled omits the `post_logout_redirect_uri` parameter from the logout request entirely.
+	// Use this when the OIDC Provider rejects unregistered post logout redirect URIs and you do
+	// not need the user redirected back after the logout completes. In that case the user is left
+	// on a page controlled by the provider.
+	//
+	// Setting this to false is equivalent to leaving postLogoutRedirect unset.
+	//
+	// +optional
+	Disabled *bool `json:"disabled,omitempty"`
 }
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
