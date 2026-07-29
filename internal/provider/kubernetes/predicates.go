@@ -563,26 +563,30 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 		return true
 	}
 
-	grpcRouteList := &gwapiv1.GRPCRouteList{}
-	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated GRPCRoutes")
-		return false
-	}
-	if len(grpcRouteList.Items) > 0 {
-		return true
+	if r.grpcRouteCRDExists {
+		grpcRouteList := &gwapiv1.GRPCRouteList{}
+		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated GRPCRoutes")
+			return false
+		}
+		if len(grpcRouteList.Items) > 0 {
+			return true
+		}
 	}
 
-	tlsRouteList := &gwapiv1.TLSRouteList{}
-	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated TLSRoutes")
-		return false
-	}
-	if len(tlsRouteList.Items) > 0 {
-		return true
+	if r.tlsRouteCRDExists {
+		tlsRouteList := &gwapiv1.TLSRouteList{}
+		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated TLSRoutes")
+			return false
+		}
+		if len(tlsRouteList.Items) > 0 {
+			return true
+		}
 	}
 
 	if r.tcpRouteCRDExists {

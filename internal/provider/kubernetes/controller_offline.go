@@ -107,10 +107,13 @@ func NewOfflineGatewayAPIController(
 		eepCRDExists:           true,
 		epCRDExists:            true,
 		eppCRDExists:           true,
+		grpcRouteCRDExists:     true,
 		hrfCRDExists:           true,
+		listenerSetCRDExists:   true,
 		serviceImportCRDExists: true,
 		spCRDExists:            true,
 		tcpRouteCRDExists:      true,
+		tlsRouteCRDExists:      true,
 		udpRouteCRDExists:      true,
 		backendCRDExists:       true,
 	}
