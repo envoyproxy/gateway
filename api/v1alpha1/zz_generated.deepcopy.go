@@ -6405,7 +6405,7 @@ func (in *OutOfBandReporting) DeepCopyInto(out *OutOfBandReporting) {
 	}
 	if in.Port != nil {
 		in, out := &in.Port, &out.Port
-		*out = new(uint32)
+		*out = new(v1.PortNumber)
 		**out = **in
 	}
 	if in.Authority != nil {

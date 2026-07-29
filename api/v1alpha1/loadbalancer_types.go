@@ -255,11 +255,9 @@ type OutOfBandReporting struct {
 
 	// Port overrides the port used for the OutOfBand reporting connection, e.g. to
 	// reach a separate reporting sidecar. Defaults to the endpoint's port.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=65535
 	// +optional
 	// +notImplementedHide
-	Port *uint32 `json:"port,omitempty"`
+	Port *gwapiv1.PortNumber `json:"port,omitempty"`
 
 	// Authority overrides the :authority header on the OutOfBand gRPC stream.
 	//
