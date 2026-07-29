@@ -9,9 +9,12 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -758,8 +761,22 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		// TODO (huabing): this is tricky and confusing for later readers, we should remove this and set the accepted condition
 		// to true in the Gateway API translator
 		status.UpdateGatewayStatusAccepted(gtw)
+
+		// For NodePort services with externalTrafficPolicy: Local, only nodes running
+		// an Envoy pod receive traffic, so restrict status addresses to those nodes.
+		nodeAddresses := r.store.listNodeAddresses()
+		if svc != nil && svc.Spec.Type == corev1.ServiceTypeNodePort &&
+			svc.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal {
+			podNodeNames, err := r.envoyPodNodeNamesForGateway(ctx, gtw)
+			if err != nil {
+				r.log.Info("failed to list Envoy pods for gateway node filtering",
+					"namespace", gtw.Namespace, "name", gtw.Name, "error", err)
+			} else {
+				nodeAddresses = r.store.listNodeAddressesForNodes(podNodeNames)
+			}
+		}
 		// update address field and programmed condition
-		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses())
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, nodeAddresses)
 	}
 
 	key := utils.NamespacedName(gtw)
@@ -787,6 +804,25 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 			return gCopy
 		}),
 	})
+}
+
+// envoyPodNodeNamesForGateway returns the names of nodes that are running a ready Envoy pod for the given gateway.
+func (r *gatewayAPIReconciler) envoyPodNodeNamesForGateway(ctx context.Context, gateway *gwapiv1.Gateway) ([]string, error) {
+	merged := r.isGatewayClassMerged(string(gateway.Spec.GatewayClassName))
+	pods := &corev1.PodList{}
+	if err := r.client.List(ctx, pods, &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, merged)),
+		Namespace:     envoyObjectNamespace(r, gateway),
+	}); err != nil {
+		return nil, err
+	}
+	seen := sets.New[string]()
+	for _, pod := range pods.Items {
+		if pod.Spec.NodeName != "" && pod.Status.Phase == corev1.PodRunning {
+			seen.Insert(pod.Spec.NodeName)
+		}
+	}
+	return seen.UnsortedList(), nil
 }
 
 // setLastTransitionTimeInConditions sets LastTransitionTime to the given time for all conditions in a slice
