@@ -12,13 +12,13 @@ require (
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.21.7
-	github.com/klauspost/compress v1.19.0
+	github.com/klauspost/compress v1.19.1
 	github.com/miekg/dns v1.1.72
 	github.com/moby/go-archive v0.2.0
 	github.com/moby/moby/client v0.5.0
-	github.com/prometheus/client_golang v1.24.0
+	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.70.0
+	github.com/prometheus/common v0.70.1
 	github.com/quic-go/quic-go v0.59.1
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/proto/otlp v1.11.0
