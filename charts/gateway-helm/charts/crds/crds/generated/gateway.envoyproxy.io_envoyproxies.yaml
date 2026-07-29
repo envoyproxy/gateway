@@ -12336,6 +12336,8 @@ spec:
                                                           Port overrides the port used for the OutOfBand reporting connection, e.g. to
                                                           reach a separate reporting sidecar. Defaults to the endpoint's port.
                                                         format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
                                                         type: integer
                                                       reportingPeriod:
                                                         description: |-
@@ -13944,6 +13946,8 @@ spec:
                                                           Port overrides the port used for the OutOfBand reporting connection, e.g. to
                                                           reach a separate reporting sidecar. Defaults to the endpoint's port.
                                                         format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
                                                         type: integer
                                                       reportingPeriod:
                                                         description: |-
@@ -15718,6 +15722,8 @@ spec:
                                                     Port overrides the port used for the OutOfBand reporting connection, e.g. to
                                                     reach a separate reporting sidecar. Defaults to the endpoint's port.
                                                   format: int32
+                                                  maximum: 65535
+                                                  minimum: 1
                                                   type: integer
                                                 reportingPeriod:
                                                   description: |-
@@ -17439,6 +17445,8 @@ spec:
                                               Port overrides the port used for the OutOfBand reporting connection, e.g. to
                                               reach a separate reporting sidecar. Defaults to the endpoint's port.
                                             format: int32
+                                            maximum: 65535
+                                            minimum: 1
                                             type: integer
                                           reportingPeriod:
                                             description: |-

@@ -859,7 +859,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							BackendUtilization: &egv1a1.BackendUtilization{
 								OutOfBand: &egv1a1.OutOfBandReporting{
 									ReportingPeriod: new(gwapiv1.Duration("5s")),
-									Port:            new(uint32(9001)),
+									Port:            new(int32(9001)),
 									Authority:       new("orca.local"),
 								},
 							},
@@ -886,7 +886,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.BackendUtilizationLoadBalancerType,
 							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(uint32(0))},
+								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(0))},
 							},
 						},
 					},
@@ -911,7 +911,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.BackendUtilizationLoadBalancerType,
 							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(uint32(70000))},
+								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(70000))},
 							},
 						},
 					},

@@ -259,7 +259,7 @@ type OutOfBandReporting struct {
 	// +kubebuilder:validation:Maximum=65535
 	// +optional
 	// +notImplementedHide
-	Port *gwapiv1.PortNumber `json:"port,omitempty"`
+	Port *int32 `json:"port,omitempty"`
 
 	// Authority overrides the :authority header on the OutOfBand gRPC stream.
 	//
