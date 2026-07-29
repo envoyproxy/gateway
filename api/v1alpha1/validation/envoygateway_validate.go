@@ -12,6 +12,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -194,7 +195,7 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return fmt.Errorf("empty ratelimit redis settings")
 	}
 
-	hasURL := redis.URL != ""
+	hasURL := ptr.Deref(redis.URL, "") != ""
 	hasURLRef := redis.URLRef != nil
 	if hasURL == hasURLRef {
 		return fmt.Errorf("exactly one of ratelimit redis url or urlRef must be set")
@@ -215,7 +216,7 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return nil
 	}
 
-	return ValidateRedisURL(redis.URL)
+	return ValidateRedisURL(*redis.URL)
 }
 
 // ValidateRedisURL validates a ratelimit Redis URL string, which may be a single
@@ -330,6 +331,13 @@ func validateEnvoyGatewayXDSServer(xdsServer *egv1a1.XDSServer) error {
 		}
 		if d <= 0 {
 			return fmt.Errorf("xdsServer.maxConnectionAgeGrace must be greater than zero")
+		}
+	}
+
+	if xdsServer.MaxReceiveMessageSize != nil {
+		v, ok := xdsServer.MaxReceiveMessageSize.AsInt64()
+		if !ok || v <= 0 {
+			return fmt.Errorf("xdsServer.maxReceiveMessageSize must be greater than zero")
 		}
 	}
 

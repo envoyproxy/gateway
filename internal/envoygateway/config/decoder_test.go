@@ -170,7 +170,7 @@ func TestDecode(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "localhost:6379",
+								URL: new("localhost:6379"),
 								TLS: &egv1a1.RedisTLSSettings{
 									CertificateRef: &gwapiv1.SecretObjectReference{
 										Name: "ratelimit-cert",
@@ -199,7 +199,7 @@ func TestDecode(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "localhost:6379",
+								URL: new("localhost:6379"),
 							},
 						},
 					},

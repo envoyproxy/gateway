@@ -2427,10 +2427,11 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 
 func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 	const (
-		policyNS  = "policy"
-		gatewayNS = "gateway"
-		routeNS   = "route"
-		otherNS   = "other"
+		policyNS      = "policy"
+		gatewayNS     = "gateway"
+		listenerSetNS = "listener-set"
+		routeNS       = "route"
+		otherNS       = "other"
 	)
 
 	refGrant := func(name, namespace, fromKind, fromNamespace, toGroup, toKind string) *gwapiv1b1.ReferenceGrant {
@@ -2461,6 +2462,11 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 		resourceTree := resource.NewResources()
 		resourceTree.Gateways = append(resourceTree.Gateways,
 			test.GetGateway(types.NamespacedName{Namespace: gatewayNS, Name: "gateway"}, "gc", 80))
+		resourceTree.ListenerSets = append(resourceTree.ListenerSets,
+			test.GetListenerSet(
+				types.NamespacedName{Namespace: listenerSetNS, Name: "listener-set"},
+				types.NamespacedName{Namespace: gatewayNS, Name: "gateway"},
+				80))
 		resourceTree.HTTPRoutes = append(resourceTree.HTTPRoutes,
 			test.GetHTTPRoute(
 				types.NamespacedName{Namespace: routeNS, Name: "route"},
@@ -2478,7 +2484,7 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 		expectedNames     sets.Set[string]
 	}{
 		{
-			name: "BackendTrafficPolicy includes gateway and route target grants",
+			name: "BackendTrafficPolicy includes gateway, ListenerSet, and route target grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{
 					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "btp"},
@@ -2486,12 +2492,13 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			},
 			referenceGrants: []client.Object{
 				refGrant("btp-gateway", gatewayNS, resource.KindBackendTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("btp-listenerset", listenerSetNS, resource.KindBackendTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindListenerSet),
 				refGrant("btp-route", routeNS, resource.KindBackendTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindHTTPRoute),
 			},
-			expectedNames: sets.New("btp-gateway", "btp-route"),
+			expectedNames: sets.New("btp-gateway", "btp-listenerset", "btp-route"),
 		},
 		{
-			name: "ClientTrafficPolicy only includes gateway target grants",
+			name: "ClientTrafficPolicy includes gateway and ListenerSet target grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &egv1a1.ClientTrafficPolicy{
 					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "ctp"},
@@ -2499,12 +2506,13 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			},
 			referenceGrants: []client.Object{
 				refGrant("ctp-gateway", gatewayNS, resource.KindClientTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("ctp-listenerset", listenerSetNS, resource.KindClientTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindListenerSet),
 				refGrant("ctp-route", routeNS, resource.KindClientTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindHTTPRoute),
 			},
-			expectedNames: sets.New("ctp-gateway"),
+			expectedNames: sets.New("ctp-gateway", "ctp-listenerset"),
 		},
 		{
-			name: "EnvoyExtensionPolicy includes gateway and route target grants",
+			name: "EnvoyExtensionPolicy includes gateway, ListenerSet, and route target grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, &egv1a1.EnvoyExtensionPolicy{
 					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "eep"},
@@ -2512,12 +2520,13 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			},
 			referenceGrants: []client.Object{
 				refGrant("eep-gateway", gatewayNS, resource.KindEnvoyExtensionPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("eep-listenerset", listenerSetNS, resource.KindEnvoyExtensionPolicy, policyNS, gwapiv1.GroupName, resource.KindListenerSet),
 				refGrant("eep-route", routeNS, resource.KindEnvoyExtensionPolicy, policyNS, gwapiv1.GroupName, resource.KindHTTPRoute),
 			},
-			expectedNames: sets.New("eep-gateway", "eep-route"),
+			expectedNames: sets.New("eep-gateway", "eep-listenerset", "eep-route"),
 		},
 		{
-			name: "SecurityPolicy includes gateway and supported route target grants",
+			name: "SecurityPolicy includes gateway, ListenerSet, and supported route target grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &egv1a1.SecurityPolicy{
 					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "sp"},
@@ -2525,12 +2534,13 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			},
 			referenceGrants: []client.Object{
 				refGrant("sp-gateway", gatewayNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("sp-listenerset", listenerSetNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindListenerSet),
 				refGrant("sp-http-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindHTTPRoute),
 				refGrant("sp-grpc-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindGRPCRoute),
 				refGrant("sp-tcp-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTCPRoute),
 				refGrant("sp-tls-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTLSRoute),
 			},
-			expectedNames: sets.New("sp-gateway", "sp-http-route", "sp-grpc-route", "sp-tcp-route"),
+			expectedNames: sets.New("sp-gateway", "sp-listenerset", "sp-http-route", "sp-grpc-route", "sp-tcp-route"),
 		},
 		{
 			name: "ignores non matching grants",

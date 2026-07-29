@@ -100,7 +100,7 @@ func TestServiceAccount(t *testing.T) {
 		Backend: egv1a1.RateLimitDatabaseBackend{
 			Type: egv1a1.RedisBackendType,
 			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+				URL: new("redis.redis.svc:6379"),
 			},
 		},
 	}
@@ -126,7 +126,7 @@ func TestService(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -137,7 +137,7 @@ func TestService(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
@@ -169,7 +169,7 @@ func TestConfigmap(t *testing.T) {
 		Backend: egv1a1.RateLimitDatabaseBackend{
 			Type: egv1a1.RedisBackendType,
 			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+				URL: new("redis.redis.svc:6379"),
 			},
 		},
 	}
@@ -193,7 +193,7 @@ func TestPDB(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -205,7 +205,7 @@ func TestPDB(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -225,7 +225,7 @@ func TestPDB(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -260,7 +260,7 @@ func TestDeployment(t *testing.T) {
 		Backend: egv1a1.RateLimitDatabaseBackend{
 			Type: egv1a1.RedisBackendType,
 			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+				URL: new("redis.redis.svc:6379"),
 			},
 		},
 	}
@@ -280,7 +280,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
@@ -487,7 +487,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 						TLS: &egv1a1.RedisTLSSettings{
 							CertificateRef: &gwapiv1.SecretObjectReference{
 								Name: "ratelimit-cert",
@@ -558,7 +558,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 						TLS: &egv1a1.RedisTLSSettings{
 							CertificateRef: &gwapiv1.SecretObjectReference{
 								Name: "ratelimit-cert",
@@ -620,7 +620,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 						TLS: &egv1a1.RedisTLSSettings{
 							CertificateRef: &gwapiv1.SecretObjectReference{
 								Name: "ratelimit-cert-origin",
@@ -725,7 +725,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
@@ -743,7 +743,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
@@ -762,7 +762,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -784,7 +784,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -834,7 +834,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -846,7 +846,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -883,7 +883,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -898,7 +898,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -1063,7 +1063,7 @@ func TestValidateRedisSettings(t *testing.T) {
 		}
 		c := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(certSecret).Build()
 		require.NoError(t, Validate(context.Background(), c, redisGW(&egv1a1.RateLimitRedisSettings{
-			URL: "redis.redis.svc:6379",
+			URL: new("redis.redis.svc:6379"),
 			TLS: &egv1a1.RedisTLSSettings{
 				CertificateRef: &gwapiv1.SecretObjectReference{Name: "redis-cert"},
 			},

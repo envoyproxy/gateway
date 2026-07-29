@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -277,7 +278,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: ":foo",
+								URL: new(":foo"),
 							},
 						},
 					},
@@ -295,7 +296,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "localhost:6376",
+								URL: new("localhost:6376"),
 							},
 						},
 					},
@@ -313,7 +314,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "primary_.-,node-0:26379,node-1:26379",
+								URL: new("primary_.-,node-0:26379,node-1:26379"),
 							},
 						},
 					},
@@ -331,7 +332,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "node-0:6376,node-1:6376,node-2:6376",
+								URL: new("node-0:6376,node-1:6376,node-2:6376"),
 							},
 						},
 					},
@@ -1112,6 +1113,18 @@ func TestValidateEnvoyGatewayXDSServer(t *testing.T) {
 		x := &egv1a1.XDSServer{MaxConnectionAgeGrace: &age}
 		require.Error(t, validateEnvoyGatewayXDSServer(x))
 	})
+
+	t.Run("valid maxReceiveMessageSize", func(t *testing.T) {
+		size := resource.MustParse("100Mi")
+		x := &egv1a1.XDSServer{MaxReceiveMessageSize: &size}
+		require.NoError(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("invalid zero maxReceiveMessageSize", func(t *testing.T) {
+		size := resource.MustParse("0")
+		x := &egv1a1.XDSServer{MaxReceiveMessageSize: &size}
+		require.Error(t, validateEnvoyGatewayXDSServer(x))
+	})
 }
 
 func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
@@ -1485,7 +1498,7 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 		},
 		{
 			name:      "url only",
-			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{URL: "redis.redis.svc:6379"}),
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{URL: new("redis.redis.svc:6379")}),
 			expectErr: false,
 		},
 		{
@@ -1503,7 +1516,7 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 		{
 			name: "both url and urlRef set",
 			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+				URL: new("redis.redis.svc:6379"),
 				URLRef: &egv1a1.RedisURLSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
