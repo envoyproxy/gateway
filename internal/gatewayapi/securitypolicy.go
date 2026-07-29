@@ -1467,43 +1467,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	return errs
 }
 
-func gatewaySecurityPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if target.SectionName != nil {
-			if listener.isFromListenerSet() || listener.Name != *target.SectionName {
-				continue
-			}
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
-func listenerSetSecurityPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	listenerSet *gwapiv1.ListenerSet,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if !listener.isFromListenerSet() {
-			continue
-		}
-		if listener.listenerSet.Namespace != listenerSet.Namespace || listener.listenerSet.Name != listenerSet.Name {
-			continue
-		}
-		if target.SectionName != nil && listener.Name != *target.SectionName {
-			continue
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
 func (t *Translator) translateSecurityPolicyForListenerSet(
 	policy *egv1a1.SecurityPolicy,
 	gtwCtx *GatewayContext,
@@ -1517,7 +1480,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 		gtwCtx,
 		resources,
 		xdsIR,
-		listenerSetSecurityPolicyTargetListeners(gtwCtx, listenerSet, target),
+		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
 	)
 }
 
@@ -1533,7 +1496,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		gtwCtx,
 		resources,
 		xdsIR,
-		gatewaySecurityPolicyTargetListeners(gtwCtx, target),
+		gatewayPolicyTargetListeners(gtwCtx, target),
 	)
 }
 
