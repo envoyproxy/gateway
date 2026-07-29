@@ -2,60 +2,58 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    name: policy-for-route-1-rule-1
-    namespace: default
+    name: target-listenerset-section
+    namespace: envoy-gateway
   spec:
-    extProc:
-    - backendRefs:
-      - name: grpc-backend-4
-        port: 8004
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-      sectionName: rule-1
+    lua:
+    - inline: |
+        function envoy_on_request(request_handle)
+          request_handle:logInfo("listenerset-section")
+        end
+      type: Inline
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+      sectionName: ext-http-1
   status:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+        kind: ListenerSet
+        name: ext-listeners
         namespace: envoy-gateway
-        sectionName: listener-1
+        sectionName: ext-http-1
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    name: policy-for-route-1
-    namespace: default
+    name: target-listenerset
+    namespace: envoy-gateway
   spec:
-    extProc:
-    - backendRefs:
-      - name: grpc-backend-3
-        port: 8003
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
+    lua:
+    - inline: |
+        function envoy_on_request(request_handle)
+          request_handle:logInfo("listenerset")
+        end
+      type: Inline
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
   status:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+        kind: ListenerSet
+        name: ext-listeners
         namespace: envoy-gateway
-        sectionName: listener-1
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -63,13 +61,8 @@ envoyExtensionPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these route rules: [rule-1]'
+          for these listenerset listeners: [envoy-gateway/ext-listeners/ext-http-1]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -77,64 +70,57 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    name: policy-for-gateway-1-listener-1
+    name: target-gw-section
     namespace: envoy-gateway
   spec:
-    extProc:
-    - backendRefs:
-      - name: grpc-backend-2
-        port: 8002
-    targetRef:
-      group: gateway.networking.k8s.io
+    lua:
+    - inline: |
+        function envoy_on_request(request_handle)
+          request_handle:logInfo("gateway-section")
+        end
+      type: Inline
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
-      name: gateway-1
-      sectionName: listener-1
+      name: composite-gateway
+      sectionName: http-8080
   status:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: gateway-1
+        name: composite-gateway
         namespace: envoy-gateway
-        sectionName: listener-1
+        sectionName: http-8080
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these routes: [default/httproute-1]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    name: policy-for-gateway-1
+    name: target-gw
     namespace: envoy-gateway
   spec:
-    extProc:
-    - backendRefs:
-      - name: grpc-backend-1
-        port: 8001
-    targetRef:
-      group: gateway.networking.k8s.io
+    lua:
+    - inline: |
+        function envoy_on_request(request_handle)
+          request_handle:logInfo("gateway")
+        end
+      type: Inline
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
-      name: gateway-1
+      name: composite-gateway
   status:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: gateway-1
+        name: composite-gateway
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
@@ -143,14 +129,10 @@ envoyExtensionPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these gateway listeners: [envoy-gateway/gateway-1/listener-1] and these
-          routes: [default/httproute-1]'
+          for these gateway listeners: [envoy-gateway/composite-gateway/http-8080]
+          and these listenersets: [envoy-gateway/ext-listeners] and these listenerset
+          listeners: [envoy-gateway/ext-listeners/ext-http-1]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -159,26 +141,30 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    name: gateway-1
+    name: composite-gateway
     namespace: envoy-gateway
   spec:
+    allowedListeners:
+      namespaces:
+        from: All
     gatewayClassName: envoy-gateway-class
     listeners:
     - allowedRoutes:
         namespaces:
           from: All
-      name: listener-1
-      port: 8081
+      name: http
+      port: 80
       protocol: HTTP
     - allowedRoutes:
         namespaces:
           from: All
-      name: listener-2
-      port: 8082
+      name: http-8080
+      port: 8080
       protocol: HTTP
   status:
+    attachedListenerSets: 1
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -195,7 +181,7 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: listener-1
+      name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -218,7 +204,7 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: listener-2
+      name: http-8080
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -228,30 +214,21 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-1
+    name: route-on-gw
     namespace: default
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
-    - name: gateway-1
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
       namespace: envoy-gateway
-      sectionName: listener-1
     rules:
     - backendRefs:
       - name: service-1
         port: 8080
       matches:
       - path:
-          value: /foo
-      name: rule-1
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      matches:
-      - path:
-          value: /bar
-      name: rule-2
+          value: /
   status:
     parents:
     - conditions:
@@ -267,19 +244,20 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: gateway-1
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: composite-gateway
         namespace: envoy-gateway
-        sectionName: listener-1
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-2
+    name: route-on-ls
     namespace: default
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
-    - name: gateway-1
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
       namespace: envoy-gateway
     rules:
     - backendRefs:
@@ -287,8 +265,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo
-      name: rule
+          value: /
   status:
     parents:
     - conditions:
@@ -304,19 +281,33 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: gateway-1
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: ext-listeners
         namespace: envoy-gateway
 infraIR:
-  envoy-gateway/gateway-1:
+  envoy-gateway/composite-gateway:
     proxy:
       listeners:
-      - name: envoy-gateway/gateway-1/listener-1
+      - name: envoy-gateway/composite-gateway/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      - name: envoy-gateway/composite-gateway/http-8080
+        ports:
+        - containerPort: 8080
+          name: http-8080
+          protocol: HTTP
+          servicePort: 8080
+      - name: envoy-gateway/composite-gateway/envoy-gateway/ext-listeners/ext-http-1
         ports:
         - containerPort: 8081
           name: http-8081
           protocol: HTTP
           servicePort: 8081
-      - name: envoy-gateway/gateway-1/listener-2
+      - name: envoy-gateway/composite-gateway/envoy-gateway/ext-listeners/ext-http-2
         ports:
         - containerPort: 8082
           name: http-8082
@@ -324,15 +315,106 @@ infraIR:
           servicePort: 8082
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-name: composite-gateway
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
         ownerReference:
           kind: GatewayClass
           name: envoy-gateway-class
-      name: envoy-gateway/gateway-1
+      name: envoy-gateway/composite-gateway
       namespace: envoy-gateway-system
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: ext-listeners
+    namespace: envoy-gateway
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: ext-http-1
+      port: 8081
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: ext-http-2
+      port: 8082
+      protocol: HTTP
+    parentRef:
+      name: composite-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are programmed
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: ext-http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: ext-http-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 xdsIR:
-  envoy-gateway/gateway-1:
+  envoy-gateway/composite-gateway:
     accessLog:
       json:
       - path: /dev/stdout
@@ -340,10 +422,10 @@ xdsIR:
       proxyServiceCluster:
         metadata:
           kind: Service
-          name: envoy-envoy-gateway-gateway-1-196ae069
+          name: envoy-envoy-gateway-composite-gateway-5ac11688
           namespace: envoy-gateway-system
           sectionName: "8080"
-        name: envoy-gateway/gateway-1
+        name: envoy-gateway/composite-gateway
         settings:
         - addressType: IP
           endpoints:
@@ -352,22 +434,128 @@ xdsIR:
             zone: zone1
           metadata:
             kind: Service
-            name: envoy-envoy-gateway-gateway-1-196ae069
+            name: envoy-envoy-gateway-composite-gateway-5ac11688
             namespace: envoy-gateway-system
             sectionName: "8080"
-          name: envoy-gateway/gateway-1
+          name: envoy-gateway/composite-gateway
           protocol: TCP
     http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: composite-gateway
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/composite-gateway/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: route-on-gw
+            namespace: default
+          name: httproute/default/route-on-gw/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/route-on-gw/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        envoyExtensions:
+          luas:
+          - Code: |
+              function envoy_on_request(request_handle)
+                request_handle:logInfo("gateway")
+              end
+            FilterContext: null
+            Name: envoyextensionpolicy/envoy-gateway/target-gw/lua/0
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: route-on-gw
+          namespace: default
+        name: httproute/default/route-on-gw/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+    - address: 0.0.0.0
+      externalPort: 8080
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: composite-gateway
+        namespace: envoy-gateway
+        sectionName: http-8080
+      name: envoy-gateway/composite-gateway/http-8080
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: route-on-gw
+            namespace: default
+          name: httproute/default/route-on-gw/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/route-on-gw/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        envoyExtensions:
+          luas:
+          - Code: |
+              function envoy_on_request(request_handle)
+                request_handle:logInfo("gateway-section")
+              end
+            FilterContext: null
+            Name: envoyextensionpolicy/envoy-gateway/target-gw-section/lua/0
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: route-on-gw
+          namespace: default
+        name: httproute/default/route-on-gw/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
     - address: 0.0.0.0
       externalPort: 8081
       hostnames:
       - '*'
       metadata:
         kind: Gateway
-        name: gateway-1
+        name: composite-gateway
         namespace: envoy-gateway
-        sectionName: listener-1
-      name: envoy-gateway/gateway-1/listener-1
+        sectionName: ext-http-1
+      name: envoy-gateway/composite-gateway/envoy-gateway/ext-listeners/ext-http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -376,10 +564,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: route-on-ls
             namespace: default
-            sectionName: rule-1
-          name: httproute/default/httproute-1/rule/0
+          name: httproute/default/route-on-ls/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -390,164 +577,38 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
+            name: httproute/default/route-on-ls/rule/0/backend/0
             protocol: HTTP
             weight: 1
         envoyExtensions:
-          extProcs:
-          - authority: grpc-backend-4.default:8004
-            destination:
-              metadata:
-                kind: EnvoyExtensionPolicy
-                name: policy-for-route-1-rule-1
-                namespace: default
-              name: envoyextensionpolicy/default/policy-for-route-1-rule-1/extproc/0
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 7.7.7.4
-                  port: 8004
-                metadata:
-                  kind: Service
-                  name: grpc-backend-4
-                  namespace: default
-                  sectionName: "8004"
-                name: envoyextensionpolicy/default/policy-for-route-1-rule-1/extproc/0/backend/0
-                protocol: GRPC
-                weight: 1
-            name: envoyextensionpolicy/default/policy-for-route-1-rule-1/extproc/0
-        hostname: gateway.envoyproxy.io
+          luas:
+          - Code: |
+              function envoy_on_request(request_handle)
+                request_handle:logInfo("listenerset-section")
+              end
+            FilterContext: null
+            Name: envoyextensionpolicy/envoy-gateway/target-listenerset-section/lua/0
+        hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: route-on-ls
           namespace: default
-          sectionName: rule-1
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/route-on-ls/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-1
-            namespace: default
-            sectionName: rule-2
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/1/backend/0
-            protocol: HTTP
-            weight: 1
-        envoyExtensions:
-          extProcs:
-          - authority: grpc-backend-3.default:8003
-            destination:
-              metadata:
-                kind: EnvoyExtensionPolicy
-                name: policy-for-route-1
-                namespace: default
-              name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 7.7.7.3
-                  port: 8003
-                metadata:
-                  kind: Service
-                  name: grpc-backend-3
-                  namespace: default
-                  sectionName: "8003"
-                name: envoyextensionpolicy/default/policy-for-route-1/extproc/0/backend/0
-                protocol: GRPC
-                weight: 1
-            name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-          sectionName: rule-2
-        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /bar
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-2
-            namespace: default
-            sectionName: rule
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        envoyExtensions:
-          extProcs:
-          - authority: grpc-backend-2.envoy-gateway:8002
-            destination:
-              metadata:
-                kind: EnvoyExtensionPolicy
-                name: policy-for-gateway-1-listener-1
-                namespace: envoy-gateway
-              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 7.7.7.2
-                  port: 8002
-                metadata:
-                  kind: Service
-                  name: grpc-backend-2
-                  namespace: envoy-gateway
-                  sectionName: "8002"
-                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0/backend/0
-                protocol: GRPC
-                weight: 1
-            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: default
-          sectionName: rule
-        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /foo
+          prefix: /
     - address: 0.0.0.0
       externalPort: 8082
       hostnames:
       - '*'
       metadata:
         kind: Gateway
-        name: gateway-1
+        name: composite-gateway
         namespace: envoy-gateway
-        sectionName: listener-2
-      name: envoy-gateway/gateway-1/listener-2
+        sectionName: ext-http-2
+      name: envoy-gateway/composite-gateway/envoy-gateway/ext-listeners/ext-http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -556,10 +617,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-2
+            name: route-on-ls
             namespace: default
-            sectionName: rule
-          name: httproute/default/httproute-2/rule/0
+          name: httproute/default/route-on-ls/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -570,44 +630,28 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-2/rule/0/backend/0
+            name: httproute/default/route-on-ls/rule/0/backend/0
             protocol: HTTP
             weight: 1
         envoyExtensions:
-          extProcs:
-          - authority: grpc-backend-1.envoy-gateway:8001
-            destination:
-              metadata:
-                kind: EnvoyExtensionPolicy
-                name: policy-for-gateway-1
-                namespace: envoy-gateway
-              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 7.7.7.1
-                  port: 8001
-                metadata:
-                  kind: Service
-                  name: grpc-backend-1
-                  namespace: envoy-gateway
-                  sectionName: "8001"
-                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0/backend/0
-                protocol: GRPC
-                weight: 1
-            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
-        hostname: gateway.envoyproxy.io
+          luas:
+          - Code: |
+              function envoy_on_request(request_handle)
+                request_handle:logInfo("listenerset")
+              end
+            FilterContext: null
+            Name: envoyextensionpolicy/envoy-gateway/target-listenerset/lua/0
+        hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-2
+          name: route-on-ls
           namespace: default
-          sectionName: rule
-        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/route-on-ls/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
+          prefix: /
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
