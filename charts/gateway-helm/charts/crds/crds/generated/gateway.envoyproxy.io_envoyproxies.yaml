@@ -818,7 +818,8 @@ spec:
                           (e.g. "/tmp" allows "/tmp/file.txt"). Paths are normalized (separators collapsed, made
                           absolute) before matching, and any "." or ".." traversal segment is always rejected.
                           When empty, all filesystem access is denied. Blank or whitespace-only entries are rejected,
-                          as they would otherwise match every path and disable the sandbox.
+                          as they would otherwise match every path and disable the sandbox. The filesystem root ("/")
+                          is likewise rejected, as it would allow access to the entire filesystem and defeat the sandbox.
                         items:
                           maxLength: 4096
                           minLength: 1
@@ -828,6 +829,9 @@ spec:
                         x-kubernetes-validations:
                         - message: allowedPaths entries must not be blank or whitespace-only
                           rule: self.all(p, p.trim() != '')
+                        - message: allowedPaths entries must not be the filesystem
+                            root
+                          rule: self.all(p, !p.matches('^/+$'))
                     type: object
                   type:
                     default: Strict

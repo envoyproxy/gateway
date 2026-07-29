@@ -297,12 +297,14 @@ type StrictValidation struct {
 	// (e.g. "/tmp" allows "/tmp/file.txt"). Paths are normalized (separators collapsed, made
 	// absolute) before matching, and any "." or ".." traversal segment is always rejected.
 	// When empty, all filesystem access is denied. Blank or whitespace-only entries are rejected,
-	// as they would otherwise match every path and disable the sandbox.
+	// as they would otherwise match every path and disable the sandbox. The filesystem root ("/")
+	// is likewise rejected, as it would allow access to the entire filesystem and defeat the sandbox.
 	//
 	// +kubebuilder:validation:MaxItems=64
 	// +kubebuilder:validation:items:MinLength=1
 	// +kubebuilder:validation:items:MaxLength=4096
 	// +kubebuilder:validation:XValidation:rule="self.all(p, p.trim() != '')",message="allowedPaths entries must not be blank or whitespace-only"
+	// +kubebuilder:validation:XValidation:rule="self.all(p, !p.matches('^/+$'))",message="allowedPaths entries must not be the filesystem root"
 	// +optional
 	AllowedPaths []string `json:"allowedPaths,omitempty"`
 

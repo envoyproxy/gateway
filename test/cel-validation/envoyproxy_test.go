@@ -2526,6 +2526,32 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"allowedPaths entries must not be blank or whitespace-only"},
 		},
 		{
+			desc: "luaValidationConfig-root-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					LuaValidationConfig: &egv1a1.LuaValidationConfig{
+						Strict: &egv1a1.StrictValidation{
+							AllowedPaths: []string{"/"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedPaths entries must not be the filesystem root"},
+		},
+		{
+			desc: "luaValidationConfig-multi-slash-root-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					LuaValidationConfig: &egv1a1.LuaValidationConfig{
+						Strict: &egv1a1.StrictValidation{
+							AllowedPaths: []string{"//"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedPaths entries must not be the filesystem root"},
+		},
+		{
 			desc: "luaValidationConfig-whitespace-envvar-rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
