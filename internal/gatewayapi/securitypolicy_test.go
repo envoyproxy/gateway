@@ -177,6 +177,170 @@ func Test_extractRedirectPath(t *testing.T) {
 	}
 }
 
+func Test_validatePostLogoutRedirectURI(t *testing.T) {
+	tests := []struct {
+		name    string
+		uri     string
+		wantErr bool
+	}{
+		{
+			name: "https",
+			uri:  "https://www.example.com/loggedout",
+		},
+		{
+			name: "http",
+			uri:  "http://www.example.com/",
+		},
+		{
+			name: "with port",
+			uri:  "https://www.example.com:9080/loggedout",
+		},
+		{
+			name: "header value syntax",
+			uri:  "%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout",
+		},
+		{
+			// Unlike extractRedirectPath, the header is not restricted to x-forwarded-proto.
+			name: "any request header as scheme",
+			uri:  "%REQ(x-scheme)%://www.example.com/loggedout",
+		},
+		{
+			name: "pseudo header as scheme",
+			uri:  "%REQ(:scheme)%://www.example.com/loggedout",
+		},
+		{
+			// Envoy rejects the whole config on a malformed command operator, so these must
+			// not reach the xDS translation.
+			name:    "empty command operator as scheme",
+			uri:     "%%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "unknown command operator as scheme",
+			uri:     "%BOGUS%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "request command operator without header",
+			uri:     "%REQ()%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "request command operator missing parentheses",
+			uri:     "%REQ%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "request command operator unterminated",
+			uri:     "%REQ(x-scheme://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name: "command operators in host and path",
+			uri:  "%REQ(x-forwarded-proto)%://%REQ(:authority)%/%REQ(x-tenant)%/loggedout",
+		},
+		{
+			name: "alternate header command operator",
+			uri:  "https://%REQ(x-a?x-b)%/loggedout",
+		},
+		{
+			name: "escaped literal percent",
+			uri:  "https://www.example.com/logged%%20out",
+		},
+		{
+			// Envoy only knows %REQ()% here; any other operator would fail filter creation
+			// and NACK the whole configuration.
+			name:    "unsupported command operator in path",
+			uri:     "https://www.example.com/%BOGUS%",
+			wantErr: true,
+		},
+		{
+			name:    "unsupported command operator in host",
+			uri:     "https://%DOWNSTREAM_LOCAL_ADDRESS%/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "unterminated command operator in path",
+			uri:     "https://www.example.com/%REQ(x-tenant)",
+			wantErr: true,
+		},
+		{
+			name:    "unpaired percent in path",
+			uri:     "https://www.example.com/logged%20out",
+			wantErr: true,
+		},
+		{
+			// The provider redirects to the host root, which is a valid post logout landing page.
+			name: "without path",
+			uri:  "https://www.example.com/",
+		},
+		{
+			name: "without trailing slash",
+			uri:  "https://www.example.com",
+		},
+		{
+			// URI schemes are case-insensitive, and Envoy passes the value through as-is.
+			name: "uppercase scheme",
+			uri:  "HTTPS://www.example.com/loggedout",
+		},
+		{
+			name: "truncated header command operator",
+			uri:  "https://%REQ(x-tenant):32%/loggedout",
+		},
+		{
+			name:    "truncated header command operator with non-numeric length",
+			uri:     "https://%REQ(x-tenant):abc%/loggedout",
+			wantErr: true,
+		},
+		{
+			// The provider would have nowhere to redirect to.
+			name:    "without host",
+			uri:     "https://",
+			wantErr: true,
+		},
+		{
+			name:    "without host but with path",
+			uri:     "https:///loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "relative path",
+			uri:     "/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "without scheme",
+			uri:     "www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "empty scheme",
+			uri:     "://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "unsupported scheme",
+			uri:     "htttps://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			uri:     "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validatePostLogoutRedirectURI(tt.uri)
+			if tt.wantErr {
+				require.Errorf(t, err, "validatePostLogoutRedirectURI(%v)", tt.uri)
+				return
+			}
+			require.NoErrorf(t, err, "validatePostLogoutRedirectURI(%v)", tt.uri)
+		})
+	}
+}
+
 func Test_JWTProvider(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -774,6 +938,51 @@ func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Test_OIDC_PostLogoutRedirect_Merge covers the invariant that the CRD's CEL rule cannot: CEL is
+// evaluated by the apiserver on an individual policy, but a merged policy only ever exists in
+// memory inside the translator. Merging a parent that sets uri with a route that sets disabled
+// therefore yields a policy that violates the exactly-one rule without any admission error, and
+// the translator would resolve it toward uri, silently dropping the route's intent.
+func Test_OIDC_PostLogoutRedirect_Merge(t *testing.T) {
+	oidcWith := func(plr *egv1a1.OIDCPostLogoutRedirect) *egv1a1.OIDC {
+		return &egv1a1.OIDC{PostLogoutRedirect: plr}
+	}
+	parentPolicy := func() *egv1a1.SecurityPolicy {
+		return &egv1a1.SecurityPolicy{
+			Spec: egv1a1.SecurityPolicySpec{
+				OIDC: oidcWith(&egv1a1.OIDCPostLogoutRedirect{
+					URI: ToPointer("https://www.example.com/loggedout"),
+				}),
+			},
+		}
+	}
+	routePolicy := func(mergeType *egv1a1.MergeType) *egv1a1.SecurityPolicy {
+		return &egv1a1.SecurityPolicy{
+			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: mergeType,
+				OIDC:      oidcWith(&egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)}),
+			},
+		}
+	}
+
+	// Each policy on its own satisfies the exactly-one rule, which is why admission lets both
+	// through.
+	require.NoError(t, validateSecurityPolicy(parentPolicy()))
+	require.NoError(t, validateSecurityPolicy(routePolicy(nil)))
+
+	strategicMerge := egv1a1.StrategicMerge
+	merged, _, err := mergeSecurityPolicy(routePolicy(&strategicMerge), parentPolicy())
+	require.NoError(t, err)
+
+	// Both fields survive the merge, so the merged policy must be rejected rather than silently
+	// resolved toward one of them.
+	plr := merged.Spec.OIDC.PostLogoutRedirect
+	require.NotNil(t, plr.URI, "expected the parent's uri to survive the merge")
+	require.NotNil(t, plr.Disabled, "expected the route's disabled to survive the merge")
+	require.ErrorContains(t, validateSecurityPolicy(merged),
+		"only one of OIDC.PostLogoutRedirect.uri or OIDC.PostLogoutRedirect.disabled must be set")
 }
 
 func ToPointer[T any](v T) *T {

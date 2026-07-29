@@ -1347,6 +1347,10 @@ type OIDC struct {
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
 
+	// PostLogoutRedirect configures the `post_logout_redirect_uri` parameter sent to the OIDC
+	// Provider's end session endpoint. If nil, Envoy's default is used.
+	PostLogoutRedirect *egv1a1.OIDCPostLogoutRedirect `json:"postLogoutRedirect,omitempty"`
+
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
 	// via the Authorization header Bearer scheme to the upstream.
 	ForwardAccessToken bool `json:"forwardAccessToken,omitempty"`

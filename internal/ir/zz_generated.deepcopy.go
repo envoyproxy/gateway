@@ -3292,6 +3292,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.PostLogoutRedirect != nil {
+		in, out := &in.PostLogoutRedirect, &out.PostLogoutRedirect
+		*out = new(v1alpha1.OIDCPostLogoutRedirect)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.ForwardIDTokenHeader != nil {
 		in, out := &in.ForwardIDTokenHeader, &out.ForwardIDTokenHeader
 		*out = new(string)

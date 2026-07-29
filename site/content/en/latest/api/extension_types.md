@@ -4264,6 +4264,7 @@ _Appears in:_
 | `redirectURL` | _string_ |  true  |  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
 | `denyRedirect` | _[OIDCDenyRedirect](#oidcdenyredirect)_ |  false  |  | Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.<br />This behavior can be useful for AJAX or machine requests. |
 | `logoutPath` | _string_ |  true  |  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
+| `postLogoutRedirect` | _[OIDCPostLogoutRedirect](#oidcpostlogoutredirect)_ |  false  |  | PostLogoutRedirect configures the `post_logout_redirect_uri` parameter that EG sends to the<br />OIDC Provider's end session endpoint when a user accesses the logout path.<br />This only applies when the OIDC Provider's end session endpoint is configured or discovered,<br />i.e. when RP-Initiated Logout is in use. It is ignored otherwise.<br />If not specified, Envoy sends the root of the request's host, "<scheme>://<host>/".<br />Note that many OIDC Providers require the post logout redirect URI to be pre-registered for<br />the client and reject the logout request otherwise. If the default value is not registered,<br />set an explicit uri here, or set disabled to true to omit the parameter altogether. |
 | `forwardAccessToken` | _boolean_ |  false  |  | ForwardAccessToken indicates whether the Envoy should forward the access token<br />via the Authorization header Bearer scheme to the upstream.<br />If not specified, defaults to false. |
 | `forwardIDToken` | _[OIDCTokenForwarding](#oidctokenforwarding)_ |  false  |  | ForwardIDToken configures forwarding of the OIDC ID token to the upstream.<br />If the configured header is "Authorization", EG forwards the ID token using<br />the "Bearer " prefix. For any other header, EG forwards the raw token value.<br />If not specified, the ID token will not be forwarded.<br />Note: when passThroughAuthHeader is enabled, this header must not be the same<br />as a header a JWT provider extracts from (the "Authorization" header by<br />default). The forwarded ID token header is owned by Envoy, and Envoy rejects<br />an OAuth2 configuration whose pass-through matcher keys on it. |
 | `defaultTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
@@ -4331,6 +4332,24 @@ _Appears in:_
 | `name` | _string_ |  true  |  | Specifies the name of the header in the request. |
 | `type` | _[StringMatchType](#stringmatchtype)_ |  false  | Exact | Type specifies how to match against a string. |
 | `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
+
+
+#### OIDCPostLogoutRedirect
+
+
+
+OIDCPostLogoutRedirect configures the `post_logout_redirect_uri` parameter used in OIDC
+[RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) requests.
+
+Exactly one of uri or disabled must be set.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `uri` | _string_ |  false  |  | URI is sent as the `post_logout_redirect_uri` parameter to the OIDC Provider's end session<br />endpoint. The provider redirects the user to this URI after the logout completes, so it<br />usually must be pre-registered for the client with the provider.<br />The URI may contain the Envoy "%REQ(header)%"<br />[command operator](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />to build the URI from the request, for example<br />"%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout". Envoy Gateway accepts only that<br />operator here, since it is the only one meaningful in a URI derived from the request, and<br />rejects any other so that a typo surfaces on this policy instead of being rejected by Envoy<br />as an invalid configuration. A literal percent is written as "%%".<br />The scheme must be http, https, or a "%REQ(header)%" command operator. The URI is<br />percent-encoded automatically when the logout URL is built, so do not pre-encode it. |
+| `disabled` | _boolean_ |  false  |  | Disabled omits the `post_logout_redirect_uri` parameter from the logout request entirely.<br />Use this when the OIDC Provider rejects unregistered post logout redirect URIs and you do<br />not need the user redirected back after the logout completes. In that case the user is left<br />on a page controlled by the provider.<br />Setting this to false is equivalent to leaving postLogoutRedirect unset. |
 
 
 #### OIDCProvider
