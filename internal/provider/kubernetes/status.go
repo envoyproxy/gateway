@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -764,16 +765,19 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 
 		// For NodePort services with externalTrafficPolicy: Local, only nodes running
 		// an Envoy pod receive traffic, so restrict status addresses to those nodes.
-		nodeAddresses := r.store.listNodeAddresses()
+		var nodeAddresses status.NodeAddresses
 		if svc != nil && svc.Spec.Type == corev1.ServiceTypeNodePort &&
 			svc.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal {
-			podNodeNames, err := r.envoyPodNodeNamesForGateway(ctx, gtw)
+			podNodeNames, err := r.envoyEndpointNodeNamesForService(ctx, svc)
 			if err != nil {
-				r.log.Info("failed to list Envoy pods for gateway node filtering",
+				r.log.Info("failed to list EndpointSlices for gateway node filtering",
 					"namespace", gtw.Namespace, "name", gtw.Name, "error", err)
+				nodeAddresses = r.store.listNodeAddresses()
 			} else {
 				nodeAddresses = r.store.listNodeAddressesForNodes(podNodeNames)
 			}
+		} else {
+			nodeAddresses = r.store.listNodeAddresses()
 		}
 		// update address field and programmed condition
 		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, nodeAddresses)
@@ -806,20 +810,24 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 	})
 }
 
-// envoyPodNodeNamesForGateway returns the names of nodes that are running a ready Envoy pod for the given gateway.
-func (r *gatewayAPIReconciler) envoyPodNodeNamesForGateway(ctx context.Context, gateway *gwapiv1.Gateway) ([]string, error) {
-	merged := r.isGatewayClassMerged(string(gateway.Spec.GatewayClassName))
-	pods := &corev1.PodList{}
-	if err := r.client.List(ctx, pods, &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, merged)),
-		Namespace:     envoyObjectNamespace(r, gateway),
+// envoyEndpointNodeNamesForService returns the names of nodes that have a Ready
+// endpoint in the EndpointSlices for the given service.
+func (r *gatewayAPIReconciler) envoyEndpointNodeNamesForService(ctx context.Context, svc *corev1.Service) ([]string, error) {
+	epSlices := &discoveryv1.EndpointSliceList{}
+	if err := r.client.List(ctx, epSlices, &client.ListOptions{
+		Namespace:     svc.Namespace,
+		LabelSelector: labels.SelectorFromSet(labels.Set{discoveryv1.LabelServiceName: svc.Name}),
 	}); err != nil {
 		return nil, err
 	}
 	seen := sets.New[string]()
-	for _, pod := range pods.Items {
-		if pod.Spec.NodeName != "" && pod.Status.Phase == corev1.PodRunning {
-			seen.Insert(pod.Spec.NodeName)
+	for i := range epSlices.Items {
+		for j := range epSlices.Items[i].Endpoints {
+			ep := &epSlices.Items[i].Endpoints[j]
+			if ep.NodeName != nil && *ep.NodeName != "" &&
+				(ep.Conditions.Ready == nil || *ep.Conditions.Ready) {
+				seen.Insert(*ep.NodeName)
+			}
 		}
 	}
 	return seen.UnsortedList(), nil
