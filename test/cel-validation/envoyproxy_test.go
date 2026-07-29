@@ -2724,6 +2724,22 @@ func TestProxyHealthCheckLog(t *testing.T) {
 			},
 			expectedError: "a failure type and a success type must both be specified together",
 		},
+		{
+			desc: "invalid - explicit empty matches list",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{},
+			},
+			expectedError: "spec.telemetry.healthCheckLog.matches: Invalid value",
+		},
+		{
+			desc: "invalid - FailureSeriesStart without a success type",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart},
+			},
+			expectedError: "a failure type and a success type must both be specified together",
+		},
 	}
 
 	for _, tc := range cases {

@@ -20,11 +20,13 @@ type ProxyHealthCheckLog struct {
 	Sinks []ProxyHealthCheckLogSink `json:"sinks,omitempty"`
 
 	// Matches defines which health check probe outcomes produce a log entry.
-	// When omitted or empty, all events are logged.
+	// When omitted, all events are logged. When specified, must contain at least
+	// one value; use the omit form rather than an explicit empty list to log all events.
 	//
 	// Each value must be unique. Multiple values are ORed. If any failure type is
 	// specified then a success type must also be specified, and vice versa.
 	//
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=4
 	// +kubebuilder:validation:XValidation:rule="self.exists(e, e == 'Failure' || e == 'FailureSeriesStart') == self.exists(e, e == 'Success' || e == 'HealthyTransition')",message="a failure type and a success type must both be specified together"
 	// +listType=set

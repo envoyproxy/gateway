@@ -752,6 +752,11 @@ func translateHealthCheckLog(hcLogging *egv1a1.ProxyHealthCheckLog) *ir.ProxyHea
 				irHCLogging.AlwaysLogHealthCheckFailures = true
 			case egv1a1.ProxyHealthCheckLogEventTypeSuccess:
 				irHCLogging.AlwaysLogHealthCheckSuccess = true
+			case egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart,
+				egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition:
+				// Intentional no-op: leaving the corresponding always-log flag false
+				// tells Envoy to use its default transition-only logging mode
+				// (first failure of a consecutive run / first success or threshold-crossing).
 			}
 		}
 	}
