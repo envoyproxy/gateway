@@ -327,3 +327,4 @@ kubectl logs -l gateway.envoyproxy.io/owning-gateway-name=eg -n envoy-gateway-sy
 [ProxyTelemetry]: ../../../api/extension_types#proxytelemetry
 [EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
+[ListenerSet]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ListenerSet
