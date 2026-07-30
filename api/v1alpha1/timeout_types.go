@@ -85,10 +85,9 @@ type TCPClientTimeout struct {
 	// HandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
 	// (e.g. the TLS handshake) after a connection is accepted.
 	// If this expires before the transport reports connection establishment, the connection is summarily closed.
-	// Default: 5 seconds.
 	//
 	// +optional
-	HandshakeTimeout  *gwapiv1.Duration `json:"handshakeTimeout,omitempty"`
+	HandshakeTimeout *gwapiv1.Duration `json:"handshakeTimeout,omitempty"`
 
 	// ConnectionInspectionTimeout is the maximum time to wait for initial inspection
 	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.
@@ -96,7 +95,7 @@ type TCPClientTimeout struct {
 	// Default: 15 seconds.
 	//
 	// +optional
-	ConnectionInspectionTimeout  *gwapiv1.Duration `json:"connectionInspectionTimeout,omitempty"`
+	ConnectionInspectionTimeout *gwapiv1.Duration `json:"connectionInspectionTimeout,omitempty"`
 }
 
 type HTTPClientTimeout struct {
@@ -109,8 +108,7 @@ type HTTPClientTimeout struct {
 	// RequestHeadersReceivedTimeout is the duration envoy waits for the request headers to arrive.
 	// The timer is activated when the first byte of the headers is received,
 	// and is disarmed when the last byte of the headers has been received.
-	// Specify 0 to disable the timeout.
-	// Default: 10 seconds.
+	// If not specified or set to 0, this timeout is disabled.
 	//
 	// +optional
 	RequestHeadersReceivedTimeout *gwapiv1.Duration `json:"requestHeadersReceivedTimeout,omitempty"`
