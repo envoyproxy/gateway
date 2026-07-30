@@ -37,6 +37,28 @@ func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 	}
 }
 
+// ctpHasListenerLevelClusterSettings mirrors the loop in route.go's
+// hasListenerLevelClusterSettings, since CTPClusterSettingsIndex is a plain policyIndex alias with
+// no dedicated method.
+func ctpHasListenerLevelClusterSettings(idx *CTPClusterSettingsIndex, gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
+	for _, l := range listeners {
+		if l.isFromListenerSet() {
+			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
+			if value, found := idx.LookupExact(listenerSetScope(lsNN)); found && value {
+				return true
+			}
+			if value, found := idx.LookupExact(listenerSetListenerScope(lsNN, l.Name)); found && value {
+				return true
+			}
+			continue
+		}
+		if value, found := idx.LookupExact(gatewayListenerScope(gatewayNN, l.Name)); found && value {
+			return true
+		}
+	}
+	return false
+}
+
 func TestBuildCTPClusterSettingsIndex(t *testing.T) {
 	gateway1 := &GatewayContext{
 		Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway-1"}},
@@ -160,14 +182,14 @@ func TestBuildCTPClusterSettingsIndex(t *testing.T) {
 	idx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1, gateway2, gateway3}, []*gwapiv1.ListenerSet{lsSection, lsWide}, nil, nil, true)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, idx.HasListenerLevelClusterSettings(tc.gatewayNN, tc.listeners))
+			require.Equal(t, tc.want, ctpHasListenerLevelClusterSettings(idx, tc.gatewayNN, tc.listeners))
 		})
 	}
 
 	// mergeBackendsEnabled: false must produce an empty, non-nil index — no lookups should
 	// ever return true.
 	emptyIdx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1}, []*gwapiv1.ListenerSet{lsSection, lsWide}, nil, nil, false)
-	require.False(t, emptyIdx.HasListenerLevelClusterSettings(gwNN("gateway-1"), gwDirectListener("http-1")))
+	require.False(t, ctpHasListenerLevelClusterSettings(emptyIdx, gwNN("gateway-1"), gwDirectListener("http-1")))
 }
 
 // TestCtpSpecHasClusterScopedFieldsExhaustive locks in today's field-by-field classification for

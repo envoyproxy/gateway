@@ -533,16 +533,31 @@ func (t *Translator) hasRouteLevelClusterSettings(
 	return value || pinned
 }
 
-// hasListenerLevelClusterSettings reports whether the route rule's attached listener has a
-// ClientTrafficPolicy setting a cluster-affecting field.
+// hasListenerLevelClusterSettings reports whether any of the route rule's attached listeners
+// (parentRef.listeners - the route's actual resolved attachment(s) under gatewayCtx's gateway) has
+// a ClientTrafficPolicy-sourced HTTP1 override, checking each listener against its own owner (the
+// Gateway, or the ListenerSet it came from).
 func (t *Translator) hasListenerLevelClusterSettings(gatewayCtx *GatewayContext, parentRef *RouteParentContext) bool {
 	if gatewayCtx == nil {
 		return false
 	}
-	return t.CTPClusterSettingsIndex.HasListenerLevelClusterSettings(
-		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
-		parentRef.listeners,
-	)
+	gatewayNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
+	for _, l := range parentRef.listeners {
+		if l.isFromListenerSet() {
+			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
+			if value, found := t.CTPClusterSettingsIndex.LookupExact(listenerSetScope(lsNN)); found && value {
+				return true
+			}
+			if value, found := t.CTPClusterSettingsIndex.LookupExact(listenerSetListenerScope(lsNN, l.Name)); found && value {
+				return true
+			}
+			continue
+		}
+		if value, found := t.CTPClusterSettingsIndex.LookupExact(gatewayListenerScope(gatewayNN, l.Name)); found && value {
+			return true
+		}
+	}
+	return false
 }
 
 // gatewayXdsIR resolves the *ir.Xds for gatewayCtx's gateway from xdsIR. Returns nil if

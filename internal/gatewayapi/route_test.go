@@ -672,13 +672,15 @@ func TestShouldMergeBackend(t *testing.T) {
 			if tc.backend != nil {
 				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
 			}
-			routingTypeIdx := newPolicyIndex[*egv1a1.RoutingType]()
-			routingTypeIdx.setGatewayLevel(gwNN, tc.gatewayBaselineRT)
 			tr := &Translator{
 				MergeBackends: tc.mergeEnabled,
 				TranslatorContext: &TranslatorContext{
-					BackendMap:          backendMap,
-					BTPRoutingTypeIndex: routingTypeIdx,
+					BackendMap: backendMap,
+					BTPRoutingTypeIndex: func() *BTPRoutingTypeIndex {
+						idx := newPolicyIndex[*egv1a1.RoutingType]()
+						idx.setGatewayLevel(gwNN, tc.gatewayBaselineRT)
+						return idx
+					}(),
 				},
 			}
 			testGwCtx := gwCtx
@@ -825,12 +827,18 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 	parentRef := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{}}
 
 	// consistentHashIdx forces IsConsistentHash to return true for gatewayCtx's gateway.
-	consistentHashIdx := newPolicyIndex[bool]()
-	consistentHashIdx.setGatewayLevel(types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"}, true)
+	consistentHashIdx := func() *BTPLoadBalancerIndex {
+		idx := newPolicyIndex[bool]()
+		idx.setGatewayLevel(types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"}, true)
+		return idx
+	}()
 
 	// clusterSettingsIdx forces HasRouteLevelClusterSettings to return true for route's own target.
-	clusterSettingsIdx := newPolicyIndex[bool]()
-	clusterSettingsIdx.setRouteLevel(types.NamespacedName{Namespace: "default", Name: "route-1"}, "HTTPRoute", true, nil)
+	clusterSettingsIdx := func() *BTPClusterSettingsIndex {
+		idx := newPolicyIndex[bool]()
+		idx.setRouteLevel(types.NamespacedName{Namespace: "default", Name: "route-1"}, "HTTPRoute", true, nil)
+		return idx
+	}()
 
 	tests := []struct {
 		name               string

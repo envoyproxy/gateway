@@ -176,7 +176,6 @@ func BuildBTPIndexes(
 	}
 }
 
-
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
