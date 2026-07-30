@@ -2184,9 +2184,6 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 			expected:      &serviceRouting,
 		},
 		{
-			// This test verifies that the index uses the target resource's namespace (ref.Namespace)
-			// instead of the policy's namespace (btp.Namespace) when building the key.
-			// This is critical for cross-namespace targetSelectors to work correctly.
 			name: "BTP with targetSelector matching route in different namespace (cross-namespace)",
 			btps: []*egv1a1.BackendTrafficPolicy{
 				{
@@ -2221,7 +2218,6 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 				},
 			},
 			gateways: []*GatewayContext{defaultGateway},
-			// ReferenceGrant allows BTP in policy-ns to reference HTTPRoute in route-ns
 			referenceGrants: []*gwapiv1b1.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2261,9 +2257,6 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 	}
 }
 
-// TestBTPLoadBalancerIndexIsConsistentHash covers only the gateway level: a route-rule/route/
-// listener-level LoadBalancer setting already disqualifies its rule from cluster merging, so
-// BTPLoadBalancerIndex doesn't track those levels.
 func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 	consistentHashType := egv1a1.ConsistentHashLoadBalancerType
 	roundRobinType := egv1a1.RoundRobinLoadBalancerType
@@ -2448,9 +2441,6 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 			want:      false,
 		},
 		{
-			// The oldest accepted BTP leaves LoadBalancer unset entirely (not just RoundRobin) -
-			// it must still claim the gateway-level slot, or a younger conflicting BTP that does
-			// set ConsistentHash silently wins it.
 			name: "oldest accepted gateway BTP with LoadBalancer unset blocks a younger conflicting one with ConsistentHash",
 			btps: []*egv1a1.BackendTrafficPolicy{
 				{
@@ -2598,9 +2588,6 @@ func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
 
 	idx := BuildBTPIndexes(btps, routes, nil, nil, referenceGrants, nil, true)
 
-	// The index must be keyed by the target route's own namespace (route-ns), not the
-	// policy's namespace (policy-ns), or this lookup misses and MergeBackends wrongly
-	// shares a cluster with routes that don't carry this cluster-scoped policy.
 	got := idx.ClusterSettings.HasRouteLevelClusterSettings(
 		"HTTPRoute",
 		types.NamespacedName{Namespace: "route-ns", Name: "route-1"},
@@ -2685,8 +2672,6 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 			expected:      false,
 		},
 		{
-			// processBackendTrafficPolicyForRoute applies the same MergeType branch to both
-			// rule-targeted and route-targeted policies.
 			name: "route-targeted BTP with MergeType unset disqualifies merging",
 			btps: []*egv1a1.BackendTrafficPolicy{
 				{
@@ -2734,8 +2719,6 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 			expected:  false,
 		},
 		{
-			// MergeType is meaningless for a Gateway-targeted policy (never set for one in
-			// practice), so leaving it nil here must NOT trigger the disqualifying signal.
 			name: "Gateway-targeted BTP with MergeType nil does not disqualify merging",
 			btps: []*egv1a1.BackendTrafficPolicy{
 				{
@@ -2760,8 +2743,6 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 			expected:  false,
 		},
 		{
-			// rule-a has its own rule-level policy (MergeType set, no cluster-scoped field of its
-			// own) - the route-level policy's CircuitBreaker can never actually reach it.
 			name: "rule-level presence shields route-level: rule-a has its own policy",
 			btps: []*egv1a1.BackendTrafficPolicy{
 				{
@@ -2803,8 +2784,6 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 			expected:      false,
 		},
 		{
-			// rule-b has no rule-level policy of its own, so the route-level policy's
-			// CircuitBreaker genuinely applies to it - unchanged, correct, pre-existing behavior.
 			name: "rule-level presence shields route-level: rule-b has none, route-level still applies",
 			btps: []*egv1a1.BackendTrafficPolicy{
 				{

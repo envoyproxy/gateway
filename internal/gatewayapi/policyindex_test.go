@@ -20,6 +20,7 @@ func TestPolicyIndexLookup(t *testing.T) {
 	routeKind := gwapiv1.Kind("HTTPRoute")
 	routeNN := types.NamespacedName{Namespace: "default", Name: "route-1"}
 	gatewayNN := types.NamespacedName{Namespace: "default", Name: "gateway-1"}
+	listenerSetNN := types.NamespacedName{Namespace: "default", Name: "listener-set-1"}
 	listenerName := gwapiv1.SectionName("http")
 	ruleName := gwapiv1.SectionName("rule-1")
 
@@ -27,92 +28,149 @@ func TestPolicyIndexLookup(t *testing.T) {
 	routeKey := routeScope(routeNN, string(routeKind))
 	listenerKey := gatewayListenerScope(gatewayNN, listenerName)
 	gatewayKey := gatewayScope(gatewayNN)
+	listenerSetListenerKey := listenerSetListenerScope(listenerSetNN, listenerName)
+	listenerSetKey := listenerSetScope(listenerSetNN)
 
 	cases := []struct {
-		name          string
-		nilIndex      bool
-		ruleEntry     *policyIndexEntry[bool]
-		routeEntry    *policyIndexEntry[bool]
-		listenerEntry *policyIndexEntry[bool]
-		gatewayValue  bool
-		omitRuleName  bool // Lookup called with routeRuleName: nil
-		omitListener  bool // Lookup called with listenerName: nil
-		wantValue     bool
-		wantPinned    bool
+		name                   string
+		nilIndex               bool
+		ruleEntry              *policyIndexEntry[bool]
+		routeEntry             *policyIndexEntry[bool]
+		listenerEntry          *policyIndexEntry[bool]
+		listenerSetListenerVal *policyIndexEntry[bool]
+		listenerSetVal         *policyIndexEntry[bool]
+		gatewayValue           bool
+		useRuleName            bool
+		useListener            bool
+		useListenerSet         bool
+		wantValue              bool
+		wantPinned             bool
 	}{
 		{
-			name:     "nil index falls through to zero value, not pinned",
-			nilIndex: true,
+			name:        "nil index falls through to zero value, not pinned",
+			nilIndex:    true,
+			useRuleName: true,
+			useListener: true,
 		},
 		{
-			name: "no entry anywhere falls through to zero value, not pinned",
+			name:        "no entry anywhere falls through to zero value, not pinned",
+			useRuleName: true,
+			useListener: true,
 		},
 		{
-			name:      "rule-level non-zero value wins outright and is pinned, regardless of MergeType",
-			ruleEntry: &policyIndexEntry[bool]{value: true, effective: true},
-			// gatewayValue: false must be ignored - an explicit value is pinned outright.
-			wantValue:  true,
-			wantPinned: true,
+			name:        "rule-level non-zero value wins outright and is pinned, regardless of MergeType",
+			ruleEntry:   &policyIndexEntry[bool]{value: true, effective: true},
+			useRuleName: true,
+			useListener: true,
+			wantValue:   true,
+			wantPinned:  true,
 		},
 		{
 			name:         "rule-level zero value with MergeType nil is pinned, does not inherit",
 			ruleEntry:    &policyIndexEntry[bool]{value: false, effective: true},
-			gatewayValue: true, // must be ignored - pinned with nothing to inherit
+			gatewayValue: true,
+			useRuleName:  true,
+			useListener:  true,
 			wantPinned:   true,
 		},
 		{
 			name:         "rule-level zero value with MergeType set falls through to gateway, not pinned",
 			ruleEntry:    &policyIndexEntry[bool]{value: false, effective: false},
 			gatewayValue: true,
+			useRuleName:  true,
+			useListener:  true,
 			wantValue:    true,
 		},
 		{
 			name:          "rule-level presence shields route-level entirely",
 			ruleEntry:     &policyIndexEntry[bool]{value: false, effective: false},
-			routeEntry:    &policyIndexEntry[bool]{value: true, effective: true}, // must be ignored - shielded
+			routeEntry:    &policyIndexEntry[bool]{value: true, effective: true},
 			listenerEntry: &policyIndexEntry[bool]{value: false, effective: true},
+			useRuleName:   true,
+			useListener:   true,
 		},
 		{
 			name:         "no rule-level entry falls to route-level, which falls through to gateway",
 			routeEntry:   &policyIndexEntry[bool]{value: false, effective: false},
 			gatewayValue: true,
+			useRuleName:  true,
+			useListener:  true,
 			wantValue:    true,
 		},
 		{
-			name:         "routeRuleName nil skips rule-level check even if an entry exists",
-			ruleEntry:    &policyIndexEntry[bool]{value: true, effective: true}, // must be ignored - name nil skips it
-			routeEntry:   &policyIndexEntry[bool]{value: false, effective: true},
-			omitRuleName: true,
-			wantPinned:   true, // from the route-level entry, whose own MergeType is nil
+			name:        "routeRuleName nil skips rule-level check even if an entry exists",
+			ruleEntry:   &policyIndexEntry[bool]{value: true, effective: true},
+			routeEntry:  &policyIndexEntry[bool]{value: false, effective: true},
+			useListener: true,
+			wantPinned:  true,
 		},
 		{
 			name:          "no rule/route entry falls to listener",
 			listenerEntry: &policyIndexEntry[bool]{value: true, effective: true},
-			// gatewayValue: false must be ignored - the listener entry is final.
-			wantValue: true,
+			useRuleName:   true,
+			useListener:   true,
+			wantValue:     true,
 		},
 		{
 			name:          "listener entry present but zero value is still final, does not fall through",
 			listenerEntry: &policyIndexEntry[bool]{value: false, effective: true},
-			gatewayValue:  true, // must be ignored - the listener entry is still final
+			gatewayValue:  true,
+			useRuleName:   true,
+			useListener:   true,
 		},
 		{
 			name:         "no listener entry at all falls through to gateway",
 			gatewayValue: true,
+			useRuleName:  true,
+			useListener:  true,
 			wantValue:    true,
 		},
 		{
 			name:          "listener entry with hasValue false transparently falls through to gateway",
-			listenerEntry: &policyIndexEntry[bool]{value: true, effective: false}, // e.g. policy doesn't address this field
+			listenerEntry: &policyIndexEntry[bool]{value: true, effective: false},
 			gatewayValue:  true,
+			useRuleName:   true,
+			useListener:   true,
 			wantValue:     true,
 		},
 		{
 			name:          "listenerName nil skips listener check, falls to gateway",
-			listenerEntry: &policyIndexEntry[bool]{value: true, effective: true}, // must be ignored - name nil skips it
+			listenerEntry: &policyIndexEntry[bool]{value: true, effective: true},
 			gatewayValue:  true,
-			omitListener:  true,
+			useRuleName:   true,
 			wantValue:     true,
+		},
+		{
+			name:                   "listenerSetNN set: listenerSet-listener level wins over listenerSet level",
+			listenerSetListenerVal: &policyIndexEntry[bool]{value: true, effective: true},
+			listenerSetVal:         &policyIndexEntry[bool]{value: false, effective: true},
+			useRuleName:            true,
+			useListener:            true,
+			useListenerSet:         true,
+			wantValue:              true,
+		},
+		{
+			name:           "listenerSetNN set: falls to listenerSet level when no listenerSet-listener entry",
+			listenerSetVal: &policyIndexEntry[bool]{value: true, effective: true},
+			useRuleName:    true,
+			useListener:    true,
+			useListenerSet: true,
+			wantValue:      true,
+		},
+		{
+			name:           "listenerSetNN set: gateway-listener entry sharing the same listener name is ignored",
+			listenerEntry:  &policyIndexEntry[bool]{value: true, effective: true},
+			useRuleName:    true,
+			useListener:    true,
+			useListenerSet: true,
+		},
+		{
+			name:           "listenerSetNN set: falls all the way to gateway level when neither listenerSet scope has an entry",
+			gatewayValue:   true,
+			useRuleName:    true,
+			useListener:    true,
+			useListenerSet: true,
+			wantValue:      true,
 		},
 	}
 
@@ -130,85 +188,30 @@ func TestPolicyIndexLookup(t *testing.T) {
 				if tc.listenerEntry != nil {
 					idx.entries[listenerKey] = *tc.listenerEntry
 				}
+				if tc.listenerSetListenerVal != nil {
+					idx.entries[listenerSetListenerKey] = *tc.listenerSetListenerVal
+				}
+				if tc.listenerSetVal != nil {
+					idx.entries[listenerSetKey] = *tc.listenerSetVal
+				}
 				idx.entries[gatewayKey] = policyIndexEntry[bool]{value: tc.gatewayValue, effective: true}
 			}
 
-			wantRuleName, wantListenerName := &ruleName, &listenerName
-			if tc.omitRuleName {
-				wantRuleName = nil
+			var wantRuleName *gwapiv1.SectionName
+			if tc.useRuleName {
+				wantRuleName = &ruleName
 			}
-			if tc.omitListener {
-				wantListenerName = nil
+			var wantListenerName *gwapiv1.SectionName
+			if tc.useListener {
+				wantListenerName = &listenerName
+			}
+			var wantListenerSetNN *types.NamespacedName
+			if tc.useListenerSet {
+				wantListenerSetNN = &listenerSetNN
 			}
 
-			value, pinned := idx.Lookup(routeKind, routeNN, gatewayNN, wantListenerName, nil, wantRuleName)
+			value, pinned := idx.Lookup(routeKind, routeNN, gatewayNN, wantListenerName, wantListenerSetNN, wantRuleName)
 			require.Equal(t, tc.wantPinned, pinned)
-			require.Equal(t, tc.wantValue, value)
-		})
-	}
-}
-
-// TestPolicyIndexLookupListenerSet covers Lookup's ListenerSet fallback, which PR #4's own
-// policyIndex predates (ListenerSet-attach for BTP landed on main via #9419/#9425 after PR #4 was
-// written) - so these cases don't come from PR #4, they cover this branch's own extension.
-func TestPolicyIndexLookupListenerSet(t *testing.T) {
-	routeKind := gwapiv1.Kind("HTTPRoute")
-	routeNN := types.NamespacedName{Namespace: "default", Name: "route-1"}
-	gatewayNN := types.NamespacedName{Namespace: "default", Name: "gateway-1"}
-	listenerSetNN := types.NamespacedName{Namespace: "default", Name: "listener-set-1"}
-	listenerName := gwapiv1.SectionName("http")
-
-	gatewayListenerKey := gatewayListenerScope(gatewayNN, listenerName)
-	listenerSetListenerKey := listenerSetListenerScope(listenerSetNN, listenerName)
-	listenerSetKey := listenerSetScope(listenerSetNN)
-	gatewayKey := gatewayScope(gatewayNN)
-
-	cases := []struct {
-		name                   string
-		gatewayListenerEntry   *policyIndexEntry[bool]
-		listenerSetListenerVal *policyIndexEntry[bool]
-		listenerSetVal         *policyIndexEntry[bool]
-		gatewayValue           bool
-		wantValue              bool
-	}{
-		{
-			name:                   "listenerSetNN set: listenerSet-listener level wins over listenerSet level",
-			listenerSetListenerVal: &policyIndexEntry[bool]{value: true, effective: true},
-			listenerSetVal:         &policyIndexEntry[bool]{value: false, effective: true},
-			wantValue:              true,
-		},
-		{
-			name:           "listenerSetNN set: falls to listenerSet level when no listenerSet-listener entry",
-			listenerSetVal: &policyIndexEntry[bool]{value: true, effective: true},
-			wantValue:      true,
-		},
-		{
-			name:                 "listenerSetNN set: gateway-listener entry sharing the same listener name is ignored",
-			gatewayListenerEntry: &policyIndexEntry[bool]{value: true, effective: true}, // must be ignored - listenerSetNN bypasses this scope entirely
-			gatewayValue:         false,
-		},
-		{
-			name:         "listenerSetNN set: falls all the way to gateway level when neither listenerSet scope has an entry",
-			gatewayValue: true,
-			wantValue:    true,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			idx := newPolicyIndex[bool]()
-			if tc.gatewayListenerEntry != nil {
-				idx.entries[gatewayListenerKey] = *tc.gatewayListenerEntry
-			}
-			if tc.listenerSetListenerVal != nil {
-				idx.entries[listenerSetListenerKey] = *tc.listenerSetListenerVal
-			}
-			if tc.listenerSetVal != nil {
-				idx.entries[listenerSetKey] = *tc.listenerSetVal
-			}
-			idx.entries[gatewayKey] = policyIndexEntry[bool]{value: tc.gatewayValue, effective: true}
-
-			value, _ := idx.Lookup(routeKind, routeNN, gatewayNN, &listenerName, &listenerSetNN, nil)
 			require.Equal(t, tc.wantValue, value)
 		})
 	}
@@ -399,14 +402,14 @@ func TestPolicyIndexSetters(t *testing.T) {
 
 	t.Run("setGatewayListenerLevel with hasValue false still claims the slot", func(t *testing.T) {
 		idx := newPolicyIndex[bool]()
-		idx.setGatewayListenerLevel(gatewayNN, listenerName, true, false) // e.g. a policy that doesn't address this field
+		idx.setGatewayListenerLevel(gatewayNN, listenerName, true, false)
 		require.Equal(t, policyIndexEntry[bool]{value: true, effective: false}, idx.entries[gatewayListenerScope(gatewayNN, listenerName)])
 	})
 
 	t.Run("setGatewayListenerLevel with hasValue false blocks a later, hasValue true call from a different policy", func(t *testing.T) {
 		idx := newPolicyIndex[bool]()
-		idx.setGatewayListenerLevel(gatewayNN, listenerName, true, false) // oldest, accepted policy - doesn't address this field
-		idx.setGatewayListenerLevel(gatewayNN, listenerName, true, true)  // younger, to-be-conflicted policy - does
+		idx.setGatewayListenerLevel(gatewayNN, listenerName, true, false)
+		idx.setGatewayListenerLevel(gatewayNN, listenerName, true, true)
 		require.Equal(t, policyIndexEntry[bool]{value: true, effective: false}, idx.entries[gatewayListenerScope(gatewayNN, listenerName)])
 	})
 
