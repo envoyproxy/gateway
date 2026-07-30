@@ -88,6 +88,11 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// PerResourceSystemCASecret restores the old behavior of emitting one SDS secret per
+	// BackendTLSPolicy or Backend resource using WellKnownCACertificates: System, instead of
+	// sharing a single system_ca_certificates secret. Disabled by default (shared secret used).
+	PerResourceSystemCASecret bool
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 
