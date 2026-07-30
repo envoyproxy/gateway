@@ -211,13 +211,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace())
 	selector := resource.GetSelector(rateLimitLabels())
 
-	podLabels := rateLimitLabels()
-	if r.rateLimitDeployment.Pod.Labels != nil {
-		maps.Copy(podLabels, r.rateLimitDeployment.Pod.Labels)
-		// Copy overwrites values in the dest map if they exist in the src map https://pkg.go.dev/maps#Copy
-		// It's applied again with the rateLimitLabels that are used as deployment selector to ensure those are not overwritten by user input
-		maps.Copy(podLabels, rateLimitLabels())
-	}
+	podLabels := map[string]string{}
+	utils.CopyStringMap(podLabels, r.rateLimitDeployment.Pod.Labels)
+	// Apply rateLimitLabels last so the labels used as the deployment selector always
+	// win over user input.
+	maps.Copy(podLabels, rateLimitLabels())
 
 	var podAnnotations map[string]string
 	if enablePrometheus(r.rateLimit) {

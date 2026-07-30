@@ -1,0 +1,1 @@
+Added validation for the pod and service `labels` under `spec.provider.kubernetes` on the EnvoyProxy resource so that invalid Kubernetes label values are rejected when the resource is created or updated, instead of being accepted and later causing reconciliation failures.

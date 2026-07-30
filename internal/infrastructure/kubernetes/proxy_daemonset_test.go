@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -195,7 +196,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
-											Labels: map[string]string{
+											Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 												// Add a new label to the custom label config.
 												// It wouldn't break the daemonset because the selector would still match after this label update.
 												"custom-label": "version1",
@@ -236,7 +237,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
-											Labels: map[string]string{
+											Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 												"custom-label":         "version1",
 												"another-custom-label": "version1", // added.
 											},
@@ -276,7 +277,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
-											Labels: map[string]string{
+											Labels: map[gwapiv1.LabelKey]gwapiv1.LabelValue{
 												// Update the label value which will break the daemonset
 												// because the selector cannot be updated while the user wants to update the label value.
 												// We cannot help this case, just emit an error and let the user recreate the envoy proxy by themselves.

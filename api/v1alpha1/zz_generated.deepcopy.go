@@ -5662,7 +5662,7 @@ func (in *KubernetesPodSpec) DeepCopyInto(out *KubernetesPodSpec) {
 	}
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
+		*out = make(map[v1.LabelKey]v1.LabelValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}
@@ -5759,7 +5759,7 @@ func (in *KubernetesServiceSpec) DeepCopyInto(out *KubernetesServiceSpec) {
 	}
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
+		*out = make(map[v1.LabelKey]v1.LabelValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}
