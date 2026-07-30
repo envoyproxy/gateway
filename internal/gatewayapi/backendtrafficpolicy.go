@@ -1618,7 +1618,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
 		gtwCtx,
-		gatewayBackendTrafficPolicyTargetListeners(gtwCtx, target),
+		gatewayPolicyTargetListeners(gtwCtx, target),
 		xdsIR,
 	)
 }
@@ -1633,46 +1633,9 @@ func (t *Translator) translateBackendTrafficPolicyForListenerSet(
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
 		gtwCtx,
-		listenerSetBackendTrafficPolicyTargetListeners(gtwCtx, listenerSet, target),
+		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
 		xdsIR,
 	)
-}
-
-func gatewayBackendTrafficPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if target.SectionName != nil {
-			if listener.isFromListenerSet() || listener.Name != *target.SectionName {
-				continue
-			}
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
-func listenerSetBackendTrafficPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	listenerSet *gwapiv1.ListenerSet,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if !listener.isFromListenerSet() {
-			continue
-		}
-		if listener.listenerSet.Namespace != listenerSet.Namespace || listener.listenerSet.Name != listenerSet.Name {
-			continue
-		}
-		if target.SectionName != nil && listener.Name != *target.SectionName {
-			continue
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
 }
 
 func (t *Translator) translateBackendTrafficPolicyForListeners(
