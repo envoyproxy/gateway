@@ -11,8 +11,12 @@ clientTrafficPolicies:
         name: gateway
         sectionName: http-1
       timeout:
+        tcp:
+          handshakeTimeout: "10s"
+          connectionInspectionTimeout: "60s"
         http:
           requestReceivedTimeout: "5s"
+          requestHeadersReceivedTimeout: "5s"
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
