@@ -397,28 +397,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// loopback protection (that guard only inspects the rewrite header or :authority). Allowing it would
 		// let a crafted path resolve to a loopback address and bypass the SSRF protection.
 		case hasDynamicResolver && hasPathRegexHostRewrite(ruleRoutes):
-			routesWithDirectResponse := sets.New[string]()
-			for _, irRoute := range ruleRoutes {
-				// If the route already has a direct response or redirect configured, then it was from a filter so skip
-				// the direct response from errors.
-				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
-					continue
-				}
-				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: new(uint32(500)),
-				}
-				routesWithDirectResponse.Insert(irRoute.Name)
-			}
-			errorCollector.Add(status.NewRouteStatusError(
-				fmt.Errorf(
-					"failed to process route rule %d: host rewrite from path (PathRegex) is not supported with a dynamic resolver backend",
-					ruleIdx),
-				gwapiv1.RouteReasonUnsupportedValue,
-			))
-			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Info("setting 500 direct response in routes due to dynamic resolver with host rewrite from path",
-					"routes", sets.List(routesWithDirectResponse))
-			}
+			t.rejectPathRegexHostRewriteWithDynamicResolver(ruleRoutes, ruleIdx, errorCollector)
 		// A route can only have one destination if this destination is a dynamic resolver, because the behavior of
 		// multiple destinations with one being a dynamic resolver just doesn't make sense.
 		case hasDynamicResolver && len(rule.BackendRefs) > 1:
@@ -491,6 +470,38 @@ func hasPathRegexHostRewrite(routes []*ir.HTTPRoute) bool {
 		}
 	}
 	return false
+}
+
+// rejectPathRegexHostRewriteWithDynamicResolver fails the rule with a 500 direct response and an
+// UnsupportedValue route error. Both HTTPRoute and GRPCRoute can attach an HTTPRouteFilter that
+// rewrites the host from the path, so both need this guard.
+func (t *Translator) rejectPathRegexHostRewriteWithDynamicResolver(
+	ruleRoutes []*ir.HTTPRoute,
+	ruleIdx int,
+	errorCollector *status.TypedErrorCollector,
+) {
+	routesWithDirectResponse := sets.New[string]()
+	for _, irRoute := range ruleRoutes {
+		// If the route already has a direct response or redirect configured, then it was from a filter so skip
+		// the direct response from errors.
+		if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+			continue
+		}
+		irRoute.DirectResponse = &ir.CustomResponse{
+			StatusCode: new(uint32(500)),
+		}
+		routesWithDirectResponse.Insert(irRoute.Name)
+	}
+	errorCollector.Add(status.NewRouteStatusError(
+		fmt.Errorf(
+			"failed to process route rule %d: host rewrite from path (PathRegex) is not supported with a dynamic resolver backend",
+			ruleIdx),
+		gwapiv1.RouteReasonUnsupportedValue,
+	))
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to dynamic resolver with host rewrite from path",
+			"routes", sets.List(routesWithDirectResponse))
+	}
 }
 
 type routeMatchCombination struct {
@@ -1035,6 +1046,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
 		var processDestinationError error
 		failedNoReadyEndpoints := false
+		hasDynamicResolver := false
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i := range rule.BackendRefs {
@@ -1068,6 +1080,11 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				continue
 			}
 			allDs = append(allDs, ds)
+
+			// check if there is a dynamic resolver in the backendRefs
+			if ds.IsDynamicResolver {
+				hasDynamicResolver = true
+			}
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, grpcRoute.GetNamespace())
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 		}
@@ -1156,6 +1173,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				t.Logger.Error(errors.New("all valid destinations have 0 weight"), "setting 500 direct response in routes due to all valid destinations having 0 weight",
 					"routes", sets.List(routesWithDirectResponse))
 			}
+		// Host rewrite from path (PathRegex) is rejected for dynamic resolver routes: the upstream host is
+		// derived from request-controlled path text, which is not validated by the dynamic forward proxy
+		// loopback protection (that guard only inspects the rewrite header or :authority). Allowing it would
+		// let a crafted path resolve to a loopback address and bypass the SSRF protection.
+		case hasDynamicResolver && hasPathRegexHostRewrite(ruleRoutes):
+			t.rejectPathRegexHostRewriteWithDynamicResolver(ruleRoutes, ruleIdx, errorCollector)
 		default:
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
