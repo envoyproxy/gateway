@@ -12,6 +12,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -107,6 +108,27 @@ func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKuberne
 	return nil
 }
 
+func validateEnvoyGatewayKubernetesProviderCustom(provider *egv1a1.EnvoyGatewayKubernetesCustomProvider) error {
+	if provider == nil || provider.Watch == nil {
+		return nil
+	}
+
+	watch := provider.Watch
+	switch watch.Type {
+	case egv1a1.KubernetesWatchModeTypeNamespaces:
+		if len(watch.Namespaces) == 0 {
+			return fmt.Errorf("namespaces should be specified when envoy gateway watch mode is 'Namespaces'")
+		}
+	case egv1a1.KubernetesWatchModeTypeNamespaceSelector:
+		if watch.NamespaceSelector == nil {
+			return fmt.Errorf("namespaceSelector should be specified when envoy gateway watch mode is 'NamespaceSelector'")
+		}
+	default:
+		return fmt.Errorf("envoy gateway watch mode invalid, should be 'Namespaces' or 'NamespaceSelector'")
+	}
+	return nil
+}
+
 func validateEnvoyGatewayCustomProvider(provider *egv1a1.EnvoyGatewayCustomProvider) error {
 	if provider == nil {
 		return fmt.Errorf("empty custom provider settings")
@@ -133,6 +155,8 @@ func validateEnvoyGatewayCustomResourceProvider(resource egv1a1.EnvoyGatewayReso
 		if len(resource.File.Paths) == 0 {
 			return fmt.Errorf("no paths were assigned for file resource provider to watch")
 		}
+	case egv1a1.ResourceProviderTypeKubernetes:
+		return validateEnvoyGatewayKubernetesProviderCustom(resource.Kubernetes)
 	default:
 		return fmt.Errorf("unsupported resource provider: %s", resource.Type)
 	}
@@ -148,6 +172,18 @@ func validateEnvoyGatewayCustomInfrastructureProvider(infra *egv1a1.EnvoyGateway
 	case egv1a1.InfrastructureProviderTypeHost:
 		if infra.Host == nil {
 			return fmt.Errorf("field 'host' should be specified when infrastructure type is 'Host'")
+		}
+	case egv1a1.InfrastructureProviderTypeRemote:
+		if infra.Remote == nil {
+			return fmt.Errorf("field 'remote' should be specified when infrastructure type is 'Remote'")
+		}
+
+		if infra.Remote.Service == nil {
+			return fmt.Errorf("field 'service' should be specified when infrastructure type is 'Remote'")
+		}
+		err := validateExtensionService(infra.Remote.Service)
+		if err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("unsupported infrastructure provider: %s", infra.Type)
@@ -194,7 +230,7 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return fmt.Errorf("empty ratelimit redis settings")
 	}
 
-	hasURL := redis.URL != ""
+	hasURL := ptr.Deref(redis.URL, "") != ""
 	hasURLRef := redis.URLRef != nil
 	if hasURL == hasURLRef {
 		return fmt.Errorf("exactly one of ratelimit redis url or urlRef must be set")
@@ -215,7 +251,7 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return nil
 	}
 
-	return ValidateRedisURL(redis.URL)
+	return ValidateRedisURL(*redis.URL)
 }
 
 // ValidateRedisURL validates a ratelimit Redis URL string, which may be a single
@@ -276,35 +312,11 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 		return fmt.Errorf("registered extension has no hooks specified")
 	}
 
-	if extensionManager.Service == nil {
-		return fmt.Errorf("extension service config is empty")
+	err := validateExtensionService(extensionManager.Service)
+	if err != nil {
+		return err
 	}
 
-	switch {
-	case extensionManager.Service.Host == "" && extensionManager.Service.FQDN == nil && extensionManager.Service.Unix == nil && extensionManager.Service.IP == nil:
-		return fmt.Errorf("extension service must contain a configured target")
-
-	case extensionManager.Service.FQDN != nil && (extensionManager.Service.IP != nil || extensionManager.Service.Unix != nil || extensionManager.Service.Host != ""),
-		extensionManager.Service.IP != nil && (extensionManager.Service.FQDN != nil || extensionManager.Service.Unix != nil || extensionManager.Service.Host != ""),
-		extensionManager.Service.Unix != nil && (extensionManager.Service.IP != nil || extensionManager.Service.FQDN != nil || extensionManager.Service.Host != ""):
-		return fmt.Errorf("only one backend target can be configured for the extension manager")
-	}
-
-	if extensionManager.Service.TLS != nil {
-		certRef := &extensionManager.Service.TLS.CertificateRef
-		if (certRef.Group != nil && *certRef.Group != corev1.GroupName) ||
-			(certRef.Kind != nil && *certRef.Kind != "Secret") {
-			return fmt.Errorf("unsupported extension server TLS certificateRef group/kind")
-		}
-
-		if extensionManager.Service.TLS.ClientCertificateRef != nil {
-			clientCertRef := extensionManager.Service.TLS.ClientCertificateRef
-			if (clientCertRef.Group != nil && *clientCertRef.Group != corev1.GroupName) ||
-				(clientCertRef.Kind != nil && *clientCertRef.Kind != "Secret") {
-				return fmt.Errorf("unsupported extension server mTLS clientCertificateRef group/kind")
-			}
-		}
-	}
 	return nil
 }
 
@@ -330,6 +342,13 @@ func validateEnvoyGatewayXDSServer(xdsServer *egv1a1.XDSServer) error {
 		}
 		if d <= 0 {
 			return fmt.Errorf("xdsServer.maxConnectionAgeGrace must be greater than zero")
+		}
+	}
+
+	if xdsServer.MaxReceiveMessageSize != nil {
+		v, ok := xdsServer.MaxReceiveMessageSize.AsInt64()
+		if !ok || v <= 0 {
+			return fmt.Errorf("xdsServer.maxReceiveMessageSize must be greater than zero")
 		}
 	}
 
@@ -385,6 +404,39 @@ func validateEnvoyGatewayTelemetry(telemetry *egv1a1.EnvoyGatewayTelemetry) erro
 		}
 		if err := validateEnvoyGatewayOpenTelemetrySink(telemetry.Traces.Sink.OpenTelemetry); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func validateExtensionService(extensionService *egv1a1.ExtensionService) error {
+	if extensionService == nil {
+		return fmt.Errorf("extension service config is empty")
+	}
+
+	switch {
+	case extensionService.Host == "" && extensionService.FQDN == nil && extensionService.Unix == nil && extensionService.IP == nil:
+		return fmt.Errorf("extension service must contain a configured target")
+
+	case extensionService.FQDN != nil && (extensionService.IP != nil || extensionService.Unix != nil || extensionService.Host != ""),
+		extensionService.IP != nil && (extensionService.FQDN != nil || extensionService.Unix != nil || extensionService.Host != ""),
+		extensionService.Unix != nil && (extensionService.IP != nil || extensionService.FQDN != nil || extensionService.Host != ""):
+		return fmt.Errorf("only one backend target can be configured for the extension manager")
+	}
+
+	if extensionService.TLS != nil {
+		certRef := &extensionService.TLS.CertificateRef
+		if (certRef.Group != nil && *certRef.Group != corev1.GroupName) ||
+			(certRef.Kind != nil && *certRef.Kind != "Secret") {
+			return fmt.Errorf("unsupported extension server TLS certificateRef group/kind")
+		}
+
+		if extensionService.TLS.ClientCertificateRef != nil {
+			clientCertRef := extensionService.TLS.ClientCertificateRef
+			if (clientCertRef.Group != nil && *clientCertRef.Group != corev1.GroupName) ||
+				(clientCertRef.Kind != nil && *clientCertRef.Kind != "Secret") {
+				return fmt.Errorf("unsupported extension server mTLS clientCertificateRef group/kind")
+			}
 		}
 	}
 	return nil

@@ -45,6 +45,8 @@
             defaultExpiresIn: 3600s
             defaultRefreshTokenExpiresIn: 172800s
             forwardBearerToken: true
+            forwardIdToken:
+              header: X-ID-Token
             redirectPathMatcher:
               path:
                 exact: /foo/oauth2/callback
@@ -115,7 +117,8 @@
               stringMatch:
                 exact: foobar
             disableTokenEncryption: true
-            preserveAuthorizationHeader: true
+            forwardIdToken:
+              header: Authorization
             redirectPathMatcher:
               path:
                 exact: /bar/oauth2/callback

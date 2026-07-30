@@ -12,16 +12,16 @@ require (
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.21.7
-	github.com/klauspost/compress v1.19.0
+	github.com/klauspost/compress v1.19.1
 	github.com/miekg/dns v1.1.72
 	github.com/moby/go-archive v0.2.0
 	github.com/moby/moby/client v0.5.0
-	github.com/prometheus/client_golang v1.24.0
+	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.70.0
+	github.com/prometheus/common v0.70.1
 	github.com/quic-go/quic-go v0.59.1
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/proto/otlp v1.10.0
+	go.opentelemetry.io/proto/otlp v1.11.0
 	golang.org/x/net v0.57.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/grpc v1.82.1
@@ -106,10 +106,10 @@ require (
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
-	github.com/envoyproxy/go-control-plane v0.14.1-0.20260409050421-3f47accd6e14 // indirect
-	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260409050421-3f47accd6e14 // indirect
+	github.com/envoyproxy/go-control-plane v0.14.1-0.20260627225610-70ff85c381ff // indirect
+	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260627225610-70ff85c381ff // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260627225610-70ff85c381ff // indirect
-	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260409050421-3f47accd6e14 // indirect
+	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260627225610-70ff85c381ff // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
@@ -279,8 +279,8 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260706201446-f0a921348800 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260720211330-0afa2a65878a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260720211330-0afa2a65878a // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

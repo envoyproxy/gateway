@@ -7,10 +7,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.10.1
+    helm.sh/chart: alloy-1.11.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.17.1"
+    app.kubernetes.io/version: "v1.18.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -80,10 +80,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.10.1
+    helm.sh/chart: alloy-1.11.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.17.1"
+    app.kubernetes.io/version: "v1.18.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: config
@@ -10106,10 +10106,10 @@ kind: ClusterRole
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-1.10.1
+    helm.sh/chart: alloy-1.11.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.17.1"
+    app.kubernetes.io/version: "v1.18.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -10322,10 +10322,10 @@ kind: ClusterRoleBinding
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-1.10.1
+    helm.sh/chart: alloy-1.11.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.17.1"
+    app.kubernetes.io/version: "v1.18.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -10407,10 +10407,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.10.1
+    helm.sh/chart: alloy-1.11.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.17.1"
+    app.kubernetes.io/version: "v1.18.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: networking
@@ -10657,10 +10657,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.10.1
+    helm.sh/chart: alloy-1.11.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.17.1"
+    app.kubernetes.io/version: "v1.18.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
 spec:
@@ -10679,7 +10679,7 @@ spec:
       serviceAccountName: alloy
       containers:
         - name: alloy
-          image: docker.io/grafana/alloy:v1.17.1
+          image: docker.io/grafana/alloy:v1.18.0
           imagePullPolicy: IfNotPresent
           args:
             - run
@@ -10777,7 +10777,7 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.156.0"
+          image: "otel/opentelemetry-collector-contrib:0.157.0"
           imagePullPolicy: IfNotPresent
           ports:
             

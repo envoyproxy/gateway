@@ -49,5 +49,5 @@ Envoy Gateway contributor meetings are held on Thursdays and alternate weekly be
 [meeting]: https://docs.google.com/document/d/1i5wa1VsxIbQw7jbWvGmvy8C4Zpp7SGV1aVViSLgqU4M/edit?usp=sharing
 [community-calendar]: https://zoom-lfx.platform.linuxfoundation.org/meetings/envoy?view=week
 [blog]: https://blog.envoyproxy.io/introducing-envoy-gateway-ad385cc59532
-[Envoy Slack workspace]: https://communityinviter.com/apps/envoyproxy/envoy
+[Envoy Slack workspace]: https://www.envoyproxy.io/slack
 [Envoy Gateway channel]: https://envoyproxy.slack.com/archives/C03E6NHLESV

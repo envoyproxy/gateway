@@ -67,18 +67,37 @@ spec:
 ```
 
 The policy applies to all resources that match either targeting method. You can target various Gateway API resource types including
-`Gateway`, `HTTPRoute`, `GRPCRoute`, `TCPRoute`, `UDPRoute`, `TLSRoute`.
+`Gateway`, `ListenerSet`, `HTTPRoute`, `GRPCRoute`, `TCPRoute`, `UDPRoute`, `TLSRoute`.
+
+When a BackendTrafficPolicy targets a `ListenerSet`, it applies only to listeners in that ListenerSet. It does not apply to listeners owned directly by the parent Gateway. A `ListenerSet` target can also use `sectionName` to apply the policy to a single listener in the ListenerSet.
+
+Route-level policies apply to the targeted route regardless of whether that route is attached directly to a `Gateway` or through a `ListenerSet`.
 
 **Important**: A BackendTrafficPolicy can only target resources in the same namespace as the policy itself.
 
 ### Precedence
 
-When multiple BackendTrafficPolicies apply to the same resource, Envoy Gateway resolves conflicts using a precedence hierarchy based on the target resource type and section-level specificity:
+When multiple BackendTrafficPolicies apply to the same resource, Envoy Gateway resolves conflicts using a precedence hierarchy based on the target resource type, route attachment path, and section-level specificity.
 
-1. **Route rule-level policies** (HTTPRoute/GRPCRoute with `sectionName` targeting specific rules) - Highest precedence
-2. **Route-level policies** (HTTPRoute, GRPCRoute without `sectionName`) - High precedence
-3. **Listener-level policies** (Gateway with `sectionName` targeting specific listeners) - Medium precedence
-4. **Gateway-level policies** (Gateway without `sectionName`) - Lowest precedence
+Route-specific policies take precedence first:
+
+1. **Route rule-level policies** (HTTPRoute/GRPCRoute with `sectionName` targeting specific rules)
+2. **Route-level policies** (HTTPRoute, GRPCRoute without `sectionName`)
+
+After route-specific policies, parent policy precedence depends on how the route is attached.
+
+For routes attached through a `ListenerSet`:
+
+1. **ListenerSet listener-level policies** (`ListenerSet` with `sectionName` targeting a specific ListenerSet listener)
+2. **ListenerSet-level policies** (`ListenerSet` without `sectionName`)
+3. **Gateway-level policies** (`Gateway` without `sectionName`) on the parent Gateway
+
+For routes attached directly to a `Gateway`:
+
+1. **Gateway listener-level policies** (`Gateway` with `sectionName` targeting specific Gateway-owned listeners)
+2. **Gateway-level policies** (`Gateway` without `sectionName`)
+
+Gateway listener-level policies are sibling scopes to ListenerSet listeners and do not apply to routes attached through a ListenerSet.
 
 ```yaml
 # Gateway-level policy (lower precedence) - Applies to all routes in the gateway
@@ -151,9 +170,14 @@ When the `mergeType` field is unset, no merging occurs and only the most specifi
 
 ## Policy Merging
 
-BackendTrafficPolicy supports merging configurations using the `mergeType` field, which allows route-level or route rule-level policies to combine with gateway-level or listener-level policies rather than completely overriding them. This enables layered policy strategies where platform teams can set baseline configurations at the Gateway level, while application teams can add specific policies for their routes.
+BackendTrafficPolicy supports merging configurations using the `mergeType` field, which allows route-level or route rule-level policies to combine with parent policies rather than completely overriding them. This enables layered policy strategies where platform teams can set baseline configurations at the Gateway or ListenerSet level, while application teams can add specific policies for their routes.
 
-When merging occurs, route-level policies will merge with either a gateway-level or listener-level policy, but not both. If both gateway and listener policies exist, the listener-level policy takes precedence.
+When merging occurs, route-level policies merge with the closest parent policy in the route's attachment hierarchy:
+
+- For routes attached directly to a Gateway, the route policy first looks for a Gateway listener-level policy, then a Gateway-level policy.
+- For routes attached through a ListenerSet, the route policy first looks for a ListenerSet listener-level policy, then a ListenerSet-level policy, then the parent Gateway-level policy.
+
+A route policy attached through a ListenerSet does not merge with a Gateway listener-level policy because Gateway listeners and ListenerSet listeners are sibling scopes.
 
 ### Merge Types
 
@@ -238,14 +262,16 @@ With this configuration, a route-level BackendTrafficPolicy that does **not** se
 The effective merge strategy for a child policy is resolved in this order:
 
 1. The child policy's own `mergeType`, if set. `Replace` explicitly opts the child out of merging, so it replaces the parent even when the parent sets `defaultChildMergeType`.
-2. Otherwise, the closest parent policy's `defaultChildMergeType` (the listener-level policy if one exists, else the gateway-level policy).
+2. Otherwise, the `defaultChildMergeType` declared by the nearest parent policy in the route's attachment hierarchy that sets it. Since only a policy targeting an entire Gateway may set the field, this is the Gateway-level policy, and it still applies to routes attached to a specific listener or ListenerSet.
 3. Otherwise, no merging occurs and only the most specific policy takes effect.
 
-Note that `defaultChildMergeType` accepts only `StrategicMerge` or `JSONMerge` (defaulting to a replace would have no effect), and it can only be set on policies targeting a Gateway.
+The child still merges into the closest parent policy in its attachment hierarchy, which may be a listener- or ListenerSet-level policy; only the default merge strategy comes from the Gateway-level policy.
+
+Note that `defaultChildMergeType` accepts only `StrategicMerge` or `JSONMerge` (defaulting to a replace would have no effect), and it can only be set on policies targeting an entire Gateway - it is rejected on policies targeting a specific listener via `sectionName`.
 
 ### Key Constraints
 
-- The `mergeType` field can only be set on policies targeting child resources (like HTTPRoute), not parent resources (like Gateway)
+- The `mergeType` field can only be set on policies targeting xRoute resources (like HTTPRoute), not parent resources (like Gateway or ListenerSet)
 - When `mergeType` is unset, no merging occurs - only the most specific policy takes effect - unless the parent policy sets a [defaultChildMergeType](#defaulting-mergetype-via-the-parent-policy)
 - The merged configuration combines both policies, enabling layered protection strategies
 

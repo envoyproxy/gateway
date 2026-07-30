@@ -120,6 +120,19 @@ func TestTranslateXds(t *testing.T) {
 				Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
 			},
 		},
+		"http-route-with-tls-system-truststore-per-resource-secret": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.PerResourceSystemCASecret},
+			},
+		},
+		"http-route-multiple-system-truststore-per-resource-secret": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.PerResourceSystemCASecret},
+			},
+		},
+		"jsonpatch-system-truststore-enforcement": {
+			requireEnvoyPatchPolicies: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))

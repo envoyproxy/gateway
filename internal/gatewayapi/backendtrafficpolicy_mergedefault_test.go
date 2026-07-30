@@ -163,10 +163,11 @@ func TestAnyParentPolicyMergeDefault(t *testing.T) {
 // TestApplyTrafficFeatureToRoute_MergeGatewayScoping covers the MergeGateways scoping in
 // applyTrafficFeatureToRoute for the TCP and UDP listener loops: a listener belonging to a
 // different Gateway must be skipped, so a merged policy does not bleed across Gateways that
-// share one IR. The HTTP path is covered by the merged-gateways golden fixture.
+// share one IR. The target listener name is the full IR name ("<gw-ns>/<gw-name>/<listener>"),
+// so matching on it also scopes to the target Gateway. The HTTP path is covered by the
+// merged-gateways golden fixture.
 func TestApplyTrafficFeatureToRoute_MergeGatewayScoping(t *testing.T) {
 	tr := &Translator{}
-	gwNN := &types.NamespacedName{Namespace: "envoy-gateway", Name: "gw"}
 	policy := &egv1a1.BackendTrafficPolicy{}
 	target := policyTargetReferenceWithSectionName{}
 
@@ -180,7 +181,7 @@ func TestApplyTrafficFeatureToRoute_MergeGatewayScoping(t *testing.T) {
 			Routes:              []*ir.TCPRoute{sibling},
 		}}}
 		tr.applyTrafficFeatureToRoute(route, &ir.TrafficFeatures{CircuitBreaker: &ir.CircuitBreaker{}},
-			nil, policy, target, x, gwNN, nil)
+			nil, policy, target, x, "envoy-gateway/gw/tcp")
 		assert.Nil(t, sibling.CircuitBreaker, "route on a sibling Gateway's listener must be skipped")
 	})
 
@@ -194,7 +195,7 @@ func TestApplyTrafficFeatureToRoute_MergeGatewayScoping(t *testing.T) {
 			Route:               sibling,
 		}}}
 		tr.applyTrafficFeatureToRoute(route, &ir.TrafficFeatures{LoadBalancer: &ir.LoadBalancer{}},
-			nil, policy, target, x, gwNN, nil)
+			nil, policy, target, x, "envoy-gateway/gw/udp")
 		assert.Nil(t, sibling.LoadBalancer, "route on a sibling Gateway's listener must be skipped")
 	})
 }
