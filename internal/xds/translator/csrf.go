@@ -144,16 +144,22 @@ func (*csrf) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error 
 
 // buildXdsCSRFPolicy builds the full Envoy CSRF policy from the IR.
 func buildXdsCSRFPolicy(csrf *ir.CSRF) *csrfv3.CsrfPolicy {
-	// Envoy only lets an invalid request through in shadow mode if that request wasn't
-	// also selected by FilterEnabled, so enforcement is set to the complement of the
-	// shadow fraction: every request is either enforced or observed, never neither.
+	// Envoy rolls the dice separately for FilterEnabled and ShadowEnabled on every request.
+	// FilterEnabled decides whether the request is enforced. ShadowEnabled only applies to
+	// requests that FilterEnabled did not pick, because Envoy checks it as "shadow && !enabled".
+	//
+	// So FilterEnabled alone carries the fraction, set to the complement of the shadow
+	// fraction, while ShadowEnabled stays at 100% to pick up everything FilterEnabled left.
+	// A shadow fraction of 40% gives FilterEnabled 60%: 60% of requests are enforced and the
+	// other 40% are checked and recorded in the csrf stats but allowed through, so every
+	// request lands in one group or the other.
 	// With no shadow fraction, all requests are enforced.
 	enforcedFraction := fractionalpercent.FromIn32(100)
 	var shadowEnabled *corev3.RuntimeFractionalPercent
 	if csrf.ShadowFraction != nil {
 		enforcedFraction = fractionalpercent.FromFraction(complementFraction(csrf.ShadowFraction))
 		shadowEnabled = &corev3.RuntimeFractionalPercent{
-			DefaultValue: fractionalpercent.FromFraction(csrf.ShadowFraction),
+			DefaultValue: fractionalpercent.FromIn32(100),
 		}
 	}
 
@@ -164,9 +170,6 @@ func buildXdsCSRFPolicy(csrf *ir.CSRF) *csrfv3.CsrfPolicy {
 		ShadowEnabled: shadowEnabled,
 	}
 
-	// Values are passed directly to Envoy without transformation. Users must provide
-	// host:port values (not full URLs) because Envoy's CSRF filter strips the scheme
-	// from the Origin header before matching.
 	for _, origin := range csrf.AdditionalOrigins {
 		policy.AdditionalOrigins = append(policy.AdditionalOrigins, buildXdsStringMatcher(origin))
 	}

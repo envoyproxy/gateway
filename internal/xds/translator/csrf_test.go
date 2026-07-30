@@ -17,8 +17,9 @@ import (
 )
 
 // Envoy only lets an invalid request through in shadow mode if that request wasn't also
-// selected by FilterEnabled, so the enforced fraction must be the complement of the
-// shadow fraction for shadowing to have any effect.
+// selected by FilterEnabled, and it draws the two fractions independently. FilterEnabled
+// must therefore be the complement of the shadow fraction, and ShadowEnabled must stay at
+// 100% so it claims the whole non-enforced remainder rather than a fraction of it.
 func TestBuildXdsCSRFPolicyFractions(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -41,13 +42,13 @@ func TestBuildXdsCSRFPolicyFractions(t *testing.T) {
 			name:           "partial shadow fraction enforces the remainder",
 			shadowFraction: &gwapiv1.Fraction{Numerator: 20},
 			expectedFilter: &xdstype.FractionalPercent{Numerator: 80, Denominator: xdstype.FractionalPercent_HUNDRED},
-			expectedShadow: &xdstype.FractionalPercent{Numerator: 20, Denominator: xdstype.FractionalPercent_HUNDRED},
+			expectedShadow: &xdstype.FractionalPercent{Numerator: 100, Denominator: xdstype.FractionalPercent_HUNDRED},
 		},
 		{
 			name:           "custom denominator is preserved in the complement",
 			shadowFraction: &gwapiv1.Fraction{Numerator: 25, Denominator: ptr.To(int32(1000))},
 			expectedFilter: &xdstype.FractionalPercent{Numerator: 9750, Denominator: xdstype.FractionalPercent_TEN_THOUSAND},
-			expectedShadow: &xdstype.FractionalPercent{Numerator: 250, Denominator: xdstype.FractionalPercent_TEN_THOUSAND},
+			expectedShadow: &xdstype.FractionalPercent{Numerator: 100, Denominator: xdstype.FractionalPercent_HUNDRED},
 		},
 	}
 
