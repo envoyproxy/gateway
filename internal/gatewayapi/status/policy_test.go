@@ -6,6 +6,7 @@
 package status
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -15,6 +16,55 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
+
+// TestSetConditionForPolicyAncestorBounded verifies the ancestor list is capped on the fly as
+// entries are added (see #9539) and that the highest-priority (not-accepted) ancestors are kept.
+func TestSetConditionForPolicyAncestorBounded(t *testing.T) {
+	const controller = "example.com/controller"
+	policyStatus := &gwapiv1.PolicyStatus{}
+
+	// A few not-accepted (rank 0) ancestors, then many accepted (rank 2) ones.
+	badNames := []string{"bad-0", "bad-1", "bad-2"}
+	for _, name := range badNames {
+		ref := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName(name)}
+		SetConditionForPolicyAncestor(policyStatus, ref, controller,
+			gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1.PolicyReasonConflicted, "conflicted", 1)
+	}
+	for i := range 100 {
+		ref := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName(fmt.Sprintf("gw-%03d", i))}
+		SetConditionForPolicyAncestor(policyStatus, ref, controller,
+			gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, "accepted", 1)
+	}
+
+	// Bounded on the fly at the soft cap, never growing to 103.
+	assert.Len(t, policyStatus.Ancestors, policyAncestorsSoftCap)
+	// The not-accepted (rank 0) ancestors are preserved; only rank-2 entries are evicted.
+	for _, name := range badNames {
+		found := false
+		for _, a := range policyStatus.Ancestors {
+			if string(a.AncestorRef.Name) == name {
+				found = true
+			}
+		}
+		assert.True(t, found, "not-accepted ancestor %q must be preserved", name)
+	}
+
+	// Final truncation still cuts to the CRD limit.
+	TruncatePolicyAncestors(policyStatus, controller, 1)
+	assert.Len(t, policyStatus.Ancestors, maxPolicyAncestors)
+}
+
+func BenchmarkSetConditionForPolicyAncestorsAtScale(b *testing.B) {
+	const controller = "example.com/controller"
+	for b.Loop() {
+		policyStatus := &gwapiv1.PolicyStatus{}
+		for i := range 10000 {
+			ref := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName(fmt.Sprintf("gw-%05d", i))}
+			SetConditionForPolicyAncestor(policyStatus, ref, controller,
+				gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, "accepted", 1)
+		}
+	}
+}
 
 func TestSetConditionForPolicyAncestorsTruncatesMessages(t *testing.T) {
 	longMsg := strings.Repeat("x", conditionMessageMaxLength+5)

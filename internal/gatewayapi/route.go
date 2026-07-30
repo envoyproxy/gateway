@@ -1546,6 +1546,25 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			//	- etc.
 		}
 
+		// A route can only have a single destination if that destination is a dynamic resolver,
+		// because combining a dynamic resolver with other backends doesn't make sense.
+		hasDynamicResolver := false
+		for _, ds := range destSettings {
+			if ds.IsDynamicResolver {
+				hasDynamicResolver = true
+				break
+			}
+		}
+		if hasDynamicResolver && len(destSettings) > 1 {
+			resolveErrs.Add(status.NewRouteStatusError(
+				errors.New("dynamic resolver is not supported for multiple backendRefs"),
+				status.RouteReasonInvalidBackendRef,
+			))
+			// Drop the destinations so neither a dynamic forward proxy cluster nor a regular
+			// cluster is produced from an invalid combination of backends.
+			destSettings = nil
+		}
+
 		routeStatus := GetRouteStatus(tlsRoute)
 		if !resolveErrs.Empty() {
 			status.SetRouteStatusCondition(routeStatus,
@@ -1585,7 +1604,21 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			if irListener != nil {
 				var tlsConfig *ir.TLS
 				if irListener.TLS != nil {
-					// Listener is in terminate mode.
+					// Listener is in terminate mode. A dynamic resolver backend forwards the connection
+					// based on the SNI and requires TLS passthrough, so it cannot be used with a listener
+					// that terminates TLS (Envoy would forward the decrypted stream instead).
+					if hasDynamicResolver {
+						routeStatus := GetRouteStatus(tlsRoute)
+						status.SetRouteStatusCondition(routeStatus,
+							parentRef.routeParentStatusIdx,
+							tlsRoute.GetGeneration(),
+							gwapiv1.RouteConditionResolvedRefs,
+							metav1.ConditionFalse,
+							gwapiv1.RouteReasonUnsupportedValue,
+							"Dynamic resolver backend is only supported with TLS passthrough listeners",
+						)
+						continue
+					}
 					tlsConfig = &ir.TLS{
 						Terminate: irListener.TLS,
 					}
@@ -2009,14 +2042,27 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		envoyProxy = gatewayCtx.envoyProxy
 	}
 
-	// Resolve BTP RoutingType for this route/gateway combination
+	// Resolve BTP RoutingType for this route/listenerset/gateway combination
 	var btpRoutingType *egv1a1.RoutingType
 	if gatewayCtx != nil {
+		var listenerSetNN *types.NamespacedName
+		if parentRef.Kind != nil && *parentRef.Kind == resource.KindListenerSet {
+			parentNamespace := route.GetNamespace()
+			if parentRef.Namespace != nil {
+				parentNamespace = string(*parentRef.Namespace)
+			}
+			listenerSetNN = &types.NamespacedName{
+				Namespace: parentNamespace,
+				Name:      string(parentRef.Name),
+			}
+		}
+
 		btpRoutingType = t.BTPRoutingTypeIndex.LookupBTPRoutingType(
 			route.GetRouteType(),
 			types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()},
 			types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
 			parentRef.SectionName,
+			listenerSetNN,
 			routeRuleName,
 		)
 	}

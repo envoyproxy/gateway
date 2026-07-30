@@ -467,7 +467,7 @@ const (
 type EnvoyProxyProvider struct {
 	// Type is the type of resource provider to use. A resource provider provides
 	// infrastructure resources for running the data plane, e.g. Envoy proxy, and
-	// optional auxiliary control planes. Supported types are "Kubernetes"and "Host".
+	// optional auxiliary control planes. Supported types are "Kubernetes" and "Host".
 	//
 	// +unionDiscriminator
 	Type EnvoyProxyProviderType `json:"type"`
@@ -528,6 +528,9 @@ type EnvoyProxyKubernetesProvider struct {
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 
 	// EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.
+	// If the HPA is set, the Replicas field from EnvoyDeployment will be ignored, and the
+	// number of replicas is solely managed by the HPA. Use MinReplicas to control the
+	// lower bound of the replica count instead.
 	//
 	// +optional
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
