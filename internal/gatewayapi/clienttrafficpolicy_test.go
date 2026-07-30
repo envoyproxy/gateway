@@ -160,14 +160,14 @@ func TestBuildCTPClusterSettingsIndex(t *testing.T) {
 	idx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1, gateway2, gateway3}, []*gwapiv1.ListenerSet{lsSection, lsWide}, nil, nil, true)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, ctpIndexHasListenerLevelClusterSettings(idx, tc.gatewayNN, tc.listeners))
+			require.Equal(t, tc.want, idx.HasListenerLevelClusterSettings(tc.gatewayNN, tc.listeners))
 		})
 	}
 
 	// mergeBackendsEnabled: false must produce an empty, non-nil index — no lookups should
 	// ever return true.
 	emptyIdx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1}, []*gwapiv1.ListenerSet{lsSection, lsWide}, nil, nil, false)
-	require.False(t, ctpIndexHasListenerLevelClusterSettings(emptyIdx, gwNN("gateway-1"), gwDirectListener("http-1")))
+	require.False(t, emptyIdx.HasListenerLevelClusterSettings(gwNN("gateway-1"), gwDirectListener("http-1")))
 }
 
 // TestCtpSpecHasClusterScopedFieldsExhaustive locks in today's field-by-field classification for

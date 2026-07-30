@@ -41,7 +41,44 @@ const (
 
 // BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies, keyed by attachment
 // scope. This avoids an O(BTPs) lookup for every iteration of processDestination.
-type BTPRoutingTypeIndex = policyIndex[*egv1a1.RoutingType]
+type BTPRoutingTypeIndex struct {
+	*policyIndex[*egv1a1.RoutingType]
+}
+
+// newBTPRoutingTypeIndex allocates a BTPRoutingTypeIndex.
+func newBTPRoutingTypeIndex() *BTPRoutingTypeIndex {
+	return &BTPRoutingTypeIndex{policyIndex: newPolicyIndex[*egv1a1.RoutingType]()}
+}
+
+// LookupBTPRoutingType resolves the RoutingType for a specific route rule and
+// gateway/listener/listenerSet combination by checking the index in priority order: routeRule >
+// route > listener/listenerSet > gateway, honoring MergeType. Returns nil if no matching BTP
+// RoutingType is found, or if the index is nil.
+func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
+	routeKind gwapiv1.Kind,
+	routeNN types.NamespacedName,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	listenerSetNN *types.NamespacedName,
+	routeRuleName *gwapiv1.SectionName,
+) *egv1a1.RoutingType {
+	if idx == nil {
+		return nil
+	}
+	value, _ := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
+	return value
+}
+
+// LookupGatewayBTRoutingType resolves the RoutingType pinned directly at gatewayNN, ignoring any
+// listener/listenerSet/route/route-rule level override. Returns nil if no matching BTP RoutingType
+// is found, or if the index is nil.
+func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.NamespacedName) *egv1a1.RoutingType {
+	if idx == nil {
+		return nil
+	}
+	value, _ := idx.LookupExact(gatewayScope(gatewayNN))
+	return value
+}
 
 // btpSpecHasClusterScopedFields reports whether spec sets any backend-cluster-scoped (CDS) field —
 // either directly inside its embedded ClusterSettings, or via a sibling field on the spec that also
@@ -65,11 +102,58 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
 // BackendTrafficPolicy sets a cluster-scoped field, or has MergeType unset.
-type BTPClusterSettingsIndex = policyIndex[bool]
+type BTPClusterSettingsIndex struct {
+	*policyIndex[bool]
+}
+
+// newBTPClusterSettingsIndex allocates a BTPClusterSettingsIndex.
+func newBTPClusterSettingsIndex() *BTPClusterSettingsIndex {
+	return &BTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
+}
+
+// HasRouteLevelClusterSettings reports whether a route-rule, route, or listener-level
+// BackendTrafficPolicy contributes backend-cluster-scoped settings for the given target, or
+// targets it with MergeType unset. A gateway-level setting isn't checked: it applies uniformly to
+// every route sharing a merged cluster, so it can't cause a divergence. ListenerSet-level BTP
+// attachment isn't tracked here yet (envoyproxy/gateway#9619), so listenerSetNN is always resolved
+// as unset.
+func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
+	routeKind gwapiv1.Kind,
+	routeNN types.NamespacedName,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	routeRuleName *gwapiv1.SectionName,
+) bool {
+	if idx == nil {
+		return false
+	}
+	value, pinned := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, nil, routeRuleName)
+	// pinned catches what value alone would miss: a rule's own BTP with MergeType nil and no
+	// cluster-scoped field (value: false) still resolves to its own empty settings, not the
+	// gateway's - diverging from a sibling rule that has no BTP and does inherit the gateway's.
+	return value || pinned
+}
 
 // BTPLoadBalancerIndex reports, per gateway, whether a BackendTrafficPolicy attached to it sets
 // LoadBalancer to ConsistentHash.
-type BTPLoadBalancerIndex = policyIndex[bool]
+type BTPLoadBalancerIndex struct {
+	*policyIndex[bool]
+}
+
+// newBTPLoadBalancerIndex allocates a BTPLoadBalancerIndex.
+func newBTPLoadBalancerIndex() *BTPLoadBalancerIndex {
+	return &BTPLoadBalancerIndex{policyIndex: newPolicyIndex[bool]()}
+}
+
+// IsConsistentHash reports whether gatewayNN has a BackendTrafficPolicy setting LoadBalancer to
+// ConsistentHash.
+func (idx *BTPLoadBalancerIndex) IsConsistentHash(gatewayNN types.NamespacedName) bool {
+	if idx == nil {
+		return false
+	}
+	value, _ := idx.LookupExact(gatewayScope(gatewayNN))
+	return value
+}
 
 // BTPIndexes groups the three pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
 // together in one pass over btps.
@@ -89,9 +173,9 @@ func BuildBTPIndexes(
 	namespaceLookup func(string) *corev1.Namespace,
 	mergeBackendsEnabled bool,
 ) *BTPIndexes {
-	routingTypeIdx := newPolicyIndex[*egv1a1.RoutingType]()
-	clusterSettingsIdx := newPolicyIndex[bool]()
-	loadBalancerIdx := newPolicyIndex[bool]()
+	routingTypeIdx := newBTPRoutingTypeIndex()
+	clusterSettingsIdx := newBTPClusterSettingsIndex()
+	loadBalancerIdx := newBTPLoadBalancerIndex()
 
 	allTargets := make([]client.Object, 0, len(routes)+len(gateways)+len(listenerSets))
 	allTargets = append(allTargets, routes...)

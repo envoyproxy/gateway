@@ -50,7 +50,39 @@ func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
 // CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy
 // sets a cluster-affecting field. Gateway-wide settings (no SectionName) aren't tracked, since a
 // merged cluster never spans gateways and so can never see them diverge.
-type CTPClusterSettingsIndex = policyIndex[bool]
+type CTPClusterSettingsIndex struct {
+	*policyIndex[bool]
+}
+
+// newCTPClusterSettingsIndex allocates a CTPClusterSettingsIndex.
+func newCTPClusterSettingsIndex() *CTPClusterSettingsIndex {
+	return &CTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
+}
+
+// HasListenerLevelClusterSettings reports whether any of listeners (which belong to gatewayNN,
+// either directly or via a ListenerSet) has a ClientTrafficPolicy-sourced cluster-scoped setting,
+// checking each listener against its own owner (the Gateway, or the ListenerSet it came from).
+func (idx *CTPClusterSettingsIndex) HasListenerLevelClusterSettings(gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
+	if idx == nil {
+		return false
+	}
+	for _, l := range listeners {
+		if l.isFromListenerSet() {
+			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
+			if value, found := idx.LookupExact(listenerSetScope(lsNN)); found && value {
+				return true
+			}
+			if value, found := idx.LookupExact(listenerSetListenerScope(lsNN, l.Name)); found && value {
+				return true
+			}
+			continue
+		}
+		if value, found := idx.LookupExact(gatewayListenerScope(gatewayNN, l.Name)); found && value {
+			return true
+		}
+	}
+	return false
+}
 
 // BuildCTPClusterSettingsIndex builds a CTPClusterSettingsIndex.
 func BuildCTPClusterSettingsIndex(
@@ -61,7 +93,7 @@ func BuildCTPClusterSettingsIndex(
 	namespaceLookup func(string) *corev1.Namespace,
 	mergeBackendsEnabled bool,
 ) *CTPClusterSettingsIndex {
-	idx := newPolicyIndex[bool]()
+	idx := newCTPClusterSettingsIndex()
 	// Moot when no accepted gateway can enable merging.
 	if !mergeBackendsEnabled {
 		return idx
@@ -98,29 +130,6 @@ func BuildCTPClusterSettingsIndex(
 	}
 
 	return idx
-}
-
-// ctpIndexHasListenerLevelClusterSettings reports whether any of listeners (which belong to
-// gatewayNN, either directly or via a ListenerSet) has a ClientTrafficPolicy-sourced cluster-scoped
-// setting, checking each listener against its own owner (the Gateway, or the ListenerSet it came
-// from).
-func ctpIndexHasListenerLevelClusterSettings(idx *CTPClusterSettingsIndex, gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
-	for _, l := range listeners {
-		if l.isFromListenerSet() {
-			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
-			if value, found := idx.LookupExact(listenerSetScope(lsNN)); found && value {
-				return true
-			}
-			if value, found := idx.LookupExact(listenerSetListenerScope(lsNN, l.Name)); found && value {
-				return true
-			}
-			continue
-		}
-		if value, found := idx.LookupExact(gatewayListenerScope(gatewayNN, l.Name)); found && value {
-			return true
-		}
-	}
-	return false
 }
 
 func hasSectionName(target *policyTargetReferenceWithSectionName) bool {

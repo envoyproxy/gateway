@@ -497,7 +497,7 @@ func (t *Translator) resolveBTPRoutingType(
 			Name:      string(parentRef.Name),
 		}
 	}
-	value, _ := t.BTPRoutingTypeIndex.Lookup(
+	return t.BTPRoutingTypeIndex.LookupBTPRoutingType(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
 		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
@@ -505,7 +505,6 @@ func (t *Translator) resolveBTPRoutingType(
 		listenerSetNN,
 		routeRuleName,
 	)
-	return value
 }
 
 // hasRouteLevelClusterSettings reports whether a route-rule/route/listener-level BTP contributes
@@ -519,18 +518,13 @@ func (t *Translator) hasRouteLevelClusterSettings(
 	if gatewayCtx == nil {
 		return false
 	}
-	value, pinned := t.BTPClusterSettingsIndex.Lookup(
+	return t.BTPClusterSettingsIndex.HasRouteLevelClusterSettings(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
 		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
 		parentRef.SectionName,
-		nil,
 		routeRuleName,
 	)
-	// pinned catches what value alone would miss: a rule's own BTP with MergeType nil and no
-	// cluster-scoped field (value: false) still resolves to its own empty settings, not the
-	// gateway's - diverging from a sibling rule that has no BTP and does inherit the gateway's.
-	return value || pinned
 }
 
 // hasListenerLevelClusterSettings reports whether any of the route rule's attached listeners
@@ -542,7 +536,7 @@ func (t *Translator) hasListenerLevelClusterSettings(gatewayCtx *GatewayContext,
 		return false
 	}
 	gatewayNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
-	return ctpIndexHasListenerLevelClusterSettings(t.CTPClusterSettingsIndex, gatewayNN, parentRef.listeners)
+	return t.CTPClusterSettingsIndex.HasListenerLevelClusterSettings(gatewayNN, parentRef.listeners)
 }
 
 // gatewayXdsIR resolves the *ir.Xds for gatewayCtx's gateway from xdsIR. Returns nil if
@@ -621,7 +615,7 @@ func (t *Translator) anyGatewayHasMergeBackendsEnabled(gateways []*GatewayContex
 // cluster whose rule resolved it differently.
 func (t *Translator) routingTypeDivergesForRule(gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType) bool {
 	gwNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
-	gatewayBaseline, _ := t.BTPRoutingTypeIndex.LookupExact(gatewayScope(gwNN))
+	gatewayBaseline := t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN)
 	baseline := t.IsServiceRouting(gatewayCtx.envoyProxy, gatewayBaseline)
 	effective := t.IsServiceRouting(gatewayCtx.envoyProxy, btpRoutingType)
 	return baseline != effective
@@ -833,7 +827,7 @@ func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
 	}
 	// ConsistentHash needs the full combined backend pool, not per-identity split clusters.
 	if gatewayCtx != nil {
-		if isConsistentHash, _ := t.BTPLoadBalancerIndex.LookupExact(gatewayScope(utils.NamespacedName(gatewayCtx.Gateway))); isConsistentHash {
+		if t.BTPLoadBalancerIndex.IsConsistentHash(utils.NamespacedName(gatewayCtx.Gateway)) {
 			return true
 		}
 	}

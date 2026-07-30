@@ -2255,7 +2255,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			idx := BuildBTPIndexes(tt.btps, tt.routes, tt.gateways, tt.listenerSets, tt.referenceGrants, nil, false)
-			got, _ := idx.RoutingType.Lookup(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.listenerSetNN, tt.routeRuleName)
+			got := idx.RoutingType.LookupBTPRoutingType(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.listenerSetNN, tt.routeRuleName)
 			require.Equal(t, tt.expected, got)
 		})
 	}
@@ -2504,7 +2504,7 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 				},
 			}}
 			idx := BuildBTPIndexes(tc.btps, nil, []*GatewayContext{gwCtx}, nil, tc.referenceGrants, func(string) *corev1.Namespace { return nil }, true)
-			got, _ := idx.LoadBalancer.LookupExact(gatewayScope(tc.gatewayNN))
+			got := idx.LoadBalancer.IsConsistentHash(tc.gatewayNN)
 			require.Equal(t, tc.want, got)
 		})
 	}
@@ -2601,15 +2601,14 @@ func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
 	// The index must be keyed by the target route's own namespace (route-ns), not the
 	// policy's namespace (policy-ns), or this lookup misses and MergeBackends wrongly
 	// shares a cluster with routes that don't carry this cluster-scoped policy.
-	value, pinned := idx.ClusterSettings.Lookup(
+	got := idx.ClusterSettings.HasRouteLevelClusterSettings(
 		"HTTPRoute",
 		types.NamespacedName{Namespace: "route-ns", Name: "route-1"},
 		types.NamespacedName{},
 		nil,
 		nil,
-		nil,
 	)
-	require.True(t, value || pinned)
+	require.True(t, got)
 }
 
 func TestBTPClusterSettingsIndex(t *testing.T) {
@@ -2974,8 +2973,8 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			idx := BuildBTPIndexes(tt.btps, tt.routes, tt.gateways, nil, nil, nil, true)
-			value, pinned := idx.ClusterSettings.Lookup(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, nil, tt.routeRuleName)
-			require.Equal(t, tt.expected, value || pinned)
+			got := idx.ClusterSettings.HasRouteLevelClusterSettings(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
+			require.Equal(t, tt.expected, got)
 		})
 	}
 }
