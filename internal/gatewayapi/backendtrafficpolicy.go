@@ -155,15 +155,14 @@ func BuildBTPIndexes(
 					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
 				}
 
-				if hasLoadBalancer {
-					switch {
-					case kind == resource.KindGateway && ref.SectionName == nil:
-						loadBalancerIdx.setGatewayLevel(nn, btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType)
-					default:
-						// A listener/route-rule/route-level LoadBalancer setting already
-						// disqualifies its own rule from merging on its own, so it's never looked
-						// up here.
-					}
+				switch {
+				case kind == resource.KindGateway && ref.SectionName == nil:
+					// Every accepted Gateway-wide BTP must claim this slot, even one that leaves
+					// LoadBalancer unset, so a younger conflicting BTP can't silently win it.
+					loadBalancerIdx.setGatewayLevel(nn, hasLoadBalancer && btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType)
+				default:
+					// A listener/route-rule/route-level LoadBalancer setting already disqualifies
+					// its own rule from merging on its own, so it's never looked up here.
 				}
 			}
 		}

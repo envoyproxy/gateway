@@ -2447,6 +2447,51 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
 			want:      false,
 		},
+		{
+			// The oldest accepted BTP leaves LoadBalancer unset entirely (not just RoundRobin) -
+			// it must still claim the gateway-level slot, or a younger conflicting BTP that does
+			// set ConsistentHash silently wins it.
+			name: "oldest accepted gateway BTP with LoadBalancer unset blocks a younger conflicting one with ConsistentHash",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "btp-oldest-accepted"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+										Group: "gateway.networking.k8s.io",
+										Kind:  "Gateway",
+										Name:  "gateway-1",
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "btp-younger-conflicting"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+										Group: "gateway.networking.k8s.io",
+										Kind:  "Gateway",
+										Name:  "gateway-1",
+									},
+								},
+							},
+						},
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+						},
+					},
+				},
+			},
+			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
+			want:      false,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
