@@ -173,6 +173,7 @@ func TestTranslate(t *testing.T) {
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
+				MergeBackends:                   IsMergeBackendsEnabled(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
@@ -1207,6 +1208,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
 		ExtensionServerPolicies []*ir.UnstructuredRef
+		BackendClusters         []*ir.BackendCluster
 	}{
 		ReadyListener:           a.ReadyListener,
 		AccessLog:               a.AccessLog,
@@ -1219,6 +1221,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
+		BackendClusters:         a.BackendClusters,
 	}
 
 	// Ensure we didn't drop an exported field.

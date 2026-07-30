@@ -88,6 +88,10 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// MergeBackends is true when cluster deduplication is enabled: routes referencing the same
+	// backend reuse a single BackendCluster instead of each getting their own.
+	MergeBackends bool
+
 	// PerResourceSystemCASecret restores the old behavior of emitting one SDS secret per
 	// BackendTLSPolicy or Backend resource using WellKnownCACertificates: System, instead of
 	// sharing a single system_ca_certificates secret. Disabled by default (shared secret used).
@@ -284,18 +288,30 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
-	// Build pre-computed BTP RoutingType index for O(1) lookups in processDestination.
-	t.BTPRoutingTypeIndex = nil
-	if hasBTPRoutingType(resources.BackendTrafficPolicies) {
-		t.BTPRoutingTypeIndex = BuildBTPRoutingTypeIndex(
-			resources.BackendTrafficPolicies,
-			routesToObjects(resources),
-			acceptedGateways,
-			resources.ListenerSets,
-			resources.ReferenceGrants,
-			t.GetNamespace,
-		)
-	}
+	// Build pre-computed BTP indexes for O(1) lookups in processDestination.
+	btpIndexes := BuildBTPIndexes(
+		resources.BackendTrafficPolicies,
+		routesToObjects(resources),
+		acceptedGateways,
+		resources.ListenerSets,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
+	t.BTPRoutingTypeIndex = btpIndexes.RoutingType
+	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
+	t.BTPLoadBalancerIndex = btpIndexes.LoadBalancer
+
+	// Pre-compute which gateways/listeners have a ClientTrafficPolicy-sourced
+	// cluster-affecting override, for O(1) lookup during route processing.
+	t.CTPClusterSettingsIndex = BuildCTPClusterSettingsIndex(
+		resources.ClientTrafficPolicies,
+		acceptedGateways,
+		resources.ListenerSets,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
 
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
@@ -495,6 +511,13 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				spec, _ := json.Marshal(gCtx.envoyProxy.Spec)
 				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...)...)
 			}
+		}
+
+		if IsMergeGatewaysEnabled(resources) && t.isMergeBackendsEnabledForGateway(gCtx) {
+			failedGateways = append(failedGateways, gCtx)
+			status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+				"mergeGateways and mergeBackends cannot both be enabled")
+			continue
 		}
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.

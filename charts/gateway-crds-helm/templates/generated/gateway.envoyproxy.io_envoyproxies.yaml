@@ -778,12 +778,24 @@ spec:
                 - InsecureSyntax
                 - Disabled
                 type: string
+              mergeBackends:
+                description: |-
+                  MergeBackends configures cluster deduplication: routes that reference the same backend
+                  share a single Envoy cluster instead of Envoy Gateway generating one cluster per route
+                  rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
+                  improves upstream connection pooling.
+
+                  Disabled when unset; specifying this field at all (even without further configuration)
+                  enables it. Mutually exclusive with MergeGateways.
+                type: object
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
                   Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.
                   This means that the port, protocol and hostname tuple must be unique for every listener.
                   If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
+
+                  Mutually exclusive with MergeBackends.
                 type: boolean
               mergeType:
                 description: |-
@@ -18238,6 +18250,9 @@ spec:
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
             type: object
+            x-kubernetes-validations:
+            - message: mergeGateways and mergeBackends cannot both be enabled
+              rule: '!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends))'
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
             properties:

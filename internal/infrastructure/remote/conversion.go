@@ -144,7 +144,7 @@ func proxyListenerToProto(l *ir.ProxyListener) *remoteinfra.ProxyListener {
 // routeDestinationToProto.
 func resolvedMetricSinkToProto(s *ir.ResolvedMetricSink) *remoteinfra.ResolvedMetricSink {
 	out := &remoteinfra.ResolvedMetricSink{
-		Destination:              routeDestinationToProto(s.Destination),
+		Destination:              routeDestinationToProto(&s.Destination),
 		Authority:                s.Authority,
 		ResourceAttributes:       s.ResourceAttributes,
 		ReportCountersAsDeltas:   s.ReportCountersAsDeltas,
@@ -171,7 +171,7 @@ func resolvedMetricSinkToProto(s *ir.ResolvedMetricSink) *remoteinfra.ResolvedMe
 //   - Name, StatName: xDS cluster naming/stat details internal to Envoy Gateway.
 //   - Metadata: provider/user resource metadata used only for Envoy route
 //     metadata enrichment.
-func routeDestinationToProto(d ir.RouteDestination) *remoteinfra.RouteDestination {
+func routeDestinationToProto(d *ir.RouteDestination) *remoteinfra.RouteDestination {
 	out := &remoteinfra.RouteDestination{}
 
 	for _, s := range d.Settings {
