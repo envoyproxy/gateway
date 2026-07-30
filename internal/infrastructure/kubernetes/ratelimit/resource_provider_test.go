@@ -827,8 +827,9 @@ func TestDeployment(t *testing.T) {
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-					RateLimitDeployment: tc.deploy,
-					RateLimitHpa:        tc.hpa,
+						RateLimitDeployment: tc.deploy,
+						RateLimitHpa:        tc.hpa,
+					},
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
