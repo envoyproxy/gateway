@@ -156,8 +156,8 @@ func TestListNodeAddressesForNodes(t *testing.T) {
 			expectedAddresses: status.NodeAddresses{},
 		},
 		{
-			name:      "unknown node name is ignored",
-			nodeNames: []string{"node-unknown"},
+			name:              "unknown node name is ignored",
+			nodeNames:         []string{"node-unknown"},
 			expectedAddresses: status.NodeAddresses{},
 		},
 		{
