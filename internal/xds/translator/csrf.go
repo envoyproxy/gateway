@@ -183,6 +183,6 @@ func complementFraction(fraction *gwapiv1.Fraction) *gwapiv1.Fraction {
 	denominator := ptr.Deref(fraction.Denominator, fractionalpercent.Hundred)
 	return &gwapiv1.Fraction{
 		Numerator:   denominator - fraction.Numerator,
-		Denominator: ptr.To(denominator),
+		Denominator: new(denominator),
 	}
 }

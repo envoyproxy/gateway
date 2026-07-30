@@ -10,7 +10,6 @@ import (
 
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -46,7 +45,7 @@ func TestBuildXdsCSRFPolicyFractions(t *testing.T) {
 		},
 		{
 			name:           "custom denominator is preserved in the complement",
-			shadowFraction: &gwapiv1.Fraction{Numerator: 25, Denominator: ptr.To(int32(1000))},
+			shadowFraction: &gwapiv1.Fraction{Numerator: 25, Denominator: new(int32(1000))},
 			expectedFilter: &xdstype.FractionalPercent{Numerator: 9750, Denominator: xdstype.FractionalPercent_TEN_THOUSAND},
 			expectedShadow: &xdstype.FractionalPercent{Numerator: 100, Denominator: xdstype.FractionalPercent_HUNDRED},
 		},
