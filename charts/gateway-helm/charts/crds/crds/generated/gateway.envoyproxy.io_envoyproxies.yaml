@@ -14692,6 +14692,9 @@ spec:
                         type: array
                         x-kubernetes-list-type: set
                         x-kubernetes-validations:
+                        - message: matches must not be empty if specified; omit the
+                            field to log all events
+                          rule: size(self) > 0
                         - message: a failure type and a success type must both be
                             specified together
                           rule: self.exists(e, e == 'Failure' || e == 'FailureSeriesStart')

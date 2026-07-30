@@ -2732,6 +2732,14 @@ func TestProxyHealthCheckLog(t *testing.T) {
 			},
 			expectedError: "a failure type and a success type must both be specified together",
 		},
+		{
+			desc: "invalid - explicit empty matches list",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{},
+			},
+			// empty list is treated as "log all events" — same as omitting the field
+		},
 	}
 
 	for _, tc := range cases {

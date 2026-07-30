@@ -20,7 +20,7 @@ type ProxyHealthCheckLog struct {
 	Sinks []ProxyHealthCheckLogSink `json:"sinks,omitempty"`
 
 	// Matches defines which health check probe outcomes produce a log entry.
-	// When omitted, all events are logged.
+	// When omitted or empty, all events are logged.
 	//
 	// Each value must be unique. Multiple values are ORed. If any failure type is
 	// specified then a success type must also be specified, and vice versa.
