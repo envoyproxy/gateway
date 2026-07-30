@@ -1,0 +1,242 @@
+backendTrafficPolicies:
+# this policy status
+# - Accepted: true
+# - Merged: true
+#   - default/route-on-ls
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-listenerset-section
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+      sectionName: ext-http-1
+    timeout:
+      http:
+        connectionIdleTimeout: 21s
+      tcp:
+        connectTimeout: 22s
+# this policy status
+# - Accepted: true
+# - Merged: true
+#   - default/route-on-ls
+# - Overridden: true
+#   - envoy-gateway/ext-listeners/ext-http-1
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-listenerset
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+    timeout:
+      http:
+        connectionIdleTimeout: 31s
+      tcp:
+        connectTimeout: 32s
+# this policy status
+# - Accepted: true
+# - Merged: true
+#   - default/route-on-gateway-policy-ls
+# - Overridden: true
+#   - envoy-gateway/composite-gateway/http-8080
+#   - envoy-gateway/ext-listeners
+#   - envoy-gateway/ext-listeners/ext-http-1
+#   - default/route-on-ls
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-gw
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+    timeout:
+      http:
+        connectionIdleTimeout: 41s
+      tcp:
+        connectTimeout: 42s
+# this policy status
+# - Accepted: true
+# Not overridden because it is attached to a gw section level, ListenerSet policies are sibling scopes.
+# Route policies attached through ListenerSets do not affect a different Gateway section listener.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: parent-gw-section
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+      sectionName: http-8080
+    timeout:
+      http:
+        connectionIdleTimeout: 51s
+      tcp:
+        connectTimeout: 52s
+# this policy status
+# - Accepted: true
+# - Merged: true
+#   - envoy-gateway/parent-listenerset-section on ext-http-1
+#   - envoy-gateway/parent-listenerset on ext-http-2
+# This route policy is attached through the ListenerSet without a sectionName.
+# It should merge with the LS section policy on ext-http-1 and fall back to the LS-wide policy on ext-http-2.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: child-route-merge
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: route-on-ls
+    connection:
+      bufferLimit: 100M
+# this policy status
+# - Accepted: true
+# - Merged: true
+#   - envoy-gateway/parent-gw
+# This route policy is attached through a ListenerSet, but that ListenerSet has no policy.
+# It should fall back to the parent Gateway policy and merge with parent-gw.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: child-route-gateway-merge
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: route-on-gateway-policy-ls
+    connection:
+      bufferLimit: 200M
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-gw
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: composite-gateway
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-ls
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-gateway-policy-ls
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: gateway-policy-listeners
+      sectionName: gw-http-1
+    rules:
+    - matches:
+      - path:
+          value: "/gateway-policy"
+      backendRefs:
+      - name: service-1
+        port: 8080
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-8080
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: ext-http-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: ext-http-2
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-policy-listeners
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: gw-http-1
+      protocol: HTTP
+      port: 8083
+      allowedRoutes:
+        namespaces:
+          from: All

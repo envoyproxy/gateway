@@ -22,7 +22,7 @@ http:
               tls:
                 alpnProtocols: null
                 caCertificate:
-                  name: websocket-wss-route/ca
+                  name: system_ca_certificates
                 sni: "websocket.example.com"
                 useSystemTrustStore: true
       - name: "ordinary-tls-http-route"
@@ -38,6 +38,6 @@ http:
               tls:
                 alpnProtocols: null
                 caCertificate:
-                  name: ordinary-tls-http-route/ca
+                  name: system_ca_certificates
                 sni: "ordinary.example.com"
                 useSystemTrustStore: true

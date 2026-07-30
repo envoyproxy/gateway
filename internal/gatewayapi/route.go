@@ -486,11 +486,23 @@ func (t *Translator) resolveBTPRoutingType(
 	if gatewayCtx == nil {
 		return nil
 	}
+	var listenerSetNN *types.NamespacedName
+	if parentRef.Kind != nil && *parentRef.Kind == resource.KindListenerSet {
+		parentNamespace := routeCtx.GetNamespace()
+		if parentRef.Namespace != nil {
+			parentNamespace = string(*parentRef.Namespace)
+		}
+		listenerSetNN = &types.NamespacedName{
+			Namespace: parentNamespace,
+			Name:      string(parentRef.Name),
+		}
+	}
 	return t.BTPRoutingTypeIndex.LookupBTPRoutingType(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
 		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
 		parentRef.SectionName,
+		listenerSetNN,
 		routeRuleName,
 	)
 }

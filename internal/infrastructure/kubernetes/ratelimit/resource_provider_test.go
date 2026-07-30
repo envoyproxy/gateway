@@ -241,7 +241,9 @@ func TestPDB(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					RateLimitPDB: tc.pdb,
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						RateLimitPDB: tc.pdb,
+					},
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -268,6 +270,7 @@ func TestDeployment(t *testing.T) {
 		caseName  string
 		rateLimit *egv1a1.RateLimit
 		deploy    *egv1a1.KubernetesDeploymentSpec
+		hpa       *egv1a1.KubernetesHorizontalPodAutoscalerSpec
 	}{
 		{
 			caseName:  "default",
@@ -800,6 +803,21 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			// The replicas field must not be rendered when an HPA is configured, so that
+			// Envoy Gateway doesn't own spec.replicas and revert the replica count
+			// computed by the HPA.
+			caseName:  "with-hpa",
+			rateLimit: rateLimit,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: new(int32(2)),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+			},
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: new(int32(3)),
+				MaxReplicas: new(int32(10)),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -808,7 +826,9 @@ func TestDeployment(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
 					RateLimitDeployment: tc.deploy,
+					RateLimitHpa:        tc.hpa,
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -914,8 +934,10 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					RateLimitHpa:        tc.rateLimitHpa,
-					RateLimitDeployment: tc.rateLimitDeployment,
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						RateLimitHpa:        tc.rateLimitHpa,
+						RateLimitDeployment: tc.rateLimitDeployment,
+					},
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
