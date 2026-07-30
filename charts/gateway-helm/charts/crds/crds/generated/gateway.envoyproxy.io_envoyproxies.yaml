@@ -10385,8 +10385,11 @@ spec:
                             type: object
                         type: object
                       envoyHpa:
-                        description: EnvoyHpa defines the Horizontal Pod Autoscaler
-                          settings for Envoy Proxy Deployment.
+                        description: |-
+                          EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.
+                          If the HPA is set, the Replicas field from EnvoyDeployment will be ignored, and the
+                          number of replicas is solely managed by the HPA. Use MinReplicas to control the
+                          lower bound of the replica count instead.
                         properties:
                           behavior:
                             description: |-
