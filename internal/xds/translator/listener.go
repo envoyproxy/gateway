@@ -214,6 +214,7 @@ func (t *Translator) buildXdsTCPListener(
 	listenerDetails *ir.CoreListenerDetails,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
+	timeout *ir.ClientTimeout,
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
 	socketOptions := buildTCPSocketOptions(keepalive)
@@ -247,6 +248,10 @@ func (t *Translator) buildXdsTCPListener(
 	if listenerDetails.IPFamily != nil && *listenerDetails.IPFamily == egv1a1.DualStack {
 		socketAddress := listener.Address.GetSocketAddress()
 		socketAddress.Ipv4Compat = true
+	}
+
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.ConnectionInspectionTimeout != nil {
+		listener.ListenerFiltersTimeout = durationpb.New(timeout.TCP.ConnectionInspectionTimeout.Duration)
 	}
 
 	return listener, nil
@@ -440,6 +445,10 @@ func (t *Translator) addHCMToXDSListener(
 			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
 		}
 
+		if irListener.Timeout.HTTP.RequestHeadersReceivedTimeout != nil {
+			mgr.RequestHeadersTimeout = durationpb.New(irListener.Timeout.HTTP.RequestHeadersReceivedTimeout.Duration)
+		}
+
 		if irListener.Timeout.HTTP.IdleTimeout != nil {
 			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(irListener.Timeout.HTTP.IdleTimeout.Duration)
 		}
@@ -506,6 +515,10 @@ func (t *Translator) addHCMToXDSListener(
 	filterChain := &listenerv3.FilterChain{
 		Name:    httpsListenerFilterChainName(irListener),
 		Filters: filters,
+	}
+
+	if irListener.Timeout != nil && irListener.Timeout.TCP != nil && irListener.Timeout.TCP.HandshakeTimeout != nil {
+		filterChain.TransportSocketConnectTimeout = durationpb.New(irListener.Timeout.TCP.HandshakeTimeout.Duration)
 	}
 
 	if irListener.TLS != nil {
@@ -805,10 +818,16 @@ func buildTCPFilterChain(
 		return nil, err
 	}
 
-	return &listenerv3.FilterChain{
+	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
 		Name:    tlsListenerFilterChainName(irRoute),
-	}, nil
+	}
+
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.HandshakeTimeout != nil {
+		filterChain.TransportSocketConnectTimeout = durationpb.New(timeout.TCP.HandshakeTimeout.Duration)
+	}
+
+	return filterChain, nil
 }
 
 func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnection) *connection_limitv3.ConnectionLimit {

@@ -946,6 +946,20 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			}
 			irTCPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
 		}
+		if clientTimeout.TCP.HandshakeTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.TCP.HandshakeTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid TCP HandshakeTimeout value %s", *clientTimeout.TCP.HandshakeTimeout)
+			}
+			irTCPTimeout.HandshakeTimeout = ir.MetaV1DurationPtr(d)
+		}
+		if clientTimeout.TCP.ConnectionInspectionTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.TCP.ConnectionInspectionTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid TCP ConnectionInspectionTimeout value %s", *clientTimeout.TCP.ConnectionInspectionTimeout)
+			}
+			irTCPTimeout.ConnectionInspectionTimeout = ir.MetaV1DurationPtr(d)
+		}
 		irClientTimeout.TCP = irTCPTimeout
 	}
 
@@ -973,6 +987,14 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 				return nil, fmt.Errorf("invalid HTTP StreamIdleTimeout value %s", *clientTimeout.HTTP.StreamIdleTimeout)
 			}
 			irHTTPTimeout.StreamIdleTimeout = ir.MetaV1DurationPtr(d)
+		}
+
+		if clientTimeout.HTTP.RequestHeadersReceivedTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestHeadersReceivedTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid HTTP RequestHeadersReceivedTimeout value %s", *clientTimeout.HTTP.RequestHeadersReceivedTimeout)
+			}
+			irHTTPTimeout.RequestHeadersReceivedTimeout = ir.MetaV1DurationPtr(d)
 		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
