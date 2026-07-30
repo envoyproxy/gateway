@@ -100,6 +100,29 @@ func BuildCTPClusterSettingsIndex(
 	return idx
 }
 
+// ctpIndexHasListenerLevelClusterSettings reports whether any of listeners (which belong to
+// gatewayNN, either directly or via a ListenerSet) has a ClientTrafficPolicy-sourced cluster-scoped
+// setting, checking each listener against its own owner (the Gateway, or the ListenerSet it came
+// from).
+func ctpIndexHasListenerLevelClusterSettings(idx *CTPClusterSettingsIndex, gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
+	for _, l := range listeners {
+		if l.isFromListenerSet() {
+			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
+			if value, found := idx.LookupExact(listenerSetScope(lsNN)); found && value {
+				return true
+			}
+			if value, found := idx.LookupExact(listenerSetListenerScope(lsNN, l.Name)); found && value {
+				return true
+			}
+			continue
+		}
+		if value, found := idx.LookupExact(gatewayListenerScope(gatewayNN, l.Name)); found && value {
+			return true
+		}
+	}
+	return false
+}
+
 func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
 }

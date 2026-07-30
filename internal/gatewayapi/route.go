@@ -542,22 +542,7 @@ func (t *Translator) hasListenerLevelClusterSettings(gatewayCtx *GatewayContext,
 		return false
 	}
 	gatewayNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
-	for _, l := range parentRef.listeners {
-		if l.isFromListenerSet() {
-			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
-			if value, found := t.CTPClusterSettingsIndex.LookupExact(listenerSetScope(lsNN)); found && value {
-				return true
-			}
-			if value, found := t.CTPClusterSettingsIndex.LookupExact(listenerSetListenerScope(lsNN, l.Name)); found && value {
-				return true
-			}
-			continue
-		}
-		if value, found := t.CTPClusterSettingsIndex.LookupExact(gatewayListenerScope(gatewayNN, l.Name)); found && value {
-			return true
-		}
-	}
-	return false
+	return ctpIndexHasListenerLevelClusterSettings(t.CTPClusterSettingsIndex, gatewayNN, parentRef.listeners)
 }
 
 // gatewayXdsIR resolves the *ir.Xds for gatewayCtx's gateway from xdsIR. Returns nil if
