@@ -1,0 +1,1 @@
+Fixed a data race between config-reload and the standalone server's shutdown/error logging by reading the logger through a new mutex-guarded `Loader.Logger()` accessor instead of the shared `cfg.Logger` field directly.

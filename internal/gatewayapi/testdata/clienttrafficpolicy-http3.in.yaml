@@ -85,7 +85,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     namespace: default
-    name: httproute-1
+    name: httproute-2
   spec:
     parentRefs:
     - namespace: envoy-gateway
