@@ -1,0 +1,1 @@
+Fixed BackendTrafficPolicy status going stale when the policy stops attaching to any target. A policy whose `targetRef`/`targetRefs` points at a nonexistent object or whose `targetSelectors` no longer match anything now has its stale ancestor status cleaned up instead of retaining an outdated `Accepted=True` condition with an out-of-date `observedGeneration`.
