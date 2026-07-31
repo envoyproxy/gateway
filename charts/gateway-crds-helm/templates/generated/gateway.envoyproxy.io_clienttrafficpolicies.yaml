@@ -748,6 +748,24 @@ spec:
                         - name
                         x-kubernetes-list-type: map
                     type: object
+                  maxRequestHeaderLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxRequestHeaderLimit provides configuration for the maximum size of the
+                      request headers allowed for incoming connections, mapping to the Envoy
+                      `max_request_headers_kb` HTTP connection manager setting. Requests whose
+                      headers exceed this limit receive a 431 (Request Header Fields Too Large)
+                      response. The value is rounded up to the nearest KiB, must be at least 1Ki,
+                      and cannot exceed 8192Ki (the maximum Envoy supports).
+                      For example, 60Ki, 96Ki, 128Ki etc.
+                      Note that when the suffix is not provided, the value is interpreted as bytes.
+                      Default: 60Ki bytes.
+                    x-kubernetes-int-or-string: true
                   preserveXRequestID:
                     description: |-
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge

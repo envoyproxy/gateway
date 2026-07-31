@@ -1,0 +1,18 @@
+http:
+  - name: "first-listener"
+    address: "::"
+    port: 8081
+    hostnames:
+      - "*"
+    routes:
+      - name: "first-route"
+        hostname: "*"
+        destination:
+          name: "first-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.1.1.1"
+                  port: 8081
+              name: "first-route-dest/backend/0"
+    headers:
+      maxRequestHeadersKB: 96
