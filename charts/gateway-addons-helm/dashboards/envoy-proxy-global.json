@@ -2916,7 +2916,7 @@
             "filterable": false,
             "inspect": false
           },
-          "decimals": 1,
+          "decimals": 0,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -2990,7 +2990,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "(min by (envoy_tls_certificate) (envoy_listener_ssl_certificate_expiration_unix_time_seconds) - time()) / 86400",
+          "expr": "min by (envoy_tls_certificate) ((envoy_listener_ssl_certificate_expiration_unix_time_seconds{namespace=~\"$Namespace\"} - time()) / 86400)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
