@@ -28,10 +28,15 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	httputils "github.com/envoyproxy/gateway/internal/utils/http"
+	netutil "github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 const (
 	EmptyPath = ""
+
+	// SystemTrustStoreSecretName is the shared SDS secret name used by all clusters that reference
+	// the system CA trust store when backend cluster deduplication is enabled.
+	SystemTrustStoreSecretName = "system_ca_certificates" //nolint:gosec // not a credential
 )
 
 var (
@@ -81,6 +86,8 @@ var (
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
 	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
+	ErrBackendClusterMergedDynamicResolver      = errors.New("a BackendCluster must not be a dynamic resolver")
+	ErrBackendClusterRefNotFound                = errors.New("field BackendClusterRefs references a BackendCluster name that does not exist")
 
 	redacted = []byte("[redacted]")
 )
@@ -175,6 +182,9 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
+	// BackendClusters holds every distinct merged BackendCluster for this gateway - the single
+	// source of truth for a cluster's Settings/Metadata.
+	BackendClusters []*BackendCluster `json:"backendClusters,omitempty" yaml:"backendClusters,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -193,6 +203,53 @@ func (x *Xds) Validate() error {
 	for _, udp := range x.UDP {
 		if err := udp.Validate(); err != nil {
 			errs = errors.Join(errs, err)
+		}
+	}
+	for _, bc := range x.BackendClusters {
+		if err := bc.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if err := x.validateBackendClusterRefs(); err != nil {
+		errs = errors.Join(errs, err)
+	}
+	return errs
+}
+
+func (x *Xds) validateBackendClusterRefs() error {
+	names := make(map[string]struct{}, len(x.BackendClusters))
+	for _, bc := range x.BackendClusters {
+		names[bc.Name] = struct{}{}
+	}
+
+	var errs error
+	check := func(rd *RouteDestination) {
+		if rd == nil {
+			return
+		}
+		for _, ref := range rd.BackendClusterRefs {
+			if _, ok := names[ref.Name]; !ok {
+				errs = errors.Join(errs, fmt.Errorf("%w: %s", ErrBackendClusterRefNotFound, ref.Name))
+			}
+		}
+	}
+
+	for _, http := range x.HTTP {
+		for _, route := range http.Routes {
+			check(route.Destination)
+			for _, mirror := range route.Mirrors {
+				check(mirror.Destination)
+			}
+		}
+	}
+	for _, tcp := range x.TCP {
+		for _, route := range tcp.Routes {
+			check(route.Destination)
+		}
+	}
+	for _, udp := range x.UDP {
+		if udp.Route != nil {
+			check(udp.Route.Destination)
 		}
 	}
 	return errs
@@ -492,11 +549,21 @@ type TLSCertificate struct {
 type SDSConfig struct {
 	// SecretName is an identifier for the SDS configuration.
 	SecretName string `json:"secretName" yaml:"secretName"`
-	// URL is the URL of the SDS server
-	URL string `json:"url" yaml:"url"`
+	// Scheme is the communication scheme to use when connecting to the SDS server (e.g., "http", "https", or "unix").
+	Scheme string `json:"scheme" yaml:"scheme"`
+	// Address is the host and port of the SDS server
+	Address string `json:"address" yaml:"address"`
 
 	// TODO: support additional SDS configuration options
 	// such as TLS settings for the SDS server, or authentication credentials if needed.
+}
+
+func (s *SDSConfig) GetURL() string {
+	if s.Scheme == "" {
+		return s.Address
+	}
+
+	return fmt.Sprintf("%s://%s", s.Scheme, s.Address)
 }
 
 func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
@@ -509,10 +576,15 @@ func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
 	if !hasURL || len(sdsURLBytes) == 0 {
 		return nil, fmt.Errorf("no url found in SDS reference secret %s/%s", s.Namespace, s.Name)
 	}
+	scheme, hostAndPort, err := netutil.ParseURL(string(sdsURLBytes)) // validate the URL format
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL in SDS reference secret %s/%s: %w", s.Namespace, s.Name, err)
+	}
 
 	return &SDSConfig{
 		SecretName: string(sdsSecretName),
-		URL:        string(sdsURLBytes),
+		Scheme:     scheme,
+		Address:    hostAndPort,
 	}, nil
 }
 
@@ -644,7 +716,6 @@ type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
 // BackendWeights stores the weights of valid, invalid and no endpoints backends for the route so that 500/503 error responses can be returned in the same proportions
 type BackendWeights struct {
-	Name        string `json:"name" yaml:"name"`
 	Valid       uint32 `json:"valid" yaml:"valid"`
 	Invalid     uint32 `json:"invalid" yaml:"invalid"`
 	NoEndpoints uint32 `json:"noEndpoints" yaml:"noEndpoints"`
@@ -652,6 +723,27 @@ type BackendWeights struct {
 
 func (b *BackendWeights) UnavailableWeight() uint32 {
 	return b.Invalid + b.NoEndpoints
+}
+
+// AddWeighted adds weight to b under the category that s's own status indicates (invalid,
+// dynamic-resolver, custom backend, has/no endpoints), independent of s.Weight.
+func (b *BackendWeights) AddWeighted(s *DestinationSetting, weight *uint32) {
+	if weight == nil {
+		return
+	}
+
+	switch {
+	case s.Invalid: // If invalid, add to invalid weight
+		b.Invalid += *weight
+	case s.IsDynamicResolver: // Dynamic resolver has no endpoints
+		b.Valid += *weight
+	case s.IsCustomBackend: // Custom backends has no endpoints
+		b.Valid += *weight
+	case len(s.Endpoints) > 0: // All other cases should have endpoints
+		b.Valid += *weight
+	default: // DestinationSetting with no endpoints
+		b.NoEndpoints += *weight
+	}
 }
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
@@ -984,8 +1076,10 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	return h.Destination.NeedsClusterPerSetting()
 }
 
+// IsDynamicResolverRoute reports whether h's destination is a dynamic resolver.
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
-	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
+	// Only checks Settings, never BackendClusterRefs: a dynamic-resolver backend is never
+	// merge-eligible, so its setting always lives in Settings.
 	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
 }
 
@@ -1334,6 +1428,10 @@ type OIDC struct {
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
 	// via the Authorization header Bearer scheme to the upstream.
 	ForwardAccessToken bool `json:"forwardAccessToken,omitempty"`
+
+	// ForwardIDTokenHeader is the upstream request header on which the OIDC ID token
+	// is forwarded. If nil, the ID token is not forwarded.
+	ForwardIDTokenHeader *string `json:"forwardIDTokenHeader,omitempty"`
 
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
 	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
@@ -1910,16 +2008,23 @@ type RouteDestination struct {
 	// Name of the destination. This field allows the xds layer
 	// to check if this route destination already exists and can be
 	// reused
-	Name     string                `json:"name" yaml:"name"`
-	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
+	Name     string  `json:"name" yaml:"name"`
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
+	// Settings holds this destination's own, non-merged backends. Never shared with another
+	// route.
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// BackendClusterRefs holds references to backend clusters for this route rule. The
+	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
+	// never here.
+	BackendClusterRefs []*BackendClusterRef `json:"backendClusterRefs,omitempty" yaml:"backendClusterRefs,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
 	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
-// Validate the fields within the RouteDestination structure
+// Validate the fields within the RouteDestination structure. BackendCluster-level validation
+// happens once per distinct cluster, not here per-ref.
 func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
@@ -1930,7 +2035,11 @@ func (r *RouteDestination) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-
+	for _, ref := range r.BackendClusterRefs {
+		if len(ref.Name) == 0 {
+			errs = errors.Join(errs, ErrDestinationNameEmpty)
+		}
+	}
 	return errs
 }
 
@@ -2014,30 +2123,57 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
-	w := &BackendWeights{
-		Name: r.Name,
-	}
-
+	w := &BackendWeights{}
 	for _, s := range r.Settings {
-		if s.Weight == nil {
-			continue
-		}
+		w.AddWeighted(s, s.Weight)
+	}
+	return w
+}
 
-		switch {
-		case s.Invalid: // If invalid, add to invalid weight
-			w.Invalid += *s.Weight
-		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
-			w.Valid += *s.Weight
-		case s.IsCustomBackend: // Custom backends has no endpoints
-			w.Valid += *s.Weight
-		case len(s.Endpoints) > 0: // All other cases should have endpoints
-			w.Valid += *s.Weight
-		default: // DestinationSetting with no endpoints
-			w.NoEndpoints += *s.Weight
+// BackendCluster is a shared, identity-deduplicated backend: exactly one backend identity, one
+// setting. Only ever constructed for genuinely merged backends.
+// +kubebuilder:object:generate=true
+type BackendCluster struct {
+	// Name uniquely identifies this backend cluster.
+	Name string `json:"name" yaml:"name"`
+	// Setting holds this backend's own configuration. Always exactly one, since a merged
+	// cluster is by definition a single deduplicated backend identity.
+	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
+	// Metadata describes the backend resource (Service, Backend, etc.)
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// Traffic holds the accepted whole-gateway BackendTrafficPolicy's settings, if any -
+	// gateway level is the only one guaranteed uniform across a merged cluster's routes.
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	// UseClientProtocol holds the accepted whole-gateway BackendTrafficPolicy's UseClientProtocol,
+	// if any - same gateway-level-only reasoning as Traffic.
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+}
+
+func (b *BackendCluster) Validate() error {
+	var errs error
+	if len(b.Name) == 0 {
+		errs = errors.Join(errs, ErrDestinationNameEmpty)
+	}
+	if b.Setting != nil {
+		if err := b.Setting.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if b.Setting.IsDynamicResolver {
+			errs = errors.Join(errs, ErrBackendClusterMergedDynamicResolver)
 		}
 	}
+	return errs
+}
 
-	return w
+// BackendClusterRef is a reference from a route rule to a backend cluster, identified by name.
+// The referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
+// never here.
+// +kubebuilder:object:generate=true
+type BackendClusterRef struct {
+	// Name identifies the referenced BackendCluster in the owning Xds's Backends registry.
+	Name string `json:"name" yaml:"name"`
+	// Weight for weighted routing across multiple BackendRefs.
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 }
 
 // DestinationSetting holds the settings associated with the destination
@@ -2452,6 +2588,12 @@ type TCPRoute struct {
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 	// Authorization defines the schema for the authorization.
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
+}
+
+// IsDynamicResolverRoute returns true if the TCPRoute routes to a dynamic resolver backend.
+func (t *TCPRoute) IsDynamicResolverRoute() bool {
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation.
+	return t.Destination != nil && len(t.Destination.Settings) == 1 && t.Destination.Settings[0].IsDynamicResolver
 }
 
 // TLS holds information for configuring TLS on a listener

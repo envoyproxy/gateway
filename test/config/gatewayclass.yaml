@@ -148,3 +148,11 @@ spec:
     name: proxy-config
     namespace: envoy-gateway-system
 ---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: remote-infra
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+

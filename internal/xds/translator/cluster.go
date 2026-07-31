@@ -15,6 +15,7 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	commondnsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/common/dns/v3"
 	dnsclusterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
@@ -1091,13 +1092,22 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
 		args.admissionControl != nil
 
+	var clusterHashPolicy []*routev3.RouteAction_HashPolicy
+	if !args.isRoute && args.loadBalancer != nil {
+		clusterHashPolicy = buildConsistentHashPolicy(args.loadBalancer.ConsistentHash)
+	}
+
 	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
-		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI || forceHTTP1UpstreamProtocol
+		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI ||
+		forceHTTP1UpstreamProtocol || len(clusterHashPolicy) > 0
 
 	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
 	}
 	protocolOptions := httpv3.HttpProtocolOptions{}
+	if len(clusterHashPolicy) > 0 {
+		protocolOptions.HashPolicy = clusterHashPolicy
+	}
 	if requiresCommonHTTPOptions {
 		protocolOptions.CommonHttpProtocolOptions = &corev3.HttpProtocolOptions{}
 		if args.timeout != nil && args.timeout.HTTP != nil {
@@ -1407,14 +1417,16 @@ func buildBackandConnectionBufferLimitBytes(bc *ir.BackendConnection) *wrappers.
 }
 
 type ExtraArgs struct {
-	metrics          *ir.Metrics
-	http1Settings    *ir.HTTP1Settings
-	http2Settings    *ir.HTTP2Settings
-	ipFamily         *egv1a1.IPFamily
-	statName         *string
-	extensionMgr     *extensionTypes.Manager
-	unstructuredRefs []*unstructured.Unstructured
-	logger           logging.Logger
+	metrics           *ir.Metrics
+	http1Settings     *ir.HTTP1Settings
+	http2Settings     *ir.HTTP2Settings
+	ipFamily          *egv1a1.IPFamily
+	statName          *string
+	extensionMgr      *extensionTypes.Manager
+	unstructuredRefs  []*unstructured.Unstructured
+	logger            logging.Logger
+	traffic           *ir.TrafficFeatures
+	useClientProtocol *bool
 }
 
 type clusterArgs interface {
@@ -1501,6 +1513,38 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 
 	// Populate traffic features.
 	applyTraffic(clusterArgs, httpRoute.Traffic)
+
+	return clusterArgs
+}
+
+// BackendClusterTranslator implements clusterArgs for a merged backend cluster, shared across
+// routes — so route-specific values are never used, but the shared gateway-level Traffic is.
+type BackendClusterTranslator struct{}
+
+func (BackendClusterTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
+) *xdsClusterArgs {
+	clusterArgs := &xdsClusterArgs{
+		name:              name,
+		settings:          settings,
+		tSocket:           nil,
+		endpointType:      buildEndpointType(settings),
+		routeHostname:     "",
+		metrics:           extra.metrics,
+		http1Settings:     extra.http1Settings,
+		http2Settings:     extra.http2Settings,
+		useClientProtocol: ptr.Deref(extra.useClientProtocol, false),
+		ipFamily:          extra.ipFamily,
+		statName:          extra.statName,
+		metadata:          metadata,
+		extensionMgr:      extra.extensionMgr,
+		unstructuredRefs:  extra.unstructuredRefs,
+		logger:            extra.logger,
+	}
+
+	applyTraffic(clusterArgs, extra.traffic)
 
 	return clusterArgs
 }

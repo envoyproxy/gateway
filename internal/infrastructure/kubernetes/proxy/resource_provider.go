@@ -393,6 +393,15 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		return nil, err
 	}
 
+	// When an HPA is configured, the replica count is owned by the HPA, so the replicas
+	// field is left unset here. Since the field is omitted from the server-side apply
+	// patch, Envoy Gateway doesn't take ownership of it and won't revert the replica
+	// count computed by the HPA on subsequent reconciliations.
+	replicas := deploymentConfig.Replicas
+	if provider.GetEnvoyProxyKubeProvider().EnvoyHpa != nil {
+		replicas = nil
+	}
+
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -405,7 +414,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: deploymentConfig.Replicas,
+			Replicas: replicas,
 			Strategy: *deploymentConfig.Strategy,
 			// Deployment's selector is immutable.
 			Selector: r.stableSelector(),

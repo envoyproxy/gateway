@@ -487,6 +487,54 @@ func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
+func gatewayDirectListeners(gtwCtx *GatewayContext) []*ListenerContext {
+	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
+	for _, listener := range gtwCtx.listeners {
+		if listener.isFromListenerSet() {
+			continue
+		}
+		listeners = append(listeners, listener)
+	}
+	return listeners
+}
+
+func gatewayPolicyTargetListeners(
+	gtwCtx *GatewayContext,
+	target policyTargetReferenceWithSectionName,
+) []*ListenerContext {
+	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
+	for _, listener := range gtwCtx.listeners {
+		if target.SectionName != nil {
+			if listener.isFromListenerSet() || listener.Name != *target.SectionName {
+				continue
+			}
+		}
+		listeners = append(listeners, listener)
+	}
+	return listeners
+}
+
+func listenerSetPolicyTargetListeners(
+	gtwCtx *GatewayContext,
+	listenerSet *gwapiv1.ListenerSet,
+	target policyTargetReferenceWithSectionName,
+) []*ListenerContext {
+	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
+	for _, listener := range gtwCtx.listeners {
+		if !listener.isFromListenerSet() {
+			continue
+		}
+		if listener.listenerSet.Namespace != listenerSet.Namespace || listener.listenerSet.Name != listenerSet.Name {
+			continue
+		}
+		if target.SectionName != nil && listener.Name != *target.SectionName {
+			continue
+		}
+		listeners = append(listeners, listener)
+	}
+	return listeners
+}
+
 func irListenerPortName(proto ir.ProtocolType, port int32) string {
 	return strings.ToLower(fmt.Sprintf("%s-%d", proto, port))
 }
@@ -515,6 +563,16 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 
 func irDestinationSettingName(destName string, backendIdx int) string {
 	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
+}
+
+// irBackendClusterName names a BackendCluster shared across routes that reference the same
+// backend.
+func irBackendClusterName(key *BackendClusterKey) string {
+	base := fmt.Sprintf("%s/%s/%s/%d", strings.ToLower(key.Kind), key.Namespace, key.Name, key.Port)
+	if key.Protocol == "" {
+		return base
+	}
+	return base + "/" + strings.ToLower(string(key.Protocol))
 }
 
 func irRuleName(policyNamespace, policyName string, ruleIndex int, ruleName *string) string {
@@ -643,6 +701,21 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return false
 }
 
+func IsMergeBackendsEnabled(resources *resource.Resources) bool {
+	// Check GatewayClass-level EnvoyProxy first (higher priority)
+	if resources.EnvoyProxyForGatewayClass != nil &&
+		resources.EnvoyProxyForGatewayClass.Spec.MergeBackends != nil {
+		return true
+	}
+
+	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
+	if resources.EnvoyProxyDefaultSpec != nil {
+		return resources.EnvoyProxyDefaultSpec.MergeBackends != nil
+	}
+
+	return false
+}
+
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 	protocolStrings := make([]string, 0, len(protocols))
 	for _, protocol := range protocols {
@@ -697,17 +770,6 @@ type policyGatewayTargetContext struct {
 	*GatewayContext
 	attached            bool
 	attachedToListeners sets.Set[string]
-}
-
-// GatewayPolicyRouteMap tracks routes attached to Gateway Listener with an index for efficient lookups
-type GatewayPolicyRouteMap struct {
-	// Routes maps Gateway Listener to attached route names
-	Routes map[NamespacedNameWithSection]sets.Set[string]
-
-	// SectionIndex: Gateway -> SectionNames index
-	// Maintains a list of all section names (listeners) per Gateway including "" (empty string) for Gateway-level entries
-	// for efficient lookup without full Routes map iteration
-	SectionIndex map[types.NamespacedName]sets.Set[string]
 }
 
 type policyScopeKind string
@@ -1522,144 +1584,4 @@ func getOverriddenTargetsMessageForRoute(
 		return fmt.Sprintf("these route rules: %v", routes)
 	}
 	return ""
-}
-
-func getOverriddenTargetsMessageForGateway(
-	targetContext *policyGatewayTargetContext,
-	listenerRouteMap map[string]sets.Set[string],
-	sectionName *gwapiv1.SectionName,
-) string {
-	var listeners, routes []string
-	if sectionName == nil {
-		if targetContext != nil {
-			listeners = targetContext.attachedToListeners.UnsortedList()
-		}
-		for _, routeSet := range listenerRouteMap {
-			routes = append(routes, routeSet.UnsortedList()...)
-		}
-	} else if listenerRouteMap != nil {
-		if routeSet, ok := listenerRouteMap[string(*sectionName)]; ok {
-			routes = routeSet.UnsortedList()
-		}
-		if routeSet, ok := listenerRouteMap[""]; ok {
-			routes = append(routes, routeSet.UnsortedList()...)
-		}
-	}
-	if len(listeners) > 0 {
-		sort.Strings(listeners)
-		if len(routes) > 0 {
-			sort.Strings(routes)
-			return fmt.Sprintf("these listeners: %v and these routes: %v", listeners, routes)
-		} else {
-			return fmt.Sprintf("these listeners: %v", listeners)
-		}
-	} else if len(routes) > 0 {
-		sort.Strings(routes)
-		return fmt.Sprintf("these routes: %v", routes)
-	}
-	return ""
-}
-
-// getOverriddenAndMergedTargetsMessageForGateway generates status messages for policies
-// indicating which listeners and routes are being overridden or merged.
-func getOverriddenAndMergedTargetsMessageForGateway(
-	targetContext *policyGatewayTargetContext,
-	gatewayRouteMap *GatewayPolicyRouteMap,
-	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
-	sectionName *gwapiv1.SectionName,
-) (string, string) {
-	var overrideListeners, overrideRoutes, mergedRoutes []string
-	var overrideMessage, mergedMessage string
-
-	gwNN := utils.NamespacedName(targetContext.GatewayContext)
-	// Initialize sets
-	overrideRouteSet := sets.New[string]()
-	mergedRouteSet := sets.New[string]()
-
-	// Get merged targets
-	if gatewayPolicyMergedMap.Routes != nil {
-		if sectionName == nil {
-			// When sectionName is nil, retrieve routes from all listeners
-			if gatewayPolicyMergedMap.SectionIndex != nil && gatewayPolicyMergedMap.SectionIndex[gwNN] != nil {
-				for _, listener := range gatewayPolicyMergedMap.SectionIndex[gwNN].UnsortedList() {
-					listenerKey := NamespacedNameWithSection{
-						NamespacedName: gwNN,
-						SectionName:    gwapiv1.SectionName(listener),
-					}
-					if routeSet, ok := gatewayPolicyMergedMap.Routes[listenerKey]; ok {
-						mergedRouteSet.Insert(routeSet.UnsortedList()...)
-					}
-				}
-			}
-		} else {
-			// When sectionName is specified, retrieve routes for that specific listener
-			listenerKey := NamespacedNameWithSection{
-				NamespacedName: gwNN,
-				SectionName:    *sectionName,
-			}
-			if routeSet, ok := gatewayPolicyMergedMap.Routes[listenerKey]; ok {
-				mergedRouteSet.Insert(routeSet.UnsortedList()...)
-			}
-		}
-	}
-
-	// Get overridden targets
-	if gatewayRouteMap.Routes != nil {
-		if sectionName == nil {
-			if targetContext != nil {
-				overrideListeners = targetContext.attachedToListeners.UnsortedList()
-			}
-			// When sectionName is nil, retrieve routes from all listeners including Gateway-level ("")
-			if gatewayRouteMap.SectionIndex != nil && gatewayRouteMap.SectionIndex[gwNN] != nil {
-				for _, listener := range gatewayRouteMap.SectionIndex[gwNN].UnsortedList() {
-					listenerKey := NamespacedNameWithSection{
-						NamespacedName: gwNN,
-						SectionName:    gwapiv1.SectionName(listener),
-					}
-					if routeSet, ok := gatewayRouteMap.Routes[listenerKey]; ok {
-						overrideRouteSet.Insert(routeSet.UnsortedList()...)
-					}
-				}
-			}
-		} else {
-			// When sectionName is specified, retrieve routes for that specific listener
-			listenerKey := NamespacedNameWithSection{
-				NamespacedName: gwNN,
-				SectionName:    *sectionName,
-			}
-			if routeSet, ok := gatewayRouteMap.Routes[listenerKey]; ok {
-				overrideRouteSet.Insert(routeSet.UnsortedList()...)
-			}
-			gwKey := NamespacedNameWithSection{
-				NamespacedName: gwNN,
-				SectionName:    "",
-			}
-			if routeSet, ok := gatewayRouteMap.Routes[gwKey]; ok {
-				overrideRouteSet.Insert(routeSet.UnsortedList()...)
-			}
-		}
-	}
-
-	mergedRoutes = mergedRouteSet.UnsortedList()
-	// Exclude merged routes from overridden routes
-	overrideRoutes = overrideRouteSet.Difference(mergedRouteSet).UnsortedList()
-
-	if len(overrideListeners) > 0 {
-		sort.Strings(overrideListeners)
-		if len(overrideRoutes) > 0 {
-			sort.Strings(overrideRoutes)
-			overrideMessage = fmt.Sprintf("these listeners: %v and these routes: %v", overrideListeners, overrideRoutes)
-		} else {
-			overrideMessage = fmt.Sprintf("these listeners: %v", overrideListeners)
-		}
-	} else if len(overrideRoutes) > 0 {
-		sort.Strings(overrideRoutes)
-		overrideMessage = fmt.Sprintf("these routes: %v", overrideRoutes)
-	}
-
-	if len(mergedRoutes) > 0 {
-		sort.Strings(mergedRoutes)
-		mergedMessage = fmt.Sprintf("these routes: %v", mergedRoutes)
-	}
-	return overrideMessage, mergedMessage
 }
