@@ -41,7 +41,7 @@
                   exact: websocket.example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: websocket-wss-route/ca
+              name: system_ca_certificates
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -95,7 +95,7 @@
                   exact: ordinary.example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: ordinary-tls-http-route/ca
+              name: system_ca_certificates
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3

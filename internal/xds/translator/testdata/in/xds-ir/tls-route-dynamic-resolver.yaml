@@ -1,0 +1,19 @@
+tcp:
+- name: "envoy-gateway/gateway-1/tls"
+  address: "0.0.0.0"
+  externalPort: 443
+  port: 10443
+  routes:
+  - name: "tlsroute/default/tlsroute-1"
+    tls:
+      inspector:
+        snis:
+        - foo.com
+        - bar.com
+    destination:
+      name: "tlsroute/default/tlsroute-1/rule/-1"
+      settings:
+      - isDynamicResolver: true
+        protocol: HTTPS
+        weight: 1
+        name: "tlsroute/default/tlsroute-1/rule/-1/backend/0"

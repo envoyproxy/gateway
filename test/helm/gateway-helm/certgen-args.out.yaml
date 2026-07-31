@@ -465,12 +465,21 @@ spec:
           value: cluster.local
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthz
+            port: 8081
+          periodSeconds: 1
+          successThreshold: 1
+          timeoutSeconds: 1
         livenessProbe:
           httpGet:
             path: /healthz
             port: 8081
-          initialDelaySeconds: 15
           periodSeconds: 20
+          successThreshold: 1
+          timeoutSeconds: 1
         name: envoy-gateway
         ports:
         - containerPort: 18000
@@ -487,8 +496,9 @@ spec:
           httpGet:
             path: /readyz
             port: 8081
-          initialDelaySeconds: 5
           periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         resources:
           limits:
             memory: 1024Mi
@@ -540,7 +550,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: standard
   name: "safe-upgrades.gateway.networking.k8s.io"
 spec:
@@ -573,7 +583,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.0
+    gateway.networking.k8s.io/bundle-version: v1.6.1
     gateway.networking.k8s.io/channel: standard
   name: safe-upgrades.gateway.networking.k8s.io
 spec:

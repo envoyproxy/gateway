@@ -19,6 +19,7 @@ import (
 	"net/mail"
 	"net/netip"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -120,8 +121,6 @@ func (t *Translator) ProcessSecurityPolicies(
 		listenerSetMap[key] = &policyListenerSetTargetContext{ListenerSet: ls}
 	}
 
-	policyCopies := securityPolicyCopiesWithStatusDeepCopy(securityPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy, policyMapSize)
 
 	// Map of attached Policy to Gateway. Used for policy merge process.
@@ -160,7 +159,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -184,7 +183,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -202,7 +201,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListenerSetListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -227,7 +226,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListenerSet(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -245,7 +244,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -270,7 +269,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = securityPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -927,6 +926,30 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		if !hasValidJwtExtractor {
 			return errors.New("the OIDC.PassThroughAuthHeader setting must be used in conjunction with a JWT provider that is configured to read from a header")
 		}
+
+		// Envoy rejects (NACKs) an OAuth2 config whose pass_through_matcher keys on the
+		// forward_id_token header. EG builds the pass_through_matcher from
+		// the JWT providers' extractFrom headers (defaulting to "Authorization"), so
+		// reject the equivalent collision here to surface a clear policy error instead
+		// of a listener NACK.
+		if oidc.ForwardIDToken != nil {
+			fwdHeader := oidc.ForwardIDToken.Header
+			for _, provider := range jwt.Providers {
+				// When ExtractFrom is not specified, JWT (and the pass-through matcher)
+				// falls back to the "Authorization" header.
+				if provider.ExtractFrom == nil {
+					if strings.EqualFold(fwdHeader, "Authorization") {
+						return fmt.Errorf("the OIDC.ForwardIDToken header %q cannot be the Authorization header when passThroughAuthHeader is enabled and a JWT provider reads from it", fwdHeader)
+					}
+					continue
+				}
+				for _, h := range provider.ExtractFrom.Headers {
+					if strings.EqualFold(fwdHeader, h.Name) {
+						return fmt.Errorf("the OIDC.ForwardIDToken header %q cannot be the same as a JWT provider extractFrom header when passThroughAuthHeader is enabled", fwdHeader)
+					}
+				}
+			}
+		}
 	}
 
 	basicAuth := p.Spec.BasicAuth
@@ -1444,54 +1467,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	return errs
 }
 
-func gatewaySecurityPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if target.SectionName != nil {
-			if listener.isFromListenerSet() || listener.Name != *target.SectionName {
-				continue
-			}
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
-func gatewayDirectListeners(gtwCtx *GatewayContext) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if listener.isFromListenerSet() {
-			continue
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
-func listenerSetSecurityPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	listenerSet *gwapiv1.ListenerSet,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if !listener.isFromListenerSet() {
-			continue
-		}
-		if listener.listenerSet.Namespace != listenerSet.Namespace || listener.listenerSet.Name != listenerSet.Name {
-			continue
-		}
-		if target.SectionName != nil && listener.Name != *target.SectionName {
-			continue
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
 func (t *Translator) translateSecurityPolicyForListenerSet(
 	policy *egv1a1.SecurityPolicy,
 	gtwCtx *GatewayContext,
@@ -1505,7 +1480,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 		gtwCtx,
 		resources,
 		xdsIR,
-		listenerSetSecurityPolicyTargetListeners(gtwCtx, listenerSet, target),
+		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
 	)
 }
 
@@ -1521,7 +1496,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		gtwCtx,
 		resources,
 		xdsIR,
-		gatewaySecurityPolicyTargetListeners(gtwCtx, target),
+		gatewayPolicyTargetListeners(gtwCtx, target),
 	)
 }
 
@@ -1770,8 +1745,12 @@ func containsWildcard(s string) bool {
 }
 
 func wildcard2regex(wildcard string) string {
-	regexStr := strings.ReplaceAll(wildcard, ".", "\\.")
-	regexStr = strings.ReplaceAll(regexStr, "*", ".*")
+	// Escape every regex metacharacter so that characters that are valid in an
+	// origin but special in a regex (e.g. '.', and '+' which is allowed in
+	// RFC 3986 schemes such as "git+ssh") are matched literally. QuoteMeta
+	// escapes '*' as "\*", so translate those back into the ".*" wildcard.
+	regexStr := regexp.QuoteMeta(wildcard)
+	regexStr = strings.ReplaceAll(regexStr, `\*`, ".*")
 	return regexStr
 }
 
@@ -1813,8 +1792,9 @@ func (t *Translator) buildJWT(
 	}
 
 	return &ir.JWT{
-		AllowMissing: ptr.Deref(policy.Spec.JWT.Optional, false),
-		Providers:    providers,
+		AllowMissing:         ptr.Deref(policy.Spec.JWT.Optional, false),
+		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.FailOpen, false),
+		Providers:            providers,
 	}, nil
 }
 
@@ -2017,6 +1997,7 @@ func (t *Translator) buildOIDC(
 		redirectPath           = defaultRedirectPath
 		logoutPath             = defaultLogoutPath
 		forwardAccessToken     = defaultForwardAccessToken
+		forwardIDTokenHeader   *string
 		refreshToken           = defaultRefreshToken
 		passThroughAuthHeader  = defaultPassThroughAuthHeader
 		disableTokenEncryption = false
@@ -2086,6 +2067,9 @@ func (t *Translator) buildOIDC(
 	if oidc.ForwardAccessToken != nil {
 		forwardAccessToken = *oidc.ForwardAccessToken
 	}
+	if oidc.ForwardIDToken != nil {
+		forwardIDTokenHeader = &oidc.ForwardIDToken.Header
+	}
 	if oidc.RefreshToken != nil {
 		refreshToken = *oidc.RefreshToken
 	}
@@ -2129,6 +2113,7 @@ func (t *Translator) buildOIDC(
 		RedirectPath:           redirectPath,
 		LogoutPath:             logoutPath,
 		ForwardAccessToken:     forwardAccessToken,
+		ForwardIDTokenHeader:   forwardIDTokenHeader,
 		RefreshToken:           refreshToken,
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
@@ -3158,16 +3143,4 @@ func buildExtAuthContextExtensionOwners(route, parent *egv1a1.SecurityPolicy) ma
 		}
 	}
 	return owners
-}
-
-// securityPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func securityPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.SecurityPolicy) []*egv1a1.SecurityPolicy {
-	copies := make([]*egv1a1.SecurityPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }
