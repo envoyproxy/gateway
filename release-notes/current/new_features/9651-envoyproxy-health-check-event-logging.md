@@ -1,0 +1,1 @@
+Added support for health check event logging in `EnvoyProxy` and `BackendTrafficPolicy`.
