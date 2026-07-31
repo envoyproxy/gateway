@@ -186,6 +186,10 @@ jobs:
           ipFamily: ipv4
           profile: watch-namespaces
           gwapiChannel: experimental
+        - version: v1.36.1
+          ipFamily: ipv4
+          profile: merge-backends
+          gwapiChannel: experimental
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
     - uses: ./tools/github-actions/setup-deps

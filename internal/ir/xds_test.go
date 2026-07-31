@@ -89,6 +89,23 @@ var (
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
 	}
+	danglingBackendClusterRefHTTPRoute = HTTPRoute{
+		Name:     "dangling-ref",
+		Hostname: "example.com",
+		Destination: &RouteDestination{
+			Name:               "dangling-ref-dest",
+			BackendClusterRefs: []*BackendClusterRef{{Name: "does-not-exist"}},
+		},
+	}
+	danglingBackendClusterRefHTTPListener = HTTPListener{
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "dangling-ref",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Hostnames: []string{"example.com"},
+		Routes:    []*HTTPRoute{&danglingBackendClusterRefHTTPRoute},
+	}
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
@@ -584,6 +601,21 @@ func TestValidateXds(t *testing.T) {
 			name: "weighted invalid backend",
 			input: Xds{
 				HTTP: []*HTTPListener{&happyHTTPListener, &weightedInvalidBackendsHTTPListener},
+			},
+			want: nil,
+		},
+		{
+			name: "dangling backend cluster ref",
+			input: Xds{
+				HTTP: []*HTTPListener{&danglingBackendClusterRefHTTPListener},
+			},
+			want: []error{ErrBackendClusterRefNotFound},
+		},
+		{
+			name: "backend cluster ref resolves",
+			input: Xds{
+				HTTP:            []*HTTPListener{&danglingBackendClusterRefHTTPListener},
+				BackendClusters: []*BackendCluster{{Name: "does-not-exist", Setting: &DestinationSetting{Name: "does-not-exist"}}},
 			},
 			want: nil,
 		},
@@ -1377,6 +1409,68 @@ func TestValidateRouteDestination(t *testing.T) {
 				},
 			},
 			want: ErrDestinationNameEmpty,
+		},
+		{
+			name: "valid single backend cluster ref",
+			input: RouteDestination{
+				Name: "single-bc",
+				BackendClusterRefs: []*BackendClusterRef{{
+					Name: "bc-1",
+				}},
+			},
+			want: nil,
+		},
+		{
+			name: "valid multiple backend cluster refs",
+			input: RouteDestination{
+				Name: "multi-bc",
+				BackendClusterRefs: []*BackendClusterRef{
+					{Name: "bc-1"},
+					{Name: "bc-2"},
+				},
+			},
+			want: nil,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, (&test.input).Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateBackendCluster(t *testing.T) {
+	tests := []struct {
+		name  string
+		input BackendCluster
+		want  error
+	}{
+		{
+			name: "happy",
+			input: BackendCluster{
+				Name:    "bc-1",
+				Setting: &DestinationSetting{},
+			},
+			want: nil,
+		},
+		{
+			name: "missing name",
+			input: BackendCluster{
+				Setting: &DestinationSetting{},
+			},
+			want: ErrDestinationNameEmpty,
+		},
+		{
+			name: "dynamic resolver is invalid",
+			input: BackendCluster{
+				Name:    "bc-1",
+				Setting: &DestinationSetting{IsDynamicResolver: true},
+			},
+			want: ErrBackendClusterMergedDynamicResolver,
 		},
 	}
 	for _, test := range tests {
