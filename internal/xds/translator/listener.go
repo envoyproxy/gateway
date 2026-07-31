@@ -411,6 +411,11 @@ func (t *Translator) addHCMToXDSListener(
 		mgr.StripTrailingHostDot = irListener.Host.StripTrailingHostDot
 	}
 
+	// Set the maximum request headers size if configured.
+	if h := irListener.Headers; h != nil && h.MaxRequestHeadersKB != nil {
+		mgr.MaxRequestHeadersKb = wrapperspb.UInt32(*h.MaxRequestHeadersKB)
+	}
+
 	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
 	// This ensures the correct scheme is sent to backends using TLS when enabled.
 	if irListener.MatchBackendScheme {

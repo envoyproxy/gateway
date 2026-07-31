@@ -3464,6 +3464,7 @@ _Appears in:_
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
 | `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header set by clients can be normalized. |
+| `maxRequestHeaderLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MaxRequestHeaderLimit provides configuration for the maximum size of the<br />request headers allowed for incoming connections, mapping to the Envoy<br />`max_request_headers_kb` HTTP connection manager setting. Requests whose<br />headers exceed this limit receive a 431 (Request Header Fields Too Large)<br />response. The value is rounded up to the nearest KiB, must be at least 1Ki,<br />and cannot exceed 8192Ki (the maximum Envoy supports).<br />For example, 60Ki, 96Ki, 128Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 60Ki bytes. |
 
 
 #### HealthCheck
