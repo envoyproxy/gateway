@@ -105,7 +105,7 @@ The hooks are executed in the following order during xDS translation:
 #### Translation Hook (`PostTranslateModifyHook`)
 
 - **When called**: After all individual resources are generated and processed
-- **Input**: All clusters, secrets, listeners, and routes, plus extension policies
+- **Input**: All clusters, secrets, listeners, and routes, plus extension policies targeting Gateways
 - **Output**: Complete set of modified resources
 - **Use cases**: Global resource injection, cross-resource modifications, cleanup operations
 
