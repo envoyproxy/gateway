@@ -238,8 +238,8 @@ type EnvoyProxySpec struct {
 type MergeBackendsConfig struct {
 	// Selector restricts cluster deduplication to backends whose target Service, ServiceImport,
 	// or Backend resource matches this label selector. When unset, every otherwise-eligible
-	// backend is merged (today's behavior). Use this to opt individual backends into
-	// deduplication gradually instead of enabling it for every backend at once.
+	// backend is merged. Use this to opt individual backends into deduplication gradually
+	// instead of enabling it for every backend at once.
 	//
 	// +optional
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`

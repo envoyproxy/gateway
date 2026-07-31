@@ -636,7 +636,7 @@ func (t *Translator) shouldMergeBackend(
 		return false
 	}
 	// The backend's target object must match the configured Selector, if any.
-	if !t.mergeBackendsSelectorMatches(cfg.Selector, backendRef, backendNamespace) {
+	if cfg.Selector != nil && !t.mergeBackendsSelectorMatches(cfg.Selector, backendRef, backendNamespace) {
 		return false
 	}
 	// A rule whose effective RoutingType diverges from the gateway's baseline would leak that
@@ -648,10 +648,9 @@ func (t *Translator) shouldMergeBackend(
 	return true
 }
 
-// mergeBackendsConfigForGateway resolves the effective MergeBackendsConfig for gatewayCtx, letting
-// a Gateway-level override (via gatewayCtx.envoyProxy) win over t.MergeBackends' GatewayClass/default
-// value wholesale, rather than merging the two field-by-field. Returns nil when MergeBackends is
-// disabled for gatewayCtx.
+// mergeBackendsConfigForGateway resolves the effective MergeBackendsConfig for gatewayCtx,
+// preferring a Gateway-level override over the GatewayClass/default value. Returns nil when
+// disabled.
 func (t *Translator) mergeBackendsConfigForGateway(gatewayCtx *GatewayContext) *MergeBackendsConfig {
 	if gatewayCtx != nil && gatewayCtx.envoyProxy != nil && gatewayCtx.envoyProxy.Spec.MergeBackends != nil {
 		cfg := gatewayCtx.envoyProxy.Spec.MergeBackends
@@ -665,15 +664,9 @@ func (t *Translator) isMergeBackendsEnabledForGateway(gatewayCtx *GatewayContext
 	return t.mergeBackendsConfigForGateway(gatewayCtx) != nil
 }
 
-// mergeBackendsSelectorMatches reports whether backendRef's target object satisfies selector. A
-// nil selector matches everything (the behavior before this field existed) — this is the opposite
-// of metav1.LabelSelectorAsSelector(nil)'s own "matches nothing" semantics, so nil is special-cased
-// here rather than passed through. A selector that is configured but whose target object cannot be
-// found, or that fails to parse, does not match (fails closed).
+// mergeBackendsSelectorMatches reports whether backendRef's target object matches selector. An
+// unresolvable target or an unparsable selector does not match.
 func (t *Translator) mergeBackendsSelectorMatches(selector *metav1.LabelSelector, backendRef gwapiv1.BackendObjectReference, backendNamespace string) bool {
-	if selector == nil {
-		return true
-	}
 	backendLabels, found := t.backendLabelsFor(backendRef, backendNamespace)
 	if !found {
 		return false
@@ -688,8 +681,7 @@ func (t *Translator) mergeBackendsSelectorMatches(selector *metav1.LabelSelector
 }
 
 // backendLabelsFor returns the labels of the Service, ServiceImport, or Backend object backendRef
-// resolves to, and whether that object was found. Mirrors the 3-way kind dispatch already used by
-// t.processDestination for the same backendRef kinds.
+// resolves to, and whether it was found.
 func (t *Translator) backendLabelsFor(backendRef gwapiv1.BackendObjectReference, backendNamespace string) (map[string]string, bool) {
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:

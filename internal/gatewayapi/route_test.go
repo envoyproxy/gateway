@@ -670,7 +670,7 @@ func TestShouldMergeBackend(t *testing.T) {
 			want:         false,
 		},
 		{
-			name:         "nil default-level selector: matches everything (today's behavior)",
+			name:         "nil default-level selector: matches everything",
 			mergeEnabled: true,
 			backendRef:   serviceBackendRef,
 			want:         true,
