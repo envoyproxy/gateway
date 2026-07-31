@@ -27,6 +27,12 @@ streaming RPCs. The relevant `spec.timeout.http` fields are:
 Follow the [GRPC Routing](../grpc-routing) task to set up a `Gateway` and a `GRPCRoute` named
 `yages` before configuring timeouts.
 
+__Note:__ A `GRPCRoute` can have at most one `BackendTrafficPolicy` attached to it; a second policy
+targeting the same route is rejected as `Conflicted`. The two examples below are therefore
+alternatives that reuse the same policy name (`grpc-timeouts`) — pick the one that matches your
+workload. Re-applying with the same `metadata.name` updates the existing policy rather than creating
+a conflicting second one.
+
 ## Unary RPCs
 
 Set `requestTimeout` to bound the duration of unary RPCs. Here, unary calls that take longer than
@@ -40,7 +46,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: grpc-unary-timeout
+  name: grpc-timeouts
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
@@ -61,7 +67,7 @@ Save and apply the following resource to your cluster:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: grpc-unary-timeout
+  name: grpc-timeouts
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
@@ -90,7 +96,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: grpc-stream-timeout
+  name: grpc-timeouts
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
@@ -116,7 +122,7 @@ Save and apply the following resource to your cluster:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: grpc-stream-timeout
+  name: grpc-timeouts
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
@@ -140,7 +146,7 @@ spec:
 Confirm the policy is accepted:
 
 ```shell
-kubectl get backendtrafficpolicy/grpc-stream-timeout -o yaml
+kubectl get backendtrafficpolicy/grpc-timeouts -o yaml
 ```
 
 The status should reflect `Accepted=True` on the targeted `GRPCRoute` ancestor.
