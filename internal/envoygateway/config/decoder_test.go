@@ -131,36 +131,38 @@ func TestDecode(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-								Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
-								Container: &egv1a1.KubernetesContainerSpec{
-									Env: []corev1.EnvVar{
-										{
-											Name:  "env_a",
-											Value: "env_a_value",
+							EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+								RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+									Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+									Container: &egv1a1.KubernetesContainerSpec{
+										Env: []corev1.EnvVar{
+											{
+												Name:  "env_a",
+												Value: "env_a_value",
+											},
+											{
+												Name:  "env_b",
+												Value: "env_b_value",
+											},
 										},
-										{
-											Name:  "env_b",
-											Value: "env_b_value",
+										Image:     new("envoyproxy/ratelimit:latest"),
+										Resources: egv1a1.DefaultResourceRequirements(),
+										SecurityContext: &corev1.SecurityContext{
+											RunAsUser:                new(int64(2000)),
+											AllowPrivilegeEscalation: new(false),
 										},
 									},
-									Image:     new("envoyproxy/ratelimit:latest"),
-									Resources: egv1a1.DefaultResourceRequirements(),
-									SecurityContext: &corev1.SecurityContext{
-										RunAsUser:                new(int64(2000)),
-										AllowPrivilegeEscalation: new(false),
-									},
-								},
-								Pod: &egv1a1.KubernetesPodSpec{
-									Annotations: map[string]string{
-										"key1": "val1",
-										"key2": "val2",
-									},
-									SecurityContext: &corev1.PodSecurityContext{
-										RunAsUser:           new(int64(1000)),
-										RunAsGroup:          new(int64(3000)),
-										FSGroup:             new(int64(2000)),
-										FSGroupChangePolicy: func(s corev1.PodFSGroupChangePolicy) *corev1.PodFSGroupChangePolicy { return &s }(corev1.FSGroupChangeOnRootMismatch),
+									Pod: &egv1a1.KubernetesPodSpec{
+										Annotations: map[string]string{
+											"key1": "val1",
+											"key2": "val2",
+										},
+										SecurityContext: &corev1.PodSecurityContext{
+											RunAsUser:           new(int64(1000)),
+											RunAsGroup:          new(int64(3000)),
+											FSGroup:             new(int64(2000)),
+											FSGroupChangePolicy: func(s corev1.PodFSGroupChangePolicy) *corev1.PodFSGroupChangePolicy { return &s }(corev1.FSGroupChangeOnRootMismatch),
+										},
 									},
 								},
 							},
@@ -239,11 +241,13 @@ func TestDecode(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: egv1a1.KubernetesWatchModeTypeNamespaces,
-								Namespaces: []string{
-									"ns-a",
-									"ns-b",
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: egv1a1.KubernetesWatchModeTypeNamespaces,
+									Namespaces: []string{
+										"ns-a",
+										"ns-b",
+									},
 								},
 							},
 						},
@@ -264,20 +268,22 @@ func TestDecode(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
-								NamespaceSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{"label-a": "foo"},
-									MatchExpressions: []metav1.LabelSelectorRequirement{
-										{
-											Key:      "tier",
-											Operator: metav1.LabelSelectorOpIn,
-											Values:   []string{"cache"},
-										},
-										{
-											Key:      "environment",
-											Operator: metav1.LabelSelectorOpNotIn,
-											Values:   []string{"dev"},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+									NamespaceSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{"label-a": "foo"},
+										MatchExpressions: []metav1.LabelSelectorRequirement{
+											{
+												Key:      "tier",
+												Operator: metav1.LabelSelectorOpIn,
+												Values:   []string{"cache"},
+											},
+											{
+												Key:      "environment",
+												Operator: metav1.LabelSelectorOpNotIn,
+												Values:   []string{"dev"},
+											},
 										},
 									},
 								},
@@ -329,11 +335,13 @@ func TestDecode(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							LeaderElection: &egv1a1.LeaderElection{
-								Disable:       new(true),
-								LeaseDuration: new(gwapiv1.Duration("1s")),
-								RenewDeadline: new(gwapiv1.Duration("2s")),
-								RetryPeriod:   new(gwapiv1.Duration("3s")),
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								LeaderElection: &egv1a1.LeaderElection{
+									Disable:       new(true),
+									LeaseDuration: new(gwapiv1.Duration("1s")),
+									RenewDeadline: new(gwapiv1.Duration("2s")),
+									RetryPeriod:   new(gwapiv1.Duration("3s")),
+								},
 							},
 						},
 					},
@@ -353,10 +361,12 @@ func TestDecode(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Client: &egv1a1.KubernetesClient{
-								RateLimit: &egv1a1.KubernetesClientRateLimit{
-									QPS:   new(int32(500)),
-									Burst: new(int32(1000)),
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Client: &egv1a1.KubernetesClient{
+									RateLimit: &egv1a1.KubernetesClientRateLimit{
+										QPS:   new(int32(500)),
+										Burst: new(int32(1000)),
+									},
 								},
 							},
 						},
