@@ -5,15 +5,24 @@ descriptors:
     value: first-route
     rate_limit: null
     descriptors:
-      - key: masked_remote_address
-        value: 192.168.0.10/32
-        rate_limit:
-          requests_per_unit: 15
-          unit: HOUR
-          unlimited: false
-          name: ""
-          replaces: []
-        descriptors: []
+      - key: test-namespace/test-policy-1/rule/0
+        value: test-namespace/test-policy-1/rule/0
+        rate_limit: null
+        descriptors:
+          - key: masked_remote_address
+            value: 192.168.0.10/32
+            rate_limit:
+              requests_per_unit: 15
+              unit: HOUR
+              unlimited: false
+              name: ""
+              replaces: []
+            descriptors: []
+            shadow_mode: false
+            quota_mode: false
+            detailed_metric: false
+            value_to_metric: false
+            share_threshold: false
         shadow_mode: false
         quota_mode: false
         detailed_metric: false
@@ -28,15 +37,24 @@ descriptors:
     value: second-route
     rate_limit: null
     descriptors:
-      - key: masked_remote_address
-        value: 192.168.0.10/32
-        rate_limit:
-          requests_per_unit: 300
-          unit: HOUR
-          unlimited: false
-          name: ""
-          replaces: []
-        descriptors: []
+      - key: test-namespace/test-policy-2/rule/0
+        value: test-namespace/test-policy-2/rule/0
+        rate_limit: null
+        descriptors:
+          - key: masked_remote_address
+            value: 192.168.0.10/32
+            rate_limit:
+              requests_per_unit: 300
+              unit: HOUR
+              unlimited: false
+              name: ""
+              replaces: []
+            descriptors: []
+            shadow_mode: false
+            quota_mode: false
+            detailed_metric: false
+            value_to_metric: false
+            share_threshold: false
         shadow_mode: false
         quota_mode: false
         detailed_metric: false

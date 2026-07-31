@@ -37,6 +37,8 @@
           alwaysConsumeDefaultTokenBucket: false
           descriptors:
           - entries:
+            - key: envoy-gateway/policy-for-gateway/rule/1
+              value: envoy-gateway/policy-for-gateway/rule/1
             - key: rule-0-match-0
               value: rule-0-match-0
             - key: rule-0-match-1
@@ -47,6 +49,8 @@
               maxTokens: 10
               tokensPerFill: 10
           - entries:
+            - key: envoy-gateway/policy-for-gateway/rule/2
+              value: envoy-gateway/policy-for-gateway/rule/2
             - key: rule-1-match-0
               value: rule-1-match-0
             - key: rule-1-match-1
@@ -67,6 +71,9 @@
               numerator: 100
           rateLimits:
           - actions:
+            - genericKey:
+                descriptorKey: envoy-gateway/policy-for-gateway/rule/1
+                descriptorValue: envoy-gateway/policy-for-gateway/rule/1
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
                 descriptorValue: rule-0-match-0
@@ -84,6 +91,9 @@
                   stringMatch:
                     exact: foo
           - actions:
+            - genericKey:
+                descriptorKey: envoy-gateway/policy-for-gateway/rule/2
+                descriptorValue: envoy-gateway/policy-for-gateway/rule/2
             - headerValueMatch:
                 descriptorKey: rule-1-match-0
                 descriptorValue: rule-1-match-0

@@ -219,6 +219,14 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			var rlActions []*routev3.RateLimit_Action
 			var descriptorEntries []*rlv3.RateLimitDescriptor_Entry
 
+			if rule.Name != "" {
+				rlActions = append(rlActions, buildGenericKeyRateLimitAction(rule.Name))
+				descriptorEntries = append(descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
+					Key:   rule.Name,
+					Value: rule.Name,
+				})
+			}
+
 			// Build all match conditions
 			// - HeaderMatch
 			// - MethodMatch
