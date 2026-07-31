@@ -143,7 +143,7 @@ spec:
 
 ## Verification
 
-Confirm the policy is accepted:
+First confirm the policy is accepted:
 
 ```shell
 kubectl get backendtrafficpolicy/grpc-timeouts -o yaml
@@ -151,7 +151,32 @@ kubectl get backendtrafficpolicy/grpc-timeouts -o yaml
 
 The status should reflect `Accepted=True` on the targeted `GRPCRoute` ancestor.
 
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
+Then confirm the timeout is actually programmed into the Envoy route config with
+[egctl](../../operations/egctl):
+
+```shell
+egctl config envoy-proxy route \
+  --labels gateway.envoyproxy.io/owning-gateway-name=eg,gateway.envoyproxy.io/owning-gateway-namespace=default \
+  -o yaml | grep -A2 -E 'timeout|maxStreamDuration'
+```
+
+For the **unary** example you should see the route's `timeout` set to the configured
+`requestTimeout` (e.g. `timeout: 5s`). For the **streaming** example you should see
+`timeout: 0s` (disabled) together with `maxStreamDuration` on the route action.
+
+To exercise the timeout end-to-end you need a gRPC backend that can delay or stream (the
+sample `yages` echo server used in the [GRPC Routing](../grpc-routing) task returns
+immediately). Against such a backend, a unary call that exceeds `requestTimeout` returns
+gRPC status `DEADLINE_EXCEEDED` (HTTP `504`), for example with
+[grpcurl](https://github.com/fullstorydev/grpcurl):
+
+```shell
+grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 <your.slow.Method>
+# ERROR:
+#   Code: DeadlineExceeded
+```
+
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [gapi-3139]: https://github.com/kubernetes-sigs/gateway-api/issues/3139
