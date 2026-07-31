@@ -221,6 +221,9 @@ xdsIR:
             sectionName: "8080"
           name: envoy-gateway/gateway-1
           protocol: TCP
+    healthCheckLog:
+      fileSinks:
+      - path: /dev/stdout
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -274,7 +277,7 @@ xdsIR:
         traffic:
           healthCheck:
             active:
-              eventLog:
+              backendHealthCheckLog:
                 fileSinks:
                 - path: /dev/stdout
               healthyThreshold: 1

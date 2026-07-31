@@ -13,20 +13,7 @@ backendTrafficPolicies:
       name: ext-listeners
       sectionName: ext-http
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-        sectionName: ext-http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -41,21 +28,7 @@ backendTrafficPolicies:
       name: ext-listeners
       sectionName: ext-http
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-        sectionName: ext-http
-      conditions:
-      - lastTransitionTime: null
-        message: Unable to target Listener ext-listeners/ext-http, another BackendTrafficPolicy
-          has already attached to it
-        reason: Conflicted
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -70,20 +43,7 @@ backendTrafficPolicies:
       name: ext-listeners
       sectionName: missing-listener
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-        sectionName: missing-listener
-      conditions:
-      - lastTransitionTime: null
-        message: No section name missing-listener found for ListenerSet envoy-gateway/ext-listeners
-        reason: TargetNotFound
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -99,25 +59,7 @@ backendTrafficPolicies:
       kind: ListenerSet
       name: ext-listeners
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other backendTrafficPolicies
-          for these listenerset listeners: [envoy-gateway/ext-listeners/ext-http]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -131,20 +73,7 @@ backendTrafficPolicies:
       kind: ListenerSet
       name: ext-listeners
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Unable to target ListenerSet ext-listeners, another BackendTrafficPolicy
-          has already attached to it
-        reason: Conflicted
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

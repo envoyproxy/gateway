@@ -527,7 +527,7 @@ func buildHealthCheck(policy *egv1a1.ClusterSettings, telemetry *egv1a1.ProxyTel
 	irhc.Active = buildActiveHealthCheck(*policy.HealthCheck)
 	irhc.PanicThreshold = policy.HealthCheck.PanicThreshold
 	if irhc.Active != nil && telemetry != nil {
-		irhc.Active.EventLog = translateHealthCheckLog(telemetry.HealthCheckLog)
+		irhc.Active.BackendHealthCheckLog = translateHealthCheckLog(telemetry.HealthCheckLog)
 	}
 	return irhc
 }

@@ -22,7 +22,7 @@ http:
             path: "/healthz"
             expectedStatuses:
             - 200
-          eventLog:
+          backendHealthCheckLog:
             fileSinks:
             - path: "/dev/stdout"
             alwaysLogHealthCheckFailures: true
@@ -48,7 +48,7 @@ http:
               text: "ping"
             receive:
               text: "pong"
-          eventLog:
+          backendHealthCheckLog:
             fileSinks:
             - path: "/dev/stdout"
             alwaysLogHealthCheckFailures: true

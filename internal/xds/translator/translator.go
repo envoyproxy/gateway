@@ -112,20 +112,22 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// to collect all errors and reflect them in the status of the CRDs.
 	var errs error
 
+	backendIndex := newBackendClusterIndex(xdsIR)
+
 	if err := t.processHTTPReadyListenerXdsTranslation(tCtx, xdsIR.ReadyListener); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
 	if err := t.processHTTPListenerXdsTranslation(
-		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics); err != nil {
+		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, xdsIR.HealthCheckLog, backendIndex); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := t.processUDPListenerXdsTranslation(tCtx, xdsIR.UDP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+	if err := t.processUDPListenerXdsTranslation(tCtx, xdsIR.UDP, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -278,6 +280,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	accessLog *ir.AccessLog,
 	tracing *ir.Tracing,
 	metrics *ir.Metrics,
+	healthCheckLog *ir.ProxyHealthCheckLog,
+	backendIndex backendClusterIndex,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -466,7 +470,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 		// Generate xDS virtual hosts and routes for the given HTTPListener,
 		// and add them to the xDS route config.
-		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings); err != nil {
+		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings, healthCheckLog, backendIndex); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
@@ -496,6 +500,8 @@ func (t *Translator) addRouteToRouteConfig(
 	httpListener *ir.HTTPListener,
 	metrics *ir.Metrics,
 	http3Settings *ir.HTTP3Settings,
+	healthCheckLog *ir.ProxyHealthCheckLog,
+	backendIndex backendClusterIndex,
 ) error {
 	var (
 		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
@@ -550,7 +556,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, backendIndex)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
@@ -596,6 +602,7 @@ func (t *Translator) addRouteToRouteConfig(
 				unstructuredRefs: extensionResources,
 				extensionMgr:     t.ExtensionManager,
 				logger:           t.Logger,
+				healthCheckLog:   healthCheckLog,
 			}
 
 			if httpRoute.Traffic != nil && httpRoute.Traffic.HTTP2 != nil {
@@ -758,6 +765,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	tcpListeners []*ir.TCPListener,
 	accesslog *ir.AccessLog,
 	metrics *ir.Metrics,
+	healthCheckLog *ir.ProxyHealthCheckLog,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -799,7 +807,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				route.Destination.Name,
 				route.Destination.Settings,
 				&TCPRouteTranslator{route},
-				&ExtraArgs{metrics: metrics},
+				&ExtraArgs{metrics: metrics, healthCheckLog: healthCheckLog},
 				route.Destination.Metadata); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -896,6 +904,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 	udpListeners []*ir.UDPListener,
 	accesslog *ir.AccessLog,
 	metrics *ir.Metrics,
+	healthCheckLog *ir.ProxyHealthCheckLog,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -910,7 +919,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 				udpListener.Route.Destination.Name,
 				udpListener.Route.Destination.Settings,
 				&UDPRouteTranslator{udpListener.Route},
-				&ExtraArgs{metrics: metrics},
+				&ExtraArgs{metrics: metrics, healthCheckLog: healthCheckLog},
 				udpListener.Route.Destination.Metadata); err != nil {
 				errs = errors.Join(errs, err)
 			}

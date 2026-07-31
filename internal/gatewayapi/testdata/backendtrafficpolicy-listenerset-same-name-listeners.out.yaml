@@ -13,20 +13,7 @@ backendTrafficPolicies:
       name: ext-listeners
       sectionName: shared
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-        sectionName: shared
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -41,20 +28,7 @@ backendTrafficPolicies:
       name: other-listeners
       sectionName: shared
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: other-listeners
-        namespace: envoy-gateway
-        sectionName: shared
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -504,7 +478,7 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: target-listenerset-shared
+            name: target-gateway-shared
             namespace: envoy-gateway
         name: httproute/default/route-on-listenerset/rule/0/match/0/*
         pathMatch:
@@ -513,7 +487,7 @@ xdsIR:
           prefix: /
         traffic:
           loadBalancer:
-            roundRobin: {}
+            random: {}
     - address: 0.0.0.0
       externalPort: 8082
       hostnames:
@@ -556,7 +530,7 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: target-other-listenerset-shared
+            name: target-gateway-shared
             namespace: envoy-gateway
         name: httproute/default/route-on-other-listenerset/rule/0/match/0/*
         pathMatch:
@@ -565,7 +539,7 @@ xdsIR:
           prefix: /
         traffic:
           loadBalancer:
-            leastRequest: {}
+            random: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

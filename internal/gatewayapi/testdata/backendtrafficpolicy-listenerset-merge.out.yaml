@@ -16,26 +16,7 @@ backendTrafficPolicies:
       tcp:
         connectTimeout: 22s
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-        sectionName: ext-http-1
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/route-on-ls]'
-        reason: Merged
-        status: "True"
-        type: Merged
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -52,31 +33,7 @@ backendTrafficPolicies:
       tcp:
         connectTimeout: 32s
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/route-on-ls]'
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other backendTrafficPolicies
-          for these listenerset listeners: [envoy-gateway/ext-listeners/ext-http-1]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -91,45 +48,7 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: route-on-ls
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-        sectionName: ext-http-1
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/parent-listenerset-section
-        reason: Merged
-        status: "True"
-        type: Merged
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-        sectionName: ext-http-2
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/parent-listenerset
-        reason: Merged
-        status: "True"
-        type: Merged
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -144,25 +63,7 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: route-on-gateway-policy-ls
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: gateway-policy-listeners
-        namespace: envoy-gateway
-        sectionName: gw-http-1
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/parent-gw
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -223,16 +124,8 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/route-on-gateway-policy-ls]'
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
-          for these gateway listeners: [envoy-gateway/composite-gateway/http-8080]
-          and these listenersets: [envoy-gateway/ext-listeners] and these listenerset
-          listeners: [envoy-gateway/ext-listeners/ext-http-1] and these routes: [default/route-on-ls]'
+          for these listeners: [http-8080]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -793,21 +686,19 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: child-route-merge
-            namespace: default
+            name: parent-gw
+            namespace: envoy-gateway
         name: httproute/default/route-on-ls/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
           prefix: /
         traffic:
-          backendConnection:
-            bufferLimit: 100000000
           timeout:
             http:
-              connectionIdleTimeout: 21s
+              connectionIdleTimeout: 41s
             tcp:
-              connectTimeout: 22s
+              connectTimeout: 42s
     - address: 0.0.0.0
       externalPort: 8082
       hostnames:
@@ -850,21 +741,19 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: child-route-merge
-            namespace: default
+            name: parent-gw
+            namespace: envoy-gateway
         name: httproute/default/route-on-ls/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
           prefix: /
         traffic:
-          backendConnection:
-            bufferLimit: 100000000
           timeout:
             http:
-              connectionIdleTimeout: 31s
+              connectionIdleTimeout: 41s
             tcp:
-              connectTimeout: 32s
+              connectTimeout: 42s
     - address: 0.0.0.0
       externalPort: 8083
       hostnames:
@@ -907,16 +796,14 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: child-route-gateway-merge
-            namespace: default
+            name: parent-gw
+            namespace: envoy-gateway
         name: httproute/default/route-on-gateway-policy-ls/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
           prefix: /gateway-policy
         traffic:
-          backendConnection:
-            bufferLimit: 200000000
           timeout:
             http:
               connectionIdleTimeout: 41s

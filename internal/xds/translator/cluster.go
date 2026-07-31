@@ -94,6 +94,7 @@ type xdsClusterArgs struct {
 	extensionMgr      *extensionTypes.Manager
 	logger            logging.Logger
 	isRoute           bool
+	healthCheckLog    *ir.ProxyHealthCheckLog
 }
 
 type EndpointType int
@@ -486,7 +487,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
-		hcs, err := buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname)
+		hcs, err := buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog)
 		if err != nil {
 			return nil, err
 		}
@@ -627,7 +628,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 	return lbConfig
 }
 
-func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string) ([]*corev3.HealthCheck, error) {
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
@@ -679,10 +680,15 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 		}
 	}
 
-	if healthCheckLogging := healthcheck.EventLog; healthCheckLogging != nil {
-		hc.AlwaysLogHealthCheckFailures = healthCheckLogging.AlwaysLogHealthCheckFailures
-		hc.AlwaysLogHealthCheckSuccess = healthCheckLogging.AlwaysLogHealthCheckSuccess
-		for _, fs := range healthCheckLogging.FileSinks {
+	// BackendHealthCheckLog (BTP path) takes precedence over gateway-level hcLog (EnvoyProxy path).
+	effectiveHCLog := hcLog
+	if healthcheck.BackendHealthCheckLog != nil {
+		effectiveHCLog = healthcheck.BackendHealthCheckLog
+	}
+	if effectiveHCLog != nil {
+		hc.AlwaysLogHealthCheckFailures = effectiveHCLog.AlwaysLogHealthCheckFailures
+		hc.AlwaysLogHealthCheckSuccess = effectiveHCLog.AlwaysLogHealthCheckSuccess
+		for _, fs := range effectiveHCLog.FileSinks {
 			fileSinkAny, err := proto.ToAnyWithValidation(&hcfilev3.HealthCheckEventFileSink{
 				EventLogPath: fs.Path,
 			})
@@ -1448,6 +1454,7 @@ type ExtraArgs struct {
 	extensionMgr     *extensionTypes.Manager
 	unstructuredRefs []*unstructured.Unstructured
 	logger           logging.Logger
+	healthCheckLog   *ir.ProxyHealthCheckLog
 }
 
 type clusterArgs interface {
@@ -1464,15 +1471,16 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:         name,
-		settings:     settings,
-		loadBalancer: route.LoadBalancer,
-		endpointType: buildEndpointType(settings),
-		metrics:      extra.metrics,
-		dns:          route.DNS,
-		ipFamily:     extra.ipFamily,
-		metadata:     metadata,
-		isRoute:      true,
+		name:           name,
+		settings:       settings,
+		loadBalancer:   route.LoadBalancer,
+		endpointType:   buildEndpointType(settings),
+		metrics:        extra.metrics,
+		dns:            route.DNS,
+		ipFamily:       extra.ipFamily,
+		metadata:       metadata,
+		isRoute:        true,
+		healthCheckLog: extra.healthCheckLog,
 	}
 }
 
@@ -1501,6 +1509,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		ipFamily:          extra.ipFamily,
 		metadata:          metadata,
 		isRoute:           true,
+		healthCheckLog:    extra.healthCheckLog,
 	}
 }
 
@@ -1530,6 +1539,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
 		isRoute:           true,
+		healthCheckLog:    extra.healthCheckLog,
 	}
 
 	// Populate traffic features.

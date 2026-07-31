@@ -365,6 +365,11 @@ xdsIR:
             sectionName: "8080"
           name: gateway-xls/composite-gateway
           protocol: TCP
+    healthCheckLog:
+      alwaysLogHealthCheckFailures: true
+      alwaysLogHealthCheckSuccess: true
+      fileSinks:
+      - path: /dev/stdout
     http:
     - address: 0.0.0.0
       externalPort: 80

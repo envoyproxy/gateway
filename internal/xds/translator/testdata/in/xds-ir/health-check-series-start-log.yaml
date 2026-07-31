@@ -22,7 +22,7 @@ http:
             path: "/healthz"
             expectedStatuses:
             - 200
-          eventLog:
+          backendHealthCheckLog:
             fileSinks:
             - path: "/dev/stdout"
             alwaysLogHealthCheckFailures: false

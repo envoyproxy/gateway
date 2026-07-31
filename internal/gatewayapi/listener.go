@@ -727,6 +727,17 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 		return
 	}
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
+	xdsIR.HealthCheckLog = processHealthCheckLog(envoyProxy)
+}
+
+// processHealthCheckLog extracts the gateway-level HC event log config from EnvoyProxy telemetry.
+func processHealthCheckLog(envoyProxy *egv1a1.EnvoyProxy) *ir.ProxyHealthCheckLog {
+	if envoyProxy == nil ||
+		envoyProxy.Spec.Telemetry == nil ||
+		envoyProxy.Spec.Telemetry.HealthCheckLog == nil {
+		return nil
+	}
+	return translateHealthCheckLog(envoyProxy.Spec.Telemetry.HealthCheckLog)
 }
 
 // translateHealthCheckLog converts a ProxyHealthCheckLog API type to its IR representation.

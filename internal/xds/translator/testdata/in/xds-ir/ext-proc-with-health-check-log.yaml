@@ -41,7 +41,7 @@ http:
               healthyThreshold: 1
               grpc:
                 service: envoy.service.ext_proc.v3.ExternalProcessor
-              eventLog:
+              backendHealthCheckLog:
                 fileSinks:
                 - path: "/dev/stdout"
                 alwaysLogHealthCheckFailures: true
