@@ -9,11 +9,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
+
+func ptrString(s string) *string {
+	v := s
+	return &v
+}
 
 func TestNamedNonSharedGlobalRateLimitRuleUsesRuleName(t *testing.T) {
 	rule := &ir.RateLimitRule{
@@ -21,7 +25,7 @@ func TestNamedNonSharedGlobalRateLimitRuleUsesRuleName(t *testing.T) {
 		HeaderMatches: []*ir.StringMatch{
 			{
 				Name:  "x-org",
-				Exact: ptr.To("acme"),
+				Exact: ptrString("acme"),
 			},
 		},
 		Limit: ir.RateLimitValue{
@@ -65,7 +69,7 @@ func TestUnnamedNonSharedGlobalRateLimitRuleKeepsIndexDescriptorShape(t *testing
 		HeaderMatches: []*ir.StringMatch{
 			{
 				Name:  "x-org",
-				Exact: ptr.To("acme"),
+				Exact: ptrString("acme"),
 			},
 		},
 		Limit: ir.RateLimitValue{
@@ -111,7 +115,7 @@ func TestNamedLocalRateLimitRuleUsesRuleName(t *testing.T) {
 				HeaderMatches: []*ir.StringMatch{
 					{
 						Name:  "x-client",
-						Exact: ptr.To("mobile"),
+						Exact: ptrString("mobile"),
 					},
 				},
 				Limit: ir.RateLimitValue{
@@ -124,7 +128,7 @@ func TestNamedLocalRateLimitRuleUsesRuleName(t *testing.T) {
 				HeaderMatches: []*ir.StringMatch{
 					{
 						Name:  "x-client",
-						Exact: ptr.To("web"),
+						Exact: ptrString("web"),
 					},
 				},
 				Limit: ir.RateLimitValue{
