@@ -888,7 +888,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is generated. However, upon activating the EnvoyProxy's HPA, the Envoy Gateway will no longer reference the `replicas` field specified in the `envoyDeployment`, as outlined [here](#customize-envoyproxy-deployment-replicas).
+After applying the config, the EnvoyProxy HPA (Horizontal Pod Autoscaler) is generated. However, upon activating the EnvoyProxy's HPA, the Envoy Gateway will no longer reference the `replicas` field specified in the `envoyDeployment`, as outlined [here](#customize-envoyproxy-deployment-replicas). The `replicas` field is omitted from the generated Deployment entirely, so that Envoy Gateway does not take ownership of it and revert the replica count computed by the HPA. Use `minReplicas` to control the lower bound of the replica count instead.
 
 ## Customize EnvoyProxy Command line options
 
