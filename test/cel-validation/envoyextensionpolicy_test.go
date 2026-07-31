@@ -74,6 +74,42 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid listenerset targetRef",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("ListenerSet"),
+								Name:  gwapiv1.ObjectName("listener-set"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid listenerset targetRefs",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("ListenerSet"),
+									Name:  gwapiv1.ObjectName("listener-set"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "both targetRef and targetRefs",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
@@ -129,7 +165,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -151,7 +187,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -214,7 +250,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -237,7 +273,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -1331,6 +1367,49 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "invalid ExtProc with FullDuplexStreamed response/request body and invalid body processing mode",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+							},
+							ShadowMode: new(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extProc[0]: Invalid value:",
+				": If shadowMode is enabled, body processing mode must be Streamed or unset.",
+			},
 		},
 	}
 

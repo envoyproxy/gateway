@@ -1,0 +1,4 @@
+# Helm values used when running the remote-infra e2e suite. The test flips the
+# control plane to use the remote infrastructure provider via a ConfigMap
+# overlay after the chart is installed (see test/config/envoy-gateaway-config/remote-infra.yaml),
+# so no helm-time overrides are required here.

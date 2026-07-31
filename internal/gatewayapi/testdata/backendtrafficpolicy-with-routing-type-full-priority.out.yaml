@@ -137,7 +137,8 @@ backendTrafficPolicies:
         type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
-          for these listeners: [http] and these routes: [default/httproute-1]'
+          for these gateway listeners: [envoy-gateway/gateway-1/http] and these routes:
+          [default/httproute-1]'
         reason: Overridden
         status: "True"
         type: Overridden

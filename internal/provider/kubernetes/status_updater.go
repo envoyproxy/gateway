@@ -53,8 +53,10 @@ func (m MutatorFunc) Mutate(old client.Object) client.Object {
 
 // UpdateHandler holds the details required to actually write an Update back to the referenced object.
 type UpdateHandler struct {
-	log           logr.Logger
-	client        client.Client
+	log    logr.Logger
+	client client.Client
+	// statusReader is an uncached reader when available. It reads straight from
+	// the API server so status comparisons are not made against stale cache data.
 	statusReader  client.Reader
 	updateChannel chan Update
 	wg            *sync.WaitGroup

@@ -151,6 +151,8 @@ securityPolicies:
       redirectURL: "https://www.example.com/foo/oauth2/callback"
       logoutPath: "/foo/logout"
       forwardAccessToken: true
+      forwardIDToken:
+        header: X-Id-Token   # Forward the ID token on a custom header alongside the access token
       defaultTokenTTL: 1h
       refreshToken: true
       defaultRefreshTokenTTL: 48h

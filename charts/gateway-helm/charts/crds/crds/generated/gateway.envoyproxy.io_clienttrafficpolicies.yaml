@@ -498,6 +498,21 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
+                  host:
+                    description: Host enables managing how the Host/Authority header
+                      set by clients can be normalized.
+                    properties:
+                      stripTrailingHostDot:
+                        description: |-
+                          StripTrailingHostDot determines if the trailing dot of the host should be removed
+                          from the Host/Authority header before any processing of the request.
+                          This affects the upstream host header as well. Without this option, incoming requests
+                          with host "example.com." will not match routes with domains set to "example.com".
+                          When the host includes a port (for example "example.com.:443"), only the trailing dot
+                          from the host section is stripped, leaving the port as-is ("example.com:443").
+                          Defaults to false.
+                        type: boolean
+                    type: object
                   lateResponseHeaders:
                     description: LateResponseHeaders defines settings for global response
                       header modification.
