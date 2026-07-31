@@ -818,6 +818,18 @@ func TestDeployment(t *testing.T) {
 				MaxReplicas: new(int32(10)),
 			},
 		},
+		{
+			// The replicas field must not be rendered when it is managed by an external
+			// autoscaler, even though no built-in RateLimitHpa is set, so that Envoy Gateway
+			// doesn't own spec.replicas and revert the externally computed count.
+			caseName:  "with-external-autoscaler",
+			rateLimit: rateLimit,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas:                            new(int32(2)),
+				ReplicasManagedByExternalAutoscaler: new(true),
+				Strategy:                            egv1a1.DefaultKubernetesDeploymentStrategy(),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
