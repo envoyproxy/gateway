@@ -249,9 +249,6 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 			continue
 		}
 
-		// Append policy extension server policy list for related gateway.
-		gwXDS.ExtensionServerPolicies = appendUnstructuredRefIfAbsent(gwXDS.ExtensionServerPolicies, policy)
-
 		// The targetRef specified a sectionName (rule) that does not exist on the route.
 		if resolveErr != nil {
 			status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
