@@ -910,19 +910,74 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "unrelated-secret"}),
 			expect: false,
 		},
+		{
+			name: "references ListenerSet TLS certificate",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "parent-gw"}, "test-gc", 8080),
+				func() *gwapiv1.ListenerSet {
+					ls := test.GetListenerSet(
+						types.NamespacedName{Namespace: "default", Name: "tls-ls"},
+						types.NamespacedName{Namespace: "default", Name: "parent-gw"},
+						443,
+					)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					ls.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					ls.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "ls-tls-secret",
+						}},
+					}
+					return ls
+				}(),
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "ls-tls-secret"}),
+			expect: true,
+		},
+		{
+			name: "ListenerSet exists but secret is unrelated",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "parent-gw"}, "test-gc", 8080),
+				func() *gwapiv1.ListenerSet {
+					ls := test.GetListenerSet(
+						types.NamespacedName{Namespace: "default", Name: "tls-ls"},
+						types.NamespacedName{Namespace: "default", Name: "parent-gw"},
+						443,
+					)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					ls.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					ls.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "ls-tls-secret",
+						}},
+					}
+					return ls
+				}(),
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "unrelated-secret"}),
+			expect: false,
+		},
 	}
 
 	// Create the reconciler.
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController:  egv1a1.GatewayControllerName,
-		log:              logger,
-		backendCRDExists: true,
-		spCRDExists:      true,
-		epCRDExists:      true,
-		eepCRDExists:     true,
-		hrfCRDExists:     true,
+		classController:      egv1a1.GatewayControllerName,
+		log:                  logger,
+		backendCRDExists:     true,
+		spCRDExists:          true,
+		epCRDExists:          true,
+		eepCRDExists:         true,
+		hrfCRDExists:         true,
+		listenerSetCRDExists: true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
@@ -937,6 +992,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
+			WithIndex(&gwapiv1.ListenerSet{}, secretListenerSetIndex, secretListenerSetIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).

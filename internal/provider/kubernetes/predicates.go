@@ -161,6 +161,12 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		return true
 	}
 
+	if r.listenerSetCRDExists {
+		if r.isListenerSetReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
 	if r.spCRDExists {
 		if r.isSecurityPolicyReferencingSecret(&nsName) {
 			return true
@@ -388,6 +394,18 @@ func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.Namespac
 		}
 	}
 	return true
+}
+
+func (r *gatewayAPIReconciler) isListenerSetReferencingSecret(nsName *types.NamespacedName) bool {
+	lsList := &gwapiv1.ListenerSetList{}
+	if err := r.client.List(context.Background(), lsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretListenerSetIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ListenerSets")
+		return false
+	}
+
+	return len(lsList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.NamespacedName) bool {
