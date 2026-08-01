@@ -405,7 +405,28 @@ func (r *gatewayAPIReconciler) isListenerSetReferencingSecret(nsName *types.Name
 		return false
 	}
 
-	return len(lsList.Items) > 0
+	if len(lsList.Items) == 0 {
+		return false
+	}
+
+	for i := range lsList.Items {
+		ls := &lsList.Items[i]
+		parent := ls.Spec.ParentRef
+		gw := &gwapiv1.Gateway{}
+		key := types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, ls.Namespace),
+			Name:      string(parent.Name),
+		}
+		if err := r.client.Get(context.Background(), key, gw); err != nil {
+			r.log.Error(err, "failed to get parent Gateway for ListenerSet",
+				"namespace", ls.Namespace, "name", ls.Name)
+			return false
+		}
+		if !r.validateGatewayForReconcile(gw) {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.NamespacedName) bool {

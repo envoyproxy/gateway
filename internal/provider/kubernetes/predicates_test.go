@@ -964,6 +964,33 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "unrelated-secret"}),
 			expect: false,
 		},
+		{
+			name: "ListenerSet references secret but parent gateway has invalid controller",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", "not.configured/controller", nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "parent-gw"}, "test-gc", 8080),
+				func() *gwapiv1.ListenerSet {
+					ls := test.GetListenerSet(
+						types.NamespacedName{Namespace: "default", Name: "tls-ls"},
+						types.NamespacedName{Namespace: "default", Name: "parent-gw"},
+						443,
+					)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					ls.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					ls.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "ls-tls-secret",
+						}},
+					}
+					return ls
+				}(),
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "ls-tls-secret"}),
+			expect: false,
+		},
 	}
 
 	// Create the reconciler.
