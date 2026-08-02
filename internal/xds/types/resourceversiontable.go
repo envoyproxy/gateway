@@ -21,10 +21,17 @@ type XdsResources = map[resourcev3.Type][]types.Resource
 
 type EnvoyPatchPolicyStatuses []*ir.EnvoyPatchPolicyStatus
 
+// GlobalResourceStatus tracks which shared global resources were emitted during translation.
+type GlobalResourceStatus struct {
+	// SystemTrustStore indicates the system_ca_certificates secret was emitted.
+	SystemTrustStore bool
+}
+
 // ResourceVersionTable holds all the translated xds resources
 type ResourceVersionTable struct {
 	XdsResources
 	EnvoyPatchPolicyStatuses
+	GlobalResourceStatus
 }
 
 // GetXdsResources retrieves the translated xds resources saved in the translator context.
