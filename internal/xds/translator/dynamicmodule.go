@@ -44,21 +44,32 @@ func (*dynamicModule) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.
 		return errors.New("ir listener is nil")
 	}
 
-	for _, route := range irListener.Routes {
-		if !routeContainsDynamicModule(route) {
-			continue
-		}
-		for _, dm := range route.EnvoyExtensions.DynamicModules {
-			if hcmContainsFilter(mgr, dynamicModuleFilterName(&dm)) {
+	addFilters := func(dms []ir.DynamicModule) {
+		for i := range dms {
+			dm := &dms[i]
+			if hcmContainsFilter(mgr, dynamicModuleFilterName(dm)) {
 				continue
 			}
-			filter, err := buildHCMDynamicModuleFilter(&dm)
+			filter, err := buildHCMDynamicModuleFilter(dm)
 			if err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			mgr.HttpFilters = append(mgr.HttpFilters, filter)
 		}
+	}
+
+	// Listener-scoped DynamicModules are enabled at VirtualHost scope; route-scoped
+	// DynamicModules are enabled per route. Both need their (disabled by default) filter
+	// present on the HCM.
+	if listenerContainsDynamicModule(irListener) {
+		addFilters(irListener.EnvoyExtensions.DynamicModules)
+	}
+	for _, route := range irListener.Routes {
+		if !routeContainsDynamicModule(route) {
+			continue
+		}
+		addFilters(route.EnvoyExtensions.DynamicModules)
 	}
 
 	return errs
@@ -162,34 +173,52 @@ func routeContainsDynamicModule(irRoute *ir.HTTPRoute) bool {
 	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.DynamicModules) > 0
 }
 
+// listenerContainsDynamicModule returns true if DynamicModules exist at listener scope.
+func listenerContainsDynamicModule(irListener *ir.HTTPListener) bool {
+	return irListener != nil && irListener.EnvoyExtensions != nil && len(irListener.EnvoyExtensions.DynamicModules) > 0
+}
+
 // patchResources creates clusters for remote dynamic module sources.
-func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener, routes []*ir.HTTPRoute) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
 
 	var errs error
-	for _, route := range routes {
-		if !routeContainsDynamicModule(route) {
-			continue
-		}
-
-		for _, dm := range route.EnvoyExtensions.DynamicModules {
+	addClusters := func(dms []ir.DynamicModule) {
+		for _, dm := range dms {
 			if dm.Remote == nil {
 				continue
 			}
-
 			if err := addClusterFromURL(dm.Remote.URL, nil, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
 	}
 
+	if listenerContainsDynamicModule(irListener) {
+		addClusters(irListener.EnvoyExtensions.DynamicModules)
+	}
+	for _, route := range routes {
+		if !routeContainsDynamicModule(route) {
+			continue
+		}
+		addClusters(route.EnvoyExtensions.DynamicModules)
+	}
+
 	return errs
 }
 
 // patchRoute enables the corresponding dynamic module filter for the provided route.
-func (*dynamicModule) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+//
+// A nil EnvoyExtensions means no route-scoped policy owns this route: it keeps inheriting the
+// listener-scoped DynamicModules delivered at VirtualHost scope by patchVirtualHost.
+//
+// A non-nil EnvoyExtensions means a more specific (xRoute or route rule) policy owns this route
+// and fully replaces — never merges with — the listener-scoped policy. The extension count is
+// intentionally not checked: an empty result (e.g. fail-open invalid Wasm) still represents a
+// more specific policy that owns this route and must suppress the lower-scope DynamicModules.
+func (*dynamicModule) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -198,6 +227,26 @@ func (*dynamicModule) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ 
 	}
 	if irRoute.EnvoyExtensions == nil {
 		return nil
+	}
+
+	own := make(map[string]struct{}, len(irRoute.EnvoyExtensions.DynamicModules))
+	for i := range irRoute.EnvoyExtensions.DynamicModules {
+		own[dynamicModuleFilterName(&irRoute.EnvoyExtensions.DynamicModules[i])] = struct{}{}
+	}
+
+	if listenerContainsDynamicModule(irListener) {
+		for i := range irListener.EnvoyExtensions.DynamicModules {
+			filterName := dynamicModuleFilterName(&irListener.EnvoyExtensions.DynamicModules[i])
+			// A single EnvoyExtensionPolicy may target both this listener and this route via
+			// separate targetRefs, in which case the same filter name appears at both scopes and
+			// the route re-enables it below instead of disabling it.
+			if _, ok := own[filterName]; ok {
+				continue
+			}
+			if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{Disabled: true}); err != nil {
+				return err
+			}
+		}
 	}
 
 	for _, dm := range irRoute.EnvoyExtensions.DynamicModules {
@@ -211,6 +260,22 @@ func (*dynamicModule) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ 
 	return nil
 }
 
-func (*dynamicModule) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+// patchVirtualHost enables the listener-scoped DynamicModule filters at VirtualHost scope so a
+// listener's policy does not bleed into virtual hosts belonging to a different listener that
+// shares the same RouteConfiguration. Delivery via VirtualHost TypedPerFilterConfig goes through
+// RDS, so policy changes do not trigger listener drains.
+func (*dynamicModule) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error {
+	if !listenerContainsDynamicModule(httpListener) {
+		return nil
+	}
+
+	for i := range httpListener.EnvoyExtensions.DynamicModules {
+		dm := &httpListener.EnvoyExtensions.DynamicModules[i]
+		if err := enableFilterOnVirtualHost(vh, dynamicModuleFilterName(dm), &routev3.FilterConfig{
+			Config: &anypb.Any{},
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }

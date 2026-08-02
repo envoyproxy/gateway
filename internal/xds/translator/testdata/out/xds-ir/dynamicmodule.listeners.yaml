@@ -94,3 +94,60 @@
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10081
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-for-route-6/dynamic-module/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+            dynamicModuleConfig:
+              module:
+                local:
+                  filename: /usr/lib/envoy/modules/route_override.so
+            filterName: route-override-filter
+        - disabled: true
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/dynamic-module/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+            dynamicModuleConfig:
+              module:
+                remote:
+                  httpUri:
+                    cluster: listener-modules_example_com_443
+                    timeout: 10s
+                    uri: https://listener-modules.example.com/liblistener.so
+                  sha256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+            filterName: listener-filter
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http-listener-scope
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10081
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http-listener-scope
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http-listener-scope
+  perConnectionBufferLimitBytes: 32768

@@ -403,7 +403,7 @@ func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
 }
 
 func (*oidc) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute,
+	_ *ir.HTTPListener, routes []*ir.HTTPRoute,
 ) error {
 	if err := createOAuthServerClusters(tCtx, routes); err != nil {
 		return err

@@ -58,21 +58,31 @@ func (*wasm) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		return errors.New("ir listener is nil")
 	}
 
-	for _, route := range irListener.Routes {
-		if !routeContainsWasm(route) {
-			continue
-		}
-		for _, ep := range route.EnvoyExtensions.Wasms {
-			if hcmContainsFilter(mgr, wasmFilterName(&ep)) {
+	addFilters := func(wasms []ir.Wasm) {
+		for i := range wasms {
+			ep := &wasms[i]
+			if hcmContainsFilter(mgr, wasmFilterName(ep)) {
 				continue
 			}
-			filter, err := buildHCMWasmFilter(&ep)
+			filter, err := buildHCMWasmFilter(ep)
 			if err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			mgr.HttpFilters = append(mgr.HttpFilters, filter)
 		}
+	}
+
+	// Listener-scoped Wasms are enabled at VirtualHost scope; route-scoped Wasms are enabled
+	// per route. Both need their (disabled by default) filter present on the HCM.
+	if listenerContainsWasm(irListener) {
+		addFilters(irListener.EnvoyExtensions.Wasms)
+	}
+	for _, route := range irListener.Routes {
+		if !routeContainsWasm(route) {
+			continue
+		}
+		addFilters(route.EnvoyExtensions.Wasms)
 	}
 
 	return errs
@@ -183,8 +193,13 @@ func routeContainsWasm(irRoute *ir.HTTPRoute) bool {
 	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.Wasms) > 0
 }
 
+// listenerContainsWasm returns true if Wasms exist at listener scope.
+func listenerContainsWasm(irListener *ir.HTTPListener) bool {
+	return irListener != nil && irListener.EnvoyExtensions != nil && len(irListener.EnvoyExtensions.Wasms) > 0
+}
+
 // patchResources patches the cluster resources for the http wasm code source.
-func (*wasm) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
+func (*wasm) patchResources(_ *types.ResourceVersionTable, _ *ir.HTTPListener, _ []*ir.HTTPRoute) error {
 	// EG always serves the Wasm module through the built-in HTTP server, which
 	// has been configured in the bootstrap configuration. So we don't need to
 	// create a cluster for the Wasm module.
@@ -192,8 +207,15 @@ func (*wasm) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) er
 }
 
 // patchRoute patches the provided route with the wasm config if applicable.
-// Note: this method enables the corresponding wasm filter for the provided route.
-func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+//
+// A nil EnvoyExtensions means no route-scoped policy owns this route: it keeps inheriting the
+// listener-scoped Wasms delivered at VirtualHost scope by patchVirtualHost.
+//
+// A non-nil EnvoyExtensions means a more specific (xRoute or route rule) policy owns this route
+// and fully replaces — never merges with — the listener-scoped policy. The extension count is
+// intentionally not checked: an empty result (e.g. fail-open invalid Wasm) still represents a
+// more specific policy that owns this route and must suppress the lower-scope Wasms.
+func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -202,6 +224,26 @@ func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	}
 	if irRoute.EnvoyExtensions == nil {
 		return nil
+	}
+
+	own := make(map[string]struct{}, len(irRoute.EnvoyExtensions.Wasms))
+	for i := range irRoute.EnvoyExtensions.Wasms {
+		own[wasmFilterName(&irRoute.EnvoyExtensions.Wasms[i])] = struct{}{}
+	}
+
+	if listenerContainsWasm(irListener) {
+		for i := range irListener.EnvoyExtensions.Wasms {
+			filterName := wasmFilterName(&irListener.EnvoyExtensions.Wasms[i])
+			// A single EnvoyExtensionPolicy may target both this listener and this route via
+			// separate targetRefs, in which case the same filter name appears at both scopes and
+			// the route re-enables it below instead of disabling it.
+			if _, ok := own[filterName]; ok {
+				continue
+			}
+			if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{Disabled: true}); err != nil {
+				return err
+			}
+		}
 	}
 
 	for _, ep := range irRoute.EnvoyExtensions.Wasms {
@@ -215,6 +257,22 @@ func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	return nil
 }
 
-func (*wasm) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+// patchVirtualHost enables the listener-scoped Wasm filters at VirtualHost scope so a listener's
+// policy does not bleed into virtual hosts belonging to a different listener that shares the same
+// RouteConfiguration. Delivery via VirtualHost TypedPerFilterConfig goes through RDS, so policy
+// changes do not trigger listener drains.
+func (*wasm) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error {
+	if !listenerContainsWasm(httpListener) {
+		return nil
+	}
+
+	for i := range httpListener.EnvoyExtensions.Wasms {
+		ep := &httpListener.EnvoyExtensions.Wasms[i]
+		if err := enableFilterOnVirtualHost(vh, wasmFilterName(ep), &routev3.FilterConfig{
+			Config: &anypb.Any{},
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }

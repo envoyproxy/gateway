@@ -236,7 +236,7 @@ envoyExtensionPolicies:
         type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these listeners: [http]'
+          for these gateway listeners: [envoy-gateway/gateway-3/http]'
         observedGeneration: 40
         reason: Overridden
         status: "True"
@@ -740,8 +740,6 @@ xdsIR:
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          fromGatewayPolicy: true
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -823,8 +821,6 @@ xdsIR:
             name: httproute/default/httproute-a/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          fromGatewayPolicy: true
         hostname: app-a.example.com
         isHTTP2: false
         metadata:
@@ -875,8 +871,6 @@ xdsIR:
             name: httproute/default/httproute-b/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          fromGatewayPolicy: true
         hostname: app-b.example.com
         isHTTP2: false
         metadata:
@@ -924,6 +918,16 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      envoyExtensions:
+        wasms:
+        - config: null
+          failOpen: false
+          httpWasmCode:
+            originalDownloadingURL: https://www.example.com/wasm-filter-gw3.wasm
+            servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/6f443df69aab42a606fc6b8d18ce47bc6ed642c929cb2ed90adbaf509acf60f7.wasm
+            sha256: c377a55221a8fb8aacbac301b3e9f0cc0cb766a3442aebb32f39f38b72694027
+          name: envoyextensionpolicy/envoy-gateway/policy-for-listener-wasm/wasm/0
+          wasmName: wasm-filter-gw3
       externalPort: 80
       hostnames:
       - gw3.example.com
@@ -957,17 +961,6 @@ xdsIR:
             name: httproute/default/httproute-gw3/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          fromGatewayPolicy: true
-          wasms:
-          - config: null
-            failOpen: false
-            httpWasmCode:
-              originalDownloadingURL: https://www.example.com/wasm-filter-gw3.wasm
-              servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/6f443df69aab42a606fc6b8d18ce47bc6ed642c929cb2ed90adbaf509acf60f7.wasm
-              sha256: c377a55221a8fb8aacbac301b3e9f0cc0cb766a3442aebb32f39f38b72694027
-            name: envoyextensionpolicy/envoy-gateway/policy-for-listener-wasm/wasm/0
-            wasmName: wasm-filter-gw3
         hostname: gw3.example.com
         isHTTP2: false
         metadata:

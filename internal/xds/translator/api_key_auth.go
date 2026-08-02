@@ -84,7 +84,7 @@ func buildHCMAPIKeyAuthFilter(apiKeyAuth *ir.APIKeyAuth) (*hcmv3.HttpFilter, err
 	}, nil
 }
 
-func (*apiKeyAuth) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*apiKeyAuth) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 

@@ -109,7 +109,7 @@ func basicAuthFilterName(basicAuth *ir.BasicAuth) string {
 	return perRouteFilterName(egv1a1.EnvoyFilterBasicAuth, basicAuth.Name)
 }
 
-func (*basicAuth) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*basicAuth) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 

@@ -110,7 +110,7 @@ func credentialSecretName(credentialInjection *ir.CredentialInjection) string {
 	return fmt.Sprintf("credential_injector/credential/%s", credentialInjection.Name)
 }
 
-func (*credentialInjector) patchResources(resource *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+func (*credentialInjector) patchResources(resource *types.ResourceVersionTable, _ *ir.HTTPListener, routes []*ir.HTTPRoute) error {
 	var errs error
 
 	for _, route := range routes {

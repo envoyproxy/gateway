@@ -69,7 +69,7 @@ type httpFilter interface {
 	// - a jwt filter needs to add the cluster for the jwks.
 	// - an oidc filter needs to add the cluster for token endpoint and the secret
 	//   for the oauth2 client secret and the hmac secret.
-	patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error
+	patchResources(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener, routes []*ir.HTTPRoute) error
 }
 
 type OrderedHTTPFilter struct {
@@ -391,9 +391,9 @@ func mustGetFilterIndex(filterName string) int {
 // for example:
 // - a jwt filter needs to add the cluster for the jwks.
 // - an oidc filter needs to add the secret for the oauth2 client secret.
-func patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+func patchResources(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener, routes []*ir.HTTPRoute) error {
 	for _, filter := range httpFilters {
-		if err := filter.patchResources(tCtx, routes); err != nil {
+		if err := filter.patchResources(tCtx, irListener, routes); err != nil {
 			return err
 		}
 	}

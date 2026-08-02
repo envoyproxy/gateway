@@ -135,3 +135,86 @@
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10081
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.wasm/envoyextensionpolicy/default/policy-for-route-4/wasm/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+            config:
+              configuration:
+                '@type': type.googleapis.com/google.protobuf.StringValue
+                value: ""
+              name: wasm-filter-route-override
+              vmConfig:
+                code:
+                  remote:
+                    httpUri:
+                      cluster: wasm_cluster
+                      timeout: 10s
+                      uri: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/9d2e2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a.wasm
+                    retryPolicy:
+                      numRetries: 10
+                      retryBackOff:
+                        baseInterval: 1s
+                        maxInterval: 30s
+                    sha256: 9d2e2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a
+                runtime: envoy.wasm.runtime.v8
+                vmId: envoyextensionpolicy/default/policy-for-route-4/wasm/0
+        - disabled: true
+          name: envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/wasm/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+            config:
+              configuration:
+                '@type': type.googleapis.com/google.protobuf.StringValue
+                value: ""
+              name: wasm-filter-listener
+              vmConfig:
+                code:
+                  remote:
+                    httpUri:
+                      cluster: wasm_cluster
+                      timeout: 10s
+                      uri: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/8c1f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f.wasm
+                    retryPolicy:
+                      numRetries: 10
+                      retryBackOff:
+                        baseInterval: 1s
+                        maxInterval: 30s
+                    sha256: 8c1f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f
+                runtime: envoy.wasm.runtime.v8
+                vmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/wasm/0
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http-listener-scope
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10081
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http-listener-scope
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http-listener-scope
+  perConnectionBufferLimitBytes: 32768

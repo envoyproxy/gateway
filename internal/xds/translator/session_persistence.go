@@ -229,7 +229,7 @@ func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRo
 
 // patchResources adds all the other needed resources referenced by this
 // filter to the resource version table.
-func (s *sessionPersistence) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
+func (s *sessionPersistence) patchResources(_ *types.ResourceVersionTable, _ *ir.HTTPListener, _ []*ir.HTTPRoute) error {
 	return nil
 }
 

@@ -131,7 +131,7 @@ func buildCompressorFilter(compression *ir.Compression) (*hcmv3.HttpFilter, erro
 	}, nil
 }
 
-func (*compressor) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*compressor) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 

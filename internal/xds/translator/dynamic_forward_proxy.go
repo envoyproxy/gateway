@@ -91,7 +91,7 @@ func (*dynamicForwardProxy) patchRoute(route *routev3.Route, irRoute *ir.HTTPRou
 	return nil
 }
 
-func (*dynamicForwardProxy) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
+func (*dynamicForwardProxy) patchResources(_ *types.ResourceVersionTable, _ *ir.HTTPListener, _ []*ir.HTTPRoute) error {
 	return nil
 }
 

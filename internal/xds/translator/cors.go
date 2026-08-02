@@ -199,7 +199,7 @@ func hasWildcard(array []string) bool {
 	return false
 }
 
-func (c *cors) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (c *cors) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 

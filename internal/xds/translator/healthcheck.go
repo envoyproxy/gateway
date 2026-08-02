@@ -94,7 +94,7 @@ func buildHealthCheckFilter(healthCheck *ir.HealthCheckSettings) (*hcmv3.HttpFil
 	}, nil
 }
 
-func (*healthCheck) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*healthCheck) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 

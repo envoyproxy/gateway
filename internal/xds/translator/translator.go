@@ -519,7 +519,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 		// Add all the other needed resources referenced by this filter to the
 		// resource version table.
-		if err = patchResources(tCtx, httpListener.Routes); err != nil {
+		if err = patchResources(tCtx, httpListener, httpListener.Routes); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}

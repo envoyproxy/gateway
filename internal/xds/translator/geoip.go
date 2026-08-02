@@ -296,7 +296,7 @@ func (*geoip) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListener) error 
 	return nil
 }
 
-func (*geoip) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*geoip) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 

@@ -231,11 +231,10 @@
         cluster: httproute/default/httproute-8/rule/0
         upgradeConfigs:
         - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-gateway/extproc/0:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
     typedPerFilterConfig:
+      envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-gateway/extproc/0:
+        '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+        config: {}
       envoy.filters.http.filter_chain.eep.lua.listener:
         '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
         filterChain:

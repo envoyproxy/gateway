@@ -100,7 +100,7 @@ func routeContainsFault(irRoute *ir.HTTPRoute) bool {
 	return false
 }
 
-func (*fault) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*fault) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 

@@ -53,7 +53,7 @@ func (*headerMutation) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 	return nil
 }
 
-func (*headerMutation) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*headerMutation) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 

@@ -118,6 +118,32 @@ func enableFilterOnRoute(route *routev3.Route, filterName string, routeCfg proto
 	return nil
 }
 
+// enableFilterOnVirtualHost enables filterName for the provided virtual host. Unlike
+// enableFilterOnRoute this is idempotent: patchVirtualHost may be invoked more than once for the
+// same VirtualHost when several IR listeners share one RouteConfiguration (cleartext listeners on
+// the same port).
+func enableFilterOnVirtualHost(vh *routev3.VirtualHost, filterName string, routeCfg proto.Message) error {
+	if vh == nil {
+		return errors.New("xds virtual host is nil")
+	}
+
+	if _, ok := vh.GetTypedPerFilterConfig()[filterName]; ok {
+		return nil
+	}
+
+	routeCfgAny, err := anypb.New(routeCfg)
+	if err != nil {
+		return err
+	}
+
+	if vh.TypedPerFilterConfig == nil {
+		vh.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+	vh.TypedPerFilterConfig[filterName] = routeCfgAny
+
+	return nil
+}
+
 // perRouteFilterName generates a unique filter name for the provided filterType and configName.
 func perRouteFilterName(filterType egv1a1.EnvoyFilter, configName string) string {
 	return fmt.Sprintf("%s/%s", filterType, configName)

@@ -111,7 +111,7 @@ func routeContainsLocalRateLimit(irRoute *ir.HTTPRoute) bool {
 }
 
 func (*localRateLimit) patchResources(*types.ResourceVersionTable,
-	[]*ir.HTTPRoute,
+	*ir.HTTPListener, []*ir.HTTPRoute,
 ) error {
 	return nil
 }

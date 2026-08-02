@@ -962,41 +962,39 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 			continue
 		}
 
-		// if already set - there's a specific level policy, so skip
+		// A Policy targeting a more specific scope (xRoute rule, xRoute, Gateway
+		// listener, ListenerSet listener) wins over a policy targeting a lesser
+		// specific scope (Gateway/ListenerSet). A non-nil EnvoyExtensions means this
+		// listener is already owned by a more specific policy.
 		if http.EnvoyExtensions != nil {
 			continue
 		}
 
-		// TODO: move other extensions to listener level.
-		// Only attach listener-level Lua when the policy succeeds; a fail-closed error in
-		// any other extension makes every route return a 500, so the Lua filter must not
-		// run on those synthetic error responses.
-		if len(luas) > 0 && !failed {
-			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-				Luas: luas,
-			}
-		}
-
-		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway
-		// listener, ListenerSet listener) wins over a policy targeting a lesser
-		// specific scope(Gateway/ListenerSet).
-		for _, r := range http.Routes {
-			// if already set - there's a specific level policy, so skip
-			if r.EnvoyExtensions != nil {
-				continue
-			}
-
-			if failed {
+		// Fail closed: a fail-closed error in any extension makes every route under
+		// this listener return a 500. No extension is attached at listener scope, so
+		// the filters do not run on those synthetic error responses.
+		if failed {
+			for _, r := range http.Routes {
+				// if already set - there's a specific level policy, so skip
+				if r.EnvoyExtensions != nil {
+					continue
+				}
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
-			} else {
-				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-					ExtProcs:          extProcs,
-					Wasms:             wasms,
-					DynamicModules:    dynamicModules,
-					FromGatewayPolicy: new(true),
-				}
+			}
+			continue
+		}
+
+		// All extensions are attached at listener scope and delivered at VirtualHost
+		// scope by the xDS translator. Routes owned by a more specific policy carry
+		// their own EnvoyExtensions and fully override this one.
+		if len(extProcs) > 0 || len(wasms) > 0 || len(luas) > 0 || len(dynamicModules) > 0 {
+			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+				ExtProcs:       extProcs,
+				Wasms:          wasms,
+				Luas:           luas,
+				DynamicModules: dynamicModules,
 			}
 		}
 	}

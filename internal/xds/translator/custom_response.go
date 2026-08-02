@@ -500,7 +500,7 @@ func (c *customResponse) routeContainsResponseOverride(irRoute *ir.HTTPRoute) bo
 	return false
 }
 
-func (c *customResponse) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
+func (c *customResponse) patchResources(_ *types.ResourceVersionTable, _ *ir.HTTPListener, _ []*ir.HTTPRoute) error {
 	return nil
 }
 

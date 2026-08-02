@@ -46,13 +46,9 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 		return errors.New("ir listener is nil")
 	}
 
-	for _, route := range irListener.Routes {
-		if !routeContainsExtProc(route) {
-			continue
-		}
-
-		for i := range route.EnvoyExtensions.ExtProcs {
-			ep := &route.EnvoyExtensions.ExtProcs[i]
+	addFilters := func(extProcs []ir.ExtProc) {
+		for i := range extProcs {
+			ep := &extProcs[i]
 			if hcmContainsFilter(mgr, extProcFilterName(ep)) {
 				continue
 			}
@@ -65,6 +61,18 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 
 			mgr.HttpFilters = append(mgr.HttpFilters, filter)
 		}
+	}
+
+	// Listener-scoped ExtProcs are enabled at VirtualHost scope; route-scoped ExtProcs are
+	// enabled per route. Both need their (disabled by default) filter present on the HCM.
+	if listenerContainsExtProc(irListener) {
+		addFilters(irListener.EnvoyExtensions.ExtProcs)
+	}
+	for _, route := range irListener.Routes {
+		if !routeContainsExtProc(route) {
+			continue
+		}
+		addFilters(route.EnvoyExtensions.ExtProcs)
 	}
 
 	return errs
@@ -177,35 +185,52 @@ func routeContainsExtProc(irRoute *ir.HTTPRoute) bool {
 	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.ExtProcs) > 0
 }
 
+// listenerContainsExtProc returns true if ExtProcs exist at listener scope.
+func listenerContainsExtProc(irListener *ir.HTTPListener) bool {
+	return irListener != nil && irListener.EnvoyExtensions != nil && len(irListener.EnvoyExtensions.ExtProcs) > 0
+}
+
 // patchResources patches the cluster resources for the external services.
 func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute,
+	irListener *ir.HTTPListener, routes []*ir.HTTPRoute,
 ) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
 
 	var errs error
+	addClusters := func(extProcs []ir.ExtProc) {
+		for i := range extProcs {
+			ep := extProcs[i]
+			if err := createExtServiceXDSCluster(&ep.Destination, ep.Traffic, tCtx); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+	}
+
+	if listenerContainsExtProc(irListener) {
+		addClusters(irListener.EnvoyExtensions.ExtProcs)
+	}
 	for _, route := range routes {
 		if !routeContainsExtProc(route) {
 			continue
 		}
-
-		for i := range route.EnvoyExtensions.ExtProcs {
-			ep := route.EnvoyExtensions.ExtProcs[i]
-			if err := createExtServiceXDSCluster(
-				&ep.Destination, ep.Traffic, tCtx); err != nil {
-				errs = errors.Join(errs, err)
-			}
-		}
+		addClusters(route.EnvoyExtensions.ExtProcs)
 	}
 
 	return errs
 }
 
 // patchRoute patches the provided route with the extProc config if applicable.
-// Note: this method enables the corresponding extProc filter for the provided route.
-func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+//
+// A nil EnvoyExtensions means no route-scoped policy owns this route: it keeps inheriting the
+// listener-scoped ExtProcs delivered at VirtualHost scope by patchVirtualHost.
+//
+// A non-nil EnvoyExtensions means a more specific (xRoute or route rule) policy owns this route
+// and fully replaces — never merges with — the listener-scoped policy. The extension count is
+// intentionally not checked: an empty result (e.g. fail-open invalid Wasm) still represents a
+// more specific policy that owns this route and must suppress the lower-scope ExtProcs.
+func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -214,6 +239,26 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 	}
 	if irRoute.EnvoyExtensions == nil {
 		return nil
+	}
+
+	own := make(map[string]struct{}, len(irRoute.EnvoyExtensions.ExtProcs))
+	for i := range irRoute.EnvoyExtensions.ExtProcs {
+		own[extProcFilterName(&irRoute.EnvoyExtensions.ExtProcs[i])] = struct{}{}
+	}
+
+	if listenerContainsExtProc(irListener) {
+		for i := range irListener.EnvoyExtensions.ExtProcs {
+			filterName := extProcFilterName(&irListener.EnvoyExtensions.ExtProcs[i])
+			// A single EnvoyExtensionPolicy may target both this listener and this route via
+			// separate targetRefs, in which case the same filter name appears at both scopes and
+			// the route re-enables it below instead of disabling it.
+			if _, ok := own[filterName]; ok {
+				continue
+			}
+			if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{Disabled: true}); err != nil {
+				return err
+			}
+		}
 	}
 
 	for i := range irRoute.EnvoyExtensions.ExtProcs {
@@ -277,6 +322,22 @@ func translateExtProcBodyProcessingMode(mode *ir.ExtProcBodyProcessingMode) extp
 	return extprocv3.ProcessingMode_NONE
 }
 
-func (*extProc) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+// patchVirtualHost enables the listener-scoped ExtProc filters at VirtualHost scope so a
+// listener's policy does not bleed into virtual hosts belonging to a different listener that
+// shares the same RouteConfiguration. Delivery via VirtualHost TypedPerFilterConfig goes through
+// RDS, so policy changes do not trigger listener drains.
+func (*extProc) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error {
+	if !listenerContainsExtProc(httpListener) {
+		return nil
+	}
+
+	for i := range httpListener.EnvoyExtensions.ExtProcs {
+		ep := &httpListener.EnvoyExtensions.ExtProcs[i]
+		if err := enableFilterOnVirtualHost(vh, extProcFilterName(ep), &routev3.FilterConfig{
+			Config: &anypb.Any{},
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }

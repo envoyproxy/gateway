@@ -1,0 +1,1 @@
+The xDS layout for EnvoyExtensionPolicies (both Gateway/listener-targeted and HTTPRoute-targeted) has changed. Any EnvoyPatchPolicy rules or extension-server logic that reads or patches the old extension filter names or per-route config shape will break and must be updated to match the new layout.

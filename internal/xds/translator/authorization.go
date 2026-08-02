@@ -693,7 +693,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 	return jwtPredicate, nil
 }
 
-func (c *rbac) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (c *rbac) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 
