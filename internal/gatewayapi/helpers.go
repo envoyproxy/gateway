@@ -1449,6 +1449,29 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	return ret
 }
 
+// policyOwnerOr returns owner if non-nil, otherwise fallback.
+// Used to resolve per-field owners from PolicyOwners: the owner is the policy
+// that contributed the field (route overrides parent), falling back to the active policy
+// when no merge occurred or the field was not set by either side.
+func policyOwnerOr[T any](owner, fallback *T) *T {
+	if owner != nil {
+		return owner
+	}
+	return fallback
+}
+
+// ownerOf returns route if routeOwns(route) is true, otherwise parent.
+// Use this when ownership of a merged field is determined by a single predicate.
+func ownerOf[T any](
+	route, parent *T,
+	routeOwns func(*T) bool,
+) *T {
+	if routeOwns(route) {
+		return route
+	}
+	return parent
+}
+
 // Sets *target to value if and only if *target is nil
 func setIfNil[T any](target **T, value *T) {
 	if *target == nil {
