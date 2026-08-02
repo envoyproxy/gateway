@@ -6,12 +6,167 @@
 package kubernetes
 
 import (
+	"context"
 	"reflect"
+	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
+
+func boolPtr(b bool) *bool { return &b }
+func strPtr(s string) *string { return &s }
+
+func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
+	ns := "envoy-gateway-system"
+	svcName := "envoy-svc"
+
+	testCases := []struct {
+		name          string
+		endpointSlices []discoveryv1.EndpointSlice
+		wantNodes     []string
+	}{
+		{
+			name:      "no EndpointSlices returns empty",
+			wantNodes: []string{},
+		},
+		{
+			name: "ready endpoint included",
+			endpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eps-1",
+						Namespace: ns,
+						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+					},
+				},
+			},
+			wantNodes: []string{"node1"},
+		},
+		{
+			name: "nil Ready treated as ready (k8s backward compat)",
+			endpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eps-1",
+						Namespace: ns,
+						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: nil}},
+					},
+				},
+			},
+			wantNodes: []string{"node1"},
+		},
+		{
+			name: "not-ready endpoint excluded",
+			endpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eps-1",
+						Namespace: ns,
+						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(false)}},
+					},
+				},
+			},
+			wantNodes: []string{},
+		},
+		{
+			name: "endpoint with empty NodeName excluded",
+			endpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eps-1",
+						Namespace: ns,
+						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{NodeName: strPtr(""), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+						{NodeName: nil, Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+					},
+				},
+			},
+			wantNodes: []string{},
+		},
+		{
+			name: "duplicate nodes across multiple EndpointSlices deduplicated",
+			endpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eps-1",
+						Namespace: ns,
+						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+						{NodeName: strPtr("node2"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eps-2",
+						Namespace: ns,
+						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+					},
+				},
+			},
+			wantNodes: []string{"node1", "node2"},
+		},
+		{
+			name: "EndpointSlice for different service ignored",
+			endpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eps-other",
+						Namespace: ns,
+						Labels:    map[string]string{discoveryv1.LabelServiceName: "other-svc"},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+					},
+				},
+			},
+			wantNodes: []string{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme())
+			for i := range tc.endpointSlices {
+				builder = builder.WithObjects(&tc.endpointSlices[i])
+			}
+			fakeClient := builder.Build()
+
+			r := &gatewayAPIReconciler{client: fakeClient}
+
+			svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: svcName, Namespace: ns}}
+			got, err := r.envoyEndpointNodeNamesForService(context.Background(), svc)
+			require.NoError(t, err)
+
+			sort.Strings(got)
+			sort.Strings(tc.wantNodes)
+			require.Equal(t, tc.wantNodes, got)
+		})
+	}
+}
 
 func Test_mergeRouteParentStatus(t *testing.T) {
 	type args struct {
