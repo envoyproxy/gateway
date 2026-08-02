@@ -1088,6 +1088,32 @@ func TestProcessTracingServiceName(t *testing.T) {
 			mergeGateways:       true,
 			expectedServiceName: "test-gateway-class", // Should use gateway class name when merging
 		},
+		{
+			name: "tracing provider without backendRefs or host",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-proxy",
+					Namespace: "test-namespace",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type:        egv1a1.TracingProviderTypeOpenTelemetry,
+								ServiceName: new("only-name-overridden"),
+							},
+						},
+					},
+				},
+			},
+			expectError: true,
+		},
 	}
 
 	for _, tc := range cases {

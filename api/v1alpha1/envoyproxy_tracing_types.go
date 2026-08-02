@@ -36,7 +36,11 @@ const (
 
 // TracingProvider defines the tracing provider configuration.
 //
-// +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
+// A provider is only required to set host or backendRefs after the
+// GatewayClass-level and Gateway-level EnvoyProxy configs are merged
+// (see EnvoyProxySpec.MergeType), so completeness is validated during
+// translation instead of by a CEL rule here.
+//
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"

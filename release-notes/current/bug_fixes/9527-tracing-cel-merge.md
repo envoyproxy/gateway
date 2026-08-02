@@ -1,0 +1,1 @@
+Fixed CRD validation rejecting a per-Gateway EnvoyProxy that overrides only part of the tracing provider (e.g. `serviceName`) when relying on `mergeType` to inherit the rest: the host/backendRefs completeness check now runs after the GatewayClass-level and Gateway-level configs are merged, surfacing an `InvalidParameters` Gateway condition instead of blocking admission.
