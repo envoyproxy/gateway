@@ -1311,19 +1311,22 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 		},
 		{
-			desc: "tracing-empty-backend",
+			// A partial provider must be accepted at admission so it can be
+			// completed by the GatewayClass/Gateway EnvoyProxy merge; completeness
+			// is validated during translation instead.
+			desc: "tracing-partial-provider-for-merge",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type:        egv1a1.TracingProviderTypeOpenTelemetry,
+								ServiceName: new("my-override"),
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"host or backendRefs needs to be set"},
 		},
 		{
 			desc: "valid-tracing-service-name",

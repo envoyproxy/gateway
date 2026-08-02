@@ -18193,8 +18193,6 @@ spec:
                         - type
                         type: object
                         x-kubernetes-validations:
-                        - message: host or backendRefs needs to be set
-                          rule: has(self.host) || self.backendRefs.size() > 0
                         - message: BackendRefs must be used, backendRef is not supported.
                           rule: '!has(self.backendRef)'
                         - message: BackendRefs only support Service and Backend kind.
