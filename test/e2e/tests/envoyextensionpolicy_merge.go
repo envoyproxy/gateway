@@ -29,7 +29,7 @@ func init() {
 var EnvoyExtensionPolicyMergedTest = suite.ConformanceTest{
 	ShortName:   "EnvoyExtensionPolicyMerged",
 	Description: "Test route-level EnvoyExtensionPolicy merge with Gateway and ListenerSet policies",
-	Manifests:   []string{"testdata/ext-proc-service.yaml", "testdata/envoyextensionpolicy-merged.yaml", "testdata/envoyextensionpolicy-listenerset.yaml"},
+	Manifests:   []string{"testdata/ext-proc-service.yaml", "testdata/envoyextensionpolicy-merged.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("EnvoyExtensionPolicyMerged", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
@@ -136,14 +136,14 @@ var EnvoyExtensionPolicyMergedTest = suite.ConformanceTest{
 
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
-					Path: "/merge-policy",
+					Path: "/ls-merged",
 					Headers: map[string]string{
 						"x-request-client-header": "original",
 					},
 				},
 				ExpectedRequest: &httputils.ExpectedRequest{
 					Request: httputils.Request{
-						Path: "/merged",
+						Path: "/ls-merged",
 						Headers: map[string]string{
 							"x-request-ext-processed":          "true",
 							"x-request-client-header-received": "original",
