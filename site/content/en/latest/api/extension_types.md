@@ -6672,6 +6672,11 @@ _Appears in:_
 
 TracingProvider defines the tracing provider configuration.
 
+A provider is only required to set host or backendRefs after the
+GatewayClass-level and Gateway-level EnvoyProxy configs are merged
+(see EnvoyProxySpec.MergeType), so completeness is validated during
+translation instead of by a CEL rule here.
+
 _Appears in:_
 - [ProxyTracing](#proxytracing)
 
