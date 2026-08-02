@@ -1055,11 +1055,13 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	// fallback to host and port
 	// TODO: remove support for Host/Port in v1.2
 	if len(ds) == 0 {
-		var host string
-		var port uint32
-		if tracing.Provider.Host != nil {
-			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
+		// Validated here instead of by a CRD CEL rule so that a partial provider
+		// (e.g. only serviceName) can be completed by the GatewayClass-level and
+		// Gateway-level EnvoyProxy merge before the check runs.
+		if tracing.Provider.Host == nil {
+			return nil, fmt.Errorf("host or backendRefs needs to be set on the tracing provider after merging EnvoyProxy configs")
 		}
+		host, port := *tracing.Provider.Host, uint32(tracing.Provider.Port)
 		ds = destinationSettingFromHostAndPort(settingName, host, port)
 		authority = host
 	}
