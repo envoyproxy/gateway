@@ -898,6 +898,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      envoyExtensions: {}
       externalPort: 80
       hostnames:
       - '*'

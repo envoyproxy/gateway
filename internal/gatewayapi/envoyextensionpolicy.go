@@ -989,13 +989,16 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 		// All extensions are attached at listener scope and delivered at VirtualHost
 		// scope by the xDS translator. Routes owned by a more specific policy carry
 		// their own EnvoyExtensions and fully override this one.
-		if len(extProcs) > 0 || len(wasms) > 0 || len(luas) > 0 || len(dynamicModules) > 0 {
-			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-				ExtProcs:       extProcs,
-				Wasms:          wasms,
-				Luas:           luas,
-				DynamicModules: dynamicModules,
-			}
+		//
+		// Record the ownership sentinel even when every extension slice is empty
+		// (e.g. all entries failed validation but were fail-open): this listener is
+		// still owned by this policy, and leaving EnvoyExtensions nil would let a
+		// lesser-specific Gateway/ListenerSet policy see it as unowned and attach.
+		http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+			ExtProcs:       extProcs,
+			Wasms:          wasms,
+			Luas:           luas,
+			DynamicModules: dynamicModules,
 		}
 	}
 
