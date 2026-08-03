@@ -21,17 +21,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
-func boolPtr(b bool) *bool { return &b }
-func strPtr(s string) *string { return &s }
-
 func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 	ns := "envoy-gateway-system"
 	svcName := "envoy-svc"
 
 	testCases := []struct {
-		name          string
+		name           string
 		endpointSlices []discoveryv1.EndpointSlice
-		wantNodes     []string
+		wantNodes      []string
 	}{
 		{
 			name:      "no EndpointSlices returns empty",
@@ -47,7 +44,7 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					},
 					Endpoints: []discoveryv1.Endpoint{
-						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 					},
 				},
 			},
@@ -63,7 +60,7 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					},
 					Endpoints: []discoveryv1.Endpoint{
-						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: nil}},
+						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: nil}},
 					},
 				},
 			},
@@ -79,7 +76,7 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					},
 					Endpoints: []discoveryv1.Endpoint{
-						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(false)}},
+						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(false)}},
 					},
 				},
 			},
@@ -95,8 +92,8 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					},
 					Endpoints: []discoveryv1.Endpoint{
-						{NodeName: strPtr(""), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
-						{NodeName: nil, Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+						{NodeName: new(""), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
+						{NodeName: nil, Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 					},
 				},
 			},
@@ -112,8 +109,8 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					},
 					Endpoints: []discoveryv1.Endpoint{
-						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
-						{NodeName: strPtr("node2"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
+						{NodeName: new("node2"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 					},
 				},
 				{
@@ -123,7 +120,7 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					},
 					Endpoints: []discoveryv1.Endpoint{
-						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 					},
 				},
 			},
@@ -139,7 +136,7 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: "other-svc"},
 					},
 					Endpoints: []discoveryv1.Endpoint{
-						{NodeName: strPtr("node1"), Conditions: discoveryv1.EndpointConditions{Ready: boolPtr(true)}},
+						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 					},
 				},
 			},
