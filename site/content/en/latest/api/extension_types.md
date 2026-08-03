@@ -837,6 +837,24 @@ _Appears in:_
 | `allowCredentials` | _boolean_ |  false  |  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
 
 
+#### CSRF
+
+
+
+CSRF defines the configuration for the Cross-Site Request Forgery (CSRF) filter.
+The CSRF filter checks that the Origin header in HTTP requests matches the destination,
+preventing cross-origin mutating requests (POST, PUT, DELETE, PATCH) from being processed.
+GET and HEAD requests are always allowed.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `shadowFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#fraction)_ |  false  |  | ShadowFraction represents the fraction of requests for which the CSRF policy is<br />evaluated in shadow (dry-run) mode. For these requests, the filter records whether<br />the request would have been allowed or rejected in the `csrf.request_valid` and<br />`csrf.request_invalid` stats, but always lets the request through. The remaining<br />requests are enforced, i.e. a mutating request with a missing or non-matching<br />Origin header is rejected with a 403.<br />Defaults to 0% (all requests are enforced) if not specified. Set it to 100% to<br />dry run the filter, watch the stats to find origins that would be rejected, then<br />lower it to roll enforcement out gradually. |
+| `additionalOrigins` | _[Origin](#origin) array_ |  false  |  | AdditionalOrigins specifies additional origins that are allowed to make mutating<br />requests, beyond the destination origin. A request whose Origin header matches one<br />of them is allowed. The value "*" allows any origin, which effectively disables<br />origin validation.<br />Note: Envoy's CSRF filter compares the host and port of the origin only, so the<br />scheme is ignored: "https://www.example.com" and "http://www.example.com" are<br />equivalent here, and both allow the request regardless of the scheme the client<br />used. |
+
+
 #### CircuitBreaker
 
 
@@ -1644,6 +1662,7 @@ _Appears in:_
 | `envoy.filters.http.health_check` | EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.<br /> | 
 | `envoy.filters.http.fault` | EnvoyFilterFault defines the Envoy HTTP fault filter.<br /> | 
 | `envoy.filters.http.cors` | EnvoyFilterCORS defines the Envoy HTTP CORS filter.<br /> | 
+| `envoy.filters.http.csrf` | EnvoyFilterCSRF defines the Envoy HTTP CSRF filter.<br /> | 
 | `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
 | `envoy.filters.http.ext_authz` | EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.<br /> | 
 | `envoy.filters.http.api_key_auth` | EnvoyFilterAPIKeyAuth defines the Envoy HTTP api key authentication filter.<br /> | 
@@ -4584,6 +4603,7 @@ For example, the following are valid origins:
 
 _Appears in:_
 - [CORS](#cors)
+- [CSRF](#csrf)
 
 
 
@@ -5988,6 +6008,7 @@ _Appears in:_
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent SecurityPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `apiKeyAuth` | _[APIKeyAuth](#apikeyauth)_ |  false  |  | APIKeyAuth defines the configuration for the API Key Authentication. |
 | `cors` | _[CORS](#cors)_ |  false  |  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+| `csrf` | _[CSRF](#csrf)_ |  false  |  | CSRF defines the configuration for Cross-Site Request Forgery (CSRF) protection.<br />When enabled, the CSRF filter checks that the Origin header matches the destination<br />or one of the additional allowed origins on mutating requests (POST, PUT, DELETE, PATCH). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  |  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` | _[JWT](#jwt)_ |  false  |  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  |  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |

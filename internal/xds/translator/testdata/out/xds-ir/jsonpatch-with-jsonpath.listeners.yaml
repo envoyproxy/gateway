@@ -36,6 +36,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
@@ -54,10 +55,12 @@
           - name: secret-1
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
           - name: secret-2
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -115,6 +118,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH

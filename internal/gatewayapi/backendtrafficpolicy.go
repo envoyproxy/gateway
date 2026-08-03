@@ -531,47 +531,52 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		}
 	}
 
-	// Process the policies targeting ListenerSet Listeners
-	for i, currPolicy := range backendTrafficPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
-		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
-		for _, currTarget := range targetRefs {
-			if isListenerSetListener(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = backendTrafficPolicies[i]
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
+	// Only run the ListenerSet-specific translation when at least one ListenerSet exists.
+	// When none are present, no policy can successfully attach to a ListenerSet (the target resolves to
+	// nil and processing returns early), so these loops would be pure overhead.
+	if len(resources.ListenerSets) > 0 {
+		// Process the policies targeting ListenerSet Listeners
+		for i, currPolicy := range backendTrafficPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+			targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+			for _, currTarget := range targetRefs {
+				if isListenerSetListener(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = backendTrafficPolicies[i]
+						handledPolicies[policyName] = policy
+						res = append(res, policy)
+					}
+					t.processBackendTrafficPolicyForListenerSet(xdsIR,
+						gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
 				}
-				t.processBackendTrafficPolicyForListenerSet(xdsIR,
-					gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
 			}
 		}
-	}
 
-	// Process the policies targeting ListenerSets
-	for i, currPolicy := range backendTrafficPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := resolvePolicyTargets(
-			currPolicy.Spec.PolicyTargetReferences,
-			resources.ListenerSets,
-			resources.ReferenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindBackendTrafficPolicy,
-			currPolicy.Namespace,
-			t.GetNamespace,
-		)
-		for _, currTarget := range targetRefs {
-			if isListenerSet(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = backendTrafficPolicies[i]
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
+		// Process the policies targeting ListenerSets
+		for i, currPolicy := range backendTrafficPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			targetRefs := resolvePolicyTargets(
+				currPolicy.Spec.PolicyTargetReferences,
+				resources.ListenerSets,
+				resources.ReferenceGrants,
+				egv1a1.GroupName,
+				egv1a1.KindBackendTrafficPolicy,
+				currPolicy.Namespace,
+				t.GetNamespace,
+			)
+			for _, currTarget := range targetRefs {
+				if isListenerSet(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = backendTrafficPolicies[i]
+						handledPolicies[policyName] = policy
+						res = append(res, policy)
+					}
+					t.processBackendTrafficPolicyForListenerSet(xdsIR,
+						gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
 				}
-				t.processBackendTrafficPolicyForListenerSet(xdsIR,
-					gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
 			}
 		}
 	}
@@ -1772,7 +1777,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
 		gtwCtx,
-		gatewayBackendTrafficPolicyTargetListeners(gtwCtx, target),
+		gatewayPolicyTargetListeners(gtwCtx, target),
 		target.SectionName == nil,
 		xdsIR,
 	)
@@ -1788,47 +1793,10 @@ func (t *Translator) translateBackendTrafficPolicyForListenerSet(
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
 		gtwCtx,
-		listenerSetBackendTrafficPolicyTargetListeners(gtwCtx, listenerSet, target),
+		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
 		false,
 		xdsIR,
 	)
-}
-
-func gatewayBackendTrafficPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if target.SectionName != nil {
-			if listener.isFromListenerSet() || listener.Name != *target.SectionName {
-				continue
-			}
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
-func listenerSetBackendTrafficPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	listenerSet *gwapiv1.ListenerSet,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if !listener.isFromListenerSet() {
-			continue
-		}
-		if listener.listenerSet.Namespace != listenerSet.Namespace || listener.listenerSet.Name != listenerSet.Name {
-			continue
-		}
-		if target.SectionName != nil && listener.Name != *target.SectionName {
-			continue
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
 }
 
 func (t *Translator) translateBackendTrafficPolicyForListeners(

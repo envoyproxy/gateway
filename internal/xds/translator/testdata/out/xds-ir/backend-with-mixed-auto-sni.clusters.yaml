@@ -61,6 +61,7 @@
               name: policy-btls/backends-ca-0
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -132,6 +133,7 @@
               name: policy-btls/backends-ca-1
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
