@@ -973,7 +973,7 @@ type TCPClientTimeout struct {
 	// TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
 	// (e.g. the TLS handshake) after a connection is accepted.
 	// If this expires before the transport reports connection establishment, the connection is summarily closed.
-	TLSHandshakeTimeout *metav1.Duration `json:"tlsHandshakeTimeout,omitempty" yaml:"handshakeTimeout,omitempty"`
+	TLSHandshakeTimeout *metav1.Duration `json:"tlsHandshakeTimeout,omitempty" yaml:"tlsHandshakeTimeout,omitempty"`
 	// ConnectionInspectionTimeout is the maximum time to wait for initial inspection
 	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.
 	// If exceeded, the connection is dropped.
