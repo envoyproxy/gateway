@@ -289,7 +289,7 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 		if err != nil {
 			return nil
 		}
-		command = append(command, fmt.Sprintf("--health-check-failure-delay=%.0fs", d.Seconds()))
+		command = append(command, fmt.Sprintf("--health-check-failure-delay=%s", d.String()))
 	}
 
 	if cfg.DrainTimeout != nil {

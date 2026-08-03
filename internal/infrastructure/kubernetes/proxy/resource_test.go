@@ -211,6 +211,18 @@ func TestExpectedShutdownPreStopCommand(t *testing.T) {
 				"--min-drain-duration=5s",
 			},
 		},
+		{
+			name: "subsecond health check failure delay",
+			cfg: &egv1a1.ShutdownConfig{
+				HealthCheckFailureDelay: new(gwapiv1.Duration("400ms")),
+			},
+			expected: []string{
+				"envoy-gateway",
+				"envoy",
+				"shutdown",
+				"--health-check-failure-delay=400ms",
+			},
+		},
 	}
 
 	for _, tt := range tests {
