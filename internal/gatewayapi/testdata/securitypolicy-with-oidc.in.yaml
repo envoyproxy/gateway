@@ -142,6 +142,7 @@ securityPolicies:
         issuer: "https://oauth.foo.com"
         authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
         tokenEndpoint: "https://oauth.foo.com/token"
+        endSessionEndpoint: "https://oauth.foo.com/logout"
       clientIDRef:
         name: "client2-secret"
       clientSecret:
@@ -150,6 +151,8 @@ securityPolicies:
       resources: ["api"]
       redirectURL: "https://www.example.com/foo/oauth2/callback"
       logoutPath: "/foo/logout"
+      postLogoutRedirect:
+        uri: "%REQ(x-forwarded-proto)%://%REQ(:authority)%/foo/loggedout"
       forwardAccessToken: true
       forwardIDToken:
         header: X-Id-Token   # Forward the ID token on a custom header alongside the access token
@@ -172,11 +175,14 @@ securityPolicies:
       provider:
         issuer: "https://accounts.google.com"
         authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth?foo=bar"       # custom auth endpoint with query params, should be used as is
+        endSessionEndpoint: "https://accounts.google.com/o/oauth2/v2/logout"
       clientID: "client1.apps.googleusercontent.com"
       clientSecret:
         name: "client3-secret"
       redirectURL: "https://www.example.com/bar/oauth2/callback"
       logoutPath: "/bar/logout"
+      postLogoutRedirect:
+        disabled: true   # omit the post_logout_redirect_uri parameter entirely
       forwardAccessToken: true
       defaultTokenTTL: 30m
       refreshToken: true

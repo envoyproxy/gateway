@@ -19,6 +19,7 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -223,6 +224,23 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 
 	if oidc.Provider.EndSessionEndpoint != nil {
 		oauth2.Config.EndSessionEndpoint = *oidc.Provider.EndSessionEndpoint
+	}
+
+	// The post_logout_redirect_uri is only meaningful when an end session endpoint is configured;
+	// Envoy ignores it otherwise. If left unset, Envoy falls back to "<scheme>://<host>/".
+	// Envoy's oneof requires exactly one branch to be set, and disabled is constrained to true, so
+	// neither an empty message nor disabled=false may be emitted.
+	if plr := oidc.PostLogoutRedirect; plr != nil {
+		switch {
+		case plr.URI != nil:
+			oauth2.Config.PostLogoutRedirectUri = &oauth2v3.PostLogoutRedirectUri{
+				Config: &oauth2v3.PostLogoutRedirectUri_Uri{Uri: *plr.URI},
+			}
+		case ptr.Deref(plr.Disabled, false):
+			oauth2.Config.PostLogoutRedirectUri = &oauth2v3.PostLogoutRedirectUri{
+				Config: &oauth2v3.PostLogoutRedirectUri_Disabled{Disabled: true},
+			}
+		}
 	}
 
 	if oidc.CSRFTokenTTL != nil {
