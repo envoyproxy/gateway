@@ -13,9 +13,26 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.dynamic_modules/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+                dynamicModuleConfig:
+                  doNotClose: true
+                  loadGlobally: true
+                  module:
+                    local:
+                      filename: /usr/lib/envoy/modules/ai_gateway.so
+                filterConfig:
+                  '@type': type.googleapis.com/google.protobuf.StringValue
+                  value: '{"maxTokensPerMinute":10000}'
+                filterName: token-ratelimit
     - match:
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-2/rule/0/match/0/www_example_com
@@ -24,12 +41,39 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
-        envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/1:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.dynamic_modules/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+                dynamicModuleConfig:
+                  module:
+                    local:
+                      filename: /usr/lib/envoy/modules/my_auth.so
+                filterConfig:
+                  '@type': type.googleapis.com/google.protobuf.StringValue
+                  value: '{"authEndpoint":"https://auth.example.com"}'
+                filterName: auth-check
+            - name: envoy.filters.http.dynamic_modules/1
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+                dynamicModuleConfig:
+                  module:
+                    remote:
+                      httpUri:
+                        cluster: modules_example_com_443
+                        timeout: 10s
+                        uri: https://modules.example.com/libremote_auth.so
+                      sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+                filterConfig:
+                  '@type': type.googleapis.com/google.protobuf.StringValue
+                  value: '{"authEndpoint":"https://remote-auth.example.com"}'
+                filterName: remote-auth-check
     - match:
         pathSeparatedPrefix: /terminal
       name: httproute/default/httproute-3/rule/0/match/0/www_example_com
@@ -38,9 +82,22 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-terminal/dynamic-module/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.dynamic_modules/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+                dynamicModuleConfig:
+                  module:
+                    local:
+                      filename: /usr/lib/envoy/modules/my_handler.so
+                filterName: handler
+                terminalFilter: true
     - match:
         pathSeparatedPrefix: /path-loaded
       name: httproute/default/httproute-4/rule/0/match/0/www_example_com
@@ -49,9 +106,21 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-path/dynamic-module/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.dynamic_modules/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+                dynamicModuleConfig:
+                  module:
+                    local:
+                      filename: /opt/modules/my_module.so
+                filterName: path-filter
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/http-listener-scope
   virtualHosts:
@@ -74,12 +143,21 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-for-route-6/dynamic-module/0:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
-        envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/dynamic-module/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.dynamic_modules/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+                dynamicModuleConfig:
+                  module:
+                    local:
+                      filename: /usr/lib/envoy/modules/route_override.so
+                filterName: route-override-filter
     - match:
         pathSeparatedPrefix: /same-name
       name: httproute/default/httproute-7/rule/0/match/0/listener_scope_example_com
@@ -88,10 +166,39 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/dynamic-module/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.dynamic_modules/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+                dynamicModuleConfig:
+                  module:
+                    remote:
+                      httpUri:
+                        cluster: listener-modules_example_com_443
+                        timeout: 10s
+                        uri: https://listener-modules.example.com/liblistener.so
+                      sha256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                filterName: listener-filter
     typedPerFilterConfig:
-      envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/dynamic-module/0:
-        '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-        config: {}
+      envoy.filters.http.filter_chain.eep.listener:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+        filterChain:
+          filters:
+          - name: envoy.filters.http.dynamic_modules/listener/0
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+              dynamicModuleConfig:
+                module:
+                  remote:
+                    httpUri:
+                      cluster: listener-modules_example_com_443
+                      timeout: 10s
+                      uri: https://listener-modules.example.com/liblistener.so
+                    sha256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+              filterName: listener-filter

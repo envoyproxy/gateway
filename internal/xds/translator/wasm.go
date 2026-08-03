@@ -7,6 +7,9 @@ package translator
 
 import (
 	"errors"
+	"fmt"
+	"slices"
+	"strconv"
 	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -44,13 +47,21 @@ type wasm struct{}
 
 var _ httpFilter = &wasm{}
 
-// patchHCM builds and appends the wasm Filters to the HTTP Connection Manager
-// if applicable, and it does not already exist.
-// Note: this method creates a wasm filter for each route that contains an wasm config.
-// The filter is disabled by default. It is enabled on the route level.
+// patchHCM adds disabled envoy.filters.http.filter_chain placeholder filters to the HTTP
+// Connection Manager: one for per-listener (per-connection) Wasm and one for per-route Wasm.
+//
+// Both placeholders are added together as soon as either scope has a Wasm policy anywhere on
+// this listener, even if the other scope currently has none. This keeps the HCM's filter set
+// stable across that kind of policy churn too: e.g. adding a per-listener Wasm policy later to
+// a listener that already has per-route Wasm only changes route/virtual host
+// TypedPerFilterConfig (an RDS update), never the listener's filter list (which would require
+// an LDS update and a connection drain).
+//
+// Wasm has no native per-route override at all, while EG's EnvoyExtensionPolicy API allows an
+// ordered list of Wasm filters per listener/route. The filter_chain filter wraps an ordered,
+// named sub-chain of Wasm filters that is supplied separately (per virtual host for
+// listener-scoped Wasm, per route for route-scoped Wasm).
 func (*wasm) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
-	var errs error
-
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -58,64 +69,38 @@ func (*wasm) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		return errors.New("ir listener is nil")
 	}
 
-	addFilters := func(wasms []ir.Wasm) {
-		for i := range wasms {
-			ep := &wasms[i]
-			if hcmContainsFilter(mgr, wasmFilterName(ep)) {
-				continue
-			}
-			filter, err := buildHCMWasmFilter(ep)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-			mgr.HttpFilters = append(mgr.HttpFilters, filter)
-		}
+	hasListenerWasm := listenerContainsWasm(irListener)
+	hasRouteWasm := slices.ContainsFunc(irListener.Routes, routeContainsWasm)
+	if !hasListenerWasm && !hasRouteWasm {
+		return nil
 	}
 
-	// Listener-scoped Wasms are enabled at VirtualHost scope; route-scoped Wasms are enabled
-	// per route. Both need their (disabled by default) filter present on the HCM.
-	if listenerContainsWasm(irListener) {
-		addFilters(irListener.EnvoyExtensions.Wasms)
-	}
-	for _, route := range irListener.Routes {
-		if !routeContainsWasm(route) {
+	for _, filterName := range []string{eepListenerFCFilterName(), eepFCFilterName()} {
+		if hcmContainsFilter(mgr, filterName) {
 			continue
 		}
-		addFilters(route.EnvoyExtensions.Wasms)
+		filter, err := buildHCMFilterChainFilter(filterName)
+		if err != nil {
+			return err
+		}
+		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return errs
+	return nil
 }
 
-// buildHCMWasmFilter returns a wasm HTTP filter from the provided IR HTTPRoute.
-func buildHCMWasmFilter(wasm *ir.Wasm) (*hcmv3.HttpFilter, error) {
-	var (
-		wasmProto *wasmfilterv3.Wasm
-		wasmAny   *anypb.Any
-		err       error
-	)
-
-	if wasmProto, err = wasmConfig(wasm); err != nil {
-		return nil, err
-	}
-	if wasmAny, err = anypb.New(wasmProto); err != nil {
-		return nil, err
-	}
-
-	// All wasm filters for all Routes are aggregated on HCM and disabled by default
-	// Per-route config is used to enable the relevant filters on appropriate routes
-	return &hcmv3.HttpFilter{
-		Name:     wasmFilterName(wasm),
-		Disabled: true,
-		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: wasmAny,
-		},
-	}, nil
+// wasmSubFilterName returns the stable top-level filter name for the per-route Wasm slot index.
+// The index is the execution slot within the ordered EnvoyExtensionPolicy Wasm list, so route
+// 0th modules always bind to the same listener-level filter.
+func wasmSubFilterName(idx int) string {
+	return perRouteFilterName(egv1a1.EnvoyFilterWasm, strconv.Itoa(idx))
 }
 
-func wasmFilterName(wasm *ir.Wasm) string {
-	return perRouteFilterName(egv1a1.EnvoyFilterWasm, wasm.Name)
+// wasmListenerSubFilterName returns the stable HCM-level filter name for a listener-level Wasm
+// slot. Using the envoy.filters.http.wasm prefix (instead of the raw policy name) ensures
+// sortHTTPFilters assigns it the correct order relative to route-level slots.
+func wasmListenerSubFilterName(idx int) string {
+	return fmt.Sprintf("%s/listener/%d", egv1a1.EnvoyFilterWasm, idx)
 }
 
 func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
@@ -215,7 +200,7 @@ func (*wasm) patchResources(_ *types.ResourceVersionTable, _ *ir.HTTPListener, _
 // and fully replaces — never merges with — the listener-scoped policy. The extension count is
 // intentionally not checked: an empty result (e.g. fail-open invalid Wasm) still represents a
 // more specific policy that owns this route and must suppress the lower-scope Wasms.
-func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
+func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -226,34 +211,42 @@ func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener 
 		return nil
 	}
 
-	own := make(map[string]struct{}, len(irRoute.EnvoyExtensions.Wasms))
-	for i := range irRoute.EnvoyExtensions.Wasms {
-		own[wasmFilterName(&irRoute.EnvoyExtensions.Wasms[i])] = struct{}{}
+	// A non-nil EnvoyExtensions means a more specific route policy owns this route and fully
+	// replaces the listener-scoped policy. The extension count is intentionally not checked
+	// here: an empty result (e.g. fail-open invalid Wasm) still represents a more specific
+	// policy that owns this route and must suppress the lower-scope Wasm.
+	if err := disableFilterOnRouteOnce(route, eepListenerFCFilterName()); err != nil {
+		return err
 	}
 
-	if listenerContainsWasm(irListener) {
-		for i := range irListener.EnvoyExtensions.Wasms {
-			filterName := wasmFilterName(&irListener.EnvoyExtensions.Wasms[i])
-			// A single EnvoyExtensionPolicy may target both this listener and this route via
-			// separate targetRefs, in which case the same filter name appears at both scopes and
-			// the route re-enables it below instead of disabling it.
-			if _, ok := own[filterName]; ok {
-				continue
-			}
-			if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{Disabled: true}); err != nil {
-				return err
-			}
-		}
-	}
-
-	for _, ep := range irRoute.EnvoyExtensions.Wasms {
-		filterName := wasmFilterName(&ep)
-		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
-			Config: &anypb.Any{},
-		}); err != nil {
+	var newFilters []*corev3.TypedExtensionConfig
+	for idx := range irRoute.EnvoyExtensions.Wasms {
+		cfg, err := wasmConfig(&irRoute.EnvoyExtensions.Wasms[idx])
+		if err != nil {
 			return err
 		}
+		cfgAny, err := anypb.New(cfg)
+		if err != nil {
+			return err
+		}
+		newFilters = append(newFilters, &corev3.TypedExtensionConfig{
+			Name:        wasmSubFilterName(idx),
+			TypedConfig: cfgAny,
+		})
 	}
+
+	if len(newFilters) == 0 {
+		return nil
+	}
+
+	merged, err := mergeFilterChainConfigPerRoute(route.GetTypedPerFilterConfig()[eepFCFilterName()], newFilters)
+	if err != nil {
+		return err
+	}
+	if route.TypedPerFilterConfig == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+	route.TypedPerFilterConfig[eepFCFilterName()] = merged
 	return nil
 }
 
@@ -266,13 +259,39 @@ func (*wasm) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPList
 		return nil
 	}
 
-	for i := range httpListener.EnvoyExtensions.Wasms {
-		ep := &httpListener.EnvoyExtensions.Wasms[i]
-		if err := enableFilterOnVirtualHost(vh, wasmFilterName(ep), &routev3.FilterConfig{
-			Config: &anypb.Any{},
-		}); err != nil {
+	filterName := eepListenerFCFilterName()
+	existing := vh.GetTypedPerFilterConfig()[filterName]
+	alreadyDelivered, err := filterChainAlreadyHasType(existing, egv1a1.EnvoyFilterWasm)
+	if err != nil {
+		return err
+	}
+	if alreadyDelivered {
+		return nil
+	}
+
+	var newFilters []*corev3.TypedExtensionConfig
+	for idx := range httpListener.EnvoyExtensions.Wasms {
+		cfg, err := wasmConfig(&httpListener.EnvoyExtensions.Wasms[idx])
+		if err != nil {
 			return err
 		}
+		cfgAny, err := anypb.New(cfg)
+		if err != nil {
+			return err
+		}
+		newFilters = append(newFilters, &corev3.TypedExtensionConfig{
+			Name:        wasmListenerSubFilterName(idx),
+			TypedConfig: cfgAny,
+		})
 	}
+
+	merged, err := mergeFilterChainConfigPerRoute(existing, newFilters)
+	if err != nil {
+		return err
+	}
+	if vh.TypedPerFilterConfig == nil {
+		vh.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+	vh.TypedPerFilterConfig[filterName] = merged
 	return nil
 }

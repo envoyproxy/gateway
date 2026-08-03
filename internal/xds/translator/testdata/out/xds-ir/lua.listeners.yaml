@@ -15,11 +15,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
@@ -58,11 +58,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
@@ -101,11 +101,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
@@ -144,27 +144,13 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
-        - disabled: true
-          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-http-route/extproc/0
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
-            grpcService:
-              envoyGrpc:
-                authority: grpc-backend.default:8000
-                clusterName: envoyextensionpolicy/default/policy-for-http-route/0/grpc-backend
-              timeout: 10s
-            processingMode:
-              requestHeaderMode: SKIP
-              requestTrailerMode: SKIP
-              responseHeaderMode: SKIP
-              responseTrailerMode: SKIP
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -201,11 +187,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router
@@ -244,27 +230,13 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
-        - disabled: true
-          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-gateway/extproc/0
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
-            grpcService:
-              envoyGrpc:
-                authority: grpc-backend.default:8000
-                clusterName: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend
-              timeout: 10s
-            processingMode:
-              requestHeaderMode: SKIP
-              requestTrailerMode: SKIP
-              responseHeaderMode: SKIP
-              responseTrailerMode: SKIP
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -301,11 +273,11 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua.listener
+          name: envoy.filters.http.filter_chain.eep.listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - disabled: true
-          name: envoy.filters.http.filter_chain.eep.lua
+          name: envoy.filters.http.filter_chain.eep.route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.router

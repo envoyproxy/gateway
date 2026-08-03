@@ -428,25 +428,23 @@ func Test_sortHTTPFilters(t *testing.T) {
 			},
 		},
 		{
-			name: "custom filter order-lua-filter-chain-placeholder",
+			name: "custom filter order-eep-filter-chain-placeholder",
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
-				httpFilterForTest(egv1a1.EnvoyFilterExtProc + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
-				httpFilterForTest(egv1a1.EnvoyFilter(luaFCFilterName())),
-				httpFilterForTest(egv1a1.EnvoyFilter(luaListenerFCFilterName())),
-				httpFilterForTest(egv1a1.EnvoyFilterWasm + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilter(eepFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilter(eepListenerFCFilterName())),
 			},
 			filterOrder: []egv1a1.FilterPosition{
 				{
 					Name:  egv1a1.EnvoyFilterLua,
-					After: new(egv1a1.EnvoyFilterWasm),
+					After: new(egv1a1.EnvoyFilterOAuth2),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
-				httpFilterForTest(egv1a1.EnvoyFilterExtProc + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
-				httpFilterForTest(egv1a1.EnvoyFilterWasm + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
-				httpFilterForTest(egv1a1.EnvoyFilter(luaListenerFCFilterName())),
-				httpFilterForTest(egv1a1.EnvoyFilter(luaFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilter(eepListenerFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilter(eepFCFilterName())),
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 			},
 		},

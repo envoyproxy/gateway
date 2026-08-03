@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -31,77 +32,61 @@ type extProc struct{}
 
 var _ httpFilter = &extProc{}
 
-// patchHCM builds and appends the ext_proc Filters to the HTTP Connection Manager
-// if applicable, and it does not already exist.
-// Note: this method creates an ext_proc filter for each route that contains an ExtAuthz config.
-// The filter is disabled by default. It is enabled on the route level.
+// patchHCM adds disabled envoy.filters.http.filter_chain placeholder filters to the HTTP
+// Connection Manager: one for per-listener (per-connection) ExtProc and one for per-route
+// ExtProc.
+//
+// Both placeholders are added together as soon as either scope has an ExtProc policy anywhere on
+// this listener, even if the other scope currently has none. This keeps the HCM's filter set
+// stable across that kind of policy churn too: e.g. adding a per-listener ExtProc policy later to
+// a listener that already has per-route ExtProc only changes route/virtual host
+// TypedPerFilterConfig (an RDS update), never the listener's filter list (which would require
+// an LDS update and a connection drain).
+//
+// Envoy's ExtProcPerRoute API can only override one processor for one filter instance, while EG's
+// EnvoyExtensionPolicy API allows an ordered list of ExtProc filters per listener/route. The
+// filter_chain filter wraps an ordered, named sub-chain of ExtProc filters that is supplied
+// separately (per virtual host for listener-scoped ExtProc, per route for route-scoped ExtProc).
 func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
-	var errs error
-
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
-
 	if irListener == nil {
 		return errors.New("ir listener is nil")
 	}
 
-	addFilters := func(extProcs []ir.ExtProc) {
-		for i := range extProcs {
-			ep := &extProcs[i]
-			if hcmContainsFilter(mgr, extProcFilterName(ep)) {
-				continue
-			}
-
-			filter, err := buildHCMExtProcFilter(ep)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-
-			mgr.HttpFilters = append(mgr.HttpFilters, filter)
-		}
+	hasListenerExtProc := listenerContainsExtProc(irListener)
+	hasRouteExtProc := slices.ContainsFunc(irListener.Routes, routeContainsExtProc)
+	if !hasListenerExtProc && !hasRouteExtProc {
+		return nil
 	}
 
-	// Listener-scoped ExtProcs are enabled at VirtualHost scope; route-scoped ExtProcs are
-	// enabled per route. Both need their (disabled by default) filter present on the HCM.
-	if listenerContainsExtProc(irListener) {
-		addFilters(irListener.EnvoyExtensions.ExtProcs)
-	}
-	for _, route := range irListener.Routes {
-		if !routeContainsExtProc(route) {
+	for _, filterName := range []string{eepListenerFCFilterName(), eepFCFilterName()} {
+		if hcmContainsFilter(mgr, filterName) {
 			continue
 		}
-		addFilters(route.EnvoyExtensions.ExtProcs)
+		filter, err := buildHCMFilterChainFilter(filterName)
+		if err != nil {
+			return err
+		}
+		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return errs
+	return nil
 }
 
-// buildHCMExtProcFilter returns an ext_proc HTTP filter from the provided IR HTTPRoute.
-func buildHCMExtProcFilter(extProc *ir.ExtProc) (*hcmv3.HttpFilter, error) {
-	extAuthProto, err := extProcConfig(extProc)
-	if err != nil {
-		return nil, err
-	}
-	extAuthAny, err := anypb.New(extAuthProto)
-	if err != nil {
-		return nil, err
-	}
-
-	// All extproc filters for all Routes are aggregated on HCM and disabled by default
-	// Per-route config is used to enable the relevant filters on appropriate routes
-	return &hcmv3.HttpFilter{
-		Name:     extProcFilterName(extProc),
-		Disabled: true,
-		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: extAuthAny,
-		},
-	}, nil
+// extProcSubFilterName returns the stable top-level filter name for the per-route ExtProc slot
+// index. The index is the execution slot within the ordered EnvoyExtensionPolicy ExtProc list, so
+// route 0th processors always bind to the same listener-level filter.
+func extProcSubFilterName(idx int) string {
+	return perRouteFilterName(egv1a1.EnvoyFilterExtProc, strconv.Itoa(idx))
 }
 
-func extProcFilterName(extProc *ir.ExtProc) string {
-	return perRouteFilterName(egv1a1.EnvoyFilterExtProc, extProc.Name)
+// extProcListenerSubFilterName returns the stable HCM-level filter name for a listener-level
+// ExtProc slot. Using the envoy.filters.http.ext_proc prefix (instead of the raw policy name)
+// ensures sortHTTPFilters assigns it the correct order relative to route-level slots.
+func extProcListenerSubFilterName(idx int) string {
+	return fmt.Sprintf("%s/listener/%d", egv1a1.EnvoyFilterExtProc, idx)
 }
 
 func extProcConfig(extProc *ir.ExtProc) (*extprocv3.ExternalProcessor, error) {
@@ -230,7 +215,7 @@ func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
 // and fully replaces — never merges with — the listener-scoped policy. The extension count is
 // intentionally not checked: an empty result (e.g. fail-open invalid Wasm) still represents a
 // more specific policy that owns this route and must suppress the lower-scope ExtProcs.
-func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
+func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -241,35 +226,42 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListen
 		return nil
 	}
 
-	own := make(map[string]struct{}, len(irRoute.EnvoyExtensions.ExtProcs))
-	for i := range irRoute.EnvoyExtensions.ExtProcs {
-		own[extProcFilterName(&irRoute.EnvoyExtensions.ExtProcs[i])] = struct{}{}
+	// A non-nil EnvoyExtensions means a more specific route policy owns this route and fully
+	// replaces the listener-scoped policy. The extension count is intentionally not checked
+	// here: an empty result (e.g. fail-open invalid Wasm) still represents a more specific
+	// policy that owns this route and must suppress the lower-scope ExtProc.
+	if err := disableFilterOnRouteOnce(route, eepListenerFCFilterName()); err != nil {
+		return err
 	}
 
-	if listenerContainsExtProc(irListener) {
-		for i := range irListener.EnvoyExtensions.ExtProcs {
-			filterName := extProcFilterName(&irListener.EnvoyExtensions.ExtProcs[i])
-			// A single EnvoyExtensionPolicy may target both this listener and this route via
-			// separate targetRefs, in which case the same filter name appears at both scopes and
-			// the route re-enables it below instead of disabling it.
-			if _, ok := own[filterName]; ok {
-				continue
-			}
-			if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{Disabled: true}); err != nil {
-				return err
-			}
-		}
-	}
-
-	for i := range irRoute.EnvoyExtensions.ExtProcs {
-		ep := &irRoute.EnvoyExtensions.ExtProcs[i]
-		filterName := extProcFilterName(ep)
-		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
-			Config: &anypb.Any{},
-		}); err != nil {
+	var newFilters []*corev3.TypedExtensionConfig
+	for idx := range irRoute.EnvoyExtensions.ExtProcs {
+		cfg, err := extProcConfig(&irRoute.EnvoyExtensions.ExtProcs[idx])
+		if err != nil {
 			return err
 		}
+		cfgAny, err := anypb.New(cfg)
+		if err != nil {
+			return err
+		}
+		newFilters = append(newFilters, &corev3.TypedExtensionConfig{
+			Name:        extProcSubFilterName(idx),
+			TypedConfig: cfgAny,
+		})
 	}
+
+	if len(newFilters) == 0 {
+		return nil
+	}
+
+	merged, err := mergeFilterChainConfigPerRoute(route.GetTypedPerFilterConfig()[eepFCFilterName()], newFilters)
+	if err != nil {
+		return err
+	}
+	if route.TypedPerFilterConfig == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+	route.TypedPerFilterConfig[eepFCFilterName()] = merged
 	return nil
 }
 
@@ -331,13 +323,39 @@ func (*extProc) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPL
 		return nil
 	}
 
-	for i := range httpListener.EnvoyExtensions.ExtProcs {
-		ep := &httpListener.EnvoyExtensions.ExtProcs[i]
-		if err := enableFilterOnVirtualHost(vh, extProcFilterName(ep), &routev3.FilterConfig{
-			Config: &anypb.Any{},
-		}); err != nil {
+	filterName := eepListenerFCFilterName()
+	existing := vh.GetTypedPerFilterConfig()[filterName]
+	alreadyDelivered, err := filterChainAlreadyHasType(existing, egv1a1.EnvoyFilterExtProc)
+	if err != nil {
+		return err
+	}
+	if alreadyDelivered {
+		return nil
+	}
+
+	var newFilters []*corev3.TypedExtensionConfig
+	for idx := range httpListener.EnvoyExtensions.ExtProcs {
+		cfg, err := extProcConfig(&httpListener.EnvoyExtensions.ExtProcs[idx])
+		if err != nil {
 			return err
 		}
+		cfgAny, err := anypb.New(cfg)
+		if err != nil {
+			return err
+		}
+		newFilters = append(newFilters, &corev3.TypedExtensionConfig{
+			Name:        extProcListenerSubFilterName(idx),
+			TypedConfig: cfgAny,
+		})
 	}
+
+	merged, err := mergeFilterChainConfigPerRoute(existing, newFilters)
+	if err != nil {
+		return err
+	}
+	if vh.TypedPerFilterConfig == nil {
+		vh.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+	vh.TypedPerFilterConfig[filterName] = merged
 	return nil
 }

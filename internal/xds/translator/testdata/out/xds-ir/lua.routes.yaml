@@ -13,7 +13,10 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.filter_chain.eep.lua:
+        envoy.filters.http.filter_chain.eep.listener:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
           '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
           filterChain:
             filters:
@@ -36,7 +39,10 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.filter_chain.eep.lua:
+        envoy.filters.http.filter_chain.eep.listener:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
           '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
           filterChain:
             filters:
@@ -67,7 +73,10 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.filter_chain.eep.lua:
+        envoy.filters.http.filter_chain.eep.listener:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
           '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
           filterChain:
             filters:
@@ -77,16 +86,13 @@
                 defaultSourceCode:
                   inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
                     end
-        envoy.filters.http.filter_chain.eep.lua.listener:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          disabled: true
         envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           filterContext:
             mode: strict
             token_header: x-api-key
     typedPerFilterConfig:
-      envoy.filters.http.filter_chain.eep.lua.listener:
+      envoy.filters.http.filter_chain.eep.listener:
         '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
         filterChain:
           filters:
@@ -116,7 +122,7 @@
         upgradeConfigs:
         - upgradeType: websocket
     typedPerFilterConfig:
-      envoy.filters.http.filter_chain.eep.lua.listener:
+      envoy.filters.http.filter_chain.eep.listener:
         '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
         filterChain:
           filters:
@@ -146,12 +152,26 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-http-route/extproc/0:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
-        envoy.filters.http.filter_chain.eep.lua.listener:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.ext_proc/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+                grpcService:
+                  envoyGrpc:
+                    authority: grpc-backend.default:8000
+                    clusterName: envoyextensionpolicy/default/policy-for-http-route/0/grpc-backend
+                  timeout: 10s
+                processingMode:
+                  requestHeaderMode: SKIP
+                  requestTrailerMode: SKIP
+                  responseHeaderMode: SKIP
+                  responseTrailerMode: SKIP
     - match:
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-5/rule/0/match/0/www_example_com
@@ -160,7 +180,7 @@
         upgradeConfigs:
         - upgradeType: websocket
     typedPerFilterConfig:
-      envoy.filters.http.filter_chain.eep.lua.listener:
+      envoy.filters.http.filter_chain.eep.listener:
         '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
         filterChain:
           filters:
@@ -185,7 +205,7 @@
         upgradeConfigs:
         - upgradeType: websocket
     typedPerFilterConfig:
-      envoy.filters.http.filter_chain.eep.lua.listener:
+      envoy.filters.http.filter_chain.eep.listener:
         '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
         filterChain:
           filters:
@@ -207,7 +227,7 @@
         upgradeConfigs:
         - upgradeType: websocket
     typedPerFilterConfig:
-      envoy.filters.http.filter_chain.eep.lua.listener:
+      envoy.filters.http.filter_chain.eep.listener:
         '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
         filterChain:
           filters:
@@ -232,10 +252,7 @@
         upgradeConfigs:
         - upgradeType: websocket
     typedPerFilterConfig:
-      envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-gateway/extproc/0:
-        '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-        config: {}
-      envoy.filters.http.filter_chain.eep.lua.listener:
+      envoy.filters.http.filter_chain.eep.listener:
         '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
         filterChain:
           filters:
@@ -245,6 +262,19 @@
               defaultSourceCode:
                 inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Gateway
                   Lua.') end
+          - name: envoy.filters.http.ext_proc/listener/0
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+              grpcService:
+                envoyGrpc:
+                  authority: grpc-backend.default:8000
+                  clusterName: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend
+                timeout: 10s
+              processingMode:
+                requestHeaderMode: SKIP
+                requestTrailerMode: SKIP
+                responseHeaderMode: SKIP
+                responseTrailerMode: SKIP
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/http-8
   virtualHosts:
@@ -260,11 +290,11 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.filter_chain.eep.lua.listener:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           disabled: true
     typedPerFilterConfig:
-      envoy.filters.http.filter_chain.eep.lua.listener:
+      envoy.filters.http.filter_chain.eep.listener:
         '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
         filterChain:
           filters:

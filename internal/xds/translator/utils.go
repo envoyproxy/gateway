@@ -10,12 +10,14 @@ import (
 	"fmt"
 	"net/netip"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	filterchainv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/filter_chain/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -118,35 +120,140 @@ func enableFilterOnRoute(route *routev3.Route, filterName string, routeCfg proto
 	return nil
 }
 
-// enableFilterOnVirtualHost enables filterName for the provided virtual host. Unlike
-// enableFilterOnRoute this is idempotent: patchVirtualHost may be invoked more than once for the
-// same VirtualHost when several IR listeners share one RouteConfiguration (cleartext listeners on
-// the same port).
-func enableFilterOnVirtualHost(vh *routev3.VirtualHost, filterName string, routeCfg proto.Message) error {
-	if vh == nil {
-		return errors.New("xds virtual host is nil")
-	}
-
-	if _, ok := vh.GetTypedPerFilterConfig()[filterName]; ok {
-		return nil
-	}
-
-	routeCfgAny, err := anypb.New(routeCfg)
-	if err != nil {
-		return err
-	}
-
-	if vh.TypedPerFilterConfig == nil {
-		vh.TypedPerFilterConfig = make(map[string]*anypb.Any)
-	}
-	vh.TypedPerFilterConfig[filterName] = routeCfgAny
-
-	return nil
-}
-
 // perRouteFilterName generates a unique filter name for the provided filterType and configName.
 func perRouteFilterName(filterType egv1a1.EnvoyFilter, configName string) string {
 	return fmt.Sprintf("%s/%s", filterType, configName)
+}
+
+// buildHCMFilterChainFilter returns a disabled envoy.filters.http.filter_chain placeholder
+// filter with the given stable name. Shared by extension types (Lua, ExtProc, Wasm,
+// DynamicModule) whose EnvoyExtensionPolicy API allows an ordered list of instances per
+// listener/route but whose native Envoy filter can only be overridden with a single instance
+// per route. The placeholder's name never changes as instances are added/removed, so the HCM's
+// filter list stays stable (no LDS update / connection drain); the actual ordered list of
+// instances is delivered separately via FilterChainConfigPerRoute in TypedPerFilterConfig.
+func buildHCMFilterChainFilter(filterName string) (*hcmv3.HttpFilter, error) {
+	var (
+		fcProto *filterchainv3.FilterChainConfig
+		fcAny   *anypb.Any
+		err     error
+	)
+	fcProto = &filterchainv3.FilterChainConfig{}
+
+	if err = fcProto.ValidateAll(); err != nil {
+		return nil, err
+	}
+	if fcAny, err = anypb.New(fcProto); err != nil {
+		return nil, err
+	}
+
+	return &hcmv3.HttpFilter{
+		Name:     filterName,
+		Disabled: true,
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: fcAny,
+		},
+	}, nil
+}
+
+// filterChainFilterNamePrefixForEEP is the stable HCM-level filter name shared by every
+// EnvoyExtensionPolicy extension type (Lua, ExtProc, Wasm, DynamicModule) that is delivered via
+// an envoy.filters.http.filter_chain placeholder. All extension types share the same two
+// placeholders (this name, and this name + ".listener") rather than each getting their own, so
+// adding/removing an instance of any extension type never changes the HCM's filter list.
+const filterChainFilterNamePrefixForEEP = "envoy.filters.http.filter_chain.eep"
+
+// eepFCFilterName returns the stable HCM-level filter name for the shared, per-route
+// EnvoyExtensionPolicy filter_chain placeholder. Every extension type (Lua, ExtProc, Wasm,
+// DynamicModule) delivers its route-scoped instances through this single placeholder rather than
+// each type getting its own, so adding/removing an instance of any type never changes the HCM's
+// filter list.
+func eepFCFilterName() string {
+	return filterChainFilterNamePrefixForEEP + ".route"
+}
+
+// eepListenerFCFilterName returns the stable HCM-level filter name for the shared, per-listener
+// (per-connection) EnvoyExtensionPolicy filter_chain placeholder. See eepFCFilterName.
+func eepListenerFCFilterName() string {
+	return filterChainFilterNamePrefixForEEP + ".listener"
+}
+
+// eepSubFilterPriority orders sub-filters within a shared filter_chain placeholder's inner
+// FilterChain across extension types: Lua runs before ExtProc, which runs before Wasm, which
+// runs before DynamicModule. Instances of the same type keep the relative order they were
+// appended in (stable sort), which is already the ordered EnvoyExtensionPolicy list order.
+func eepSubFilterPriority(name string) int {
+	switch {
+	case strings.HasPrefix(name, string(egv1a1.EnvoyFilterLua)):
+		return 0
+	case strings.HasPrefix(name, string(egv1a1.EnvoyFilterExtProc)):
+		return 1
+	case strings.HasPrefix(name, string(egv1a1.EnvoyFilterWasm)):
+		return 2
+	case strings.HasPrefix(name, string(egv1a1.EnvoyFilterDynamicModules)):
+		return 3
+	default:
+		return 99
+	}
+}
+
+// mergeFilterChainConfigPerRoute merges newFilters into the FilterChainConfigPerRoute already
+// stored at existing (nil if none yet), re-sorting the combined inner FilterChain so that
+// multiple extension types sharing the same filter_chain placeholder still run in a stable,
+// predictable cross-type order instead of whatever order patchRoute/patchVirtualHost happened to
+// be called in for this route/virtual host.
+func mergeFilterChainConfigPerRoute(existing *anypb.Any, newFilters []*corev3.TypedExtensionConfig) (*anypb.Any, error) {
+	fc := &filterchainv3.FilterChainConfigPerRoute{FilterChain: &filterchainv3.FilterChain{}}
+	if existing != nil {
+		if err := existing.UnmarshalTo(fc); err != nil {
+			return nil, err
+		}
+		if fc.FilterChain == nil {
+			fc.FilterChain = &filterchainv3.FilterChain{}
+		}
+	}
+
+	fc.FilterChain.Filters = append(fc.FilterChain.Filters, newFilters...)
+	sort.SliceStable(fc.FilterChain.Filters, func(i, j int) bool {
+		return eepSubFilterPriority(fc.FilterChain.Filters[i].Name) < eepSubFilterPriority(fc.FilterChain.Filters[j].Name)
+	})
+
+	return anypb.New(fc)
+}
+
+// disableFilterOnRouteOnce disables filterName on the route unless some TypedPerFilterConfig is
+// already set under that name. Several extension types can all want to disable the same shared
+// filter_chain placeholder for a route that fully overrides listener-scoped extensions, so unlike
+// enableFilterOnRoute this must tolerate being called more than once for the same route/filter.
+func disableFilterOnRouteOnce(route *routev3.Route, filterName string) error {
+	if _, ok := route.GetTypedPerFilterConfig()[filterName]; ok {
+		return nil
+	}
+	return enableFilterOnRoute(route, filterName, &routev3.FilterConfig{Disabled: true})
+}
+
+// filterChainAlreadyHasType reports whether the FilterChainConfigPerRoute stored at existing (if
+// any) already contains a sub-filter of the given type. Used by patchVirtualHost to stay
+// idempotent per extension type: unlike the old per-type placeholder, the shared filter_chain key
+// may already carry a different type's contribution, so "the key is set" no longer implies "this
+// type already delivered its filters here".
+func filterChainAlreadyHasType(existing *anypb.Any, filterType egv1a1.EnvoyFilter) (bool, error) {
+	if existing == nil {
+		return false, nil
+	}
+	fc := &filterchainv3.FilterChainConfigPerRoute{}
+	if err := existing.UnmarshalTo(fc); err != nil {
+		return false, err
+	}
+	if fc.FilterChain == nil {
+		return false, nil
+	}
+	for _, f := range fc.FilterChain.Filters {
+		if strings.HasPrefix(f.Name, string(filterType)) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool {

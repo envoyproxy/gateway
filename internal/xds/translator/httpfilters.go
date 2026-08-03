@@ -7,9 +7,7 @@ package translator
 
 import (
 	"container/list"
-	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -128,19 +126,12 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 10
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
 		order = 11
-	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		if strings.Contains(filter.Name, "listener") {
-			// Listener-level Lua runs before route-level Lua.
-			order = 12
-		} else {
-			order = 62
-		}
-	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
-		order = 100 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
-		order = 200 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, egv1a1.EnvoyFilterDynamicModules):
-		order = 250 + mustGetFilterIndex(filter.Name)
+	case filter.Name == eepListenerFCFilterName():
+		// Lua, ExtProc, Wasm, and DynamicModule all share this one placeholder for their
+		// listener-scoped instances, and it runs before the shared route-scoped placeholder.
+		order = 12
+	case filter.Name == eepFCFilterName():
+		order = 62
 	case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
 		order = 300
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
@@ -367,23 +358,16 @@ func isFilterType(filter *hcmv3.HttpFilter, filterType egv1a1.EnvoyFilter) bool 
 	if strings.HasPrefix(filter.Name, string(filterType)) {
 		return true
 	}
-	// Lua is delivered via envoy.filters.http.filter_chain placeholder filters
-	// (luaFCFilterName/luaListenerFCFilterName) rather than under the envoy.filters.http.lua
-	// prefix, so FilterOrder entries that reference EnvoyFilterLua need to match those names too.
-	if filterType == egv1a1.EnvoyFilterLua {
-		return filter.Name == luaFCFilterName() || filter.Name == luaListenerFCFilterName()
+	// Lua, ExtProc, Wasm, and DynamicModules are all delivered via the same two shared
+	// envoy.filters.http.filter_chain placeholder filters rather than under their own
+	// filter-type prefix, so FilterOrder entries that reference any of these types need to
+	// match those placeholder names too. Because the placeholder is shared, moving one of
+	// these types in a custom FilterOrder moves all of them together.
+	switch filterType {
+	case egv1a1.EnvoyFilterLua, egv1a1.EnvoyFilterExtProc, egv1a1.EnvoyFilterWasm, egv1a1.EnvoyFilterDynamicModules:
+		return filter.Name == eepFCFilterName() || filter.Name == eepListenerFCFilterName()
 	}
 	return false
-}
-
-// mustGetFilterIndex returns the index of the filter in its filter type.
-func mustGetFilterIndex(filterName string) int {
-	a := strings.Split(filterName, "/")
-	index, err := strconv.Atoi(a[len(a)-1])
-	if err != nil {
-		panic(fmt.Errorf("cannot get filter index from %s :%w", filterName, err))
-	}
-	return index
 }
 
 // patchResources adds all the other needed resources referenced by this

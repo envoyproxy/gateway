@@ -13,7 +13,6 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	filterchainv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/filter_chain/v3"
 	luafilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -34,7 +33,11 @@ type lua struct{}
 var _ httpFilter = &lua{}
 
 // patchHCM adds disabled envoy.filters.http.filter_chain placeholder filters to the HTTP
-// Connection Manager: one for per-listener (per-connection) Lua and one for per-route Lua.
+// Connection Manager: one shared placeholder for per-listener (per-connection) EnvoyExtensionPolicy
+// extensions and one shared placeholder for per-route extensions. Lua, ExtProc, Wasm, and
+// DynamicModule all deliver their instances through these same two placeholders instead of each
+// type getting its own, so the HCM's filter list never grows or reorders as extensions of any
+// type are added, removed, or renamed.
 //
 // Both placeholders are added together as soon as either scope has a Lua policy anywhere on
 // this listener, even if the other scope currently has none. This keeps the HCM's filter set
@@ -61,7 +64,7 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 		return nil
 	}
 
-	for _, filterName := range []string{luaListenerFCFilterName(), luaFCFilterName()} {
+	for _, filterName := range []string{eepListenerFCFilterName(), eepFCFilterName()} {
 		if hcmContainsFilter(mgr, filterName) {
 			continue
 		}
@@ -73,42 +76,6 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 	}
 
 	return nil
-}
-
-// luaFCFilterName returns the stable HCM-level filter name for the per-route Lua
-// filter_chain placeholder.
-func luaFCFilterName() string {
-	return FilterChainFilterNamePrefixForEEP + "lua"
-}
-
-// luaListenerFCFilterName returns the stable HCM-level filter name for the per-listener
-// (per-connection) Lua filter_chain placeholder.
-func luaListenerFCFilterName() string {
-	return FilterChainFilterNamePrefixForEEP + "lua.listener"
-}
-
-func buildHCMFilterChainFilter(filterName string) (*hcmv3.HttpFilter, error) {
-	var (
-		fcProto *filterchainv3.FilterChainConfig
-		fcAny   *anypb.Any
-		err     error
-	)
-	fcProto = &filterchainv3.FilterChainConfig{}
-
-	if err = fcProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-	if fcAny, err = anypb.New(fcProto); err != nil {
-		return nil, err
-	}
-
-	return &hcmv3.HttpFilter{
-		Name:     filterName,
-		Disabled: true,
-		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: fcAny,
-		},
-	}, nil
 }
 
 // luaFilterName returns the stable top-level filter name for the per-route Lua slot index.
@@ -142,7 +109,7 @@ func (*lua) patchResources(_ *types.ResourceVersionTable, _ *ir.HTTPListener, _ 
 // Routes with no Lua entries fall back to the listener-level Lua inherited from the virtual host.
 // Only routes with their own Lua entries disable the inherited listener-level Lua and install
 // their own scripts in its place.
-func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
+func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -157,18 +124,11 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 	// replaces the listener-scoped policy. The extension count is intentionally not checked
 	// here: an empty result (e.g. fail-open invalid Wasm) still represents a more specific
 	// policy that owns this route and must suppress the lower-scope Lua.
-	if irListener != nil && irListener.EnvoyExtensions != nil && len(irListener.EnvoyExtensions.Luas) > 0 {
-		if err := enableFilterOnRoute(route, luaListenerFCFilterName(), &routev3.FilterConfig{Disabled: true}); err != nil {
-			return err
-		}
+	if err := disableFilterOnRouteOnce(route, eepListenerFCFilterName()); err != nil {
+		return err
 	}
 
-	if route.TypedPerFilterConfig == nil {
-		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-	}
-	filterChainConfigPerRoute := &filterchainv3.FilterChainConfigPerRoute{
-		FilterChain: &filterchainv3.FilterChain{},
-	}
+	var newFilters []*corev3.TypedExtensionConfig
 	for idx, ep := range irRoute.EnvoyExtensions.Luas {
 		filterName := luaFilterName(idx)
 		luaOnFCFilter := &luafilterv3.Lua{
@@ -191,29 +151,33 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 			if err != nil {
 				return err
 			}
+			if route.TypedPerFilterConfig == nil {
+				route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+			}
 			route.TypedPerFilterConfig[filterName] = luaPerRouteAny
 		}
 		luaOnFCFilterAny, err := anypb.New(luaOnFCFilter)
 		if err != nil {
 			return err
 		}
-		filterChainConfigPerRoute.FilterChain.Filters = append(filterChainConfigPerRoute.FilterChain.Filters,
-			&corev3.TypedExtensionConfig{
-				Name:        filterName,
-				TypedConfig: luaOnFCFilterAny,
-			},
-		)
+		newFilters = append(newFilters, &corev3.TypedExtensionConfig{
+			Name:        filterName,
+			TypedConfig: luaOnFCFilterAny,
+		})
 	}
 
-	if len(filterChainConfigPerRoute.FilterChain.Filters) == 0 {
+	if len(newFilters) == 0 {
 		return nil
 	}
-	fcAny, err := anypb.New(filterChainConfigPerRoute)
+
+	merged, err := mergeFilterChainConfigPerRoute(route.GetTypedPerFilterConfig()[eepFCFilterName()], newFilters)
 	if err != nil {
 		return err
 	}
-
-	route.TypedPerFilterConfig[luaFCFilterName()] = fcAny
+	if route.TypedPerFilterConfig == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+	route.TypedPerFilterConfig[eepFCFilterName()] = merged
 	return nil
 }
 
@@ -226,8 +190,13 @@ func (*lua) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListe
 		return nil
 	}
 
-	filterName := luaListenerFCFilterName()
-	if vh.TypedPerFilterConfig != nil && vh.TypedPerFilterConfig[filterName] != nil {
+	filterName := eepListenerFCFilterName()
+	existing := vh.GetTypedPerFilterConfig()[filterName]
+	alreadyDelivered, err := filterChainAlreadyHasType(existing, egv1a1.EnvoyFilterLua)
+	if err != nil {
+		return err
+	}
+	if alreadyDelivered {
 		// Already delivered for this VirtualHost, e.g. because patchVirtualHost was called
 		// again for a different IR listener sharing the same RouteConfiguration.
 		return nil
@@ -237,9 +206,7 @@ func (*lua) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListe
 		vh.TypedPerFilterConfig = map[string]*anypb.Any{}
 	}
 
-	filterChainConfigPerRoute := &filterchainv3.FilterChainConfigPerRoute{
-		FilterChain: &filterchainv3.FilterChain{},
-	}
+	var newFilters []*corev3.TypedExtensionConfig
 	for i, ep := range httpListener.EnvoyExtensions.Luas {
 		subFilterName := luaListenerFilterName(i)
 		luaOnFCFilter := &luafilterv3.Lua{
@@ -268,18 +235,16 @@ func (*lua) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListe
 		if err != nil {
 			return err
 		}
-		filterChainConfigPerRoute.FilterChain.Filters = append(filterChainConfigPerRoute.FilterChain.Filters,
-			&corev3.TypedExtensionConfig{
-				Name:        subFilterName,
-				TypedConfig: luaOnFCFilterAny,
-			},
-		)
+		newFilters = append(newFilters, &corev3.TypedExtensionConfig{
+			Name:        subFilterName,
+			TypedConfig: luaOnFCFilterAny,
+		})
 	}
 
-	fcAny, err := anypb.New(filterChainConfigPerRoute)
+	merged, err := mergeFilterChainConfigPerRoute(existing, newFilters)
 	if err != nil {
 		return err
 	}
-	vh.TypedPerFilterConfig[filterName] = fcAny
+	vh.TypedPerFilterConfig[filterName] = merged
 	return nil
 }

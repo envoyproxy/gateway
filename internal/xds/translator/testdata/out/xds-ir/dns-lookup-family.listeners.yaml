@@ -139,19 +139,13 @@
             withRequestBody:
               maxRequestBytes: 8192
         - disabled: true
-          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-httproute/extproc/0
+          name: envoy.filters.http.filter_chain.eep.listener
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
-            grpcService:
-              envoyGrpc:
-                authority: backend-fqdn2.default:9090
-                clusterName: envoyextensionpolicy/default/policy-for-httproute/extproc/0
-              timeout: 10s
-            processingMode:
-              requestHeaderMode: SKIP
-              requestTrailerMode: SKIP
-              responseHeaderMode: SKIP
-              responseTrailerMode: SKIP
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
+        - disabled: true
+          name: envoy.filters.http.filter_chain.eep.route
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfig
         - name: envoy.filters.http.grpc_web
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
