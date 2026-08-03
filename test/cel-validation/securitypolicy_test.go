@@ -627,6 +627,80 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 		},
 
+		// csrf
+		{
+			desc: "csrf additionalOrigins valid",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CSRF: &egv1a1.CSRF{
+						AdditionalOrigins: []egv1a1.Origin{
+							"https://www.example.com",
+							"http://www.example.com:8080",
+							"https://*.trusted.com",
+							"*",
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "csrf additionalOrigins invalid without scheme",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CSRF: &egv1a1.CSRF{
+						// invalid, an origin is scheme://host even though the CSRF filter
+						// only ever matches on the host and port.
+						AdditionalOrigins: []egv1a1.Origin{"www.example.com"},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.csrf.additionalOrigins[0]: Invalid value: \"www.example.com\": spec.csrf.additionalOrigins[0] in body should match '^(\\*|[A-Za-z][A-Za-z0-9+.-]*:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
+			},
+		},
+		{
+			desc: "csrf additionalOrigins invalid with path",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CSRF: &egv1a1.CSRF{
+						// invalid, the Origin header never carries a path.
+						AdditionalOrigins: []egv1a1.Origin{"https://www.example.com/app"},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.csrf.additionalOrigins[0]: Invalid value: \"https://www.example.com/app\": spec.csrf.additionalOrigins[0] in body should match '^(\\*|[A-Za-z][A-Za-z0-9+.-]*:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
+			},
+		},
+
 		// ExtAuth
 		{
 			desc: "GRPC external auth service",
