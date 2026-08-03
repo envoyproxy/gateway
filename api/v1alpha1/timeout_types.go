@@ -90,7 +90,7 @@ type TCPClientTimeout struct {
 	TLSHandshakeTimeout *gwapiv1.Duration `json:"tlsHandshakeTimeout,omitempty"`
 
 	// ConnectionInspectionTimeout is the maximum time to wait for initial inspection
-	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.
+	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection on the listener socket.
 	// If exceeded, the connection is dropped.
 	// Default: 15 seconds.
 	//
