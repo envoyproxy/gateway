@@ -18,6 +18,7 @@ import (
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"google.golang.org/protobuf/encoding/protojson"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -126,6 +127,13 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			if len(dests) == 0 {
 				tn := typedName{p.Type, p.Name}
 				notFoundResources = append(notFoundResources, tn.String())
+				continue
+			}
+
+			// Reject patches that modify the reserved system_ca_certificates secret.
+			if p.Type == resourcev3.SecretType && ptr.Deref(p.Name.Exact, "") == SystemTrustStoreSecretName {
+				tErr := fmt.Errorf("secret name %q is reserved for the system trust store and cannot be modified by patches", SystemTrustStoreSecretName)
+				tErrs = errors.Join(tErrs, tErr)
 				continue
 			}
 
