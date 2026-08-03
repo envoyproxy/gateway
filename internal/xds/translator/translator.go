@@ -1168,7 +1168,7 @@ func findXdsEndpoints(tCtx *types.ResourceVersionTable, name *ir.StringMatch) []
 		}
 	}
 
-	return nil
+	return result
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.

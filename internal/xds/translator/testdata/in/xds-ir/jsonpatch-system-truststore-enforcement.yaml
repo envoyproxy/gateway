@@ -65,7 +65,7 @@ envoyPatchPolicies:
           trusted_ca:
             filename: "/etc/ssl/certs/ca-certificates.crt"
   - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
-    name: 
+    name:
       exact: other-secret
     operation:
       op: "replace"
