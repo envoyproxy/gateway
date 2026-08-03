@@ -3189,8 +3189,14 @@ func (t *Translator) processBackendDestinationSetting(
 		}
 	}
 
+	// more than 1 type of addr
 	if len(addrTypeMap) > 0 && dstAddrType == nil {
-		dstAddrType = new(ir.MIXED)
+		// if one of the types is FQDN, the other is UDS/IP, so mixed endpoints
+		if _, hasFQDN := addrTypeMap[ir.FQDN]; hasFQDN {
+			dstAddrType = new(ir.MIXED)
+		} else { // otherwise
+			dstAddrType = new(ir.STATIC)
+		}
 	}
 
 	ds.Endpoints = dstEndpoints

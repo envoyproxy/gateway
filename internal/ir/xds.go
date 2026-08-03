@@ -2066,6 +2066,8 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
+// that Envoy cannot handle in a single cluster. IP+UDS combinations are allowed since
+// both are static address types; only FQDN mixing with IP or UDS is unsupported.
 func (r *RouteDestination) HasMixedEndpoints() bool {
 	destinationAddressTypes := sets.Set[DestinationAddressType]{}
 	for _, s := range r.Settings {
@@ -2073,7 +2075,14 @@ func (r *RouteDestination) HasMixedEndpoints() bool {
 			destinationAddressTypes.Insert(*s.AddressType)
 		}
 	}
-	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
+	// IP+UDS mix is valid (both are static); only flag as mixed when FQDN is involved.
+	if destinationAddressTypes.Has(MIXED) {
+		return true
+	}
+	if destinationAddressTypes.Has(FQDN) && destinationAddressTypes.Len() > 1 {
+		return true
+	}
+	return false
 }
 
 // HasFiltersInSettings returns true if any setting in the destination has a filter
@@ -2254,10 +2263,11 @@ func (d *DestinationSetting) Validate() error {
 type DestinationAddressType string
 
 const (
-	IP    DestinationAddressType = "IP"
-	FQDN  DestinationAddressType = "FQDN"
-	MIXED DestinationAddressType = "Mixed"
-	UDS   DestinationAddressType = "UDS"
+	IP     DestinationAddressType = "IP"
+	FQDN   DestinationAddressType = "FQDN"
+	MIXED  DestinationAddressType = "Mixed"
+	UDS    DestinationAddressType = "UDS"
+	STATIC DestinationAddressType = "STATIC" // a mix of static addresses (IP and UDS)
 )
 
 // DestinationEndpoint holds the endpoint details associated with the destination
