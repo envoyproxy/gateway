@@ -643,6 +643,7 @@ _Appears in:_
 | `errorUtilizationPenaltyPercent` | _integer_ |  false  |  | ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).<br />This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.<br />For example:<br />- 100 => 1.0x<br />- 120 => 1.2x<br />- 200 => 2.0x<br />Must be non-negative. |
 | `metricNamesForComputingUtilization` | _string array_ |  false  |  | Metric names used to compute utilization if application_utilization is not set.<br />For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo". |
 | `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
+| `outOfBand` | _[OutOfBandReporting](#outofbandreporting)_ |  false  |  | OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a<br />server-streaming gRPC connection to each endpoint's<br />xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load<br />reports periodically, instead of relying on in-band ORCA metrics<br />carried in response headers/trailers.<br />The backend must implement OpenRcaService for this to take effect. |
 
 
 #### BandwidthLimitRequestConfig
@@ -4633,6 +4634,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `reportingPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ReportingPeriod is how often Envoy requests load reports from the server.<br />Must be greater than 0. Defaults to 10s. |
+| `port` | _integer_ |  false  |  | Port overrides the port used for the OutOfBand reporting connection, e.g. to<br />reach a separate reporting sidecar. Defaults to the endpoint's port. |
+| `authority` | _string_ |  false  |  | Authority overrides the :authority header on the OutOfBand gRPC stream.<br />If unset, Envoy uses the endpoint hostname, then the dialed address, then<br />the cluster name. |
 
 
 #### PassiveHealthCheck

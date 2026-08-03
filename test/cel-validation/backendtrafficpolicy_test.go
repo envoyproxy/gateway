@@ -1038,7 +1038,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.loadBalancer.backendUtilization.outOfBand.port"},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.port: Invalid value:",
+				": spec.loadBalancer.backendUtilization.outOfBand.port in body should be greater than or equal to 1",
+			},
 		},
 		{
 			desc: "backendUtilization OutOfBand port above max is rejected",
@@ -1063,7 +1066,66 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.loadBalancer.backendUtilization.outOfBand.port"},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.port: Invalid value:",
+				": spec.loadBalancer.backendUtilization.outOfBand.port in body should be less than or equal to 65535",
+			},
+		},
+		{
+			desc: "backendUtilization OutOfBand reportingPeriod of zero is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{ReportingPeriod: new(gwapiv1.Duration("0s"))},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.reportingPeriod: Invalid value:",
+				": reportingPeriod must be greater than 0",
+			},
+		},
+		{
+			desc: "backendUtilization OutOfBand empty authority is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("")},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.authority: Invalid value:",
+				": spec.loadBalancer.backendUtilization.outOfBand.authority in body should be at least 1 chars long",
+			},
 		},
 		{
 			desc: "backendUtilization OutOfBand authority with newline is rejected",
@@ -1088,7 +1150,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.loadBalancer.backendUtilization.outOfBand.authority"},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.authority: Invalid value:",
+				`: spec.loadBalancer.backendUtilization.outOfBand.authority in body should match '^[^\x00\n\r]*$'`,
+			},
 		},
 		{
 			desc: "backendUtilization field nil when type is BackendUtilization",
