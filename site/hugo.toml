@@ -229,6 +229,10 @@ enable = true
     weight = -102
     url = "/docs"
   [[menu.main]]
+    name = "Release Notes"
+    weight = -103
+    url = "/news/releases/notes"
+  [[menu.main]]
     name = "Tools"
     weight = -99
     url = "/tools"
