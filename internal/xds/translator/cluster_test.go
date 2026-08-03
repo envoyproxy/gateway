@@ -661,7 +661,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 
 func TestBackendClusterTranslatorAsClusterArgsAppliesTraffic(t *testing.T) {
 	circuitBreaker := &ir.CircuitBreaker{}
-	traffic := &ir.TrafficFeatures{CircuitBreaker: circuitBreaker}
+	traffic := &ir.ClusterTrafficFeatures{CircuitBreaker: circuitBreaker}
 
 	args := BackendClusterTranslator{}.asClusterArgs("backend-1", nil, &ExtraArgs{traffic: traffic}, nil)
 
