@@ -391,6 +391,20 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), backendUtilization.MetricNamesForComputingUtilization...)
 			}
 			lb.BackendUtilization.KeepResponseHeaders = new(ptr.Deref(backendUtilization.KeepResponseHeaders, false))
+			if backendUtilization.OutOfBand != nil {
+				oob := &ir.OutOfBandReporting{
+					Port:      backendUtilization.OutOfBand.Port,
+					Authority: backendUtilization.OutOfBand.Authority,
+				}
+				if backendUtilization.OutOfBand.ReportingPeriod != nil {
+					d, err := time.ParseDuration(string(*backendUtilization.OutOfBand.ReportingPeriod))
+					if err != nil {
+						return nil, fmt.Errorf("invalid OutOfBand ReportingPeriod value %s: %w", *backendUtilization.OutOfBand.ReportingPeriod, err)
+					}
+					oob.ReportingPeriod = ir.MetaV1DurationPtr(d)
+				}
+				lb.BackendUtilization.OutOfBand = oob
+			}
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
 			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))

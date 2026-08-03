@@ -63,7 +63,8 @@ var (
 	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrHTTPPathRegexModifierNoSetting           = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
-	ErrHTTPHostModifierDoubleReplace            = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
+	ErrHTTPHostModifierDoubleReplace            = errors.New("url rewrite filter cannot have a host modifier that supplies more than one of Name, Header, Backend and PathRegex")
+	ErrHTTPHostModifierEmptyPathRegex           = errors.New("host modifier with a PathRegex must supply both a Pattern and a Substitution")
 	ErrAddHeaderEmptyName                       = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate                       = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate                    = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
@@ -2471,16 +2472,17 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 // +k8s:deepcopy-gen=true
 type HTTPHostModifier struct {
 	// Name provides a string to replace the host of the request.
-	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
-	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
-	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
+	Name      *string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Header    *string            `json:"header,omitempty" yaml:"header,omitempty"`
+	Backend   *bool              `json:"backend,omitempty" yaml:"backend,omitempty"`
+	PathRegex *RegexMatchReplace `json:"pathRegex,omitempty" yaml:"pathRegex,omitempty"`
 }
 
 // Validate the fields within the HTTPPathModifier structure
 func (r HTTPHostModifier) Validate() error {
 	var errs error
 
-	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil}
+	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil, r.PathRegex != nil}
 	rwc := 0
 	for _, rw := range rewrites {
 		if rw {
@@ -2490,6 +2492,10 @@ func (r HTTPHostModifier) Validate() error {
 
 	if rwc > 1 {
 		errs = errors.Join(errs, ErrHTTPHostModifierDoubleReplace)
+	}
+
+	if r.PathRegex != nil && (r.PathRegex.Pattern == "" || r.PathRegex.Substitution == "") {
+		errs = errors.Join(errs, ErrHTTPHostModifierEmptyPathRegex)
 	}
 
 	return errs
@@ -3277,13 +3283,26 @@ type Random struct{}
 // BackendUtilization load balancer settings
 // +k8s:deepcopy-gen=true
 type BackendUtilization struct {
-	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
-	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
-	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
-	ErrorUtilizationPenaltyPercent     *uint32          `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
-	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
-	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
-	KeepResponseHeaders                *bool            `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+	BlackoutPeriod                     *metav1.Duration    `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
+	WeightExpirationPeriod             *metav1.Duration    `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
+	WeightUpdatePeriod                 *metav1.Duration    `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
+	ErrorUtilizationPenaltyPercent     *uint32             `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
+	MetricNamesForComputingUtilization []string            `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
+	SlowStart                          *SlowStart          `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	KeepResponseHeaders                *bool               `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+	OutOfBand                          *OutOfBandReporting `json:"outOfBand,omitempty" yaml:"outOfBand,omitempty"`
+}
+
+// OutOfBandReporting configures out-of-band ORCA load reporting for the
+// BackendUtilization load balancer.
+// +k8s:deepcopy-gen=true
+type OutOfBandReporting struct {
+	// ReportingPeriod is how often Envoy requests load reports from the server.
+	ReportingPeriod *metav1.Duration `json:"reportingPeriod,omitempty" yaml:"reportingPeriod,omitempty"`
+	// Port overrides the port used for the out-of-band reporting connection.
+	Port *int32 `json:"port,omitempty" yaml:"port,omitempty"`
+	// Authority overrides the :authority header on the out-of-band gRPC stream.
+	Authority *string `json:"authority,omitempty" yaml:"authority,omitempty"`
 }
 
 // ConsistentHash load balancer settings
