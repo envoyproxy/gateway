@@ -27006,6 +27006,7 @@ spec:
                                   For example, "Foo" and "foo" are considered the same header.
                                 maxLength: 256
                                 minLength: 1
+                                pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                 type: string
                               value:
                                 description: Value within the HTTP header to match

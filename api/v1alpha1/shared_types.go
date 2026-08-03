@@ -842,10 +842,7 @@ type ResponseOverrideHeaderMatch struct {
 	// Name of the HTTP header.
 	// The header name is case-insensitive.
 	// For example, "Foo" and "foo" are considered the same header.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	Name string `json:"name"`
+	Name gwapiv1.HTTPHeaderName `json:"name"`
 
 	// Value within the HTTP header to match against.
 	Value StringMatch `json:"value"`

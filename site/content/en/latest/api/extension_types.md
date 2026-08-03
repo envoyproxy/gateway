@@ -5774,7 +5774,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive.<br />For example, "Foo" and "foo" are considered the same header. |
+| `name` | _[HTTPHeaderName](#httpheadername)_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive.<br />For example, "Foo" and "foo" are considered the same header. |
 | `value` | _[StringMatch](#stringmatch)_ |  true  |  | Value within the HTTP header to match against. |
 
 
