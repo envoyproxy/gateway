@@ -30,7 +30,7 @@
       conditions:
       - lastTransitionTime: null
         message: Secret name "system_ca_certificates" is reserved for the system trust
-          store and cannot be modified by patches.
+          store and cannot be used by other resources.
         observedGeneration: 1
         reason: Invalid
         status: "False"
