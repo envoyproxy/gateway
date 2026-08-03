@@ -985,6 +985,7 @@
                           "rds": {
                             "configSource": {
                               "ads": {},
+                              "initialFetchTimeout": "0s",
                               "resourceApiVersion": "V3"
                             },
                             "routeConfigName": "default/eg/http"
@@ -1137,6 +1138,7 @@
                           "rds": {
                             "configSource": {
                               "ads": {},
+                              "initialFetchTimeout": "0s",
                               "resourceApiVersion": "V3"
                             },
                             "routeConfigName": "default/eg/grpc"

@@ -430,6 +430,7 @@ xds:
                   rds:
                     configSource:
                       ads: {}
+                      initialFetchTimeout: 0s
                       resourceApiVersion: V3
                     routeConfigName: envoy-gateway-system/eg/http
                   serverHeaderTransformation: PASS_THROUGH
