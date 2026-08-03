@@ -60,8 +60,7 @@ envoyProxyForGatewayClass:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.luaValidation is deprecated, use spec.luaValidationConfig.type
-          instead
+        message: spec.luaValidation is deprecated, use spec.lua.validationType instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -187,7 +186,7 @@ infraIR:
               status: "True"
               type: Accepted
             - lastTransitionTime: null
-              message: spec.luaValidation is deprecated, use spec.luaValidationConfig.type
+              message: spec.luaValidation is deprecated, use spec.lua.validationType
                 instead
               reason: DeprecatedField
               status: "True"

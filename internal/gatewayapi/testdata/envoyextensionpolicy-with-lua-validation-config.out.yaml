@@ -46,8 +46,8 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
   spec:
     logging: {}
-    luaValidationConfig:
-      type: Disabled
+    lua:
+      validationType: Disabled
   status:
     ancestors:
     - ancestorRef:
@@ -168,8 +168,8 @@ infraIR:
           namespace: envoy-gateway-system
         spec:
           logging: {}
-          luaValidationConfig:
-            type: Disabled
+          lua:
+            validationType: Disabled
         status:
           ancestors:
           - ancestorRef:

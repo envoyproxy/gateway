@@ -2486,11 +2486,11 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
 		{
-			desc: "luaValidationConfig-strict-valid",
+			desc: "lua-strict-valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{
-						Strict: &egv1a1.StrictValidation{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
 							AllowedPaths:   []string{"/tmp"},
 							AllowedEnvVars: []string{"LOG_LEVEL"},
 						},
@@ -2500,11 +2500,11 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "luaValidationConfig-empty-path-rejected",
+			desc: "lua-empty-path-rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{
-						Strict: &egv1a1.StrictValidation{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
 							AllowedPaths: []string{""},
 						},
 					},
@@ -2513,11 +2513,11 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"should be at least 1 chars long"},
 		},
 		{
-			desc: "luaValidationConfig-whitespace-path-rejected",
+			desc: "lua-whitespace-path-rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{
-						Strict: &egv1a1.StrictValidation{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
 							AllowedPaths: []string{"  "},
 						},
 					},
@@ -2526,11 +2526,11 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"allowedPaths entries must not be blank or whitespace-only"},
 		},
 		{
-			desc: "luaValidationConfig-root-path-rejected",
+			desc: "lua-root-path-rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{
-						Strict: &egv1a1.StrictValidation{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
 							AllowedPaths: []string{"/"},
 						},
 					},
@@ -2539,11 +2539,11 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"allowedPaths entries must not be the filesystem root"},
 		},
 		{
-			desc: "luaValidationConfig-multi-slash-root-path-rejected",
+			desc: "lua-multi-slash-root-path-rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{
-						Strict: &egv1a1.StrictValidation{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
 							AllowedPaths: []string{"//"},
 						},
 					},
@@ -2552,11 +2552,11 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"allowedPaths entries must not be the filesystem root"},
 		},
 		{
-			desc: "luaValidationConfig-whitespace-envvar-rejected",
+			desc: "lua-whitespace-envvar-rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{
-						Strict: &egv1a1.StrictValidation{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
 							AllowedEnvVars: []string{"  "},
 						},
 					},
@@ -2565,49 +2565,49 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"allowedEnvVars entries must not be blank or whitespace-only"},
 		},
 		{
-			desc: "luaValidationConfig-with-explicit-strict-type-allowed",
+			desc: "lua-with-explicit-strict-type-allowed",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{
-						Type:   new(egv1a1.LuaValidationStrict),
-						Strict: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
+					Lua: &egv1a1.LuaValidationConfig{
+						ValidationType:   new(egv1a1.LuaValidationStrict),
+						StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
 					},
 				}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: "luaValidationConfig-with-unset-type-allowed",
+			desc: "lua-with-unset-type-allowed",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{
-						Strict: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
 					},
 				}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: "luaValidationConfig-strict-with-insecure-syntax-type-rejected",
+			desc: "lua-strict-with-insecure-syntax-type-rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{
-						Type:   new(egv1a1.LuaValidationInsecureSyntax),
-						Strict: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
+					Lua: &egv1a1.LuaValidationConfig{
+						ValidationType:   new(egv1a1.LuaValidationInsecureSyntax),
+						StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
 					},
 				}
 			},
-			wantErrors: []string{"strict can only be set when type is Strict"},
+			wantErrors: []string{"strictValidation can only be set when validationType is Strict"},
 		},
 		{
-			desc: "luaValidation-and-luaValidationConfig-mutually-exclusive",
+			desc: "luaValidation-and-lua-mutually-exclusive",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidation:       new(egv1a1.LuaValidationStrict),
-					LuaValidationConfig: &egv1a1.LuaValidationConfig{Strict: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}}},
+					LuaValidation: new(egv1a1.LuaValidationStrict),
+					Lua:           &egv1a1.LuaValidationConfig{StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}}},
 				}
 			},
-			wantErrors: []string{"only one of luaValidation or luaValidationConfig may be set"},
+			wantErrors: []string{"only one of luaValidation or lua may be set"},
 		},
 	}
 

@@ -83,11 +83,11 @@ func (l *LuaValidator) validate(code string) error {
 }
 
 // getLuaValidation returns the Lua validation level, defaulting to strict if not configured.
-// The union LuaValidationConfig.Type takes precedence over the deprecated LuaValidation field.
+// The union Lua.ValidationType takes precedence over the deprecated LuaValidation field.
 func (l *LuaValidator) getLuaValidation() egv1a1.LuaValidation {
 	if l.envoyProxy != nil {
-		if cfg := l.envoyProxy.Spec.LuaValidationConfig; cfg != nil && cfg.Type != nil {
-			return *cfg.Type
+		if cfg := l.envoyProxy.Spec.Lua; cfg != nil && cfg.ValidationType != nil {
+			return *cfg.ValidationType
 		}
 		if l.envoyProxy.Spec.LuaValidation != nil {
 			return *l.envoyProxy.Spec.LuaValidation
@@ -102,9 +102,9 @@ func (l *LuaValidator) getLuaValidation() egv1a1.LuaValidation {
 func (l *LuaValidator) allowlistData() string {
 	var paths, envVars []string
 	if l.envoyProxy != nil {
-		if cfg := l.envoyProxy.Spec.LuaValidationConfig; cfg != nil && cfg.Strict != nil {
-			paths = cfg.Strict.AllowedPaths
-			envVars = cfg.Strict.AllowedEnvVars
+		if cfg := l.envoyProxy.Spec.Lua; cfg != nil && cfg.StrictValidation != nil {
+			paths = cfg.StrictValidation.AllowedPaths
+			envVars = cfg.StrictValidation.AllowedEnvVars
 		}
 	}
 

@@ -769,29 +769,18 @@ spec:
                       and the log level is the value. If unspecified, defaults to "default: warn".
                     type: object
                 type: object
-              luaValidation:
+              lua:
                 description: |-
-                  LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
-                  Default: Strict
-
-                  Deprecated: Use LuaValidationConfig.Type instead. This field will be removed in a future release.
-                enum:
-                - Strict
-                - InsecureSyntax
-                - Disabled
-                type: string
-              luaValidationConfig:
-                description: |-
-                  LuaValidationConfig configures how Lua scripts from EnvoyExtensionPolicy resources are
+                  Lua configures how Lua scripts from EnvoyExtensionPolicy resources are
                   validated in the gateway controller. It selects the validation mode and, for the Strict
                   mode, defines the filesystem paths and environment variables the scripts are permitted to
                   access during validation.
                 properties:
-                  strict:
+                  strictValidation:
                     description: |-
-                      Strict configures the security sandbox that the Strict validation mode executes Lua scripts
-                      in, defining the filesystem paths and environment variables the scripts are permitted to
-                      access during validation.
+                      StrictValidation configures the security sandbox that the Strict validation mode executes Lua
+                      scripts in, defining the filesystem paths and environment variables the scripts are permitted
+                      to access during validation.
 
                       It has no effect for the InsecureSyntax or Disabled modes, which do not execute the security
                       sandbox.
@@ -834,10 +823,10 @@ spec:
                             root
                           rule: self.all(p, !p.matches('^/+$'))
                     type: object
-                  type:
+                  validationType:
                     default: Strict
                     description: |-
-                      Type determines the strictness of the Lua script validation.
+                      ValidationType determines the strictness of the Lua script validation.
                       Default: Strict
                     enum:
                     - Strict
@@ -846,8 +835,21 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-validations:
-                - message: strict can only be set when type is Strict
-                  rule: '!has(self.strict) || !has(self.type) || self.type == ''Strict'''
+                - message: strictValidation can only be set when validationType is
+                    Strict
+                  rule: '!has(self.strictValidation) || !has(self.validationType)
+                    || self.validationType == ''Strict'''
+              luaValidation:
+                description: |-
+                  LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
+                  Default: Strict
+
+                  Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release.
+                enum:
+                - Strict
+                - InsecureSyntax
+                - Disabled
+                type: string
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
@@ -18306,8 +18308,8 @@ spec:
                 type: object
             type: object
             x-kubernetes-validations:
-            - message: only one of luaValidation or luaValidationConfig may be set
-              rule: '!has(self.luaValidation) || !has(self.luaValidationConfig)'
+            - message: only one of luaValidation or lua may be set
+              rule: '!has(self.luaValidation) || !has(self.lua)'
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
             properties:

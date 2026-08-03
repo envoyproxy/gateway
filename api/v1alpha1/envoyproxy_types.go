@@ -35,7 +35,7 @@ type EnvoyProxy struct {
 }
 
 // EnvoyProxySpec defines the desired state of EnvoyProxy.
-// +kubebuilder:validation:XValidation:rule="!has(self.luaValidation) || !has(self.luaValidationConfig)",message="only one of luaValidation or luaValidationConfig may be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.luaValidation) || !has(self.lua)",message="only one of luaValidation or lua may be set"
 type EnvoyProxySpec struct {
 	// Provider defines the desired resource provider and provider-specific configuration.
 	// If unspecified, the "Kubernetes" resource provider is used with default configuration
@@ -188,17 +188,17 @@ type EnvoyProxySpec struct {
 	// LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
 	// Default: Strict
 	//
-	// Deprecated: Use LuaValidationConfig.Type instead. This field will be removed in a future release.
+	// Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release.
 	// +optional
 	LuaValidation *LuaValidation `json:"luaValidation,omitempty"`
 
-	// LuaValidationConfig configures how Lua scripts from EnvoyExtensionPolicy resources are
+	// Lua configures how Lua scripts from EnvoyExtensionPolicy resources are
 	// validated in the gateway controller. It selects the validation mode and, for the Strict
 	// mode, defines the filesystem paths and environment variables the scripts are permitted to
 	// access during validation.
 	//
 	// +optional
-	LuaValidationConfig *LuaValidationConfig `json:"luaValidationConfig,omitempty"`
+	Lua *LuaValidationConfig `json:"lua,omitempty"`
 
 	// DynamicModules defines the set of dynamic modules that are allowed to be
 	// used by EnvoyExtensionPolicy resources and dynamic module load balancer
@@ -265,25 +265,25 @@ const (
 // in the gateway controller.
 //
 // +union
-// +kubebuilder:validation:XValidation:rule="!has(self.strict) || !has(self.type) || self.type == 'Strict'",message="strict can only be set when type is Strict"
+// +kubebuilder:validation:XValidation:rule="!has(self.strictValidation) || !has(self.validationType) || self.validationType == 'Strict'",message="strictValidation can only be set when validationType is Strict"
 type LuaValidationConfig struct {
-	// Type determines the strictness of the Lua script validation.
+	// ValidationType determines the strictness of the Lua script validation.
 	// Default: Strict
 	//
 	// +unionDiscriminator
 	// +kubebuilder:default=Strict
 	// +optional
-	Type *LuaValidation `json:"type,omitempty"`
+	ValidationType *LuaValidation `json:"validationType,omitempty"`
 
-	// Strict configures the security sandbox that the Strict validation mode executes Lua scripts
-	// in, defining the filesystem paths and environment variables the scripts are permitted to
-	// access during validation.
+	// StrictValidation configures the security sandbox that the Strict validation mode executes Lua
+	// scripts in, defining the filesystem paths and environment variables the scripts are permitted
+	// to access during validation.
 	//
 	// It has no effect for the InsecureSyntax or Disabled modes, which do not execute the security
 	// sandbox.
 	//
 	// +optional
-	Strict *StrictValidation `json:"strict,omitempty"`
+	StrictValidation *StrictValidation `json:"strictValidation,omitempty"`
 }
 
 // StrictValidation defines the configuration that Strict Lua validation runs with.

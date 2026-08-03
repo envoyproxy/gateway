@@ -213,8 +213,8 @@ func Test_BasicValidation(t *testing.T) {
 func allowlistProxy(paths, envVars []string) *egv1a1.EnvoyProxy {
 	return &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
-			LuaValidationConfig: &egv1a1.LuaValidationConfig{
-				Strict: &egv1a1.StrictValidation{
+			Lua: &egv1a1.LuaValidationConfig{
+				StrictValidation: &egv1a1.StrictValidation{
 					AllowedPaths:   paths,
 					AllowedEnvVars: envVars,
 				},
