@@ -192,49 +192,56 @@ func (t *Translator) ProcessSecurityPolicies(
 			}
 		}
 	}
-	// Process the policies targeting ListenerSets Listeners
-	for i, currPolicy := range securityPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
-		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
-		for _, currTarget := range targetRefs {
-			if isListenerSetListener(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = securityPolicies[i]
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
-				}
 
-				t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+	// Only run the ListenerSet-specific translation when at least one ListenerSet exists.
+	// When none are present, no policy can successfully attach to a ListenerSet (the target resolves to
+	// nil and processing returns early), so these loops would be pure overhead.
+	if len(resources.ListenerSets) > 0 {
+		// Process the policies targeting ListenerSets Listeners
+		for i, currPolicy := range securityPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+			targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+			for _, currTarget := range targetRefs {
+				if isListenerSetListener(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = securityPolicies[i]
+						handledPolicies[policyName] = policy
+						res = append(res, policy)
+					}
+
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+				}
+			}
+		}
+		// Process the policies targeting ListenerSets
+		for i, currPolicy := range securityPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			targetRefs := resolvePolicyTargets(
+				currPolicy.Spec.PolicyTargetReferences,
+				resources.ListenerSets,
+				resources.ReferenceGrants,
+				egv1a1.GroupName,
+				egv1a1.KindSecurityPolicy,
+				currPolicy.Namespace,
+				t.GetNamespace,
+			)
+			for _, currTarget := range targetRefs {
+				if isListenerSet(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = securityPolicies[i]
+						handledPolicies[policyName] = policy
+						res = append(res, policy)
+					}
+
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+				}
 			}
 		}
 	}
-	// Process the policies targeting ListenerSets
-	for i, currPolicy := range securityPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := resolvePolicyTargets(
-			currPolicy.Spec.PolicyTargetReferences,
-			resources.ListenerSets,
-			resources.ReferenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindSecurityPolicy,
-			currPolicy.Namespace,
-			t.GetNamespace,
-		)
-		for _, currTarget := range targetRefs {
-			if isListenerSet(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = securityPolicies[i]
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
-				}
 
-				t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
-			}
-		}
-	}
 	// Process the policies targeting Gateway Listeners
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
@@ -969,7 +976,7 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // - Empty/no Authorization is allowed and results in no-op on TCP.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
-	if p.Spec.CORS != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
+	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
 		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
@@ -1242,6 +1249,11 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
+	var csrf *ir.CSRF
+	if policy.Spec.CSRF != nil {
+		csrf = t.buildCSRF(policy.Spec.CSRF)
+	}
+
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(
 			policy,
@@ -1355,6 +1367,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		// Pre-create security features to avoid repeated allocations
 		securityFeatures := &ir.SecurityFeatures{
 			CORS:          cors,
+			CSRF:          csrf,
 			JWT:           jwt,
 			OIDC:          oidc,
 			APIKeyAuth:    apiKeyAuth,
@@ -1525,6 +1538,11 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
+	var csrf *ir.CSRF
+	if policy.Spec.CSRF != nil {
+		csrf = t.buildCSRF(policy.Spec.CSRF)
+	}
+
 	if policy.Spec.JWT != nil {
 		if jwt, err = t.buildJWT(
 			policy,
@@ -1609,6 +1627,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	// Pre-create security features and error response to avoid repeated allocations
 	securityFeatures := &ir.SecurityFeatures{
 		CORS:          cors,
+		CSRF:          csrf,
 		JWT:           jwt,
 		OIDC:          oidc,
 		APIKeyAuth:    apiKeyAuth,
@@ -1738,6 +1757,40 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	}
 
 	return irCORS
+}
+
+func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
+	var additionalOrigins []*ir.StringMatch
+
+	for _, origin := range csrf.AdditionalOrigins {
+		// Envoy's CSRF filter matches the host and port of the Origin header against the
+		// target host, so the scheme is dropped before the matcher is built.
+		hostAndPort := originHostAndPort(string(origin))
+		if containsWildcard(hostAndPort) {
+			regexStr := wildcard2regex(hostAndPort)
+			additionalOrigins = append(additionalOrigins, &ir.StringMatch{
+				SafeRegex: &regexStr,
+			})
+		} else {
+			additionalOrigins = append(additionalOrigins, &ir.StringMatch{
+				Exact: &hostAndPort,
+			})
+		}
+	}
+
+	return &ir.CSRF{
+		ShadowFraction:    csrf.ShadowFraction,
+		AdditionalOrigins: additionalOrigins,
+	}
+}
+
+// originHostAndPort strips the scheme from an Origin, leaving its host and optional port.
+// A bare "*" carries no scheme and is returned as is.
+func originHostAndPort(origin string) string {
+	if _, hostAndPort, found := strings.Cut(origin, "://"); found {
+		return hostAndPort
+	}
+	return origin
 }
 
 func containsWildcard(s string) bool {

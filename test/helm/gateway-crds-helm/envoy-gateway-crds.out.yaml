@@ -2020,8 +2020,9 @@ spec:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
                   configurations targeting a parent resource. When set, this configuration will be merged
-                  into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).
-                  This field cannot be set when targeting a parent resource (Gateway).
+                  into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for
+                  example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).
+                  Currently, this field can only be set when targeting xRoute resources.
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
                 x-kubernetes-validations:
@@ -3962,28 +3963,37 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true '
-            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
-              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
-                ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''] : true'
+            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
+              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'',
+                ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'']
+                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
-                : true '
+                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'',
+                ''TLSRoute'']) : true '
+            - message: mergeType can only be used with xRoute targets
+              rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
+                && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in
+                [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'']))
+                && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind
+                in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])))'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
             - message: requestBuffer cannot be used together with httpUpgrade
               rule: '!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size()
                 == 0'
             - message: admissionControl can only be used with HTTPRoute, GRPCRoute,
-                or Gateway targets
+                Gateway, or ListenerSet targets
               rule: '!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind
-                in [''Gateway'', ''HTTPRoute'', ''GRPCRoute'']) && (!has(self.targetRefs)
-                || self.targetRefs.all(ref, ref.kind in [''Gateway'', ''HTTPRoute'',
-                ''GRPCRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
-                sel.kind in [''Gateway'', ''HTTPRoute'', ''GRPCRoute''])))'
+                in [''Gateway'', ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'']) &&
+                (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in [''Gateway'',
+                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute''])) && (!has(self.targetSelectors)
+                || self.targetSelectors.all(sel, sel.kind in [''Gateway'', ''ListenerSet'',
+                ''HTTPRoute'', ''GRPCRoute''])))'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&
@@ -10266,6 +10276,7 @@ spec:
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
@@ -10298,6 +10309,7 @@ spec:
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
@@ -10328,6 +10340,7 @@ spec:
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
@@ -10606,12 +10619,24 @@ spec:
                 - InsecureSyntax
                 - Disabled
                 type: string
+              mergeBackends:
+                description: |-
+                  MergeBackends configures cluster deduplication: routes that reference the same backend
+                  share a single Envoy cluster instead of Envoy Gateway generating one cluster per route
+                  rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
+                  improves upstream connection pooling.
+
+                  Disabled when unset; specifying this field at all (even without further configuration)
+                  enables it. Mutually exclusive with MergeGateways.
+                type: object
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
                   Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.
                   This means that the port, protocol and hostname tuple must be unique for every listener.
                   If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
+
+                  Mutually exclusive with MergeBackends.
                 type: boolean
               mergeType:
                 description: |-
@@ -20216,8 +20241,11 @@ spec:
                             type: object
                         type: object
                       envoyHpa:
-                        description: EnvoyHpa defines the Horizontal Pod Autoscaler
-                          settings for Envoy Proxy Deployment.
+                        description: |-
+                          EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.
+                          If the HPA is set, the Replicas field from EnvoyDeployment will be ignored, and the
+                          number of replicas is solely managed by the HPA. Use MinReplicas to control the
+                          lower bound of the replica count instead.
                         properties:
                           behavior:
                             description: |-
@@ -21096,7 +21124,7 @@ spec:
                     description: |-
                       Type is the type of resource provider to use. A resource provider provides
                       infrastructure resources for running the data plane, e.g. Envoy proxy, and
-                      optional auxiliary control planes. Supported types are "Kubernetes"and "Host".
+                      optional auxiliary control planes. Supported types are "Kubernetes" and "Host".
                     enum:
                     - Kubernetes
                     - Host
@@ -28066,6 +28094,8 @@ spec:
             x-kubernetes-validations:
             - message: only one of luaValidation or lua may be set
               rule: '!has(self.luaValidation) || !has(self.lua)'
+            - message: mergeGateways and mergeBackends cannot both be enabled
+              rule: '!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends))'
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
             properties:
@@ -29481,6 +29511,75 @@ spec:
                       It specifies the value in the Access-Control-Max-Age CORS response header..
                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
+                type: object
+              csrf:
+                description: |-
+                  CSRF defines the configuration for Cross-Site Request Forgery (CSRF) protection.
+                  When enabled, the CSRF filter checks that the Origin header matches the destination
+                  or one of the additional allowed origins on mutating requests (POST, PUT, DELETE, PATCH).
+                properties:
+                  additionalOrigins:
+                    description: |-
+                      AdditionalOrigins specifies additional origins that are allowed to make mutating
+                      requests, beyond the destination origin. A request whose Origin header matches one
+                      of them is allowed. The value "*" allows any origin, which effectively disables
+                      origin validation.
+
+                      Note: Envoy's CSRF filter compares the host and port of the origin only, so the
+                      scheme is ignored: "https://www.example.com" and "http://www.example.com" are
+                      equivalent here, and both allow the request regardless of the scheme the client
+                      used.
+                    items:
+                      description: |-
+                        Origin is defined by the scheme (protocol), hostname (domain), and port of
+                        the URL used to access it. The hostname can be "precise" which is just the
+                        domain name or "wildcard" which is a domain name prefixed with a single
+                        wildcard label such as "*.example.com".
+                        In addition to that a single wildcard (with or without scheme) can be
+                        configured to match any origin.
+
+                        For example, the following are valid origins:
+                        - https://foo.example.com
+                        - https://*.example.com
+                        - http://foo.example.com:8080
+                        - http://*.example.com:8080
+                        - https://*
+                        - moz-extension://example.com
+                        - foo://*.example.com:8080
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^(\*|[A-Za-z][A-Za-z0-9+.-]*:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$
+                      type: string
+                    maxItems: 16
+                    type: array
+                  shadowFraction:
+                    description: |-
+                      ShadowFraction represents the fraction of requests for which the CSRF policy is
+                      evaluated in shadow (dry-run) mode. For these requests, the filter records whether
+                      the request would have been allowed or rejected in the `csrf.request_valid` and
+                      `csrf.request_invalid` stats, but always lets the request through. The remaining
+                      requests are enforced, i.e. a mutating request with a missing or non-matching
+                      Origin header is rejected with a 403.
+
+                      Defaults to 0% (all requests are enforced) if not specified. Set it to 100% to
+                      dry run the filter, watch the stats to find origins that would be rejected, then
+                      lower it to roll enforcement out gradually.
+                    properties:
+                      denominator:
+                        default: 100
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      numerator:
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    required:
+                    - numerator
+                    type: object
+                    x-kubernetes-validations:
+                    - message: numerator must be less than or equal to denominator
+                      rule: self.numerator <= self.denominator
                 type: object
               extAuth:
                 description: ExtAuth defines the configuration for External Authorization.

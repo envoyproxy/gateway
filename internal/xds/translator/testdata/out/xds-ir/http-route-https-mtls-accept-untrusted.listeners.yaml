@@ -24,6 +24,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http-plain
         serverHeaderTransformation: PASS_THROUGH
@@ -59,6 +60,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-mtls-request
         serverHeaderTransformation: PASS_THROUGH
@@ -77,6 +79,7 @@
           - name: envoy-gateway/gateway-1/server-cert-request
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
           validationContext:
             trustChainVerification: ACCEPT_UNTRUSTED
@@ -112,6 +115,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-mtls-requireany
         serverHeaderTransformation: PASS_THROUGH
@@ -130,6 +134,7 @@
           - name: envoy-gateway/gateway-1/server-cert-requireany
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
           validationContext:
             trustChainVerification: ACCEPT_UNTRUSTED
@@ -165,6 +170,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-mtls-verifyifgiven
         serverHeaderTransformation: PASS_THROUGH
@@ -183,11 +189,13 @@
           - name: envoy-gateway/gateway-1/server-cert-verifyifgiven
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
           validationContextSdsSecretConfig:
             name: envoy-gateway/gateway-1/ca-cert-verifyifgiven
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -221,6 +229,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-mtls-requireandverify
         serverHeaderTransformation: PASS_THROUGH
@@ -239,11 +248,13 @@
           - name: envoy-gateway/gateway-1/server-cert-requireandverify
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
           validationContextSdsSecretConfig:
             name: envoy-gateway/gateway-1/ca-cert-requireandverify
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -277,6 +288,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-mtls-request-with-ca
         serverHeaderTransformation: PASS_THROUGH
@@ -298,11 +310,13 @@
               name: envoy-gateway/gateway-1/ca-cert-request-with-ca
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway/gateway-1/server-cert-request-with-ca
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true

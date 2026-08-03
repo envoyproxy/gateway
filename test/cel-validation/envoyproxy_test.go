@@ -2609,6 +2609,36 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{"only one of luaValidation or lua may be set"},
 		},
+		{
+			desc: "mergeBackends present (empty) is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeGateways and mergeBackends both set is invalid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeGateways = new(true)
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{"mergeGateways and mergeBackends cannot both be enabled"},
+		},
+		{
+			desc: "mergeGateways enabled with mergeBackends unset is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeGateways = new(true)
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeGateways disabled with mergeBackends set is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeGateways = new(false)
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{},
+		},
 	}
 
 	for _, tc := range cases {

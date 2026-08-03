@@ -169,7 +169,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 		}
 	}
 
-	// Only run the ListenerSet-specific　translation when at least one ListenerSet exists.
+	// Only run the ListenerSet-specific translation when at least one ListenerSet exists.
 	// When none are present, no policy can successfully attach to a ListenerSet (the target resolves to
 	// nil and processing returns early), so these loops would be pure overhead.
 	if len(resources.ListenerSets) > 0 {
