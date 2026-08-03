@@ -3557,6 +3557,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.CodeVerifierTTL != nil {
+		in, out := &in.CodeVerifierTTL, &out.CodeVerifierTTL
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	if in.CookieNameOverrides != nil {
 		in, out := &in.CookieNameOverrides, &out.CookieNameOverrides
 		*out = new(v1alpha1.OIDCCookieNames)
