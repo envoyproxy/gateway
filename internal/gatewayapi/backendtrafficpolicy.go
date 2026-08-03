@@ -252,9 +252,16 @@ func BuildBTPIndexes(
 
 	for _, btp := range btps {
 		hasRoutingType := btp.Spec.RoutingType != nil
+		// A policy with mergeType Replace discards the parent policy's configuration
+		// entirely, so its routes must not share a merged BackendCluster with routes
+		// governed by that parent: the shared cluster carries the parent's cluster-scoped
+		// settings and would reinstate exactly what the policy discards. This holds even
+		// when the policy sets no cluster-scoped field of its own, so it disqualifies
+		// merging on its own. See #9588 for the same problem with mergeType unset.
+		replacesParentConfig := btp.Spec.MergeType != nil && *btp.Spec.MergeType == egv1a1.Replace
 		// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
 		// accepted gateway can enable merging; RoutingType applies regardless of MergeBackends.
-		hasClusterScoped := mergeBackendsEnabled && btpSpecHasClusterScopedFields(&btp.Spec)
+		hasClusterScoped := mergeBackendsEnabled && (btpSpecHasClusterScopedFields(&btp.Spec) || replacesParentConfig)
 		hasLoadBalancer := mergeBackendsEnabled && btp.Spec.LoadBalancer != nil
 
 		if !hasRoutingType && !hasClusterScoped && !hasLoadBalancer {
