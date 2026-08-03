@@ -970,10 +970,10 @@ type TCPClientTimeout struct {
 	// IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
 	// bytes sent or received on either the upstream or downstream connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
-	// HandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
+	// TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
 	// (e.g. the TLS handshake) after a connection is accepted.
 	// If this expires before the transport reports connection establishment, the connection is summarily closed.
-	HandshakeTimeout *metav1.Duration `json:"handshakeTimeout,omitempty" yaml:"handshakeTimeout,omitempty"`
+	TLSHandshakeTimeout *metav1.Duration `json:"tlsHandshakeTimeout,omitempty" yaml:"handshakeTimeout,omitempty"`
 	// ConnectionInspectionTimeout is the maximum time to wait for initial inspection
 	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.
 	// If exceeded, the connection is dropped.

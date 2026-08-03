@@ -8522,8 +8522,8 @@ func (in *TCPClientTimeout) DeepCopyInto(out *TCPClientTimeout) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.HandshakeTimeout != nil {
-		in, out := &in.HandshakeTimeout, &out.HandshakeTimeout
+	if in.TLSHandshakeTimeout != nil {
+		in, out := &in.TLSHandshakeTimeout, &out.TLSHandshakeTimeout
 		*out = new(v1.Duration)
 		**out = **in
 	}

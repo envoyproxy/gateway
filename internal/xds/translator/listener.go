@@ -517,8 +517,8 @@ func (t *Translator) addHCMToXDSListener(
 		Filters: filters,
 	}
 
-	if irListener.Timeout != nil && irListener.Timeout.TCP != nil && irListener.Timeout.TCP.HandshakeTimeout != nil {
-		filterChain.TransportSocketConnectTimeout = durationpb.New(irListener.Timeout.TCP.HandshakeTimeout.Duration)
+	if irListener.Timeout != nil && irListener.Timeout.TCP != nil && irListener.Timeout.TCP.TLSHandshakeTimeout != nil {
+		filterChain.TransportSocketConnectTimeout = durationpb.New(irListener.Timeout.TCP.TLSHandshakeTimeout.Duration)
 	}
 
 	if irListener.TLS != nil {
@@ -823,8 +823,8 @@ func buildTCPFilterChain(
 		Name:    tlsListenerFilterChainName(irRoute),
 	}
 
-	if timeout != nil && timeout.TCP != nil && timeout.TCP.HandshakeTimeout != nil {
-		filterChain.TransportSocketConnectTimeout = durationpb.New(timeout.TCP.HandshakeTimeout.Duration)
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.TLSHandshakeTimeout != nil {
+		filterChain.TransportSocketConnectTimeout = durationpb.New(timeout.TCP.TLSHandshakeTimeout.Duration)
 	}
 
 	return filterChain, nil

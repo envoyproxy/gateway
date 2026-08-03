@@ -6322,7 +6322,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
-| `handshakeTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | HandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation<br />(e.g. the TLS handshake) after a connection is accepted.<br />If this expires before the transport reports connection establishment, the connection is summarily closed. |
+| `tlsHandshakeTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation<br />(e.g. the TLS handshake) after a connection is accepted.<br />If this expires before the transport reports connection establishment, the connection is summarily closed. |
 | `connectionInspectionTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ConnectionInspectionTimeout is the maximum time to wait for initial inspection<br />(TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.<br />If exceeded, the connection is dropped.<br />Default: 15 seconds. |
 
 

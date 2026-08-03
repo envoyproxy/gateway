@@ -946,12 +946,12 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			}
 			irTCPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
 		}
-		if clientTimeout.TCP.HandshakeTimeout != nil {
-			d, err := time.ParseDuration(string(*clientTimeout.TCP.HandshakeTimeout))
+		if clientTimeout.TCP.TLSHandshakeTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.TCP.TLSHandshakeTimeout))
 			if err != nil {
-				return nil, fmt.Errorf("invalid TCP HandshakeTimeout value %s", *clientTimeout.TCP.HandshakeTimeout)
+				return nil, fmt.Errorf("invalid TCP TLSHandshakeTimeout value %s", *clientTimeout.TCP.TLSHandshakeTimeout)
 			}
-			irTCPTimeout.HandshakeTimeout = ir.MetaV1DurationPtr(d)
+			irTCPTimeout.TLSHandshakeTimeout = ir.MetaV1DurationPtr(d)
 		}
 		if clientTimeout.TCP.ConnectionInspectionTimeout != nil {
 			d, err := time.ParseDuration(string(*clientTimeout.TCP.ConnectionInspectionTimeout))

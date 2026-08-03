@@ -29774,18 +29774,18 @@ spec:
                           Default: 15 seconds.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
-                      handshakeTimeout:
-                        description: |-
-                          HandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
-                          (e.g. the TLS handshake) after a connection is accepted.
-                          If this expires before the transport reports connection establishment, the connection is summarily closed.
-                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                        type: string
                       idleTimeout:
                         description: |-
                           IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
                           bytes sent or received on either the upstream or downstream connection.
                           Default: 1 hour.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      tlsHandshakeTimeout:
+                        description: |-
+                          TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
+                          (e.g. the TLS handshake) after a connection is accepted.
+                          If this expires before the transport reports connection establishment, the connection is summarily closed.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object

@@ -12,7 +12,7 @@ clientTrafficPolicies:
         sectionName: http-1
       timeout:
         tcp:
-          handshakeTimeout: "10s"
+          tlsHandshakeTimeout: "10s"
           connectionInspectionTimeout: "60s"
         http:
           requestReceivedTimeout: "5s"
