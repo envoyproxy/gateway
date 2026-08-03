@@ -50,11 +50,13 @@
               name: policy-btls-for-service-1/default-ca
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway-system/client-auth
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         sni: example.com
   type: EDS

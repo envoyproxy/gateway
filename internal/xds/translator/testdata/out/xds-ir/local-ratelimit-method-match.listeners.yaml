@@ -29,6 +29,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: method-match-listener
         serverHeaderTransformation: PASS_THROUGH
