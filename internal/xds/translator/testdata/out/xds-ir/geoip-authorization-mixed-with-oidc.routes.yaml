@@ -32,7 +32,7 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: httproute/default/httproute-protected/rule/0/match/0/www_example_com
+          requirementName: exjwt_6861375dfe67a09f
         envoy.filters.http.oauth2:
           '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
           config:
@@ -55,11 +55,13 @@
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-protected-route
                 sdsConfig:
                   ads: {}
+                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/default/policy-for-protected-route
                 sdsConfig:
                   ads: {}
+                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             csrfTokenExpiresIn: 2100s
             defaultExpiresIn: 3600s
