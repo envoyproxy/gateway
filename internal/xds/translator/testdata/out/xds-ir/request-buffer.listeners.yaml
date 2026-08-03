@@ -29,6 +29,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
@@ -69,6 +70,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-2/http
         serverHeaderTransformation: PASS_THROUGH

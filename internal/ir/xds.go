@@ -1238,6 +1238,8 @@ func (b *TrafficFeatures) Validate() error {
 type SecurityFeatures struct {
 	// CORS policy for the route.
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// CSRF policy for the route.
+	CSRF *CSRF `json:"csrf,omitempty" yaml:"csrf,omitempty"`
 	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
@@ -1302,6 +1304,17 @@ type CORS struct {
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
 	// AllowCredentials indicates whether a request can include user credentials.
 	AllowCredentials bool `json:"allowCredentials,omitempty" yaml:"allowCredentials,omitempty"`
+}
+
+// CSRF holds the Cross-Site Request Forgery (CSRF) policy for the route.
+//
+// +k8s:deepcopy-gen=true
+type CSRF struct {
+	// ShadowFraction is the fraction of requests evaluated in shadow/dry-run mode.
+	// The remaining requests are enforced. nil means 0%, i.e. everything is enforced.
+	ShadowFraction *gwapiv1.Fraction `json:"shadowFraction,omitempty" yaml:"shadowFraction,omitempty"`
+	// AdditionalOrigins specifies additional origins that are allowed.
+	AdditionalOrigins []*StringMatch `json:"additionalOrigins,omitempty" yaml:"additionalOrigins,omitempty"`
 }
 
 // JWT defines the schema for authenticating HTTP requests using
