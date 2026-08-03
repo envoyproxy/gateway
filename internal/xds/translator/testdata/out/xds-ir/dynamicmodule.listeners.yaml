@@ -76,6 +76,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http-listener-scope
         serverHeaderTransformation: PASS_THROUGH

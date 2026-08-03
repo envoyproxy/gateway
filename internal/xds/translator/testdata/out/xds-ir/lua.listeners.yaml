@@ -76,6 +76,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http-2
         serverHeaderTransformation: PASS_THROUGH
@@ -119,6 +120,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http-3
         serverHeaderTransformation: PASS_THROUGH
@@ -162,6 +164,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http-4
         serverHeaderTransformation: PASS_THROUGH
@@ -205,6 +208,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http-5
         serverHeaderTransformation: PASS_THROUGH
@@ -248,6 +252,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http-7
         serverHeaderTransformation: PASS_THROUGH
@@ -291,6 +296,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http-8
         serverHeaderTransformation: PASS_THROUGH
