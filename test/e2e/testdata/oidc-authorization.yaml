@@ -21,6 +21,21 @@ spec:
         - name: infra-backend-v1
           port: 8080
 ---
+# Make the test-provided X-Forwarded-For address available to clientCIDRs.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: oidc-authz-client-ip-detection
+  namespace: gateway-conformance-infra
+spec:
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 1
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace
+---
 apiVersion: v1
 kind: Secret
 metadata:
