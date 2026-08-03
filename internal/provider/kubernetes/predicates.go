@@ -91,7 +91,8 @@ func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesGateway(ctx context.Conte
 		return true
 	}
 
-	for _, gtw := range gtwList.Items {
+	for i := range gtwList.Items {
+		gtw := &gtwList.Items[i]
 		for _, l := range gtw.Spec.Listeners {
 			if hasNamespacesFromSelector(l.AllowedRoutes) {
 				return true
@@ -109,9 +110,10 @@ func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesGateway(ctx context.Conte
 		// any of them have SelectorAllowedRoutes set to true, so we return true.
 		return true
 	}
-	for _, l := range listenerSetList.Items {
-		for _, ls := range l.Spec.Listeners {
-			if hasNamespacesFromSelector(ls.AllowedRoutes) {
+	for i := range listenerSetList.Items {
+		ls := &listenerSetList.Items[i]
+		for _, l := range ls.Spec.Listeners {
+			if hasNamespacesFromSelector(l.AllowedRoutes) {
 				return true
 			}
 		}
