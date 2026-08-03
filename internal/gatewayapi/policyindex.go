@@ -41,11 +41,13 @@ func (idx *policyIndex[T]) putFirst(scope policyScope, entry policyIndexEntry[T]
 }
 
 // isRouteEffective reports whether a route-rule/route-level policy is effective at its own
-// scope: an explicit value always is, and so is an unset value whose MergeType is nil, since nil
-// means the policy doesn't inherit from any parent at all.
+// scope: an explicit value always is, and so is an unset value whose MergeType doesn't inherit
+// from a parent. Both nil and Replace mean no inheritance, nil because the policy doesn't merge
+// at all and Replace because it discards the parent's configuration wholesale, so in either case
+// an unset value is the policy's own answer rather than a reason to fall through to the parent.
 func isRouteEffective[T comparable](value T, mergeType *egv1a1.MergeType) bool {
 	var zero T
-	return value != zero || mergeType == nil
+	return value != zero || mergeType == nil || *mergeType == egv1a1.Replace
 }
 
 // setRouteRuleLevel records a route-rule target's first-registered entry.
