@@ -1,0 +1,65 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+# PathRegex host rewrite is invalid on a dynamic resolver backend: the upstream host would be
+# derived from request-controlled path text, bypassing the dynamic forward proxy loopback protection.
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-dynamic-resolver-path-regex
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - method:
+          method: "Rewrite"
+          service: "com.example"
+          type: Exact
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-dynamic-resolver
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-path-regex
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-dynamic-resolver
+    namespace: default
+  spec:
+    type: DynamicResolver
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: valid-path-regex
+    namespace: default
+  spec:
+    urlRewrite:
+      hostname:
+        type: PathRegex
+        pathRegex:
+          pattern: "^/([^/]+)/.*$"
+          substitution: "\\1"

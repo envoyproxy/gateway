@@ -116,6 +116,42 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "Valid PathRegex",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.PathRegexHTTPHostnameModifier,
+							PathRegex: &egv1a1.HostnamePathRegexRewrite{
+								Pattern:      "^/node/([0-9]+)/api.*",
+								Substitution: "backend-\\1.service.namespace.svc.cluster.local",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid PathRegex substitution with control characters",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.PathRegexHTTPHostnameModifier,
+							PathRegex: &egv1a1.HostnamePathRegexRewrite{
+								Pattern:      "^/node/([0-9]+)/api.*",
+								Substitution: "backend-\\1.service\r\n.local",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.urlRewrite.hostname.pathRegex.substitution in body should match '^[^\\r\\n\\x00]*$'",
+			},
+		},
+		{
 			desc: "Valid appendXForwardedHost false",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
@@ -176,6 +212,103 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{
 				"spec.urlRewrite.hostname: Invalid value:",
 				": header must be nil if the type is not Header",
+			},
+		},
+		{
+			desc: "invalid PathRegex missing settings",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.PathRegexHTTPHostnameModifier,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.urlRewrite.hostname: Invalid value:",
+				": pathRegex must be specified for PathRegex type",
+			},
+		},
+		{
+			desc: "invalid PathRegex with header",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type:   egv1a1.PathRegexHTTPHostnameModifier,
+							Header: new("foo"),
+							PathRegex: &egv1a1.HostnamePathRegexRewrite{
+								Pattern:      "^/node/([0-9]+)/api.*",
+								Substitution: "backend-\\1.service.namespace.svc.cluster.local",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.urlRewrite.hostname: Invalid value:",
+				": header must be nil if the type is not Header",
+			},
+		},
+		{
+			desc: "invalid Header with pathRegex",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type:   egv1a1.HeaderHTTPHostnameModifier,
+							Header: new("foo"),
+							PathRegex: &egv1a1.HostnamePathRegexRewrite{
+								Pattern:      "^/node/([0-9]+)/api.*",
+								Substitution: "backend-\\1.service.namespace.svc.cluster.local",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.urlRewrite.hostname: Invalid value:",
+				": pathRegex must be nil if the type is not PathRegex",
+			},
+		},
+		{
+			desc: "invalid Backend with pathRegex",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.BackendHTTPHostnameModifier,
+							PathRegex: &egv1a1.HostnamePathRegexRewrite{
+								Pattern:      "^/node/([0-9]+)/api.*",
+								Substitution: "backend-\\1.service.namespace.svc.cluster.local",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.urlRewrite.hostname: Invalid value:",
+				": pathRegex must be nil if the type is not PathRegex",
+			},
+		},
+		{
+			desc: "invalid PathRegex missing pattern and substitution",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.PathRegexHTTPHostnameModifier,
+							PathRegex: &egv1a1.HostnamePathRegexRewrite{
+								Pattern:      "",
+								Substitution: "",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.urlRewrite.hostname.pathRegex.pattern: Invalid value: \"\": spec.urlRewrite.hostname.pathRegex.pattern in body should be at least 1 chars long",
 			},
 		},
 		{
