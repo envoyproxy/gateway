@@ -22,6 +22,7 @@
             - profile
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            codeVerifierTokenExpiresIn: 120s
             credentials:
               clientId: client.oauth.foo.com
               cookieNames:
