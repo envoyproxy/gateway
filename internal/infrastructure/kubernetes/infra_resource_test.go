@@ -346,8 +346,10 @@ func newGatewayNamespaceInfra(t *testing.T, cli client.Client) *Infra {
 	kube.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 		Type: egv1a1.ProviderTypeKubernetes,
 		Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-			Deploy: &egv1a1.KubernetesDeployMode{
-				Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+			EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+				Deploy: &egv1a1.KubernetesDeployMode{
+					Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+				},
 			},
 		},
 	}

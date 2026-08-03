@@ -100,7 +100,7 @@ func TestServiceAccount(t *testing.T) {
 		Backend: egv1a1.RateLimitDatabaseBackend{
 			Type: egv1a1.RedisBackendType,
 			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+				URL: new("redis.redis.svc:6379"),
 			},
 		},
 	}
@@ -126,7 +126,7 @@ func TestService(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -137,7 +137,7 @@ func TestService(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
@@ -169,7 +169,7 @@ func TestConfigmap(t *testing.T) {
 		Backend: egv1a1.RateLimitDatabaseBackend{
 			Type: egv1a1.RedisBackendType,
 			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+				URL: new("redis.redis.svc:6379"),
 			},
 		},
 	}
@@ -193,7 +193,7 @@ func TestPDB(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -205,7 +205,7 @@ func TestPDB(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -225,7 +225,7 @@ func TestPDB(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -241,7 +241,9 @@ func TestPDB(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					RateLimitPDB: tc.pdb,
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						RateLimitPDB: tc.pdb,
+					},
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -260,7 +262,7 @@ func TestDeployment(t *testing.T) {
 		Backend: egv1a1.RateLimitDatabaseBackend{
 			Type: egv1a1.RedisBackendType,
 			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+				URL: new("redis.redis.svc:6379"),
 			},
 		},
 	}
@@ -268,6 +270,7 @@ func TestDeployment(t *testing.T) {
 		caseName  string
 		rateLimit *egv1a1.RateLimit
 		deploy    *egv1a1.KubernetesDeploymentSpec
+		hpa       *egv1a1.KubernetesHorizontalPodAutoscalerSpec
 	}{
 		{
 			caseName:  "default",
@@ -280,7 +283,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
@@ -487,7 +490,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 						TLS: &egv1a1.RedisTLSSettings{
 							CertificateRef: &gwapiv1.SecretObjectReference{
 								Name: "ratelimit-cert",
@@ -558,7 +561,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 						TLS: &egv1a1.RedisTLSSettings{
 							CertificateRef: &gwapiv1.SecretObjectReference{
 								Name: "ratelimit-cert",
@@ -620,7 +623,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 						TLS: &egv1a1.RedisTLSSettings{
 							CertificateRef: &gwapiv1.SecretObjectReference{
 								Name: "ratelimit-cert-origin",
@@ -725,7 +728,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
@@ -743,7 +746,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
@@ -762,7 +765,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -784,7 +787,7 @@ func TestDeployment(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -800,6 +803,21 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			// The replicas field must not be rendered when an HPA is configured, so that
+			// Envoy Gateway doesn't own spec.replicas and revert the replica count
+			// computed by the HPA.
+			caseName:  "with-hpa",
+			rateLimit: rateLimit,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: new(int32(2)),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+			},
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: new(int32(3)),
+				MaxReplicas: new(int32(10)),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -808,7 +826,10 @@ func TestDeployment(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					RateLimitDeployment: tc.deploy,
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						RateLimitDeployment: tc.deploy,
+						RateLimitHpa:        tc.hpa,
+					},
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -834,7 +855,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -846,7 +867,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -883,7 +904,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -898,7 +919,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				Backend: egv1a1.RateLimitDatabaseBackend{
 					Type: egv1a1.RedisBackendType,
 					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
+						URL: new("redis.redis.svc:6379"),
 					},
 				},
 			},
@@ -914,8 +935,10 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					RateLimitHpa:        tc.rateLimitHpa,
-					RateLimitDeployment: tc.rateLimitDeployment,
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						RateLimitHpa:        tc.rateLimitHpa,
+						RateLimitDeployment: tc.rateLimitDeployment,
+					},
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -1063,7 +1086,7 @@ func TestValidateRedisSettings(t *testing.T) {
 		}
 		c := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(certSecret).Build()
 		require.NoError(t, Validate(context.Background(), c, redisGW(&egv1a1.RateLimitRedisSettings{
-			URL: "redis.redis.svc:6379",
+			URL: new("redis.redis.svc:6379"),
 			TLS: &egv1a1.RedisTLSSettings{
 				CertificateRef: &gwapiv1.SecretObjectReference{Name: "redis-cert"},
 			},

@@ -192,6 +192,11 @@ func mergeServerValidationTLSConfigs(
 
 	if btpValidationTLSConfig.CACertificate != nil {
 		mergedConfig.CACertificate = btpValidationTLSConfig.CACertificate
+		// If the BTLSP provides an explicit CA certificate, it overrides the backend's
+		// system trust store — clear UseSystemTrustStore so the IR is consistent.
+		if !btpValidationTLSConfig.UseSystemTrustStore {
+			mergedConfig.UseSystemTrustStore = false
+		}
 	}
 	if btpValidationTLSConfig.SNI != nil { // BTP takes precedence for SNI, if set, it will override Backend resource SNI and disable AutoSNIFromEndpointHostname
 		mergedConfig.SNI = btpValidationTLSConfig.SNI
@@ -276,8 +281,12 @@ func (t *Translator) processServerValidationTLSSettings(
 	if !tlsConfig.InsecureSkipVerify {
 		tlsConfig.UseSystemTrustStore = ptr.Deref(backend.Spec.TLS.WellKnownCACertificates, "") == gwapiv1.WellKnownCACertificatesSystem
 		if tlsConfig.UseSystemTrustStore {
+			name := fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace)
+			if !t.PerResourceSystemCASecret {
+				name = ir.SystemTrustStoreSecretName
+			}
 			tlsConfig.CACertificate = &ir.TLSCACertificate{
-				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
+				Name: name,
 			}
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
 			caRefs := getObjectReferences(gwapiv1.Namespace(backend.Namespace), backend.Spec.TLS.CACertificateRefs)
@@ -504,8 +513,12 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 		SubjectAltNames:     subjectAltNames,
 	}
 	if tlsBundle.UseSystemTrustStore {
+		name := fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
+		if !t.PerResourceSystemCASecret {
+			name = ir.SystemTrustStoreSecretName
+		}
 		tlsBundle.CACertificate = &ir.TLSCACertificate{
-			Name: fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace),
+			Name: name,
 		}
 		return tlsBundle, nil
 	}
