@@ -37,7 +37,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              httproute/default/httproute-protected/rule/0/match/0/www_example_com/exjwt:
+              exjwt_3c2e18607d861b79:
                 claimToHeaders:
                 - claimName: groups
                   headerName: x-user-groups
@@ -58,8 +58,8 @@
                     timeout: 10s
                     uri: https://oauth.example.com/realms/example/protocol/openid-connect/certs
             requirementMap:
-              httproute/default/httproute-protected/rule/0/match/0/www_example_com:
-                providerName: httproute/default/httproute-protected/rule/0/match/0/www_example_com/exjwt
+              exjwt_6861375dfe67a09f:
+                providerName: exjwt_3c2e18607d861b79
         - name: envoy.filters.http.rbac
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
@@ -79,6 +79,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH

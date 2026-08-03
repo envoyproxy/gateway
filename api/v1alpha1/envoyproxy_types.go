@@ -125,6 +125,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.cors
 	//
+	// - envoy.filters.http.csrf
+	//
 	// - envoy.filters.http.header_mutation
 	//
 	// - envoy.filters.http.geoip

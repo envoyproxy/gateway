@@ -46,6 +46,7 @@ func testOIDCWithAuthorizationDeny(t *testing.T, suite *suite.ConformanceTestSui
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-authz", Namespace: ns}, suite.ControllerName, ancestorRef)
+		ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-authz-client-ip-detection", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 		// A client in the denied CIDR must be rejected with 403 before the OIDC
 		// filter runs. Before the fix this returned a 302 redirect to Keycloak.

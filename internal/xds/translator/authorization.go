@@ -141,9 +141,9 @@ func listenerContainsRBAC(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-// listenerContainsPreAuthRBAC returns true if any route on the listener needs
+// listenerNeedsPreAuthRBAC returns true if any route on the listener needs
 // the pre-auth RBAC filter.
-func listenerContainsPreAuthRBAC(irListener *ir.HTTPListener) bool {
+func listenerNeedsPreAuthRBAC(irListener *ir.HTTPListener) bool {
 	if irListener == nil {
 		return false
 	}
@@ -158,9 +158,9 @@ func listenerContainsPreAuthRBAC(irListener *ir.HTTPListener) bool {
 }
 
 // routeNeedsPreAuthRBAC returns true if the route has both an authentication
-// mechanism that runs before the main RBAC filter and a non-empty leading run
-// of authentication-independent authorization rules. Only in that case does
-// splitting the enforcement change the observable behavior.
+// mechanism that runs before the main RBAC filter and a Deny rule in its leading
+// run of authentication-independent authorization rules. An Allow-only prefix
+// is a no-op because the pre-auth filter also uses Allow as its default action.
 func routeNeedsPreAuthRBAC(route *ir.HTTPRoute) bool {
 	if route == nil || route.Security == nil || route.Security.Authorization == nil {
 		return false
@@ -168,7 +168,12 @@ func routeNeedsPreAuthRBAC(route *ir.HTTPRoute) bool {
 	if !hasPreRBACAuthentication(route.Security) {
 		return false
 	}
-	return len(authIndependentPrefix(route.Security.Authorization)) > 0
+	for _, rule := range authIndependentPrefix(route.Security.Authorization) {
+		if rule.Action == egv1a1.AuthorizationActionDeny {
+			return true
+		}
+	}
+	return false
 }
 
 // hasPreRBACAuthentication returns true if the route configures an
@@ -190,9 +195,10 @@ func hasPreRBACAuthentication(sf *ir.SecurityFeatures) bool {
 // whose principal matches only on client IP (clientCIDRs) and/or geo location
 // (clientIPGeoLocations) — the principals that can be evaluated before any
 // authentication filter runs. It stops at the first rule whose principal needs
-// authentication state (a JWT or header principal). It is a contiguous prefix,
-// not a filter: once an auth-dependent rule is seen, later IP/geo rules are
-// excluded too.
+// authentication state (a JWT or header principal), or that uses CEL, which can
+// reference authentication-derived headers, metadata, or filter state. It is a
+// contiguous prefix, not a filter: once an auth-dependent rule is seen, later
+// IP/geo rules are excluded too.
 //
 // The prefix must be contiguous to preserve the policy's first-match-wins
 // semantics. Because these rules keep their original order and all precede any
@@ -210,7 +216,7 @@ func authIndependentPrefix(authorization *ir.Authorization) []*ir.AuthorizationR
 
 	prefix := make([]*ir.AuthorizationRule, 0, len(authorization.Rules))
 	for _, rule := range authorization.Rules {
-		if rule == nil || !isAuthIndependentRule(rule) {
+		if rule == nil || !isPreAuthRule(rule) {
 			break
 		}
 		prefix = append(prefix, rule)
@@ -220,13 +226,16 @@ func authIndependentPrefix(authorization *ir.Authorization) []*ir.AuthorizationR
 }
 
 // isPreAuthRule reports whether a rule can be evaluated before authentication.
-// Only client IP / geo principals qualify.
+// Only client IP / geo principals and operation matches qualify. CEL is excluded
+// because it can reference authentication-derived headers, metadata, or filter
+// state.
 //
-// NOTE: this is intentionally an exclusion check. If a NEW auth-dependent field
-// is added to ir.Principal, it MUST be added here, or such rules will be wrongly
-// enforced pre-auth. Test_isPreAuthRule pins every Principal field to force that.
+// NOTE: this is intentionally an exclusion check. If a new matching field is
+// added to ir.AuthorizationRule or ir.Principal, it MUST be considered here, or
+// such rules may be wrongly enforced pre-auth. Test_isPreAuthRule pins every
+// field to force that review.
 func isPreAuthRule(rule *ir.AuthorizationRule) bool {
-	return rule.Principal.JWT == nil && len(rule.Principal.Headers) == 0
+	return rule.CEL == nil && rule.Principal.JWT == nil && len(rule.Principal.Headers) == 0
 }
 
 // patchRoute patches the provided route with the RBAC config if applicable.

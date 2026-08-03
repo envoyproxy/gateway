@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,6 +65,15 @@ func headerRule() *ir.AuthorizationRule {
 	}
 }
 
+func celRule() *ir.AuthorizationRule {
+	expression := "request.headers['authorization'] != ''"
+	return &ir.AuthorizationRule{
+		Name:   "cel",
+		Action: egv1a1.AuthorizationActionDeny,
+		CEL:    &expression,
+	}
+}
+
 func ruleNames(rules []*ir.AuthorizationRule) []string {
 	names := make([]string, 0, len(rules))
 	for _, r := range rules {
@@ -105,6 +115,13 @@ func Test_authIndependentPrefix(t *testing.T) {
 			want: []string{"cidr"},
 		},
 		{
+			name: "prefix stops at the first CEL rule",
+			authorization: &ir.Authorization{
+				Rules: []*ir.AuthorizationRule{cidrRule(), celRule(), geoRule()},
+			},
+			want: []string{"cidr"},
+		},
+		{
 			name: "leading authentication-dependent rule yields an empty prefix",
 			authorization: &ir.Authorization{
 				Rules: []*ir.AuthorizationRule{jwtRule(), geoRule()},
@@ -117,6 +134,43 @@ func Test_authIndependentPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := authIndependentPrefix(tt.authorization)
 			assert.Equal(t, tt.want, ruleNames(got))
+		})
+	}
+}
+
+func Test_isPreAuthRule(t *testing.T) {
+	principalType := reflect.TypeOf(ir.Principal{})
+	principalFields := make([]string, 0, principalType.NumField())
+	for i := 0; i < principalType.NumField(); i++ {
+		principalFields = append(principalFields, principalType.Field(i).Name)
+	}
+	assert.ElementsMatch(t, []string{"ClientCIDRs", "JWT", "Headers", "ClientIPGeoLocations"}, principalFields,
+		"update isPreAuthRule and its tests when adding a field to ir.Principal")
+
+	ruleType := reflect.TypeOf(ir.AuthorizationRule{})
+	ruleFields := make([]string, 0, ruleType.NumField())
+	for i := 0; i < ruleType.NumField(); i++ {
+		ruleFields = append(ruleFields, ruleType.Field(i).Name)
+	}
+	assert.ElementsMatch(t, []string{"Name", "Action", "Operation", "Principal", "CEL"}, ruleFields,
+		"update isPreAuthRule and its tests when adding a field to ir.AuthorizationRule")
+
+	tests := []struct {
+		name string
+		rule *ir.AuthorizationRule
+		want bool
+	}{
+		{name: "empty principal", rule: &ir.AuthorizationRule{}, want: true},
+		{name: "client CIDRs", rule: cidrRule(), want: true},
+		{name: "client IP geo locations", rule: geoRule(), want: true},
+		{name: "JWT", rule: jwtRule(), want: false},
+		{name: "headers", rule: headerRule(), want: false},
+		{name: "CEL", rule: celRule(), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isPreAuthRule(tt.rule))
 		})
 	}
 }
@@ -172,6 +226,41 @@ func Test_routeNeedsPreAuthRBAC(t *testing.T) {
 				},
 			},
 			want: false,
+		},
+		{
+			name: "authentication with an allow-only prefix",
+			route: &ir.HTTPRoute{
+				Security: &ir.SecurityFeatures{
+					OIDC: &ir.OIDC{},
+					Authorization: &ir.Authorization{Rules: []*ir.AuthorizationRule{
+						{
+							Name:      "allow-cidr",
+							Action:    egv1a1.AuthorizationActionAllow,
+							Principal: cidrRule().Principal,
+						},
+						jwtRule(),
+					}},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "authentication with an allow followed by a deny in the prefix",
+			route: &ir.HTTPRoute{
+				Security: &ir.SecurityFeatures{
+					OIDC: &ir.OIDC{},
+					Authorization: &ir.Authorization{Rules: []*ir.AuthorizationRule{
+						{
+							Name:      "allow-cidr",
+							Action:    egv1a1.AuthorizationActionAllow,
+							Principal: cidrRule().Principal,
+						},
+						geoRule(),
+						jwtRule(),
+					}},
+				},
+			},
+			want: true,
 		},
 		{
 			name: "authentication with a geo deny prefix",

@@ -76,10 +76,12 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
 				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilterCSRF),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
 			},
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCSRF),
 				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
 				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
