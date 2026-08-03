@@ -18,7 +18,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -2364,13 +2363,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &v1.Namespace{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, ns *v1.Namespace) []reconcile.Request {
+		source.Kind(mgr.GetCache(), &corev1.Namespace{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, ns *corev1.Namespace) []reconcile.Request {
 				// Gateway listener restricts route attachment with allowedRoutes.namespaces.from: Selector
 				// changing a namespace's labels after an HTTPRoute in it has been evaluated should trigger re-evaluation.
 				// It's hard to determine which Gateway/GatewayClass(es) are affected by a namespace label change,
 				// so we enqueue all GatewayClasses for reconciliation.
-				// In the worse case, changes unreleated namespace labels will trigger unnecessary reconciliations, but this is a rare event.
+				// In the worst case, changes unrelated namespace labels will trigger unnecessary reconciliations, but this is a rare event.
 
 				if !r.hasSelectorAllowedRoutesGateway(ctx) {
 					return nil
