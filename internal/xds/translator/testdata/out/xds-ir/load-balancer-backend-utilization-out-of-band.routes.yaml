@@ -1,0 +1,21 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: backend-utilization-oob-route
+      route:
+        cluster: backend-utilization-oob-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: backend-utilization-oob-defaults-route
+      route:
+        cluster: backend-utilization-oob-defaults-dest
+        upgradeConfigs:
+        - upgradeType: websocket

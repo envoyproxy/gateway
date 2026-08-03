@@ -25730,8 +25730,12 @@ spec:
                           The backend must implement OpenRcaService for this to take effect.
                         properties:
                           authority:
-                            description: Authority overrides the :authority header
-                              on the OutOfBand gRPC stream.
+                            description: |-
+                              Authority overrides the :authority header on the OutOfBand gRPC stream.
+                              If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                              the cluster name.
+                            maxLength: 259
+                            minLength: 1
                             pattern: ^[^\x00\n\r]*$
                             type: string
                           port:
@@ -25745,9 +25749,12 @@ spec:
                           reportingPeriod:
                             description: |-
                               ReportingPeriod is how often Envoy requests load reports from the server.
-                              If omitted, uses Envoy's default of 10s.
+                              Must be greater than 0. Defaults to 10s.
                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
+                            x-kubernetes-validations:
+                            - message: reportingPeriod must be greater than 0
+                              rule: duration(self) > duration('0s')
                         type: object
                       weightExpirationPeriod:
                         description: If a given endpoint has not reported load metrics
@@ -31658,8 +31665,12 @@ spec:
                                     The backend must implement OpenRcaService for this to take effect.
                                   properties:
                                     authority:
-                                      description: Authority overrides the :authority
-                                        header on the OutOfBand gRPC stream.
+                                      description: |-
+                                        Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                        If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                        the cluster name.
+                                      maxLength: 259
+                                      minLength: 1
                                       pattern: ^[^\x00\n\r]*$
                                       type: string
                                     port:
@@ -31673,9 +31684,13 @@ spec:
                                     reportingPeriod:
                                       description: |-
                                         ReportingPeriod is how often Envoy requests load reports from the server.
-                                        If omitted, uses Envoy's default of 10s.
+                                        Must be greater than 0. Defaults to 10s.
                                       pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: reportingPeriod must be greater than
+                                          0
+                                        rule: duration(self) > duration('0s')
                                   type: object
                                 weightExpirationPeriod:
                                   description: If a given endpoint has not reported
@@ -46221,9 +46236,12 @@ spec:
                                                       The backend must implement OpenRcaService for this to take effect.
                                                     properties:
                                                       authority:
-                                                        description: Authority overrides
-                                                          the :authority header on
-                                                          the OutOfBand gRPC stream.
+                                                        description: |-
+                                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                                          the cluster name.
+                                                        maxLength: 259
+                                                        minLength: 1
                                                         pattern: ^[^\x00\n\r]*$
                                                         type: string
                                                       port:
@@ -46237,9 +46255,13 @@ spec:
                                                       reportingPeriod:
                                                         description: |-
                                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                                          If omitted, uses Envoy's default of 10s.
+                                                          Must be greater than 0. Defaults to 10s.
                                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
+                                                        x-kubernetes-validations:
+                                                        - message: reportingPeriod
+                                                            must be greater than 0
+                                                          rule: duration(self) > duration('0s')
                                                     type: object
                                                   weightExpirationPeriod:
                                                     description: If a given endpoint
@@ -47831,9 +47853,12 @@ spec:
                                                       The backend must implement OpenRcaService for this to take effect.
                                                     properties:
                                                       authority:
-                                                        description: Authority overrides
-                                                          the :authority header on
-                                                          the OutOfBand gRPC stream.
+                                                        description: |-
+                                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                                          the cluster name.
+                                                        maxLength: 259
+                                                        minLength: 1
                                                         pattern: ^[^\x00\n\r]*$
                                                         type: string
                                                       port:
@@ -47847,9 +47872,13 @@ spec:
                                                       reportingPeriod:
                                                         description: |-
                                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                                          If omitted, uses Envoy's default of 10s.
+                                                          Must be greater than 0. Defaults to 10s.
                                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
+                                                        x-kubernetes-validations:
+                                                        - message: reportingPeriod
+                                                            must be greater than 0
+                                                          rule: duration(self) > duration('0s')
                                                     type: object
                                                   weightExpirationPeriod:
                                                     description: If a given endpoint
@@ -49607,9 +49636,12 @@ spec:
                                                 The backend must implement OpenRcaService for this to take effect.
                                               properties:
                                                 authority:
-                                                  description: Authority overrides
-                                                    the :authority header on the OutOfBand
-                                                    gRPC stream.
+                                                  description: |-
+                                                    Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                                    If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                                    the cluster name.
+                                                  maxLength: 259
+                                                  minLength: 1
                                                   pattern: ^[^\x00\n\r]*$
                                                   type: string
                                                 port:
@@ -49623,9 +49655,13 @@ spec:
                                                 reportingPeriod:
                                                   description: |-
                                                     ReportingPeriod is how often Envoy requests load reports from the server.
-                                                    If omitted, uses Envoy's default of 10s.
+                                                    Must be greater than 0. Defaults to 10s.
                                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                   type: string
+                                                  x-kubernetes-validations:
+                                                  - message: reportingPeriod must
+                                                      be greater than 0
+                                                    rule: duration(self) > duration('0s')
                                               type: object
                                             weightExpirationPeriod:
                                               description: If a given endpoint has
@@ -51331,8 +51367,12 @@ spec:
                                           The backend must implement OpenRcaService for this to take effect.
                                         properties:
                                           authority:
-                                            description: Authority overrides the :authority
-                                              header on the OutOfBand gRPC stream.
+                                            description: |-
+                                              Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                              If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                              the cluster name.
+                                            maxLength: 259
+                                            minLength: 1
                                             pattern: ^[^\x00\n\r]*$
                                             type: string
                                           port:
@@ -51346,9 +51386,13 @@ spec:
                                           reportingPeriod:
                                             description: |-
                                               ReportingPeriod is how often Envoy requests load reports from the server.
-                                              If omitted, uses Envoy's default of 10s.
+                                              Must be greater than 0. Defaults to 10s.
                                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
+                                            x-kubernetes-validations:
+                                            - message: reportingPeriod must be greater
+                                                than 0
+                                              rule: duration(self) > duration('0s')
                                         type: object
                                       weightExpirationPeriod:
                                         description: If a given endpoint has not reported
@@ -52777,12 +52821,48 @@ spec:
                         description: Header is the name of the header whose value
                           would be used to rewrite the Host header
                         type: string
+                      pathRegex:
+                        description: |-
+                          PathRegex defines a regex match and substitution applied to the request path to compute
+                          the rewritten Host header.
+                          For example, with:
+                          pathRegex:
+                            pattern: "^/tenant/([a-z0-9-]+)/.*"
+                            substitution: "\\1.example.internal"
+                          a request to "http://foo.bar.com/tenant/tenant1/api/v1" has its upstream Host header rewritten
+                          to "tenant1.example.internal" (the request path "/tenant/tenant1/api/v1" is preserved).
+                        properties:
+                          pattern:
+                            description: |-
+                              Pattern matches a regular expression against the value of the HTTP Path. The regex string must
+                              adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
+                            minLength: 1
+                            type: string
+                          substitution:
+                            description: |-
+                              Substitution is an expression that replaces the matched portion. The expression may include numbered
+                              capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.
+
+                              The resulting value is used as the upstream Host header and should be constrained to a valid
+                              DNS hostname by using explicit regex capture groups in Pattern.
+
+                              The NUL, CR, and LF characters are not allowed: they are invalid in an HTTP header value and are
+                              rejected by the Envoy proto (well_known_regex HTTP_HEADER_VALUE), which would otherwise cause the
+                              generated configuration to be rejected by the data plane.
+                            minLength: 1
+                            pattern: ^[^\r\n\x00]*$
+                            type: string
+                        required:
+                        - pattern
+                        - substitution
+                        type: object
                       type:
                         description: HTTPPathModifierType defines the type of Hostname
                           rewrite.
                         enum:
                         - Header
                         - Backend
+                        - PathRegex
                         type: string
                     required:
                     - type
@@ -52792,6 +52872,10 @@ spec:
                       rule: '!(has(self.header) && self.type != ''Header'')'
                     - message: header must be specified for Header type
                       rule: '!(!has(self.header) && self.type == ''Header'')'
+                    - message: pathRegex must be nil if the type is not PathRegex
+                      rule: '!(has(self.pathRegex) && self.type != ''PathRegex'')'
+                    - message: pathRegex must be specified for PathRegex type
+                      rule: '!(!has(self.pathRegex) && self.type == ''PathRegex'')'
                   path:
                     description: Path defines a path rewrite.
                     properties:
@@ -54619,8 +54703,12 @@ spec:
                                       The backend must implement OpenRcaService for this to take effect.
                                     properties:
                                       authority:
-                                        description: Authority overrides the :authority
-                                          header on the OutOfBand gRPC stream.
+                                        description: |-
+                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                          the cluster name.
+                                        maxLength: 259
+                                        minLength: 1
                                         pattern: ^[^\x00\n\r]*$
                                         type: string
                                       port:
@@ -54634,9 +54722,13 @@ spec:
                                       reportingPeriod:
                                         description: |-
                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                          If omitted, uses Envoy's default of 10s.
+                                          Must be greater than 0. Defaults to 10s.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: reportingPeriod must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
                                     type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
@@ -56094,8 +56186,12 @@ spec:
                                       The backend must implement OpenRcaService for this to take effect.
                                     properties:
                                       authority:
-                                        description: Authority overrides the :authority
-                                          header on the OutOfBand gRPC stream.
+                                        description: |-
+                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                          the cluster name.
+                                        maxLength: 259
+                                        minLength: 1
                                         pattern: ^[^\x00\n\r]*$
                                         type: string
                                       port:
@@ -56109,9 +56205,13 @@ spec:
                                       reportingPeriod:
                                         description: |-
                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                          If omitted, uses Envoy's default of 10s.
+                                          Must be greater than 0. Defaults to 10s.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: reportingPeriod must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
                                     type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
@@ -57877,9 +57977,12 @@ spec:
                                             The backend must implement OpenRcaService for this to take effect.
                                           properties:
                                             authority:
-                                              description: Authority overrides the
-                                                :authority header on the OutOfBand
-                                                gRPC stream.
+                                              description: |-
+                                                Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                                If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                                the cluster name.
+                                              maxLength: 259
+                                              minLength: 1
                                               pattern: ^[^\x00\n\r]*$
                                               type: string
                                             port:
@@ -57893,9 +57996,13 @@ spec:
                                             reportingPeriod:
                                               description: |-
                                                 ReportingPeriod is how often Envoy requests load reports from the server.
-                                                If omitted, uses Envoy's default of 10s.
+                                                Must be greater than 0. Defaults to 10s.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: reportingPeriod must be greater
+                                                  than 0
+                                                rule: duration(self) > duration('0s')
                                           type: object
                                         weightExpirationPeriod:
                                           description: If a given endpoint has not
@@ -59680,8 +59787,12 @@ spec:
                                       The backend must implement OpenRcaService for this to take effect.
                                     properties:
                                       authority:
-                                        description: Authority overrides the :authority
-                                          header on the OutOfBand gRPC stream.
+                                        description: |-
+                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                          the cluster name.
+                                        maxLength: 259
+                                        minLength: 1
                                         pattern: ^[^\x00\n\r]*$
                                         type: string
                                       port:
@@ -59695,9 +59806,13 @@ spec:
                                       reportingPeriod:
                                         description: |-
                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                          If omitted, uses Envoy's default of 10s.
+                                          Must be greater than 0. Defaults to 10s.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: reportingPeriod must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
                                     type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported

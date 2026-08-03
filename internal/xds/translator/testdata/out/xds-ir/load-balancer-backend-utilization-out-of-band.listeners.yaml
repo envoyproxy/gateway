@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -18,19 +18,16 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
-        mergeSlashes: true
         normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-btls/http
+          routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
-    name: envoy-gateway/gateway-btls/http
+    name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-btls/http
+  name: first-listener
   perConnectionBufferLimitBytes: 32768
