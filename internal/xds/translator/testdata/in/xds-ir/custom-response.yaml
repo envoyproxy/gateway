@@ -101,9 +101,7 @@ http:
               - match:
                   responseHeaders:
                     - name: X-Custom-Header
-                      value:
-                        name: X-Custom-Header
-                        exact: custom-value
+                      exact: custom-value
                 name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/1
                 response:
                   body: bWF0Y2hlZCByZXNwb25zZSBoZWFkZXI=
@@ -113,13 +111,9 @@ http:
                     - value: 503
                   responseHeaders:
                     - name: X-Error-Type
-                      value:
-                        name: X-Error-Type
-                        prefix: upstream-
+                      prefix: upstream-
                     - name: X-Region
-                      value:
-                        name: X-Region
-                        safeRegex: "^us-.*$"
+                      safeRegex: "^us-.*$"
                 name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/2
                 response:
                   body: eyJlcnJvciI6ImNvbWJpbmVkIG1hdGNoIn0=

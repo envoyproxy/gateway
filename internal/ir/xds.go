@@ -834,17 +834,7 @@ type CustomResponseMatch struct {
 	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
 
 	// Response headers to match on. The match evaluates to true if any of the matches are successful.
-	ResponseHeaders []ResponseOverrideHeaderMatch `json:"responseHeaders,omitempty"`
-}
-
-// ResponseOverrideHeaderMatch defines the configuration for matching a response header.
-// +k8s:deepcopy-gen=true
-type ResponseOverrideHeaderMatch struct {
-	// Name of the HTTP header. The header name is case-insensitive.
-	Name string `json:"name"`
-
-	// Value within the HTTP header to match against.
-	Value StringMatch `json:"value"`
+	ResponseHeaders []StringMatch `json:"responseHeaders,omitempty"`
 }
 
 // StatusCodeMatch defines the configuration for matching a status code.

@@ -205,14 +205,14 @@ func (c *customResponse) buildStatusCodePredicate(codes []ir.StatusCodeMatch) (*
 	}, nil
 }
 
-func (c *customResponse) buildResponseHeaderPredicate(headers []ir.ResponseOverrideHeaderMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+func (c *customResponse) buildResponseHeaderPredicate(headers []ir.StringMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
 	predicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(headers))
 	for _, header := range headers {
 		input, err := c.buildResponseHeaderInput(header.Name)
 		if err != nil {
 			return nil, err
 		}
-		valueMatcher, err := buildStringMatcher(header.Value)
+		valueMatcher, err := buildStringMatcher(header)
 		if err != nil {
 			return nil, err
 		}

@@ -741,27 +741,21 @@ xdsIR:
                 statusCode: 401
             - match:
                 responseHeaders:
-                - name: X-Custom-Header
-                  value:
-                    distinct: false
-                    exact: custom-value
-                    name: X-Custom-Header
+                - distinct: false
+                  exact: custom-value
+                  name: X-Custom-Header
               name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/1
               response:
                 body: bWF0Y2hlZCByZXNwb25zZSBoZWFkZXI=
                 contentType: text/plain
             - match:
                 responseHeaders:
-                - name: X-Error-Type
-                  value:
-                    distinct: false
-                    name: X-Error-Type
-                    prefix: upstream-
-                - name: X-Region
-                  value:
-                    distinct: false
-                    name: X-Region
-                    safeRegex: ^us-.*$
+                - distinct: false
+                  name: X-Error-Type
+                  prefix: upstream-
+                - distinct: false
+                  name: X-Region
+                  safeRegex: ^us-.*$
                 statusCodes:
                 - value: 503
               name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/2
