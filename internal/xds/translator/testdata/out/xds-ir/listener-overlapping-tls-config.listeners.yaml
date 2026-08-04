@@ -27,6 +27,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-1
         serverHeaderTransformation: PASS_THROUGH
@@ -44,6 +45,7 @@
           - name: envoy-gateway/tls-secret-foo-example-com
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -71,6 +73,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-2
         serverHeaderTransformation: PASS_THROUGH
@@ -88,6 +91,7 @@
           - name: envoy-gateway/tls-secret-example-com
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -127,6 +131,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-3
         serverHeaderTransformation: PASS_THROUGH
@@ -144,6 +149,7 @@
           - name: envoy-gateway/tls-secret-bar-example-com
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true

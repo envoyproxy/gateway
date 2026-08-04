@@ -692,6 +692,75 @@ spec:
                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                 type: object
+              csrf:
+                description: |-
+                  CSRF defines the configuration for Cross-Site Request Forgery (CSRF) protection.
+                  When enabled, the CSRF filter checks that the Origin header matches the destination
+                  or one of the additional allowed origins on mutating requests (POST, PUT, DELETE, PATCH).
+                properties:
+                  additionalOrigins:
+                    description: |-
+                      AdditionalOrigins specifies additional origins that are allowed to make mutating
+                      requests, beyond the destination origin. A request whose Origin header matches one
+                      of them is allowed. The value "*" allows any origin, which effectively disables
+                      origin validation.
+
+                      Note: Envoy's CSRF filter compares the host and port of the origin only, so the
+                      scheme is ignored: "https://www.example.com" and "http://www.example.com" are
+                      equivalent here, and both allow the request regardless of the scheme the client
+                      used.
+                    items:
+                      description: |-
+                        Origin is defined by the scheme (protocol), hostname (domain), and port of
+                        the URL used to access it. The hostname can be "precise" which is just the
+                        domain name or "wildcard" which is a domain name prefixed with a single
+                        wildcard label such as "*.example.com".
+                        In addition to that a single wildcard (with or without scheme) can be
+                        configured to match any origin.
+
+                        For example, the following are valid origins:
+                        - https://foo.example.com
+                        - https://*.example.com
+                        - http://foo.example.com:8080
+                        - http://*.example.com:8080
+                        - https://*
+                        - moz-extension://example.com
+                        - foo://*.example.com:8080
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^(\*|[A-Za-z][A-Za-z0-9+.-]*:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$
+                      type: string
+                    maxItems: 16
+                    type: array
+                  shadowFraction:
+                    description: |-
+                      ShadowFraction represents the fraction of requests for which the CSRF policy is
+                      evaluated in shadow (dry-run) mode. For these requests, the filter records whether
+                      the request would have been allowed or rejected in the `csrf.request_valid` and
+                      `csrf.request_invalid` stats, but always lets the request through. The remaining
+                      requests are enforced, i.e. a mutating request with a missing or non-matching
+                      Origin header is rejected with a 403.
+
+                      Defaults to 0% (all requests are enforced) if not specified. Set it to 100% to
+                      dry run the filter, watch the stats to find origins that would be rejected, then
+                      lower it to roll enforcement out gradually.
+                    properties:
+                      denominator:
+                        default: 100
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      numerator:
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    required:
+                    - numerator
+                    type: object
+                    x-kubernetes-validations:
+                    - message: numerator must be less than or equal to denominator
+                      rule: self.numerator <= self.denominator
+                type: object
               extAuth:
                 description: ExtAuth defines the configuration for External Authorization.
                 properties:
@@ -1683,6 +1752,44 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  outOfBand:
+                                    description: |-
+                                      OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                      server-streaming gRPC connection to each endpoint's
+                                      xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                      reports periodically, instead of relying on in-band ORCA metrics
+                                      carried in response headers/trailers.
+
+                                      The backend must implement OpenRcaService for this to take effect.
+                                    properties:
+                                      authority:
+                                        description: |-
+                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                          the cluster name.
+                                        maxLength: 259
+                                        minLength: 1
+                                        pattern: ^[^\x00\n\r]*$
+                                        type: string
+                                      port:
+                                        description: |-
+                                          Port overrides the port used for the OutOfBand reporting connection, e.g. to
+                                          reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                      reportingPeriod:
+                                        description: |-
+                                          ReportingPeriod is how often Envoy requests load reports from the server.
+                                          Must be greater than 0. Defaults to 10s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                        x-kubernetes-validations:
+                                        - message: reportingPeriod must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
+                                    type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported
@@ -3128,6 +3235,44 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  outOfBand:
+                                    description: |-
+                                      OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                      server-streaming gRPC connection to each endpoint's
+                                      xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                      reports periodically, instead of relying on in-band ORCA metrics
+                                      carried in response headers/trailers.
+
+                                      The backend must implement OpenRcaService for this to take effect.
+                                    properties:
+                                      authority:
+                                        description: |-
+                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                          the cluster name.
+                                        maxLength: 259
+                                        minLength: 1
+                                        pattern: ^[^\x00\n\r]*$
+                                        type: string
+                                      port:
+                                        description: |-
+                                          Port overrides the port used for the OutOfBand reporting connection, e.g. to
+                                          reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                      reportingPeriod:
+                                        description: |-
+                                          ReportingPeriod is how often Envoy requests load reports from the server.
+                                          Must be greater than 0. Defaults to 10s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                        x-kubernetes-validations:
+                                        - message: reportingPeriod must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
+                                    type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported
@@ -4881,6 +5026,44 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        outOfBand:
+                                          description: |-
+                                            OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                            server-streaming gRPC connection to each endpoint's
+                                            xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                            reports periodically, instead of relying on in-band ORCA metrics
+                                            carried in response headers/trailers.
+
+                                            The backend must implement OpenRcaService for this to take effect.
+                                          properties:
+                                            authority:
+                                              description: |-
+                                                Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                                If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                                the cluster name.
+                                              maxLength: 259
+                                              minLength: 1
+                                              pattern: ^[^\x00\n\r]*$
+                                              type: string
+                                            port:
+                                              description: |-
+                                                Port overrides the port used for the OutOfBand reporting connection, e.g. to
+                                                reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                              format: int32
+                                              maximum: 65535
+                                              minimum: 1
+                                              type: integer
+                                            reportingPeriod:
+                                              description: |-
+                                                ReportingPeriod is how often Envoy requests load reports from the server.
+                                                Must be greater than 0. Defaults to 10s.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                              x-kubernetes-validations:
+                                              - message: reportingPeriod must be greater
+                                                  than 0
+                                                rule: duration(self) > duration('0s')
+                                          type: object
                                         weightExpirationPeriod:
                                           description: If a given endpoint has not
                                             reported load metrics in this long, stop
@@ -6653,6 +6836,44 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  outOfBand:
+                                    description: |-
+                                      OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                      server-streaming gRPC connection to each endpoint's
+                                      xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                      reports periodically, instead of relying on in-band ORCA metrics
+                                      carried in response headers/trailers.
+
+                                      The backend must implement OpenRcaService for this to take effect.
+                                    properties:
+                                      authority:
+                                        description: |-
+                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                          the cluster name.
+                                        maxLength: 259
+                                        minLength: 1
+                                        pattern: ^[^\x00\n\r]*$
+                                        type: string
+                                      port:
+                                        description: |-
+                                          Port overrides the port used for the OutOfBand reporting connection, e.g. to
+                                          reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                      reportingPeriod:
+                                        description: |-
+                                          ReportingPeriod is how often Envoy requests load reports from the server.
+                                          Must be greater than 0. Defaults to 10s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                        x-kubernetes-validations:
+                                        - message: reportingPeriod must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
+                                    type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported

@@ -583,7 +583,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).<br />This field cannot be set when targeting a parent resource (Gateway).<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `bandwidthLimit` | _[BandwidthLimitSpec](#bandwidthlimitspec)_ |  false  |  | BandwidthLimit allows the user to limit the bandwidth of traffic<br />sent to and received from the backend. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
@@ -643,6 +643,7 @@ _Appears in:_
 | `errorUtilizationPenaltyPercent` | _integer_ |  false  |  | ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).<br />This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.<br />For example:<br />- 100 => 1.0x<br />- 120 => 1.2x<br />- 200 => 2.0x<br />Must be non-negative. |
 | `metricNamesForComputingUtilization` | _string array_ |  false  |  | Metric names used to compute utilization if application_utilization is not set.<br />For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo". |
 | `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
+| `outOfBand` | _[OutOfBandReporting](#outofbandreporting)_ |  false  |  | OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a<br />server-streaming gRPC connection to each endpoint's<br />xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load<br />reports periodically, instead of relying on in-band ORCA metrics<br />carried in response headers/trailers.<br />The backend must implement OpenRcaService for this to take effect. |
 
 
 #### BandwidthLimitRequestConfig
@@ -835,6 +836,24 @@ _Appears in:_
 | `exposeHeaders` | _string array_ |  false  |  | ExposeHeaders defines which response headers should be made accessible to<br />scripts running in the browser.<br />It specifies the headers in the Access-Control-Expose-Headers CORS response header..<br />The value "*" allows any header to be exposed. |
 | `maxAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
 | `allowCredentials` | _boolean_ |  false  |  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
+
+
+#### CSRF
+
+
+
+CSRF defines the configuration for the Cross-Site Request Forgery (CSRF) filter.
+The CSRF filter checks that the Origin header in HTTP requests matches the destination,
+preventing cross-origin mutating requests (POST, PUT, DELETE, PATCH) from being processed.
+GET and HEAD requests are always allowed.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `shadowFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#fraction)_ |  false  |  | ShadowFraction represents the fraction of requests for which the CSRF policy is<br />evaluated in shadow (dry-run) mode. For these requests, the filter records whether<br />the request would have been allowed or rejected in the `csrf.request_valid` and<br />`csrf.request_invalid` stats, but always lets the request through. The remaining<br />requests are enforced, i.e. a mutating request with a missing or non-matching<br />Origin header is rejected with a 403.<br />Defaults to 0% (all requests are enforced) if not specified. Set it to 100% to<br />dry run the filter, watch the stats to find origins that would be rejected, then<br />lower it to roll enforcement out gradually. |
+| `additionalOrigins` | _[Origin](#origin) array_ |  false  |  | AdditionalOrigins specifies additional origins that are allowed to make mutating<br />requests, beyond the destination origin. A request whose Origin header matches one<br />of them is allowed. The value "*" allows any origin, which effectively disables<br />origin validation.<br />Note: Envoy's CSRF filter compares the host and port of the origin only, so the<br />scheme is ignored: "https://www.example.com" and "http://www.example.com" are<br />equivalent here, and both allow the request regardless of the scheme the client<br />used. |
 
 
 #### CircuitBreaker
@@ -1642,6 +1661,7 @@ _Appears in:_
 | `envoy.filters.http.health_check` | EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.<br /> | 
 | `envoy.filters.http.fault` | EnvoyFilterFault defines the Envoy HTTP fault filter.<br /> | 
 | `envoy.filters.http.cors` | EnvoyFilterCORS defines the Envoy HTTP CORS filter.<br /> | 
+| `envoy.filters.http.csrf` | EnvoyFilterCSRF defines the Envoy HTTP CSRF filter.<br /> | 
 | `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
 | `envoy.filters.http.ext_authz` | EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.<br /> | 
 | `envoy.filters.http.api_key_auth` | EnvoyFilterAPIKeyAuth defines the Envoy HTTP api key authentication filter.<br /> | 
@@ -1783,8 +1803,63 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[InfrastructureProviderType](#infrastructureprovidertype)_ |  true  |  | Type is the type of infrastructure providers to use. Supported types are "Host". |
+| `type` | _[InfrastructureProviderType](#infrastructureprovidertype)_ |  true  |  | Type is the type of infrastructure providers to use. Supported types are "Host" or "Remote". |
 | `host` | _[EnvoyGatewayHostInfrastructureProvider](#envoygatewayhostinfrastructureprovider)_ |  false  |  | Host defines the configuration of the Host provider. Host provides runtime<br />deployment of the data plane as a child process on the host environment. |
+| `remote` | _[EnvoyGatewayRemoteInfrastructureProvider](#envoygatewayremoteinfrastructureprovider)_ |  false  |  | Remote defines the configuration of the Remote provider. Remotes defers<br />runtime deployment of the data plane to aW remote infrastructure manager. |
+
+
+#### EnvoyGatewayKubernetesConfiguration
+
+
+
+EnvoyGatewayKubernetesConfiguration defines configuration for how Envoy Gateway communicates with the Kubernetes API server.
+
+_Appears in:_
+- [EnvoyGatewayKubernetesCustomProvider](#envoygatewaykubernetescustomprovider)
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
+| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
+| `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
+| `cacheSyncPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | CacheSyncPeriod determines the minimum frequency at which watched resources are synced.<br />Note that a sync in the provider layer will not lead to a full reconciliation (including translation),<br />unless there are actual changes in the provider resources.<br />This option can be used to protect against missed events or issues in Envoy Gateway where resources<br />are not requeued when they should be, at the cost of increased resource consumption.<br />Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options<br />Default: 10 hours |
+
+
+#### EnvoyGatewayKubernetesCustomProvider
+
+
+
+EnvoyGatewayKubernetesCustomProvider defines configuration for the Kubernetes provider when using a Custom provider.
+
+_Appears in:_
+- [EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
+| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
+| `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
+| `cacheSyncPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | CacheSyncPeriod determines the minimum frequency at which watched resources are synced.<br />Note that a sync in the provider layer will not lead to a full reconciliation (including translation),<br />unless there are actual changes in the provider resources.<br />This option can be used to protect against missed events or issues in Envoy Gateway where resources<br />are not requeued when they should be, at the cost of increased resource consumption.<br />Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options<br />Default: 10 hours |
+
+
+#### EnvoyGatewayKubernetesInfrastructureConfiguration
+
+
+
+EnvoyGatewayKubernetesInfrastructureConfiguration defines configuration for the Kubernetes infrastructure provider.
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `rateLimitDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  |  | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.<br />If unspecified, default settings for the managed Envoy ratelimit deployment resource<br />are applied. |
+| `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
+| `rateLimitPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  |  | RateLimitPDB allows to control the pod disruption budget of rate limit service. |
+| `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  |  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
+| `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
+| `proxyTopologyInjector` | _[EnvoyGatewayTopologyInjector](#envoygatewaytopologyinjector)_ |  false  |  | TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration |
 
 
 #### EnvoyGatewayKubernetesProvider
@@ -1801,12 +1876,12 @@ _Appears in:_
 | `rateLimitDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  |  | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.<br />If unspecified, default settings for the managed Envoy ratelimit deployment resource<br />are applied. |
 | `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
 | `rateLimitPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  |  | RateLimitPDB allows to control the pod disruption budget of rate limit service. |
-| `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  |  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
-| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
-| `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
 | `proxyTopologyInjector` | _[EnvoyGatewayTopologyInjector](#envoygatewaytopologyinjector)_ |  false  |  | TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration |
+| `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
+| `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
+| `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
 | `cacheSyncPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | CacheSyncPeriod determines the minimum frequency at which watched resources are synced.<br />Note that a sync in the provider layer will not lead to a full reconciliation (including translation),<br />unless there are actual changes in the provider resources.<br />This option can be used to protect against missed events or issues in Envoy Gateway where resources<br />are not requeued when they should be, at the cost of increased resource consumption.<br />Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options<br />Default: 10 hours |
 
 
@@ -1943,6 +2018,20 @@ _Appears in:_
 | `custom` | _[EnvoyGatewayCustomProvider](#envoygatewaycustomprovider)_ |  false  |  | Custom defines the configuration for the Custom provider. This provider<br />allows you to define a specific resource provider and an infrastructure<br />provider. |
 
 
+#### EnvoyGatewayRemoteInfrastructureProvider
+
+
+
+EnvoyGatewayRemoteInfrastructureProvider defines configuration for the Remote Infrastructure provider.
+
+_Appears in:_
+- [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `service` | _[ExtensionService](#extensionservice)_ |  true  |  | Service defines the configuration of the remote infrastructure service that the Envoy<br />Gateway Control Plane will call through the infrastructure manager. |
+
+
 #### EnvoyGatewayResourceProvider
 
 
@@ -1954,8 +2043,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ResourceProviderType](#resourceprovidertype)_ |  true  |  | Type is the type of resource provider to use. Supported types are "File". |
+| `type` | _[ResourceProviderType](#resourceprovidertype)_ |  true  |  | Type is the type of resource provider to use. Supported types are "File" or "Kubernetes". |
 | `file` | _[EnvoyGatewayFileResourceProvider](#envoygatewayfileresourceprovider)_ |  false  |  | File defines the configuration of the File provider. File provides runtime<br />configuration defined by one or more files. |
+| `kubernetes` | _[EnvoyGatewayKubernetesCustomProvider](#envoygatewaykubernetescustomprovider)_ |  false  |  | Kubernetes defines the configuration of the Kubernetes provider. This provider retrieves Envoy configuration<br />from a Kubernetes API. |
 
 
 #### EnvoyGatewaySpec
@@ -2008,6 +2098,7 @@ _Appears in:_
 EnvoyGatewayTopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
 
 _Appears in:_
+- [EnvoyGatewayKubernetesInfrastructureConfiguration](#envoygatewaykubernetesinfrastructureconfiguration)
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
 | Field | Type | Required | Default | Description |
@@ -2191,7 +2282,7 @@ _Appears in:_
 | `envoyDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  |  | EnvoyDeployment defines the desired state of the Envoy deployment resource.<br />If unspecified, default settings for the managed Envoy deployment resource<br />are applied. |
 | `envoyDaemonSet` | _[KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)_ |  false  |  | EnvoyDaemonSet defines the desired state of the Envoy daemonset resource.<br />Disabled by default, a deployment resource is used instead to provision the Envoy Proxy fleet |
 | `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  |  | EnvoyService defines the desired state of the Envoy service resource.<br />If unspecified, default settings for the managed Envoy service resource<br />are applied. |
-| `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment. |
+| `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.<br />If the HPA is set, the Replicas field from EnvoyDeployment will be ignored, and the<br />number of replicas is solely managed by the HPA. Use MinReplicas to control the<br />lower bound of the replica count instead. |
 | `useListenerPortAsContainerPort` | _boolean_ |  false  |  | UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.<br />When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.<br />This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability. |
 | `envoyPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  |  | EnvoyPDB allows to control the pod disruption budget of an Envoy Proxy. |
 | `envoyServiceAccount` | _[KubernetesServiceAccountSpec](#kubernetesserviceaccountspec)_ |  true  |  | EnvoyServiceAccount defines the desired state of the Envoy service account resource. |
@@ -2208,7 +2299,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[EnvoyProxyProviderType](#envoyproxyprovidertype)_ |  true  |  | Type is the type of resource provider to use. A resource provider provides<br />infrastructure resources for running the data plane, e.g. Envoy proxy, and<br />optional auxiliary control planes. Supported types are "Kubernetes"and "Host". |
+| `type` | _[EnvoyProxyProviderType](#envoyproxyprovidertype)_ |  true  |  | Type is the type of resource provider to use. A resource provider provides<br />infrastructure resources for running the data plane, e.g. Envoy proxy, and<br />optional auxiliary control planes. Supported types are "Kubernetes" and "Host". |
 | `kubernetes` | _[EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)_ |  false  |  | Kubernetes defines the desired state of the Kubernetes resource provider.<br />Kubernetes provides infrastructure resources for running the data plane,<br />e.g. Envoy proxy. If unspecified and type is "Kubernetes", default settings<br />for managed Kubernetes resources are applied. |
 | `host` | _[EnvoyProxyHostProvider](#envoyproxyhostprovider)_ |  false  |  | Host provides runtime deployment of the data plane as a child process on the<br />host environment.<br />If unspecified and type is "Host", default settings for the custom provider<br />are applied. |
 
@@ -2248,7 +2339,8 @@ _Appears in:_
 | `concurrency` | _integer_ |  false  |  | Concurrency defines the number of worker threads to run. If unset, it defaults to<br />the number of cpuset threads on the platform. |
 | `routingType` | _[RoutingType](#routingtype)_ |  false  |  | RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,<br />or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint". |
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
-| `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
+| `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.<br />Mutually exclusive with MergeBackends. |
+| `mergeBackends` | _[MergeBackendsConfig](#mergebackendsconfig)_ |  false  |  | MergeBackends configures cluster deduplication: routes that reference the same backend<br />share a single Envoy cluster instead of Envoy Gateway generating one cluster per route<br />rule. This reduces xDS size, active health-check traffic, and stats cardinality, and<br />improves upstream connection pooling.<br />Disabled when unset; specifying this field at all (even without further configuration)<br />enables it. Mutually exclusive with MergeGateways. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.bandwidth_limit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
@@ -2449,6 +2541,7 @@ _Appears in:_
 ExtensionService defines the configuration for connecting to a registered extension service.
 
 _Appears in:_
+- [EnvoyGatewayRemoteInfrastructureProvider](#envoygatewayremoteinfrastructureprovider)
 - [ExtensionManager](#extensionmanager)
 
 | Field | Type | Required | Default | Description |
@@ -3107,6 +3200,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[HTTPHostnameModifierType](#httphostnamemodifiertype)_ |  true  |  |  |
 | `header` | _string_ |  false  |  | Header is the name of the header whose value would be used to rewrite the Host header |
+| `pathRegex` | _[HostnamePathRegexRewrite](#hostnamepathregexrewrite)_ |  false  |  | PathRegex defines a regex match and substitution applied to the request path to compute<br />the rewritten Host header.<br />For example, with:<br />pathRegex:<br />  pattern: "^/tenant/([a-z0-9-]+)/.*"<br />  substitution: "\\1.example.internal"<br />a request to "http://foo.bar.com/tenant/tenant1/api/v1" has its upstream Host header rewritten<br />to "tenant1.example.internal" (the request path "/tenant/tenant1/api/v1" is preserved). |
 
 
 #### HTTPHostnameModifierType
@@ -3122,6 +3216,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Header` | HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in header.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header<br /> | 
 | `Backend` | BackendHTTPHostnameModifier indicates that the Host header value would be replaced by the DNS name of the backend if it exists.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite<br /> | 
+| `PathRegex` | PathRegexHTTPHostnameModifier indicates that the Host header value would be rewritten by applying a regex<br />match and substitution to the request path.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-path-regex<br /> | 
 
 
 #### HTTPPathModifier
@@ -3411,6 +3506,21 @@ _Appears in:_
 | `stripTrailingHostDot` | _boolean_ |  false  |  | StripTrailingHostDot determines if the trailing dot of the host should be removed<br />from the Host/Authority header before any processing of the request.<br />This affects the upstream host header as well. Without this option, incoming requests<br />with host "example.com." will not match routes with domains set to "example.com".<br />When the host includes a port (for example "example.com.:443"), only the trailing dot<br />from the host section is stripped, leaving the port as-is ("example.com:443").<br />Defaults to false. |
 
 
+#### HostnamePathRegexRewrite
+
+
+
+HostnamePathRegexRewrite defines a hostname rewrite computed from the request path using regex.
+
+_Appears in:_
+- [HTTPHostnameModifier](#httphostnamemodifier)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `pattern` | _string_ |  true  |  | Pattern matches a regular expression against the value of the HTTP Path. The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
+| `substitution` | _string_ |  true  |  | Substitution is an expression that replaces the matched portion. The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.<br />The resulting value is used as the upstream Host header and should be constrained to a valid<br />DNS hostname by using explicit regex capture groups in Pattern.<br />The NUL, CR, and LF characters are not allowed: they are invalid in an HTTP header value and are<br />rejected by the Envoy proto (well_known_regex HTTP_HEADER_VALUE), which would otherwise cause the<br />generated configuration to be rejected by the data plane. |
+
+
 #### IPEndpoint
 
 
@@ -3488,6 +3598,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Host` | InfrastructureProviderTypeHost defines the "Host" provider.<br /> | 
+| `Remote` | InfrastructureProviderTypeRemote defines the "Remote" provider.<br /> | 
 
 
 #### InjectedCredential
@@ -3687,6 +3798,8 @@ _Appears in:_
 
 
 _Appears in:_
+- [EnvoyGatewayKubernetesConfiguration](#envoygatewaykubernetesconfiguration)
+- [EnvoyGatewayKubernetesCustomProvider](#envoygatewaykubernetescustomprovider)
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
 | Field | Type | Required | Default | Description |
@@ -3755,6 +3868,7 @@ KubernetesDeployMode holds configuration for how to deploy managed resources suc
 data plane fleet.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesInfrastructureConfiguration](#envoygatewaykubernetesinfrastructureconfiguration)
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
 | Field | Type | Required | Default | Description |
@@ -3784,6 +3898,7 @@ _Appears in:_
 KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesInfrastructureConfiguration](#envoygatewaykubernetesinfrastructureconfiguration)
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
@@ -3808,6 +3923,7 @@ Envoy Gateway will revert back to this value every time reconciliation occurs.
 See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesInfrastructureConfiguration](#envoygatewaykubernetesinfrastructureconfiguration)
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
@@ -3849,6 +3965,7 @@ _Appears in:_
 KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesInfrastructureConfiguration](#envoygatewaykubernetesinfrastructureconfiguration)
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
@@ -3928,6 +4045,8 @@ _Appears in:_
 KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesConfiguration](#envoygatewaykubernetesconfiguration)
+- [EnvoyGatewayKubernetesCustomProvider](#envoygatewaykubernetescustomprovider)
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
 | Field | Type | Required | Default | Description |
@@ -3955,6 +4074,8 @@ _Appears in:_
 LeaderElection defines the desired leader election settings.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesConfiguration](#envoygatewaykubernetesconfiguration)
+- [EnvoyGatewayKubernetesCustomProvider](#envoygatewaykubernetescustomprovider)
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
 | Field | Type | Required | Default | Description |
@@ -4190,6 +4311,19 @@ _Appears in:_
 | ----- | ----------- |
 | `Inline` | LuaValueTypeInline defines the "Inline" Lua type.<br /> | 
 | `ValueRef` | LuaValueTypeValueRef defines the "ValueRef" Lua type.<br /> | 
+
+
+#### MergeBackendsConfig
+
+
+
+MergeBackendsConfig configures backend cluster deduplication (MergeBackends). Its mere
+presence on EnvoyProxySpec enables it; a backendRef is only merged into a shared cluster when
+safe to do so, otherwise it falls back to a dedicated per-route cluster.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
 
 
 #### MergeType
@@ -4485,6 +4619,7 @@ For example, the following are valid origins:
 
 _Appears in:_
 - [CORS](#cors)
+- [CSRF](#csrf)
 
 
 
@@ -4502,6 +4637,23 @@ _Appears in:_
 | `oid` | _string_ |  true  |  | OID Value |
 | `type` | _[StringMatchType](#stringmatchtype)_ |  false  | Exact | Type specifies how to match against a string. |
 | `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
+
+
+#### OutOfBandReporting
+
+
+
+OutOfBandReporting configures out-of-band ORCA load reporting for the
+BackendUtilization load balancer.
+
+_Appears in:_
+- [BackendUtilization](#backendutilization)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `reportingPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ReportingPeriod is how often Envoy requests load reports from the server.<br />Must be greater than 0. Defaults to 10s. |
+| `port` | _integer_ |  false  |  | Port overrides the port used for the OutOfBand reporting connection, e.g. to<br />reach a separate reporting sidecar. Defaults to the endpoint's port. |
+| `authority` | _string_ |  false  |  | Authority overrides the :authority header on the OutOfBand gRPC stream.<br />If unset, Envoy uses the endpoint hostname, then the dialed address, then<br />the cluster name. |
 
 
 #### PassiveHealthCheck
@@ -5610,6 +5762,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
+| `Kubernetes` | ResourceProviderTypeKubernetes defines the "Kubernetes" provider.<br /> | 
 
 
 #### ResponseOverride
@@ -5764,6 +5917,7 @@ _Appears in:_
 | ----- | ----------- |
 | `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
 | `EndpointSliceIndex` | EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.<br />It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.<br />If the additional controller memory usage for the indexes becomes a concern,<br />consider disabling this flag.<br /> | 
+| `PerResourceSystemCASecret` | PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per<br />BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead<br />of sharing a single system_ca_certificates secret across all of them.<br />Disabled by default (i.e. the shared secret is used). Enable this flag to opt out during<br />upgrades — Envoy must warm the new system_ca_certificates secret before clusters can use<br />it, which may cause a brief disruption to new connections on first enable.<br /> | 
 
 
 #### RuntimeFlags
@@ -5858,6 +6012,7 @@ _Appears in:_
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent SecurityPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `apiKeyAuth` | _[APIKeyAuth](#apikeyauth)_ |  false  |  | APIKeyAuth defines the configuration for the API Key Authentication. |
 | `cors` | _[CORS](#cors)_ |  false  |  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+| `csrf` | _[CSRF](#csrf)_ |  false  |  | CSRF defines the configuration for Cross-Site Request Forgery (CSRF) protection.<br />When enabled, the CSRF filter checks that the Origin header matches the destination<br />or one of the additional allowed origins on mutating requests (POST, PUT, DELETE, PATCH). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  |  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` | _[JWT](#jwt)_ |  false  |  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  |  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
@@ -5949,6 +6104,7 @@ _Appears in:_
 ShutdownManager defines the configuration for the shutdown manager.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesInfrastructureConfiguration](#envoygatewaykubernetesinfrastructureconfiguration)
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
 | Field | Type | Required | Default | Description |

@@ -132,11 +132,13 @@
               name: backend-fqdn/default-ca
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: default/authz-tls
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         sni: primary.foo.com
   typedExtensionProtocolOptions:
