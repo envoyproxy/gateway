@@ -44,37 +44,37 @@ func TestPolicyIndexLookup(t *testing.T) {
 		useListener            bool
 		useListenerSet         bool
 		wantValue              bool
-		wantPinned             bool
+		wantReplacesParent     bool
 	}{
 		{
-			name:        "nil index falls through to zero value, not pinned",
+			name:        "nil index falls through to zero value, not replacing parent",
 			nilIndex:    true,
 			useRuleName: true,
 			useListener: true,
 		},
 		{
-			name:        "no entry anywhere falls through to zero value, not pinned",
+			name:        "no entry anywhere falls through to zero value, not replacing parent",
 			useRuleName: true,
 			useListener: true,
 		},
 		{
-			name:        "rule-level non-zero value wins outright and is pinned, regardless of MergeType",
-			ruleEntry:   &policyIndexEntry[bool]{value: true, effective: true},
-			useRuleName: true,
-			useListener: true,
-			wantValue:   true,
-			wantPinned:  true,
+			name:               "rule-level non-zero value wins outright and replaces parent, regardless of MergeType",
+			ruleEntry:          &policyIndexEntry[bool]{value: true, effective: true},
+			useRuleName:        true,
+			useListener:        true,
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 		{
-			name:         "rule-level zero value with MergeType nil is pinned, does not inherit",
-			ruleEntry:    &policyIndexEntry[bool]{value: false, effective: true},
-			gatewayValue: true,
-			useRuleName:  true,
-			useListener:  true,
-			wantPinned:   true,
+			name:               "rule-level zero value with MergeType nil replaces parent, does not inherit",
+			ruleEntry:          &policyIndexEntry[bool]{value: false, effective: true},
+			gatewayValue:       true,
+			useRuleName:        true,
+			useListener:        true,
+			wantReplacesParent: true,
 		},
 		{
-			name:         "rule-level zero value with MergeType set falls through to gateway, not pinned",
+			name:         "rule-level zero value with MergeType set falls through to gateway, not replacing parent",
 			ruleEntry:    &policyIndexEntry[bool]{value: false, effective: false},
 			gatewayValue: true,
 			useRuleName:  true,
@@ -98,11 +98,11 @@ func TestPolicyIndexLookup(t *testing.T) {
 			wantValue:    true,
 		},
 		{
-			name:        "routeRuleName nil skips rule-level check even if an entry exists",
-			ruleEntry:   &policyIndexEntry[bool]{value: true, effective: true},
-			routeEntry:  &policyIndexEntry[bool]{value: false, effective: true},
-			useListener: true,
-			wantPinned:  true,
+			name:               "routeRuleName nil skips rule-level check even if an entry exists",
+			ruleEntry:          &policyIndexEntry[bool]{value: true, effective: true},
+			routeEntry:         &policyIndexEntry[bool]{value: false, effective: true},
+			useListener:        true,
+			wantReplacesParent: true,
 		},
 		{
 			name:          "no rule/route entry falls to listener",
@@ -210,8 +210,8 @@ func TestPolicyIndexLookup(t *testing.T) {
 				wantListenerSetNN = &listenerSetNN
 			}
 
-			value, pinned := idx.Lookup(routeKind, routeNN, gatewayNN, wantListenerName, wantListenerSetNN, wantRuleName)
-			require.Equal(t, tc.wantPinned, pinned)
+			value, replacesParent := idx.Lookup(routeKind, routeNN, gatewayNN, wantListenerName, wantListenerSetNN, wantRuleName)
+			require.Equal(t, tc.wantReplacesParent, replacesParent)
 			require.Equal(t, tc.wantValue, value)
 		})
 	}
@@ -232,26 +232,26 @@ func TestPolicyIndexLookupExact(t *testing.T) {
 	listenerSetKey := listenerSetScope(listenerSetNN)
 
 	cases := []struct {
-		name       string
-		scope      policyScope
-		entry      *policyIndexEntry[bool]
-		extraScope policyScope
-		extraEntry *policyIndexEntry[bool]
-		wantValue  bool
-		wantPinned bool
+		name               string
+		scope              policyScope
+		entry              *policyIndexEntry[bool]
+		extraScope         policyScope
+		extraEntry         *policyIndexEntry[bool]
+		wantValue          bool
+		wantReplacesParent bool
 	}{
 		{
-			name:       "route-rule scope with a non-zero value pins outright",
-			scope:      ruleKey,
-			entry:      &policyIndexEntry[bool]{value: true, effective: true},
-			wantValue:  true,
-			wantPinned: true,
+			name:               "route-rule scope with a non-zero value pins outright",
+			scope:              ruleKey,
+			entry:              &policyIndexEntry[bool]{value: true, effective: true},
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 		{
-			name:       "route-rule scope with a zero value and MergeType nil still pins",
-			scope:      ruleKey,
-			entry:      &policyIndexEntry[bool]{value: false, effective: true},
-			wantPinned: true,
+			name:               "route-rule scope with a zero value and MergeType nil still pins",
+			scope:              ruleKey,
+			entry:              &policyIndexEntry[bool]{value: false, effective: true},
+			wantReplacesParent: true,
 		},
 		{
 			name:  "route-rule scope with a zero value and MergeType set does not pin",
@@ -263,18 +263,18 @@ func TestPolicyIndexLookupExact(t *testing.T) {
 			scope: ruleKey,
 		},
 		{
-			name:       "route scope with a non-zero value pins outright",
-			scope:      routeKey,
-			entry:      &policyIndexEntry[bool]{value: true, effective: true},
-			wantValue:  true,
-			wantPinned: true,
+			name:               "route scope with a non-zero value pins outright",
+			scope:              routeKey,
+			entry:              &policyIndexEntry[bool]{value: true, effective: true},
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 		{
-			name:       "listener scope with hasValue true pins",
-			scope:      listenerKey,
-			entry:      &policyIndexEntry[bool]{value: true, effective: true},
-			wantValue:  true,
-			wantPinned: true,
+			name:               "listener scope with hasValue true pins",
+			scope:              listenerKey,
+			entry:              &policyIndexEntry[bool]{value: true, effective: true},
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 		{
 			name:  "listener scope with hasValue false does not pin",
@@ -282,27 +282,27 @@ func TestPolicyIndexLookupExact(t *testing.T) {
 			entry: &policyIndexEntry[bool]{value: true, effective: false},
 		},
 		{
-			name:       "gateway scope pins whenever an entry exists",
-			scope:      gatewayKey,
-			entry:      &policyIndexEntry[bool]{value: true, effective: true},
-			wantValue:  true,
-			wantPinned: true,
+			name:               "gateway scope pins whenever an entry exists",
+			scope:              gatewayKey,
+			entry:              &policyIndexEntry[bool]{value: true, effective: true},
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 		{
-			name:       "gateway scope ignores a coexisting listener-scope entry",
-			scope:      gatewayKey,
-			entry:      &policyIndexEntry[bool]{value: true, effective: true},
-			extraScope: listenerKey,
-			extraEntry: &policyIndexEntry[bool]{value: false, effective: true},
-			wantValue:  true,
-			wantPinned: true,
+			name:               "gateway scope ignores a coexisting listener-scope entry",
+			scope:              gatewayKey,
+			entry:              &policyIndexEntry[bool]{value: true, effective: true},
+			extraScope:         listenerKey,
+			extraEntry:         &policyIndexEntry[bool]{value: false, effective: true},
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 		{
-			name:       "listenerSet listener scope with hasValue true pins",
-			scope:      listenerSetListenerKey,
-			entry:      &policyIndexEntry[bool]{value: true, effective: true},
-			wantValue:  true,
-			wantPinned: true,
+			name:               "listenerSet listener scope with hasValue true pins",
+			scope:              listenerSetListenerKey,
+			entry:              &policyIndexEntry[bool]{value: true, effective: true},
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 		{
 			name:  "listenerSet listener scope with hasValue false does not pin",
@@ -310,29 +310,29 @@ func TestPolicyIndexLookupExact(t *testing.T) {
 			entry: &policyIndexEntry[bool]{value: true, effective: false},
 		},
 		{
-			name:       "listenerSet scope pins whenever an entry exists",
-			scope:      listenerSetKey,
-			entry:      &policyIndexEntry[bool]{value: true, effective: true},
-			wantValue:  true,
-			wantPinned: true,
+			name:               "listenerSet scope pins whenever an entry exists",
+			scope:              listenerSetKey,
+			entry:              &policyIndexEntry[bool]{value: true, effective: true},
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 		{
-			name:       "listenerSet scope ignores a coexisting listenerSet-listener-scope entry",
-			scope:      listenerSetKey,
-			entry:      &policyIndexEntry[bool]{value: true, effective: true},
-			extraScope: listenerSetListenerKey,
-			extraEntry: &policyIndexEntry[bool]{value: false, effective: true},
-			wantValue:  true,
-			wantPinned: true,
+			name:               "listenerSet scope ignores a coexisting listenerSet-listener-scope entry",
+			scope:              listenerSetKey,
+			entry:              &policyIndexEntry[bool]{value: true, effective: true},
+			extraScope:         listenerSetListenerKey,
+			extraEntry:         &policyIndexEntry[bool]{value: false, effective: true},
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 		{
-			name:       "gateway and listenerSet scopes sharing a NamespacedName don't collide",
-			scope:      gatewayKey,
-			entry:      &policyIndexEntry[bool]{value: true, effective: true},
-			extraScope: listenerSetScope(gatewayNN),
-			extraEntry: &policyIndexEntry[bool]{value: false, effective: true},
-			wantValue:  true,
-			wantPinned: true,
+			name:               "gateway and listenerSet scopes sharing a NamespacedName don't collide",
+			scope:              gatewayKey,
+			entry:              &policyIndexEntry[bool]{value: true, effective: true},
+			extraScope:         listenerSetScope(gatewayNN),
+			extraEntry:         &policyIndexEntry[bool]{value: false, effective: true},
+			wantValue:          true,
+			wantReplacesParent: true,
 		},
 	}
 
@@ -346,8 +346,8 @@ func TestPolicyIndexLookupExact(t *testing.T) {
 				idx.entries[tc.extraScope] = *tc.extraEntry
 			}
 
-			value, pinned := idx.LookupExact(tc.scope)
-			require.Equal(t, tc.wantPinned, pinned)
+			value, replacesParent := idx.LookupExact(tc.scope)
+			require.Equal(t, tc.wantReplacesParent, replacesParent)
 			require.Equal(t, tc.wantValue, value)
 		})
 	}

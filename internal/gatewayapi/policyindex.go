@@ -81,16 +81,18 @@ func (idx *policyIndex[T]) setListenerSetListenerLevel(ls types.NamespacedName, 
 	idx.putFirst(listenerSetListenerScope(ls, listener), policyIndexEntry[T]{value: value, effective: hasValue})
 }
 
-// setListenerSetLevel is setGatewayLevel's counterpart for a ListenerSet.
+// setListenerSetLevel is setGatewayLevel's counterpart for a ListenerSet: also always effective,
+// for the same reason - resolveParentLevels never falls through from a ListenerSet's own scope to
+// Gateway scope (they're siblings, not parent/child), so there's no hasValue distinction to make.
 func (idx *policyIndex[T]) setListenerSetLevel(ls types.NamespacedName, value T) {
 	idx.putFirst(listenerSetScope(ls), policyIndexEntry[T]{value: value, effective: true})
 }
 
 // Lookup resolves the effective value for a route-rule/route/listener/listenerSet/gateway target.
-// value alone is always correct; pinned reports whether a route-rule/route entry supplied it
-// directly. listenerSetNN is nil unless the route attaches through a ListenerSet, in which case
-// Gateway listener/gateway scopes are skipped: Gateway listeners and ListenerSet listeners are
-// sibling scopes, not parent/child.
+// value alone is always correct; replacesParent reports whether a route-rule/route entry supplied
+// it directly, instead of falling through to a parent scope. listenerSetNN is nil unless the route
+// attaches through a ListenerSet, in which case Gateway listener/gateway scopes are skipped:
+// Gateway listeners and ListenerSet listeners are sibling scopes, not parent/child.
 func (idx *policyIndex[T]) Lookup(
 	routeKind gwapiv1.Kind,
 	routeNN types.NamespacedName,
@@ -98,7 +100,7 @@ func (idx *policyIndex[T]) Lookup(
 	listenerName *gwapiv1.SectionName,
 	listenerSetNN *types.NamespacedName,
 	routeRuleName *gwapiv1.SectionName,
-) (value T, pinned bool) {
+) (value T, replacesParent bool) {
 	if idx == nil {
 		return value, false
 	}
@@ -114,7 +116,7 @@ func (idx *policyIndex[T]) Lookup(
 		return idx.resolveEntry(entry, gatewayNN, listenerName, listenerSetNN)
 	}
 
-	return idx.parentLevels(gatewayNN, listenerName, listenerSetNN), false
+	return idx.resolveParentLevels(gatewayNN, listenerName, listenerSetNN), false
 }
 
 // LookupExact resolves scope's own entry, whichever level it is, with no fallback to a broader
@@ -131,10 +133,10 @@ func (idx *policyIndex[T]) LookupExact(scope policyScope) (T, bool) {
 	return zero, false
 }
 
-// parentLevels resolves just the listenerSet/listener/gateway levels, for Lookup/resolveEntry's
-// own fallback step when no more specific route-rule/route entry applies (or one applies but
-// isn't effective).
-func (idx *policyIndex[T]) parentLevels(gatewayNN types.NamespacedName, listenerName *gwapiv1.SectionName, listenerSetNN *types.NamespacedName) T {
+// resolveParentLevels resolves just the listenerSet/listener/gateway levels, for
+// Lookup/resolveEntry's own fallback step when no more specific route-rule/route entry applies
+// (or one applies but isn't effective).
+func (idx *policyIndex[T]) resolveParentLevels(gatewayNN types.NamespacedName, listenerName *gwapiv1.SectionName, listenerSetNN *types.NamespacedName) T {
 	var zero T
 	if idx == nil {
 		return zero
@@ -155,15 +157,18 @@ func (idx *policyIndex[T]) parentLevels(gatewayNN types.NamespacedName, listener
 		}
 	}
 
+	// Some callers (e.g. BTPClusterSettingsIndex) never populate a gateway-scope entry at all, so
+	// this is a guaranteed miss for them - the generic primitive still checks it, since it's the
+	// caller's construction, not this walk, that decides whether gateway scope is meaningful here.
 	value, _ := idx.LookupExact(gatewayScope(gatewayNN))
 	return value
 }
 
-// resolveEntry reports pinned: true whenever entry itself is effective, and false only when it
-// falls through to a parent.
+// resolveEntry reports replacesParent: true whenever entry itself is effective, and false only
+// when it falls through to a parent.
 func (idx *policyIndex[T]) resolveEntry(entry policyIndexEntry[T], gatewayNN types.NamespacedName, listenerName *gwapiv1.SectionName, listenerSetNN *types.NamespacedName) (T, bool) {
 	if entry.effective {
 		return entry.value, true
 	}
-	return idx.parentLevels(gatewayNN, listenerName, listenerSetNN), false
+	return idx.resolveParentLevels(gatewayNN, listenerName, listenerSetNN), false
 }

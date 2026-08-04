@@ -65,8 +65,8 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	if idx == nil {
 		return nil
 	}
-	value, _ := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
-	return value
+	routingType, _ := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
+	return routingType
 }
 
 // LookupGatewayBTRoutingType resolves the RoutingType pinned directly at gatewayNN, ignoring any
@@ -76,8 +76,8 @@ func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.Names
 	if idx == nil {
 		return nil
 	}
-	value, _ := idx.LookupExact(gatewayScope(gatewayNN))
-	return value
+	routingType, _ := idx.LookupExact(gatewayScope(gatewayNN))
+	return routingType
 }
 
 // btpSpecHasClusterScopedFields reports whether spec sets any backend-cluster-scoped (CDS) field —
@@ -111,13 +111,13 @@ func newBTPClusterSettingsIndex() *BTPClusterSettingsIndex {
 	return &BTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
 }
 
-// HasRouteLevelClusterSettings reports whether a route-rule, route, or listener-level
+// HasClusterSettingsBelowGateway reports whether a route-rule, route, or listener-level
 // BackendTrafficPolicy contributes backend-cluster-scoped settings for the given target, or
-// targets it with MergeType unset. A gateway-level setting isn't checked: it applies uniformly to
-// every route sharing a merged cluster, so it can't cause a divergence. ListenerSet-level BTP
-// attachment isn't tracked here yet (envoyproxy/gateway#9619), so listenerSetNN is always resolved
-// as unset.
-func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
+// targets it with MergeType unset. A gateway-level setting is never the answer here: it applies
+// uniformly to every route sharing a merged cluster, so it can't cause a divergence -
+// BuildBTPIndexes never writes a gateway-scope entry into this index at all, so Lookup's walk to
+// gatewayScope is a guaranteed miss, not just a value this method happens to ignore.
+func (idx *BTPClusterSettingsIndex) HasClusterSettingsBelowGateway(
 	routeKind gwapiv1.Kind,
 	routeNN types.NamespacedName,
 	gatewayNN types.NamespacedName,
@@ -127,11 +127,12 @@ func (idx *BTPClusterSettingsIndex) HasRouteLevelClusterSettings(
 	if idx == nil {
 		return false
 	}
-	value, pinned := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, nil, routeRuleName)
-	// pinned catches what value alone would miss: a rule's own BTP with MergeType nil and no
-	// cluster-scoped field (value: false) still resolves to its own empty settings, not the
-	// gateway's - diverging from a sibling rule that has no BTP and does inherit the gateway's.
-	return value || pinned
+	hasClusterSettings, replacesParent := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, nil, routeRuleName)
+	// replacesParent catches what hasClusterSettings alone would miss: a rule's own BTP with
+	// MergeType nil and no cluster-scoped field (false) still resolves to its own empty settings,
+	// not the gateway's - diverging from a sibling rule that has no BTP and does inherit the
+	// gateway's.
+	return hasClusterSettings || replacesParent
 }
 
 // BTPLoadBalancerIndex reports, per gateway, whether a BackendTrafficPolicy attached to it sets
@@ -151,8 +152,8 @@ func (idx *BTPLoadBalancerIndex) IsConsistentHash(gatewayNN types.NamespacedName
 	if idx == nil {
 		return false
 	}
-	value, _ := idx.LookupExact(gatewayScope(gatewayNN))
-	return value
+	isConsistentHash, _ := idx.LookupExact(gatewayScope(gatewayNN))
+	return isConsistentHash
 }
 
 // BTPIndexes groups the three pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
@@ -227,6 +228,8 @@ func BuildBTPIndexes(
 			// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
 			// accepted gateway can enable merging; RoutingType (above) applies regardless.
 			if mergeBackendsEnabled {
+				// TODO(#9619): unlike routingTypeIdx above, this switch has no ListenerSet case, so
+				// ListenerSet-level BTP attachment isn't tracked here.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName != nil:
 					clusterSettingsIdx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
@@ -239,6 +242,8 @@ func BuildBTPIndexes(
 					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
 				}
 
+				// TODO(#9619): same gap as clusterSettingsIdx above - this switch has no
+				// ListenerSet case either, so ListenerSet-level BTP attachment isn't tracked here.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName == nil:
 					// Every accepted Gateway-wide BTP must claim this slot, even one that leaves
@@ -1796,7 +1801,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 
 	// Gateway-level Traffic is the only level safe to apply uniformly to a merged cluster: a
 	// route/rule-level BackendTrafficPolicy that would conflict is already excluded from merging
-	// via hasRouteLevelClusterSettings, so it never reaches x.BackendClusters here.
+	// via hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here.
 	if applyToBackendClusters && errs == nil {
 		for _, bc := range x.BackendClusters {
 			bc.Traffic = tf.DeepCopy()

@@ -833,7 +833,7 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 		return idx
 	}()
 
-	// clusterSettingsIdx forces HasRouteLevelClusterSettings to return true for route's own target.
+	// clusterSettingsIdx forces HasClusterSettingsBelowGateway to return true for route's own target.
 	clusterSettingsIdx := func() *BTPClusterSettingsIndex {
 		idx := newBTPClusterSettingsIndex()
 		idx.setRouteLevel(types.NamespacedName{Namespace: "default", Name: "route-1"}, "HTTPRoute", true, nil)

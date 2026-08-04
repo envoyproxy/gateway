@@ -2588,7 +2588,7 @@ func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
 
 	idx := BuildBTPIndexes(btps, routes, nil, nil, referenceGrants, nil, true)
 
-	got := idx.ClusterSettings.HasRouteLevelClusterSettings(
+	got := idx.ClusterSettings.HasClusterSettingsBelowGateway(
 		"HTTPRoute",
 		types.NamespacedName{Namespace: "route-ns", Name: "route-1"},
 		types.NamespacedName{},
@@ -2952,7 +2952,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			idx := BuildBTPIndexes(tt.btps, tt.routes, tt.gateways, nil, nil, nil, true)
-			got := idx.ClusterSettings.HasRouteLevelClusterSettings(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
+			got := idx.ClusterSettings.HasClusterSettingsBelowGateway(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
 			require.Equal(t, tt.expected, got)
 		})
 	}
