@@ -829,7 +829,7 @@ type CustomResponseMatch struct {
 	// +kubebuilder:validation:MaxItems=50
 	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
 
-	// Response headers to match on. The match evaluates to true if any of the matches are successful.
+	// Response headers to match on. The match evaluates to true if all matches are successful.
 	//
 	// +optional
 	// +kubebuilder:validation:MinItems=1

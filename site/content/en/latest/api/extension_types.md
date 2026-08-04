@@ -1392,7 +1392,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  false  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
-| `responseHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Response headers to match on. The match evaluates to true if any of the matches are successful. |
+| `responseHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Response headers to match on. The match evaluates to true if all matches are successful. |
 
 
 #### CustomTag

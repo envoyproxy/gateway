@@ -833,7 +833,7 @@ type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
 	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
 
-	// Response headers to match on. The match evaluates to true if any of the matches are successful.
+	// Response headers to match on. The match evaluates to true if all matches are successful.
 	ResponseHeaders []StringMatch `json:"responseHeaders,omitempty"`
 }
 

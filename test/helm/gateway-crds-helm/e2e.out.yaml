@@ -2939,7 +2939,7 @@ spec:
                       properties:
                         responseHeaders:
                           description: Response headers to match on. The match evaluates
-                            to true if any of the matches are successful.
+                            to true if all matches are successful.
                           items:
                             description: ResponseOverrideHeaderMatch defines the configuration
                               for matching a response header.
