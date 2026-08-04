@@ -603,7 +603,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 			foundSupportedRef = true
 			cm := t.GetConfigMap(caRefNs, string(caRef.Name))
 			if cm != nil {
-				if crt, dataOk := getOrFirstFromData(cm.Data, CACertKey); dataOk {
+				if crt, dataOk := getFirstMatchOrFirstFromData(cm.Data, CACertKey, TLSCertKey); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
@@ -634,7 +634,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 					continue
 				}
 				// Regular secret processing
-				if crt, dataOk := getOrFirstFromData(secret.Data, CACertKey); dataOk {
+				if crt, dataOk := getFirstMatchOrFirstFromData(secret.Data, CACertKey, TLSCertKey); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
