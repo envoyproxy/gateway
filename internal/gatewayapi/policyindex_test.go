@@ -172,6 +172,24 @@ func TestPolicyIndexLookup(t *testing.T) {
 			useListenerSet: true,
 			wantValue:      true,
 		},
+		{
+			name:           "listenerSetNN set: listenerSet-level entry with hasValue false transparently falls through to gateway",
+			listenerSetVal: &policyIndexEntry[bool]{value: true, effective: false},
+			gatewayValue:   true,
+			useRuleName:    true,
+			useListener:    true,
+			useListenerSet: true,
+			wantValue:      true,
+		},
+		{
+			name:                   "listenerSetNN set: listenerSet-listener entry with hasValue false falls through to listenerSet level",
+			listenerSetListenerVal: &policyIndexEntry[bool]{value: true, effective: false},
+			listenerSetVal:         &policyIndexEntry[bool]{value: true, effective: true},
+			useRuleName:            true,
+			useListener:            true,
+			useListenerSet:         true,
+			wantValue:              true,
+		},
 	}
 
 	for _, tc := range cases {
@@ -429,8 +447,21 @@ func TestPolicyIndexSetters(t *testing.T) {
 
 	t.Run("setListenerSetLevel keeps the first value recorded for a key", func(t *testing.T) {
 		idx := newPolicyIndex[bool]()
-		idx.setListenerSetLevel(listenerSetNN, true)
-		idx.setListenerSetLevel(listenerSetNN, false)
+		idx.setListenerSetLevel(listenerSetNN, true, true)
+		idx.setListenerSetLevel(listenerSetNN, false, true)
 		require.Equal(t, policyIndexEntry[bool]{value: true, effective: true}, idx.entries[listenerSetScope(listenerSetNN)])
+	})
+
+	t.Run("setListenerSetLevel with hasValue false still claims the slot", func(t *testing.T) {
+		idx := newPolicyIndex[bool]()
+		idx.setListenerSetLevel(listenerSetNN, true, false)
+		require.Equal(t, policyIndexEntry[bool]{value: true, effective: false}, idx.entries[listenerSetScope(listenerSetNN)])
+	})
+
+	t.Run("setListenerSetLevel with hasValue false blocks a later, hasValue true call from a different policy", func(t *testing.T) {
+		idx := newPolicyIndex[bool]()
+		idx.setListenerSetLevel(listenerSetNN, true, false)
+		idx.setListenerSetLevel(listenerSetNN, true, true)
+		require.Equal(t, policyIndexEntry[bool]{value: true, effective: false}, idx.entries[listenerSetScope(listenerSetNN)])
 	})
 }

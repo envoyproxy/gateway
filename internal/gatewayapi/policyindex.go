@@ -81,18 +81,21 @@ func (idx *policyIndex[T]) setListenerSetListenerLevel(ls types.NamespacedName, 
 	idx.putFirst(listenerSetListenerScope(ls, listener), policyIndexEntry[T]{value: value, effective: hasValue})
 }
 
-// setListenerSetLevel is setGatewayLevel's counterpart for a ListenerSet: also always effective,
-// for the same reason - resolveParentLevels never falls through from a ListenerSet's own scope to
-// Gateway scope (they're siblings, not parent/child), so there's no hasValue distinction to make.
-func (idx *policyIndex[T]) setListenerSetLevel(ls types.NamespacedName, value T) {
-	idx.putFirst(listenerSetScope(ls), policyIndexEntry[T]{value: value, effective: true})
+// setListenerSetLevel is setGatewayLevel's counterpart for a ListenerSet. hasValue decides whether
+// Lookup uses value directly or falls through to bare-Gateway scope, the same role it plays in
+// setGatewayListenerLevel: a ListenerSet has no Gateway-listener parent to fall back to (Gateway
+// listeners and ListenerSet listeners are sibling scopes), but it does still fall back to
+// bare-Gateway scope, which sits above both.
+func (idx *policyIndex[T]) setListenerSetLevel(ls types.NamespacedName, value T, hasValue bool) {
+	idx.putFirst(listenerSetScope(ls), policyIndexEntry[T]{value: value, effective: hasValue})
 }
 
 // Lookup resolves the effective value for a route-rule/route/listener/listenerSet/gateway target.
 // value alone is always correct; replacesParent reports whether a route-rule/route entry supplied
 // it directly, instead of falling through to a parent scope. listenerSetNN is nil unless the route
-// attaches through a ListenerSet, in which case Gateway listener/gateway scopes are skipped:
-// Gateway listeners and ListenerSet listeners are sibling scopes, not parent/child.
+// attaches through a ListenerSet, in which case Gateway-listener scope is skipped (Gateway listeners
+// and ListenerSet listeners are sibling scopes, not parent/child) but bare-Gateway scope is not:
+// it sits above both listener kinds, so either can still fall through to it.
 func (idx *policyIndex[T]) Lookup(
 	routeKind gwapiv1.Kind,
 	routeNN types.NamespacedName,

@@ -218,7 +218,7 @@ func BuildBTPIndexes(
 			case kind == resource.KindListenerSet && ref.SectionName != nil:
 				routingTypeIdx.setListenerSetListenerLevel(nn, *ref.SectionName, btp.Spec.RoutingType, hasRoutingType)
 			case kind == resource.KindListenerSet:
-				routingTypeIdx.setListenerSetLevel(nn, btp.Spec.RoutingType)
+				routingTypeIdx.setListenerSetLevel(nn, btp.Spec.RoutingType, hasRoutingType)
 			case ref.SectionName != nil:
 				routingTypeIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, btp.Spec.RoutingType, btp.Spec.MergeType)
 			default:

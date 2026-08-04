@@ -124,7 +124,7 @@ func BuildCTPClusterSettingsIndex(
 			case ref.Kind == resource.KindListenerSet && ref.SectionName != nil:
 				idx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
 			case ref.Kind == resource.KindListenerSet:
-				idx.setListenerSetLevel(nn, hasClusterScoped)
+				idx.setListenerSetLevel(nn, hasClusterScoped, true)
 			}
 		}
 	}
