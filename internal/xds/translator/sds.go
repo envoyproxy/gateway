@@ -6,10 +6,13 @@
 package translator
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -24,6 +27,23 @@ import (
 )
 
 const defaultConnectionTimeout = 10 * time.Second
+
+func sdsClusterNameFromURL(url string) string {
+	address := strings.TrimPrefix(url, "unix://")
+	hash := sha256.Sum256([]byte(address))
+	const maxReadablePrefixLength = 48
+
+	hashSuffix := hex.EncodeToString(hash[:16])
+	readablePrefix := strings.Trim(strings.ReplaceAll(address, "/", "_"), "_")
+	for len(readablePrefix) > maxReadablePrefixLength {
+		_, size := utf8.DecodeLastRuneInString(readablePrefix)
+		readablePrefix = readablePrefix[:len(readablePrefix)-size]
+	}
+	if readablePrefix != "" {
+		return fmt.Sprintf("sds_%s_%s", readablePrefix, hashSuffix)
+	}
+	return fmt.Sprintf("sds_%s", hashSuffix)
+}
 
 func sdsSecretConfig(secretName, clusterName string) *tlsv3.SdsSecretConfig {
 	return &tlsv3.SdsSecretConfig{
@@ -48,7 +68,7 @@ func sdsSecretConfig(secretName, clusterName string) *tlsv3.SdsSecretConfig {
 }
 
 func buildSDSCluster(sdsURL string) *cluster.Cluster {
-	clusterName := ir.SDSClusterNameFromURL(sdsURL)
+	clusterName := sdsClusterNameFromURL(sdsURL)
 	pipePath := strings.TrimPrefix(sdsURL, "unix://")
 
 	return &cluster.Cluster{

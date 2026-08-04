@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -21,7 +22,31 @@ import (
 )
 
 func TestSDSClusterNameFromURLIncludesReadableUnixPathAndHash(t *testing.T) {
-	require.Equal(t, "sds_var_run_secrets_workload-spiffe-uds_socket_2465711674b623c4f815575b37404800", ir.SDSClusterNameFromURL("unix:///var/run/secrets/workload-spiffe-uds/socket"))
+	require.Equal(t, "sds_var_run_secrets_workload-spiffe-uds_socket_2465711674b623c4f815575b37404800", sdsClusterNameFromURL("unix:///var/run/secrets/workload-spiffe-uds/socket"))
+}
+
+func TestSDSClusterNameFromURLDistinguishesUnixSocketPaths(t *testing.T) {
+	first := sdsClusterNameFromURL("/run/a/b/socket")
+	second := sdsClusterNameFromURL("/run/a_b/socket")
+
+	require.Equal(t, "sds_run_a_b_socket_73917e80488448b0df63fc687c91913f", first)
+	require.NotEqual(t, first, second)
+	require.Contains(t, first, "run_a_b_socket")
+	require.Contains(t, second, "run_a_b_socket")
+}
+
+func TestSDSClusterNameFromURLPreservesValidUTF8(t *testing.T) {
+	url := "unix:///" + strings.Repeat("a", 47) + "é/socket"
+
+	name := sdsClusterNameFromURL(url)
+
+	require.True(t, utf8.ValidString(name))
+}
+
+func TestSDSClusterNameFromURLUsesStrongHashWithoutReadablePrefix(t *testing.T) {
+	name := sdsClusterNameFromURL("unix:///")
+
+	require.Len(t, strings.TrimPrefix(name, "sds_"), 32)
 }
 
 func TestProcessSDSClustersCreatesDistinctClustersForAmbiguousUnixPaths(t *testing.T) {
@@ -32,7 +57,7 @@ func TestProcessSDSClustersCreatesDistinctClustersForAmbiguousUnixPaths(t *testi
 
 	require.NoError(t, err)
 	require.Len(t, tCtx.XdsResources[resourcev3.ClusterType], 2)
-	require.NotEqual(t, ir.SDSClusterNameFromURL("unix:///run/a/b/socket"), ir.SDSClusterNameFromURL("unix:///run/a_b/socket"))
+	require.NotEqual(t, sdsClusterNameFromURL("unix:///run/a/b/socket"), sdsClusterNameFromURL("unix:///run/a_b/socket"))
 }
 
 func TestProcessSDSClustersDeduplicatesSameURLAcrossHTTPAndTCP(t *testing.T) {
@@ -67,9 +92,9 @@ func TestProcessSDSClustersOrdersClustersByURL(t *testing.T) {
 	clusterM := clusters[1].(*cluster.Cluster)
 	clusterZ := clusters[2].(*cluster.Cluster)
 	require.Equal(t, []string{
-		ir.SDSClusterNameFromURL("unix:///var/run/sds/a.sock"),
-		ir.SDSClusterNameFromURL("unix:///var/run/sds/m.sock"),
-		ir.SDSClusterNameFromURL("unix:///var/run/sds/z.sock"),
+		sdsClusterNameFromURL("unix:///var/run/sds/a.sock"),
+		sdsClusterNameFromURL("unix:///var/run/sds/m.sock"),
+		sdsClusterNameFromURL("unix:///var/run/sds/z.sock"),
 	}, []string{
 		clusterA.GetName(),
 		clusterM.GetName(),
@@ -79,7 +104,7 @@ func TestProcessSDSClustersOrdersClustersByURL(t *testing.T) {
 
 func TestProcessSDSClustersReturnsCollisionForPreexistingNonSDSCluster(t *testing.T) {
 	sdsURL := "unix:///var/run/sds/socket"
-	clusterName := ir.SDSClusterNameFromURL(sdsURL)
+	clusterName := sdsClusterNameFromURL(sdsURL)
 	tCtx := &types.ResourceVersionTable{}
 	tCtx.XdsResources = types.XdsResources{
 		resourcev3.ClusterType: {&cluster.Cluster{Name: clusterName}},
@@ -106,7 +131,7 @@ func TestProcessSDSClustersReturnsCollisionWhenPreexistingClusterMissesHTTP2Opti
 	sdsURL := "unix:///var/run/sds/socket"
 	tCtx := &types.ResourceVersionTable{}
 	require.NoError(t, createSDSCluster(tCtx, sdsURL))
-	existing := findXdsCluster(tCtx, ir.SDSClusterNameFromURL(sdsURL))
+	existing := findXdsCluster(tCtx, sdsClusterNameFromURL(sdsURL))
 	require.NotNil(t, existing)
 	http2Options := existing.ProtoReflect().Descriptor().Fields().ByName("http2_protocol_options")
 	existing.ProtoReflect().Clear(http2Options)
@@ -121,7 +146,7 @@ func TestProcessSDSClustersReturnsCollisionWhenPreexistingClusterHasWrongConnect
 	sdsURL := "unix:///var/run/sds/socket"
 	tCtx := &types.ResourceVersionTable{}
 	require.NoError(t, createSDSCluster(tCtx, sdsURL))
-	findXdsCluster(tCtx, ir.SDSClusterNameFromURL(sdsURL)).ConnectTimeout = durationpb.New(5 * time.Second)
+	findXdsCluster(tCtx, sdsClusterNameFromURL(sdsURL)).ConnectTimeout = durationpb.New(5 * time.Second)
 
 	err := processSDSClusters(tCtx, xdsWithHTTPSDSURLs(sdsURL))
 
@@ -133,7 +158,7 @@ func TestProcessSDSClustersReturnsCollisionWhenPreexistingClusterHasEmptyLoadAss
 	sdsURL := "unix:///var/run/sds/socket"
 	tCtx := &types.ResourceVersionTable{}
 	require.NoError(t, createSDSCluster(tCtx, sdsURL))
-	clusterName := ir.SDSClusterNameFromURL(sdsURL)
+	clusterName := sdsClusterNameFromURL(sdsURL)
 	findXdsCluster(tCtx, clusterName).LoadAssignment = &endpoint.ClusterLoadAssignment{ClusterName: clusterName}
 
 	err := processSDSClusters(tCtx, xdsWithHTTPSDSURLs(sdsURL))
@@ -166,5 +191,5 @@ func tlsConfigWithSDSURLs(urls ...string) *ir.TLSConfig {
 }
 
 func sdsCollisionError(sdsURL string) string {
-	return `SDS cluster "` + ir.SDSClusterNameFromURL(sdsURL) + `" conflicts with an existing cluster`
+	return `SDS cluster "` + sdsClusterNameFromURL(sdsURL) + `" conflicts with an existing cluster`
 }
