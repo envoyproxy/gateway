@@ -581,20 +581,16 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 }
 
 // irTLSConfigs produces a defaulted IR TLSConfig
-func irTLSConfigs(config *ListenerTLSConfig) (*ir.TLSConfig, error) {
+func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
-		return nil, nil
+		return nil
 	}
 
 	tlsListenerConfigs := &ir.TLSConfig{
 		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
 	for i, tlsSecret := range config.secrets {
-		cert, err := getTLSCertificateFromSecret(tlsSecret)
-		if err != nil {
-			return nil, err
-		}
-		tlsListenerConfigs.Certificates[i] = cert
+		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(tlsSecret)
 	}
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
@@ -604,7 +600,7 @@ func irTLSConfigs(config *ListenerTLSConfig) (*ir.TLSConfig, error) {
 		// TODO: setTLSClientValidationContext when Gateway API support.
 	}
 
-	return tlsListenerConfigs, nil
+	return tlsListenerConfigs
 }
 
 func convertClientValidationModeType(mode egv1a1.ClientValidationModeType, irTLSConfig *ir.TLSConfig) {
@@ -631,13 +627,10 @@ func isValidClientCertificateRef(tlsSecret *corev1.Secret) bool {
 	return tlsSecret.Data[corev1.TLSCertKey] != nil && tlsSecret.Data[corev1.TLSPrivateKeyKey] != nil
 }
 
-func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) (ir.TLSCertificate, error) {
+func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
 	if tlsSecret.Type == egv1a1.SDSSecretType {
-		sdsConfig, err := ir.NewSDSConfig(tlsSecret)
-		if err != nil {
-			return ir.TLSCertificate{}, err
-		}
-		return ir.TLSCertificate{Name: irTLSListenerConfigName(tlsSecret), SDS: sdsConfig}, nil
+		sdsConfig, _ := ir.NewSDSConfig(tlsSecret)
+		return ir.TLSCertificate{Name: irTLSListenerConfigName(tlsSecret), SDS: sdsConfig}
 	}
 
 	cert := ir.TLSCertificate{
@@ -650,16 +643,13 @@ func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) (ir.TLSCertificate, e
 	if ok && len(ocspStaple) > 0 {
 		cert.OCSPStaple = ocspStaple
 	}
-	return cert, nil
+	return cert
 }
 
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
 // for TCP/TLS routes, e.g. disabling ALPN
-func irTLSConfigsForTCPListener(config *ListenerTLSConfig) (*ir.TLSConfig, error) {
-	tlsListenerConfigs, err := irTLSConfigs(config)
-	if err != nil {
-		return nil, err
-	}
+func irTLSConfigsForTCPListener(config *ListenerTLSConfig) *ir.TLSConfig {
+	tlsListenerConfigs := irTLSConfigs(config)
 
 	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
 	// by setting an empty slice instead of a nil slice
@@ -667,7 +657,7 @@ func irTLSConfigsForTCPListener(config *ListenerTLSConfig) (*ir.TLSConfig, error
 		tlsListenerConfigs.ALPNProtocols = []string{}
 	}
 
-	return tlsListenerConfigs, nil
+	return tlsListenerConfigs
 }
 
 func irTLSListenerConfigName(secret *corev1.Secret) string {

@@ -444,11 +444,7 @@ func (t *Translator) processClientTLSSettings(
 			}
 		} else {
 			// Regular secret processing
-			certificate, err := getTLSCertificateFromSecret(secret)
-			if err != nil {
-				return tlsConfig, err
-			}
-			tlsConfig.ClientCertificates = append(tlsConfig.ClientCertificates, certificate)
+			tlsConfig.ClientCertificates = append(tlsConfig.ClientCertificates, getTLSCertificateFromSecret(secret))
 		}
 	}
 
