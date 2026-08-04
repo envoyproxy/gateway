@@ -967,8 +967,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 			continue
 		}
 
-		switch {
-		case failed:
+		if failed {
 			// A fail-closed error in any extension makes every route under this listener
 			// return a 500. That's inherently a per-route action, so it's still set on each
 			// route individually (skipping any route that already has its own policy) rather
@@ -982,10 +981,16 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 					StatusCode: new(uint32(500)),
 				}
 			}
-		case len(extProcs) > 0 || len(wasms) > 0 || len(luas) > 0 || len(dynamicModules) > 0:
+		} else {
 			// The whole extension set lives on the listener - a route(-rule) targeting policy
 			// wins over this Gateway/ListenerSet-scoped one outright (see
 			// translateEnvoyExtensionPolicyForRoute) and is never merged with it.
+			//
+			// Always set, even when every slice below ends up empty (e.g. a fail-open
+			// ExtProc/Wasm error leaves nothing to actually run): this listener still has a
+			// policy that succeeded and owns the scope, and a nil EnvoyExtensions here would
+			// let a later, less-specific Gateway/ListenerSet policy attach its own filters to
+			// the same listener instead of being blocked by the "if already set" check above.
 			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 				ExtProcs:       extProcs,
 				Wasms:          wasms,
