@@ -1331,7 +1331,7 @@ func (t *Translator) buildWasm(
 				kind:      resource.KindEnvoyExtensionPolicy,
 				namespace: policy.Namespace,
 			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
 				return nil, err
 			}
 		}
@@ -1373,7 +1373,7 @@ func (t *Translator) buildWasm(
 				kind:      resource.KindEnvoyExtensionPolicy,
 				namespace: policy.Namespace,
 			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
 				return nil, err
 			}
 		}
