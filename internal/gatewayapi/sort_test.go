@@ -216,7 +216,7 @@ func TestXdsIRRoutesSort(t *testing.T) {
 	}
 }
 
-func TestSortXdsIRMapPreserveRouteOrderPriority(t *testing.T) {
+func TestSortXdsIRMapRouteOrder(t *testing.T) {
 	cases := []struct {
 		name               string
 		preserveRouteOrder bool
@@ -224,27 +224,27 @@ func TestSortXdsIRMapPreserveRouteOrderPriority(t *testing.T) {
 		expectedOrder      []string
 	}{
 		{
-			name:               "priority orders routes when preserveRouteOrder is set",
+			name:               "route order ranks routes when preserveRouteOrder is set",
 			preserveRouteOrder: true,
 			routes: []*ir.HTTPRoute{
-				{Name: "low", Priority: 1},
-				{Name: "high", Priority: 10},
-				{Name: "mid", Priority: 5},
+				{Name: "low", RouteOrder: 1},
+				{Name: "high", RouteOrder: 10},
+				{Name: "mid", RouteOrder: 5},
 			},
 			expectedOrder: []string{"high", "mid", "low"},
 		},
 		{
-			name:               "equal priority keeps insertion order when preserveRouteOrder is set",
+			name:               "equal route order keeps insertion order when preserveRouteOrder is set",
 			preserveRouteOrder: true,
 			routes: []*ir.HTTPRoute{
-				{Name: "first", Priority: 5},
-				{Name: "second", Priority: 5},
-				{Name: "third", Priority: 5},
+				{Name: "first", RouteOrder: 5},
+				{Name: "second", RouteOrder: 5},
+				{Name: "third", RouteOrder: 5},
 			},
 			expectedOrder: []string{"first", "second", "third"},
 		},
 		{
-			name:               "no priorities preserves insertion order when preserveRouteOrder is set",
+			name:               "no route order preserves insertion order when preserveRouteOrder is set",
 			preserveRouteOrder: true,
 			routes: []*ir.HTTPRoute{
 				{Name: "a"},
@@ -254,11 +254,29 @@ func TestSortXdsIRMapPreserveRouteOrderPriority(t *testing.T) {
 			expectedOrder: []string{"a", "b", "c"},
 		},
 		{
-			name:               "priority is ignored under default specificity ordering",
+			name:               "route order wins over specificity under default sort",
 			preserveRouteOrder: false,
 			routes: []*ir.HTTPRoute{
-				{Name: "specific", PathMatch: &ir.StringMatch{Prefix: new("/api/v1")}, Priority: 1},
-				{Name: "unspecific", PathMatch: &ir.StringMatch{Prefix: new("/")}, Priority: 100},
+				{Name: "specific", PathMatch: &ir.StringMatch{Prefix: new("/api/v1")}, RouteOrder: 1},
+				{Name: "unspecific", PathMatch: &ir.StringMatch{Prefix: new("/")}, RouteOrder: 100},
+			},
+			expectedOrder: []string{"unspecific", "specific"},
+		},
+		{
+			name:               "specificity breaks ties within equal route order under default sort",
+			preserveRouteOrder: false,
+			routes: []*ir.HTTPRoute{
+				{Name: "unspecific", PathMatch: &ir.StringMatch{Prefix: new("/")}, RouteOrder: 5},
+				{Name: "specific", PathMatch: &ir.StringMatch{Prefix: new("/api/v1")}, RouteOrder: 5},
+			},
+			expectedOrder: []string{"specific", "unspecific"},
+		},
+		{
+			name:               "no route order preserves specificity under default sort",
+			preserveRouteOrder: false,
+			routes: []*ir.HTTPRoute{
+				{Name: "unspecific", PathMatch: &ir.StringMatch{Prefix: new("/")}},
+				{Name: "specific", PathMatch: &ir.StringMatch{Prefix: new("/api/v1")}},
 			},
 			expectedOrder: []string{"specific", "unspecific"},
 		},
