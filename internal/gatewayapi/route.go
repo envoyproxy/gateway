@@ -1355,16 +1355,16 @@ func (t *Translator) processHTTPRouteRule(
 
 	if priority := t.routePriority(httpRoute); priority != nil {
 		for _, r := range ruleRoutes {
-			r.Priority = *priority
+			r.RouteOrder = *priority
 		}
 	}
 
 	return ruleRoutes, nil
 }
 
-// routePriority parses RoutePriorityAnnotation, returning nil when absent. The
-// annotation only affects ordering under PreserveRouteOrder (see sortXdsIRMap),
-// so an invalid value is ignored with a warning rather than failing the route.
+// routePriority parses RoutePriorityAnnotation, returning nil when absent. A
+// malformed value is ignored with a warning rather than failing the route, so a
+// typo can never drop a route.
 func (t *Translator) routePriority(httpRoute *HTTPRouteContext) *uint32 {
 	val, ok := httpRoute.Annotations[egv1a1.RoutePriorityAnnotation]
 	if !ok {
