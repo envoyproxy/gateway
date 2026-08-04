@@ -478,6 +478,13 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      envoyExtensions:
+        luas:
+        - code: |
+            function envoy_on_request(request_handle)
+              request_handle:logInfo("gateway")
+            end
+          name: envoyextensionpolicy/envoy-gateway/target-gw/lua/0
       externalPort: 80
       hostnames:
       - '*'
@@ -511,14 +518,6 @@ xdsIR:
             name: httproute/default/route-on-gw/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          luas:
-          - Code: |
-              function envoy_on_request(request_handle)
-                request_handle:logInfo("gateway")
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/target-gw/lua/0
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -531,6 +530,13 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      envoyExtensions:
+        luas:
+        - code: |
+            function envoy_on_request(request_handle)
+              request_handle:logInfo("gateway-section")
+            end
+          name: envoyextensionpolicy/envoy-gateway/target-gw-section/lua/0
       externalPort: 8080
       hostnames:
       - '*'
@@ -564,14 +570,6 @@ xdsIR:
             name: httproute/default/route-on-gw/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          luas:
-          - Code: |
-              function envoy_on_request(request_handle)
-                request_handle:logInfo("gateway-section")
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/target-gw-section/lua/0
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -584,6 +582,13 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      envoyExtensions:
+        luas:
+        - code: |
+            function envoy_on_request(request_handle)
+              request_handle:logInfo("listenerset-section")
+            end
+          name: envoyextensionpolicy/envoy-gateway/target-listenerset-section/lua/0
       externalPort: 8081
       hostnames:
       - '*'
@@ -619,12 +624,11 @@ xdsIR:
             weight: 1
         envoyExtensions:
           luas:
-          - Code: |
+          - code: |
               function envoy_on_request(request_handle)
                 request_handle:logInfo("route")
               end
-            FilterContext: null
-            Name: envoyextensionpolicy/default/target-route/lua/0
+            name: envoyextensionpolicy/default/target-route/lua/0
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -637,6 +641,13 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      envoyExtensions:
+        luas:
+        - code: |
+            function envoy_on_request(request_handle)
+              request_handle:logInfo("listenerset")
+            end
+          name: envoyextensionpolicy/envoy-gateway/target-listenerset/lua/0
       externalPort: 8082
       hostnames:
       - '*'
@@ -672,12 +683,11 @@ xdsIR:
             weight: 1
         envoyExtensions:
           luas:
-          - Code: |
+          - code: |
               function envoy_on_request(request_handle)
                 request_handle:logInfo("route")
               end
-            FilterContext: null
-            Name: envoyextensionpolicy/default/target-route/lua/0
+            name: envoyextensionpolicy/default/target-route/lua/0
         hostname: '*'
         isHTTP2: false
         metadata:

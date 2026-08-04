@@ -32,7 +32,8 @@ var _ httpFilter = &dynamicModule{}
 
 // patchHCM builds and appends the dynamic module filters to the HTTP Connection Manager
 // if applicable, and they do not already exist.
-// Note: this method creates a filter for each route that contains a dynamic module config.
+// Note: this method creates a filter for each route that contains a dynamic module config, plus
+// one for each DynamicModule a Gateway/Listener-scoped policy attached directly to the listener.
 // The filter is disabled by default and enabled on the route level.
 func (*dynamicModule) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
@@ -44,21 +45,29 @@ func (*dynamicModule) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.
 		return errors.New("ir listener is nil")
 	}
 
-	for _, route := range irListener.Routes {
-		if !routeContainsDynamicModule(route) {
-			continue
-		}
-		for _, dm := range route.EnvoyExtensions.DynamicModules {
-			if hcmContainsFilter(mgr, dynamicModuleFilterName(&dm)) {
+	addDynamicModuleFilters := func(dms []ir.DynamicModule) {
+		for i := range dms {
+			dm := &dms[i]
+			if hcmContainsFilter(mgr, dynamicModuleFilterName(dm)) {
 				continue
 			}
-			filter, err := buildHCMDynamicModuleFilter(&dm)
+			filter, err := buildHCMDynamicModuleFilter(dm)
 			if err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			mgr.HttpFilters = append(mgr.HttpFilters, filter)
 		}
+	}
+
+	if irListener.EnvoyExtensions != nil {
+		addDynamicModuleFilters(irListener.EnvoyExtensions.DynamicModules)
+	}
+	for _, route := range irListener.Routes {
+		if !routeContainsDynamicModule(route) {
+			continue
+		}
+		addDynamicModuleFilters(route.EnvoyExtensions.DynamicModules)
 	}
 
 	return errs
@@ -188,20 +197,49 @@ func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []
 	return errs
 }
 
-// patchRoute enables the corresponding dynamic module filter for the provided route.
-func (*dynamicModule) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+// patchResources creates clusters for remote dynamic module sources a Gateway/Listener-scoped
+// policy attached directly to irListener, as opposed to a specific route. Called directly from
+// the translator alongside patchResources, the same way rate limiting is handled outside the
+// generic per-filter loop, since patchResources has no listener context.
+func patchDynamicModuleListenerResources(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener) error {
+	if tCtx == nil || tCtx.XdsResources == nil {
+		return errors.New("xds resource table is nil")
+	}
+	if irListener == nil || irListener.EnvoyExtensions == nil {
+		return nil
+	}
+
+	var errs error
+	for _, dm := range irListener.EnvoyExtensions.DynamicModules {
+		if dm.Remote == nil {
+			continue
+		}
+		if err := addClusterFromURL(dm.Remote.URL, nil, tCtx); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
+}
+
+// patchRoute enables the corresponding dynamic module filter for the provided route. Routes with
+// no DynamicModule of their own inherit whatever a Gateway/Listener-scoped policy attached to irListener.
+func (*dynamicModule) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.EnvoyExtensions == nil {
+
+	extensions := effectiveEnvoyExtensions(irRoute, irListener)
+	if extensions == nil {
 		return nil
 	}
 
-	for _, dm := range irRoute.EnvoyExtensions.DynamicModules {
-		filterName := dynamicModuleFilterName(&dm)
+	for i := range extensions.DynamicModules {
+		dm := &extensions.DynamicModules[i]
+		filterName := dynamicModuleFilterName(dm)
 		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
 			Config: &anypb.Any{},
 		}); err != nil {

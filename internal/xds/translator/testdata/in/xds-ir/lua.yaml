@@ -275,8 +275,9 @@ http:
       distinct: false
       name: ""
       prefix: /
-# Gateway policy with Lua (at listener) + ExtProc (at route), both from the same policy.
-# The route's ExtProc carries fromGatewayPolicy:true so the listener Lua must NOT be disabled.
+# Gateway policy with Lua and ExtProc, both attached at the listener (same policy). The route has
+# no EnvoyExtensions of its own, so it inherits both: the listener Lua must NOT be disabled, and
+# the listener's ExtProc filter must be enabled on the route.
 - address: 0.0.0.0
   hostnames:
   - '*'
@@ -287,6 +288,15 @@ http:
         request_handle:logInfo('Gateway Lua.')
         end
       name: envoyextensionpolicy/default/policy-for-gateway/lua/0
+    extProcs:
+    - name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
+      authority: grpc-backend.default:8000
+      destination:
+        name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend
+        settings:
+        - protocol: GRPC
+          weight: 1
+          name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend/backend/0
   path:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
@@ -309,20 +319,9 @@ http:
       distinct: false
       name: ""
       prefix: /foo
-    envoyExtensions:
-      fromGatewayPolicy: true
-      extProcs:
-      - name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
-        authority: grpc-backend.default:8000
-        destination:
-          name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend
-          settings:
-          - protocol: GRPC
-            weight: 1
-            name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend/backend/0
 # Listener Lua with a route that has a fail-open empty policy (EnvoyExtensions non-nil but all
-# extension slices empty and no fromGatewayPolicy). The listener Lua must still be disabled
-# because the more-specific route policy owns this route regardless of producing no extensions.
+# extension slices empty). The listener Lua must still be disabled because the more-specific
+# route policy owns this route regardless of producing no extensions.
 - address: 0.0.0.0
   hostnames:
   - '*'

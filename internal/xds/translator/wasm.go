@@ -46,7 +46,8 @@ var _ httpFilter = &wasm{}
 
 // patchHCM builds and appends the wasm Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
-// Note: this method creates a wasm filter for each route that contains an wasm config.
+// Note: this method creates a wasm filter for each route that contains an wasm config, plus one
+// for each Wasm a Gateway/Listener-scoped policy attached directly to the listener.
 // The filter is disabled by default. It is enabled on the route level.
 func (*wasm) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
@@ -58,21 +59,29 @@ func (*wasm) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		return errors.New("ir listener is nil")
 	}
 
-	for _, route := range irListener.Routes {
-		if !routeContainsWasm(route) {
-			continue
-		}
-		for _, ep := range route.EnvoyExtensions.Wasms {
-			if hcmContainsFilter(mgr, wasmFilterName(&ep)) {
+	addWasmFilters := func(wasms []ir.Wasm) {
+		for i := range wasms {
+			w := &wasms[i]
+			if hcmContainsFilter(mgr, wasmFilterName(w)) {
 				continue
 			}
-			filter, err := buildHCMWasmFilter(&ep)
+			filter, err := buildHCMWasmFilter(w)
 			if err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			mgr.HttpFilters = append(mgr.HttpFilters, filter)
 		}
+	}
+
+	if irListener.EnvoyExtensions != nil {
+		addWasmFilters(irListener.EnvoyExtensions.Wasms)
+	}
+	for _, route := range irListener.Routes {
+		if !routeContainsWasm(route) {
+			continue
+		}
+		addWasmFilters(route.EnvoyExtensions.Wasms)
 	}
 
 	return errs
@@ -192,20 +201,23 @@ func (*wasm) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) er
 }
 
 // patchRoute patches the provided route with the wasm config if applicable.
-// Note: this method enables the corresponding wasm filter for the provided route.
-func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+// Note: this method enables the corresponding wasm filter for the provided route. Routes with no
+// Wasm of their own inherit whatever a Gateway/Listener-scoped policy attached to irListener.
+func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.EnvoyExtensions == nil {
+
+	extensions := effectiveEnvoyExtensions(irRoute, irListener)
+	if extensions == nil {
 		return nil
 	}
 
-	for _, ep := range irRoute.EnvoyExtensions.Wasms {
-		filterName := wasmFilterName(&ep)
+	for i := range extensions.Wasms {
+		filterName := wasmFilterName(&extensions.Wasms[i])
 		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
 			Config: &anypb.Any{},
 		}); err != nil {

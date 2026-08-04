@@ -967,36 +967,30 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 			continue
 		}
 
-		// TODO: move other extensions to listener level.
-		// Only attach listener-level Lua when the policy succeeds; a fail-closed error in
-		// any other extension makes every route return a 500, so the Lua filter must not
-		// run on those synthetic error responses.
-		if len(luas) > 0 && !failed {
-			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-				Luas: luas,
-			}
-		}
-
-		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway
-		// listener, ListenerSet listener) wins over a policy targeting a lesser
-		// specific scope(Gateway/ListenerSet).
-		for _, r := range http.Routes {
-			// if already set - there's a specific level policy, so skip
-			if r.EnvoyExtensions != nil {
-				continue
-			}
-
-			if failed {
+		switch {
+		case failed:
+			// A fail-closed error in any extension makes every route under this listener
+			// return a 500. That's inherently a per-route action, so it's still set on each
+			// route individually (skipping any route that already has its own policy) rather
+			// than on the listener.
+			for _, r := range http.Routes {
+				// if already set - there's a specific level policy, so skip
+				if r.EnvoyExtensions != nil {
+					continue
+				}
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
-			} else {
-				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-					ExtProcs:          extProcs,
-					Wasms:             wasms,
-					DynamicModules:    dynamicModules,
-					FromGatewayPolicy: new(true),
-				}
+			}
+		case len(extProcs) > 0 || len(wasms) > 0 || len(luas) > 0 || len(dynamicModules) > 0:
+			// The whole extension set lives on the listener - a route(-rule) targeting policy
+			// wins over this Gateway/ListenerSet-scoped one outright (see
+			// translateEnvoyExtensionPolicyForRoute) and is never merged with it.
+			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+				ExtProcs:       extProcs,
+				Wasms:          wasms,
+				Luas:           luas,
+				DynamicModules: dynamicModules,
 			}
 		}
 	}

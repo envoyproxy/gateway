@@ -522,6 +522,16 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		if err = patchResources(tCtx, httpListener.Routes); err != nil {
 			errs = errors.Join(errs, err)
 		}
+
+		// ExtProc/DynamicModule configs a Gateway/Listener-scoped policy attached directly to the
+		// listener aren't reachable through httpListener.Routes, so they're handled separately -
+		// the same way rate limiting is handled outside the generic per-filter loop above.
+		if err = patchExtProcListenerResources(tCtx, httpListener); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if err = patchDynamicModuleListenerResources(tCtx, httpListener); err != nil {
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	return errs

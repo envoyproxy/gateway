@@ -19,7 +19,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -154,17 +153,13 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *
 		return nil
 	}
 
-	// Disable the inherited listener-level Lua whenever EnvoyExtensions was set by a
-	// more-specific route policy (FromGatewayPolicy is false/nil). The extension count
-	// is intentionally not checked here: an empty result (e.g. fail-open invalid Wasm)
-	// still represents a more-specific policy that owns this route and must suppress the
-	// lower-scope Lua. When FromGatewayPolicy is true the route-level extensions come
-	// from the same gateway/listener policy that also installed the listener Lua, so both coexist.
-	disableListenerLevelFilter := !ptr.Deref(irRoute.EnvoyExtensions.FromGatewayPolicy, false)
-
-	// Route has its own Lua entries — disable the inherited listener-level Lua and
-	// install the route's scripts instead.
-	if irListener != nil && irListener.EnvoyExtensions != nil && len(irListener.EnvoyExtensions.Luas) > 0 && disableListenerLevelFilter {
+	// A route only ever has its own EnvoyExtensions when a more-specific policy targets it
+	// directly - Gateway/Listener-scoped policies attach their extensions to the listener itself
+	// (see translateEnvoyExtensionPolicyForListeners) rather than copying them onto every route.
+	// That more-specific policy owns the route and must suppress the listener-level Lua it would
+	// otherwise inherit, regardless of whether it has any Lua entries of its own (e.g. an empty
+	// result from a fail-open invalid Wasm still represents ownership of the route).
+	if irListener != nil && irListener.EnvoyExtensions != nil && len(irListener.EnvoyExtensions.Luas) > 0 {
 		if err := enableFilterOnRoute(route, luaListenerFCFilterName(), &routev3.FilterConfig{Disabled: true}); err != nil {
 			return err
 		}
