@@ -224,6 +224,17 @@ func TestTranslateXds(t *testing.T) {
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
+
+			// A Runtime resource is always emitted, so only the cases that configure
+			// runtime values keep a golden file for it.
+			if len(x.Runtime) > 0 {
+				runtimeResources := tCtx.XdsResources[resourcev3.RuntimeType]
+				if test.OverrideTestData() {
+					keep.Insert(inputFileName + ".runtime.yaml")
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, runtimeResources), filepath.Join("testdata", "out", "xds-ir", inputFileName+".runtime.yaml")))
+				}
+				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".runtime.yaml"), requireResourcesToYAMLString(t, runtimeResources))
+			}
 		})
 	}
 

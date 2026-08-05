@@ -24,6 +24,8 @@ var (
 	differentDynamicResourcesUserBootstrap string
 	//go:embed testdata/validate/different-xds-cluster-address-bootstrap.yaml
 	differentXdsClusterAddressBootstrap string
+	//go:embed testdata/validate/duplicate-runtime-layer-bootstrap.yaml
+	duplicateRuntimeLayerBootstrap string
 )
 
 func TestValidateBootstrap(t *testing.T) {
@@ -57,6 +59,15 @@ func TestValidateBootstrap(t *testing.T) {
 			name: "user bootstrap with different xds_cluster endpoint",
 			bootstrap: &egv1a1.ProxyBootstrap{
 				Value: &differentXdsClusterAddressBootstrap,
+			},
+			expected: false,
+		},
+		{
+			// Envoy refuses to start on duplicate runtime layer names, so this has to be
+			// rejected here rather than surfacing as a proxy crashloop.
+			name: "user bootstrap with duplicate runtime layer names",
+			bootstrap: &egv1a1.ProxyBootstrap{
+				Value: &duplicateRuntimeLayerBootstrap,
 			},
 			expected: false,
 		},

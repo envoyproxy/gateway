@@ -930,6 +930,86 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Customize EnvoyProxy Runtime Values
+
+You can set [Envoy runtime][] values via `spec.runtime` in EnvoyProxy Config. Runtime values are
+delivered to proxies over RTDS, so editing them applies to running proxies without a restart.
+
+One use is tuning circuit breakers on clusters that Envoy Gateway does not build from its own
+configuration, such as clusters added by an [extension server][]. Those clusters keep Envoy's
+built-in defaults, including a `max_requests` of 1024, and cannot be targeted by a
+`BackendTrafficPolicy`. Since an ext_proc filter opens one gRPC stream per request, that default
+limits the proxy to 1024 concurrent requests through ext_proc, after which requests are rejected
+and `cluster.<cluster_name>.upstream_rq_active_overflow` increments.
+
+The runtime key applies whether or not the cluster carries a `circuit_breakers` block, so it
+reaches these clusters without modifying them:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  runtime:
+    circuit_breakers.my-extension-cluster.default.max_requests: 16384
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  runtime:
+    circuit_breakers.my-extension-cluster.default.max_requests: 16384
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Values keep the type they are written with. Envoy resolves boolean runtime guards only from real
+booleans, and numeric limits from numbers, so quoting matters:
+
+```yaml
+spec:
+  runtime:
+    circuit_breakers.my-cluster.default.max_requests: 16384      # number
+    envoy.reloadable_features.some_feature: false                # boolean
+    some.string.key: "a string"                                  # string
+```
+
+Runtime keys are an Envoy-level interface and are not validated by Envoy Gateway. Refer to the
+[Envoy runtime][] documentation for the available keys.
+
+To confirm the values a proxy is using, query its admin interface. Envoy's configuration dump has
+no runtime section, so `egctl x translate` shows only the RTDS layer in the bootstrap and not the
+values themselves:
+
+```shell
+kubectl exec -n envoy-gateway-system <envoy-pod> -- curl -s localhost:19000/runtime
+```
+
+Note that changing a runtime value avoids the connection and stream disruption that comes with
+modifying a cluster, but it only reaches settings Envoy reads from runtime. Settings with no
+runtime key, such as `connect_timeout`, are not configurable this way.
+
+Runtime values reach proxies through an RTDS layer in the bootstrap. If you replace the bootstrap
+entirely using `spec.bootstrap` with the `Replace` type, keep that layer or `spec.runtime` will
+have no effect.
+
 ## Customize EnvoyProxy with Patches
 
 You can customize the EnvoyProxy using patches.
@@ -1202,3 +1282,5 @@ After applying the config, the EnvoyProxy deployment will be configured to use t
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [egctl x translate]: ../operations/egctl#egctl-experimental-translate
+[Envoy runtime]: https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime
+[extension server]: ../extensibility/extension-server

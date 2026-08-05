@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -1206,6 +1207,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		UDP                     []*ir.UDPListener
 		EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
 		FilterOrder             []egv1a1.FilterPosition
+		Runtime                 map[string]apiextensionsv1.JSON
 		GlobalResources         *ir.GlobalResources
 		ExtensionServerPolicies []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
@@ -1219,6 +1221,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		UDP:                     a.UDP,
 		EnvoyPatchPolicies:      a.EnvoyPatchPolicies,
 		FilterOrder:             a.FilterOrder,
+		Runtime:                 a.Runtime,
 		GlobalResources:         a.GlobalResources,
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
 		BackendClusters:         a.BackendClusters,

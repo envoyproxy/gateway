@@ -408,6 +408,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		if gateway.envoyProxy != nil {
 			irKey := t.getIRKey(gateway.Gateway)
 			xdsIR[irKey].FilterOrder = gateway.envoyProxy.Spec.FilterOrder
+			xdsIR[irKey].Runtime = gateway.envoyProxy.Spec.Runtime
 		}
 	}
 

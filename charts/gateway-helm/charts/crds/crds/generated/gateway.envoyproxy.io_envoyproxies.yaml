@@ -11298,6 +11298,27 @@ spec:
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
                   or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint".
                 type: string
+              runtime:
+                additionalProperties:
+                  x-kubernetes-preserve-unknown-fields: true
+                description: "Runtime defines Envoy runtime values for managed proxies,
+                  as a map of runtime key\nto value. Values are typed: numbers, booleans
+                  and strings are all preserved as\nwritten, which matters because
+                  Envoy resolves boolean runtime guards only from real\nbooleans and
+                  numeric limits only from numbers or numeric strings.\n\nRuntime
+                  values are delivered over RTDS, so changes apply to running proxies
+                  without\na restart and without triggering a CDS update.\n\nOne use
+                  is tuning circuit breakers on clusters that Envoy Gateway does not
+                  build from\nits own configuration, such as clusters added by an
+                  extension server, which otherwise\nkeep Envoy's built-in defaults:\n\n\truntime:\n\t
+                  \ circuit_breakers.my-extension-cluster.default.max_requests: 16384\n\nRuntime
+                  keys are an Envoy-level interface and are not validated by Envoy
+                  Gateway.\nVisit https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime\nto
+                  learn more about the available keys.\n\nNote: this has no effect
+                  when spec.bootstrap uses the Replace type with a bootstrap\nthat
+                  omits the RTDS layer, since the proxy then has no layer for these
+                  values to\nland in."
+                type: object
               shutdown:
                 description: Shutdown defines configuration for graceful envoy shutdown
                   process.
