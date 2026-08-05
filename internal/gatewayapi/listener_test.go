@@ -696,7 +696,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 			expectedStatus: []expectedListenerStatus{
 				{
 					listenerName: "listener-2",
-					condition:    status.ListenerConditionTLSCertificateNamesUnknown,
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       status.ListenerReasonSDSCertificateOpaque,
 					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
@@ -723,14 +723,14 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 			expectedStatus: []expectedListenerStatus{
 				{
 					listenerName: "listener-1",
-					condition:    status.ListenerConditionTLSCertificateNamesUnknown,
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       status.ListenerReasonSDSCertificateOpaque,
 					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
 				},
 				{
 					listenerName: "listener-2",
-					condition:    status.ListenerConditionTLSCertificateNamesUnknown,
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       status.ListenerReasonSDSCertificateOpaque,
 					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
@@ -781,14 +781,14 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 			expectedStatus: []expectedListenerStatus{
 				{
 					listenerName: "listener-1",
-					condition:    gwapiv1.ListenerConditionType("gateway.envoyproxy.io/TLSCertificateNamesUnknown"),
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerConditionReason("SDSCertificateOpaque"),
 					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
 				},
 				{
 					listenerName: "listener-2",
-					condition:    gwapiv1.ListenerConditionType("gateway.envoyproxy.io/TLSCertificateNamesUnknown"),
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerConditionReason("SDSCertificateOpaque"),
 					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
@@ -878,8 +878,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 			for _, listener := range gateway.listeners {
 				conditions := status.GetGatewayListenerStatusConditions(gateway.Gateway, listener.listenerStatusIdx)
 				for _, condition := range conditions {
-					if condition.Type == string(gwapiv1.ListenerConditionOverlappingTLSConfig) ||
-						condition.Type == "gateway.envoyproxy.io/TLSCertificateNamesUnknown" {
+					if condition.Type == string(gwapiv1.ListenerConditionOverlappingTLSConfig) {
 						found := false
 						for _, expected := range tt.expectedStatus {
 							if string(listener.Name) == expected.listenerName &&

@@ -96,7 +96,7 @@ gateways:
           Configure ALPN explicitly with ClientTrafficPolicy to override this default.
         reason: SDSCertificateOpaque
         status: "True"
-        type: gateway.envoyproxy.io/TLSCertificateNamesUnknown
+        type: OverlappingTLSConfig
       name: sds-multiple
       supportedKinds:
       - group: gateway.networking.k8s.io

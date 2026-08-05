@@ -588,7 +588,7 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 			listener.httpIR.TLSOverlaps = true
 		}
 		listener.SetCondition(
-			status.ListenerConditionTLSCertificateNamesUnknown,
+			gwapiv1.ListenerConditionOverlappingTLSConfig,
 			metav1.ConditionTrue,
 			status.ListenerReasonSDSCertificateOpaque,
 			sdsCertificateOpaqueConditionMessage,

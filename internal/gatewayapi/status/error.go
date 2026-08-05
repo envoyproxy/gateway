@@ -41,11 +41,6 @@ const (
 	ListenerReasonSDSCertificateOpaque           gwapiv1.ListenerConditionReason = "SDSCertificateOpaque"
 )
 
-// Listener condition types for various error scenarios
-const (
-	ListenerConditionTLSCertificateNamesUnknown gwapiv1.ListenerConditionType = "gateway.envoyproxy.io/TLSCertificateNamesUnknown"
-)
-
 // ListenerError is an error interface that represents errors that need to be reflected
 // in the status of a Kubernetes resource. It extends the standard error interface
 // with a Reason method that returns the specific condition reason.
