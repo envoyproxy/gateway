@@ -79,7 +79,7 @@ var HTTPWasmTest = suite.ConformanceTest{
 		// is unique per EnvoyExtensionPolicy wasm entry ("Do not share VMs across different
 		// filters"), so each of the 2 wasm-configured routes above gets its own dedicated Wasm
 		// filter/VM even though both reference the same underlying .wasm module. The
-		// process-wide "wasm.wasm_vm_count" gauge should therefore read exactly 3* worker thread.
+		// process-wide "wasm.wasm_vm_count" gauge should therefore read exactly 2* (worker thread +2).
 		tlog.Logf(t, "concurrency: %d", runtime.NumCPU())
 		t.Run("wasm vm count is per-route", func(t *testing.T) {
 			promQL := `sum(envoy_wasm_wasm_vm_count{app_kubernetes_io_component="proxy", app_kubernetes_io_managed_by="envoy-gateway", app_kubernetes_io_name="envoy", gateway_envoyproxy_io_owning_gateway_name="same-namespace"})`
