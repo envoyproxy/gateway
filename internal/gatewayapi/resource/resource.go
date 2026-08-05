@@ -155,6 +155,15 @@ type ControllerResourcesContext struct {
 	Context   context.Context
 }
 
+// ParentContext returns the trace context stashed on c, or fallback if c is nil or has none
+// (e.g. before any Reconcile has stored a context yet).
+func (c *ControllerResourcesContext) ParentContext(fallback context.Context) context.Context {
+	if c != nil && c.Context != nil {
+		return c.Context
+	}
+	return fallback
+}
+
 // DeepCopy creates a new ControllerResourcesContext.
 // The Context field is preserved (not deep copied) since contexts are meant to be passed around.
 func (c *ControllerResourcesContext) DeepCopy() *ControllerResourcesContext {

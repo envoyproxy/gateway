@@ -210,10 +210,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
-			parentCtx := context.Background()
-			if update.Value != nil && update.Value.Context != nil {
-				parentCtx = update.Value.Context
-			}
+			parentCtx := update.Value.ParentContext(context.Background())
 
 			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
 			defer span.End()
@@ -287,7 +284,19 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 
 			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
+
+			rtcTraceCtx, rtcSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle")
 			for _, resources := range *val {
+				// The GatewayClass name is deliberately kept out of the span name and passed as
+				// an attribute instead: span names are what most trace backends group/aggregate
+				// by (latency percentiles, error rates, etc.), and this loop runs once per
+				// GatewayClass in the cluster. Baking the name into the span name would fragment
+				// those aggregates into one bucket per class - unbounded and growing over the
+				// cluster's lifetime - for no benefit, since the attribute already makes the span
+				// filterable/searchable by GatewayClass in any trace UI.
+				translateGCCtx, translateGCSpan := tracer.Start(rtcTraceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateGatewayClass",
+					trace.WithAttributes(attribute.String("gatewayclass.name", string(resources.GatewayClass.Name))),
+				)
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
 					GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
@@ -324,7 +333,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
-				_, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
+				_, translateToIRSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
 				result, err := t.Translate(resources)
 				translateToIRSpan.End()
 				if err != nil {
@@ -373,7 +382,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				// Update Status
-				_, statusUpdateSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
+				_, statusUpdateSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
 				if result.GatewayClass != nil {
 					key := utils.NamespacedName(result.GatewayClass)
 					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
@@ -488,6 +497,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
 				}
 				statusUpdateSpan.End()
+				translateGCSpan.End()
 			}
 
 			// Store the stauses of all objects atomically with the aggregated status.
@@ -604,6 +614,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 			// Delete keys using mark and sweep
 			r.deleteKeys(keysToDelete)
+			rtcSpan.End()
 		},
 	)
 	r.Logger.Info("shutting down")
