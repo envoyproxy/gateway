@@ -2659,6 +2659,15 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 	ruleAName := gwapiv1.SectionName("rule-a")
 	ruleBName := gwapiv1.SectionName("rule-b")
 
+	defaultListenerSet := &gwapiv1.ListenerSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "listenerset-1"},
+	}
+	listenerSetNN := types.NamespacedName{Namespace: "default", Name: "listenerset-1"}
+	otherListenerSet := &gwapiv1.ListenerSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "listenerset-2"},
+	}
+	lsListenerName := gwapiv1.SectionName("ls-http")
+
 	tests := []struct {
 		name          string
 		btps          []*egv1a1.BackendTrafficPolicy
@@ -2999,6 +3008,115 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 			gatewayNN:    types.NamespacedName{Namespace: "default", Name: "gateway-1"},
 			listenerName: new(gwapiv1.SectionName("http")),
 			expected:     false,
+		},
+		{
+			name: "bare ListenerSet-targeted BTP with cluster-scoped field disqualifies merging for a route attached via that ListenerSet",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-listenerset"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("ListenerSet"),
+									Name:  gwapiv1.ObjectName("listenerset-1"),
+								},
+							},
+						},
+						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+					},
+				},
+			},
+			listenerSets:  []*gwapiv1.ListenerSet{defaultListenerSet},
+			routeKind:     "HTTPRoute",
+			routeNN:       routeNN,
+			gatewayNN:     types.NamespacedName{Namespace: "default", Name: "gateway-1"},
+			listenerName:  &lsListenerName,
+			listenerSetNN: &listenerSetNN,
+			expected:      true,
+		},
+		{
+			name: "ListenerSet-listener-targeted BTP with cluster-scoped field disqualifies merging for that specific listener",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-listenerset-listener"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("ListenerSet"),
+									Name:  gwapiv1.ObjectName("listenerset-1"),
+								},
+								SectionName: &lsListenerName,
+							},
+						},
+						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+					},
+				},
+			},
+			listenerSets:  []*gwapiv1.ListenerSet{defaultListenerSet},
+			routeKind:     "HTTPRoute",
+			routeNN:       routeNN,
+			gatewayNN:     types.NamespacedName{Namespace: "default", Name: "gateway-1"},
+			listenerName:  &lsListenerName,
+			listenerSetNN: &listenerSetNN,
+			expected:      true,
+		},
+		{
+			name: "bare ListenerSet-targeted BTP on a different ListenerSet does not disqualify merging",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-other-listenerset"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("ListenerSet"),
+									Name:  gwapiv1.ObjectName("listenerset-2"),
+								},
+							},
+						},
+						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+					},
+				},
+			},
+			listenerSets:  []*gwapiv1.ListenerSet{defaultListenerSet, otherListenerSet},
+			routeKind:     "HTTPRoute",
+			routeNN:       routeNN,
+			gatewayNN:     types.NamespacedName{Namespace: "default", Name: "gateway-1"},
+			listenerName:  &lsListenerName,
+			listenerSetNN: &listenerSetNN,
+			expected:      false,
+		},
+		{
+			name: "ListenerSet-attached route with no ListenerSet-level BTP falls through to bare Gateway scope",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway-for-ls-fallthrough"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("gateway-1"),
+								},
+							},
+						},
+						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+					},
+				},
+			},
+			listenerSets:  []*gwapiv1.ListenerSet{defaultListenerSet},
+			routeKind:     "HTTPRoute",
+			routeNN:       routeNN,
+			gatewayNN:     types.NamespacedName{Namespace: "default", Name: "gateway-1"},
+			listenerName:  &lsListenerName,
+			listenerSetNN: &listenerSetNN,
+			expected:      false,
 		},
 	}
 
