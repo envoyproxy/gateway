@@ -173,7 +173,7 @@ func verifyRBACStats(t *testing.T, promClient *prometheus.Client, expectAllowed 
 
 	// Query RBAC metrics for the specific TLS listener (tls-passthrough-8443)
 	// This ensures we're checking stats for THIS test's traffic, not other tests
-	query := metric + `{namespace="envoy-gateway-system",envoy_rbac_prefix="tls-passthrough-8443"}`
+	query := metric + `{envoy_rbac_prefix="tls-passthrough-8443"}`
 
 	// Poll for RBAC stats with a short timeout
 	err := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 10*time.Second, true,
