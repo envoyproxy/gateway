@@ -229,22 +229,32 @@ func BuildBTPIndexes(
 			// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
 			// accepted gateway can enable merging; RoutingType (above) applies regardless.
 			if mergeBackendsEnabled {
-				// TODO(#9619): unlike routingTypeIdx above, this switch has no ListenerSet case, so
-				// ListenerSet-level BTP attachment isn't tracked here.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName != nil:
 					clusterSettingsIdx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
 				case kind == resource.KindGateway:
 					// Gateway-level settings apply uniformly to every route sharing a merged
 					// cluster, so they don't disqualify merging - no entry needed.
+				case kind == resource.KindListenerSet && ref.SectionName != nil:
+					clusterSettingsIdx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+				case kind == resource.KindListenerSet:
+					// Unlike bare-Gateway, a bare-ListenerSet setting is NOT uniform across every
+					// route that could share a merged cluster under the same Gateway - sibling
+					// ListenerSets/listeners under that Gateway don't get it. So, unlike the
+					// Gateway case above, this needs a real entry.
+					clusterSettingsIdx.setListenerSetLevel(nn, hasClusterScoped, true)
 				case ref.SectionName != nil:
 					clusterSettingsIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, hasClusterScoped, btp.Spec.MergeType)
 				default:
 					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
 				}
 
-				// TODO(#9619): same gap as clusterSettingsIdx above - this switch has no
-				// ListenerSet case either, so ListenerSet-level BTP attachment isn't tracked here.
+				// No ListenerSet case needed here, unlike clusterSettingsIdx above: IsConsistentHash
+				// (this index's only consumer) only ever checks bare-Gateway scope, and
+				// mergeIncompatibleForWeightedRule already checks hasClusterSettingsBelowGateway
+				// (backed by clusterSettingsIdx, which does track ListenerSet/listener-level
+				// LoadBalancer settings as a cluster-scoped field) first, short-circuiting before
+				// this index is ever consulted for anything below bare-Gateway scope.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName == nil:
 					// Every accepted Gateway-wide BTP must claim this slot, even one that leaves
