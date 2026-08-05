@@ -274,10 +274,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
-			parentCtx := context.Background()
-			if update.Value != nil && update.Value.Context != nil {
-				parentCtx = update.Value.Context
-			}
+			parentCtx := update.Value.ParentContext(context.Background())
 
 			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
 			defer span.End()
