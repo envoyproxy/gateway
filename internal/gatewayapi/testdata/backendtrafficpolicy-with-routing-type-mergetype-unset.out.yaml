@@ -2,14 +2,14 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-rule-2-no-mergetype
+    name: policy-for-rule-0
     namespace: default
   spec:
-    targetRefs:
-    - group: gateway.networking.k8s.io
+    targetRef:
+      group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: http-route-1
-      sectionName: rule-2
+      name: httproute-1
+      sectionName: rule-0
   status:
     ancestors:
     - ancestorRef:
@@ -23,17 +23,65 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-gateway-circuitbreaker
+    name: policy-for-rule-1
+    namespace: default
+  spec:
+    mergeType: StrategicMerge
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      sectionName: rule-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Merged with policy envoy-gateway/policy-for-gateway
+        reason: Merged
+        status: "True"
+        type: Merged
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-for-gateway
     namespace: envoy-gateway
   spec:
-    circuitBreaker:
-      maxConnections: 1024
-    targetRefs:
-    - group: gateway.networking.k8s.io
+    routingType: Service
+    targetRef:
+      group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -50,11 +98,16 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'This policy is being overridden by other backendTrafficPolicies
-          for these routes: [default/http-route-1]'
-        reason: Overridden
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
         status: "True"
-        type: Overridden
+        type: Warning
+      - lastTransitionTime: null
+        message: 'This policy is being merged by other backendTrafficPolicies for
+          these routes: [default/httproute-1]'
+        reason: Merged
+        status: "True"
+        type: Merged
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -100,7 +153,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: http-route-1
+    name: httproute-1
     namespace: default
   spec:
     parentRefs:
@@ -112,15 +165,15 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /rule-1
-      name: rule-1
+          value: /foo
+      name: rule-0
     - backendRefs:
-      - name: service-1
+      - name: service-2
         port: 8080
       matches:
       - path:
-          value: /rule-2
-      name: rule-2
+          value: /bar
+      name: rule-1
   status:
     parents:
     - conditions:
@@ -141,16 +194,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          name: test
-          namespace: envoy-gateway-system
-        spec:
-          logging: {}
-          mergeBackends: {}
-        status: {}
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -172,28 +215,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    backendClusters:
-    - metadata:
-        kind: Service
-        name: service-1
-        namespace: default
-        sectionName: "8080"
-      name: service/default/service-1/8080/http
-      setting:
-        addressType: IP
-        endpoints:
-        - host: 7.7.7.7
-          port: 8080
-        metadata:
-          kind: Service
-          name: service-1
-          namespace: default
-          sectionName: "8080"
-        name: service/default/service-1/8080/http
-        protocol: HTTP
-      traffic:
-        circuitBreaker:
-          maxConnections: 1024
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -232,41 +253,12 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          backendClusterRefs:
-          - name: service/default/service-1/8080/http
-            weight: 1
           metadata:
             kind: HTTPRoute
-            name: http-route-1
+            name: httproute-1
             namespace: default
-            sectionName: rule-1
-          name: httproute/default/http-route-1/rule/0
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: http-route-1
-          namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: btp-gateway-circuitbreaker
-            namespace: envoy-gateway
-          sectionName: rule-1
-        name: httproute/default/http-route-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /rule-1
-        traffic:
-          circuitBreaker:
-            maxConnections: 1024
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: http-route-1
-            namespace: default
-            sectionName: rule-2
-          name: httproute/default/http-route-1/rule/1
+            sectionName: rule-0
+          name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -277,25 +269,61 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/http-route-1/rule/1/backend/0
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: http-route-1
+          name: httproute-1
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-rule-2-no-mergetype
+            name: policy-for-rule-0
             namespace: default
-          sectionName: rule-2
-        name: httproute/default/http-route-1/rule/1/match/0/*
+          sectionName: rule-0
+        name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /rule-2
+          prefix: /foo
+        traffic: {}
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: rule-1
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - endpoints:
+            - host: 1.1.1.1
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-rule-1
+            namespace: default
+          sectionName: rule-1
+        name: httproute/default/httproute-1/rule/1/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /bar
         traffic: {}
     readyListener:
       address: 0.0.0.0

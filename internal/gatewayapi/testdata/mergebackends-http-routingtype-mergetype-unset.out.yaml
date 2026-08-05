@@ -2,14 +2,15 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-rule-2-no-mergetype
+    name: btp-rule-1-no-mergetype
     namespace: default
   spec:
+    circuitBreaker: {}
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: http-route-1
-      sectionName: rule-2
+      name: http-route-3
+      sectionName: rule-1
   status:
     ancestors:
     - ancestorRef:
@@ -27,11 +28,49 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-gateway-circuitbreaker
+    name: btp-rule-2-mergetype-set
+    namespace: default
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-route-4
+      sectionName: rule-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Merged with policy envoy-gateway/btp-gateway-1
+        reason: Merged
+        status: "True"
+        type: Merged
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: btp-gateway-1
     namespace: envoy-gateway
   spec:
-    circuitBreaker:
-      maxConnections: 1024
+    routingType: Service
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -50,8 +89,14 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
+        message: 'This policy is being merged by other backendTrafficPolicies for
+          these routes: [default/http-route-4]'
+        reason: Merged
+        status: "True"
+        type: Merged
+      - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
-          for these routes: [default/http-route-1]'
+          for these routes: [default/http-route-3]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -73,7 +118,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -100,7 +145,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: http-route-1
+    name: http-route-3
     namespace: default
   spec:
     parentRefs:
@@ -108,14 +153,41 @@ httpRoutes:
       namespace: envoy-gateway
     rules:
     - backendRefs:
-      - name: service-1
+      - name: service-3
         port: 8080
       matches:
       - path:
           value: /rule-1
       name: rule-1
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: http-route-4
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
     - backendRefs:
-      - name: service-1
+      - name: service-4
         port: 8080
       matches:
       - path:
@@ -175,25 +247,22 @@ xdsIR:
     backendClusters:
     - metadata:
         kind: Service
-        name: service-1
+        name: service-4
         namespace: default
         sectionName: "8080"
-      name: service/default/service-1/8080/http
+      name: service/default/service-4/8080/http
       setting:
-        addressType: IP
         endpoints:
-        - host: 7.7.7.7
+        - host: 1.1.1.1
           port: 8080
         metadata:
           kind: Service
-          name: service-1
+          name: service-4
           namespace: default
           sectionName: "8080"
-        name: service/default/service-1/8080/http
+        name: service/default/service-4/8080/http
         protocol: HTTP
-      traffic:
-        circuitBreaker:
-          maxConnections: 1024
+      traffic: {}
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -232,41 +301,12 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          backendClusterRefs:
-          - name: service/default/service-1/8080/http
-            weight: 1
           metadata:
             kind: HTTPRoute
-            name: http-route-1
+            name: http-route-3
             namespace: default
             sectionName: rule-1
-          name: httproute/default/http-route-1/rule/0
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: http-route-1
-          namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: btp-gateway-circuitbreaker
-            namespace: envoy-gateway
-          sectionName: rule-1
-        name: httproute/default/http-route-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /rule-1
-        traffic:
-          circuitBreaker:
-            maxConnections: 1024
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: http-route-1
-            namespace: default
-            sectionName: rule-2
-          name: httproute/default/http-route-1/rule/1
+          name: httproute/default/http-route-3/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -274,24 +314,52 @@ xdsIR:
               port: 8080
             metadata:
               kind: Service
-              name: service-1
+              name: service-3
               namespace: default
               sectionName: "8080"
-            name: httproute/default/http-route-1/rule/1/backend/0
+            name: httproute/default/http-route-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: http-route-1
+          name: http-route-3
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-rule-2-no-mergetype
+            name: btp-rule-1-no-mergetype
+            namespace: default
+          sectionName: rule-1
+        name: httproute/default/http-route-3/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /rule-1
+        traffic:
+          circuitBreaker: {}
+      - destination:
+          backendClusterRefs:
+          - name: service/default/service-4/8080/http
+            weight: 1
+          metadata:
+            kind: HTTPRoute
+            name: http-route-4
+            namespace: default
+            sectionName: rule-2
+          name: httproute/default/http-route-4/rule/0
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: http-route-4
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: btp-rule-2-mergetype-set
             namespace: default
           sectionName: rule-2
-        name: httproute/default/http-route-1/rule/1/match/0/*
+        name: httproute/default/http-route-4/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""

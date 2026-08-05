@@ -556,9 +556,20 @@ func (t *Translator) resolveBTPRoutingType(
 	)
 }
 
-// hasRouteLevelClusterSettings reports whether a route-rule/route/listener-level BTP contributes
-// cluster-scoped settings for this rule.
-func (t *Translator) hasRouteLevelClusterSettings(
+// hasClusterSettingsBelowGateway reports whether the cluster-scoped settings applying to this rule
+// are defined below Gateway scope, in either of two ways:
+//
+//   - BTP: a route-rule/route/listener-level BackendTrafficPolicy sets a cluster-scoped field, or
+//     a route-rule/route-level one targets the rule with MergeType unset - replacing the
+//     Gateway's settings instead of merging with them, even when it sets none of its own.
+//   - CTP: a listener-level ClientTrafficPolicy sets an HTTP1 override on any of the rule's
+//     attached listeners (parentRef.listeners), checking each against its own owner (the
+//     Gateway, or the ListenerSet it came from).
+//
+// Both make cluster deduplication unsafe, though not for the same reason: the BTP settings would
+// wrongly apply to the other routes sharing the cluster, while the CTP ones would be lost
+// entirely, since a merged BackendCluster carries no HTTP1 settings.
+func (t *Translator) hasClusterSettingsBelowGateway(
 	gatewayCtx *GatewayContext,
 	routeCtx RouteContext,
 	parentRef *RouteParentContext,
@@ -567,25 +578,17 @@ func (t *Translator) hasRouteLevelClusterSettings(
 	if gatewayCtx == nil {
 		return false
 	}
-	return t.BTPClusterSettingsIndex.HasRouteLevelClusterSettings(
+	gatewayNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
+	if t.BTPClusterSettingsIndex.HasClusterSettingsBelowGateway(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
-		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
+		gatewayNN,
 		parentRef.SectionName,
 		routeRuleName,
-	)
-}
-
-// hasListenerLevelClusterSettings reports whether the route rule's attached listener has a
-// ClientTrafficPolicy setting a cluster-affecting field.
-func (t *Translator) hasListenerLevelClusterSettings(gatewayCtx *GatewayContext, parentRef *RouteParentContext) bool {
-	if gatewayCtx == nil {
-		return false
+	) {
+		return true
 	}
-	return t.CTPClusterSettingsIndex.HasListenerLevelClusterSettings(
-		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
-		parentRef.listeners,
-	)
+	return t.CTPClusterSettingsIndex.HasClusterSettingsBelowGateway(gatewayNN, parentRef.listeners)
 }
 
 // gatewayXdsIR resolves the *ir.Xds for gatewayCtx's gateway from xdsIR. Returns nil if
@@ -664,7 +667,8 @@ func (t *Translator) anyGatewayHasMergeBackendsEnabled(gateways []*GatewayContex
 // cluster whose rule resolved it differently.
 func (t *Translator) routingTypeDivergesForRule(gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType) bool {
 	gwNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
-	baseline := t.IsServiceRouting(gatewayCtx.envoyProxy, t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN))
+	gatewayBaseline := t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN)
+	baseline := t.IsServiceRouting(gatewayCtx.envoyProxy, gatewayBaseline)
 	effective := t.IsServiceRouting(gatewayCtx.envoyProxy, btpRoutingType)
 	return baseline != effective
 }
@@ -801,14 +805,9 @@ func (t *Translator) mergeIncompatibleForWeightedRule(
 	backendRefs []gwapiv1.BackendObjectReference,
 	sessionPersistent bool,
 ) bool {
-	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
-	// cluster shared with other routes if merged.
-	if t.hasRouteLevelClusterSettings(gatewayCtx, routeCtx, parentRef, routeRuleName) {
-		return true
-	}
-	// A listener-level ClientTrafficPolicy cluster-affecting setting would incorrectly apply to a
-	// cluster shared with routes under a different listener if merged.
-	if t.hasListenerLevelClusterSettings(gatewayCtx, parentRef) {
+	// A BTP/CTP cluster-scoped setting below Gateway scope would incorrectly apply uniformly to a
+	// cluster shared with other routes/listeners if merged.
+	if t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, parentRef, routeRuleName) {
 		return true
 	}
 	// A single backendRef has no multi-backend pool for the checks below to protect —
@@ -838,17 +837,9 @@ func (t *Translator) mergeIncompatibleForSingleClusterRule(
 	if len(backendRefs) > 1 {
 		return true
 	}
-	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
-	// cluster shared with other routes if merged.
-	if t.hasRouteLevelClusterSettings(gatewayCtx, routeCtx, parentRef, routeRuleName) {
-		return true
-	}
-	// A listener-level ClientTrafficPolicy cluster-affecting setting would incorrectly apply to a
-	// cluster shared with routes under a different listener if merged.
-	if t.hasListenerLevelClusterSettings(gatewayCtx, parentRef) {
-		return true
-	}
-	return false
+	// A BTP/CTP cluster-scoped setting below Gateway scope would incorrectly apply uniformly to a
+	// cluster shared with other routes/listeners if merged.
+	return t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, parentRef, routeRuleName)
 }
 
 // weightedRuleBackendsMustBeInOneCluster reports whether a feature on this multi-backendRef
@@ -874,8 +865,10 @@ func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
 		}
 	}
 	// ConsistentHash needs the full combined backend pool, not per-identity split clusters.
-	if gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(utils.NamespacedName(gatewayCtx.Gateway)) {
-		return true
+	if gatewayCtx != nil {
+		if t.BTPLoadBalancerIndex.IsConsistentHash(utils.NamespacedName(gatewayCtx.Gateway)) {
+			return true
+		}
 	}
 	return false
 }

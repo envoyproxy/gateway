@@ -47,42 +47,37 @@ func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
 	return spec != nil && spec.HTTP1 != nil
 }
 
-// ctpClusterSettingsKey identifies a ClientTrafficPolicy's target: a listener's own name, scoped
-// to its owner's identity - the Gateway's own NamespacedName for a Gateway-direct listener, or the
-// ListenerSet's own NamespacedName for a listener contributed by a ListenerSet.
-type ctpClusterSettingsKey struct {
-	Namespace, Name, SectionName string
-}
-
 // CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy
 // sets a cluster-affecting field. Gateway-wide settings (no SectionName) aren't tracked, since a
 // merged cluster never spans gateways and so can never see them diverge.
 type CTPClusterSettingsIndex struct {
-	listenerLevel    map[ctpClusterSettingsKey]bool
-	listenerSetLevel map[types.NamespacedName]bool
+	*policyIndex[bool]
 }
 
-// HasListenerLevelClusterSettings reports whether any of listeners - the route's actual resolved
-// attachment(s) under gatewayNN - has a ClientTrafficPolicy-sourced HTTP1 override, checking each
-// listener against its own owner (the Gateway, or the ListenerSet it came from).
-func (idx *CTPClusterSettingsIndex) HasListenerLevelClusterSettings(gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
+// newCTPClusterSettingsIndex allocates a CTPClusterSettingsIndex.
+func newCTPClusterSettingsIndex() *CTPClusterSettingsIndex {
+	return &CTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
+}
+
+// HasClusterSettingsBelowGateway reports whether any of listeners (which belong to gatewayNN,
+// either directly or via a ListenerSet) has a ClientTrafficPolicy-sourced cluster-scoped setting,
+// checking each listener against its own owner (the Gateway, or the ListenerSet it came from).
+func (idx *CTPClusterSettingsIndex) HasClusterSettingsBelowGateway(gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
 	if idx == nil {
 		return false
 	}
 	for _, l := range listeners {
 		if l.isFromListenerSet() {
 			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
-			if idx.listenerSetLevel[lsNN] {
+			if hasClusterSettings, found := idx.LookupExact(listenerSetScope(lsNN)); found && hasClusterSettings {
 				return true
 			}
-			key := ctpClusterSettingsKey{Namespace: lsNN.Namespace, Name: lsNN.Name, SectionName: string(l.Name)}
-			if idx.listenerLevel[key] {
+			if hasClusterSettings, found := idx.LookupExact(listenerSetListenerScope(lsNN, l.Name)); found && hasClusterSettings {
 				return true
 			}
 			continue
 		}
-		key := ctpClusterSettingsKey{Namespace: gatewayNN.Namespace, Name: gatewayNN.Name, SectionName: string(l.Name)}
-		if idx.listenerLevel[key] {
+		if hasClusterSettings, found := idx.LookupExact(gatewayListenerScope(gatewayNN, l.Name)); found && hasClusterSettings {
 			return true
 		}
 	}
@@ -98,19 +93,14 @@ func BuildCTPClusterSettingsIndex(
 	namespaceLookup func(string) *corev1.Namespace,
 	mergeBackendsEnabled bool,
 ) *CTPClusterSettingsIndex {
-	idx := &CTPClusterSettingsIndex{
-		listenerLevel:    make(map[ctpClusterSettingsKey]bool),
-		listenerSetLevel: make(map[types.NamespacedName]bool),
-	}
+	idx := newCTPClusterSettingsIndex()
 	// Moot when no accepted gateway can enable merging.
 	if !mergeBackendsEnabled {
 		return idx
 	}
 
 	for _, ctp := range ctps {
-		if !ctpSpecHasClusterScopedFields(&ctp.Spec) {
-			continue
-		}
+		hasClusterScoped := ctpSpecHasClusterScopedFields(&ctp.Spec)
 
 		refs := resolvePolicyTargetsForGatewayAndListenerSet(
 			ctp.Spec.PolicyTargetReferences,
@@ -124,19 +114,17 @@ func BuildCTPClusterSettingsIndex(
 		)
 
 		for _, ref := range refs {
-			switch ref.Kind {
-			case resource.KindGateway:
-				if ref.SectionName != nil {
-					key := ctpClusterSettingsKey{Namespace: string(ref.Namespace), Name: string(ref.Name), SectionName: string(*ref.SectionName)}
-					idx.listenerLevel[key] = true
-				}
-			case resource.KindListenerSet:
-				if ref.SectionName != nil {
-					key := ctpClusterSettingsKey{Namespace: string(ref.Namespace), Name: string(ref.Name), SectionName: string(*ref.SectionName)}
-					idx.listenerLevel[key] = true
-				} else {
-					idx.listenerSetLevel[types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}] = true
-				}
+			nn := types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}
+			switch {
+			case ref.Kind == resource.KindGateway && ref.SectionName != nil:
+				idx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+			case ref.Kind == resource.KindGateway:
+				// Gateway-wide settings apply uniformly to every route sharing a merged cluster,
+				// so they don't disqualify merging - no entry needed.
+			case ref.Kind == resource.KindListenerSet && ref.SectionName != nil:
+				idx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+			case ref.Kind == resource.KindListenerSet:
+				idx.setListenerSetLevel(nn, hasClusterScoped, true)
 			}
 		}
 	}

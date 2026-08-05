@@ -435,7 +435,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
 	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
 	routeNN := utils.NamespacedName(targetedRoute)
-	routeAsChildScope := routeScope(routeNN)
+	routeAsChildScope := routeScope(routeNN, string(targetedRoute.GetRouteType()))
 	for _, p := range parentRefs {
 		parentNamespace := targetedRoute.GetNamespace()
 		if p.Namespace != nil {

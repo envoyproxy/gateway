@@ -24,38 +24,6 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    name: btp-gateway-circuitbreaker
-    namespace: envoy-gateway
-  spec:
-    circuitBreaker:
-      maxConnections: 1024
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other backendTrafficPolicies
-          for these routes: [default/http-route-1]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -191,9 +159,6 @@ xdsIR:
           sectionName: "8080"
         name: service/default/service-1/8080/http
         protocol: HTTP
-      traffic:
-        circuitBreaker:
-          maxConnections: 1024
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -247,19 +212,12 @@ xdsIR:
           kind: HTTPRoute
           name: http-route-1
           namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: btp-gateway-circuitbreaker
-            namespace: envoy-gateway
           sectionName: rule-1
         name: httproute/default/http-route-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
           prefix: /rule-1
-        traffic:
-          circuitBreaker:
-            maxConnections: 1024
       - destination:
           metadata:
             kind: HTTPRoute

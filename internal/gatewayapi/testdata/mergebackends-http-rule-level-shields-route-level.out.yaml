@@ -2,14 +2,15 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-rule-2-no-mergetype
+    name: btp-rule-a-mergetype-set
     namespace: default
   spec:
+    mergeType: StrategicMerge
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: http-route-1
-      sectionName: rule-2
+      name: http-route-2
+      sectionName: rule-a
   status:
     ancestors:
     - ancestorRef:
@@ -27,15 +28,14 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: btp-gateway-circuitbreaker
-    namespace: envoy-gateway
+    name: btp-route-2-circuitbreaker
+    namespace: default
   spec:
-    circuitBreaker:
-      maxConnections: 1024
+    circuitBreaker: {}
     targetRefs:
     - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+      kind: HTTPRoute
+      name: http-route-2
   status:
     ancestors:
     - ancestorRef:
@@ -50,8 +50,8 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'This policy is being overridden by other backendTrafficPolicies
-          for these routes: [default/http-route-1]'
+        message: 'This policy is being overridden by other backendTrafficPolicy for
+          these route rules: [rule-a]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -100,7 +100,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: http-route-1
+    name: http-route-2
     namespace: default
   spec:
     parentRefs:
@@ -108,19 +108,19 @@ httpRoutes:
       namespace: envoy-gateway
     rules:
     - backendRefs:
-      - name: service-1
+      - name: service-2
         port: 8080
       matches:
       - path:
-          value: /rule-1
-      name: rule-1
+          value: /rule-a
+      name: rule-a
     - backendRefs:
-      - name: service-1
+      - name: service-2
         port: 8080
       matches:
       - path:
-          value: /rule-2
-      name: rule-2
+          value: /rule-b
+      name: rule-b
   status:
     parents:
     - conditions:
@@ -175,10 +175,10 @@ xdsIR:
     backendClusters:
     - metadata:
         kind: Service
-        name: service-1
+        name: service-2
         namespace: default
         sectionName: "8080"
-      name: service/default/service-1/8080/http
+      name: service/default/service-2/8080/http
       setting:
         addressType: IP
         endpoints:
@@ -186,14 +186,11 @@ xdsIR:
           port: 8080
         metadata:
           kind: Service
-          name: service-1
+          name: service-2
           namespace: default
           sectionName: "8080"
-        name: service/default/service-1/8080/http
+        name: service/default/service-2/8080/http
         protocol: HTTP
-      traffic:
-        circuitBreaker:
-          maxConnections: 1024
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -233,40 +230,38 @@ xdsIR:
       routes:
       - destination:
           backendClusterRefs:
-          - name: service/default/service-1/8080/http
+          - name: service/default/service-2/8080/http
             weight: 1
           metadata:
             kind: HTTPRoute
-            name: http-route-1
+            name: http-route-2
             namespace: default
-            sectionName: rule-1
-          name: httproute/default/http-route-1/rule/0
+            sectionName: rule-a
+          name: httproute/default/http-route-2/rule/0
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: http-route-1
+          name: http-route-2
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-gateway-circuitbreaker
-            namespace: envoy-gateway
-          sectionName: rule-1
-        name: httproute/default/http-route-1/rule/0/match/0/*
+            name: btp-rule-a-mergetype-set
+            namespace: default
+          sectionName: rule-a
+        name: httproute/default/http-route-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /rule-1
-        traffic:
-          circuitBreaker:
-            maxConnections: 1024
+          prefix: /rule-a
+        traffic: {}
       - destination:
           metadata:
             kind: HTTPRoute
-            name: http-route-1
+            name: http-route-2
             namespace: default
-            sectionName: rule-2
-          name: httproute/default/http-route-1/rule/1
+            sectionName: rule-b
+          name: httproute/default/http-route-2/rule/1
           settings:
           - addressType: IP
             endpoints:
@@ -274,29 +269,30 @@ xdsIR:
               port: 8080
             metadata:
               kind: Service
-              name: service-1
+              name: service-2
               namespace: default
               sectionName: "8080"
-            name: httproute/default/http-route-1/rule/1/backend/0
+            name: httproute/default/http-route-2/rule/1/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: http-route-1
+          name: http-route-2
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: btp-rule-2-no-mergetype
+            name: btp-route-2-circuitbreaker
             namespace: default
-          sectionName: rule-2
-        name: httproute/default/http-route-1/rule/1/match/0/*
+          sectionName: rule-b
+        name: httproute/default/http-route-2/rule/1/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /rule-2
-        traffic: {}
+          prefix: /rule-b
+        traffic:
+          circuitBreaker: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
