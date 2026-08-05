@@ -1,0 +1,27 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: envoy-gateway/gateway-1/http/gateway_envoyproxy_io
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.bandwidth_limit/request:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.bandwidth_limit.v3.BandwidthLimit
+          enableMode: REQUEST
+          limitKbps: "10240"
+          statPrefix: http_bandwidth_limiter
+        envoy.filters.http.bandwidth_limit/response:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.bandwidth_limit.v3.BandwidthLimit
+          enableMode: RESPONSE
+          enableResponseTrailers: true
+          limitKbps: "1706"
+          responseTrailerPrefix: x-eg
+          statPrefix: http_bandwidth_limiter

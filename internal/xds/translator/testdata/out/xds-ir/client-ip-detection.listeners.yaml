@@ -23,11 +23,12 @@
         - name: envoy.extensions.http.original_ip_detection.xff
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig
-            skipXffAppend: false
+            skipXffAppend: true
             xffNumTrustedHops: 1
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
@@ -67,6 +68,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
@@ -108,6 +110,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: third-listener
         serverHeaderTransformation: PASS_THROUGH
@@ -154,6 +157,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: fourth-listener
         serverHeaderTransformation: PASS_THROUGH

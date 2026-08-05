@@ -10,5 +10,7 @@
       name: direct-route
       route:
         cluster: direct-route-dest
+        maxStreamDuration:
+          maxStreamDuration: 30s
         upgradeConfigs:
         - upgradeType: websocket

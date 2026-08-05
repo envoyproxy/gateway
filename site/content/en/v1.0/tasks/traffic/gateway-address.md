@@ -62,7 +62,7 @@ Using the addresses in `Gateway.Spec.Addresses` as the [Cluster IP][] of Envoy P
 this will __require__ the address to be of type `IPAddress` and the [ServiceType][] to be of `ClusterIP`.
 
 
-[Addresses]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayAddress
+[Addresses]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.GatewayAddress
 [External IPs]: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
 [Cluster IP]: https://kubernetes.io/docs/concepts/services-networking/service/#type-clusterip
 [ServiceType]: ../../../api/extension_types#servicetype

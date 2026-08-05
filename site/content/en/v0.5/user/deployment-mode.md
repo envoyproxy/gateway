@@ -5,7 +5,7 @@ title: "Deployment Mode"
 
 ### One GatewayClass per Envoy Gateway
 
-* Envoy Gateway can accept a single [GatewayClass](https://gateway-api.sigs.k8s.io/api-types/gatewayclass/)
+* Envoy Gateway can accept a single [GatewayClass](https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/)
 resource. If you've instantiated multiple GatewayClasses, we recommend running multiple Envoy Gateway controllers
 in different namespaces, linking a GatewayClass to each of them. 
 * Support for accepting multiple GatewayClass is being tracked [here](https://github.com/envoyproxy/gateway/issues/1231).

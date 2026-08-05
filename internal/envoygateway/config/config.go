@@ -88,17 +88,18 @@ func New(stdout, stderr io.Writer) (*Server, error) {
 	}, nil
 }
 
-// Validate validates a Server config.
-func (s *Server) Validate() error {
+// Validate validates a Server config and returns any warnings.
+func (s *Server) Validate() ([]string, error) {
 	switch {
 	case s == nil:
-		return errors.New("server config is unspecified")
+		return nil, errors.New("server config is unspecified")
 	case len(s.ControllerNamespace) == 0:
-		return errors.New("namespace is empty string")
+		return nil, errors.New("namespace is empty string")
 	}
 	if err := validation.ValidateEnvoyGateway(s.EnvoyGateway); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	warnings := validation.WarnEnvoyGateway(s.EnvoyGateway)
+	return warnings, nil
 }

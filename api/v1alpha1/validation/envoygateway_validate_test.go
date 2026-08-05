@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -276,7 +278,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: ":foo",
+								URL: new(":foo"),
 							},
 						},
 					},
@@ -294,7 +296,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "localhost:6376",
+								URL: new("localhost:6376"),
 							},
 						},
 					},
@@ -312,7 +314,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "primary_.-,node-0:26379,node-1:26379",
+								URL: new("primary_.-,node-0:26379,node-1:26379"),
 							},
 						},
 					},
@@ -330,7 +332,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "node-0:6376,node-1:6376,node-2:6376",
+								URL: new("node-0:6376,node-1:6376,node-2:6376"),
 							},
 						},
 					},
@@ -716,8 +718,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: "foobar",
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: "foobar",
+								},
 							},
 						},
 					},
@@ -733,9 +737,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
-								Namespaces: []string{"foo"},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
+									Namespaces: []string{"foo"},
+								},
 							},
 						},
 					},
@@ -751,9 +757,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
-								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
+									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+								},
 							},
 						},
 					},
@@ -769,9 +777,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
-								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+								},
 							},
 						},
 					},
@@ -787,8 +797,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+								},
 							},
 						},
 					},
@@ -908,6 +920,152 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			},
 			expect: false,
 		},
+		{
+			name: "both extensionManager and extensionManagers set",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+							},
+						},
+						Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+					},
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "ext1",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers explicitly empty",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:           egv1a1.DefaultGateway(),
+					Provider:          egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers with duplicate names",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "ext1",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						},
+						{
+							Name: "ext1",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers with missing name",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers with invalid individual extension manager",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "good-ext",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "good.extension", Port: 80},
+						},
+						{
+							Name: "bad-ext",
+							// Missing hooks → should fail individual validation
+							Service: &egv1a1.ExtensionService{Host: "bad.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "valid extensionManagers plural config",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "ai-gateway",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute, egv1a1.XDSTranslation},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "ai-gw.extension", Port: 80},
+						},
+						{
+							Name: "observability",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSHTTPListener},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "obs.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -963,6 +1121,18 @@ func TestValidateEnvoyGatewayXDSServer(t *testing.T) {
 	t.Run("non positive", func(t *testing.T) {
 		age := gwapiv1.Duration("0s")
 		x := &egv1a1.XDSServer{MaxConnectionAgeGrace: &age}
+		require.Error(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("valid maxReceiveMessageSize", func(t *testing.T) {
+		size := resource.MustParse("100Mi")
+		x := &egv1a1.XDSServer{MaxReceiveMessageSize: &size}
+		require.NoError(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("invalid zero maxReceiveMessageSize", func(t *testing.T) {
+		size := resource.MustParse("0")
+		x := &egv1a1.XDSServer{MaxReceiveMessageSize: &size}
 		require.Error(t, validateEnvoyGatewayXDSServer(x))
 	})
 }
@@ -1041,10 +1211,12 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Replicas:  nil,
-			Pod:       nil,
-			Container: nil,
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Replicas:  nil,
+				Pod:       nil,
+				Container: nil,
+			},
 		},
 	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
@@ -1053,12 +1225,14 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Pod: nil,
-			Container: &egv1a1.KubernetesContainerSpec{
-				Resources:       nil,
-				SecurityContext: nil,
-				Image:           nil,
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Pod: nil,
+				Container: &egv1a1.KubernetesContainerSpec{
+					Resources:       nil,
+					SecurityContext: nil,
+					Image:           nil,
+				},
 			},
 		},
 	}
@@ -1171,4 +1345,268 @@ func TestEnvoyGatewayTelemetry(t *testing.T) {
 	assert.NotNil(t, eg.Telemetry.Metrics)
 	assert.False(t, eg.Telemetry.Metrics.Prometheus.Disable)
 	assert.Nil(t, eg.Telemetry.Metrics.Sinks)
+}
+
+func TestGetExtensionManagers(t *testing.T) {
+	t.Run("both nil returns nil", func(t *testing.T) {
+		spec := egv1a1.EnvoyGatewaySpec{}
+		assert.Nil(t, spec.GetExtensionManagers())
+	})
+
+	t.Run("only singular set returns it as slice", func(t *testing.T) {
+		ext := egv1a1.ExtensionManager{Name: "ext1"}
+		spec := egv1a1.EnvoyGatewaySpec{
+			ExtensionManager: &ext,
+		}
+		result := spec.GetExtensionManagers()
+		require.Len(t, result, 1)
+		assert.Equal(t, "ext1", result[0].Name)
+	})
+
+	t.Run("only plural set returns plural", func(t *testing.T) {
+		spec := egv1a1.EnvoyGatewaySpec{
+			ExtensionManagers: []egv1a1.ExtensionManager{
+				{Name: "ext1"},
+				{Name: "ext2"},
+			},
+		}
+		result := spec.GetExtensionManagers()
+		require.Len(t, result, 2)
+		assert.Equal(t, "ext1", result[0].Name)
+		assert.Equal(t, "ext2", result[1].Name)
+	})
+
+	t.Run("both set returns plural (plural takes precedence)", func(t *testing.T) {
+		ext := egv1a1.ExtensionManager{Name: "singular"}
+		spec := egv1a1.EnvoyGatewaySpec{
+			ExtensionManager: &ext,
+			ExtensionManagers: []egv1a1.ExtensionManager{
+				{Name: "plural1"},
+				{Name: "plural2"},
+			},
+		}
+		result := spec.GetExtensionManagers()
+		require.Len(t, result, 2)
+		assert.Equal(t, "plural1", result[0].Name)
+		assert.Equal(t, "plural2", result[1].Name)
+	})
+}
+
+func TestWarnEnvoyGateway(t *testing.T) {
+	eg := egv1a1.DefaultEnvoyGateway()
+
+	testCases := []struct {
+		name     string
+		eg       *egv1a1.EnvoyGateway
+		expected []string
+	}{
+		{
+			name:     "nil EnvoyGateway",
+			eg:       nil,
+			expected: nil,
+		},
+		{
+			name:     "nil ExtensionAPIs",
+			eg:       eg,
+			expected: nil,
+		},
+		{
+			name: "disableLua is set",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+						DisableLua: new(true),
+					},
+				},
+			},
+			expected: []string{"disableLua is deprecated, use enableLua instead"},
+		},
+		{
+			name: "enableLua is set",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+						EnableLua: true,
+					},
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			warnings := WarnEnvoyGateway(tc.eg)
+			assert.Equal(t, tc.expected, warnings)
+		})
+	}
+}
+
+func TestLuaDisabled(t *testing.T) {
+	testCases := []struct {
+		name     string
+		ext      *egv1a1.ExtensionAPISettings
+		expected bool
+	}{
+		{
+			name:     "nil ExtensionAPISettings",
+			ext:      nil,
+			expected: true,
+		},
+		{
+			name:     "neither set - defaults to disabled",
+			ext:      &egv1a1.ExtensionAPISettings{},
+			expected: true,
+		},
+		{
+			name:     "enableLua true",
+			ext:      &egv1a1.ExtensionAPISettings{EnableLua: true},
+			expected: false,
+		},
+		{
+			name:     "disableLua true",
+			ext:      &egv1a1.ExtensionAPISettings{DisableLua: new(true)},
+			expected: true,
+		},
+		{
+			name:     "disableLua false (explicit enable via deprecated field)",
+			ext:      &egv1a1.ExtensionAPISettings{DisableLua: new(false)},
+			expected: false,
+		},
+		{
+			name:     "enableLua takes precedence over disableLua",
+			ext:      &egv1a1.ExtensionAPISettings{EnableLua: true, DisableLua: new(true)},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, tc.ext.LuaDisabled())
+		})
+	}
+}
+
+func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
+	redisBackend := func(redis *egv1a1.RateLimitRedisSettings) *egv1a1.RateLimit {
+		return &egv1a1.RateLimit{
+			Backend: egv1a1.RateLimitDatabaseBackend{
+				Type:  egv1a1.RedisBackendType,
+				Redis: redis,
+			},
+		}
+	}
+	cases := []struct {
+		name      string
+		rateLimit *egv1a1.RateLimit
+		expectErr bool
+	}{
+		{
+			name:      "nil redis settings",
+			rateLimit: redisBackend(nil),
+			expectErr: true,
+		},
+		{
+			name:      "url only",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{URL: new("redis.redis.svc:6379")}),
+			expectErr: false,
+		},
+		{
+			name: "urlRef only",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+					},
+				},
+			}),
+			expectErr: false,
+		},
+		{
+			name: "both url and urlRef set",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URL: new("redis.redis.svc:6379"),
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+					},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name:      "neither url nor urlRef",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef missing key",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+					},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef missing name",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{Key: "REDIS_ENDPOINT"},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef optional true",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+						Optional:             new(true),
+					},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef optional false",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+						Optional:             new(false),
+					},
+				},
+			}),
+			expectErr: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateEnvoyGatewayRateLimit(tc.rateLimit)
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateRedisURL(t *testing.T) {
+	require.NoError(t, ValidateRedisURL("redis.redis.svc:6379"))
+	require.NoError(t, ValidateRedisURL("a.redis.svc:6379,b.redis.svc:6379"))
+	require.ErrorContains(t, ValidateRedisURL(""), "ratelimit redis url is empty")
+	require.ErrorContains(t, ValidateRedisURL(":foo"), "unknown ratelimit redis url format")
 }

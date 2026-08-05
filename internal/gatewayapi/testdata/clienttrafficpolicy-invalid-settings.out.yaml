@@ -30,8 +30,8 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has no key ca.crt and more than one entry
-          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has no key ca.crt and more than one entry.
+          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has none of the expected keys [ca.crt] and more than one entry
+          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has none of the expected keys [ca.crt] and more than one entry.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -942,7 +942,7 @@ infraIR:
       name: default/gateway-5
       namespace: envoy-gateway-system
 tcpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcp-route-1
@@ -974,7 +974,7 @@ tcpRoutes:
         name: gateway-1
         namespace: default
         sectionName: tcp-1
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: tcp-route-1

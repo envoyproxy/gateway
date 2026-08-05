@@ -179,6 +179,8 @@ envoyextensionpolicies:
         name: cm-policy-for-http-route
         kind: ConfigMap
         group: v1
+      filterContext:
+        token_header: x-session-token
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:

@@ -6,7 +6,7 @@ vulnerability.ignore = true
 
 [[PackageOverrides]]
 name = "github.com/go-sql-driver/mysql"
-version = "1.9.3"
+version = "1.10.0"
 ecosystem = "Go"
 license.ignore = true
 reason = "This package is licensed under the MPL-2.0 license, which is not included in the CNCF allowlist, but it is covered by an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"

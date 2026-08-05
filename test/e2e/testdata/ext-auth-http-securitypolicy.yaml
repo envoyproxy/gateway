@@ -35,6 +35,24 @@ spec:
     - name: infra-backend-v1
       port: 8080
 ---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-ext-auth-path-override
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /myapp-override
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -52,4 +70,23 @@ spec:
         name: envoy-ext-auth
         namespace: gateway-conformance-infra
         port: 8080
-      headersToBackend: ["x-current-user"]
+      headersToBackend: ["x-current-user", "x-ext-auth-req-path"]
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ext-auth-path-override-test
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-ext-auth-path-override
+  extAuth:
+    http:
+      pathOverride: /auth
+      backendRef:
+        name: envoy-ext-auth
+        namespace: gateway-conformance-infra
+        port: 8080
+      headersToBackend: ["x-current-user", "x-ext-auth-req-path"]

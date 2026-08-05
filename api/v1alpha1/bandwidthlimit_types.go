@@ -69,6 +69,7 @@ type BandwidthLimitResponseTrailers struct {
 	// "bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.
 	// "bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter.
 	//
+	// +kubebuilder:validation:Pattern=`^[^\r\n\x00]*$`
 	// +optional
 	Prefix *string `json:"prefix,omitempty"`
 }

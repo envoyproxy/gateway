@@ -142,10 +142,12 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the client certificate and common TLS settings from EnvoyProxy resource.
-	if gtwBackendTLSConfig, owner := gtwCtx.GetBackendTLSConfig(); gtwBackendTLSConfig != nil {
-		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(
-			gtwBackendTLSConfig, owner); err != nil {
-			return nil, err
+	if gtwCtx != nil {
+		if gtwBackendTLSConfig, owner := gtwCtx.GetBackendTLSConfig(); gtwBackendTLSConfig != nil {
+			if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(
+				gtwBackendTLSConfig, owner); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -154,6 +156,15 @@ func (t *Translator) applyBackendTLSSetting(
 	mergedClientTLSConfig = mergeClientTLSConfigs(backendClientTLSConfig, envoyProxyClientTLSConfig)
 	if mergedClientTLSConfig != nil {
 		mergedTLSConfig.TLSConfig = *mergedClientTLSConfig
+	}
+
+	// Set to the default TLS protocol versions (min 1.2, max 1.3) when
+	// not explicitly configured.
+	if mergedTLSConfig.MinVersion == nil {
+		mergedTLSConfig.MinVersion = new(ir.TLSv12)
+	}
+	if mergedTLSConfig.MaxVersion == nil {
+		mergedTLSConfig.MaxVersion = new(ir.TLSv13)
 	}
 
 	return mergedTLSConfig, nil
@@ -181,9 +192,15 @@ func mergeServerValidationTLSConfigs(
 
 	if btpValidationTLSConfig.CACertificate != nil {
 		mergedConfig.CACertificate = btpValidationTLSConfig.CACertificate
+		// If the BTLSP provides an explicit CA certificate, it overrides the backend's
+		// system trust store — clear UseSystemTrustStore so the IR is consistent.
+		if !btpValidationTLSConfig.UseSystemTrustStore {
+			mergedConfig.UseSystemTrustStore = false
+		}
 	}
-	if btpValidationTLSConfig.SNI != nil {
+	if btpValidationTLSConfig.SNI != nil { // BTP takes precedence for SNI, if set, it will override Backend resource SNI and disable AutoSNIFromEndpointHostname
 		mergedConfig.SNI = btpValidationTLSConfig.SNI
+		mergedConfig.AutoSNIFromEndpointHostname = false
 	}
 	if btpValidationTLSConfig.UseSystemTrustStore {
 		mergedConfig.UseSystemTrustStore = btpValidationTLSConfig.UseSystemTrustStore
@@ -242,7 +259,7 @@ func mergeClientTLSConfigs(
 		mergedConfig.SignatureAlgorithms = backendClientTLSConfig.SignatureAlgorithms
 	}
 
-	if len(backendClientTLSConfig.ALPNProtocols) > 0 {
+	if backendClientTLSConfig.ALPNProtocols != nil {
 		mergedConfig.ALPNProtocols = backendClientTLSConfig.ALPNProtocols
 	}
 
@@ -253,7 +270,8 @@ func (t *Translator) processServerValidationTLSSettings(
 	backend *egv1a1.Backend,
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
-		InsecureSkipVerify: ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
+		InsecureSkipVerify:          ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
+		AutoSNIFromEndpointHostname: ptr.Deref(backend.Spec.TLS.AutoSNIFromEndpointHostname, false),
 	}
 
 	if backend.Spec.TLS.SNI != nil {
@@ -263,8 +281,12 @@ func (t *Translator) processServerValidationTLSSettings(
 	if !tlsConfig.InsecureSkipVerify {
 		tlsConfig.UseSystemTrustStore = ptr.Deref(backend.Spec.TLS.WellKnownCACertificates, "") == gwapiv1.WellKnownCACertificatesSystem
 		if tlsConfig.UseSystemTrustStore {
+			name := fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace)
+			if !t.PerResourceSystemCASecret {
+				name = ir.SystemTrustStoreSecretName
+			}
 			tlsConfig.CACertificate = &ir.TLSCACertificate{
-				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
+				Name: name,
 			}
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
 			caRefs := getObjectReferences(gwapiv1.Namespace(backend.Namespace), backend.Spec.TLS.CACertificateRefs)
@@ -371,7 +393,8 @@ func (t *Translator) processClientTLSSettings(
 	if clientTLS.MaxVersion != nil {
 		tlsConfig.MaxVersion = new(ir.TLSVersion(*clientTLS.MaxVersion))
 	}
-	if len(clientTLS.ALPNProtocols) > 0 {
+	// An empty list of ALPNProtocols means ALPN is disabled, while a nil value means it is not set.
+	if clientTLS.ALPNProtocols != nil {
 		tlsConfig.ALPNProtocols = make([]string, len(clientTLS.ALPNProtocols))
 		for i := range clientTLS.ALPNProtocols {
 			tlsConfig.ALPNProtocols[i] = string(clientTLS.ALPNProtocols[i])
@@ -428,15 +451,15 @@ func (t *Translator) processClientTLSSettings(
 	return tlsConfig, nil
 }
 
-func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
+func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string, shouldSectionNameMatch bool) bool {
 	for _, currTarget := range policy.Spec.TargetRefs {
 		if target.Group == currTarget.Group &&
 			target.Kind == currTarget.Kind &&
 			backendNamespace == policy.Namespace &&
 			target.Name == currTarget.Name {
 			// if section name is not set, then it targets the entire backend
-			if currTarget.SectionName == nil {
-				return true
+			if currTarget.SectionName == nil && target.SectionName != nil {
+				return !shouldSectionNameMatch
 			} else if reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
 				return true
 			}
@@ -452,8 +475,16 @@ func (t *Translator) getBackendTLSPolicy(
 ) *gwapiv1.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
 	target := t.getTargetBackendReference(backendRef, backendNamespace)
+	if target.SectionName != nil {
+		for _, policy := range policies {
+			if backendTLSTargetMatched(policy, target, backendNamespace, true) {
+				// prefer policies that target this specific section over wildcard matches
+				return policy
+			}
+		}
+	}
 	for _, policy := range policies {
-		if backendTLSTargetMatched(policy, target, backendNamespace) {
+		if backendTLSTargetMatched(policy, target, backendNamespace, false) {
 			return policy
 		}
 	}
@@ -482,8 +513,12 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 		SubjectAltNames:     subjectAltNames,
 	}
 	if tlsBundle.UseSystemTrustStore {
+		name := fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
+		if !t.PerResourceSystemCASecret {
+			name = ir.SystemTrustStoreSecretName
+		}
 		tlsBundle.CACertificate = &ir.TLSCACertificate{
-			Name: fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace),
+			Name: name,
 		}
 		return tlsBundle, nil
 	}
@@ -541,7 +576,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 		}
 		if caRefNs != meta.Namespace && resources != nil {
 			// check reference grant
-			if !t.validateCrossNamespaceRef(
+			if !isCrossNamespaceReferencePermitted(
 				crossNamespaceFrom{
 					group:     meta.Group,
 					kind:      meta.Kind,
@@ -564,7 +599,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 			foundSupportedRef = true
 			cm := t.GetConfigMap(caRefNs, string(caRef.Name))
 			if cm != nil {
-				if crt, dataOk := getOrFirstFromData(cm.Data, CACertKey); dataOk {
+				if crt, dataOk := getFirstMatchOrFirstFromData(cm.Data, CACertKey, TLSCertKey); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
@@ -595,7 +630,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 					continue
 				}
 				// Regular secret processing
-				if crt, dataOk := getOrFirstFromData(secret.Data, CACertKey); dataOk {
+				if crt, dataOk := getFirstMatchOrFirstFromData(secret.Data, CACertKey, TLSCertKey); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}

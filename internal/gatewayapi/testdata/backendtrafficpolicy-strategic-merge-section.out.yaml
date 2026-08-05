@@ -256,13 +256,14 @@ backendTrafficPolicies:
         type: Warning
       - lastTransitionTime: null
         message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/grpcroute-1 default/httproute-1 default/httproute-2]'
+          these routes: [default/httproute-1 default/httproute-2]'
         reason: Merged
         status: "True"
         type: Merged
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
-          for these listeners: [listener-2]'
+          for these gateway listeners: [envoy-gateway/gateway-1/listener-2] and these
+          routes: [default/grpcroute-1]'
         reason: Overridden
         status: "True"
         type: Overridden

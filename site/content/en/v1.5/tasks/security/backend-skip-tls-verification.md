@@ -337,5 +337,5 @@ version and cipher suite used for the connection.
 [Backend Routing]: ../traffic/backend/#enable-backend
 [Backend]: ../../../api/extension_types#backend
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
-[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/

@@ -487,5 +487,5 @@ transfer-encoding: chunked
 [RateLimitFilter]: ../api/config_types#ratelimitfilter
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
 [EnvoyGateway]: ../api/config_types#envoygateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[ExtensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPRouteFilter
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[ExtensionRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPRouteFilter

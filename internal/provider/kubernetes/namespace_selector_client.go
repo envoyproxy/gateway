@@ -20,18 +20,20 @@ import (
 // List operations.
 type namespaceSelectorClient struct {
 	client.Client
-	namespaceSelector *metav1.LabelSelector
+	namespaceSelector   *metav1.LabelSelector
+	controllerNamespace string
 }
 
 // newNamespaceSelectorClient creates a new namespace-filtered client wrapper.
 // If namespaceSelector is nil, the wrapper passes through all operations unchanged.
-func newNamespaceSelectorClient(c client.Client, namespaceSelector *metav1.LabelSelector) client.Client {
+func newNamespaceSelectorClient(c client.Client, namespaceSelector *metav1.LabelSelector, controllerNamespace string) client.Client {
 	if namespaceSelector == nil {
 		return c
 	}
 	return &namespaceSelectorClient{
-		Client:            c,
-		namespaceSelector: namespaceSelector,
+		Client:              c,
+		namespaceSelector:   namespaceSelector,
+		controllerNamespace: controllerNamespace,
 	}
 }
 
@@ -86,15 +88,21 @@ func (c *namespaceSelectorClient) filterByNamespaceLabels(ctx context.Context, l
 		}
 
 		ns := obj.GetNamespace()
-		matches, cached := namespaceMatches[ns]
-		if !cached {
-			var err error
-			matches, err = checkObjectNamespaceLabels(ctx, c.Client, c.namespaceSelector, obj)
-			if err != nil {
-				return fmt.Errorf("failed to check namespace labels for object %s/%s: %w",
-					ns, obj.GetName(), err)
+		// Keep controller-namespace infrastructure resources visible even when
+		// the controller namespace does not match the user selector.
+		matches := ns == c.controllerNamespace && isNamespaceSelectorBypassInfrastructureResource(item)
+		if !matches {
+			cachedMatches, cached := namespaceMatches[ns]
+			matches = cachedMatches
+			if !cached {
+				var err error
+				matches, err = checkObjectNamespaceLabels(ctx, c.Client, c.namespaceSelector, obj)
+				if err != nil {
+					return fmt.Errorf("failed to check namespace labels for object %s/%s: %w",
+						ns, obj.GetName(), err)
+				}
+				namespaceMatches[ns] = matches
 			}
-			namespaceMatches[ns] = matches
 		}
 
 		if matches {

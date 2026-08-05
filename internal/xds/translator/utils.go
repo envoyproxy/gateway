@@ -66,10 +66,8 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 
 	name := clusterName(u.Hostname(), uint32(port))
 
-	if ip, err := netip.ParseAddr(u.Hostname()); err == nil {
-		if ip.Unmap().Is4() {
-			epType = EndpointTypeStatic
-		}
+	if _, err := netip.ParseAddr(u.Hostname()); err == nil {
+		epType = EndpointTypeStatic
 	}
 
 	return &urlCluster{
@@ -219,6 +217,7 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
 	args.backendConnection = traffic.BackendConnection
 	args.dns = traffic.DNS
 	args.http2Settings = traffic.HTTP2
+	args.admissionControl = traffic.AdmissionControl
 }
 
 // determineIPFamily determines the IP family based on multiple destination settings

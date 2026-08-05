@@ -799,7 +799,7 @@ curl --header "Host: www.merged3.com" http://$GATEWAY_HOST:8082/example3
 
 [Quickstart]: ../quickstart.md
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
-[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
+[GatewayClass]: https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/
 [Namespaced deployment mode]: ../../api/extension_types#kuberneteswatchmode
 [issue1231]: https://github.com/envoyproxy/gateway/issues/1231
 [issue1117]: https://github.com/envoyproxy/gateway/issues/1117

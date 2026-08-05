@@ -501,6 +501,11 @@ securityPolicies:
         reason: Overridden
         status: "True"
         type: Overridden
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -553,11 +558,16 @@ securityPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
-          listeners: [listener-2] and these routes: [default/httproute-1 default/httproute-3
-          default/httproute-5]'
+          gateway listeners: [envoy-gateway/gateway-1/listener-2] and these routes:
+          [default/httproute-1 default/httproute-3 default/httproute-5]'
         reason: Overridden
         status: "True"
         type: Overridden
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:

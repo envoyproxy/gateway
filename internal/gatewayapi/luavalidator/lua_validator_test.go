@@ -181,6 +181,19 @@ func Test_BasicValidation(t *testing.T) {
 			},
 			expectedErrSubstring: "",
 		},
+		{
+			name: "stream:filterContext:get",
+			code: `function envoy_on_response(response_handle)
+                     local ctx = response_handle:filterContext()
+                     if ctx ~= nil then
+                       local custom_value = ctx:get("custom_value")
+                       if custom_value ~= nil then
+                         response_handle:headers():add("X-Lua-Filter-Context", custom_value)
+                       end
+                     end
+                   end`,
+			expectedErrSubstring: "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -327,6 +340,102 @@ func Test_block_or_sanitize_io(t *testing.T) {
                      if file then file:close() end
                    end`,
 			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open double-slash //etc/passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//etc/passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open double-slash //var/run/secrets/token",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//var/run/secrets/kubernetes.io/serviceaccount/token", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open run secrets alias /run/secrets/token",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("/run/secrets/kubernetes.io/serviceaccount/token", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open run secrets alias double-slash //run/secrets/token",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//run/secrets/kubernetes.io/serviceaccount/token", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open multiple-slash ///etc/passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("///etc/passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open embedded double-slash /etc//passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("/etc//passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open double-slash //proc/self/environ",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//proc/self/environ", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open double-slash //certs/tls.crt",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("//certs/tls.crt", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "critical path",
+		},
+		{
+			name: "io.open dot segment /etc/./passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("/etc/./passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name: "io.open leading dot ./etc/passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("./etc/passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name: "io.open trailing dot /etc/.",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("/etc/.", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name: "io.open dot with backslash etc\\.\\passwd",
+			code: `function envoy_on_response(response_handle)
+                     local file = io.open("etc\\.\\passwd", "r")
+                     if file then file:close() end
+                   end`,
+			expectedErrSubstring: "path traversals",
 		},
 		// io.input tests
 		{

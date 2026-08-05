@@ -36,7 +36,11 @@ SecurityPolicy can be attached to Gateway API resources using two targeting mech
 1. **Direct Reference (`targetRefs`)**: Explicitly reference specific resources by name and kind.
 2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselectors))
 
-The policy applies to all resources that match either targeting method. You can target various Gateway API resource types including `Gateway`, `HTTPRoute`, `GRPCRoute`, and `TCPRoute`.
+The policy applies to all resources that match either targeting method. You can target various Gateway API resource types including `Gateway`, `ListenerSet`, `HTTPRoute`, `GRPCRoute`, and `TCPRoute`.
+
+When a SecurityPolicy targets a `ListenerSet`, it applies only to listeners in that ListenerSet. It does not apply to listeners owned directly by the parent Gateway. A `ListenerSet` target can also use `sectionName` to apply the policy to a single listener in the ListenerSet.
+
+Route-level policies apply to the targeted route regardless of whether that route is attached directly to a `Gateway` or through a `ListenerSet`.
 
 Note: TCPRoute support is limited to authorization using client IP allow/deny lists (IP-based authorization). Other SecurityPolicy features such as JWT, API Key, Basic Auth, or OIDC are not applicable to TCPRoute targets.
 
@@ -44,12 +48,27 @@ Note: TCPRoute support is limited to authorization using client IP allow/deny li
 
 ### Precedence
 
-When multiple SecurityPolicies apply to the same resource, Envoy Gateway resolves conflicts using a precedence hierarchy based on the target resource type and section-level specificity:
+When multiple SecurityPolicies apply to the same resource, Envoy Gateway resolves conflicts using a precedence hierarchy based on the target resource type, route attachment path, and section-level specificity.
 
-1. **Route rule-level policies** (HTTPRoute, GRPCRoute, or TCPRoute with `sectionName` targeting specific rules) - Highest precedence
-2. **Route-level policies** (HTTPRoute, GRPCRoute, or TCPRoute without `sectionName`) - High precedence  
-3. **Listener-level policies** (Gateway with `sectionName` targeting specific listeners) - Medium precedence
-4. **Gateway-level policies** (Gateway without `sectionName`) - Lowest precedence
+Route-specific policies take precedence first:
+
+1. **Route rule-level policies** (HTTPRoute, GRPCRoute, or TCPRoute with `sectionName` targeting specific rules)
+2. **Route-level policies** (HTTPRoute, GRPCRoute, or TCPRoute without `sectionName`)
+
+After route-specific policies, parent policy precedence depends on how the route is attached.
+
+For routes attached through a `ListenerSet`:
+
+1. **ListenerSet listener-level policies** (`ListenerSet` with `sectionName` targeting a specific ListenerSet listener)
+2. **ListenerSet-level policies** (`ListenerSet` without `sectionName`)
+3. **Gateway-level policies** (`Gateway` without `sectionName`) on the parent Gateway
+
+For routes attached directly to a `Gateway`:
+
+1. **Gateway listener-level policies** (`Gateway` with `sectionName` targeting specific Gateway-owned listeners)
+2. **Gateway-level policies** (`Gateway` without `sectionName`)
+
+Gateway listener-level policies are sibling scopes to ListenerSet listeners and do not apply to routes attached through a ListenerSet.
 
 #### Multiple Policies at the Same Level
 
@@ -203,13 +222,20 @@ spec:
 
 In the example, policy A affects only the HTTPS listener, while policy B applies to the rest of the listeners in the gateway. Since Policy A is more specific, the system will show Overridden=True for Policy B on the https listener.
 
+The same specificity rules apply when a `ListenerSet` is involved. A section-specific `ListenerSet` policy applies only to the named ListenerSet listener, while a ListenerSet-wide policy applies to the remaining listeners in that ListenerSet. The parent Gateway-wide policy applies to Gateway-owned listeners and to ListenerSet listeners that do not have a more specific ListenerSet policy. A Gateway listener policy applies only to the listener owned directly by the Gateway and does not affect ListenerSet listeners.
+
 When the `mergeType` field is unset, no merging occurs and only the most specific configuration takes effect. However, policies can be configured to merge with parent policies using the `mergeType` field (see [Policy Merging](#policy-merging) section below).
 
 ## Policy Merging
 
-SecurityPolicy supports merging configurations using the `mergeType` field, which allows route-level or route rule-level policies to combine with gateway-level or listener-level policies rather than completely overriding them. This enables layered security strategies where platform teams can set baseline security configurations at the Gateway level, while application teams can add specific security policies for their routes.
+SecurityPolicy supports merging configurations using the `mergeType` field, which allows route-level or route rule-level policies to combine with parent policies rather than completely overriding them. This enables layered security strategies where platform teams can set baseline security configurations at the Gateway or ListenerSet level, while application teams can add specific security policies for their routes.
 
-When merging occurs, route-level policies will merge with either a gateway-level or listener-level policy, but not both. If both gateway and listener policies exist, the listener-level policy takes precedence.
+When merging occurs, route-level policies merge with the closest parent policy in the route's attachment hierarchy:
+
+- For routes attached directly to a Gateway, the route policy first looks for a Gateway listener-level policy, then a Gateway-level policy.
+- For routes attached through a ListenerSet, the route policy first looks for a ListenerSet listener-level policy, then a ListenerSet-level policy, then the parent Gateway-level policy.
+
+A route policy attached through a ListenerSet does not merge with a Gateway listener-level policy because Gateway listeners and ListenerSet listeners are sibling scopes.
 
 ### Merge Types
 
@@ -264,21 +290,11 @@ In this example, the route-level policy merges with the gateway-level policy, re
 
 ### Key Constraints
 
-- The `mergeType` field can only be set on policies targeting child resources (like HTTPRoute), not parent resources (like Gateway)
+- The `mergeType` field can only be set on policies targeting child resources (like HTTPRoute), not parent resources (like Gateway or ListenerSet)
 - When `mergeType` is unset, no merging occurs - only the most specific policy takes effect
 - The merged configuration combines both policies, enabling layered security strategies
 - When the same security feature is configured in both parent and child policies (e.g., both define CORS), the child policy's configuration takes precedence for that specific feature
-
-### Important: Namespace Behavior with Secret References
-
-When policies are merged, secret references inherited from parent policies must be resolvable from the **route policy's namespace**. This is because the merged policy retains the identity (including namespace) of the route-level policy.
-
-**Example scenario:**
-- Gateway policy in namespace `envoy-gateway` references `basic-auth-secret`
-- Route policy in namespace `default` merges with the gateway policy
-- The secret `basic-auth-secret` must exist in the `default` namespace for the merged policy to work
-
-**Best Practice:** When using policy merging with secret-based authentication (BasicAuth, OIDC, JWT, APIKeyAuth), ensure that required secrets are available in each route's namespace, or design your namespace strategy accordingly.
+- Secret references and backend references are resolved against the namespace of the **policy that originally configured the field** (either route or parent). For example, if a Gateway policy defines BasicAuth, its secret is looked up in the Gateway policy's namespace even after merging.
 
 ## Related Resources
 - [API Key Authentication](../../tasks/security/apikey-auth.md)

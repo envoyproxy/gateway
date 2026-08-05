@@ -242,7 +242,7 @@ xdsIR:
           prefix: /foo
         security:
           basicAuth:
-            name: securitypolicy/default/policy-for-route
+            name: securitypolicy/envoy-gateway/policy-for-gateway
             users: '[redacted]'
           cors:
             allowHeaders:

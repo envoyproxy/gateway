@@ -130,7 +130,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+								LoadBalancerSourceRanges: []string{"1.1.1.1", "2001:db8::/32"},
 							},
 						},
 					},
@@ -140,6 +140,23 @@ func TestEnvoyProxyProvider(t *testing.T) {
 		},
 		{
 			desc: "loadBalancerSourceRanges-pass-case2",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"2001:db8::/32"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "loadBalancerSourceRanges-pass-case3",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
@@ -2467,6 +2484,36 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"If type is Remote, local field must not be set"},
+		},
+		{
+			desc: "mergeBackends present (empty) is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeGateways and mergeBackends both set is invalid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeGateways = new(true)
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{"mergeGateways and mergeBackends cannot both be enabled"},
+		},
+		{
+			desc: "mergeGateways enabled with mergeBackends unset is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeGateways = new(true)
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeGateways disabled with mergeBackends set is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeGateways = new(false)
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{},
 		},
 	}
 

@@ -1,0 +1,1 @@
+Added a `failedRefetchDuration` field to JWT providers in `SecurityPolicy`, configuring how long Envoy waits before re-fetching the JWKS after a failed fetch. If not specified, Envoy's default of 1 second is used.

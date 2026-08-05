@@ -41,6 +41,33 @@ httpRoutes:
               namespace: default
               kind: Backend
               group: gateway.envoyproxy.io
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-with-wrong-section-name
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-btls
+          sectionName: http2
+      rules:
+        - matches:
+            - path:
+                type: Exact
+                value: "/exact"
+          backendRefs:
+            - name: http-backend
+              namespace: default
+              port: 8080
+            - name: backend-ip-tls-1
+              namespace: default
+              kind: Backend
+              group: gateway.envoyproxy.io
+            - name: backend-ip-tls-2
+              namespace: default
+              kind: Backend
+              group: gateway.envoyproxy.io
 referenceGrants:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: ReferenceGrant

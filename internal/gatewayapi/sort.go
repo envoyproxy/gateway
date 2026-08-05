@@ -125,7 +125,7 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 
 // sortXdsIR sorts the xdsIR based on the match precedence
 // defined in the Gateway API spec.
-// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
+// https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
 func sortXdsIRMap(xdsIR resource.XdsIRMap) {
 	for _, irItem := range xdsIR {
 		for _, http := range irItem.HTTP {

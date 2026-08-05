@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -85,8 +84,8 @@ type GatewayAPIStatuses struct {
 	HTTPRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
 	GRPCRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
 	TLSRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1.TLSRouteStatus]
-	TCPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
-	UDPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	TCPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1.TCPRouteStatus]
+	UDPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1.UDPRouteStatus]
 	ListenerSetStatuses  watchable.Map[types.NamespacedName, *gwapiv1.ListenerSetStatus]
 }
 
@@ -115,6 +114,8 @@ type PolicyStatuses struct {
 	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
 	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
 	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
+
+	EnvoyProxyStatuses watchable.Map[types.NamespacedName, *egv1a1.EnvoyProxyStatus]
 }
 
 // ExtensionStatuses contains statuses related to gw-api extension resources
@@ -130,6 +131,7 @@ func (p *PolicyStatuses) Close() {
 	p.BackendTLSPolicyStatuses.Close()
 	p.EnvoyExtensionPolicyStatuses.Close()
 	p.ExtensionPolicyStatuses.Close()
+	p.EnvoyProxyStatuses.Close()
 }
 
 func (e *ExtensionStatuses) Close() {
@@ -225,4 +227,6 @@ const (
 	ListenerSetStatusMessageName MessageName = "listenerset-status"
 	// GatewayClassStatusMessageName is a message containing updates to GatewayClass status
 	GatewayClassStatusMessageName MessageName = "gatewayclass-status"
+	// EnvoyProxyStatusMessageName is a message containing updates to EnvoyProxy status
+	EnvoyProxyStatusMessageName MessageName = "envoyproxy-status"
 )

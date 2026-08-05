@@ -5,7 +5,7 @@ title = "ReferenceGrant"
 
     The `ReferenceGrant` resource is Beta and part of the
     Standard Channel since `v0.6.0`. For more information on release
-    channels, refer to our [versioning guide](https://gateway-api.sigs.k8s.io/concepts/versioning).
+    channels, refer to our [versioning guide](https://gateway-api.sigs.k8s.io/docs/concepts/versioning/).
 
     This resource was originally named "ReferencePolicy". It was renamed
     to "ReferenceGrant" to avoid any confusion with policy attachment.
@@ -29,7 +29,7 @@ ReferenceGrant, a cross namespace reference is invalid.
 It is recommended that `ReferenceGrants` are used with caution, and that validations
 and limits are applied by cluster admins to guarantee the proper usage of this resource.
 
-Please refer to [Security Considerations](https://gateway-api.sigs.k8s.io/concepts/security/#limiting-cross-namespace-references)
+Please refer to [Security Considerations](https://gateway-api.sigs.k8s.io/docs/concepts/security/#limiting-cross-namespace-references)
 for more details.
 
 ## Structure
@@ -96,7 +96,7 @@ While the API is simplistic in nature, it comes with a few notable decisions:
    other. This makes it impossible for them to conflict with each other.
 
 Please see the [API
-Specification](https://gateway-api.sigs.k8s.io/reference/spec#referencegrant)
+Specification](https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#referencegrant)
 for more details on how specific ReferenceGrant fields are interpreted.
 
 ## Implementation Guidelines
@@ -116,7 +116,7 @@ No hints should be provided about whether or not the referenced resource exists.
 Cross namespace Route -> Gateway binding follows a slightly different pattern
 where the handshake mechanism is built into the Gateway resource. For more
 information on that approach, refer to the relevant [Security Model
-documentation](https://gateway-api.sigs.k8s.io/concepts/security-model). Although conceptually similar to
+documentation](https://gateway-api.sigs.k8s.io/docs/concepts/security/). Although conceptually similar to
 ReferenceGrant, this configuration is built directly into Gateway Listeners,
 and allows for fine-grained per Listener configuration that would not be
 possible with ReferenceGrant.

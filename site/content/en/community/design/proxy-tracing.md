@@ -162,5 +162,5 @@ spec:
 
 [tracing]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/observability/tracing
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[support levels]: https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels
+[support levels]: https://gateway-api.sigs.k8s.io/docs/concepts/conformance/?h=extended#2-support-levels
 [OpenTelemetry Collector]: https://opentelemetry.io/docs/collector/

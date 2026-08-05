@@ -66,9 +66,10 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
+        message: 'Failed to process route rule 0 backendRef 0: Backend ref to Service
+          backends/service-1 not permitted by any ReferenceGrant.'
+        reason: RefNotPermitted
+        status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -135,25 +136,8 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-1
-            namespace: default
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: backends
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
+      - directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:

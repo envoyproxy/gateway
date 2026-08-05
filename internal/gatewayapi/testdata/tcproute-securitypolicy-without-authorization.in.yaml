@@ -1,0 +1,41 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-tcp
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: tcp
+      protocol: TCP
+      port: 8088
+      allowedRoutes:
+        namespaces:
+          from: All
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcpr-app
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-tcp
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-tcpr-no-auth
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcpr-app

@@ -39,8 +39,9 @@ var GatewayInfraResource = suite.ConformanceTest{
 		}
 		gatewayObjMeta := metav1.ObjectMeta{
 			Name:      "e2e-test-infra",
-			Namespace: "envoy-gateway-system",
+			Namespace: "gateway-conformance-infra",
 		}
+		infraNamespace := GetGatewayResourceNamespace()
 
 		t.Cleanup(func() {
 			// delete the gateway if it still exists after the test is done
@@ -52,8 +53,9 @@ var GatewayInfraResource = suite.ConformanceTest{
 		})
 
 		labelSelector := labels.SelectorFromSet(labels.Set{
-			"gateway.envoyproxy.io/owning-gateway-name": gatewayObjMeta.Name,
-			"app.kubernetes.io/managed-by":              "envoy-gateway",
+			"gateway.envoyproxy.io/owning-gateway-name":      gatewayObjMeta.Name,
+			"gateway.envoyproxy.io/owning-gateway-namespace": gatewayObjMeta.Namespace,
+			"app.kubernetes.io/managed-by":                   "envoy-gateway",
 		})
 
 		tlog.Logf(t, "creating gateway")
@@ -86,7 +88,7 @@ var GatewayInfraResource = suite.ConformanceTest{
 				gatewayDeploymentList := &appsv1.DeploymentList{}
 				err = suite.Client.List(ctx, gatewayDeploymentList, &client.ListOptions{
 					LabelSelector: labelSelector,
-					Namespace:     gatewayObjMeta.Namespace,
+					Namespace:     infraNamespace,
 				})
 				if err != nil {
 					tlog.Logf(t, "error listing gateway deployment: %v", err)
@@ -138,7 +140,7 @@ var GatewayInfraResource = suite.ConformanceTest{
 				svcList := &corev1.ServiceList{}
 				err := suite.Client.List(ctx, svcList, &client.ListOptions{
 					LabelSelector: labelSelector,
-					Namespace:     gatewayObjMeta.Namespace,
+					Namespace:     infraNamespace,
 				})
 				if err != nil {
 					tlog.Logf(t, "error listing gateway deployment: %v", err)
@@ -187,7 +189,7 @@ var GatewayInfraResource = suite.ConformanceTest{
 				gatewayDeploymentList := &appsv1.DeploymentList{}
 				err := suite.Client.List(ctx, gatewayDeploymentList, &client.ListOptions{
 					LabelSelector: labelSelector,
-					Namespace:     gatewayObjMeta.Namespace,
+					Namespace:     infraNamespace,
 				})
 				if err != nil {
 					tlog.Logf(t, "error listing gateway deployment: %v", err)

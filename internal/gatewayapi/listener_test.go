@@ -34,23 +34,47 @@ type expectedListenerStatus struct {
 	message      string
 }
 
-func TestProxySamplingRate(t *testing.T) {
+func TestProxySamplingRates(t *testing.T) {
 	cases := []struct {
-		name     string
-		tracing  *egv1a1.ProxyTracing
-		expected float64
+		name            string
+		tracing         *egv1a1.ProxyTracing
+		expectedRandom  float64
+		expectedClient  float64
+		expectedOverall float64
 	}{
 		{
-			name:     "default",
-			tracing:  &egv1a1.ProxyTracing{},
-			expected: 100.0,
+			name:            "default",
+			tracing:         &egv1a1.ProxyTracing{},
+			expectedRandom:  100.0,
+			expectedClient:  100.0,
+			expectedOverall: 100.0,
 		},
 		{
 			name: "rate",
 			tracing: &egv1a1.ProxyTracing{
 				SamplingRate: new(uint32(10)),
 			},
-			expected: 10.0,
+			expectedRandom:  10.0,
+			expectedClient:  100.0,
+			expectedOverall: 100.0,
+		},
+		{
+			name: "client and overall fraction",
+			tracing: &egv1a1.ProxyTracing{
+				Tracing: egv1a1.Tracing{
+					ClientSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: new(int32(4)),
+					},
+					OverallSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   3,
+						Denominator: new(int32(4)),
+					},
+				},
+			},
+			expectedRandom:  100.0,
+			expectedClient:  25.0,
+			expectedOverall: 75.0,
 		},
 		{
 			name: "fraction numerator only",
@@ -61,7 +85,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 100,
+			expectedRandom:  100,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "fraction",
@@ -73,7 +99,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 10,
+			expectedRandom:  10,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "less than zero",
@@ -85,7 +113,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 0,
+			expectedRandom:  0,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "greater than 100",
@@ -97,7 +127,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 100,
+			expectedRandom:  100,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "less than 1",
@@ -109,16 +141,20 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 0.1,
+			expectedRandom:  0.1,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := proxySamplingRate(tc.tracing)
-			if actual != tc.expected {
-				t.Errorf("expected %v, got %v", tc.expected, actual)
-			}
+			random := proxySamplingRate(tc.tracing.SamplingRate, tc.tracing.SamplingFraction)
+			client := proxySamplingRate(nil, tc.tracing.ClientSamplingFraction)
+			overall := proxySamplingRate(nil, tc.tracing.OverallSamplingFraction)
+			assert.Equal(t, tc.expectedRandom, random)
+			assert.Equal(t, tc.expectedClient, client)
+			assert.Equal(t, tc.expectedOverall, overall)
 		})
 	}
 }
@@ -385,6 +421,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			for i := range tt.gateway.listeners {
 				tt.gateway.listeners[i].listenerStatusIdx = i
 				tt.gateway.listeners[i].gateway = tt.gateway
+				tt.gateway.listeners[i].httpIR = &ir.HTTPListener{}
 				tt.gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
 					Name:       tt.gateway.listeners[i].Name,
 					Conditions: []metav1.Condition{},
@@ -419,6 +456,10 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 					// expectedHostname == "" means matching all hostnames
 					t.Errorf("expected condition for listener %d, got nil or False", idx)
 				}
+			}
+			for idx, listener := range tt.gateway.listeners {
+				require.NotNil(t, listener.httpIR)
+				assert.False(t, listener.httpIR.TLSOverlaps, "hostname overlap must not trigger ALPN downgrade for listener %d", idx)
 			}
 
 			if len(tt.expected) == 0 {
@@ -647,6 +688,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				}
 				gateway.listeners[i].listenerStatusIdx = i
 				gateway.listeners[i].gateway = gateway
+				gateway.listeners[i].httpIR = &ir.HTTPListener{}
 			}
 
 			// Process overlapping certificates
@@ -699,6 +741,15 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						}
 					}
 				}
+			}
+
+			expectedTLSOverlaps := map[string]bool{}
+			for _, expected := range tt.expectedStatus {
+				expectedTLSOverlaps[expected.listenerName] = true
+			}
+			for _, listener := range gateway.listeners {
+				require.NotNil(t, listener.httpIR)
+				assert.Equal(t, expectedTLSOverlaps[string(listener.Name)], listener.httpIR.TLSOverlaps, "unexpected TLSOverlaps for listener %s", listener.Name)
 			}
 		})
 	}
@@ -1382,7 +1433,8 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	backendMetadata := &ir.ResourceMetadata{Kind: resource.KindBackend, Name: backendName, Namespace: ns}
 	backendPolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel.example.com"), UseSystemTrustStore: true,
-		CACertificate: &ir.TLSCACertificate{Name: "otel-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
+		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
 	}
 
 	serviceBackendCluster := egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
@@ -1420,7 +1472,8 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	serviceMetadata := &ir.ResourceMetadata{Kind: resource.KindService, Name: serviceName, Namespace: ns, SectionName: "4317"}
 	servicePolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel-svc.example.com"), UseSystemTrustStore: true,
-		CACertificate: &ir.TLSCACertificate{Name: "otel-svc-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
+		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
 	}
 
 	tests := []struct {

@@ -15,6 +15,8 @@ xds:
               portValue: 19000
         clusterManager:
           localClusterName: local_cluster
+        deferredStatOptions:
+          enableDeferredCreationStats: true
         dynamicResources:
           adsConfig:
             apiType: DELTA_GRPC
@@ -35,7 +37,6 @@ xds:
           layers:
           - name: global_config
             staticLayer:
-              envoy.restart_features.use_eds_cache_for_ads: true
               re2.max_program_size.error_level: 4294967295
               re2.max_program_size.warn_level: 1000
         node:
@@ -227,10 +228,16 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
+          clusterType:
+            name: envoy.cluster.dns
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+              dnsLookupFamily: V4_PREFERRED
+              dnsRefreshRate: 30s
+              respectDnsTtl: true
           commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
-          dnsRefreshRate: 30s
           ignoreHealthOnHostRemoval: true
           loadAssignment:
             clusterName: raw_githubusercontent_com_443
@@ -255,17 +262,17 @@ xds:
                     localityWeightedLbConfig: {}
           name: raw_githubusercontent_com_443
           perConnectionBufferLimitBytes: 32768
-          respectDnsTtl: true
           transportSocket:
             name: envoy.transport_sockets.tls
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
               commonTlsContext:
+                tlsParams:
+                  tlsMaximumProtocolVersion: TLSv1_3
                 validationContext:
                   trustedCa:
                     filename: /etc/ssl/certs/ca-certificates.crt
               sni: raw.githubusercontent.com
-          type: STRICT_DNS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
       dynamicListeners:
       - activeState:
@@ -396,7 +403,7 @@ xds:
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
                       providers:
-                        httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example:
+                        example_7815c684b265ae47:
                           forward: true
                           normalizePayloadInMetadata:
                             spaceDelimitedClaims:
@@ -411,8 +418,8 @@ xds:
                               timeout: 10s
                               uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
                       requirementMap:
-                        httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com:
-                          providerName: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example
+                        example_610fd14578c340be:
+                          providerName: example_7815c684b265ae47
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -423,6 +430,7 @@ xds:
                   rds:
                     configSource:
                       ads: {}
+                      initialFetchTimeout: 0s
                       resourceApiVersion: V3
                     routeConfigName: envoy-gateway-system/eg/http
                   serverHeaderTransformation: PASS_THROUGH
@@ -468,4 +476,4 @@ xds:
               typedPerFilterConfig:
                 envoy.filters.http.jwt_authn:
                   '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-                  requirementName: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com
+                  requirementName: example_610fd14578c340be

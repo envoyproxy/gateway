@@ -41,8 +41,39 @@ type TLSSettings struct {
 
 	// Ciphers specifies the set of cipher suites supported when
 	// negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
-	// For the list of supported ciphers, please refer to the Envoy documentation:
+	// For Envoy TLS cipher suite configuration semantics and default cipher
+	// lists, see the Envoy documentation:
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
+	// Supported cipher suite names:
+	// - ECDHE-ECDSA-AES128-GCM-SHA256
+	// - ECDHE-RSA-AES128-GCM-SHA256
+	// - ECDHE-ECDSA-AES256-GCM-SHA384
+	// - ECDHE-RSA-AES256-GCM-SHA384
+	// - ECDHE-ECDSA-CHACHA20-POLY1305
+	// - ECDHE-RSA-CHACHA20-POLY1305
+	// - ECDHE-ECDSA-AES128-SHA
+	// - ECDHE-RSA-AES128-SHA
+	// - AES128-GCM-SHA256
+	// - AES128-SHA
+	// - ECDHE-ECDSA-AES256-SHA
+	// - ECDHE-RSA-AES256-SHA
+	// - AES256-GCM-SHA384
+	// - AES256-SHA
+	// Supported IANA/RFC aliases:
+	// - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+	// - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+	// - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+	// - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+	// - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+	// - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+	// - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+	// - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+	// - TLS_RSA_WITH_AES_128_GCM_SHA256
+	// - TLS_RSA_WITH_AES_128_CBC_SHA
+	// - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+	// - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+	// - TLS_RSA_WITH_AES_256_GCM_SHA384
+	// - TLS_RSA_WITH_AES_256_CBC_SHA
 	// In non-FIPS Envoy Proxy builds the default cipher list is:
 	// - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
 	// - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -154,6 +185,8 @@ const (
 // ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection
 // to the Gateway.
 // By default, no client specific configuration is validated.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate || !has(self.mode) || self.mode in ['VerifyIfGiven', 'RequireAndVerify']",message="allowExpiredCertificate can only be set when mode is VerifyIfGiven or RequireAndVerify"
 type ClientValidationContext struct {
 	// Optional set to true accepts connections even when a client doesn't present a certificate.
 	// Defaults to false, which rejects connections without a valid client certificate.
@@ -205,6 +238,13 @@ type ClientValidationContext struct {
 	// Crl specifies the crl configuration that can be used to validate the client initiating the TLS connection
 	// +optional
 	Crl *CrlContext `json:"crl,omitempty"`
+
+	// AllowExpiredCertificate permits client certificates that have expired
+	// but are otherwise valid (CA chain, signature). When true, Envoy skips
+	// the NotAfter check during client certificate validation.
+	// Defaults to false.
+	// +optional
+	AllowExpiredCertificate *bool `json:"allowExpiredCertificate,omitempty"`
 }
 
 // ClientValidationModeType defines how a Gateway or Listener validates client certificates.

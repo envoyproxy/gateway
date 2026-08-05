@@ -1,0 +1,1 @@
+Fixed IPv6 literal hosts (e.g. `[::1]`, `[2001:db8::1]`) not being detected in OIDC token/JWKS endpoints, which caused them to be built as STRICT_DNS clusters instead of static ones and bypassed the IP-literal check on the SecurityPolicy token endpoint.

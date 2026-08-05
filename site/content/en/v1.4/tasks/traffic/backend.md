@@ -295,14 +295,14 @@ curl -HHost:httpbin.org http://${GATEWAY_HOST}/get
 
 [Backend]: ../../../api/extension_types#backend
 [routing to cluster-external backends]: ./../../tasks/traffic/routing-outside-kubernetes.md
-[BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.BackendObjectReference
+[BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
 [extension resource]: https://gateway-api.sigs.k8s.io/guides/getting-started/migrating-from-ingress/#approach-to-extensibility
 [CVE-2021-25740]: https://nvd.nist.gov/vuln/detail/CVE-2021-25740
 [upstream recommendations]: https://github.com/kubernetes/kubernetes/issues/103675
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
-[TLSRoute]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1alpha2.TLSRoute
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[TLSRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute
 [Envoy Extension Policy]: ../../../api/extension_types#envoyextensionpolicy
 [Security Policy]: ../../../api/extension_types#oidcprovider
-[Backend TLS Policy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[Backend TLS Policy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [EnvoyGateway]: ../../../api/extension_types#envoygateway

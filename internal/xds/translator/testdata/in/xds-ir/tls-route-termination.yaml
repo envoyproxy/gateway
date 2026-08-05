@@ -22,7 +22,7 @@ tcp:
           port: 50000
         - host: "5.6.7.8"
           port: 50001
-        protocol: HTTPS
+        protocol: TCP
         name: "tls-termination-foo-dest/backend/0"
   - name: "tls-route-termination-bar"
     tls:
@@ -42,5 +42,5 @@ tcp:
         - host: "bar"
           port: 50000
         addressType: FQDN
-        protocol: HTTPS
+        protocol: TCP
         name: "tls-termination-bar-dest/backend/0"

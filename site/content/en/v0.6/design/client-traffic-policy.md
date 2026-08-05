@@ -110,5 +110,5 @@ entire Gateway then
 
 * The project can indefinitely wait for these configuration parameters to be part of the [Gateway API][].
 
-[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment
+[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/reference/policy-attachment/#direct-policy-attachment
 [Gateway API]: https://gateway-api.sigs.k8s.io/

@@ -111,5 +111,5 @@ this route's parentRef which in turn overrides a Policy targeting the Gateway th
 ## Alternatives
 * The project can indefinitely wait for these configuration parameters to be part of the [Gateway API][].
 
-[Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment
+[Policy Attachment]: https://gateway-api.sigs.k8s.io/reference/policy-attachment/
 [Gateway API]: https://gateway-api.sigs.k8s.io/

@@ -1,0 +1,18 @@
+# This test verifies that pod-level security context can be configured
+# for the certgen job.
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+
+certgen:
+  job:
+    pod:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault

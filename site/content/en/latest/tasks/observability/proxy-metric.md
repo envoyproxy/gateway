@@ -117,6 +117,27 @@ To completely remove Prometheus resources from the cluster, set the `prometheus.
 helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --reuse-values --set prometheus.enabled=false 
 ```
 
+### Scrape proxy metrics with an existing Prometheus
+
+If you already run Prometheus via the [Prometheus Operator](https://prometheus-operator.dev/) (for example through
+`kube-prometheus-stack`) you do not need the bundled Prometheus from `gateway-addons-helm`. Disable it as shown
+above and have your existing Prometheus discover the proxy pods by applying a `PodMonitor` that targets the
+`metrics` port served by the Envoy proxy at `/stats/prometheus`:
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/metric/pod-monitor.yaml
+```
+
+The `PodMonitor` selects pods labelled `app.kubernetes.io/name=envoy` and `app.kubernetes.io/component=proxy`
+in any namespace (Envoy Gateway places proxy pods in `envoy-gateway-system` by default but the namespace can be
+customised via the `EnvoyProxy` resource), and scrapes the `metrics` port that Envoy exposes for the
+Prometheus admin endpoint.
+
+The Prometheus Operator only watches `PodMonitor` and `ServiceMonitor` resources that match the
+`podMonitorSelector` / `podMonitorNamespaceSelector` configured on your `Prometheus` custom resource. If the
+target labels do not match the defaults set by your chart, override the `PodMonitor` `metadata.labels` to add
+the label your `Prometheus` selects on (commonly `release: <helm-release-name>` for `kube-prometheus-stack`).
+
 ### OpenTelemetry Metrics
 
 Envoy Gateway can export metrics to an OpenTelemetry sink. Use the following command to send metrics to the

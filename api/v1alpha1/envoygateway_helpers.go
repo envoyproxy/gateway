@@ -43,9 +43,12 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Provider == nil {
 		e.Provider = DefaultEnvoyGatewayProvider()
 	}
+
 	if e.Provider.Kubernetes == nil {
 		e.Provider.Kubernetes = &EnvoyGatewayKubernetesProvider{
-			LeaderElection: DefaultLeaderElection(),
+			EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
+				LeaderElection: DefaultLeaderElection(),
+			},
 		}
 	}
 	if e.Provider.Kubernetes.LeaderElection == nil {
@@ -54,6 +57,19 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 
 	if e.Provider.Kubernetes.Client == nil {
 		e.Provider.Kubernetes.Client = DefaultKubernetesClient()
+	}
+
+	if e.Provider != nil && e.Provider.Custom != nil && e.Provider.Custom.Resource.Type == ResourceProviderTypeKubernetes {
+		if e.Provider.Custom.Resource.Kubernetes == nil {
+			e.Provider.Custom.Resource.Kubernetes = &EnvoyGatewayKubernetesCustomProvider{}
+		}
+		if e.Provider.Custom.Resource.Kubernetes.LeaderElection == nil {
+			e.Provider.Custom.Resource.Kubernetes.LeaderElection = DefaultLeaderElection()
+		}
+
+		if e.Provider.Custom.Resource.Kubernetes.Client == nil {
+			e.Provider.Custom.Resource.Kubernetes.Client = DefaultKubernetesClient()
+		}
 	}
 
 	if e.Gateway == nil {
@@ -96,13 +112,17 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 	return ""
 }
 
-// NamespaceMode returns if uses namespace mode.
-func (e *EnvoyGateway) NamespaceMode() bool {
-	return e.Provider != nil &&
-		e.Provider.Kubernetes != nil &&
-		e.Provider.Kubernetes.Watch != nil &&
-		e.Provider.Kubernetes.Watch.Type == KubernetesWatchModeTypeNamespaces &&
-		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
+// WatchesNamespaces returns true when Envoy Gateway is configured to watch specific Kubernetes namespaces.
+func (e *EnvoyGateway) WatchesNamespaces() bool {
+	if e.Provider == nil || !e.Provider.IsRunningOnKubernetes() {
+		return false
+	}
+
+	cfg := e.Provider.GetKubernetesConfiguration()
+
+	return cfg.Watch != nil &&
+		cfg.Watch.Type == KubernetesWatchModeTypeNamespaces &&
+		len(cfg.Watch.Namespaces) > 0
 }
 
 // GatewayNamespaceMode returns true if controller uses gateway namespace mode for infra deployments.
@@ -110,6 +130,7 @@ func (e *EnvoyGateway) GatewayNamespaceMode() bool {
 	return e.Provider != nil &&
 		e.Provider.Kubernetes != nil &&
 		e.Provider.Kubernetes.Deploy != nil &&
+		e.Provider.Kubernetes.Deploy.Type != nil &&
 		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
 }
 
@@ -123,6 +144,23 @@ func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
 	return false
 }
 
+// LuaDisabled returns true if Lua EnvoyExtensionPolicies should be disabled.
+// EnableLua takes precedence over the deprecated DisableLua field.
+// When neither is set, Lua is disabled by default.
+func (e *ExtensionAPISettings) LuaDisabled() bool {
+	if e == nil {
+		return true
+	}
+	if e.EnableLua {
+		return false
+	}
+	if e.DisableLua != nil {
+		return *e.DisableLua
+	}
+	// Default: Lua is disabled
+	return true
+}
+
 // GetEnvoyProxyDefaultSpec returns the default EnvoyProxySpec if specified,
 // otherwise returns nil.
 func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {
@@ -131,7 +169,8 @@ func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {
 
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
-	XDSNameSchemeV2: false,
+	XDSNameSchemeV2:    false,
+	EndpointSliceIndex: true,
 }
 
 // IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
@@ -257,8 +296,10 @@ func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 	return &EnvoyGatewayProvider{
 		Type: ProviderTypeKubernetes,
 		Kubernetes: &EnvoyGatewayKubernetesProvider{
-			LeaderElection: DefaultLeaderElection(),
-			Client:         DefaultKubernetesClient(),
+			EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
+				LeaderElection: DefaultLeaderElection(),
+				Client:         DefaultKubernetesClient(),
+			},
 		},
 	}
 }
@@ -276,7 +317,9 @@ func (e *EnvoyGateway) GetEnvoyGatewayProvider() *EnvoyGatewayProvider {
 // DefaultEnvoyGatewayKubeProvider returns a new EnvoyGatewayKubernetesProvider with default settings.
 func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
 	return &EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: DefaultKubernetesDeployment(DefaultRateLimitImage),
+		EnvoyGatewayKubernetesInfrastructureConfiguration: EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: DefaultKubernetesDeployment(DefaultRateLimitImage),
+		},
 	}
 }
 
@@ -301,7 +344,7 @@ func DefaultEnvoyGatewayAdminAddress() *EnvoyGatewayAdminAddress {
 // a default EnvoyGatewayKubernetesProvider if unspecified. If EnvoyGatewayProvider is not of
 // type "Kubernetes", a nil EnvoyGatewayKubernetesProvider is returned.
 func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
-	if r.Type != ProviderTypeKubernetes {
+	if !r.IsRunningOnKubernetes() {
 		return nil
 	}
 
@@ -342,13 +385,51 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 }
 
 func (r *EnvoyGatewayProvider) IsRunningOnKubernetes() bool {
-	return r.Type == ProviderTypeKubernetes
+	if r.Type == ProviderTypeKubernetes {
+		return true
+	}
+	if r.Type == ProviderTypeCustom && r.Custom != nil {
+		return r.Custom.Resource.Type == ResourceProviderTypeKubernetes
+	}
+	return false
+}
+
+func (r *EnvoyGatewayProvider) IsInfraManagedRemotely() bool {
+	if r.Type != ProviderTypeCustom {
+		return false
+	}
+
+	if r.Custom == nil || r.Custom.Infrastructure == nil {
+		return false
+	}
+
+	return r.Custom.Infrastructure.Type == InfrastructureProviderTypeRemote
 }
 
 func (r *EnvoyGatewayProvider) IsRunningOnHost() bool {
 	return r.Type == ProviderTypeCustom &&
 		r.Custom.Infrastructure != nil &&
 		r.Custom.Infrastructure.Type == InfrastructureProviderTypeHost
+}
+
+func (r *EnvoyGatewayProvider) GetKubernetesConfiguration() EnvoyGatewayKubernetesConfiguration {
+	if r.Type == ProviderTypeKubernetes && r.Kubernetes != nil {
+		return r.Kubernetes.EnvoyGatewayKubernetesConfiguration
+	}
+
+	if r.Type == ProviderTypeCustom && r.Custom != nil &&
+		r.Custom.Resource.Type == ResourceProviderTypeKubernetes &&
+		r.Custom.Resource.Kubernetes != nil {
+		return r.Custom.Resource.Kubernetes.EnvoyGatewayKubernetesConfiguration
+	}
+	return EnvoyGatewayKubernetesConfiguration{}
+}
+
+func (r *EnvoyGatewayProvider) GetKubernetesInfrastructureConfiguration() EnvoyGatewayKubernetesInfrastructureConfiguration {
+	if r.Type == ProviderTypeKubernetes && r.Kubernetes != nil {
+		return r.Kubernetes.EnvoyGatewayKubernetesInfrastructureConfiguration
+	}
+	return EnvoyGatewayKubernetesInfrastructureConfiguration{}
 }
 
 // DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.
@@ -379,6 +460,19 @@ func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
 	qps := ptr.Deref(kcr.QPS, DefaultKubernetesClientQPS)
 	burst := ptr.Deref(kcr.Burst, DefaultKubernetesClientBurst)
 	return float32(qps), int(burst)
+}
+
+// GetExtensionManagers normalizes the singular ExtensionManager and plural ExtensionManagers
+// fields into a single list. The plural field takes precedence. If only the singular field
+// is set, it is returned as a single-element list. Returns nil if neither is set.
+func (e *EnvoyGatewaySpec) GetExtensionManagers() []ExtensionManager {
+	if len(e.ExtensionManagers) > 0 {
+		return e.ExtensionManagers
+	}
+	if e.ExtensionManager != nil {
+		return []ExtensionManager{*e.ExtensionManager}
+	}
+	return nil
 }
 
 // ShouldIncludeClusters returns true if clusters should be included in the translation hook.

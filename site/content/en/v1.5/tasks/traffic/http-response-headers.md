@@ -440,6 +440,6 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[req_filter]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#httpheaderfilter
+[req_filter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpheaderfilter

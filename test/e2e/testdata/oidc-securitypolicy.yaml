@@ -140,6 +140,8 @@ spec:
     logoutPath: "/bar/logout"
     forwardAccessToken: true
     passThroughAuthHeader: true
+    forwardIDToken:
+      header: X-Id-Token   # Forward the OIDC ID token to the upstream on this header
   jwt:
     providers:
     - name: "keycloak"  # This is needed so JWTs generated through the OIDC flow can be validated

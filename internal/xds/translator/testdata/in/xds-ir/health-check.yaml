@@ -20,6 +20,9 @@ http:
           http:
             host: "*"
             path: "/healthz"
+            method: "POST"
+            requestBody:
+              text: "ping"
             expectedResponse:
               text: "ok"
             expectedStatuses:
@@ -52,6 +55,9 @@ http:
           http:
             host: "*"
             path: "/healthz"
+            method: "POST"
+            requestBody:
+              binary: "cGluZw=="
             expectedResponse:
               binary: "cG9uZw=="
             expectedStatuses:

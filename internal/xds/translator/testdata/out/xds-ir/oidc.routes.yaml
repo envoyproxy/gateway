@@ -35,16 +35,20 @@
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-first-route
                 sdsConfig:
                   ads: {}
+                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/default/policy-for-first-route
                 sdsConfig:
                   ads: {}
+                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             csrfTokenExpiresIn: 2100s
             defaultExpiresIn: 3600s
             defaultRefreshTokenExpiresIn: 172800s
             forwardBearerToken: true
+            forwardIdToken:
+              header: X-ID-Token
             redirectPathMatcher:
               path:
                 exact: /foo/oauth2/callback
@@ -91,11 +95,13 @@
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-second-route
                 sdsConfig:
                   ads: {}
+                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/default/policy-for-second-route
                 sdsConfig:
                   ads: {}
+                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             denyRedirectMatcher:
             - name: test-exact
@@ -115,7 +121,8 @@
               stringMatch:
                 exact: foobar
             disableTokenEncryption: true
-            preserveAuthorizationHeader: true
+            forwardIdToken:
+              header: Authorization
             redirectPathMatcher:
               path:
                 exact: /bar/oauth2/callback

@@ -372,7 +372,7 @@ xdsIR:
           prefix: /foo
         security:
           basicAuth:
-            name: securitypolicy/default/policy-for-route
+            name: securitypolicy/envoy-gateway/policy-for-gateway-1
             users: '[redacted]'
           cors:
             allowMethods:
@@ -473,9 +473,9 @@ xdsIR:
               destination:
                 metadata:
                   kind: SecurityPolicy
-                  name: policy-for-route
-                  namespace: default
-                name: securitypolicy/default/policy-for-route/extauth/0
+                  name: policy-for-gateway-2
+                  namespace: envoy-gateway
+                name: securitypolicy/envoy-gateway/policy-for-gateway-2/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -486,11 +486,11 @@ xdsIR:
                     name: auth-service
                     namespace: envoy-gateway
                     sectionName: "9001"
-                  name: securitypolicy/default/policy-for-route/extauth/0/backend/0
+                  name: securitypolicy/envoy-gateway/policy-for-gateway-2/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
               path: ""
-            name: securitypolicy/default/policy-for-route
+            name: securitypolicy/envoy-gateway/policy-for-gateway-2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

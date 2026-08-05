@@ -596,8 +596,8 @@ $ curl -vvv "http://${GATEWAY_HOST}/get" \
 ...
 ```
 
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[req_filter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpheaderfilter
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[req_filter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpheaderfilter
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy

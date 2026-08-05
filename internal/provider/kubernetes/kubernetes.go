@@ -116,6 +116,9 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		},
 	}
 
+	kubernetesConfigParams := svrCfg.EnvoyGateway.Provider.GetKubernetesConfiguration()
+	kubernetesInfrastructureConfigParams := svrCfg.EnvoyGateway.Provider.GetKubernetesInfrastructureConfiguration()
+
 	if metricsOpts != nil {
 		mgrOpts.Metrics = *metricsOpts
 	}
@@ -123,28 +126,28 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	log.SetLogger(mgrOpts.Logger)
 	klog.SetLogger(mgrOpts.Logger)
 
-	restCfg.QPS, restCfg.Burst = svrCfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
+	restCfg.QPS, restCfg.Burst = kubernetesConfigParams.Client.RateLimit.GetQPSAndBurst()
 
-	if !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+	if !ptr.Deref(kubernetesConfigParams.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
-		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration != nil {
-			ld, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration))
+		if kubernetesConfigParams.LeaderElection.LeaseDuration != nil {
+			ld, err := time.ParseDuration(string(*kubernetesConfigParams.LeaderElection.LeaseDuration))
 			if err != nil {
 				return nil, err
 			}
 			mgrOpts.LeaseDuration = new(ld)
 		}
 
-		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod != nil {
-			rp, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod))
+		if kubernetesConfigParams.LeaderElection.RetryPeriod != nil {
+			rp, err := time.ParseDuration(string(*kubernetesConfigParams.LeaderElection.RetryPeriod))
 			if err != nil {
 				return nil, err
 			}
 			mgrOpts.RetryPeriod = new(rp)
 		}
 
-		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline != nil {
-			rd, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline))
+		if kubernetesConfigParams.LeaderElection.RenewDeadline != nil {
+			rd, err := time.ParseDuration(string(*kubernetesConfigParams.LeaderElection.RenewDeadline))
 			if err != nil {
 				return nil, err
 			}
@@ -153,8 +156,8 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		mgrOpts.Controller = config.Controller{NeedLeaderElection: new(false)}
 	}
 
-	if svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod != nil {
-		csp, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod))
+	if kubernetesConfigParams.CacheSyncPeriod != nil {
+		csp, err := time.ParseDuration(string(*kubernetesConfigParams.CacheSyncPeriod))
 		if err != nil {
 			return nil, err
 		}
@@ -270,13 +273,84 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 
 	mgrOpts.Cache.DefaultTransform = cache.TransformStripManagedFields()
 
-	if svrCfg.EnvoyGateway.NamespaceMode() {
-		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
-		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
-			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
+	// When configured with an explicit namespace watch list, scope the default
+	// cache to those namespaces and add type-specific controller namespace
+	// exceptions below.
+	if svrCfg.EnvoyGateway.WatchesNamespaces() {
+		watchedNamespaces := map[string]cache.Config{}
+		for _, watchNS := range kubernetesConfigParams.Watch.Namespaces {
+			watchedNamespaces[watchNS] = cache.Config{}
+		}
+
+		watchedAndControllerNamespaces := make(map[string]cache.Config, len(watchedNamespaces)+1)
+		for ns, cfg := range watchedNamespaces {
+			watchedAndControllerNamespaces[ns] = cfg
+		}
+		watchedAndControllerNamespaces[svrCfg.ControllerNamespace] = cache.Config{}
+
+		// DefaultNamespaces applies to every namespaced informer without a
+		// ByObject namespace override, including Gateway API informers
+		// registered later. Since Gateway API resources do not get controller
+		// namespace overrides below, they only watch these configured namespaces.
+		mgrOpts.Cache.DefaultNamespaces = watchedNamespaces
+
+		// ConfigMaps and Services must cover both scopes: watched namespaces for
+		// user refs such as policy/filter ConfigMaps and Route backend Services,
+		// and the controller namespace for EG-owned proxy/ratelimit infra
+		// ConfigMaps and Services.
+		mgrOpts.Cache.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Transform:             composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData),
+			Namespaces:            watchedAndControllerNamespaces,
+		}
+		mgrOpts.Cache.ByObject[&corev1.Service{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces:            watchedAndControllerNamespaces,
+		}
+		mgrOpts.Cache.ByObject[&discoveryv1.EndpointSlice{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces:            watchedAndControllerNamespaces,
+		}
+		if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
+			// GatewayNamespaceMode still needs controller namespace access for
+			// EG controller resources and the xDS CA Secret.
+			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
+			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
+			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
+		} else {
+			// In normal mode, ServiceAccounts and Deployments are controller
+			// namespace infra, while Secrets cover watched namespaces for user
+			// refs and the controller namespace for EG-managed infra Secrets,
+			// including the OIDC HMAC Secret and Envoy's TLS Secret for
+			// connections to EG-managed control-plane services.
+			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces:            watchedAndControllerNamespaces,
+			}
 		}
 	}
-	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
+	if kubernetesInfrastructureConfigParams.TopologyInjector == nil || !ptr.Deref(kubernetesInfrastructureConfigParams.TopologyInjector.Disable, false) {
 		mgrOpts.WebhookServer = webhook.NewServer(webhook.Options{
 			CertDir:  webhookTLSCertDir,
 			CertName: webhookTLSCert,
@@ -290,7 +364,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
 
-	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
+	if kubernetesInfrastructureConfigParams.TopologyInjector == nil || !ptr.Deref(kubernetesInfrastructureConfigParams.TopologyInjector.Disable, false) {
 		mgr.GetWebhookServer().Register("/inject-pod-topology", &webhook.Admission{
 			Handler: &ProxyTopologyInjector{
 				Client:    mgr.GetClient(),
@@ -300,7 +374,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			},
 		})
 	}
-	updateHandler := NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
+	updateHandler := NewUpdateHandler(mgr.GetLogger(), mgr.GetClient(), mgr.GetAPIReader())
 	if err := mgr.Add(updateHandler); err != nil {
 		return nil, fmt.Errorf("failed to add status update handler %w", err)
 	}

@@ -821,6 +821,6 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 [BackendTrafficPolicy]: ../api/extension_types#backendtrafficpolicy
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
 [EnvoyGateway]: ../api/extension_types#envoygateway
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/

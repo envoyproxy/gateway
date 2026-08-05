@@ -1,0 +1,171 @@
+# Health check Host header hierarchy:
+# 1. BackendTrafficPolicy healthCheck.active.http.hostname wins.
+# 2. Backend.spec.endpoints[].hostname overrides the route-derived default.
+# 3. Effective HTTPRoute/GRPCRoute hostname for the listener remains the fallback
+#    when the endpoint has no hostname.
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    namespace: default
+    name: backend-with-hostname
+  spec:
+    endpoints:
+    - hostname: backend-endpoint.example.com
+      fqdn:
+        hostname: backend-address.example.com
+        port: 443
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    namespace: default
+    name: backend-without-hostname
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: backend-no-endpoint-host.example.com
+        port: 443
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-btp-host
+  spec:
+    hostnames:
+    - btp-route.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /btp-host
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-with-hostname
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-backend-host
+  spec:
+    hostnames:
+    - backend-route.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /backend-host
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-with-hostname
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-route-host
+  spec:
+    hostnames:
+    - route-fallback.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /route-host
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-without-hostname
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-btp-host
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-btp-host
+    healthCheck:
+      active:
+        timeout: 2s
+        interval: 5s
+        healthyThreshold: 1
+        unhealthyThreshold: 3
+        type: HTTP
+        http:
+          hostname: btp-health.example.com
+          path: /healthz
+          method: GET
+          expectedStatuses:
+          - 200
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-backend-host
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-backend-host
+    healthCheck:
+      active:
+        timeout: 2s
+        interval: 5s
+        healthyThreshold: 1
+        unhealthyThreshold: 3
+        type: HTTP
+        http:
+          path: /healthz
+          method: GET
+          expectedStatuses:
+          - 200
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-route-host
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-route-host
+    healthCheck:
+      active:
+        timeout: 2s
+        interval: 5s
+        healthyThreshold: 1
+        unhealthyThreshold: 3
+        type: HTTP
+        http:
+          path: /healthz
+          method: GET
+          expectedStatuses:
+          - 200

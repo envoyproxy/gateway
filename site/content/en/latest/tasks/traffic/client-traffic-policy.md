@@ -68,17 +68,14 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Verify that ClientTrafficPolicy is Accepted:
+Verify that the ClientTrafficPolicy was created and attached to your Gateway:
 
 ```shell
-kubectl get clienttrafficpolicies.gateway.envoyproxy.io -n default
+kubectl get clienttrafficpolicies.gateway.envoyproxy.io enable-tcp-keepalive-policy -n default -o jsonpath='{.status.ancestors[0].conditions[?(@.type=="Accepted")].message}'
 ```
 
-You should see the policy marked as accepted like this:
-
-```shell
-NAME                          STATUS     AGE
-enable-tcp-keepalive-policy   Accepted   5s
+```
+Policy has been accepted.
 ```
 
 Curl the example app through Envoy proxy once again:
@@ -242,17 +239,14 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Verify that ClientTrafficPolicy is Accepted:
+Verify that the ClientTrafficPolicy was created and attached to your Gateway:
 
 ```shell
-kubectl get clienttrafficpolicies.gateway.envoyproxy.io -n default
+kubectl get clienttrafficpolicies.gateway.envoyproxy.io enable-proxy-protocol-policy -n default -o jsonpath='{.status.ancestors[0].conditions[?(@.type=="Accepted")].message}'
 ```
 
-You should see the policy marked as accepted like this:
-
-```shell
-NAME                          STATUS     AGE
-enable-proxy-protocol-policy   Accepted   5s
+```
+Policy has been accepted.
 ```
 
 Try the endpoint without using PROXY protocol with curl:
@@ -383,17 +377,14 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Verify that ClientTrafficPolicy is Accepted:
+Verify that the ClientTrafficPolicy was created and attached to your Gateway:
 
 ```shell
-kubectl get clienttrafficpolicies.gateway.envoyproxy.io -n default
+kubectl get clienttrafficpolicies.gateway.envoyproxy.io http-client-ip-detection -n default -o jsonpath='{.status.ancestors[0].conditions[?(@.type=="Accepted")].message}'
 ```
 
-You should see the policy marked as accepted like this:
-
-```shell
-NAME                          STATUS     AGE
-http-client-ip-detection   Accepted   5s
+```
+Policy has been accepted.
 ```
 
 Curl the example app through Envoy proxy:
@@ -407,6 +398,19 @@ curl -v http://$GATEWAY_HOST/get \
 
 If `numTrustedHops` is set to N, the client IP is taken from the Nth address from the right end of the XFF header. In this example,
 we set `numTrustedHops` to 2, so the client IP will be taken from the second rightmost address in the XFF header.
+
+To stop Envoy Gateway from automatically appending the downstream client address to `X-Forwarded-For`,
+set `spec.clientIPDetection.xForwardedFor.disableXForwardedForAppend: true` in the same `ClientTrafficPolicy`.
+This only disables the automatic append behavior and does not remove or sanitize an incoming
+`X-Forwarded-For` header.
+
+```yaml
+spec:
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 2
+      disableXForwardedForAppend: true
+```
 
 You should expect 200 response status, see that `X-Forwarded-Proto` was preserved and `X-Envoy-External-Address` was set to the
 second rightmost address in the `X-Forwarded-For` header:

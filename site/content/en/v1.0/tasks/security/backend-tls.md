@@ -229,4 +229,4 @@ Inspect the output and see that the response contains the details of the TLS han
 ```
 
 [Quickstart]: ../quickstart
-[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/

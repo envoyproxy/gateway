@@ -38,4 +38,7 @@ type Manager interface {
 
 	// GetTranslationHookConfig returns the translation hook configuration.
 	GetTranslationHookConfig() *egv1a1.TranslationConfig
+
+	// CleanupHookConns closes all gRPC connections to extension services.
+	CleanupHookConns()
 }

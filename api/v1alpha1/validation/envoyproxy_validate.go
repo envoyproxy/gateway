@@ -166,7 +166,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 			}
 
 			for _, serviceLoadBalancerSourceRange := range serviceLoadBalancerSourceRanges {
-				if ip, _, err := net.ParseCIDR(serviceLoadBalancerSourceRange); err != nil || ip.To4() == nil {
+				if _, _, err := net.ParseCIDR(serviceLoadBalancerSourceRange); err != nil {
 					errs = append(errs, fmt.Errorf("loadBalancerSourceRange:%s is an invalid IP subnet", serviceLoadBalancerSourceRange))
 				}
 			}

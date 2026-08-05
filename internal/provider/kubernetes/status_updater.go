@@ -20,7 +20,6 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -54,16 +53,22 @@ func (m MutatorFunc) Mutate(old client.Object) client.Object {
 
 // UpdateHandler holds the details required to actually write an Update back to the referenced object.
 type UpdateHandler struct {
-	log           logr.Logger
-	client        client.Client
+	log logr.Logger
+	// client is the manager's cache-backed client used for reads and writes.
+	client client.Client
+	// apiReader is an uncached reader that reads straight from the API server.
+	// It is used to confirm a NotFound before dropping a status write, since the
+	// cache may lag behind the API server under high watch-event churn (issue #9536).
+	apiReader     client.Reader
 	updateChannel chan Update
 	wg            *sync.WaitGroup
 }
 
-func NewUpdateHandler(log logr.Logger, client client.Client) *UpdateHandler {
+func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Reader) *UpdateHandler {
 	u := &UpdateHandler{
 		log:           log,
 		client:        client,
+		apiReader:     apiReader,
 		updateChannel: make(chan Update, 1000),
 		wg:            new(sync.WaitGroup),
 	}
@@ -95,10 +100,19 @@ func (u *UpdateHandler) apply(update Update) {
 	}, func() error {
 		// Get the resource.
 		if err := u.client.Get(context.Background(), update.NamespacedName, obj); err != nil {
-			if kerrors.IsNotFound(err) {
-				return nil
+			if !kerrors.IsNotFound(err) {
+				return err
 			}
-			return err
+			// The cache-backed client may not have a freshly-created object yet.
+			// Confirm against the API server before dropping the status write;
+			// otherwise the update is silently lost under high cache churn, leaving
+			// the object with an empty status until a controller restart (issue #9536).
+			if err := u.apiReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil // The object is genuinely gone.
+				}
+				return err
+			}
 		}
 
 		newObj := update.Mutator.Mutate(obj)
@@ -223,14 +237,14 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case *gwapiv1a2.TCPRoute:
-		if b, ok := objB.(*gwapiv1a2.TCPRoute); ok {
+	case *gwapiv1.TCPRoute:
+		if b, ok := objB.(*gwapiv1.TCPRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
 		}
-	case *gwapiv1a2.UDPRoute:
-		if b, ok := objB.(*gwapiv1a2.UDPRoute); ok {
+	case *gwapiv1.UDPRoute:
+		if b, ok := objB.(*gwapiv1.UDPRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -324,9 +338,9 @@ func KindOf(obj interface{}) string {
 		kind = resource.KindHTTPRoute
 	case *gwapiv1.TLSRoute:
 		kind = resource.KindTLSRoute
-	case *gwapiv1a2.TCPRoute:
+	case *gwapiv1.TCPRoute:
 		kind = resource.KindTCPRoute
-	case *gwapiv1a2.UDPRoute:
+	case *gwapiv1.UDPRoute:
 		kind = resource.KindUDPRoute
 	case *gwapiv1.GRPCRoute:
 		kind = resource.KindGRPCRoute

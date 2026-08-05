@@ -38,18 +38,18 @@ There are several resources that play a part in enabling you to meet your Kubern
 
 
 
-[1]:	https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-[2]:	https://gateway-api.sigs.k8s.io/api-types/gateway/
-[3]:	https://gateway-api.sigs.k8s.io/api-types/httproute/
-[4]:	https://gateway-api.sigs.k8s.io/api-types/grpcroute/
-[5]:	https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1alpha2.TLSRoute
-[6]:	https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1alpha2.TCPRoute
-[7]:	https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1alpha2.UDPRoute
+[1]:	https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/
+[2]:	https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[3]:	https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[4]:	https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
+[5]:	https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute
+[6]:	https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute
+[7]:	https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
 [8]:	../tasks/traffic/backend
 [9]:	../api/extension_types#clienttrafficpolicy
 [10]:	../api/extension_types#backendtrafficpolicy
 [11]:	../api/extension_types#securitypolicy
-[12]:	https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[12]:	https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/
 [13]:	../api/extension_types#envoyproxy
 [14]:	../api/extension_types#envoypatchpolicy
 [15]:	../api/extension_types#envoyextensionpolicy

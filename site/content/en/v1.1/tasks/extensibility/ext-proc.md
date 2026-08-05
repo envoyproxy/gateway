@@ -285,6 +285,6 @@ kubectl delete backendtlspolicy/grpc-ext-proc-btls
 Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
 [EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
-[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/

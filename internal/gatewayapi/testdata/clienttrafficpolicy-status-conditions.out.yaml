@@ -24,6 +24,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
@@ -50,6 +55,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
@@ -453,12 +463,6 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - name: envoy-gateway/gateway-2/https
-        ports:
-        - containerPort: 10443
-          name: https-443
-          protocol: HTTPS
-          servicePort: 443
       - name: envoy-gateway/gateway-2/tcp
         ports:
         - containerPort: 10053
@@ -596,20 +600,6 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-    - address: 0.0.0.0
-      externalPort: 443
-      hostnames:
-      - '*'
-      metadata:
-        kind: Gateway
-        name: gateway-2
-        namespace: envoy-gateway
-        sectionName: https
-      name: envoy-gateway/gateway-2/https
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10443
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

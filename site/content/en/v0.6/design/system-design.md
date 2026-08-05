@@ -151,23 +151,23 @@ The Infra Manager consumes the Infra IR as input to manage the data plane infras
 The draft for this document is [here][draft_design].
 
 [gw_api]: https://gateway-api.sigs.k8s.io
-[gc]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass
-[gw]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway
-[hroute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute
-[troute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute
+[gc]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gatewayclass
+[gw]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway
+[hroute]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#httproute
+[troute]: https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#tlsroute
 [go_cp]: https://github.com/envoyproxy/go-control-plane
 [grl]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [rls]: https://github.com/envoyproxy/ratelimit
 [rlf]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#envoy-v3-api-msg-extensions-filters-http-ratelimit-v3-ratelimit
-[crf]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute#filters-optional
-[gwapi_conflicts]: https://gateway-api.sigs.k8s.io/concepts/guidelines/#conflicts
+[crf]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.HTTPRoute#filters-optional
+[gwapi_conflicts]: https://gateway-api.sigs.k8s.io/guides/api-design/#conflicts
 [listener]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/listeners#config-listeners
 [route]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-route
-[be_ref]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute#backendrefs-optional
+[be_ref]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.HTTPRoute#backendrefs-optional
 [cluster]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster
 [draft_design]: https://docs.google.com/document/d/1riyTPPYuvNzIhBdrAX8dpfxTmcobWZDSYTTB5NeybuY/edit
 [cr]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/
-[be]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
+[be]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
 [ wcd ]: ../watching/
 [Issue #37]: https://github.com/envoyproxy/gateway/issues/37

@@ -9,14 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 
-	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -88,6 +88,15 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// MergeBackends is true when cluster deduplication is enabled: routes referencing the same
+	// backend reuse a single BackendCluster instead of each getting their own.
+	MergeBackends bool
+
+	// PerResourceSystemCASecret restores the old behavior of emitting one SDS secret per
+	// BackendTLSPolicy or Backend resource using WellKnownCACertificates: System, instead of
+	// sharing a single system_ca_certificates secret. Disabled by default (shared secret used).
+	PerResourceSystemCASecret bool
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 
@@ -117,12 +126,10 @@ type Translator struct {
 	WasmCache wasm.Cache
 
 	// RunningOnHost indicates whether Envoy Gateway is running locally on the host machine.
-	//
-	// When running on the local host using the Host infrastructure provider, disable translating the
-	// gateway listener port into a non-privileged port and reuse the specified value.
-	// Also, allow loopback IP addresses in Backend endpoints, as the threat model is different from
-	// the cluster environment and the related security risk is not applicable.
 	RunningOnHost bool
+
+	// InfraRemotelyManaged indicates whether the Envoy fleet is managed in the Remote infrastructure provider.
+	InfraRemotelyManaged bool
 
 	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
 	oidcDiscoveryCache *oidcDiscoveryCache
@@ -139,6 +146,7 @@ type TranslateResult struct {
 
 func newTranslateResult(
 	gc *gwapiv1.GatewayClass,
+	envoyProxyForGC *egv1a1.EnvoyProxy,
 	gateways []*GatewayContext,
 	httpRoutes []*HTTPRouteContext,
 	grpcRoutes []*GRPCRouteContext,
@@ -162,11 +170,24 @@ func newTranslateResult(
 	}
 
 	translateResult.GatewayClass = gc
-
+	if gc != nil {
+		// this won't happen in real world, just a safety check to make sure the testdata won't be a mess.
+		translateResult.EnvoyProxyForGatewayClass = envoyProxyForGC
+	}
+	epProxiesSet := sets.New[types.NamespacedName]()
 	if n := len(gateways); n > 0 {
 		translateResult.Gateways = make([]*gwapiv1.Gateway, n)
 		for i, gateway := range gateways {
 			translateResult.Gateways[i] = gateway.Gateway
+			// If the EnvoyProxy is from the Gateway itself, add it to the result so that the status can be updated in the provider layer.
+			// If it's inherited from GatewayClass, it should be handled in EnvoyProxyForGatewayClass(L164).
+			if gateway.envoyProxyFromGateway && gateway.envoyProxy != nil {
+				epKey := utils.NamespacedName(gateway.envoyProxy)
+				if !epProxiesSet.Has(epKey) {
+					translateResult.EnvoyProxiesForGateways = append(translateResult.EnvoyProxiesForGateways, gateway.envoyProxy)
+					epProxiesSet.Insert(epKey)
+				}
+			}
 		}
 	}
 
@@ -192,14 +213,14 @@ func newTranslateResult(
 	}
 
 	if n := len(tcpRoutes); n > 0 {
-		translateResult.TCPRoutes = make([]*gwapiv1a2.TCPRoute, n)
+		translateResult.TCPRoutes = make([]*gwapiv1.TCPRoute, n)
 		for i, tcpRoute := range tcpRoutes {
 			translateResult.TCPRoutes[i] = tcpRoute.TCPRoute
 		}
 	}
 
 	if n := len(udpRoutes); n > 0 {
-		translateResult.UDPRoutes = make([]*gwapiv1a2.UDPRoute, n)
+		translateResult.UDPRoutes = make([]*gwapiv1.UDPRoute, n)
 		for i, udpRoute := range udpRoutes {
 			translateResult.UDPRoutes[i] = udpRoute.UDPRoute
 		}
@@ -239,6 +260,13 @@ func newTranslateResult(
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
 
+	// The input resource tree is shared with the watchable coalesce goroutine, which
+	// walks it with reflect.DeepEqual. The translator mutates resource Status in place
+	// while computing status updates, which races with that walk. Work on a copy whose
+	// status-bearing objects are shallow-copied with only their Status fields deep-copied,
+	// isolating those mutations without the memory cost of a full DeepCopy.
+	resources = resources.StatusDeepCopy()
+
 	// Preprocessing to improve get resources operations performance.
 	translatorContext := &TranslatorContext{}
 	translatorContext.SetNamespaces(resources.Namespaces)
@@ -260,15 +288,30 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
-	// Build pre-computed BTP RoutingType index for O(1) lookups in processDestination.
-	t.BTPRoutingTypeIndex = nil
-	if hasBTPRoutingType(resources.BackendTrafficPolicies) {
-		t.BTPRoutingTypeIndex = BuildBTPRoutingTypeIndex(
-			resources.BackendTrafficPolicies,
-			routesToObjects(resources),
-			acceptedGateways,
-		)
-	}
+	// Build pre-computed BTP indexes for O(1) lookups in processDestination.
+	btpIndexes := BuildBTPIndexes(
+		resources.BackendTrafficPolicies,
+		routesToObjects(resources),
+		acceptedGateways,
+		resources.ListenerSets,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
+	t.BTPRoutingTypeIndex = btpIndexes.RoutingType
+	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
+	t.BTPLoadBalancerIndex = btpIndexes.LoadBalancer
+
+	// Pre-compute which gateways/listeners have a ClientTrafficPolicy-sourced
+	// cluster-affecting override, for O(1) lookup during route processing.
+	t.CTPClusterSettingsIndex = BuildCTPClusterSettingsIndex(
+		resources.ClientTrafficPolicies,
+		acceptedGateways,
+		resources.ListenerSets,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
 
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
@@ -280,7 +323,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 
 	// Compute ListenerSet status based on listener processing results
 	// This should be done after ProcessListeners because ListenerSet status depends on listener processing results
-	t.ProcessListenerSetStatus(resources.ListenerSets)
+	t.ProcessListenerSetStatus(resources.ListenerSets, acceptedGateways)
 
 	// Process EnvoyPatchPolicies
 	envoyPatchPolicies := t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
@@ -347,7 +390,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
 	extServerPolicies, err := t.ProcessExtensionServerPolicies(
-		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
+		resources.ExtensionServerPolicies, acceptedGateways, routes, resources, xdsIR)
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -378,6 +421,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	allGateways = append(allGateways, failedGateways...)
 
 	return newTranslateResult(resources.GatewayClass,
+		resources.EnvoyProxyForGatewayClass,
 		allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
@@ -404,6 +448,16 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	// if EnvoyProxy found but invalid, set GC status to not accepted,
 	// otherwise set GC status to accepted.
 	if ep := resources.EnvoyProxyForGatewayClass; ep != nil {
+		var ancestor *gwapiv1.ParentReference
+		// TODO: remove this nil check after we update all the testdata.
+		if resources.GatewayClass != nil {
+			ancestor = &gwapiv1.ParentReference{
+				Group: GroupPtr(gwapiv1.GroupName),
+				Kind:  KindPtr(resource.KindGatewayClass),
+				Name:  gwapiv1.ObjectName(resources.GatewayClass.Name),
+			}
+		}
+
 		err := validateEnvoyProxy(ep)
 		if err != nil {
 			envoyproxyValidationErrorMap[utils.NamespacedName(ep)] = err
@@ -413,6 +467,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			status.SetGatewayClassAccepted(resources.GatewayClass,
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
+
+			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+				egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
 		} else {
 			// TODO: remove this nil check after we update all the testdata.
 			if resources.GatewayClass != nil {
@@ -426,6 +483,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			key := utils.NamespacedName(ep)
 			envoyproxyMap[key] = ep
 			// we didn't append to envoyproxyValidatioErrorMap because it's valid.
+
+			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 		}
 	}
 
@@ -453,8 +513,15 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			// Debug logging to inspect the final merged EnvoyProxy configuration
 			if logV := t.Logger.V(1); logV.Enabled() {
 				spec, _ := json.Marshal(gCtx.envoyProxy.Spec)
-				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...))
+				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...)...)
 			}
+		}
+
+		if IsMergeGatewaysEnabled(resources) && t.isMergeBackendsEnabledForGateway(gCtx) {
+			failedGateways = append(failedGateways, gCtx)
+			status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+				"mergeGateways and mergeBackends cannot both be enabled")
+			continue
 		}
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
@@ -464,6 +531,18 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			continue
 		}
 
+		var ancestor *gwapiv1.ParentReference
+		if gCtx.envoyProxyFromGateway {
+			// didn't need to update EnvoyProxy status if it's inherited
+			//  from GatewayClass/EnvoyGateway.
+			ancestor = &gwapiv1.ParentReference{
+				Group:     GroupPtr(gwapiv1.GroupName),
+				Kind:      KindPtr(resource.KindGateway),
+				Name:      gwapiv1.ObjectName(gateway.Name),
+				Namespace: NamespacePtr(gateway.Namespace),
+			}
+		}
+
 		if ep := gCtx.envoyProxy; ep != nil {
 			key := utils.NamespacedName(ep)
 			if err, exits := envoyproxyValidationErrorMap[key]; exits {
@@ -471,7 +550,17 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				t.Logger.Info("EnvoyProxy for Gateway invalid", logKeysAndValues...)
 				status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 					fmt.Sprintf("%s: %v", "Invalid parametersRef:", err.Error()))
+
+				if gCtx.envoyProxyFromGateway {
+					status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+						egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
+				}
 				continue
+			}
+
+			if gCtx.envoyProxyFromGateway {
+				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 			}
 		}
 

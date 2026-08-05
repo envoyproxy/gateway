@@ -32,7 +32,7 @@ export GITHUB_REMOTE=origin
 ```
 
 1. Clone the repo, checkout the `main` branch, ensure it’s up-to-date, and your local branch is clean.
-2. Create a topic branch for adding the release notes and updating the [VERSION][] file with the release version. Refer to previous [release notes][] and [VERSION][] for additional details. The latest changes are already accumulated in the current.yaml file. Copy the content of the current.yaml file to the release notes file and clear the current.yaml file.
+2. Create a topic branch for adding the release notes and updating the [VERSION][] file with the release version. Refer to previous [release notes][] and [VERSION][] for additional details. The latest changes are accumulated as per-change fragment files under the `release-notes/current/` directory. Compile them into the versioned release notes file by running `make release-notes-gen RELEASE_NOTE_VERSION=<release-version> RELEASE_NOTE_DATE="<Month D, YYYY>"` (for example, `make release-notes-gen RELEASE_NOTE_VERSION=v1.9.0 RELEASE_NOTE_DATE="June 23, 2026"`); this generates `release-notes/<release-version>.yaml` and clears the fragments under `release-notes/current/`.
 
    ```shell
    echo "v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}" > VERSION
@@ -407,7 +407,7 @@ export GITHUB_REMOTE=origin
    # Release Announcement
 
    Check out the [v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}  release announcement]
-   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}.html) to learn more about the release.
+   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}) to learn more about the release.
    ```
 
 18. If this patch release is the latest release, update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.

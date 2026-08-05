@@ -68,8 +68,16 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 		return nil, err
 	}
 
+	return retrieveConfigDumpFromPods(cli, pods, includeEds, configType, portForwarder)
+}
+
+type configDumpPortForwarderFunc func(kube.CLIClient, types.NamespacedName, int) (kube.PortForwarder, error)
+
+func retrieveConfigDumpFromPods(cli kube.CLIClient, pods []types.NamespacedName, includeEds bool, configType envoyConfigType, forwarder configDumpPortForwarderFunc) (aggregatedConfigDump, error) {
 	podConfigDumps := make(aggregatedConfigDump)
 	mu := sync.Mutex{}
+	errMu := sync.Mutex{}
+
 	// Initialize the map with namespaces
 	for _, pod := range pods {
 		if _, ok := podConfigDumps[pod.Namespace]; !ok {
@@ -82,22 +90,29 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 	wg.Add(len(pods))
 	for _, pod := range pods {
 		go func() {
-			fw, err := portForwarder(cli, pod, adminPort)
+			defer wg.Done()
+
+			fw, err := forwarder(cli, pod, adminPort)
 			if err != nil {
+				errMu.Lock()
 				errs = errors.Join(errs, err)
+				errMu.Unlock()
 				return
 			}
 
 			if err := fw.Start(); err != nil {
+				errMu.Lock()
 				errs = errors.Join(errs, err)
+				errMu.Unlock()
 				return
 			}
 			defer fw.Stop()
-			defer wg.Done()
 
 			configDump, err := extractConfigDump(fw, includeEds, configType)
 			if err != nil {
+				errMu.Lock()
 				errs = errors.Join(errs, err)
+				errMu.Unlock()
 				return
 			}
 

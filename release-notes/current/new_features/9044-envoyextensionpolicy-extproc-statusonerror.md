@@ -1,0 +1,1 @@
+Added a `statusOnError` field to the ExtProc settings in `EnvoyExtensionPolicy`, allowing the HTTP status returned to the client to be customized when the external processor is unreachable and `failOpen` is false.

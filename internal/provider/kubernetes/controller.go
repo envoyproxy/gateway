@@ -40,7 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -86,10 +85,13 @@ type gatewayAPIReconciler struct {
 	eepCRDExists           bool
 	epCRDExists            bool
 	eppCRDExists           bool
+	grpcRouteCRDExists     bool
 	hrfCRDExists           bool
+	listenerSetCRDExists   bool
 	serviceImportCRDExists bool
 	spCRDExists            bool
 	tcpRouteCRDExists      bool
+	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
 
 	clusterTrustBundleExits bool
@@ -121,8 +123,8 @@ type subscriptions struct {
 	httpRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
 	grpcRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
 	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.TLSRouteStatus]
-	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
-	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.TCPRouteStatus]
+	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.UDPRouteStatus]
 	listenerSetStatuses          <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.ListenerSetStatus]
 	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
@@ -132,6 +134,7 @@ type subscriptions struct {
 	securityPolicyStatuses       <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendStatuses              <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.BackendStatus]
 	extensionPolicyStatuses      <-chan watchable.Snapshot[message.NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
+	envoyProxyStatuses           <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.EnvoyProxyStatus]
 }
 
 // newGatewayAPIController
@@ -142,16 +145,16 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	var extServerPoliciesGVKs []schema.GroupVersionKind
 	var extGVKs []schema.GroupVersionKind
 	var extBackendGVKs []schema.GroupVersionKind
-	if cfg.EnvoyGateway.ExtensionManager != nil {
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.Resources {
+	for _, em := range cfg.EnvoyGateway.GetExtensionManagers() {
+		for _, rsrc := range em.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extGVKs = append(extGVKs, gvk)
 		}
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.PolicyResources {
+		for _, rsrc := range em.PolicyResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extServerPoliciesGVKs = append(extServerPoliciesGVKs, gvk)
 		}
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
+		for _, rsrc := range em.BackendResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extBackendGVKs = append(extBackendGVKs, gvk)
 		}
@@ -175,8 +178,10 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	}
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
-		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
-		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel)
+		r.namespaceLabel = cfg.EnvoyGateway.Provider.GetKubernetesConfiguration().Watch.NamespaceSelector
+		// Always allow controller-namespace infrastructure resources to bypass
+		// user namespace selectors.
+		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
 	}
 
 	// controller-runtime doesn't allow run controller with same name for more than once
@@ -207,7 +212,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		// Subscribe to resource updates
 		r.subscribeToResources(ctx)
 		// Update status
-		go r.updateStatusFromSubscriptions(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		go r.updateStatusFromSubscriptions(ctx, len(cfg.EnvoyGateway.GetExtensionManagers()) > 0)
 		r.log.Info("started")
 		// Close resources if the context is done.
 		<-ctx.Done()
@@ -216,8 +221,8 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	}
 
 	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
-	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
-		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+	if cfg.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
+		!ptr.Deref(cfg.EnvoyGateway.Provider.GetKubernetesConfiguration().LeaderElection.Disable, false) {
 		go func() {
 			select {
 			case <-ctx.Done():
@@ -254,6 +259,7 @@ func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
 	r.subscriptions.securityPolicyStatuses = r.resources.SecurityPolicyStatuses.Subscribe(ctx)
 	r.subscriptions.backendStatuses = r.resources.BackendStatuses.Subscribe(ctx)
 	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyProxyStatuses = r.resources.EnvoyProxyStatuses.Subscribe(ctx)
 }
 
 func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
@@ -270,14 +276,22 @@ func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
 	return !r.envoyGateway.ExtensionAPIs.EnableBackend
 }
 
+func (r *gatewayAPIReconciler) endpointSliceIndexEnabled() bool {
+	var flags *egv1a1.RuntimeFlags
+	if r != nil && r.envoyGateway != nil {
+		flags = r.envoyGateway.RuntimeFlags
+	}
+	return flags.IsEnabled(egv1a1.EndpointSliceIndex)
+}
+
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
-	if eg.Provider == nil ||
-		eg.Provider.Kubernetes == nil ||
-		eg.Provider.Kubernetes.Watch == nil {
+	if eg.Provider == nil {
 		return false
 	}
-
-	watch := eg.Provider.Kubernetes.Watch
+	watch := eg.Provider.GetKubernetesConfiguration().Watch
+	if watch == nil {
+		return false
+	}
 	switch watch.Type {
 	case egv1a1.KubernetesWatchModeTypeNamespaceSelector:
 		// Make sure that the namespace selector has at least one label or expression is set.
@@ -511,6 +525,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
+		if err = r.processPolicyTargetReferenceGrants(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing policy target ReferenceGrants")
+				return reconcile.Result{}, err
+			}
+			gcLogger.Error(err, "failed to process policy target ReferenceGrants for GatewayClass")
+		}
+
 		if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
 			if isTransientError(err) {
 				gcLogger.Error(err, "transient error processing ExtensionServerPolicies")
@@ -677,6 +699,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		logger.Info("processing Backend")
 		nn := types.NamespacedName{Namespace: backendNs, Name: backendName}
 		var endpointSliceLabelKey string
+		var endpointSliceIndex string
 		switch backendRefKind {
 		case resource.KindService:
 			service := new(corev1.Service)
@@ -696,6 +719,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				}
 			}
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
+			endpointSliceIndex = serviceEndpointSliceIndex
 
 		case resource.KindServiceImport:
 			serviceImport := new(mcsapiv1a1.ServiceImport)
@@ -716,6 +740,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				}
 			}
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
+			endpointSliceIndex = serviceImportEndpointSliceIndex
 
 		case egv1a1.KindBackend:
 			if r.backendAPIDisabled() {
@@ -810,10 +835,16 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		if endpointSliceLabelKey != "" {
 			endpointSliceList := new(discoveryv1.EndpointSliceList)
 			opts := []client.ListOption{
-				client.MatchingLabels(map[string]string{
+				client.InNamespace(string(*backendRef.Namespace)),
+			}
+			if r.endpointSliceIndexEnabled() {
+				opts = append(opts, client.MatchingFields{
+					endpointSliceIndex: string(backendRef.Name),
+				})
+			} else {
+				opts = append(opts, client.MatchingLabels{
 					endpointSliceLabelKey: string(backendRef.Name),
-				}),
-				client.InNamespace(*backendRef.Namespace),
+				})
 			}
 			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
 				if isTransientError(err) {
@@ -1601,6 +1632,145 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
+// processPolicyTargetReferenceGrants finds the ReferenceGrants that allow policies in this GatewayClass to reference resources in other namespaces, and adds them to the resourceTree.
+func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
+	ctx context.Context,
+	resourceTree *resource.Resources,
+	resourceMap *resourceMappings,
+) error {
+	targetNamespaces := sets.New[string]()
+	for _, gateway := range resourceTree.Gateways {
+		targetNamespaces.Insert(gateway.Namespace)
+	}
+	for _, listenerSet := range resourceTree.ListenerSets {
+		targetNamespaces.Insert(listenerSet.Namespace)
+	}
+	for _, route := range resourceTree.HTTPRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	for _, route := range resourceTree.GRPCRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	for _, route := range resourceTree.TLSRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	for _, route := range resourceTree.TCPRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	for _, route := range resourceTree.UDPRoutes {
+		targetNamespaces.Insert(route.Namespace)
+	}
+	if targetNamespaces.Len() == 0 {
+		return nil
+	}
+
+	policyFromNamespaces := map[string]sets.Set[string]{
+		resource.KindClientTrafficPolicy:  sets.New[string](),
+		resource.KindBackendTrafficPolicy: sets.New[string](),
+		resource.KindEnvoyExtensionPolicy: sets.New[string](),
+		resource.KindSecurityPolicy:       sets.New[string](),
+	}
+	for _, policy := range resourceTree.ClientTrafficPolicies {
+		policyFromNamespaces[resource.KindClientTrafficPolicy].Insert(policy.Namespace)
+	}
+	for _, policy := range resourceTree.BackendTrafficPolicies {
+		policyFromNamespaces[resource.KindBackendTrafficPolicy].Insert(policy.Namespace)
+	}
+	for _, policy := range resourceTree.EnvoyExtensionPolicies {
+		policyFromNamespaces[resource.KindEnvoyExtensionPolicy].Insert(policy.Namespace)
+	}
+	for _, policy := range resourceTree.SecurityPolicies {
+		policyFromNamespaces[resource.KindSecurityPolicy].Insert(policy.Namespace)
+	}
+
+	allowedTargetKinds := map[string]sets.Set[string]{
+		resource.KindClientTrafficPolicy: sets.New[string](
+			resource.KindGateway,
+			resource.KindListenerSet,
+		),
+		resource.KindBackendTrafficPolicy: sets.New[string](
+			resource.KindGateway,
+			resource.KindListenerSet,
+			resource.KindHTTPRoute,
+			resource.KindGRPCRoute,
+			resource.KindTLSRoute,
+			resource.KindTCPRoute,
+			resource.KindUDPRoute,
+		),
+		resource.KindEnvoyExtensionPolicy: sets.New[string](
+			resource.KindGateway,
+			resource.KindListenerSet,
+			resource.KindHTTPRoute,
+			resource.KindGRPCRoute,
+			resource.KindTLSRoute,
+			resource.KindTCPRoute,
+			resource.KindUDPRoute,
+		),
+		resource.KindSecurityPolicy: sets.New[string](
+			resource.KindGateway,
+			resource.KindListenerSet,
+			resource.KindHTTPRoute,
+			resource.KindGRPCRoute,
+			resource.KindTCPRoute,
+		),
+	}
+
+	refGrantList := new(gwapiv1b1.ReferenceGrantList)
+	if err := r.client.List(ctx, refGrantList); err != nil {
+		return fmt.Errorf("failed to list ReferenceGrants: %w", err)
+	}
+
+	for i := range refGrantList.Items {
+		refGrant := &refGrantList.Items[i]
+		if !targetNamespaces.Has(refGrant.Namespace) {
+			continue
+		}
+		if !policyTargetReferenceGrantAllowed(refGrant, policyFromNamespaces, allowedTargetKinds) {
+			continue
+		}
+
+		key := utils.NamespacedName(refGrant).String()
+		if resourceMap.allAssociatedReferenceGrants.Has(key) {
+			continue
+		}
+		resourceMap.allAssociatedReferenceGrants.Insert(key)
+		resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+		r.log.Info("added policy target ReferenceGrant to resource map", "namespace", refGrant.Namespace, "name", refGrant.Name)
+	}
+
+	return nil
+}
+
+// policyTargetReferenceGrantAllowed checks if the ReferenceGrant allows any of the policies in this GatewayClass to reference resources in other namespaces.
+// This is a coarse check that looks at the "from" and "to" of the ReferenceGrant to see if it potentially allows any valid reference from policies to gateways/routes.
+// The detailed check is done in the Gateway API IR translation, where we check if the ReferenceGrant allows the specific reference from the specific policy to the specific gateway/route.
+func policyTargetReferenceGrantAllowed(
+	refGrant *gwapiv1b1.ReferenceGrant,
+	policyFromNamespaces map[string]sets.Set[string],
+	allowedTargetKinds map[string]sets.Set[string],
+) bool {
+	for _, refGrantFrom := range refGrant.Spec.From {
+		if string(refGrantFrom.Group) != egv1a1.GroupVersion.Group {
+			continue
+		}
+		fromNamespaces, ok := policyFromNamespaces[string(refGrantFrom.Kind)]
+		if !ok || !fromNamespaces.Has(string(refGrantFrom.Namespace)) {
+			continue
+		}
+
+		for _, refGrantTo := range refGrant.Spec.To {
+			if string(refGrantTo.Group) != gwapiv1.GroupName {
+				continue
+			}
+			if allowedTargetKinds[string(refGrantFrom.Kind)].Has(string(refGrantTo.Kind)) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
 	// Find gateways for the managedGC
 	// Find the Gateways that reference this Class.
@@ -1720,18 +1890,22 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		gtwNamespacedName := utils.NamespacedName(gtw).String()
 
 		// ListenerSet Processing (must be done before route processing)
-		if err := r.processListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			if isTransientError(err) {
-				return err
+		if r.listenerSetCRDExists {
+			if err := r.processListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				if isTransientError(err) {
+					return err
+				}
+				r.log.Error(err, "failed to process ListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 			}
-			r.log.Error(err, "failed to process ListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		}
 
 		// Route Processing
 
-		// Get TLSRoute objects and check if it exists.
-		if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			return err
+		if r.tlsRouteCRDExists {
+			// Get TLSRoute objects and check if it exists.
+			if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
+			}
 		}
 
 		// Get HTTPRoute objects and check if it exists.
@@ -1739,9 +1913,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			return err
 		}
 
-		// Get GRPCRoute objects and check if it exists.
-		if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			return err
+		if r.grpcRouteCRDExists {
+			// Get GRPCRoute objects and check if it exists.
+			if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
+			}
 		}
 
 		if r.tcpRouteCRDExists {
@@ -2143,25 +2319,44 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	xlsPredicates := []predicate.TypedPredicate[*gwapiv1.ListenerSet]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1.ListenerSet]{},
+	// The watches for ListenerSet, GRPCRoute, TLSRoute, TCPRoute and UDPRoute are all optional. These
+	// kinds are in the Gateway API standard channel today (ListenerSet and TLSRoute graduated in
+	// v1.5, TCPRoute and UDPRoute in v1.6), but they are still not guaranteed to be installed:
+	//   - The cluster may run an older Gateway API bundle, or a standard channel bundle from before
+	//     the kind graduated, so the kind is simply not there.
+	//   - Some managed Kubernetes offerings install only a curated subset of the standard channel and
+	//     don't let users add the missing CRDs. For example, GKE's managed gateway-api-crds addon
+	//     ships Gateway API v1.5 without ListenerSet and GRPCRoute, because the GKE Gateway
+	//     controller doesn't implement them.
+	// Envoy Gateway must start on those clusters instead of crash-looping: an absent kind can't be
+	// used there anyway, so its absence should disable the feature, not take down the controller.
+	r.listenerSetCRDExists, err = checkCRD(resource.KindListenerSet, gwapiv1.GroupVersion.String())
+	if err != nil {
+		return err
 	}
-	if r.namespaceLabel != nil {
-		xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
-			return r.hasMatchingNamespaceLabels(obj)
-		}))
-	}
+	if !r.listenerSetCRDExists {
+		r.log.Info("ListenerSet CRD not found, skipping ListenerSet watch")
+	} else {
+		xlsPredicates := []predicate.TypedPredicate[*gwapiv1.ListenerSet]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1.ListenerSet]{},
+		}
+		if r.namespaceLabel != nil {
+			xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
+				return r.hasMatchingNamespaceLabels(obj)
+			}))
+		}
 
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.ListenerSet{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *gwapiv1.ListenerSet) []reconcile.Request {
-				return r.enqueueClass(ctx, obj)
-			}),
-			xlsPredicates...)); err != nil {
-		return err
-	}
-	if err := addListenerSetIndexers(ctx, mgr); err != nil {
-		return err
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.ListenerSet{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *gwapiv1.ListenerSet) []reconcile.Request {
+					return r.enqueueClass(ctx, obj)
+				}),
+				xlsPredicates...)); err != nil {
+			return err
+		}
+		if err := addListenerSetIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
@@ -2183,45 +2378,60 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch GRPCRoute CRUDs and process affected Gateways.
-	grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
-	if r.namespaceLabel != nil {
-		grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
-			return r.hasMatchingNamespaceLabels(grpc)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, route)
-			}),
-			grpcrPredicates...)); err != nil {
+	r.grpcRouteCRDExists, err = checkCRD(resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
+	if err != nil {
 		return err
 	}
-	if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
+	if !r.grpcRouteCRDExists {
+		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
+	} else {
+		// Watch GRPCRoute CRUDs and process affected Gateways.
+		grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
+		if r.namespaceLabel != nil {
+			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
+				return r.hasMatchingNamespaceLabels(grpc)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
+					return r.enqueueClass(ctx, route)
+				}),
+				grpcrPredicates...)); err != nil {
+			return err
+		}
+		if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
+			return err
+		}
+	}
+	r.tlsRouteCRDExists, err = checkCRD(resource.KindTLSRoute, gwapiv1.GroupVersion.String())
+	if err != nil {
 		return err
+	}
+	if !r.tlsRouteCRDExists {
+		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
+	} else {
+		// Watch TLSRoute CRUDs and process affected Gateways.
+		tlsrPredicates := commonPredicates[*gwapiv1.TLSRoute]()
+		if r.namespaceLabel != nil {
+			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TLSRoute) bool {
+				return r.hasMatchingNamespaceLabels(route)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.TLSRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.TLSRoute) []reconcile.Request {
+					return r.enqueueClass(ctx, route)
+				}),
+				tlsrPredicates...)); err != nil {
+			return err
+		}
+		if err := addTLSRouteIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
-	// Watch TLSRoute CRUDs and process affected Gateways.
-	tlsrPredicates := commonPredicates[*gwapiv1.TLSRoute]()
-	if r.namespaceLabel != nil {
-		tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TLSRoute) bool {
-			return r.hasMatchingNamespaceLabels(route)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.TLSRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.TLSRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, route)
-			}),
-			tlsrPredicates...)); err != nil {
-		return err
-	}
-	if err := addTLSRouteIndexers(ctx, mgr); err != nil {
-		return err
-	}
-
-	r.udpRouteCRDExists, err = checkCRD(resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
+	r.udpRouteCRDExists, err = checkCRD(resource.KindUDPRoute, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
 	}
@@ -2229,15 +2439,15 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("UDPRoute CRD not found, skipping UDPRoute watch")
 	} else {
 		// Watch UDPRoute CRUDs and process affected Gateways.
-		udprPredicates := commonPredicates[*gwapiv1a2.UDPRoute]()
+		udprPredicates := commonPredicates[*gwapiv1.UDPRoute]()
 		if r.namespaceLabel != nil {
-			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.UDPRoute) bool {
+			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.UDPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.UDPRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1.UDPRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.UDPRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				udprPredicates...)); err != nil {
@@ -2248,7 +2458,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tcpRouteCRDExists, err = checkCRD(resource.KindTCPRoute, gwapiv1a2.GroupVersion.String())
+	r.tcpRouteCRDExists, err = checkCRD(resource.KindTCPRoute, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
 	}
@@ -2256,15 +2466,15 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("TCPRoute CRD not found, skipping TCPRoute watch")
 	} else {
 		// Watch TCPRoute CRUDs and process affected Gateways.
-		tcprPredicates := commonPredicates[*gwapiv1a2.TCPRoute]()
+		tcprPredicates := commonPredicates[*gwapiv1.TCPRoute]()
 		if r.namespaceLabel != nil {
-			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.TCPRoute) bool {
+			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TCPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.TCPRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1.TCPRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.TCPRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				tcprPredicates...)); err != nil {
@@ -2336,6 +2546,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}),
 			esPredicates...)); err != nil {
 		return err
+	}
+	if r.endpointSliceIndexEnabled() {
+		if err := addEndpointSliceIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	// we didn't check if the backend CRD exists every time for performance,
@@ -2785,9 +3000,10 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return fmt.Errorf("failed to find envoyproxy %s/%s for Gateway %s: %w", gtw.Namespace, ref.Name, gtw.Name, err)
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	ep.Status = egv1a1.EnvoyProxyStatus{}
+	r.processEnvoyProxy(ep, resourceMap)
 
 	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
@@ -2823,19 +3039,20 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 		return errors.New("using Merged Gateways with Gateway Namespace Mode is not supported")
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	ep.Status = egv1a1.EnvoyProxyStatus{}
+	r.processEnvoyProxy(ep, resourceMap)
 	resourceTree.EnvoyProxyForGatewayClass = ep
 	return nil
 }
 
-// processEnvoyProxy processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) error {
+// processEnvoyProxy processes the parametersRef of the provided GatewayClass/Gateway.
+func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) {
 	key := utils.NamespacedName(ep).String()
 	if resourceMap.allAssociatedEnvoyProxies.Has(key) {
 		r.log.Info("current EnvoyProxy has been processed already", "namespace", ep.Namespace, "name", ep.Name)
-		return nil
+		return
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
@@ -2883,7 +3100,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	resourceMap.allAssociatedEnvoyProxies.Insert(key)
-	return nil
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it.
@@ -3050,8 +3266,9 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 			}
 			_, foundTargetRef := policySpec["targetRef"]
 			_, foundTargetRefs := policySpec["targetRefs"]
-			if !foundTargetRef && !foundTargetRefs {
-				return fmt.Errorf("not a policy object - no targetRef or targetRefs found in %s.%s %s",
+			_, foundTargetSelectors := policySpec["targetSelectors"]
+			if !foundTargetRef && !foundTargetRefs && !foundTargetSelectors {
+				return fmt.Errorf("not a policy object - no targetRef or targetRefs or targetSelectors found in %s.%s %s",
 					policy.GetAPIVersion(), policy.GetKind(), policy.GetName())
 			}
 

@@ -131,5 +131,5 @@ With the new connection limit, only 5 of 10 connections are established, and so 
 [Client Traffic Policy]: ../../../api/extension_types#clienttrafficpolicy
 [Hey project]: https://github.com/rakyll/hey
 [connection limit]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/network_filters/connection_limit_filter
-[listener]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#listener
-[gateway]:  https://gateway-api.sigs.k8s.io/reference/1.4/spec#gateway
+[listener]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#listener
+[gateway]:  https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#gateway

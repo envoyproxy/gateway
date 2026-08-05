@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -334,6 +335,88 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProcessBackendRefsUsesEndpointSliceIndex(t *testing.T) {
+	const ns = "default"
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backend",
+			Namespace: ns,
+		},
+	}
+	matchingEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-backend"}, service.Name, false)
+	otherEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(service, matchingEndpointSlice, otherEndpointSlice).
+		WithIndex(&discoveryv1.EndpointSlice{}, serviceEndpointSliceIndex, serviceEndpointSliceIndexFunc).
+		Build()
+
+	r := &gatewayAPIReconciler{
+		log:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeClient,
+	}
+
+	resourceMappings := newResourceMapping()
+	resourceMappings.insertBackendRef(gwapiv1.BackendObjectReference{
+		Name:      gwapiv1.ObjectName(service.Name),
+		Namespace: gatewayapi.NamespacePtr(ns),
+	})
+
+	gwcResource := resource.NewResources()
+	require.NoError(t, r.processBackendRefs(t.Context(), gwcResource, resourceMappings))
+
+	require.Len(t, gwcResource.Services, 1)
+	require.Equal(t, service.Name, gwcResource.Services[0].Name)
+	require.Len(t, gwcResource.EndpointSlices, 1)
+	require.Equal(t, matchingEndpointSlice.Name, gwcResource.EndpointSlices[0].Name)
+}
+
+func TestProcessBackendRefsEndpointSliceIndexDisabled(t *testing.T) {
+	const ns = "default"
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backend",
+			Namespace: ns,
+		},
+	}
+	matchingEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-backend"}, service.Name, false)
+	otherEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
+
+	// Do not register EndpointSlice field indexes here. This verifies the disabled
+	// runtime flag path falls back to label selection instead of using MatchingFields.
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(service, matchingEndpointSlice, otherEndpointSlice).
+		Build()
+
+	r := &gatewayAPIReconciler{
+		log:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeClient,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				RuntimeFlags: &egv1a1.RuntimeFlags{
+					Disabled: []egv1a1.RuntimeFlag{egv1a1.EndpointSliceIndex},
+				},
+			},
+		},
+	}
+
+	resourceMappings := newResourceMapping()
+	resourceMappings.insertBackendRef(gwapiv1.BackendObjectReference{
+		Name:      gwapiv1.ObjectName(service.Name),
+		Namespace: gatewayapi.NamespacePtr(ns),
+	})
+
+	gwcResource := resource.NewResources()
+	require.NoError(t, r.processBackendRefs(t.Context(), gwcResource, resourceMappings))
+
+	require.Len(t, gwcResource.Services, 1)
+	require.Equal(t, service.Name, gwcResource.Services[0].Name)
+	require.Len(t, gwcResource.EndpointSlices, 1)
+	require.Equal(t, matchingEndpointSlice.Name, gwcResource.EndpointSlices[0].Name)
 }
 
 func TestRemoveGatewayClassFinalizer(t *testing.T) {
@@ -2340,6 +2423,188 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
 		Build()
 	return r
+}
+
+func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
+	const (
+		policyNS      = "policy"
+		gatewayNS     = "gateway"
+		listenerSetNS = "listener-set"
+		routeNS       = "route"
+		otherNS       = "other"
+	)
+
+	refGrant := func(name, namespace, fromKind, fromNamespace, toGroup, toKind string) *gwapiv1b1.ReferenceGrant {
+		return &gwapiv1b1.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Spec: gwapiv1b1.ReferenceGrantSpec{
+				From: []gwapiv1b1.ReferenceGrantFrom{
+					{
+						Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind(fromKind),
+						Namespace: gwapiv1b1.Namespace(fromNamespace),
+					},
+				},
+				To: []gwapiv1b1.ReferenceGrantTo{
+					{
+						Group: gwapiv1b1.Group(toGroup),
+						Kind:  gwapiv1b1.Kind(toKind),
+					},
+				},
+			},
+		}
+	}
+
+	resourceTreeWithTargets := func() *resource.Resources {
+		resourceTree := resource.NewResources()
+		resourceTree.Gateways = append(resourceTree.Gateways,
+			test.GetGateway(types.NamespacedName{Namespace: gatewayNS, Name: "gateway"}, "gc", 80))
+		resourceTree.ListenerSets = append(resourceTree.ListenerSets,
+			test.GetListenerSet(
+				types.NamespacedName{Namespace: listenerSetNS, Name: "listener-set"},
+				types.NamespacedName{Namespace: gatewayNS, Name: "gateway"},
+				80))
+		resourceTree.HTTPRoutes = append(resourceTree.HTTPRoutes,
+			test.GetHTTPRoute(
+				types.NamespacedName{Namespace: routeNS, Name: "route"},
+				"gateway",
+				test.GetServiceBackendRef(types.NamespacedName{Name: "svc"}, 80),
+				""))
+		return resourceTree
+	}
+
+	testCases := []struct {
+		name              string
+		mutateTree        func(*resource.Resources)
+		referenceGrants   []client.Object
+		existingGrantName string
+		expectedNames     sets.Set[string]
+	}{
+		{
+			name: "BackendTrafficPolicy includes gateway, ListenerSet, and route target grants",
+			mutateTree: func(resourceTree *resource.Resources) {
+				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "btp"},
+				})
+			},
+			referenceGrants: []client.Object{
+				refGrant("btp-gateway", gatewayNS, resource.KindBackendTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("btp-listenerset", listenerSetNS, resource.KindBackendTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindListenerSet),
+				refGrant("btp-route", routeNS, resource.KindBackendTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindHTTPRoute),
+			},
+			expectedNames: sets.New("btp-gateway", "btp-listenerset", "btp-route"),
+		},
+		{
+			name: "ClientTrafficPolicy includes gateway and ListenerSet target grants",
+			mutateTree: func(resourceTree *resource.Resources) {
+				resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &egv1a1.ClientTrafficPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "ctp"},
+				})
+			},
+			referenceGrants: []client.Object{
+				refGrant("ctp-gateway", gatewayNS, resource.KindClientTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("ctp-listenerset", listenerSetNS, resource.KindClientTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindListenerSet),
+				refGrant("ctp-route", routeNS, resource.KindClientTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindHTTPRoute),
+			},
+			expectedNames: sets.New("ctp-gateway", "ctp-listenerset"),
+		},
+		{
+			name: "EnvoyExtensionPolicy includes gateway, ListenerSet, and route target grants",
+			mutateTree: func(resourceTree *resource.Resources) {
+				resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, &egv1a1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "eep"},
+				})
+			},
+			referenceGrants: []client.Object{
+				refGrant("eep-gateway", gatewayNS, resource.KindEnvoyExtensionPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("eep-listenerset", listenerSetNS, resource.KindEnvoyExtensionPolicy, policyNS, gwapiv1.GroupName, resource.KindListenerSet),
+				refGrant("eep-route", routeNS, resource.KindEnvoyExtensionPolicy, policyNS, gwapiv1.GroupName, resource.KindHTTPRoute),
+			},
+			expectedNames: sets.New("eep-gateway", "eep-listenerset", "eep-route"),
+		},
+		{
+			name: "SecurityPolicy includes gateway, ListenerSet, and supported route target grants",
+			mutateTree: func(resourceTree *resource.Resources) {
+				resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "sp"},
+				})
+			},
+			referenceGrants: []client.Object{
+				refGrant("sp-gateway", gatewayNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("sp-listenerset", listenerSetNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindListenerSet),
+				refGrant("sp-http-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindHTTPRoute),
+				refGrant("sp-grpc-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindGRPCRoute),
+				refGrant("sp-tcp-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTCPRoute),
+				refGrant("sp-tls-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTLSRoute),
+			},
+			expectedNames: sets.New("sp-gateway", "sp-listenerset", "sp-http-route", "sp-grpc-route", "sp-tcp-route"),
+		},
+		{
+			name: "ignores non matching grants",
+			mutateTree: func(resourceTree *resource.Resources) {
+				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "btp"},
+				})
+			},
+			referenceGrants: []client.Object{
+				refGrant("wrong-from-kind", gatewayNS, resource.KindClientTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("wrong-from-namespace", gatewayNS, resource.KindBackendTrafficPolicy, otherNS, gwapiv1.GroupName, resource.KindGateway),
+				func() *gwapiv1b1.ReferenceGrant {
+					rg := refGrant("wrong-from-group", gatewayNS, resource.KindBackendTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway)
+					rg.Spec.From[0].Group = gwapiv1b1.Group(gwapiv1.GroupName)
+					return rg
+				}(),
+				refGrant("wrong-to-group", gatewayNS, resource.KindBackendTrafficPolicy, policyNS, corev1.GroupName, resource.KindGateway),
+				refGrant("outside-target-namespaces", otherNS, resource.KindBackendTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+			},
+			expectedNames: sets.New[string](),
+		},
+		{
+			name: "deduplicates grants already collected",
+			mutateTree: func(resourceTree *resource.Resources) {
+				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "btp"},
+				})
+			},
+			referenceGrants: []client.Object{
+				refGrant("btp-gateway", gatewayNS, resource.KindBackendTrafficPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+			},
+			existingGrantName: "btp-gateway",
+			expectedNames:     sets.New("btp-gateway"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resourceTree := resourceTreeWithTargets()
+			tc.mutateTree(resourceTree)
+			resourceMap := newResourceMapping()
+
+			if tc.existingGrantName != "" {
+				for _, obj := range tc.referenceGrants {
+					refGrant := obj.(*gwapiv1b1.ReferenceGrant)
+					if refGrant.Name != tc.existingGrantName {
+						continue
+					}
+					resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+					resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
+				}
+			}
+
+			r := setupReferenceGrantReconciler(tc.referenceGrants)
+			require.NoError(t, r.processPolicyTargetReferenceGrants(t.Context(), resourceTree, resourceMap))
+
+			actualNames := sets.New[string]()
+			for _, refGrant := range resourceTree.ReferenceGrants {
+				actualNames.Insert(refGrant.Name)
+			}
+			require.Equal(t, tc.expectedNames, actualNames)
+			require.Len(t, resourceTree.ReferenceGrants, tc.expectedNames.Len())
+		})
+	}
 }
 
 func TestIsTransientError(t *testing.T) {

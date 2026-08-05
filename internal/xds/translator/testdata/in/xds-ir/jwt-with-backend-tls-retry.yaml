@@ -127,3 +127,4 @@ http:
                   connectTimeout: 15s
             uri: https://foo.bar.com/jwt/public-key/jwks.json
             cacheDuration: 300s
+            failedRefetchDuration: 30s

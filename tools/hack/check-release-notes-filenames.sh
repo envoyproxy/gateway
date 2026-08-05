@@ -17,12 +17,28 @@ if [[ ! -d "${RELEASE_NOTES_DIR}" ]]; then
     exit 1
 fi
 
-# Valid patterns:
-# - current.yaml
+# Valid patterns for versioned release notes files:
 # - vX.Y.Z.yaml (e.g., v1.2.3.yaml)
 # - vX.Y.Z-rc.M.yaml (e.g., v1.0.0-rc.1.yaml)
+#
+# In-development release notes now live as per-change fragment files under
+# release-notes/current/<section>/<pr-number>-<slug>.md (see release-notes/current/README.md).
 
-VALID_PATTERN='^(current|v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?)\.yaml$'
+VALID_PATTERN='^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?\.yaml$'
+
+# Canonical section directories under release-notes/current/.
+VALID_SECTIONS=(
+    "breaking_changes"
+    "security_updates"
+    "new_features"
+    "bug_fixes"
+    "performance_improvements"
+    "deprecations"
+    "other_changes"
+)
+
+# Fragment filename convention: <pr-number>-<slug>.md
+FRAGMENT_PATTERN='^[0-9]+-[a-z0-9-]+\.md$'
 
 # Legacy files to ignore (grandfathered in)
 LEGACY_FILES=(
@@ -54,6 +70,49 @@ while IFS= read -r -d '' file; do
     fi
 done < <(find "${RELEASE_NOTES_DIR}" -maxdepth 1 -type f -name "*.yaml" -print0)
 
+# Validate the in-development fragment directory: release-notes/current/
+CURRENT_DIR="${RELEASE_NOTES_DIR}/current"
+if [[ -d "${CURRENT_DIR}" ]]; then
+    while IFS= read -r -d '' entry; do
+        rel="${entry#"${CURRENT_DIR}/"}"
+        base="$(basename "${entry}")"
+
+        # Allow top-level helper files.
+        if [[ "${rel}" == "README.md" ]]; then
+            continue
+        fi
+
+        # Every fragment must live directly inside a known section directory.
+        section="${rel%%/*}"
+        is_valid_section=false
+        for valid in "${VALID_SECTIONS[@]}"; do
+            if [[ "${section}" == "${valid}" ]]; then
+                is_valid_section=true
+                break
+            fi
+        done
+        if [[ "${is_valid_section}" == "false" ]]; then
+            INVALID_FILES+=("current/${rel} (not in a known section directory)")
+            continue
+        fi
+
+        # Allow the per-section placeholder.
+        if [[ "${base}" == ".gitkeep" ]]; then
+            continue
+        fi
+
+        # Reject nested paths (fragments must be flat inside a section dir).
+        if [[ "${rel}" != "${section}/${base}" ]]; then
+            INVALID_FILES+=("current/${rel} (fragments must not be nested)")
+            continue
+        fi
+
+        if [[ ! "${base}" =~ ${FRAGMENT_PATTERN} ]]; then
+            INVALID_FILES+=("current/${rel} (must match <pr-number>-<slug>.md)")
+        fi
+    done < <(find "${CURRENT_DIR}" -mindepth 1 -type f -print0)
+fi
+
 # Report results
 if [[ ${#INVALID_FILES[@]} -gt 0 ]]; then
     echo "❌ Invalid release notes filenames found:"
@@ -62,9 +121,10 @@ if [[ ${#INVALID_FILES[@]} -gt 0 ]]; then
     done
     echo ""
     echo "Valid formats:"
-    echo "  - current.yaml"
-    echo "  - vX.Y.Z.yaml (e.g., v1.2.3.yaml)"
-    echo "  - vX.Y.Z-rc.M.yaml (e.g., v1.0.0-rc.1.yaml)"
+    echo "  - Released versions: vX.Y.Z.yaml / vX.Y.Z-rc.M.yaml (e.g., v1.2.3.yaml, v1.0.0-rc.1.yaml)"
+    echo "  - Unreleased fragments: current/<section>/<pr-number>-<slug>.md"
+    echo "    sections: breaking_changes, security_updates, new_features, bug_fixes,"
+    echo "              performance_improvements, deprecations, other_changes"
     exit 1
 else
     echo "✅ All release notes filenames are valid"

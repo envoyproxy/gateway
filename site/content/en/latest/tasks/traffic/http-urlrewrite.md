@@ -5,6 +5,10 @@ title: "HTTP URL Rewrite"
 [HTTPURLRewriteFilter][] defines a filter that modifies a request during forwarding. At most one of these filters may be
 used on a Route rule. This MUST NOT be used on the same Route rule as a HTTPRequestRedirect filter.
 
+The Envoy Gateway `HTTPRouteFilter` (used for hostname and regex path rewrite) can also be referenced from a `GRPCRoute`
+via an `extensionRef` filter. For gRPC, a regex `:path` rewrite operates on the gRPC path, which has the form
+`/<package>.<Service>/<Method>`. See [Gateway API support](./gatewayapi-support#grpcroute) for details.
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
@@ -742,6 +746,6 @@ When `appendXForwardedHost` is set to `false`, the `X-Forwarded-Host` header wil
 request even though the host is being rewritten. This is useful when the upstream service does not need or should
 not receive the original host information.
 
-[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpurlrewritefilter
+[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpurlrewritefilter
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
 [RE2]: https://github.com/google/re2/wiki/Syntax

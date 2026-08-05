@@ -149,7 +149,7 @@ Once a matching ClusterIssuer is found, that plugin does what needs to be done t
 
 In the case of the ACME protocol (used by Let's Encrypt), cert-manager can also use an HTTP Gateway to solve the HTTP-01 challenge type.
 This is the other side of cert-manager's Gateway API support:
-the [ACME issuer](https://github.com/cert-manager/cert-manager/tree/master/pkg/issuer/acme/http/httproute.go) creates a temporary [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/), lets the ACME server(s) query it, and deletes it again.
+the [ACME issuer](https://github.com/cert-manager/cert-manager/tree/master/pkg/issuer/acme/http/httproute.go) creates a temporary [HTTPRoute](https://gateway-api.sigs.k8s.io/reference/api-types/httproute/), lets the ACME server(s) query it, and deletes it again.
 
 cert-manager then updates the Secret that the Gateway's listener points to in `tls.certificateRefs`.
 Envoy Gateway picks up that the Secret has changed, and reloads the corresponding Envoy Proxy Deployments with the new private key and certificate.

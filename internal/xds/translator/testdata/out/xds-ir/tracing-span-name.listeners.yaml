@@ -24,13 +24,13 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         tracing:
-          clientSampling:
-            value: 100
+          clientSampling: {}
           operation: '%REQ(X-ENVOY-ORIGINAL-HOST)%%PATH(NQ:ORIG)%'
           overallSampling:
             value: 100
@@ -78,13 +78,13 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-2/http-2
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8888
         tracing:
-          clientSampling:
-            value: 100
+          clientSampling: {}
           operation: '%REQ(X-ENVOY-ORIGINAL-HOST)%%PATH(NQ:ORIG)%'
           overallSampling:
             value: 100

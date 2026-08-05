@@ -24,6 +24,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
@@ -65,15 +66,18 @@
               name: ca-cert
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: secret-1
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
           - name: secret-2
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -125,11 +129,13 @@
               name: ca-cert-2
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: secret-3
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true

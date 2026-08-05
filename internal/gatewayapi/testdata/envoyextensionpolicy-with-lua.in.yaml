@@ -85,3 +85,6 @@ envoyextensionpolicies:
       inline: "function envoy_on_response(response_handle)
     response_handle:logWarn('Goodbye.')
     end"
+      filterContext:
+        token_header: x-api-key
+        mode: strict

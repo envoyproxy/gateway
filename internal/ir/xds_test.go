@@ -89,6 +89,23 @@ var (
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
 	}
+	danglingBackendClusterRefHTTPRoute = HTTPRoute{
+		Name:     "dangling-ref",
+		Hostname: "example.com",
+		Destination: &RouteDestination{
+			Name:               "dangling-ref-dest",
+			BackendClusterRefs: []*BackendClusterRef{{Name: "does-not-exist"}},
+		},
+	}
+	danglingBackendClusterRefHTTPListener = HTTPListener{
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "dangling-ref",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Hostnames: []string{"example.com"},
+		Routes:    []*HTTPRoute{&danglingBackendClusterRefHTTPRoute},
+	}
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
@@ -584,6 +601,21 @@ func TestValidateXds(t *testing.T) {
 			name: "weighted invalid backend",
 			input: Xds{
 				HTTP: []*HTTPListener{&happyHTTPListener, &weightedInvalidBackendsHTTPListener},
+			},
+			want: nil,
+		},
+		{
+			name: "dangling backend cluster ref",
+			input: Xds{
+				HTTP: []*HTTPListener{&danglingBackendClusterRefHTTPListener},
+			},
+			want: []error{ErrBackendClusterRefNotFound},
+		},
+		{
+			name: "backend cluster ref resolves",
+			input: Xds{
+				HTTP:            []*HTTPListener{&danglingBackendClusterRefHTTPListener},
+				BackendClusters: []*BackendCluster{{Name: "does-not-exist", Setting: &DestinationSetting{Name: "does-not-exist"}}},
 			},
 			want: nil,
 		},
@@ -1195,6 +1227,70 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "cluster per setting mixed auto sni",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS: &TLSUpstreamConfig{
+							AutoSNIFromEndpointHostname: true,
+						},
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "other.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS:         &TLSUpstreamConfig{},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "single cluster all auto sni from upstream host",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS: &TLSUpstreamConfig{
+							AutoSNIFromEndpointHostname: true,
+						},
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "other.com",
+								Port: 8080,
+							},
+						},
+						AddressType: new(FQDN),
+						TLS: &TLSUpstreamConfig{
+							AutoSNIFromEndpointHostname: true,
+						},
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for _, test := range tests {
@@ -1313,6 +1409,68 @@ func TestValidateRouteDestination(t *testing.T) {
 				},
 			},
 			want: ErrDestinationNameEmpty,
+		},
+		{
+			name: "valid single backend cluster ref",
+			input: RouteDestination{
+				Name: "single-bc",
+				BackendClusterRefs: []*BackendClusterRef{{
+					Name: "bc-1",
+				}},
+			},
+			want: nil,
+		},
+		{
+			name: "valid multiple backend cluster refs",
+			input: RouteDestination{
+				Name: "multi-bc",
+				BackendClusterRefs: []*BackendClusterRef{
+					{Name: "bc-1"},
+					{Name: "bc-2"},
+				},
+			},
+			want: nil,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, (&test.input).Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateBackendCluster(t *testing.T) {
+	tests := []struct {
+		name  string
+		input BackendCluster
+		want  error
+	}{
+		{
+			name: "happy",
+			input: BackendCluster{
+				Name:    "bc-1",
+				Setting: &DestinationSetting{},
+			},
+			want: nil,
+		},
+		{
+			name: "missing name",
+			input: BackendCluster{
+				Setting: &DestinationSetting{},
+			},
+			want: ErrDestinationNameEmpty,
+		},
+		{
+			name: "dynamic resolver is invalid",
+			input: BackendCluster{
+				Name:    "bc-1",
+				Setting: &DestinationSetting{IsDynamicResolver: true},
+			},
+			want: ErrBackendClusterMergedDynamicResolver,
 		},
 	}
 	for _, test := range tests {
@@ -1676,7 +1834,7 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckHealthyThresholdInvalid,
 		},
 		{
-			name: "http-health-check: invalid host",
+			name: "http-health-check: empty host",
 			input: HealthCheck{
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
@@ -1692,7 +1850,6 @@ func TestValidateHealthCheck(t *testing.T) {
 				&OutlierDetection{},
 				new(uint32(10)),
 			},
-			want: ErrHCHTTPHostInvalid,
 		},
 		{
 			name: "http-health-check: invalid path",
@@ -1830,6 +1987,30 @@ func TestValidateHealthCheck(t *testing.T) {
 						Method:           new(http.MethodOptions),
 						ExpectedStatuses: []HTTPStatus{200, 300},
 						ExpectedResponse: &HealthCheckPayload{
+							Text:   new("foo"),
+							Binary: []byte{'f', 'o', 'o'},
+						},
+					},
+				},
+				&OutlierDetection{},
+				new(uint32(10)),
+			},
+			want: ErrHealthCheckPayloadInvalid,
+		},
+		{
+			name: "http-health-check: invalid send payload",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           new(http.MethodPost),
+						ExpectedStatuses: []HTTPStatus{200, 300},
+						RequestBody: &HealthCheckPayload{
 							Text:   new("foo"),
 							Binary: []byte{'f', 'o', 'o'},
 						},

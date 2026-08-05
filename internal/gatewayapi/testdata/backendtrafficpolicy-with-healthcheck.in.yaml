@@ -274,7 +274,10 @@ backendTrafficPolicies:
         type: HTTP
         http:
           path: "/healthz"
-          method: "GET"
+          method: "POST"
+          requestBody:
+            type: Text
+            text: ping
           expectedResponse:
             type: Text
             text: pong

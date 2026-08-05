@@ -160,6 +160,9 @@ backendTrafficPolicies:
           limit:
             requests: 20
             unit: Hour
+            fromMetadata:
+              namespace: something.com
+              key: some_limit_set_by_foo
           cost:
             request:
               from: Number

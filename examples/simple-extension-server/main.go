@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -54,16 +55,25 @@ func main() {
 						DefaultText: "Info",
 						Value:       "Info",
 					},
+					&cli.StringFlag{
+						Name:        "suffix",
+						Usage:       "suffix appended to VirtualHost domains and used in response headers",
+						DefaultText: "extserver",
+						Value:       "extserver",
+					},
 				},
 			},
 		},
 	}
-	app.Run(os.Args)
+	err := app.Run(os.Args)
+	if err != nil {
+		panic(err)
+	}
 }
 
 var grpcServer *grpc.Server
 
-func handleSignals(cCtx *cli.Context) error {
+func handleSignals(_ *cli.Context) error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGQUIT)
 	go func() {
@@ -94,49 +104,68 @@ func startExtensionServer(cCtx *cli.Context) error {
 	var opts []grpc.ServerOption
 	grpcServer = grpc.NewServer(opts...)
 	sig := make(chan int, 1)
-	pb.RegisterEnvoyGatewayExtensionServer(grpcServer, New(logger, sig))
+	pb.RegisterEnvoyGatewayExtensionServer(grpcServer, New(logger, sig, cCtx.String("suffix")))
 	return grpcServer.Serve(lis)
 }
 
 type Server struct {
 	pb.UnimplementedEnvoyGatewayExtensionServer
-	sig chan int
-	log *slog.Logger
+	sig    chan int
+	log    *slog.Logger
+	suffix string
 }
 
-func New(logger *slog.Logger, sig chan int) *Server {
+func New(logger *slog.Logger, sig chan int, suffix string) *Server {
 	return &Server{
-		log: logger,
-		sig: sig,
+		log:    logger,
+		sig:    sig,
+		suffix: suffix,
 	}
 }
 
-func (s *Server) PostRouteModify(ctx context.Context, req *pb.PostRouteModifyRequest) (*pb.PostRouteModifyResponse, error) {
+func (s *Server) PostRouteModify(_ context.Context, req *pb.PostRouteModifyRequest) (*pb.PostRouteModifyResponse, error) {
 	s.log.Info("PostRouteModify callback was invoked")
+
+	if req.PostRouteContext != nil && len(req.PostRouteContext.ExtensionResources) > 0 {
+		s.log.Info("PostRouteModify received extension resources, adding response header",
+			slog.Int("count", len(req.PostRouteContext.ExtensionResources)))
+		req.Route.ResponseHeadersToAdd = append(req.Route.ResponseHeadersToAdd, &corev3.HeaderValueOption{
+			Header: &corev3.HeaderValue{
+				Key:   "x-ext-server",
+				Value: s.suffix,
+			},
+		})
+	}
 
 	return &pb.PostRouteModifyResponse{
 		Route: req.Route,
 	}, nil
 }
 
-func (s *Server) PostVirtualHostModify(ctx context.Context, req *pb.PostVirtualHostModifyRequest) (*pb.PostVirtualHostModifyResponse, error) {
+func (s *Server) PostVirtualHostModify(_ context.Context, req *pb.PostVirtualHostModifyRequest) (*pb.PostVirtualHostModifyResponse, error) {
 	s.log.Info("PostVirtualHostModify callback was invoked")
 
 	if strings.Contains(req.VirtualHost.Name, "fail") {
 		s.log.Info("PostVirtualHostModify returning unavailable error")
 		return nil, status.Error(codes.Unavailable, "Service is currently unavailable")
-	} else {
-		s.log.Info("PostVirtualHostModify sending response")
-		if len(req.VirtualHost.Domains) > 0 {
-			req.VirtualHost.Domains = append(req.VirtualHost.Domains, fmt.Sprintf("%s.extserver", req.VirtualHost.Domains[0]))
-		}
-		return &pb.PostVirtualHostModifyResponse{
-			VirtualHost: req.VirtualHost,
-		}, nil
 	}
+
+	s.log.Info("PostVirtualHostModify sending response")
+	if len(req.VirtualHost.Domains) > 0 {
+		lastDomain := len(req.VirtualHost.Domains) - 1
+		newDomain := fmt.Sprintf("%s.%s", req.VirtualHost.Domains[lastDomain], s.suffix)
+		s.log.Info("PostVirtualHostModify appending suffix to last domain",
+			slog.String("originalDomain", req.VirtualHost.Domains[lastDomain]),
+			slog.String("newDomain", newDomain))
+
+		req.VirtualHost.Domains = append(req.VirtualHost.Domains, newDomain)
+	}
+	return &pb.PostVirtualHostModifyResponse{
+		VirtualHost: req.VirtualHost,
+	}, nil
 }
 
-func (s *Server) PostHTTPListenerModify(ctx context.Context, req *pb.PostHTTPListenerModifyRequest) (*pb.PostHTTPListenerModifyResponse, error) {
+func (s *Server) PostHTTPListenerModify(_ context.Context, req *pb.PostHTTPListenerModifyRequest) (*pb.PostHTTPListenerModifyResponse, error) {
 	s.log.Info("postHTTPListenerModify callback was invoked")
 
 	return &pb.PostHTTPListenerModifyResponse{
@@ -144,7 +173,7 @@ func (s *Server) PostHTTPListenerModify(ctx context.Context, req *pb.PostHTTPLis
 	}, nil
 }
 
-func (s *Server) PostTranslateModify(ctx context.Context, req *pb.PostTranslateModifyRequest) (*pb.PostTranslateModifyResponse, error) {
+func (s *Server) PostTranslateModify(_ context.Context, req *pb.PostTranslateModifyRequest) (*pb.PostTranslateModifyResponse, error) {
 	s.log.Info("PostTranslateModify callback was invoked")
 
 	return &pb.PostTranslateModifyResponse{

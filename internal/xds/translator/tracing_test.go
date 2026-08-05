@@ -15,6 +15,61 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func TestBuildHCMTracingSampling(t *testing.T) {
+	testCases := []struct {
+		name                    string
+		tracing                 *ir.Tracing
+		expectedRandomSampling  float64
+		expectedClientSampling  float64
+		expectedOverallSampling float64
+	}{
+		{
+			name: "explicit sampling values",
+			tracing: &ir.Tracing{
+				ServiceName:         "test-service",
+				SamplingRate:        10,
+				ClientSamplingRate:  new(20.0),
+				OverallSamplingRate: new(30.0),
+				Destination: ir.RouteDestination{
+					Name: "tracing",
+				},
+				Provider: egv1a1.TracingProvider{
+					Type: egv1a1.TracingProviderTypeOpenTelemetry,
+				},
+			},
+			expectedRandomSampling:  10.0,
+			expectedClientSampling:  20.0,
+			expectedOverallSampling: 30.0,
+		},
+		{
+			name: "unset client sampling defaults to zero",
+			tracing: &ir.Tracing{
+				ServiceName:  "test-service",
+				SamplingRate: 10,
+				Destination: ir.RouteDestination{
+					Name: "tracing",
+				},
+				Provider: egv1a1.TracingProvider{
+					Type: egv1a1.TracingProviderTypeOpenTelemetry,
+				},
+			},
+			expectedRandomSampling:  10.0,
+			expectedClientSampling:  0.0,
+			expectedOverallSampling: 100.0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := buildHCMTracing(tc.tracing)
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedRandomSampling, got.RandomSampling.Value)
+			require.Equal(t, tc.expectedClientSampling, got.ClientSampling.Value)
+			require.Equal(t, tc.expectedOverallSampling, got.OverallSampling.Value)
+		})
+	}
+}
+
 func TestBuildSampler(t *testing.T) {
 	testCases := []struct {
 		name          string

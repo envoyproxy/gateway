@@ -19,41 +19,55 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/test"
 )
 
-func TestMergeBackendTrafficPolicy(t *testing.T) {
+func TestMergePolicy(t *testing.T) {
 	baseDir := "testdata"
-	caseFiles, err := filepath.Glob(filepath.Join(baseDir, "backendtrafficpolicy_*.in.yaml"))
+	caseFiles, err := filepath.Glob(filepath.Join(baseDir, "*policy_*.in.yaml"))
 	require.NoError(t, err)
 
 	for _, caseFile := range caseFiles {
-		// get case name from path
-		caseName := strings.TrimPrefix(strings.TrimSuffix(caseFile, ".in.yaml"), baseDir+"/backendtrafficpolicy_")
+		caseName := strings.TrimPrefix(strings.TrimSuffix(caseFile, ".in.yaml"), baseDir+"/")
+		policyType := strings.SplitN(caseName, "_", 2)[0]
+
 		t.Run(caseName, func(t *testing.T) {
-			for _, mergeType := range []egv1a1.MergeType{egv1a1.StrategicMerge, egv1a1.JSONMerge} {
-				patchedInput := strings.Replace(caseFile, ".in.yaml", ".patch.yaml", 1)
-				var output string
-				if mergeType == egv1a1.StrategicMerge {
-					output = strings.Replace(caseFile, ".in.yaml", ".strategicmerge.out.yaml", 1)
-				} else {
-					output = strings.Replace(caseFile, ".in.yaml", ".jsonmerge.out.yaml", 1)
-				}
-
-				original := readObject[*egv1a1.BackendTrafficPolicy](t, caseFile)
-				patch := readObject[*egv1a1.BackendTrafficPolicy](t, patchedInput)
-
-				got, err := Merge(original, patch, mergeType)
-				require.NoError(t, err)
-
-				if test.OverrideTestData() {
-					b, err := yaml.Marshal(got)
-					require.NoError(t, err)
-					require.NoError(t, os.WriteFile(output, b, 0o600))
-					continue
-				}
-
-				expected := readObject[*egv1a1.BackendTrafficPolicy](t, output)
-				require.Equal(t, expected, got)
+			switch policyType {
+			case "backendtrafficpolicy":
+				runMergePolicyTest[*egv1a1.BackendTrafficPolicy](t, caseFile)
+			case "securitypolicy":
+				runMergePolicyTest[*egv1a1.SecurityPolicy](t, caseFile)
+			default:
+				t.Fatalf("unsupported policy type %q in %s", policyType, caseFile)
 			}
 		})
+	}
+}
+
+func runMergePolicyTest[T client.Object](t *testing.T, caseFile string) {
+	t.Helper()
+
+	for _, mergeType := range []egv1a1.MergeType{egv1a1.StrategicMerge, egv1a1.JSONMerge} {
+		patchedInput := strings.Replace(caseFile, ".in.yaml", ".patch.yaml", 1)
+		var output string
+		if mergeType == egv1a1.StrategicMerge {
+			output = strings.Replace(caseFile, ".in.yaml", ".strategicmerge.out.yaml", 1)
+		} else {
+			output = strings.Replace(caseFile, ".in.yaml", ".jsonmerge.out.yaml", 1)
+		}
+
+		original := readObject[T](t, caseFile)
+		patch := readObject[T](t, patchedInput)
+
+		got, err := Merge(original, patch, mergeType)
+		require.NoError(t, err)
+
+		if test.OverrideTestData() {
+			b, err := yaml.Marshal(got)
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(output, b, 0o600))
+			continue
+		}
+
+		expected := readObject[T](t, output)
+		require.Equal(t, expected, got)
 	}
 }
 

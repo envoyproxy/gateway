@@ -79,7 +79,7 @@
                             typedConfig:
                               '@type': type.googleapis.com/xds.type.matcher.v3.CelMatcher
                               exprMatch:
-                                parsedExpr:
+                                celExprParsed:
                                   expr:
                                     callExpr:
                                       args:
@@ -167,6 +167,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: default/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH

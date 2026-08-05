@@ -23,6 +23,8 @@ envoyProxyForGatewayClass:
         node:
           locality:
             zone: $(ENVOY_SERVICE_ZONE)
+        deferredStatOptions:
+          enableDeferredCreationStats: true
         stats_config:
           use_all_default_tags: true
           stats_tags:
@@ -38,7 +40,6 @@ envoyProxyForGatewayClass:
           layers:
           - name: global_config
             static_layer:
-              envoy.restart_features.use_eds_cache_for_ads: true
               re2.max_program_size.error_level: 4294967295
               re2.max_program_size.warn_level: 1000
         dynamic_resources:
@@ -172,7 +173,18 @@ envoyProxyForGatewayClass:
               "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
               max_active_downstream_connections: 50000
     logging: {}
-  status: {}
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: eg
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
@@ -436,7 +448,7 @@ httpRoutes:
         kind: Gateway
         name: eg
 tcpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: TCPRoute
   metadata:
     name: backend
@@ -514,7 +526,7 @@ tlsRoutes:
         name: eg
         sectionName: tls-passthrough
 udpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1
   kind: UDPRoute
   metadata:
     name: backend
@@ -568,6 +580,8 @@ xds:
               portValue: 19000
         clusterManager:
           localClusterName: local_cluster
+        deferredStatOptions:
+          enableDeferredCreationStats: true
         dynamicResources:
           adsConfig:
             apiType: DELTA_GRPC
@@ -588,7 +602,6 @@ xds:
           layers:
           - name: global_config
             staticLayer:
-              envoy.restart_features.use_eds_cache_for_ads: true
               re2.max_program_size.error_level: 4294967295
               re2.max_program_size.warn_level: 1000
         node:
@@ -1135,6 +1148,7 @@ xds:
                   rds:
                     configSource:
                       ads: {}
+                      initialFetchTimeout: 0s
                       resourceApiVersion: V3
                     routeConfigName: default/eg/http
                   serverHeaderTransformation: PASS_THROUGH
@@ -1247,6 +1261,7 @@ xds:
                   rds:
                     configSource:
                       ads: {}
+                      initialFetchTimeout: 0s
                       resourceApiVersion: V3
                     routeConfigName: default/eg/grpc
                   serverHeaderTransformation: PASS_THROUGH

@@ -1,0 +1,66 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: ctp-ls-section
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+      sectionName: ext-http-1
+    tcpKeepalive:
+      probes: 3
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: ctp-gw-wide
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+    tcpKeepalive:
+      probes: 7
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: Same
+    listeners:
+    - name: core-http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: ext-http-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: ext-http-2
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: Same

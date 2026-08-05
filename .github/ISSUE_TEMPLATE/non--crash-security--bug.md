@@ -1,11 +1,15 @@
 ---
-name: Bug
-about: Bugs
+name: Non-{crash,security} bug
+about: Bugs which are not crashes of Envoy Gateway or Envoy Proxy, DoS or other security issue
 title: ''
 labels: bug,triage
 assignees: ''
 
 ---
+
+**If you are reporting *any* crash or *any* potential security issue, *do not*
+open an issue in this repo. Please report the issue via emailing
+envoy-gateway-security@googlegroups.com where the issue will be triaged appropriately.**
 
 *Description*:
 >What issue is being seen? Describe what should be happening instead of

@@ -29,6 +29,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -515,6 +516,53 @@ func (r *mockLayer) Uncompressed() (io.ReadCloser, error) {
 }
 func (r *mockLayer) MediaType() (types.MediaType, error) { return r.mediaType, nil }
 
+type staticLayer struct {
+	content   []byte
+	mediaType types.MediaType
+}
+
+func (l *staticLayer) Digest() (v1.Hash, error) {
+	return v1.Hash{Algorithm: "sha256", Hex: strings.Repeat("0", 64)}, nil
+}
+
+func (l *staticLayer) DiffID() (v1.Hash, error) {
+	return v1.Hash{Algorithm: "sha256", Hex: strings.Repeat("0", 64)}, nil
+}
+
+func (l *staticLayer) Compressed() (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewReader(l.content)), nil
+}
+
+func (l *staticLayer) Uncompressed() (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewReader(l.content)), nil
+}
+
+func (l *staticLayer) Size() (int64, error) {
+	return int64(len(l.content)), nil
+}
+
+func (l *staticLayer) MediaType() (types.MediaType, error) {
+	return l.mediaType, nil
+}
+
+type staticImage struct {
+	layers []v1.Layer
+}
+
+func (i *staticImage) Layers() ([]v1.Layer, error) { return i.layers, nil }
+func (i *staticImage) MediaType() (types.MediaType, error) {
+	return types.OCIManifestSchema1, nil
+}
+func (i *staticImage) Size() (int64, error)                    { return 0, nil }
+func (i *staticImage) ConfigName() (v1.Hash, error)            { return v1.Hash{}, nil }
+func (i *staticImage) ConfigFile() (*v1.ConfigFile, error)     { return nil, nil }
+func (i *staticImage) RawConfigFile() ([]byte, error)          { return nil, nil }
+func (i *staticImage) Digest() (v1.Hash, error)                { return v1.Hash{}, nil }
+func (i *staticImage) Manifest() (*v1.Manifest, error)         { return nil, nil }
+func (i *staticImage) RawManifest() ([]byte, error)            { return nil, nil }
+func (i *staticImage) LayerByDigest(v1.Hash) (v1.Layer, error) { return nil, nil }
+func (i *staticImage) LayerByDiffID(v1.Hash) (v1.Layer, error) { return nil, nil }
+
 func TestExtractOCIArtifactImage(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		// Create the image with custom media types.
@@ -550,6 +598,23 @@ func TestExtractOCIArtifactImage(t *testing.T) {
 
 		if !bytes.Equal(actual, want) {
 			t.Errorf("extractOCIArtifactImage got %s, but want '%s'", string(actual), string(want))
+		}
+	})
+
+	t.Run("reject oversized wasm layer", func(t *testing.T) {
+		wasmLayer := &staticLayer{
+			content:   []byte("hello"),
+			mediaType: "application/vnd.module.wasm.content.layer.v1+wasm",
+		}
+		configLayer := &staticLayer{
+			content:   []byte("{}"),
+			mediaType: "application/vnd.module.wasm.config.v1+json",
+		}
+		img := &staticImage{layers: []v1.Layer{wasmLayer, configLayer}}
+
+		_, err := extractOCIArtifactImageWithLimit(img, 4)
+		if err == nil || !strings.Contains(err.Error(), "exceeds maximum size") {
+			t.Fatalf("extractOCIArtifactImage got error %v, want exceeds maximum size", err)
 		}
 	})
 
@@ -666,6 +731,48 @@ func TestExtractWasmPluginBinary(t *testing.T) {
 		_, err := extractWasmPluginBinary(buf)
 		if err == nil || !strings.Contains(err.Error(), "not found") {
 			t.Errorf("extractWasmPluginBinary must fail with not found")
+		}
+	})
+
+	t.Run("ignore oversized non-wasm entry", func(t *testing.T) {
+		buf := bytes.NewBuffer(nil)
+		gz := gzip.NewWriter(buf)
+		tw := tar.NewWriter(gz)
+		if err := tw.WriteHeader(&tar.Header{
+			Name: "non-wasm.txt",
+			Size: math.MaxInt64,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		_ = tw.Close()
+		if err := gz.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := extractWasmPluginBinary(buf)
+		if err == nil {
+			t.Fatal("extractWasmPluginBinary must fail")
+		}
+	})
+
+	t.Run("reject oversized wasm entry", func(t *testing.T) {
+		buf := bytes.NewBuffer(nil)
+		gz := gzip.NewWriter(buf)
+		tw := tar.NewWriter(gz)
+		if err := tw.WriteHeader(&tar.Header{
+			Name: "plugin.wasm",
+			Size: math.MaxInt64,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		_ = tw.Close()
+		if err := gz.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := extractWasmPluginBinary(buf)
+		if err == nil || !strings.Contains(err.Error(), "exceeds maximum size") {
+			t.Fatalf("extractWasmPluginBinary got error %v, want exceeds maximum size", err)
 		}
 	})
 }

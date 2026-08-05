@@ -106,25 +106,30 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 2
 	case isFilterType(filter, egv1a1.EnvoyFilterCORS):
 		order = 3
+	case isFilterType(filter, egv1a1.EnvoyFilterCSRF):
+		// Ensure csrf runs after cors, so that preflight requests are answered by
+		// the cors filter, and before the authn/authz filters, so that cross-site
+		// mutating requests are rejected without invoking external auth services.
+		order = 4
 	case isFilterType(filter, egv1a1.EnvoyFilterHeaderMutation):
 		// Ensure header mutation run before ext auth which might consume the header.
-		order = 4
-	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 5
-	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
+	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 6
-	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
+	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
 		order = 7
-	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
+	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
 		order = 8
-	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
+	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
 		order = 9
-	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
+	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
 		order = 10
-	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
 		order = 11
+	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+		order = 12
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 12 + mustGetFilterIndex(filter.Name)
+		order = 13 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
@@ -139,10 +144,12 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 302
 	case isFilterType(filter, egv1a1.EnvoyFilterRateLimit):
 		order = 303
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
+	case isFilterType(filter, egv1a1.EnvoyFilterBandwidthLimit):
 		order = 304
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
 		order = 305
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
+		order = 306
 	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 307
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):

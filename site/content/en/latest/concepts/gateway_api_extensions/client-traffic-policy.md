@@ -7,7 +7,7 @@ title: "ClientTrafficPolicy"
 
 ## Overview
 
-`ClientTrafficPolicy` is an extension to the Kubernetes Gateway API that allows system administrators to configure how the Envoy Proxy server behaves with downstream clients. It is a policy attachment resource that can be applied to Gateway resources and holds settings for configuring the behavior of the connection between the downstream client and Envoy Proxy listener.
+`ClientTrafficPolicy` is an extension to the Kubernetes Gateway API that allows system administrators to configure how the Envoy Proxy server behaves with downstream clients. It is a policy attachment resource that can be applied to `Gateway` and `ListenerSet` resources and holds settings for configuring the behavior of the connection between the downstream client and Envoy Proxy listener.
 
 Think of `ClientTrafficPolicy` as a set of rules for your Gateway's entry points, it lets you configure specific behaviors for each listener in your Gateway, with more specific rules taking precedence over general ones.
 
@@ -41,19 +41,26 @@ Think of `ClientTrafficPolicy` as a set of rules for your Gateway's entry points
 
 ClientTrafficPolicy can be attached to Gateway API resources using two targeting mechanisms:
 
-1. **Direct Reference (`targetRefs`)**: Explicitly reference specific Gateway resources by name and kind.
-2. **Label Selection (`targetSelectors`)**: Match Gateway resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselectors))
+1. **Direct Reference (`targetRefs`)**: Explicitly reference specific resources by name and kind. Supported kinds are:
+   - `Gateway` — apply the policy to all listeners on the Gateway (or a specific listener via `sectionName`)
+   - `ListenerSet` — apply the policy to all listeners in the ListenerSet (or a specific listener via `sectionName`)
+2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselectors)). Both `Gateway` and `ListenerSet` kinds are supported.
 
-The policy applies to all Gateway resources that match either targeting method.
+The policy applies to all resources that match either targeting method.
 
-**Important**: A ClientTrafficPolicy can only target Gateway resources in the same namespace as the policy itself.
+Targeting a `ListenerSet` is useful when you want to apply client traffic settings to a group of listeners managed independently from the parent Gateway, without affecting Gateway-owned listeners.
+
+**Important**: A ClientTrafficPolicy can only target resources in the same namespace as the policy itself.
 
 ### Precedence
 
-When multiple ClientTrafficPolicies apply to the same resource, Envoy Gateway resolves conflicts using section-level specificity and creation-time priority:
+When multiple ClientTrafficPolicies apply to the same listener, Envoy Gateway resolves conflicts using target specificity and creation-time priority:
 
-1. **Section-specific policies** (targeting specific listeners via `sectionName`) - Highest precedence
-2. **Gateway-wide policies** (targeting entire Gateway) - Lower precedence
+1. **Section-specific policies** (targeting a specific listener via `sectionName` on a `Gateway` or `ListenerSet`) - Highest precedence
+2. **ListenerSet-wide policies** (targeting an entire `ListenerSet`) - Medium precedence
+3. **Gateway-wide policies** (targeting an entire `Gateway`) - Lowest precedence
+
+A ListenerSet-wide policy takes precedence over a Gateway-wide policy for any listener that belongs to that ListenerSet. The Gateway-wide policy is still applied to listeners that are owned directly by the Gateway and not covered by a ListenerSet-wide policy.
 
 #### Multiple Policies at the Same Level
 
@@ -133,6 +140,61 @@ In this case:
 
 - Policy A will be applied/attached to the specific Listener defined in the `targetRef.SectionName`
 - Policy B will be applied to the remaining Listeners within the Gateway. Policy B will have an additional status condition Overridden=True.
+
+The same specificity rules apply when a `ListenerSet` is involved. Consider this example where a Gateway and a ListenerSet each have a policy, plus a section-specific policy on the ListenerSet:
+
+```yaml
+# Policy A: Targets a specific listener in a ListenerSet (highest precedence for that listener)
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: listenerset-section-policy
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: my-listener-set
+      sectionName: ext-https  # Targets a single listener
+  tls:
+    minVersion: "1.3"
+
+---
+# Policy B: Targets the entire ListenerSet (beats Gateway-wide for ListenerSet listeners)
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: listenerset-wide-policy
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: my-listener-set
+  timeout:
+    http:
+      idleTimeout: 45s
+
+---
+# Policy C: Targets the entire Gateway (lowest precedence)
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: gateway-wide-policy
+spec:
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway
+  timeout:
+    http:
+      idleTimeout: 60s
+```
+
+In this case:
+
+- Policy A is applied to the `ext-https` listener in the ListenerSet.
+- Policy B is applied to the remaining listeners in `my-listener-set`. Policy B will have `Overridden=True` for the `ext-https` listener covered by Policy A.
+- Policy C is applied to listeners owned directly by `my-gateway` that are not part of `my-listener-set`. Policy C will have `Overridden=True` for every listener covered by Policy A or Policy B.
+
+When a ClientTrafficPolicy targets a `ListenerSet`, the policy's status `ancestorRef` is set to the `ListenerSet` itself rather than the parent Gateway, so you can observe attachment status scoped to the ListenerSet directly.
 
 ## Related Resources
 

@@ -267,7 +267,7 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [cors]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute
-[HTTPCORSFilter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpcorsfilter
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
+[HTTPCORSFilter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpcorsfilter

@@ -402,4 +402,4 @@ $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}/get
 
 You can see that the `X-Forwarded-Host` is `path.rewrite.example`, but the actual host is `envoygateway.io`.
 
-[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPURLRewriteFilter
+[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.HTTPURLRewriteFilter

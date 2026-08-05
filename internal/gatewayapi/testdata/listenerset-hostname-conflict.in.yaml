@@ -1,0 +1,134 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-with-listenerset-hostname-conflict
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      allowedListeners:
+        namespaces:
+          from: Same
+      listeners:
+        - name: gateway-listener
+          port: 80
+          protocol: HTTP
+          hostname: "gateway-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+        # The following listener should be accepted based on listener precedence
+        - name: hostname-conflict-with-gateway-listener
+          port: 80
+          protocol: HTTP
+          hostname: "hostname-conflict-with-gateway-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+listenerSets:
+  # The listener `hostname-conflict-with-gateway-listener` should be rejected but the listenerSet should be accepted since it has other valid listeners
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      name: listenerset-with-hostname-conflict-with-gateway-1
+      namespace: envoy-gateway
+    spec:
+      parentRef:
+        kind: Gateway
+        group: gateway.networking.k8s.io
+        name: gateway-with-listenerset-hostname-conflict
+        namespace: envoy-gateway
+      listeners:
+        - name: listener-set-1-listener
+          port: 80
+          protocol: HTTP
+          hostname: "listener-set-1-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+        # The following listener should be rejected since it conflicts with the gateway listener
+        - name: hostname-conflict-with-gateway-listener
+          port: 80
+          protocol: HTTP
+          hostname: "hostname-conflict-with-gateway-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+        # The following listener should be accepted based on listener precedence
+        - name: hostname-conflict-with-listener-set-listener
+          port: 80
+          protocol: HTTP
+          hostname: "hostname-conflict-with-listener-set-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+  # This listenerSet should not be accepted since its only listener `hostname-conflict-with-gateway-listener` is rejected
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      name: listenerset-with-hostname-conflict-with-gateway-2
+      namespace: envoy-gateway
+    spec:
+      parentRef:
+        kind: Gateway
+        group: gateway.networking.k8s.io
+        name: gateway-with-listenerset-hostname-conflict
+        namespace: envoy-gateway
+      listeners:
+        # The following listener should be rejected since it conflicts with the gateway listener
+        - name: hostname-conflict-with-gateway-listener
+          port: 80
+          protocol: HTTP
+          hostname: "hostname-conflict-with-gateway-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+  # The listener `hostname-conflict-with-listener-set-listener` should be rejected but the listenerSet should be accepted since it has other valid listeners
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      name: listenerset-with-hostname-conflict-with-listener-set-1
+      namespace: envoy-gateway
+    spec:
+      parentRef:
+        kind: Gateway
+        group: gateway.networking.k8s.io
+        name: gateway-with-listenerset-hostname-conflict
+        namespace: envoy-gateway
+      listeners:
+        - name: listener-set-2-listener
+          port: 80
+          protocol: HTTP
+          hostname: "listener-set-2-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+        # The following listener should be rejected since it conflicts with another listenerSet's listener
+        - name: hostname-conflict-with-listener-set-listener
+          port: 80
+          protocol: HTTP
+          hostname: "hostname-conflict-with-listener-set-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+  # This listenerSet should not be accepted since its only listener `hostname-conflict-with-listener-set-listener` is rejected
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      name: listenerset-with-hostname-conflict-with-listener-set-2
+      namespace: envoy-gateway
+    spec:
+      parentRef:
+        kind: Gateway
+        group: gateway.networking.k8s.io
+        name: gateway-with-listenerset-hostname-conflict
+        namespace: envoy-gateway
+      listeners:
+        # The following listener should be rejected since it conflicts with another listenerSet's listener
+        - name: hostname-conflict-with-listener-set-listener
+          port: 80
+          protocol: HTTP
+          hostname: "hostname-conflict-with-listener-set-listener.com"
+          allowedRoutes:
+            namespaces:
+              from: All

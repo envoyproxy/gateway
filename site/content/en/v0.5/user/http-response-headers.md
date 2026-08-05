@@ -278,6 +278,6 @@ spec:
 EOF
 ```
 
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[req_filter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPHeaderFilter
+[req_filter]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1beta1.HTTPHeaderFilter

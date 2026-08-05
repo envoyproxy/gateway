@@ -194,5 +194,5 @@ curl --header "Host: timeout.example.com" http://${GATEWAY_HOST}/?delay=3s  -v
 upstream request timeout
 ```
 
-[HTTPRouteTimeouts]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#httproutetimeouts
-[HTTPRouteRule]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#httprouterule
+[HTTPRouteTimeouts]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httproutetimeouts
+[HTTPRouteRule]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httprouterule

@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -321,14 +320,14 @@ func TestBuildResourceMetadataWrappedRouteKinds(t *testing.T) {
 		{
 			name: "tcp route context",
 			obj: &TCPRouteContext{
-				TCPRoute: &gwapiv1a2.TCPRoute{},
+				TCPRoute: &gwapiv1.TCPRoute{},
 			},
 			want: resource.KindTCPRoute,
 		},
 		{
 			name: "udp route context",
 			obj: &UDPRouteContext{
-				UDPRoute: &gwapiv1a2.UDPRoute{},
+				UDPRoute: &gwapiv1.UDPRoute{},
 			},
 			want: resource.KindUDPRoute,
 		},

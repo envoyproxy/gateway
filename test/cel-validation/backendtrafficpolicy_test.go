@@ -59,6 +59,42 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid listenerset targetRef",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("ListenerSet"),
+								Name:  gwapiv1.ObjectName("xls"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid listenerset targetRefs",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("ListenerSet"),
+									Name:  gwapiv1.ObjectName("xls"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid httproute targetRef",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -70,6 +106,278 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								Name:  gwapiv1.ObjectName("httpbin-route"),
 							},
 						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid mergeType with xRoute targetRef",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("HTTPRoute"),
+								Name:  gwapiv1.ObjectName("backend"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid mergeType with xRoute targetSelector",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Kind:        gwapiv1.Kind("HTTPRoute"),
+								MatchLabels: map[string]string{"app": "foo"},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeType rejected on ListenerSet targetRef",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("ListenerSet"),
+								Name:  gwapiv1.ObjectName("xls"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+		},
+		{
+			desc: "mergeType rejected on ListenerSet targetRefs",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("ListenerSet"),
+									Name:  gwapiv1.ObjectName("xls"),
+								},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+		},
+		{
+			desc: "mergeType rejected on ListenerSet targetSelector",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Kind:        gwapiv1.Kind("ListenerSet"),
+								MatchLabels: map[string]string{"app": "foo"},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+		},
+		{
+			desc: "valid admissionControl percentage bounds",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("HTTPRoute"),
+								Name:  gwapiv1.ObjectName("httpbin-route"),
+							},
+						},
+					},
+					AdmissionControl: &egv1a1.AdmissionControl{
+						MinSuccessRate:      new(uint32(1)),
+						MaxRejectionPercent: new(uint32(100)),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "admissionControl minSuccessRate below minimum",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("HTTPRoute"),
+								Name:  gwapiv1.ObjectName("httpbin-route"),
+							},
+						},
+					},
+					AdmissionControl: &egv1a1.AdmissionControl{
+						MinSuccessRate: new(uint32(0)),
+					},
+				}
+			},
+			wantErrors: []string{"minSuccessRate"},
+		},
+		{
+			desc: "admissionControl maxRejectionPercent above maximum",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("HTTPRoute"),
+								Name:  gwapiv1.ObjectName("httpbin-route"),
+							},
+						},
+					},
+					AdmissionControl: &egv1a1.AdmissionControl{
+						MaxRejectionPercent: new(uint32(101)),
+					},
+				}
+			},
+			wantErrors: []string{"maxRejectionPercent"},
+		},
+		{
+			desc: "admissionControl rejected on TCPRoute target",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("TCPRoute"),
+								Name:  gwapiv1.ObjectName("tcp-route"),
+							},
+						},
+					},
+					AdmissionControl: &egv1a1.AdmissionControl{
+						MinSuccessRate: new(uint32(50)),
+					},
+				}
+			},
+			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets"},
+		},
+		{
+			desc: "admissionControl rejected on UDPRoute target via targetRefs",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("UDPRoute"),
+									Name:  gwapiv1.ObjectName("udp-route"),
+								},
+							},
+						},
+					},
+					AdmissionControl: &egv1a1.AdmissionControl{
+						MinSuccessRate: new(uint32(50)),
+					},
+				}
+			},
+			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets"},
+		},
+		{
+			desc: "admissionControl rejected on TLSRoute target via targetSelectors",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Kind:        gwapiv1.Kind("TLSRoute"),
+								MatchLabels: map[string]string{"app": "foo"},
+							},
+						},
+					},
+					AdmissionControl: &egv1a1.AdmissionControl{
+						MinSuccessRate: new(uint32(50)),
+					},
+				}
+			},
+			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets"},
+		},
+		{
+			desc: "admissionControl allowed on Gateway target",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					AdmissionControl: &egv1a1.AdmissionControl{
+						MinSuccessRate: new(uint32(50)),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "admissionControl allowed on ListenerSet target",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("ListenerSet"),
+								Name:  gwapiv1.ObjectName("xls"),
+							},
+						},
+					},
+					AdmissionControl: &egv1a1.AdmissionControl{
+						MinSuccessRate: new(uint32(50)),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "admissionControl allowed on GRPCRoute target",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("GRPCRoute"),
+								Name:  gwapiv1.ObjectName("grpc-route"),
+							},
+						},
+					},
+					AdmissionControl: &egv1a1.AdmissionControl{
+						MinSuccessRate: new(uint32(50)),
 					},
 				}
 			},
@@ -102,7 +410,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -124,7 +432,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -165,7 +473,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -677,6 +985,175 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "backendUtilization with OutOfBand fields is valid",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{
+									ReportingPeriod: new(gwapiv1.Duration("5s")),
+									Port:            new(int32(9001)),
+									Authority:       new("orca.local"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "backendUtilization OutOfBand port zero is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(0))},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.port: Invalid value:",
+				": spec.loadBalancer.backendUtilization.outOfBand.port in body should be greater than or equal to 1",
+			},
+		},
+		{
+			desc: "backendUtilization OutOfBand port above max is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(70000))},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.port: Invalid value:",
+				": spec.loadBalancer.backendUtilization.outOfBand.port in body should be less than or equal to 65535",
+			},
+		},
+		{
+			desc: "backendUtilization OutOfBand reportingPeriod of zero is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{ReportingPeriod: new(gwapiv1.Duration("0s"))},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.reportingPeriod: Invalid value:",
+				": reportingPeriod must be greater than 0",
+			},
+		},
+		{
+			desc: "backendUtilization OutOfBand empty authority is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("")},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.authority: Invalid value:",
+				": spec.loadBalancer.backendUtilization.outOfBand.authority in body should be at least 1 chars long",
+			},
+		},
+		{
+			desc: "backendUtilization OutOfBand authority with newline is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("foo\nbar")},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.backendUtilization.outOfBand.authority: Invalid value:",
+				`: spec.loadBalancer.backendUtilization.outOfBand.authority in body should match '^[^\x00\n\r]*$'`,
+			},
 		},
 		{
 			desc: "backendUtilization field nil when type is BackendUtilization",
@@ -1774,7 +2251,36 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "rate limit requests of zero is rejected",
+			desc: "rate limit requests of one is accepted",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{
+										Requests: 1,
+										Unit:     "Minute",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "global rate limit requests of zero is accepted",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1800,10 +2306,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.ratelimit.global.rules[0].limit.requests",
-				"should be greater than or equal to 1",
-			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "local rate limit requests at uint32 max boundary is accepted",
@@ -1835,7 +2338,36 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "local rate limit requests of zero is rejected",
+			desc: "local rate limit requests of one is accepted",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{
+										Requests: 1,
+										Unit:     "Minute",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "local rate limit requests of zero is accepted",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1861,10 +2393,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.ratelimit.local.rules[0].limit.requests",
-				"should be greater than or equal to 1",
-			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "valid connectionBufferLimitBytes format",
@@ -2697,6 +3226,37 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{`response cost is not supported for Local Rate Limits`},
 		},
 		{
+			desc: "invalid local rate limit rule sourcing limit from metadata",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{
+										Requests: 10,
+										Unit:     "Minute",
+										// This is not supported for LocalRateLimit.
+										FromMetadata: &egv1a1.RateLimitValueMetadata{Namespace: "something.com", Key: "some_limit"},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{`limit fromMetadata is not supported for Local Rate Limits`},
+		},
+		{
 			desc: "invalid RateLimitSelectCondition with no selectors",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -3265,6 +3825,99 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "invalid bandwidthLimit prefix with carriage return",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Response: &egv1a1.BandwidthLimitResponseConfig{
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("10M"),
+								Unit:  egv1a1.BandwidthLimitUnitSecond,
+							},
+							ResponseTrailers: &egv1a1.BandwidthLimitResponseTrailers{
+								Prefix: new("x-eg\r"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.bandwidthLimit.response.responseTrailers.prefix",
+				"in body should match",
+			},
+		},
+		{
+			desc: "invalid bandwidthLimit prefix with newline",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Response: &egv1a1.BandwidthLimitResponseConfig{
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("10M"),
+								Unit:  egv1a1.BandwidthLimitUnitSecond,
+							},
+							ResponseTrailers: &egv1a1.BandwidthLimitResponseTrailers{
+								Prefix: new("x-eg\n"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.bandwidthLimit.response.responseTrailers.prefix",
+				"in body should match",
+			},
+		},
+		{
+			desc: "invalid bandwidthLimit prefix with null byte",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Response: &egv1a1.BandwidthLimitResponseConfig{
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("10M"),
+								Unit:  egv1a1.BandwidthLimitUnitSecond,
+							},
+							ResponseTrailers: &egv1a1.BandwidthLimitResponseTrailers{
+								Prefix: new("x-eg\x00"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.bandwidthLimit.response.responseTrailers.prefix",
+				"in body should match",
+			},
+		},
+		{
 			desc: "invalid bandwidthLimit with neither request nor response",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -3281,6 +3934,164 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"at least one of request or response must be specified"},
+		},
+		{
+			desc: "valid HTTP healthcheck requestBody with lowercase post method",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path:   "/healthz",
+									Method: new("post"),
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ping"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid HTTP healthcheck requestBody without a method (defaults to GET)",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path: "/healthz",
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ping"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"The requestBody field can only be set when method is POST or PUT"},
+		},
+		{
+			desc: "invalid HTTP healthcheck requestBody with lowercase get method",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path:   "/healthz",
+									Method: new("get"),
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ping"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"The requestBody field can only be set when method is POST or PUT"},
+		},
+		{
+			desc: "invalid HTTP healthcheck requestBody with empty method",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path:   "/healthz",
+									Method: new(""),
+									RequestBody: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ping"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"The requestBody field can only be set when method is POST or PUT"},
+		},
+		{
+			desc: "valid HTTP healthcheck without requestBody and default method",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							Active: &egv1a1.ActiveHealthCheck{
+								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+								HTTP: &egv1a1.HTTPActiveHealthChecker{
+									Path: "/healthz",
+									ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
+										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+										Text: new("ok"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 	}
 

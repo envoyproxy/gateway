@@ -25,6 +25,9 @@
             "clusterManager": {
               "localClusterName": "local_cluster"
             },
+            "deferredStatOptions": {
+              "enableDeferredCreationStats": true
+            },
             "dynamicResources": {
               "adsConfig": {
                 "apiType": "DELTA_GRPC",
@@ -54,7 +57,6 @@
                 {
                   "name": "global_config",
                   "staticLayer": {
-                    "envoy.restart_features.use_eds_cache_for_ads": true,
                     "re2.max_program_size.error_level": 4294967295,
                     "re2.max_program_size.warn_level": 1000
                   }
@@ -983,6 +985,7 @@
                           "rds": {
                             "configSource": {
                               "ads": {},
+                              "initialFetchTimeout": "0s",
                               "resourceApiVersion": "V3"
                             },
                             "routeConfigName": "default/eg/http"
@@ -1135,6 +1138,7 @@
                           "rds": {
                             "configSource": {
                               "ads": {},
+                              "initialFetchTimeout": "0s",
                               "resourceApiVersion": "V3"
                             },
                             "routeConfigName": "default/eg/grpc"

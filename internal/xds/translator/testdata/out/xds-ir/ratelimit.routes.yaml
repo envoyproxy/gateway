@@ -117,6 +117,12 @@
                     exact: one
             hitsAddend:
               number: "12345"
+            limit:
+              dynamicMetadata:
+                metadataKey:
+                  key: envoy.lb
+                  path:
+                  - key: tenant_rate_limit
           - actions:
             - genericKey:
                 descriptorKey: req-and-resp-cost
@@ -132,6 +138,12 @@
             applyOnStreamDone: true
             hitsAddend:
               format: '%DYNAMIC_METADATA(something.com:key)%'
+            limit:
+              dynamicMetadata:
+                metadataKey:
+                  key: envoy.lb
+                  path:
+                  - key: tenant_rate_limit
     - match:
         path: test
       name: req-cost
@@ -192,3 +204,33 @@
             applyOnStreamDone: true
             hitsAddend:
               format: '%DYNAMIC_METADATA(something.com:key)%'
+    - match:
+        path: foo/bar/limit-from-metadata
+      name: limit-from-metadata
+      route:
+        cluster: fifth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: first-listener
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: limit-from-metadata
+                descriptorValue: limit-from-metadata
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-tenant-id
+                  stringMatch:
+                    exact: one
+            limit:
+              dynamicMetadata:
+                metadataKey:
+                  key: envoy.lb
+                  path:
+                  - key: tenant_rate_limit

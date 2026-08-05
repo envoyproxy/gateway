@@ -587,6 +587,10 @@ function StreamHandle:connectionStreamInfo()
   return ConnectionStreamInfo
 end
 
+function StreamHandle:filterContext()
+  return Metadata
+end
+
 function StreamHandle:setUpstreamOverrideHost(host, strict)
 end
 

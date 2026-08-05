@@ -176,6 +176,7 @@ securityPolicies:
                 requestTimeout: 5s
               tcp:
                 connectTimeout: 15s
+          failedRefetchDuration: 30s
           uri: https://foo.bar.com/jwt/public-key/jwks.json
     targetRef:
       group: gateway.networking.k8s.io
@@ -284,6 +285,7 @@ xdsIR:
               issuer: https://foo.bar.com
               name: foobar
               remoteJWKS:
+                failedRefetchDuration: 30s
                 traffic:
                   backendConnection:
                     bufferLimit: 100000000

@@ -24,7 +24,13 @@ var (
 		[]float64{0.1, 10, 50, 100, 1000, 10000},
 	)
 
+	xdsNACKTotal = metrics.NewCounter(
+		"xds_nack_total",
+		"Total number of xds updates rejected (NACKed) by Envoy, by node id and resource type.",
+	)
+
 	nodeIDLabel        = metrics.NewLabel("nodeID")
 	streamIDLabel      = metrics.NewLabel("streamID")
 	isDeltaStreamLabel = metrics.NewLabel("isDeltaStream")
+	typeURLLabel       = metrics.NewLabel("typeURL")
 )

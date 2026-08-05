@@ -1,0 +1,153 @@
+securityPolicies:
+# this policy status
+# - Accepted: true
+# - Overridden: true
+#   - envoy-gateway/ext-listeners/ext-http-1
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-listenerset
+  spec:
+    cors:
+      allowOrigins:
+      - "https://ls.example.com"
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+# this policy status
+# - Accepted: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-listenerset-section
+  spec:
+    cors:
+      allowOrigins:
+      - "https://ls-section.example.com"
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+      sectionName: ext-http-1
+# this policy status
+# - Accepted: true
+# - Overridden: true
+#   - envoy-gateway/ext-listeners/ext-http-1
+#   - envoy-gateway/ext-listeners
+#   - envoy-gateway/composite-gateway/http-8080
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gw
+  spec:
+    cors:
+      allowOrigins:
+      - "https://gw.example.com"
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+# this policy status
+# - Accepted: true
+# Not overridden because it is attached to a gw section level, ListenerSet policy is sibling.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gw-section
+  spec:
+    cors:
+      allowOrigins:
+      - "https://gw-section.example.com"
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+      sectionName: http-8080
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-gw
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: composite-gateway
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-ls
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-8080
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: ext-http-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: ext-http-2
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: All

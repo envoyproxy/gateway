@@ -114,6 +114,7 @@ securityPolicies:
                 consecutiveLocalOriginFailures: 5
                 splitExternalLocalOriginErrors: false
           uri: https://foo.bar.com/jwt/public-key/jwks.json
+          failedRefetchDuration: 30s
         claimToHeaders:
         - header: claim-header
           claim: claim

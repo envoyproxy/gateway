@@ -75,14 +75,15 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 					continue
 				}
 
+				// Set defaults for unset fields before validation so the validator
+				// always sees a fully-defaulted struct.
+				eg.SetEnvoyGatewayDefaults()
+				eg.Logging.SetEnvoyGatewayLoggingDefaults()
+
 				if err := validation.ValidateEnvoyGateway(eg); err != nil {
 					r.logger.Error(err, "failed to validate EnvoyGateway config")
 					continue
 				}
-
-				// Set defaults for unset fields
-				eg.SetEnvoyGatewayDefaults()
-				eg.Logging.SetEnvoyGatewayLoggingDefaults()
 
 				r.cfgMu.Lock()
 				r.cfg.EnvoyGateway = eg
@@ -139,6 +140,14 @@ func (r *Loader) runHook(ctx context.Context) error {
 // Errors returns a channel where hook errors are reported.
 func (r *Loader) Errors() <-chan error {
 	return r.hookErr
+}
+
+// Logger returns the current logger, safe to call concurrently with a config
+// reload replacing it.
+func (r *Loader) Logger() logging.Logger {
+	r.cfgMu.RLock()
+	defer r.cfgMu.RUnlock()
+	return r.cfg.Logger
 }
 
 // Wait returns when success to acquire mutex, which means no hook is running.

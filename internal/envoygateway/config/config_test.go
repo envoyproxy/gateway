@@ -65,7 +65,7 @@ func TestValidate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.cfg.Validate()
+			_, err := tc.cfg.Validate()
 			if !tc.expect {
 				require.Error(t, err)
 			} else {

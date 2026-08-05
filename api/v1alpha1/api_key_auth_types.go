@@ -21,6 +21,8 @@ type APIKeyAuth struct {
 
 	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.
+	//
+	// +kubebuilder:validation:MinItems=1
 	ExtractFrom []*ExtractFrom `json:"extractFrom"`
 
 	// ForwardClientIDHeader is the name of the header to forward the client identity to the backend
@@ -36,24 +38,31 @@ type APIKeyAuth struct {
 }
 
 // ExtractFrom is where to fetch the key from the coming request.
-// Only one of header, param or cookie is supposed to be specified.
+// Only one of headers, params or cookies must be specified.
+// +kubebuilder:validation:XValidation:rule="(has(self.headers) ? 1 : 0) + (has(self.params) ? 1 : 0) + (has(self.cookies) ? 1 : 0) == 1",message="exactly one of headers, params, or cookies must be specified"
 type ExtractFrom struct {
 	// Headers is the names of the header to fetch the key from.
 	// If multiple headers are specified, envoy will look for the api key in the order of the list.
-	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	// This field is optional, but only one of headers, params or cookies must be specified.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:MinLength=1
 	Headers []string `json:"headers,omitempty"`
 	// Params is the names of the query parameter to fetch the key from.
 	// If multiple params are specified, envoy will look for the api key in the order of the list.
-	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	// This field is optional, but only one of headers, params or cookies must be specified.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:MinLength=1
 	Params []string `json:"params,omitempty"`
 	// Cookies is the names of the cookie to fetch the key from.
 	// If multiple cookies are specified, envoy will look for the api key in the order of the list.
-	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	// This field is optional, but only one of headers, params or cookies must be specified.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:MinLength=1
 	Cookies []string `json:"cookies,omitempty"`
 }

@@ -55,3 +55,34 @@ func LoadTLSConfig(tlsCrt, tlsKey, caCrt string) (*tls.Config, error) {
 		},
 	}, nil
 }
+
+// LoadServerTLSConfig returns a server-only TLSConfig from a certificate. Unlike
+// LoadTLSConfig it does not require client certificate verification, for callers
+// that authenticate peers out-of-band (e.g. JWT).
+func LoadServerTLSConfig(tlsCrt, tlsKey string) (*tls.Config, error) {
+	loadConfig := func() (*tls.Config, error) {
+		cert, err := tls.LoadX509KeyPair(tlsCrt, tlsKey)
+		if err != nil {
+			return nil, err
+		}
+
+		return &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			NextProtos:   []string{"h2"},
+			MinVersion:   tls.VersionTLS13,
+		}, nil
+	}
+
+	// Attempt to load certificate and key to catch configuration errors early.
+	if _, err := loadConfig(); err != nil {
+		return nil, err
+	}
+
+	return &tls.Config{
+		MinVersion: tls.VersionTLS13,
+		Rand:       rand.Reader,
+		GetConfigForClient: func(*tls.ClientHelloInfo) (*tls.Config, error) {
+			return loadConfig()
+		},
+	}, nil
+}

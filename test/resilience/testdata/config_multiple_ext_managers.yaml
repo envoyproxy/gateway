@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+      enableBackend: true
+    extensionManagers:
+    - name: ext-a
+      resources:
+      - group: ext-a.example.io
+        version: v1
+        kind: FooFilter
+      hooks:
+        xdsTranslator:
+          post:
+          - VirtualHost
+          - Route
+      service:
+        fqdn:
+          hostname: gateway-ext-server-a.envoy-gateway-system.svc.cluster.local
+          port: 5005
+    - name: ext-b
+      resources:
+      - group: ext-b.example.io
+        version: v1
+        kind: BarFilter
+      hooks:
+        xdsTranslator:
+          post:
+          - VirtualHost
+          - Route
+      service:
+        fqdn:
+          hostname: gateway-ext-server-b.envoy-gateway-system.svc.cluster.local
+          port: 5005

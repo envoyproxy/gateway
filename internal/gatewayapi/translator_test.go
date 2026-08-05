@@ -56,6 +56,7 @@ func TestTranslate(t *testing.T) {
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
+		PerResourceSystemCASecret       bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -93,6 +94,36 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled: true,
 			SDSEnabled:     true,
 		},
+		{
+			name: "envoyextensionpolicy-with-extproc-with-backendtlspolicy-shared-secret",
+		},
+		{
+			name:                      "envoyproxy-otel-backend-tls-per-resource-secret",
+			BackendEnabled:            true,
+			PerResourceSystemCASecret: true,
+		},
+		{
+			name:                      "envoyextensionpolicy-with-extproc-with-backendtlspolicy-per-resource-secret",
+			PerResourceSystemCASecret: true,
+		},
+		{
+			name:           "backend-system-truststore-shared-secret",
+			BackendEnabled: true,
+		},
+		{
+			name:                      "backend-system-truststore-per-resource-secret",
+			BackendEnabled:            true,
+			PerResourceSystemCASecret: true,
+		},
+		{
+			name:           "backend-system-truststore-btlsp-override-shared-secret",
+			BackendEnabled: true,
+		},
+		{
+			name:                      "backend-system-truststore-btlsp-override-per-resource-secret",
+			BackendEnabled:            true,
+			PerResourceSystemCASecret: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -118,6 +149,7 @@ func TestTranslate(t *testing.T) {
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
+			perResourceSystemCASecret := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -127,6 +159,7 @@ func TestTranslate(t *testing.T) {
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
+					perResourceSystemCASecret = config.PerResourceSystemCASecret
 				}
 			}
 
@@ -137,8 +170,10 @@ func TestTranslate(t *testing.T) {
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
+				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
+				MergeBackends:                   IsMergeBackendsEnabled(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
@@ -942,8 +977,6 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 		want           bool
 	}
 
-	translator := &Translator{}
-
 	baseCase := func() *testcase {
 		return &testcase{
 			name: "reference covered by reference grant (all resources of kind)",
@@ -1044,17 +1077,18 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 				referenceGrants = append(referenceGrants, tc.referenceGrant)
 			}
 
-			assert.Equal(t, tc.want, translator.validateCrossNamespaceRef(tc.from, tc.to, referenceGrants))
+			assert.Equal(t, tc.want, isCrossNamespaceReferencePermitted(tc.from, tc.to, referenceGrants))
 		})
 	}
 }
 
 func TestServicePortToContainerPort(t *testing.T) {
 	testCases := []struct {
-		servicePort   int32
-		containerPort int32
-		envoyProxy    *egv1a1.EnvoyProxy
-		runningOnHost bool
+		servicePort          int32
+		containerPort        int32
+		envoyProxy           *egv1a1.EnvoyProxy
+		runningOnHost        bool
+		infraManagedRemotely bool
 	}{
 		{
 			servicePort:   99,
@@ -1116,15 +1150,22 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
+			servicePort:          99,
+			containerPort:        99,
+			infraManagedRemotely: true,
+		},
+		{
 			servicePort:   99,
 			containerPort: 99,
 			runningOnHost: true,
 		},
 	}
-	for _, tc := range testCases {
-		translator := &Translator{RunningOnHost: tc.runningOnHost}
-		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
-		assert.Equal(t, tc.containerPort, got)
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			translator := &Translator{RunningOnHost: tc.runningOnHost, InfraRemotelyManaged: tc.infraManagedRemotely}
+			got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
+			assert.Equal(t, tc.containerPort, got)
+		})
 	}
 }
 
@@ -1167,6 +1208,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
 		ExtensionServerPolicies []*ir.UnstructuredRef
+		BackendClusters         []*ir.BackendCluster
 	}{
 		ReadyListener:           a.ReadyListener,
 		AccessLog:               a.AccessLog,
@@ -1179,6 +1221,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
+		BackendClusters:         a.BackendClusters,
 	}
 
 	// Ensure we didn't drop an exported field.

@@ -119,6 +119,16 @@ envoyPatchPolicies:
       op: copy
       from: "/endpoints/1/load_balancing_weight"
       path: "/endpoints/0/load_balancing_weight"
+  # Patch route.typed_per_filter_config property.
+  - name: envoy-gateway/gateway-1/http
+    operation:
+      jsonPath: ..routes[?(@.name=~"httproute/default/httproute-1")]
+      op: add
+      path: typed_per_filter_config/another-filter-per-filter-config
+      value:
+        '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+        config: {}
+    type: type.googleapis.com/envoy.config.route.v3.RouteConfiguration
 http:
 - name: "first-listener"
   address: "::"
@@ -168,3 +178,61 @@ http:
         - host: "4.5.6.7"
           port: 60000
         name: "second-route-dest/backend/0"
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    envoyExtensions:
+      wasms:
+      - config:
+          parameter1:
+            key1: value1
+          parameter2:
+            key2:
+              key3: value3
+        failOpen: true
+        httpWasmCode:
+          servingURL: https://envoy-gateway:18002/fe571e7b1ef5dc626ceb2c2c86782a134a92989a2643485238951696ae4334c3.wasm
+          originalDownloadingURL: https://www.test.com/wasm-filter-4.wasm
+          sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
+        name: envoyextensionpolicy/default/policy-for-http-route/wasm/0
+        wasmName: wasm-filter-4
+  - destination:
+      name: httproute/default/httproute-1/rule/1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/1/backend/0
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-1/rule/1/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /

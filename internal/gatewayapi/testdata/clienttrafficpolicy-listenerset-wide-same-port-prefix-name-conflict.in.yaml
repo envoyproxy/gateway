@@ -1,0 +1,68 @@
+# Tests that a ListenerSet-wide CTP correctly detects a port conflict when another
+# ListenerSet's name is a string prefix of the targeted ListenerSet's name
+# (e.g. "ext" vs "ext-b"). Without a trailing separator in the prefix comparison,
+# "ext" would falsely match "ext-b" listeners, hiding the conflict.
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: ctp-ls-wide
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext
+    tcpKeepalive:
+      probes: 5
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: Same
+    listeners:
+    - name: core-http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1alpha1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: http
+      hostname: ext.example.com
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1alpha1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-b
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: http
+      hostname: ext-b.example.com
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: Same

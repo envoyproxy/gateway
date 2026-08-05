@@ -54,6 +54,16 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+    - matches:
+      - path:
+          value: "/v2"
+      retry:
+        attempts: 3
+      timeouts:
+        backendRequest: 3s
+      backendRefs:
+      - name: service-1
+        port: 8080
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy

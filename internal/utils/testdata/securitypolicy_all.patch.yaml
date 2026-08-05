@@ -1,0 +1,50 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: patched
+spec:
+  basicAuth:
+    users:
+      name: users-route
+  apiKeyAuth:
+    credentialRefs:
+    - name: api-keys-route
+    sanitize: true
+  authorization:
+    rules:
+    - name: route-rule
+      action: Deny
+      principal:
+        headers:
+        - name: x-role
+          values:
+          - route
+  extAuth:
+    grpc:
+      backendRefs:
+      - name: ext-auth-route
+        port: 9002
+    # arrays all replace
+    contextExtensions:
+    - name: shared
+      type: Value
+      value: route
+    - name: route-only
+      type: Value
+      value: route-only
+  oidc:
+    provider:
+      backendRefs:
+      - name: oidc-route
+        port: 8443
+    clientIDRef:
+      name: oidc-client-id-route
+    clientSecret:
+      name: oidc-client-secret-route
+  jwt:
+    providers:
+    - name: jwt-route
+      issuer: https://issuer.route.example.com
+      localJWKS:
+        type: Inline
+        inline: "{}"

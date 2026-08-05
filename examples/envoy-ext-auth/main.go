@@ -294,6 +294,7 @@ func authCheckerHandler(w http.ResponseWriter, req *http.Request) {
 	if len(extracted) == 2 && extracted[0] == "Bearer" {
 		if user, ok := testUsers[extracted[1]]; ok {
 			w.Header().Add("x-current-user", user) // this should be set before call WriteHeader
+			w.Header().Add("x-ext-auth-req-path", req.URL.Path)
 			w.WriteHeader(http.StatusOK)
 			return
 		}

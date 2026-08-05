@@ -1,0 +1,66 @@
+# Tests that a ClientTrafficPolicy using targetSelectors can match both a Gateway
+# and a ListenerSet in the same policy, with the policy applied to listeners from both.
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: ctp-mixed-selector
+  spec:
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      matchLabels:
+        app: core
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      matchLabels:
+        app: external
+    tcpKeepalive:
+      probes: 3
+      idleTime: 10m
+      interval: 60s
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: composite-gateway
+    labels:
+      app: core
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: Same
+    listeners:
+    - name: core-http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1alpha1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+    labels:
+      app: external
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: ext-http-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: ext-http-2
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: Same

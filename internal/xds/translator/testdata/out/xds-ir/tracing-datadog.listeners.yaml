@@ -24,13 +24,13 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         tracing:
-          clientSampling:
-            value: 100
+          clientSampling: {}
           customTags:
           - environment:
               defaultValue: '-'

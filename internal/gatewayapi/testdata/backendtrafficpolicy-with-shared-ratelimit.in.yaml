@@ -27,6 +27,20 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-3
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
 grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: GRPCRoute
@@ -54,6 +68,25 @@ httpRoutes:
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-3
       sectionName: http
     rules:
     - matches:
@@ -90,6 +123,42 @@ backendTrafficPolicies:
             requests: 10
             unit: Hour
           shared: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+    rateLimit:
+      type: Global
+      global:
+        rules:
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: one
+            - name: x-org-id
+              type: Distinct
+            - name: x-org-id
+              value: admin
+              invert: true
+          limit:
+            requests: 10
+            unit: Hour
+          shared: true
+          cost:
+            request:
+              from: Number
+              number: 0
+            response:
+              from: Metadata
+              metadata:
+                namespace: my.cost.ns
+                key: request_cost
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
