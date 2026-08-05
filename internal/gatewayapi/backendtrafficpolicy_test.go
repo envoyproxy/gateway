@@ -3010,7 +3010,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 			expected:     false,
 		},
 		{
-			name: "bare ListenerSet-targeted BTP with cluster-scoped field disqualifies merging for a route attached via that ListenerSet",
+			name: "bare ListenerSet-targeted BTP with cluster-scoped field disqualifies merging",
 			btps: []*egv1a1.BackendTrafficPolicy{
 				{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-listenerset"},
@@ -3092,7 +3092,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 			expected:      false,
 		},
 		{
-			name: "ListenerSet-attached route with no ListenerSet-level BTP falls through to bare Gateway scope",
+			name: "listenerSetNN set with no ListenerSet-level BTP falls through to bare Gateway scope",
 			btps: []*egv1a1.BackendTrafficPolicy{
 				{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway-for-ls-fallthrough"},

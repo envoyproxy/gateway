@@ -579,14 +579,15 @@ func (t *Translator) hasClusterSettingsBelowGateway(
 		return false
 	}
 	gatewayNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
-	// All of one parentRef's resolved listeners share the same owner (a parentRef targets either
-	// a Gateway or a ListenerSet, never both), so checking the first resolved listener is enough
-	// to tell which one this parentRef's listenerName belongs to.
 	var listenerSetNN *types.NamespacedName
-	if len(parentRef.listeners) > 0 && parentRef.listeners[0].isFromListenerSet() {
+	if parentRef.Kind != nil && *parentRef.Kind == resource.KindListenerSet {
+		parentNamespace := routeCtx.GetNamespace()
+		if parentRef.Namespace != nil {
+			parentNamespace = string(*parentRef.Namespace)
+		}
 		listenerSetNN = &types.NamespacedName{
-			Namespace: parentRef.listeners[0].listenerSet.Namespace,
-			Name:      parentRef.listeners[0].listenerSet.Name,
+			Namespace: parentNamespace,
+			Name:      string(parentRef.Name),
 		}
 	}
 	if t.BTPClusterSettingsIndex.HasClusterSettingsBelowGateway(

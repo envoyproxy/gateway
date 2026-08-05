@@ -238,10 +238,6 @@ func BuildBTPIndexes(
 				case kind == resource.KindListenerSet && ref.SectionName != nil:
 					clusterSettingsIdx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
 				case kind == resource.KindListenerSet:
-					// Unlike bare-Gateway, a bare-ListenerSet setting is NOT uniform across every
-					// route that could share a merged cluster under the same Gateway - sibling
-					// ListenerSets/listeners under that Gateway don't get it. So, unlike the
-					// Gateway case above, this needs a real entry.
 					clusterSettingsIdx.setListenerSetLevel(nn, hasClusterScoped, true)
 				case ref.SectionName != nil:
 					clusterSettingsIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, hasClusterScoped, btp.Spec.MergeType)
@@ -249,19 +245,13 @@ func BuildBTPIndexes(
 					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
 				}
 
-				// No ListenerSet case needed here, unlike clusterSettingsIdx above: IsConsistentHash
-				// (this index's only consumer) only ever checks bare-Gateway scope, and
-				// mergeIncompatibleForWeightedRule already checks hasClusterSettingsBelowGateway
-				// (backed by clusterSettingsIdx, which does track ListenerSet/listener-level
-				// LoadBalancer settings as a cluster-scoped field) first, short-circuiting before
-				// this index is ever consulted for anything below bare-Gateway scope.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName == nil:
 					// Every accepted Gateway-wide BTP must claim this slot, even one that leaves
 					// LoadBalancer unset, so a younger conflicting BTP can't silently win it.
 					loadBalancerIdx.setGatewayLevel(nn, hasLoadBalancer && btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType)
 				default:
-					// A listener/route-rule/route-level LoadBalancer setting already disqualifies
+					// A listener/listenerSet/route-rule/route-level LoadBalancer setting already disqualifies
 					// its own rule from merging on its own, so it's never looked up here.
 				}
 			}
