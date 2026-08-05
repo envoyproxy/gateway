@@ -12,7 +12,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2
 	github.com/containers/image/v5 v5.36.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v29.6.2+incompatible
+	github.com/docker/cli v29.7.1+incompatible
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.14.0
@@ -36,8 +36,8 @@ require (
 	github.com/google/go-containerregistry v0.21.7
 	github.com/klauspost/compress v1.19.1
 	github.com/miekg/dns v1.1.72
-	github.com/moby/go-archive v0.2.1
-	github.com/ohler55/ojg v1.28.2
+	github.com/moby/go-archive v0.3.2
+	github.com/ohler55/ojg v1.28.3
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.2
@@ -69,7 +69,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260720211330-0afa2a65878a
-	google.golang.org/grpc v1.82.1
+	google.golang.org/grpc v1.83.0
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	gopkg.in/yaml.v3 v3.0.1
