@@ -2644,6 +2644,7 @@ func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
 		types.NamespacedName{},
 		nil,
 		nil,
+		nil,
 	)
 	require.True(t, got)
 }
@@ -2663,10 +2664,12 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 		btps          []*egv1a1.BackendTrafficPolicy
 		routes        []client.Object
 		gateways      []*GatewayContext
+		listenerSets  []*gwapiv1.ListenerSet
 		routeKind     gwapiv1.Kind
 		routeNN       types.NamespacedName
 		gatewayNN     types.NamespacedName
 		listenerName  *gwapiv1.SectionName
+		listenerSetNN *types.NamespacedName
 		routeRuleName *gwapiv1.SectionName
 		expected      bool
 	}{
@@ -3001,8 +3004,8 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			idx := BuildBTPIndexes(tt.btps, tt.routes, tt.gateways, nil, nil, nil, true)
-			got := idx.ClusterSettings.HasClusterSettingsBelowGateway(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
+			idx := BuildBTPIndexes(tt.btps, tt.routes, tt.gateways, tt.listenerSets, nil, nil, true)
+			got := idx.ClusterSettings.HasClusterSettingsBelowGateway(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.listenerSetNN, tt.routeRuleName)
 			require.Equal(t, tt.expected, got)
 		})
 	}
