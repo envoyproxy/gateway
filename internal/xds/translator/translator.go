@@ -121,12 +121,18 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
+	// The HTTP and TCP listeners that share an address and port are translated into a
+	// single xDS listener, so the settings that apply to the socket are resolved
+	// across all of them up front.
+	socketSettingsByListener := buildSocketSettings(xdsIR)
+
 	if err := t.processHTTPListenerXdsTranslation(
-		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics); err != nil {
+		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, socketSettingsByListener); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+	if err := t.processTCPListenerXdsTranslation(
+		tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics, socketSettingsByListener); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -325,6 +331,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	accessLog *ir.AccessLog,
 	tracing *ir.Tracing,
 	metrics *ir.Metrics,
+	socketSettingsByListener map[listenerKey]*socketSettings,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -389,8 +396,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
 			if tcpXDSListener, err = t.buildXdsTCPListener(
 				&httpListener.CoreListenerDetails,
-				httpListener.TCPKeepalive,
-				httpListener.Connection,
+				socketSettingsByListener[listenerKey{Address: httpListener.Address, Port: httpListener.Port}],
 				accessLog,
 			); err != nil {
 				errs = errors.Join(errs, err)
@@ -831,6 +837,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	tcpListeners []*ir.TCPListener,
 	accesslog *ir.AccessLog,
 	metrics *ir.Metrics,
+	socketSettingsByListener map[listenerKey]*socketSettings,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -844,8 +851,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		if xdsListener == nil {
 			if xdsListener, err = t.buildXdsTCPListener(
 				&tcpListener.CoreListenerDetails,
-				tcpListener.TCPKeepalive,
-				tcpListener.Connection,
+				socketSettingsByListener[listenerKey{Address: tcpListener.Address, Port: tcpListener.Port}],
 				accesslog,
 			); err != nil {
 				// skip this listener if failed to build xds listener

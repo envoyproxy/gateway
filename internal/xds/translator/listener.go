@@ -209,20 +209,80 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 	return extensionConfig
 }
 
+// socketSettings holds the settings that Envoy applies to the listener socket itself
+// rather than to an individual filter chain.
+//
+// Gateway listeners that share an address and port collapse into a single xDS
+// listener, so these settings belong to the whole socket and have to be resolved
+// across all the IR listeners that end up on it.
+type socketSettings struct {
+	keepalive               *ir.TCPKeepalive
+	bufferLimitBytes        *uint32
+	maxAcceptPerSocketEvent *uint32
+}
+
+// buildSocketSettings resolves the socket settings for every address and port
+// combination in the IR.
+//
+// The settings are resolved per field: a listener that leaves a field unset does not
+// shadow another listener on the same socket that sets it, which would otherwise
+// silently replace a configured value with the hardcoded default. When more than one
+// listener sets the same field, the first one still wins, so the resulting
+// configuration only changes for the sockets that were getting a default they never
+// asked for.
+func buildSocketSettings(xdsIR *ir.Xds) map[listenerKey]*socketSettings {
+	resolved := make(map[listenerKey]*socketSettings)
+
+	collect := func(details *ir.CoreListenerDetails, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection) {
+		key := listenerKey{Address: details.Address, Port: details.Port}
+		settings, ok := resolved[key]
+		if !ok {
+			settings = &socketSettings{}
+			resolved[key] = settings
+		}
+
+		if settings.keepalive == nil {
+			settings.keepalive = keepalive
+		}
+		if connection == nil {
+			return
+		}
+		if settings.bufferLimitBytes == nil {
+			settings.bufferLimitBytes = connection.BufferLimitBytes
+		}
+		if settings.maxAcceptPerSocketEvent == nil {
+			settings.maxAcceptPerSocketEvent = connection.MaxAcceptPerSocketEvent
+		}
+	}
+
+	// The HTTP listeners are translated before the TCP ones, so they are visited in
+	// the same order here to keep the winning listener unchanged.
+	for _, httpListener := range xdsIR.HTTP {
+		collect(&httpListener.CoreListenerDetails, httpListener.TCPKeepalive, httpListener.Connection)
+	}
+	for _, tcpListener := range xdsIR.TCP {
+		collect(&tcpListener.CoreListenerDetails, tcpListener.TCPKeepalive, tcpListener.Connection)
+	}
+
+	return resolved
+}
+
 // buildXdsTCPListener creates a xds Listener resource
 func (t *Translator) buildXdsTCPListener(
 	listenerDetails *ir.CoreListenerDetails,
-	keepalive *ir.TCPKeepalive,
-	connection *ir.ClientConnection,
+	settings *socketSettings,
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
-	socketOptions := buildTCPSocketOptions(keepalive)
+	if settings == nil {
+		settings = &socketSettings{}
+	}
+	socketOptions := buildTCPSocketOptions(settings.keepalive)
 	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	if err != nil {
 		return nil, err
 	}
-	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
-	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(connection)
+	bufferLimitBytes := buildPerConnectionBufferLimitBytes(settings.bufferLimitBytes)
+	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(settings.maxAcceptPerSocketEvent)
 	listener := &listenerv3.Listener{
 		Name: xdsListenerName(
 			listenerDetails.Name, listenerDetails.ExternalPort,
@@ -269,21 +329,21 @@ func xdsListenerName(name string, externalPort uint32, protocol corev3.SocketAdd
 	return name
 }
 
-func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
-	if connection != nil && connection.BufferLimitBytes != nil {
-		return wrapperspb.UInt32(*connection.BufferLimitBytes)
+func buildPerConnectionBufferLimitBytes(bufferLimitBytes *uint32) *wrapperspb.UInt32Value {
+	if bufferLimitBytes != nil {
+		return wrapperspb.UInt32(*bufferLimitBytes)
 	}
 	return wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes)
 }
 
-func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
-	if connection == nil || connection.MaxAcceptPerSocketEvent == nil {
+func buildMaxAcceptPerSocketEvent(maxAcceptPerSocketEvent *uint32) *wrapperspb.UInt32Value {
+	if maxAcceptPerSocketEvent == nil {
 		return wrapperspb.UInt32(defaultMaxAcceptConnectionsPerSocketEvent)
 	}
-	if *connection.MaxAcceptPerSocketEvent == 0 {
+	if *maxAcceptPerSocketEvent == 0 {
 		return nil
 	}
-	return wrapperspb.UInt32(*connection.MaxAcceptPerSocketEvent)
+	return wrapperspb.UInt32(*maxAcceptPerSocketEvent)
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
