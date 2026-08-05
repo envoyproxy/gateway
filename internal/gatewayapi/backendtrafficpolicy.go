@@ -252,9 +252,16 @@ func BuildBTPIndexes(
 
 	for _, btp := range btps {
 		hasRoutingType := btp.Spec.RoutingType != nil
+		// A policy with mergeType Replace discards the parent policy's configuration
+		// entirely, so its routes must not share a merged BackendCluster with routes
+		// governed by that parent: the shared cluster carries the parent's cluster-scoped
+		// settings and would reinstate exactly what the policy discards. This holds even
+		// when the policy sets no cluster-scoped field of its own, so it disqualifies
+		// merging on its own. See #9588 for the same problem with mergeType unset.
+		replacesParentConfig := btp.Spec.MergeType != nil && *btp.Spec.MergeType == egv1a1.Replace
 		// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
 		// accepted gateway can enable merging; RoutingType applies regardless of MergeBackends.
-		hasClusterScoped := mergeBackendsEnabled && btpSpecHasClusterScopedFields(&btp.Spec)
+		hasClusterScoped := mergeBackendsEnabled && (btpSpecHasClusterScopedFields(&btp.Spec) || replacesParentConfig)
 		hasLoadBalancer := mergeBackendsEnabled && btp.Spec.LoadBalancer != nil
 
 		if !hasRoutingType && !hasClusterScoped && !hasLoadBalancer {
@@ -426,6 +433,12 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	backendTrafficPolicies := resources.BackendTrafficPolicies
 	// BackendTrafficPolicies are already sorted by the provider layer
 
+	// TCP/UDP IR routes claimed by a route-scoped policy using mergeType Replace,
+	// keyed by replacedRouteKey. The route pass records them, and the later
+	// Gateway/ListenerSet pass skips them instead of back-filling fields the
+	// replacing policy intentionally omitted.
+	replacedRoutes := sets.New[string]()
+
 	routeMapSize := len(routes)
 	gatewayMapSize := len(gateways)
 	policyMapSize := len(backendTrafficPolicies)
@@ -500,7 +513,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 				}
 
 				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
+					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, replacedRoutes, policy, currTarget)
 			}
 		}
 	}
@@ -526,7 +539,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 				}
 
 				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
+					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, replacedRoutes, policy, currTarget)
 			}
 		}
 	}
@@ -549,7 +562,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 						res = append(res, policy)
 					}
 					t.processBackendTrafficPolicyForListenerSet(xdsIR,
-						gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+						gatewayMap, listenerSetMap, overrides, merged, replacedRoutes, policy, currTarget)
 				}
 			}
 		}
@@ -575,7 +588,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 						res = append(res, policy)
 					}
 					t.processBackendTrafficPolicyForListenerSet(xdsIR,
-						gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+						gatewayMap, listenerSetMap, overrides, merged, replacedRoutes, policy, currTarget)
 				}
 			}
 		}
@@ -595,7 +608,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 				t.processBackendTrafficPolicyForGateway(xdsIR,
-					gatewayMap, overrides, merged, policy, currTarget)
+					gatewayMap, overrides, merged, replacedRoutes, policy, currTarget)
 			}
 		}
 	}
@@ -620,7 +633,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 				t.processBackendTrafficPolicyForGateway(xdsIR,
-					gatewayMap, overrides, merged, policy, currTarget)
+					gatewayMap, overrides, merged, replacedRoutes, policy, currTarget)
 			}
 		}
 	}
@@ -750,6 +763,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	listenerSetPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
 	overrides policyScopeGraph,
 	merged policyScopeGraph,
+	replacedRoutes sets.Set[string],
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -844,7 +858,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 	if policy.Spec.MergeType == nil {
 		// Set conditions for translation error if it got any
-		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil); err != nil {
+		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil, replacedRoutes); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -900,7 +914,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 				if parentPolicy == nil {
 					// not found, fall back to the current policy
-					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, listener); err != nil {
+					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, listener, replacedRoutes); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
@@ -915,7 +929,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 				// merge with parent policy
 				if err := t.translateBackendTrafficPolicyForRouteWithMerge(
-					policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
+					policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR, replacedRoutes,
 				); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -984,6 +998,7 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
 	overrides policyScopeGraph,
 	merged policyScopeGraph,
+	replacedRoutes sets.Set[string],
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -1034,7 +1049,7 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
-	if err := t.translateBackendTrafficPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, xdsIR); err != nil {
+	if err := t.translateBackendTrafficPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, xdsIR, replacedRoutes); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -1094,6 +1109,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	overrides policyScopeGraph,
 	merged policyScopeGraph,
+	replacedRoutes sets.Set[string],
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -1130,7 +1146,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateBackendTrafficPolicyForGateway(policy, targetedGateway, currTarget, xdsIR); err != nil {
+	if err := t.translateBackendTrafficPolicyForGateway(policy, targetedGateway, currTarget, xdsIR, replacedRoutes); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -1376,6 +1392,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 	policyTargetListener *ListenerContext,
+	replacedRoutes sets.Set[string],
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy, nil)
 	if tf == nil {
@@ -1395,7 +1412,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 			// Skip if not the gateway wanted
 			continue
 		}
-		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, targetListenerName)
+		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, targetListenerName, replacedRoutes)
 	}
 
 	return errs
@@ -1406,6 +1423,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	target policyTargetReferenceWithSectionName,
 	policyTargetListener *ListenerContext, route RouteContext,
 	xdsIR resource.XdsIRMap,
+	replacedRoutes sets.Set[string],
 ) error {
 	mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
 	if err != nil {
@@ -1441,7 +1459,9 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 			// Replace the rate limit in the merged features if successful
 			tf.RateLimit = mergedRL
 		}
-	} else if policy.Spec.RateLimit == nil && parentPolicy.Spec.RateLimit != nil {
+	} else if policy.Spec.RateLimit == nil &&
+		parentPolicy.Spec.RateLimit != nil &&
+		*policy.Spec.MergeType != egv1a1.Replace {
 		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
 		tfGW, _ := t.buildTrafficFeatures(parentPolicy, nil)
 		if tfGW != nil && tfGW.RateLimit != nil {
@@ -1456,7 +1476,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		// should not happen.
 		return nil
 	}
-	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, irListenerName(policyTargetListener))
+	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, irListenerName(policyTargetListener), replacedRoutes)
 
 	return errs
 }
@@ -1467,11 +1487,17 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	target policyTargetReferenceWithSectionName,
 	x *ir.Xds,
 	policyTargetListenerName string,
+	replacedRoutes sets.Set[string],
 ) {
 	routeStatName := ""
 	if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
 		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
 	}
+
+	// A policy with mergeType Replace discards the parent policy configuration
+	// entirely, so claim the matched TCP/UDP routes to prevent the parent
+	// Gateway/Listener policy from back-filling fields this policy omitted.
+	replaceClaimsRoutes := policy.Spec.MergeType != nil && *policy.Spec.MergeType == egv1a1.Replace
 
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
@@ -1486,6 +1512,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				continue
 			}
 			if strings.HasPrefix(r.Destination.Name, prefix) {
+				if replaceClaimsRoutes {
+					replacedRoutes.Insert(replacedRouteKey(tcp.Name, r.Destination.Name))
+				}
 				// only set attributes which weren't already set by a more
 				// specific policy
 				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
@@ -1515,6 +1544,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				continue
 			}
 			if strings.HasPrefix(r.Destination.Name, prefix) {
+				if replaceClaimsRoutes {
+					replacedRoutes.Insert(replacedRouteKey(udp.Name, r.Destination.Name))
+				}
 				// only set attributes which weren't already set by a more
 				// specific policy
 				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
@@ -1773,6 +1805,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	gtwCtx *GatewayContext,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
+	replacedRoutes sets.Set[string],
 ) error {
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
@@ -1780,6 +1813,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		gatewayPolicyTargetListeners(gtwCtx, target),
 		target.SectionName == nil,
 		xdsIR,
+		replacedRoutes,
 	)
 }
 
@@ -1789,6 +1823,7 @@ func (t *Translator) translateBackendTrafficPolicyForListenerSet(
 	listenerSet *gwapiv1.ListenerSet,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
+	replacedRoutes sets.Set[string],
 ) error {
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
@@ -1796,6 +1831,7 @@ func (t *Translator) translateBackendTrafficPolicyForListenerSet(
 		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
 		false,
 		xdsIR,
+		replacedRoutes,
 	)
 }
 
@@ -1805,6 +1841,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 	targetListeners []*ListenerContext,
 	applyToBackendClusters bool,
 	xdsIR resource.XdsIRMap,
+	replacedRoutes sets.Set[string],
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy, nil)
 	if tf == nil {
@@ -1832,6 +1869,11 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		}
 
 		for _, r := range tcp.Routes {
+			// Skip routes claimed by a route-scoped policy with mergeType Replace,
+			// which discards the parent policy configuration entirely.
+			if replacedRoutes.Has(replacedRouteKey(tcp.Name, r.Destination.Name)) {
+				continue
+			}
 			// only set attributes which weren't already set by a more
 			// specific policy
 			setIfNil(&r.LoadBalancer, tf.LoadBalancer)
@@ -1856,6 +1898,12 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		}
 
 		route := udp.Route
+
+		// Skip routes claimed by a route-scoped policy with mergeType Replace,
+		// which discards the parent policy configuration entirely.
+		if replacedRoutes.Has(replacedRouteKey(udp.Name, route.Destination.Name)) {
+			continue
+		}
 
 		// only set attributes which weren't already set by a more
 		// specific policy
