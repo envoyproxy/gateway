@@ -761,25 +761,8 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		// TODO (huabing): this is tricky and confusing for later readers, we should remove this and set the accepted condition
 		// to true in the Gateway API translator
 		status.UpdateGatewayStatusAccepted(gtw)
-
-		// For NodePort services with externalTrafficPolicy: Local, only nodes running
-		// an Envoy pod receive traffic, so restrict status addresses to those nodes.
-		var nodeAddresses status.NodeAddresses
-		if svc != nil && svc.Spec.Type == corev1.ServiceTypeNodePort &&
-			svc.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal {
-			podNodeNames, err := r.envoyEndpointNodeNamesForService(ctx, svc)
-			if err != nil {
-				r.log.Info("failed to list EndpointSlices for gateway node filtering",
-					"namespace", gtw.Namespace, "name", gtw.Name, "error", err)
-				nodeAddresses = r.store.listNodeAddresses()
-			} else {
-				nodeAddresses = r.store.listNodeAddressesForNodes(podNodeNames)
-			}
-		} else {
-			nodeAddresses = r.store.listNodeAddresses()
-		}
 		// update address field and programmed condition
-		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, nodeAddresses, r.envoyGateway.Provider.IsInfraManagedRemotely())
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.nodeAddressesForGateway(ctx, gtw, svc), r.envoyGateway.Provider.IsInfraManagedRemotely())
 	}
 
 	key := utils.NamespacedName(gtw)
@@ -809,6 +792,23 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 	})
 }
 
+// nodeAddressesForGateway returns the node addresses to use for the gateway status.
+// For NodePort services with externalTrafficPolicy: Local, only nodes with a Ready
+// endpoint are returned; otherwise all cluster node addresses are returned.
+func (r *gatewayAPIReconciler) nodeAddressesForGateway(ctx context.Context, gtw *gwapiv1.Gateway, svc *corev1.Service) status.NodeAddresses {
+	if svc != nil && svc.Spec.Type == corev1.ServiceTypeNodePort &&
+		svc.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal {
+		nodeNames, err := r.envoyEndpointNodeNamesForService(ctx, svc)
+		if err != nil {
+			r.log.Info("failed to list EndpointSlices for gateway node filtering",
+				"namespace", gtw.Namespace, "name", gtw.Name, "error", err)
+			return r.store.listNodeAddresses()
+		}
+		return r.store.listNodeAddressesForNodes(nodeNames)
+	}
+	return r.store.listNodeAddresses()
+}
+
 // envoyEndpointNodeNamesForService returns the names of nodes that have a Ready
 // endpoint in the EndpointSlices for the given service.
 func (r *gatewayAPIReconciler) envoyEndpointNodeNamesForService(ctx context.Context, svc *corev1.Service) ([]string, error) {
@@ -829,7 +829,7 @@ func (r *gatewayAPIReconciler) envoyEndpointNodeNamesForService(ctx context.Cont
 			}
 		}
 	}
-	return seen.UnsortedList(), nil
+	return sets.List(seen), nil
 }
 
 // setLastTransitionTimeInConditions sets LastTransitionTime to the given time for all conditions in a slice
