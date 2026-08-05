@@ -15,11 +15,13 @@ import (
 	"time"
 
 	perr "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -39,6 +41,108 @@ const (
 	scopeEntireGateway     ctpAttachScope = iota
 	scopeEntireListenerSet ctpAttachScope = iota
 )
+
+// ctpSpecHasClusterScopedFields reports whether spec sets a listener-level HTTP1 field.
+func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
+	return spec != nil && spec.HTTP1 != nil
+}
+
+// ctpClusterSettingsKey identifies a ClientTrafficPolicy's target: a listener's own name, scoped
+// to its owner's identity - the Gateway's own NamespacedName for a Gateway-direct listener, or the
+// ListenerSet's own NamespacedName for a listener contributed by a ListenerSet.
+type ctpClusterSettingsKey struct {
+	Namespace, Name, SectionName string
+}
+
+// CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy
+// sets a cluster-affecting field. Gateway-wide settings (no SectionName) aren't tracked, since a
+// merged cluster never spans gateways and so can never see them diverge.
+type CTPClusterSettingsIndex struct {
+	listenerLevel    map[ctpClusterSettingsKey]bool
+	listenerSetLevel map[types.NamespacedName]bool
+}
+
+// HasListenerLevelClusterSettings reports whether any of listeners - the route's actual resolved
+// attachment(s) under gatewayNN - has a ClientTrafficPolicy-sourced HTTP1 override, checking each
+// listener against its own owner (the Gateway, or the ListenerSet it came from).
+func (idx *CTPClusterSettingsIndex) HasListenerLevelClusterSettings(gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
+	if idx == nil {
+		return false
+	}
+	for _, l := range listeners {
+		if l.isFromListenerSet() {
+			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
+			if idx.listenerSetLevel[lsNN] {
+				return true
+			}
+			key := ctpClusterSettingsKey{Namespace: lsNN.Namespace, Name: lsNN.Name, SectionName: string(l.Name)}
+			if idx.listenerLevel[key] {
+				return true
+			}
+			continue
+		}
+		key := ctpClusterSettingsKey{Namespace: gatewayNN.Namespace, Name: gatewayNN.Name, SectionName: string(l.Name)}
+		if idx.listenerLevel[key] {
+			return true
+		}
+	}
+	return false
+}
+
+// BuildCTPClusterSettingsIndex builds a CTPClusterSettingsIndex.
+func BuildCTPClusterSettingsIndex(
+	ctps []*egv1a1.ClientTrafficPolicy,
+	gateways []*GatewayContext,
+	listenerSets []*gwapiv1.ListenerSet,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	namespaceLookup func(string) *corev1.Namespace,
+	mergeBackendsEnabled bool,
+) *CTPClusterSettingsIndex {
+	idx := &CTPClusterSettingsIndex{
+		listenerLevel:    make(map[ctpClusterSettingsKey]bool),
+		listenerSetLevel: make(map[types.NamespacedName]bool),
+	}
+	// Moot when no accepted gateway can enable merging.
+	if !mergeBackendsEnabled {
+		return idx
+	}
+
+	for _, ctp := range ctps {
+		if !ctpSpecHasClusterScopedFields(&ctp.Spec) {
+			continue
+		}
+
+		refs := resolvePolicyTargetsForGatewayAndListenerSet(
+			ctp.Spec.PolicyTargetReferences,
+			gateways,
+			listenerSets,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindClientTrafficPolicy,
+			ctp.Namespace,
+			namespaceLookup,
+		)
+
+		for _, ref := range refs {
+			switch ref.Kind {
+			case resource.KindGateway:
+				if ref.SectionName != nil {
+					key := ctpClusterSettingsKey{Namespace: string(ref.Namespace), Name: string(ref.Name), SectionName: string(*ref.SectionName)}
+					idx.listenerLevel[key] = true
+				}
+			case resource.KindListenerSet:
+				if ref.SectionName != nil {
+					key := ctpClusterSettingsKey{Namespace: string(ref.Namespace), Name: string(ref.Name), SectionName: string(*ref.SectionName)}
+					idx.listenerLevel[key] = true
+				} else {
+					idx.listenerSetLevel[types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}] = true
+				}
+			}
+		}
+	}
+
+	return idx
+}
 
 func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
@@ -1132,7 +1236,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		seenCACerts := make(map[[sha256.Size]byte]struct{})
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, resources, from, CACertKey)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
@@ -1171,7 +1275,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, CRLKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, resources, from, CRLKey)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}
@@ -1204,10 +1308,13 @@ func (t *Translator) buildListenerTLSParameters(
 // validateAndGetDataAtKeyInRef validates the secret object reference and gets the data at the key in the secret or configmap
 func (t *Translator) validateAndGetDataAtKeyInRef(
 	ref gwapiv1.SecretObjectReference,
-	key string,
 	resources *resource.Resources,
 	from crossNamespaceFrom,
+	keys ...string,
 ) ([]byte, error) {
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("unsupported call with no key")
+	}
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
@@ -1216,9 +1323,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		secretCertBytes, ok := getOrFirstFromData(secret.Data, key)
+		secretCertBytes, ok := getFirstMatchOrFirstFromData(secret.Data, keys...)
 		if !ok || len(secretCertBytes) == 0 {
-			return nil, fmt.Errorf("ref secret [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref secret [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
@@ -1227,9 +1334,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		configMapData, ok := getOrFirstFromData(configMap.Data, key)
+		configMapData, ok := getFirstMatchOrFirstFromData(configMap.Data, keys...)
 		if !ok || len(configMapData) == 0 {
-			return nil, fmt.Errorf("ref configmap [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref configmap [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return []byte(configMapData), nil
 	case resource.KindClusterTrustBundle:

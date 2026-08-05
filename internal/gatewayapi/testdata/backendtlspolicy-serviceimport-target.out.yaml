@@ -202,7 +202,7 @@ xdsIR:
             tls:
               alpnProtocols: null
               caCertificate:
-                name: policy-btls/default-ca
+                name: system_ca_certificates
               maxVersion: "1.3"
               minVersion: "1.2"
               sni: example.com
@@ -222,7 +222,7 @@ xdsIR:
             tls:
               alpnProtocols: null
               caCertificate:
-                name: policy-btls/default-ca
+                name: system_ca_certificates
               maxVersion: "1.3"
               minVersion: "1.2"
               sni: example.com

@@ -169,7 +169,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 		}
 	}
 
-	// Only run the ListenerSet-specific　translation when at least one ListenerSet exists.
+	// Only run the ListenerSet-specific translation when at least one ListenerSet exists.
 	// When none are present, no policy can successfully attach to a ListenerSet (the target resolves to
 	// nil and processing returns early), so these loops would be pure overhead.
 	if len(resources.ListenerSets) > 0 {
@@ -1331,7 +1331,7 @@ func (t *Translator) buildWasm(
 				kind:      resource.KindEnvoyExtensionPolicy,
 				namespace: policy.Namespace,
 			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
 				return nil, err
 			}
 		}
@@ -1373,7 +1373,7 @@ func (t *Translator) buildWasm(
 				kind:      resource.KindEnvoyExtensionPolicy,
 				namespace: policy.Namespace,
 			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
 				return nil, err
 			}
 		}

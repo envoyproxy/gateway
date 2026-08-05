@@ -977,6 +977,44 @@ spec:
                                   items:
                                     type: string
                                   type: array
+                                outOfBand:
+                                  description: |-
+                                    OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a
+                                    server-streaming gRPC connection to each endpoint's
+                                    xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load
+                                    reports periodically, instead of relying on in-band ORCA metrics
+                                    carried in response headers/trailers.
+
+                                    The backend must implement OpenRcaService for this to take effect.
+                                  properties:
+                                    authority:
+                                      description: |-
+                                        Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                        If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                        the cluster name.
+                                      maxLength: 259
+                                      minLength: 1
+                                      pattern: ^[^\x00\n\r]*$
+                                      type: string
+                                    port:
+                                      description: |-
+                                        Port overrides the port used for the OutOfBand reporting connection, e.g. to
+                                        reach a separate reporting sidecar. Defaults to the endpoint's port.
+                                      format: int32
+                                      maximum: 65535
+                                      minimum: 1
+                                      type: integer
+                                    reportingPeriod:
+                                      description: |-
+                                        ReportingPeriod is how often Envoy requests load reports from the server.
+                                        Must be greater than 0. Defaults to 10s.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: reportingPeriod must be greater than
+                                          0
+                                        rule: duration(self) > duration('0s')
+                                  type: object
                                 weightExpirationPeriod:
                                   description: If a given endpoint has not reported
                                     load metrics in this long, stop using the reported

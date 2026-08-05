@@ -46,9 +46,10 @@
                   exact: subdomain.secondexample.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: policy-btls-for-backend-1/default-ca
+              name: system_ca_certificates
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: example.com
   type: EDS

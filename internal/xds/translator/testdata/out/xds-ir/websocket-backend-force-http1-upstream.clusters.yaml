@@ -41,9 +41,10 @@
                   exact: websocket.example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: websocket-wss-route/ca
+              name: system_ca_certificates
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: websocket.example.com
   type: EDS
@@ -95,9 +96,10 @@
                   exact: ordinary.example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: ordinary-tls-http-route/ca
+              name: system_ca_certificates
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: ordinary.example.com
   type: EDS
