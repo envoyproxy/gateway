@@ -1,0 +1,24 @@
+- clusterName: backend-utilization-oob-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 5.6.7.8
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: backend-utilization-oob-dest/backend/0
+- clusterName: backend-utilization-oob-defaults-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 5.6.7.9
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: backend-utilization-oob-defaults-dest/backend/0

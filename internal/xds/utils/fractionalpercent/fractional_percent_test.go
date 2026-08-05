@@ -188,3 +188,40 @@ func TestFromFraction(t *testing.T) {
 		})
 	}
 }
+
+func TestFromFractionOrZero(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    *gwapiv1.Fraction
+		expected *xdstype.FractionalPercent
+	}{
+		{
+			name: "configured fraction",
+			input: &gwapiv1.Fraction{
+				Numerator:   2,
+				Denominator: new(int32(100)),
+			},
+			expected: &xdstype.FractionalPercent{
+				Numerator:   2,
+				Denominator: xdstype.FractionalPercent_HUNDRED,
+			},
+		},
+		{
+			name:  "nil fraction defaults to zero",
+			input: nil,
+			expected: &xdstype.FractionalPercent{
+				Numerator:   0,
+				Denominator: xdstype.FractionalPercent_HUNDRED,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := FromFractionOrZero(tc.input)
+			if result.Numerator != tc.expected.Numerator || result.Denominator != tc.expected.Denominator {
+				t.Errorf("expected %v, got %v", tc.expected, result)
+			}
+		})
+	}
+}

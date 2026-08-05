@@ -97,6 +97,20 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionServerPolicies:
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test5
+          namespace: envoy-gateway
+        spec:
+          data: Targets a listener section name that doesn't exist on gateway-1
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+            sectionName: nonexistent-listener
     globalResources:
       proxyServiceCluster:
         metadata:

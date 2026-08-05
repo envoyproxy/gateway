@@ -1,0 +1,1 @@
+Added a `failOpen` field to JWT in `SecurityPolicy`, allowing a request to pass JWT authentication even when its JWT is missing or invalid (maps to Envoy's `allow_missing_or_failed`). Verified claims are still forwarded, so it should be paired with an Authorization policy for enforcement.

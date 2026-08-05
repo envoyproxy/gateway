@@ -37,7 +37,6 @@ xds:
           layers:
           - name: global_config
             staticLayer:
-              envoy.restart_features.use_eds_cache_for_ads: true
               re2.max_program_size.error_level: 4294967295
               re2.max_program_size.warn_level: 1000
         node:
@@ -229,10 +228,16 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
+          clusterType:
+            name: envoy.cluster.dns
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+              dnsLookupFamily: V4_PREFERRED
+              dnsRefreshRate: 30s
+              respectDnsTtl: true
           commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
-          dnsRefreshRate: 30s
           ignoreHealthOnHostRemoval: true
           loadAssignment:
             clusterName: raw_githubusercontent_com_443
@@ -257,17 +262,17 @@ xds:
                     localityWeightedLbConfig: {}
           name: raw_githubusercontent_com_443
           perConnectionBufferLimitBytes: 32768
-          respectDnsTtl: true
           transportSocket:
             name: envoy.transport_sockets.tls
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
               commonTlsContext:
+                tlsParams:
+                  tlsMaximumProtocolVersion: TLSv1_3
                 validationContext:
                   trustedCa:
                     filename: /etc/ssl/certs/ca-certificates.crt
               sni: raw.githubusercontent.com
-          type: STRICT_DNS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
       dynamicListeners:
       - activeState:
@@ -425,6 +430,7 @@ xds:
                   rds:
                     configSource:
                       ads: {}
+                      initialFetchTimeout: 0s
                       resourceApiVersion: V3
                     routeConfigName: envoy-gateway-system/eg/http
                   serverHeaderTransformation: PASS_THROUGH

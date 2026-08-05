@@ -28,10 +28,15 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	httputils "github.com/envoyproxy/gateway/internal/utils/http"
+	netutil "github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 const (
 	EmptyPath = ""
+
+	// SystemTrustStoreSecretName is the shared SDS secret name used by all clusters that reference
+	// the system CA trust store when backend cluster deduplication is enabled.
+	SystemTrustStoreSecretName = "system_ca_certificates" //nolint:gosec // not a credential
 )
 
 var (
@@ -58,7 +63,8 @@ var (
 	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrHTTPPathRegexModifierNoSetting           = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
-	ErrHTTPHostModifierDoubleReplace            = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
+	ErrHTTPHostModifierDoubleReplace            = errors.New("url rewrite filter cannot have a host modifier that supplies more than one of Name, Header, Backend and PathRegex")
+	ErrHTTPHostModifierEmptyPathRegex           = errors.New("host modifier with a PathRegex must supply both a Pattern and a Substitution")
 	ErrAddHeaderEmptyName                       = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate                       = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate                    = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
@@ -81,6 +87,8 @@ var (
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
 	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
+	ErrBackendClusterMergedDynamicResolver      = errors.New("a BackendCluster must not be a dynamic resolver")
+	ErrBackendClusterRefNotFound                = errors.New("field BackendClusterRefs references a BackendCluster name that does not exist")
 
 	redacted = []byte("[redacted]")
 )
@@ -175,6 +183,9 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
+	// BackendClusters holds every distinct merged BackendCluster for this gateway - the single
+	// source of truth for a cluster's Settings/Metadata.
+	BackendClusters []*BackendCluster `json:"backendClusters,omitempty" yaml:"backendClusters,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -193,6 +204,53 @@ func (x *Xds) Validate() error {
 	for _, udp := range x.UDP {
 		if err := udp.Validate(); err != nil {
 			errs = errors.Join(errs, err)
+		}
+	}
+	for _, bc := range x.BackendClusters {
+		if err := bc.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if err := x.validateBackendClusterRefs(); err != nil {
+		errs = errors.Join(errs, err)
+	}
+	return errs
+}
+
+func (x *Xds) validateBackendClusterRefs() error {
+	names := make(map[string]struct{}, len(x.BackendClusters))
+	for _, bc := range x.BackendClusters {
+		names[bc.Name] = struct{}{}
+	}
+
+	var errs error
+	check := func(rd *RouteDestination) {
+		if rd == nil {
+			return
+		}
+		for _, ref := range rd.BackendClusterRefs {
+			if _, ok := names[ref.Name]; !ok {
+				errs = errors.Join(errs, fmt.Errorf("%w: %s", ErrBackendClusterRefNotFound, ref.Name))
+			}
+		}
+	}
+
+	for _, http := range x.HTTP {
+		for _, route := range http.Routes {
+			check(route.Destination)
+			for _, mirror := range route.Mirrors {
+				check(mirror.Destination)
+			}
+		}
+	}
+	for _, tcp := range x.TCP {
+		for _, route := range tcp.Routes {
+			check(route.Destination)
+		}
+	}
+	for _, udp := range x.UDP {
+		if udp.Route != nil {
+			check(udp.Route.Destination)
 		}
 	}
 	return errs
@@ -316,6 +374,8 @@ type HTTPListener struct {
 	GeoIPProvider *GeoIPProvider `json:"geoIPProvider,omitempty" yaml:"geoIPProvider,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
+	// Host contains settings for Host/Authority header normalization
+	Host *HostSettings `json:"host,omitempty" yaml:"host,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
@@ -438,6 +498,10 @@ type TLSConfig struct {
 	// AcceptUntrusted permits the connection even when client certificate verification fails.
 	// This maps to Envoy CertificateValidationContext.trust_chain_verification=ACCEPT_UNTRUSTED.
 	AcceptUntrusted bool `json:"acceptUntrusted,omitempty" yaml:"acceptUntrusted,omitempty"`
+	// AllowExpiredCertificate permits client certificates that have expired but are otherwise valid.
+	//
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#envoy-v3-api-field-extensions-transport-sockets-tls-v3-certificatevalidationcontext-allow-expired-certificate
+	AllowExpiredCertificate bool `json:"allowExpiredCertificate,omitempty" yaml:"allowExpiredCertificate,omitempty"`
 	// A list of allowed base64-encoded SHA-256 hashes of the DER-encoded Subject Public Key Information (SPKI)
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
 	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
@@ -486,11 +550,21 @@ type TLSCertificate struct {
 type SDSConfig struct {
 	// SecretName is an identifier for the SDS configuration.
 	SecretName string `json:"secretName" yaml:"secretName"`
-	// URL is the URL of the SDS server
-	URL string `json:"url" yaml:"url"`
+	// Scheme is the communication scheme to use when connecting to the SDS server (e.g., "http", "https", or "unix").
+	Scheme string `json:"scheme" yaml:"scheme"`
+	// Address is the host and port of the SDS server
+	Address string `json:"address" yaml:"address"`
 
 	// TODO: support additional SDS configuration options
 	// such as TLS settings for the SDS server, or authentication credentials if needed.
+}
+
+func (s *SDSConfig) GetURL() string {
+	if s.Scheme == "" {
+		return s.Address
+	}
+
+	return fmt.Sprintf("%s://%s", s.Scheme, s.Address)
 }
 
 func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
@@ -503,10 +577,15 @@ func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
 	if !hasURL || len(sdsURLBytes) == 0 {
 		return nil, fmt.Errorf("no url found in SDS reference secret %s/%s", s.Namespace, s.Name)
 	}
+	scheme, hostAndPort, err := netutil.ParseURL(string(sdsURLBytes)) // validate the URL format
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL in SDS reference secret %s/%s: %w", s.Namespace, s.Name, err)
+	}
 
 	return &SDSConfig{
 		SecretName: string(sdsSecretName),
-		URL:        string(sdsURLBytes),
+		Scheme:     scheme,
+		Address:    hostAndPort,
 	}, nil
 }
 
@@ -589,6 +668,13 @@ type PathSettings struct {
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
 }
 
+// HostSettings holds configuration for Host/Authority header normalization
+// +k8s:deepcopy-gen=true
+type HostSettings struct {
+	// StripTrailingHostDot strips the trailing dot from the Host/Authority header before processing.
+	StripTrailingHostDot bool `json:"stripTrailingHostDot,omitempty" yaml:"stripTrailingHostDot,omitempty"`
+}
+
 // ProxyProtocolSettings holds configuration for proxy protocol
 // +k8s:deepcopy-gen=true
 type ProxyProtocolSettings struct {
@@ -631,7 +717,6 @@ type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
 // BackendWeights stores the weights of valid, invalid and no endpoints backends for the route so that 500/503 error responses can be returned in the same proportions
 type BackendWeights struct {
-	Name        string `json:"name" yaml:"name"`
 	Valid       uint32 `json:"valid" yaml:"valid"`
 	Invalid     uint32 `json:"invalid" yaml:"invalid"`
 	NoEndpoints uint32 `json:"noEndpoints" yaml:"noEndpoints"`
@@ -639,6 +724,27 @@ type BackendWeights struct {
 
 func (b *BackendWeights) UnavailableWeight() uint32 {
 	return b.Invalid + b.NoEndpoints
+}
+
+// AddWeighted adds weight to b under the category that s's own status indicates (invalid,
+// dynamic-resolver, custom backend, has/no endpoints), independent of s.Weight.
+func (b *BackendWeights) AddWeighted(s *DestinationSetting, weight *uint32) {
+	if weight == nil {
+		return
+	}
+
+	switch {
+	case s.Invalid: // If invalid, add to invalid weight
+		b.Invalid += *weight
+	case s.IsDynamicResolver: // Dynamic resolver has no endpoints
+		b.Valid += *weight
+	case s.IsCustomBackend: // Custom backends has no endpoints
+		b.Valid += *weight
+	case len(s.Endpoints) > 0: // All other cases should have endpoints
+		b.Valid += *weight
+	default: // DestinationSetting with no endpoints
+		b.NoEndpoints += *weight
+	}
 }
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
@@ -923,6 +1029,10 @@ type HTTPRoute struct {
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and
+	// target this route: either the whole HTTPRoute/GRPCRoute (targetRef without sectionName) or one
+	// of its rules (targetRef with a sectionName matching the rule).
+	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	// Security holds the features associated with SecurityPolicy
@@ -971,8 +1081,10 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	return h.Destination.NeedsClusterPerSetting()
 }
 
+// IsDynamicResolverRoute reports whether h's destination is a dynamic resolver.
 func (h *HTTPRoute) IsDynamicResolverRoute() bool {
-	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
+	// Only checks Settings, never BackendClusterRefs: a dynamic-resolver backend is never
+	// merge-eligible, so its setting always lives in Settings.
 	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
 }
 
@@ -1082,10 +1194,12 @@ type BackendTelemetry struct {
 // BackendTracing defines the tracing configuration for the backend.
 // +k8s:deepcopy-gen=true
 type BackendTracing struct {
-	SamplingFraction *gwapiv1.Fraction       `json:"samplingFraction,omitempty" yaml:"samplingFraction,omitempty"`
-	CustomTags       []CustomTagMapEntry     `json:"customTags,omitempty" yaml:"customTags,omitempty"`
-	Tags             []MapEntry              `json:"tags,omitempty" yaml:"tags,omitempty"`
-	SpanName         *egv1a1.TracingSpanName `json:"spanName,omitempty" yaml:"spanName,omitempty"`
+	SamplingFraction        *gwapiv1.Fraction       `json:"samplingFraction,omitempty" yaml:"samplingFraction,omitempty"`
+	ClientSamplingFraction  *gwapiv1.Fraction       `json:"clientSamplingFraction,omitempty" yaml:"clientSamplingFraction,omitempty"`
+	OverallSamplingFraction *gwapiv1.Fraction       `json:"overallSamplingFraction,omitempty" yaml:"overallSamplingFraction,omitempty"`
+	CustomTags              []CustomTagMapEntry     `json:"customTags,omitempty" yaml:"customTags,omitempty"`
+	Tags                    []MapEntry              `json:"tags,omitempty" yaml:"tags,omitempty"`
+	SpanName                *egv1a1.TracingSpanName `json:"spanName,omitempty" yaml:"spanName,omitempty"`
 }
 
 // BackendMetrics defines the metrics configuration for the backend.
@@ -1129,6 +1243,8 @@ func (b *TrafficFeatures) Validate() error {
 type SecurityFeatures struct {
 	// CORS policy for the route.
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// CSRF policy for the route.
+	CSRF *CSRF `json:"csrf,omitempty" yaml:"csrf,omitempty"`
 	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
@@ -1195,6 +1311,17 @@ type CORS struct {
 	AllowCredentials bool `json:"allowCredentials,omitempty" yaml:"allowCredentials,omitempty"`
 }
 
+// CSRF holds the Cross-Site Request Forgery (CSRF) policy for the route.
+//
+// +k8s:deepcopy-gen=true
+type CSRF struct {
+	// ShadowFraction is the fraction of requests evaluated in shadow/dry-run mode.
+	// The remaining requests are enforced. nil means 0%, i.e. everything is enforced.
+	ShadowFraction *gwapiv1.Fraction `json:"shadowFraction,omitempty" yaml:"shadowFraction,omitempty"`
+	// AdditionalOrigins specifies additional origins that are allowed.
+	AdditionalOrigins []*StringMatch `json:"additionalOrigins,omitempty" yaml:"additionalOrigins,omitempty"`
+}
+
 // JWT defines the schema for authenticating HTTP requests using
 // JSON Web Tokens (JWT).
 //
@@ -1202,6 +1329,10 @@ type CORS struct {
 type JWT struct {
 	// AllowMissing determines whether a missing JWT is acceptable.
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
+
+	// AllowMissingOrFailed determines whether a missing or invalid JWT is tolerated.
+	// When true it supersedes AllowMissing and maps to Envoy's `allow_missing_or_failed`.
+	AllowMissingOrFailed bool `json:"allowMissingOrFailed,omitempty" yaml:"allowMissingOrFailed,omitempty"`
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
@@ -1315,6 +1446,10 @@ type OIDC struct {
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
 	// via the Authorization header Bearer scheme to the upstream.
 	ForwardAccessToken bool `json:"forwardAccessToken,omitempty"`
+
+	// ForwardIDTokenHeader is the upstream request header on which the OIDC ID token
+	// is forwarded. If nil, the ID token is not forwarded.
+	ForwardIDTokenHeader *string `json:"forwardIDTokenHeader,omitempty"`
 
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
 	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
@@ -1891,16 +2026,23 @@ type RouteDestination struct {
 	// Name of the destination. This field allows the xds layer
 	// to check if this route destination already exists and can be
 	// reused
-	Name     string                `json:"name" yaml:"name"`
-	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
+	Name     string  `json:"name" yaml:"name"`
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
+	// Settings holds this destination's own, non-merged backends. Never shared with another
+	// route.
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// BackendClusterRefs holds references to backend clusters for this route rule. The
+	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
+	// never here.
+	BackendClusterRefs []*BackendClusterRef `json:"backendClusterRefs,omitempty" yaml:"backendClusterRefs,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
 	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
-// Validate the fields within the RouteDestination structure
+// Validate the fields within the RouteDestination structure. BackendCluster-level validation
+// happens once per distinct cluster, not here per-ref.
 func (r *RouteDestination) Validate() error {
 	var errs error
 	if len(r.Name) == 0 {
@@ -1911,7 +2053,11 @@ func (r *RouteDestination) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-
+	for _, ref := range r.BackendClusterRefs {
+		if len(ref.Name) == 0 {
+			errs = errors.Join(errs, ErrDestinationNameEmpty)
+		}
+	}
 	return errs
 }
 
@@ -1924,6 +2070,8 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
+// that Envoy cannot handle in a single cluster. IP+UDS combinations are allowed since
+// both are static address types; only FQDN mixing with IP or UDS is unsupported.
 func (r *RouteDestination) HasMixedEndpoints() bool {
 	destinationAddressTypes := sets.Set[DestinationAddressType]{}
 	for _, s := range r.Settings {
@@ -1931,7 +2079,14 @@ func (r *RouteDestination) HasMixedEndpoints() bool {
 			destinationAddressTypes.Insert(*s.AddressType)
 		}
 	}
-	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
+	// IP+UDS mix is valid (both are static); only flag as mixed when FQDN is involved.
+	if destinationAddressTypes.Has(MIXED) {
+		return true
+	}
+	if destinationAddressTypes.Has(FQDN) && destinationAddressTypes.Len() > 1 {
+		return true
+	}
+	return false
 }
 
 // HasFiltersInSettings returns true if any setting in the destination has a filter
@@ -1995,30 +2150,57 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
-	w := &BackendWeights{
-		Name: r.Name,
-	}
-
+	w := &BackendWeights{}
 	for _, s := range r.Settings {
-		if s.Weight == nil {
-			continue
-		}
+		w.AddWeighted(s, s.Weight)
+	}
+	return w
+}
 
-		switch {
-		case s.Invalid: // If invalid, add to invalid weight
-			w.Invalid += *s.Weight
-		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
-			w.Valid += *s.Weight
-		case s.IsCustomBackend: // Custom backends has no endpoints
-			w.Valid += *s.Weight
-		case len(s.Endpoints) > 0: // All other cases should have endpoints
-			w.Valid += *s.Weight
-		default: // DestinationSetting with no endpoints
-			w.NoEndpoints += *s.Weight
+// BackendCluster is a shared, identity-deduplicated backend: exactly one backend identity, one
+// setting. Only ever constructed for genuinely merged backends.
+// +kubebuilder:object:generate=true
+type BackendCluster struct {
+	// Name uniquely identifies this backend cluster.
+	Name string `json:"name" yaml:"name"`
+	// Setting holds this backend's own configuration. Always exactly one, since a merged
+	// cluster is by definition a single deduplicated backend identity.
+	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
+	// Metadata describes the backend resource (Service, Backend, etc.)
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// Traffic holds the accepted whole-gateway BackendTrafficPolicy's settings, if any -
+	// gateway level is the only one guaranteed uniform across a merged cluster's routes.
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	// UseClientProtocol holds the accepted whole-gateway BackendTrafficPolicy's UseClientProtocol,
+	// if any - same gateway-level-only reasoning as Traffic.
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+}
+
+func (b *BackendCluster) Validate() error {
+	var errs error
+	if len(b.Name) == 0 {
+		errs = errors.Join(errs, ErrDestinationNameEmpty)
+	}
+	if b.Setting != nil {
+		if err := b.Setting.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if b.Setting.IsDynamicResolver {
+			errs = errors.Join(errs, ErrBackendClusterMergedDynamicResolver)
 		}
 	}
+	return errs
+}
 
-	return w
+// BackendClusterRef is a reference from a route rule to a backend cluster, identified by name.
+// The referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
+// never here.
+// +kubebuilder:object:generate=true
+type BackendClusterRef struct {
+	// Name identifies the referenced BackendCluster in the owning Xds's Backends registry.
+	Name string `json:"name" yaml:"name"`
+	// Weight for weighted routing across multiple BackendRefs.
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 }
 
 // DestinationSetting holds the settings associated with the destination
@@ -2085,10 +2267,11 @@ func (d *DestinationSetting) Validate() error {
 type DestinationAddressType string
 
 const (
-	IP    DestinationAddressType = "IP"
-	FQDN  DestinationAddressType = "FQDN"
-	MIXED DestinationAddressType = "Mixed"
-	UDS   DestinationAddressType = "UDS"
+	IP     DestinationAddressType = "IP"
+	FQDN   DestinationAddressType = "FQDN"
+	MIXED  DestinationAddressType = "Mixed"
+	UDS    DestinationAddressType = "UDS"
+	STATIC DestinationAddressType = "STATIC" // a mix of static addresses (IP and UDS)
 )
 
 // DestinationEndpoint holds the endpoint details associated with the destination
@@ -2303,16 +2486,17 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 // +k8s:deepcopy-gen=true
 type HTTPHostModifier struct {
 	// Name provides a string to replace the host of the request.
-	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
-	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
-	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
+	Name      *string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Header    *string            `json:"header,omitempty" yaml:"header,omitempty"`
+	Backend   *bool              `json:"backend,omitempty" yaml:"backend,omitempty"`
+	PathRegex *RegexMatchReplace `json:"pathRegex,omitempty" yaml:"pathRegex,omitempty"`
 }
 
 // Validate the fields within the HTTPPathModifier structure
 func (r HTTPHostModifier) Validate() error {
 	var errs error
 
-	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil}
+	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil, r.PathRegex != nil}
 	rwc := 0
 	for _, rw := range rewrites {
 		if rw {
@@ -2322,6 +2506,10 @@ func (r HTTPHostModifier) Validate() error {
 
 	if rwc > 1 {
 		errs = errors.Join(errs, ErrHTTPHostModifierDoubleReplace)
+	}
+
+	if r.PathRegex != nil && (r.PathRegex.Pattern == "" || r.PathRegex.Substitution == "") {
+		errs = errors.Join(errs, ErrHTTPHostModifierEmptyPathRegex)
 	}
 
 	return errs
@@ -2433,6 +2621,12 @@ type TCPRoute struct {
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 	// Authorization defines the schema for the authorization.
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
+}
+
+// IsDynamicResolverRoute returns true if the TCPRoute routes to a dynamic resolver backend.
+func (t *TCPRoute) IsDynamicResolverRoute() bool {
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation.
+	return t.Destination != nil && len(t.Destination.Settings) == 1 && t.Destination.Settings[0].IsDynamicResolver
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -2991,17 +3185,19 @@ func (o *JSONPatchOperation) Validate() error {
 // Tracing defines the configuration for tracing a Envoy xDS Resource
 // +k8s:deepcopy-gen=true
 type Tracing struct {
-	ServiceName        string                  `json:"serviceName"`
-	Authority          string                  `json:"authority,omitempty"`
-	SamplingRate       float64                 `json:"samplingRate,omitempty"`
-	CustomTags         []CustomTagMapEntry     `json:"customTags,omitempty"`
-	Tags               []MapEntry              `json:"tags,omitempty"`
-	ResourceAttributes []MapEntry              `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
-	Destination        RouteDestination        `json:"destination,omitempty"`
-	Traffic            *TrafficFeatures        `json:"traffic,omitempty"`
-	Provider           egv1a1.TracingProvider  `json:"provider"`
-	Headers            []gwapiv1.HTTPHeader    `json:"headers,omitempty" yaml:"headers,omitempty"`
-	SpanName           *egv1a1.TracingSpanName `json:"spanName,omitempty"`
+	ServiceName         string                  `json:"serviceName"`
+	Authority           string                  `json:"authority,omitempty"`
+	SamplingRate        float64                 `json:"samplingRate,omitempty"`
+	ClientSamplingRate  *float64                `json:"clientSamplingRate,omitempty"`
+	OverallSamplingRate *float64                `json:"overallSamplingRate,omitempty"`
+	CustomTags          []CustomTagMapEntry     `json:"customTags,omitempty"`
+	Tags                []MapEntry              `json:"tags,omitempty"`
+	ResourceAttributes  []MapEntry              `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
+	Destination         RouteDestination        `json:"destination,omitempty"`
+	Traffic             *TrafficFeatures        `json:"traffic,omitempty"`
+	Provider            egv1a1.TracingProvider  `json:"provider"`
+	Headers             []gwapiv1.HTTPHeader    `json:"headers,omitempty" yaml:"headers,omitempty"`
+	SpanName            *egv1a1.TracingSpanName `json:"spanName,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
@@ -3101,13 +3297,26 @@ type Random struct{}
 // BackendUtilization load balancer settings
 // +k8s:deepcopy-gen=true
 type BackendUtilization struct {
-	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
-	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
-	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
-	ErrorUtilizationPenaltyPercent     *uint32          `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
-	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
-	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
-	KeepResponseHeaders                *bool            `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+	BlackoutPeriod                     *metav1.Duration    `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
+	WeightExpirationPeriod             *metav1.Duration    `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
+	WeightUpdatePeriod                 *metav1.Duration    `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
+	ErrorUtilizationPenaltyPercent     *uint32             `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
+	MetricNamesForComputingUtilization []string            `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
+	SlowStart                          *SlowStart          `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	KeepResponseHeaders                *bool               `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+	OutOfBand                          *OutOfBandReporting `json:"outOfBand,omitempty" yaml:"outOfBand,omitempty"`
+}
+
+// OutOfBandReporting configures out-of-band ORCA load reporting for the
+// BackendUtilization load balancer.
+// +k8s:deepcopy-gen=true
+type OutOfBandReporting struct {
+	// ReportingPeriod is how often Envoy requests load reports from the server.
+	ReportingPeriod *metav1.Duration `json:"reportingPeriod,omitempty" yaml:"reportingPeriod,omitempty"`
+	// Port overrides the port used for the out-of-band reporting connection.
+	Port *int32 `json:"port,omitempty" yaml:"port,omitempty"`
+	// Authority overrides the :authority header on the out-of-band gRPC stream.
+	Authority *string `json:"authority,omitempty" yaml:"authority,omitempty"`
 }
 
 // ConsistentHash load balancer settings
@@ -3680,6 +3889,10 @@ type ExtProc struct {
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	MessageTimeout *metav1.Duration `json:"messageTimeout,omitempty" yaml:"messageTimeout,omitempty"`
 
+	// ShadowMode sets if envoy gateway should treat this external processor as "send and go".
+	// Maps to Envoy's `observability_mode` on the ext_proc filter.
+	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
+
 	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
 	// external processor are terminated or passed-through.
 	FailOpen *bool `json:"failOpen,omitempty" yaml:"failOpen,omitempty"`
@@ -3722,7 +3935,8 @@ type ExtProc struct {
 // Lua holds the information associated with Lua extensions
 // +k8s:deepcopy-gen=true
 type Lua struct {
-	// Name is a unique name for the Lua configuration.
+	// Name is a unique name for the LUa configuration.
+	// The xds translator only generates one Lua filter for each unique name
 	Name string
 	// Code is the Lua source code
 	Code *string

@@ -174,40 +174,12 @@ func (r *gatewayAPIReconciler) processGRPCRoute(ctx context.Context, grpcRoute *
 			}
 		}
 
+		// HTTPRouteFilter is only supported at the rule level for GRPCRoute;
+		// backendRef-level extended filters are not supported.
 		for i := range rule.Filters {
-			filter := rule.Filters[i]
-			var extGKs []schema.GroupKind
-			for _, gvk := range r.extGVKs {
-				extGKs = append(extGKs, gvk.GroupKind())
-			}
-			if err := gatewayapi.ValidateGRPCRouteFilter(&filter, extGKs...); err != nil {
+			if err := r.processGRPCRouteFilter(ctx, &rule.Filters[i], grpcRoute, resourceMap, resourceTree); err != nil {
 				r.log.Error(err, "bypassing filter rule", "index", i)
 				continue
-			}
-			if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
-				key := utils.NamespacedNameWithGroupKind{
-					NamespacedName: types.NamespacedName{
-						Namespace: grpcRoute.Namespace,
-						Name:      string(filter.ExtensionRef.Name),
-					},
-					GroupKind: schema.GroupKind{
-						Group: string(filter.ExtensionRef.Group),
-						Kind:  string(filter.ExtensionRef.Kind),
-					},
-				}
-
-				extRefFilter, ok := resourceMap.extensionRefFilters[key]
-				if !ok {
-					r.log.Error(
-						errors.New("filter not found; bypassing rule"),
-						"Filter not found; bypassing rule",
-						"name",
-						filter.ExtensionRef.Name, "index", i)
-					continue
-				}
-
-				resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
-
 			}
 		}
 	}
@@ -216,6 +188,58 @@ func (r *gatewayAPIReconciler) processGRPCRoute(ctx context.Context, grpcRoute *
 	resourceMap.allAssociatedGRPCRoutes.Insert(key)
 	grpcRoute.Status = gwapiv1.GRPCRouteStatus{}
 	resourceTree.GRPCRoutes = append(resourceTree.GRPCRoutes, grpcRoute)
+}
+
+// processGRPCRouteFilter validates a GRPCRoute filter and, for ExtensionRef filters,
+// loads the referenced resource into the resourceTree. EG's own HTTPRouteFilter can
+// be referenced from a GRPCRoute (gRPC runs over HTTP/2 and shares the same extended
+// filter behavior); any other kind is resolved from extension-server registered kinds.
+// It is used for rule-level filters.
+func (r *gatewayAPIReconciler) processGRPCRouteFilter(
+	ctx context.Context,
+	filter *gwapiv1.GRPCRouteFilter,
+	grpcRoute *gwapiv1.GRPCRoute,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+) error {
+	extGKs := make([]schema.GroupKind, 0, len(r.extGVKs))
+	for _, gvk := range r.extGVKs {
+		extGKs = append(extGKs, gvk.GroupKind())
+	}
+	if err := gatewayapi.ValidateGRPCRouteFilter(filter, extGKs...); err != nil {
+		return err
+	}
+
+	if filter.Type != gwapiv1.GRPCRouteFilterExtensionRef {
+		return nil
+	}
+
+	// NOTE: filters must be in the same namespace as the GRPCRoute.
+	key := utils.NamespacedNameWithGroupKind{
+		NamespacedName: types.NamespacedName{
+			Namespace: grpcRoute.Namespace,
+			Name:      string(filter.ExtensionRef.Name),
+		},
+		GroupKind: schema.GroupKind{
+			Group: string(filter.ExtensionRef.Group),
+			Kind:  string(filter.ExtensionRef.Kind),
+		},
+	}
+
+	if string(filter.ExtensionRef.Group) == egv1a1.GroupName &&
+		string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter {
+		return r.loadHTTPRouteFilter(ctx, key, resourceMap, resourceTree)
+	}
+
+	extRefFilter, ok := resourceMap.extensionRefFilters[key]
+	if !ok {
+		return fmt.Errorf("filter not found: %s", filter.ExtensionRef.Name)
+	}
+	if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
+		resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
+		resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+	}
+	return nil
 }
 
 // processHTTPRoutes finds HTTPRoutes corresponding to a gatewayNamespaceName, further checks for
@@ -401,17 +425,8 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 
 		switch string(filter.ExtensionRef.Kind) {
 		case egv1a1.KindHTTPRouteFilter:
-			if r.hrfCRDExists {
-				httpFilter, err := r.getHTTPRouteFilter(ctx, key.Name, key.Namespace)
-				if err != nil {
-					return fmt.Errorf("filter not found: %w", err)
-				}
-				if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
-					r.processRouteFilterConfigMapRef(ctx, httpFilter, resourceMap, resourceTree)
-					r.processRouteFilterSecretRef(ctx, httpFilter, resourceMap, resourceTree)
-					resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
-					resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
-				}
+			if err := r.loadHTTPRouteFilter(ctx, key, resourceMap, resourceTree); err != nil {
+				return err
 			}
 		default:
 			extRefFilter, ok := resourceMap.extensionRefFilters[key]
@@ -424,6 +439,32 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 				resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
 			}
 		}
+	}
+	return nil
+}
+
+// loadHTTPRouteFilter fetches the EG HTTPRouteFilter referenced by an extensionRef
+// filter (from either an HTTPRoute or a GRPCRoute) along with any Secret/ConfigMap
+// it references, and adds them to the resourceTree. It is a no-op if the
+// HTTPRouteFilter CRD is not installed or the filter has already been processed.
+func (r *gatewayAPIReconciler) loadHTTPRouteFilter(
+	ctx context.Context,
+	key utils.NamespacedNameWithGroupKind,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+) error {
+	if !r.hrfCRDExists {
+		return nil
+	}
+	httpFilter, err := r.getHTTPRouteFilter(ctx, key.Name, key.Namespace)
+	if err != nil {
+		return fmt.Errorf("filter not found: %w", err)
+	}
+	if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
+		r.processRouteFilterConfigMapRef(ctx, httpFilter, resourceMap, resourceTree)
+		r.processRouteFilterSecretRef(ctx, httpFilter, resourceMap, resourceTree)
+		resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
+		resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
 	}
 	return nil
 }

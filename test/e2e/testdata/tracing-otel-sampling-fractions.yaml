@@ -1,0 +1,131 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: tracing-otel-overall-sampling-zero
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: tracing-otel-overall-sampling-zero
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: tracing-otel-overall-sampling-zero
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  telemetry:
+    tracing:
+      samplingFraction:
+        numerator: 100
+      clientSamplingFraction:
+        numerator: 100
+      overallSamplingFraction:
+        numerator: 0
+      provider:
+        backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 4317
+      tags:
+        "provider": "otel-overall-sampling-zero"
+        "k8s.cluster.name": "envoy-gateway"
+        "k8s.pod.name": "%ENVIRONMENT(ENVOY_POD_NAME)%"
+        "k8s.namespace.name": "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tracing-otel-overall-sampling-zero
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tracing-otel-overall-sampling-zero
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /otel-overall-sampling-zero
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: tracing-otel-client-sampling-zero
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: tracing-otel-client-sampling-zero
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: tracing-otel-client-sampling-zero
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  telemetry:
+    tracing:
+      samplingFraction:
+        numerator: 0
+      clientSamplingFraction:
+        numerator: 0
+      overallSamplingFraction:
+        numerator: 100
+      provider:
+        backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 4317
+      tags:
+        "provider": "otel-client-sampling-zero"
+        "k8s.cluster.name": "envoy-gateway"
+        "k8s.pod.name": "%ENVIRONMENT(ENVOY_POD_NAME)%"
+        "k8s.namespace.name": "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tracing-otel-client-sampling-zero
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tracing-otel-client-sampling-zero
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /otel-client-sampling-zero
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

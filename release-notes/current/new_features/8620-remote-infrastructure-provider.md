@@ -1,0 +1,1 @@
+Add remote infrastructure provider. This allows users to define their own infrastructure management strategy.

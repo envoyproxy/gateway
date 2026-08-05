@@ -1,10 +1,16 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   healthChecks:
   - healthyThreshold: 1
     httpHealthCheck:
@@ -42,15 +48,19 @@
             localityWeightedLbConfig: {}
   name: btp-host-route-dest
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  type: STRICT_DNS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   healthChecks:
   - healthyThreshold: 1
     httpHealthCheck:
@@ -90,15 +100,19 @@
             localityWeightedLbConfig: {}
   name: backend-host-route-dest
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  type: STRICT_DNS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   healthChecks:
   - healthyThreshold: 1
     httpHealthCheck:
@@ -135,5 +149,3 @@
             localityWeightedLbConfig: {}
   name: route-host-route-dest
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  type: STRICT_DNS

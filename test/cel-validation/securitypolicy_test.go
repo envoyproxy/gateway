@@ -576,7 +576,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.cors.allowOrigins[0]: Invalid value: \"https://foo.*.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|https?:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
+				"spec.cors.allowOrigins[0]: Invalid value: \"https://foo.*.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|[A-Za-z][A-Za-z0-9+.-]*:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
 			},
 		},
 		{
@@ -600,16 +600,60 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.cors.allowOrigins[0]: Invalid value: \"foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|https?:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
+				"spec.cors.allowOrigins[0]: Invalid value: \"foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|[A-Za-z][A-Za-z0-9+.-]*:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
 			},
 		},
 		{
-			desc: "cors alloworigin invalid with unsupported scheme",
+			desc: "cors alloworigin valid with browser extension scheme",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					CORS: &egv1a1.CORS{
 						AllowOrigins: []egv1a1.Origin{
-							"grpc://foo.bar.com", // invalid, unsupported scheme
+							"moz-extension://example.com", // valid, scheme may contain hyphens per RFC 3986
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "cors alloworigin valid with custom scheme, wildcard and port",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{
+							"foo://*.example.com:8080", // valid
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "cors alloworigin invalid with scheme not starting with a letter",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{
+							"1http://foo.bar.com", // invalid, RFC 3986 scheme must start with a letter
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -624,7 +668,81 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.cors.allowOrigins[0]: Invalid value: \"grpc://foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|https?:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
+				"spec.cors.allowOrigins[0]: Invalid value: \"1http://foo.bar.com\": spec.cors.allowOrigins[0] in body should match '^(\\*|[A-Za-z][A-Za-z0-9+.-]*:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
+			},
+		},
+
+		// csrf
+		{
+			desc: "csrf additionalOrigins valid",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CSRF: &egv1a1.CSRF{
+						AdditionalOrigins: []egv1a1.Origin{
+							"https://www.example.com",
+							"http://www.example.com:8080",
+							"https://*.trusted.com",
+							"*",
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "csrf additionalOrigins invalid without scheme",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CSRF: &egv1a1.CSRF{
+						// invalid, an origin is scheme://host even though the CSRF filter
+						// only ever matches on the host and port.
+						AdditionalOrigins: []egv1a1.Origin{"www.example.com"},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.csrf.additionalOrigins[0]: Invalid value: \"www.example.com\": spec.csrf.additionalOrigins[0] in body should match '^(\\*|[A-Za-z][A-Za-z0-9+.-]*:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
+			},
+		},
+		{
+			desc: "csrf additionalOrigins invalid with path",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					CSRF: &egv1a1.CSRF{
+						// invalid, the Origin header never carries a path.
+						AdditionalOrigins: []egv1a1.Origin{"https://www.example.com/app"},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.csrf.additionalOrigins[0]: Invalid value: \"https://www.example.com/app\": spec.csrf.additionalOrigins[0] in body should match '^(\\*|[A-Za-z][A-Za-z0-9+.-]*:\\/\\/(\\*|(\\*\\.)?(([\\w-]+\\.?)+)?[\\w-]+)(:\\d{1,5})?)$'",
 			},
 		},
 
@@ -1352,6 +1470,37 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "jwt with both optional and failOpen",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Optional: new(true),
+						FailOpen: new(true),
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"optional and failOpen cannot both be set; failOpen already tolerates a missing JWT",
+			},
+		},
+		{
 			desc: "valueRef type of localJWKS without valueRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -1809,6 +1958,212 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"only one of clientID or clientIDRef must be set"},
+		},
+		{
+			desc: "oidc-forward-id-token-custom-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "X-ID-Token",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-forward-id-token-token-chars-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						// Underscore is a valid RFC 7230 token character; it must be
+						// accepted by both the CRD and the translation-time validation.
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "X_Id_Token",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-forward-id-token-authorization",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "Authorization",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-forward-id-token-pseudo-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: ":path",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should match"},
+		},
+		{
+			desc: "oidc-forward-id-token-control-char-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "X-Id\nToken",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should match"},
+		},
+		{
+			desc: "oidc-forward-id-token-host-header",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "host",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"header cannot be the Host header"},
+		},
+		{
+			desc: "oidc-forward-id-token-and-access-token-on-authorization",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:           new("client-id"),
+						ClientSecret:       gwapiv1b1.SecretObjectReference{Name: "secret"},
+						ForwardAccessToken: new(true),
+						ForwardIDToken: &egv1a1.OIDCTokenForwarding{
+							Header: "authorization",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"forwardAccessToken cannot be true when forwardIDToken.header is Authorization"},
 		},
 	}
 

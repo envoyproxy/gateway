@@ -15,11 +15,13 @@ import (
 	"time"
 
 	perr "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -39,6 +41,96 @@ const (
 	scopeEntireGateway     ctpAttachScope = iota
 	scopeEntireListenerSet ctpAttachScope = iota
 )
+
+// ctpSpecHasClusterScopedFields reports whether spec sets a listener-level HTTP1 field.
+func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
+	return spec != nil && spec.HTTP1 != nil
+}
+
+// CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy
+// sets a cluster-affecting field. Gateway-wide settings (no SectionName) aren't tracked, since a
+// merged cluster never spans gateways and so can never see them diverge.
+type CTPClusterSettingsIndex struct {
+	*policyIndex[bool]
+}
+
+// newCTPClusterSettingsIndex allocates a CTPClusterSettingsIndex.
+func newCTPClusterSettingsIndex() *CTPClusterSettingsIndex {
+	return &CTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
+}
+
+// HasClusterSettingsBelowGateway reports whether any of listeners (which belong to gatewayNN,
+// either directly or via a ListenerSet) has a ClientTrafficPolicy-sourced cluster-scoped setting,
+// checking each listener against its own owner (the Gateway, or the ListenerSet it came from).
+func (idx *CTPClusterSettingsIndex) HasClusterSettingsBelowGateway(gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
+	if idx == nil {
+		return false
+	}
+	for _, l := range listeners {
+		if l.isFromListenerSet() {
+			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
+			if hasClusterSettings, found := idx.LookupExact(listenerSetScope(lsNN)); found && hasClusterSettings {
+				return true
+			}
+			if hasClusterSettings, found := idx.LookupExact(listenerSetListenerScope(lsNN, l.Name)); found && hasClusterSettings {
+				return true
+			}
+			continue
+		}
+		if hasClusterSettings, found := idx.LookupExact(gatewayListenerScope(gatewayNN, l.Name)); found && hasClusterSettings {
+			return true
+		}
+	}
+	return false
+}
+
+// BuildCTPClusterSettingsIndex builds a CTPClusterSettingsIndex.
+func BuildCTPClusterSettingsIndex(
+	ctps []*egv1a1.ClientTrafficPolicy,
+	gateways []*GatewayContext,
+	listenerSets []*gwapiv1.ListenerSet,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	namespaceLookup func(string) *corev1.Namespace,
+	mergeBackendsEnabled bool,
+) *CTPClusterSettingsIndex {
+	idx := newCTPClusterSettingsIndex()
+	// Moot when no accepted gateway can enable merging.
+	if !mergeBackendsEnabled {
+		return idx
+	}
+
+	for _, ctp := range ctps {
+		hasClusterScoped := ctpSpecHasClusterScopedFields(&ctp.Spec)
+
+		refs := resolvePolicyTargetsForGatewayAndListenerSet(
+			ctp.Spec.PolicyTargetReferences,
+			gateways,
+			listenerSets,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindClientTrafficPolicy,
+			ctp.Namespace,
+			namespaceLookup,
+		)
+
+		for _, ref := range refs {
+			nn := types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}
+			switch {
+			case ref.Kind == resource.KindGateway && ref.SectionName != nil:
+				idx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+			case ref.Kind == resource.KindGateway:
+				// Gateway-wide settings apply uniformly to every route sharing a merged cluster,
+				// so they don't disqualify merging - no entry needed.
+			case ref.Kind == resource.KindListenerSet && ref.SectionName != nil:
+				idx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+			case ref.Kind == resource.KindListenerSet:
+				idx.setListenerSetLevel(nn, hasClusterScoped, true)
+			}
+		}
+	}
+
+	return idx
+}
 
 func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
@@ -96,8 +188,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		listenerSetMap[key] = ls
 	}
 
-	policyCopies := clientTrafficPolicyCopiesWithStatusDeepCopy(clientTrafficPolicies)
-
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.ClientTrafficPolicy)
 	// Translate
 	// 1. First translate Policies with a sectionName set
@@ -112,7 +202,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			if hasSectionName(&targetRef) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = clientTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -258,7 +348,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 					policy, found := handledPolicies[policyName]
 					if !found {
-						policy = policyCopies[i]
+						policy = clientTrafficPolicies[i]
 						res = append(res, policy)
 						handledPolicies[policyName] = policy
 					}
@@ -925,6 +1015,12 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		}
 	}
 
+	if headerSettings.Host != nil && headerSettings.Host.StripTrailingHostDot != nil {
+		httpIR.Host = &ir.HostSettings{
+			StripTrailingHostDot: *headerSettings.Host.StripTrailingHostDot,
+		}
+	}
+
 	var errs error
 
 	if headerSettings.EarlyRequestHeaders != nil {
@@ -1128,11 +1224,11 @@ func (t *Translator) buildListenerTLSParameters(
 
 		seenCACerts := make(map[[sha256.Size]byte]struct{})
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, resources, from, CACertKey)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
-			validCaCertBytes, listenerErr := filterValidCertificates(caCertBytes)
+			validCaCertBytes, listenerErr := filterValidCACertificates(caCertBytes)
 			if listenerErr != nil {
 				if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
 					return irTLSConfig, fmt.Errorf("no valid certificates exist in %s: %w", caCertRef.Name, listenerErr)
@@ -1167,7 +1263,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, CRLKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, resources, from, CRLKey)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}
@@ -1200,10 +1296,13 @@ func (t *Translator) buildListenerTLSParameters(
 // validateAndGetDataAtKeyInRef validates the secret object reference and gets the data at the key in the secret or configmap
 func (t *Translator) validateAndGetDataAtKeyInRef(
 	ref gwapiv1.SecretObjectReference,
-	key string,
 	resources *resource.Resources,
 	from crossNamespaceFrom,
+	keys ...string,
 ) ([]byte, error) {
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("unsupported call with no key")
+	}
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
@@ -1212,9 +1311,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		secretCertBytes, ok := getOrFirstFromData(secret.Data, key)
+		secretCertBytes, ok := getFirstMatchOrFirstFromData(secret.Data, keys...)
 		if !ok || len(secretCertBytes) == 0 {
-			return nil, fmt.Errorf("ref secret [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref secret [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
@@ -1223,9 +1322,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		configMapData, ok := getOrFirstFromData(configMap.Data, key)
+		configMapData, ok := getFirstMatchOrFirstFromData(configMap.Data, keys...)
 		if !ok || len(configMapData) == 0 {
-			return nil, fmt.Errorf("ref configmap [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref configmap [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return []byte(configMapData), nil
 	case resource.KindClusterTrustBundle:
@@ -1245,6 +1344,9 @@ func setTLSClientValidationContext(tlsClientValidation *egv1a1.ClientValidationC
 	}
 	if len(tlsClientValidation.CertificateHashes) > 0 {
 		irTLSConfig.VerifyCertificateHash = append(irTLSConfig.VerifyCertificateHash, tlsClientValidation.CertificateHashes...)
+	}
+	if tlsClientValidation.AllowExpiredCertificate != nil && *tlsClientValidation.AllowExpiredCertificate {
+		irTLSConfig.AllowExpiredCertificate = true
 	}
 	if tlsClientValidation.SubjectAltNames != nil {
 		for _, match := range tlsClientValidation.SubjectAltNames.DNSNames {
@@ -1506,16 +1608,4 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	}
 
 	return addRequestHeaders, removeRequestHeaders, removeRequestHeadersOnMatch, errs
-}
-
-// clientTrafficPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func clientTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.ClientTrafficPolicy) []*egv1a1.ClientTrafficPolicy {
-	copies := make([]*egv1a1.ClientTrafficPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
-	}
-	return copies
 }

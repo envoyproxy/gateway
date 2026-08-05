@@ -394,7 +394,7 @@ type KubernetesServiceSpec struct {
 }
 
 // LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
-// +kubebuilder:validation:Enum=trace;debug;info;warn;error
+// +kubebuilder:validation:Enum=trace;debug;info;warn;error;off;critical
 type LogLevel string
 
 const (
@@ -412,6 +412,12 @@ const (
 
 	// LogLevelError defines the "Error" logging level.
 	LogLevelError LogLevel = "error"
+
+	// LogLevelOff disables logging.
+	LogLevelOff LogLevel = "off"
+
+	// LogLevelCritical defines the "critical" logging level.
+	LogLevelCritical LogLevel = "critical"
 )
 
 // XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
@@ -941,6 +947,18 @@ type Tracing struct {
 	//
 	// +optional
 	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
+	// ClientSamplingFraction represents the fraction of requests that should be
+	// selected for tracing when requested by the client.
+	// If unspecified, client-forced tracing is disabled by default and users must
+	// set this field to opt in.
+	//
+	// +optional
+	ClientSamplingFraction *gwapiv1.Fraction `json:"clientSamplingFraction,omitempty"`
+	// OverallSamplingFraction represents the fraction of requests that should be
+	// selected for tracing after all other sampling checks have been applied.
+	//
+	// +optional
+	OverallSamplingFraction *gwapiv1.Fraction `json:"overallSamplingFraction,omitempty"`
 	// CustomTags defines the custom tags to add to each span.
 	// If provider is kubernetes, pod name and namespace are added by default.
 	//

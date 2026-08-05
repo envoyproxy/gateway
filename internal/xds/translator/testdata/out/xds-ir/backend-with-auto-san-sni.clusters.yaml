@@ -44,6 +44,7 @@
               name: policy-btls/backends-ca
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
   type: EDS
   typedExtensionProtocolOptions:
@@ -99,6 +100,7 @@
               name: policy-btls/backends-ca
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
   type: EDS
   typedExtensionProtocolOptions:
@@ -153,6 +155,7 @@
               name: policy-btls/backends-ca
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
   - match:
       name: mixed-sni-route/tls/1
@@ -172,6 +175,7 @@
               name: policy-btls/backends-ca
               sdsConfig:
                 ads: {}
+                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: should.not.use.auto
   type: EDS

@@ -151,6 +151,12 @@ type ListenerContext struct {
 	// Conflict detection should only consider listeners with specValid=true.
 	specValid bool
 
+	// protocolConflicted is set by validateConflictedProtocolsListeners when this
+	// listener loses a protocol conflict. Listeners with this flag must be excluded
+	// from subsequent hostname conflict resolution so they cannot steal a hostname
+	// slot from a valid same-hostname listener that uses the winner protocol.
+	protocolConflicted bool
+
 	tls ListenerTLSConfig
 
 	httpIR *ir.HTTPListener
@@ -862,16 +868,30 @@ type backendServiceKey struct {
 	name      string
 }
 
+// BackendClusterKey identifies a unique backend per gateway for cluster deduplication.
+type BackendClusterKey struct {
+	GatewayIRKey string
+	Kind         string
+	Namespace    string
+	Name         string
+	Port         int32
+	Protocol     ir.AppProtocol
+}
+
 type TranslatorContext struct {
-	NamespaceMap          map[types.NamespacedName]*corev1.Namespace
-	ServiceMap            map[types.NamespacedName]*corev1.Service
-	ServiceImportMap      map[types.NamespacedName]*mcsapiv1a1.ServiceImport
-	BackendMap            map[types.NamespacedName]*egv1a1.Backend
-	SecretMap             map[types.NamespacedName]*corev1.Secret
-	ConfigMapMap          map[types.NamespacedName]*corev1.ConfigMap
-	ClusterTrustBundleMap map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
-	EndpointSliceMap      map[backendServiceKey][]*discoveryv1.EndpointSlice
-	BTPRoutingTypeIndex   *BTPRoutingTypeIndex
+	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
+	ServiceMap              map[types.NamespacedName]*corev1.Service
+	ServiceImportMap        map[types.NamespacedName]*mcsapiv1a1.ServiceImport
+	BackendMap              map[types.NamespacedName]*egv1a1.Backend
+	SecretMap               map[types.NamespacedName]*corev1.Secret
+	ConfigMapMap            map[types.NamespacedName]*corev1.ConfigMap
+	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
+	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
+	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
+	BTPClusterSettingsIndex *BTPClusterSettingsIndex
+	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
+	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {

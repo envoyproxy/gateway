@@ -47,10 +47,16 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
     clusterName: wasm_cluster
@@ -75,7 +81,6 @@
             localityWeightedLbConfig: {}
   name: wasm_cluster
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   transportSocket:
     name: envoy.transport_sockets.tls
     typedConfig:
@@ -85,13 +90,13 @@
         - name: envoy-gateway-system/envoy
           sdsConfig:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
         tlsParams:
           tlsMaximumProtocolVersion: TLSv1_3
         validationContext:
           trustedCa:
             filename: /certs/ca.crt
-  type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
