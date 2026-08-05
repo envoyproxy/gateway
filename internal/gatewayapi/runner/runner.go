@@ -295,7 +295,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				// cluster's lifetime - for no benefit, since the attribute already makes the span
 				// filterable/searchable by GatewayClass in any trace UI.
 				translateGCCtx, translateGCSpan := tracer.Start(rtcTraceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateGatewayClass",
-					trace.WithAttributes(attribute.String("gatewayclass.name", string(resources.GatewayClass.Name))),
+					trace.WithAttributes(attribute.String("gatewayclass.name", resources.GatewayClass.Name)),
 				)
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
@@ -374,7 +374,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					} else {
 						m := message.XdsIRWithContext{
 							XdsIR:   val,
-							Context: traceCtx,
+							Context: translateGCCtx,
 						}
 						r.XdsIR.Store(key, &m)
 						xdsIRCount++
