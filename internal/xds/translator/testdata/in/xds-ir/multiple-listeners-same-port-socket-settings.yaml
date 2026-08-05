@@ -1,0 +1,67 @@
+# The listeners below all share the same address and port, so they collapse into a
+# single xDS listener. The first one leaves every socket setting unset and must not
+# make the shared socket fall back to the defaults: the buffer limit and the keepalive
+# come from the second HTTP listener, and the max accept per socket event comes from
+# the TCP listener.
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "foo.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+- name: "second-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "foo.net"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tcpKeepalive:
+    probes: 7
+    interval: 200
+    idleTime: 50
+  connection:
+    bufferLimit: 1048576
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"
+tcp:
+- name: "third-listener"
+  address: "::"
+  port: 10080
+  connection:
+    maxAcceptPerSocketEvent: 64
+  routes:
+  - name: "third-route"
+    tls:
+      inspector:
+        snis:
+        - bar.com
+    destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tcp-route-dest/backend/0"
