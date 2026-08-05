@@ -379,11 +379,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-3'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -407,7 +402,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /
+          value: /route-3
   status:
     parents:
     - conditions:
@@ -421,11 +416,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -624,6 +614,56 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
+            name: httproute-3
+            namespace: default
+          name: httproute/default/httproute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-3/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: bar.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-3
+            namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/bar_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-3
+        traffic:
+          responseOverride:
+            name: backendtrafficpolicy/default/policy-for-route-3
+            rules:
+            - match:
+                statusCodes:
+                - value: 200
+              name: backendtrafficpolicy/default/policy-for-route-3/responseoverride/rule/0
+              redirect:
+                hostname: www.redirect.com
+                path:
+                  fullReplace: /redirect/path
+                  prefixMatchReplace: null
+                port: 8443
+                scheme: https
+                statusCode: 301
+      - destination:
+          metadata:
+            kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
@@ -720,56 +760,6 @@ xdsIR:
               name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/0
               response:
                 statusCode: 401
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-3
-            namespace: default
-          name: httproute/default/httproute-3/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-3/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: bar.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-3
-          namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: policy-for-route-3
-            namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/bar_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-        traffic:
-          responseOverride:
-            name: backendtrafficpolicy/default/policy-for-route-3
-            rules:
-            - match:
-                statusCodes:
-                - value: 200
-              name: backendtrafficpolicy/default/policy-for-route-3/responseoverride/rule/0
-              redirect:
-                hostname: www.redirect.com
-                path:
-                  fullReplace: /redirect/path
-                  prefixMatchReplace: null
-                port: 8443
-                scheme: https
-                statusCode: 301
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -106,11 +106,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-1-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -134,7 +129,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /
+          value: /route-1-1
   status:
     parents:
     - conditions:
@@ -148,11 +143,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -222,6 +212,36 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
+            name: httproute-1-1
+            namespace: default
+          name: httproute/default/httproute-1-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1-1
+          namespace: default
+        name: httproute/default/httproute-1-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-1-1
+      - destination:
+          metadata:
+            kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
@@ -258,36 +278,6 @@ xdsIR:
             maxConnections: 2048
             maxParallelRequests: 4294967295
             maxPendingRequests: 1
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-1-1
-            namespace: default
-          name: httproute/default/httproute-1-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1-1
-          namespace: default
-        name: httproute/default/httproute-1-1/rule/0/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -1296,11 +1296,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -1316,11 +1311,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -1336,11 +1326,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-3
@@ -1356,11 +1341,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-4
@@ -1376,11 +1356,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-5
@@ -1396,11 +1371,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-6
@@ -1416,11 +1386,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-7
@@ -1436,11 +1401,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-8
@@ -1456,11 +1416,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-9
@@ -1476,11 +1431,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-10
@@ -1496,11 +1446,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-11
@@ -1516,11 +1461,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-12
@@ -1536,11 +1476,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-13
@@ -1556,11 +1491,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-14
@@ -1576,11 +1506,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-15
@@ -1596,11 +1521,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-16
@@ -1616,11 +1536,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-17
@@ -1636,11 +1551,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-18
@@ -1694,7 +1604,7 @@ httpRoutes:
         port: 8443
       matches:
       - path:
-          value: /
+          value: /route-2
   status:
     parents:
     - conditions:
@@ -1709,11 +1619,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -1730,11 +1635,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -1751,11 +1651,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-3
@@ -1772,11 +1667,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-4
@@ -1793,11 +1683,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-5
@@ -1814,11 +1699,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-6
@@ -1835,11 +1715,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-7
@@ -1856,11 +1731,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-8
@@ -1877,11 +1747,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-9
@@ -1898,11 +1763,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-10
@@ -1919,11 +1779,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-11
@@ -1940,11 +1795,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-12
@@ -1961,11 +1811,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-13
@@ -1982,11 +1827,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-14
@@ -2003,11 +1843,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-15
@@ -2024,11 +1859,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-16
@@ -2045,11 +1875,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-17
@@ -2066,11 +1891,6 @@ httpRoutes:
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-18
@@ -2442,6 +2262,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -2476,19 +2309,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -2539,6 +2359,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -2573,19 +2406,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -2636,6 +2456,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -2670,19 +2503,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -2733,6 +2553,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -2767,19 +2600,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -2830,6 +2650,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -2864,19 +2697,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -2927,6 +2747,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -2961,19 +2794,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3024,6 +2844,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3058,19 +2891,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3121,6 +2941,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3155,19 +2988,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3218,6 +3038,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3252,19 +3085,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3315,6 +3135,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3349,19 +3182,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3412,6 +3232,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3446,19 +3279,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3509,6 +3329,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3543,19 +3376,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3606,6 +3426,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3640,19 +3473,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3703,6 +3523,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3737,19 +3570,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3800,6 +3620,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3834,19 +3667,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3897,6 +3717,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -3931,19 +3764,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -3994,6 +3814,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -4028,19 +3861,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -4091,6 +3911,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -4125,19 +3958,6 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""

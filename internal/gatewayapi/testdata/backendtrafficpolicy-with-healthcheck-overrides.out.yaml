@@ -208,6 +208,8 @@ grpcRoutes:
     name: grpcroute-with-overrides
     namespace: default
   spec:
+    hostnames:
+    - grpc-with-overrides.envoyproxy.io
     parentRefs:
     - name: gateway
       namespace: envoy-gateway
@@ -229,11 +231,6 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-with-no-overrides'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway
@@ -245,6 +242,8 @@ grpcRoutes:
     name: grpcroute-with-no-overrides
     namespace: default
   spec:
+    hostnames:
+    - grpc-with-no-overrides.envoyproxy.io
     parentRefs:
     - name: gateway
       namespace: envoy-gateway
@@ -266,11 +265,6 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-with-overrides'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway
@@ -530,7 +524,7 @@ xdsIR:
             name: grpcroute/default/grpcroute-with-overrides/rule/0/backend/0
             protocol: GRPC
             weight: 1
-        hostname: '*'
+        hostname: grpc-with-overrides.envoyproxy.io
         isHTTP2: true
         metadata:
           kind: GRPCRoute
@@ -540,7 +534,7 @@ xdsIR:
           - kind: BackendTrafficPolicy
             name: policy-for-grpcroute-with-overrides
             namespace: default
-        name: grpcroute/default/grpcroute-with-overrides/rule/0/match/-1/*
+        name: grpcroute/default/grpcroute-with-overrides/rule/0/match/-1/grpc-with-overrides_envoyproxy_io
         traffic:
           healthCheck:
             active:
@@ -571,7 +565,7 @@ xdsIR:
             name: grpcroute/default/grpcroute-with-no-overrides/rule/0/backend/0
             protocol: GRPC
             weight: 1
-        hostname: '*'
+        hostname: grpc-with-no-overrides.envoyproxy.io
         isHTTP2: true
         metadata:
           kind: GRPCRoute
@@ -581,7 +575,7 @@ xdsIR:
           - kind: BackendTrafficPolicy
             name: policy-for-grpcroute-with-no-overrides
             namespace: default
-        name: grpcroute/default/grpcroute-with-no-overrides/rule/0/match/-1/*
+        name: grpcroute/default/grpcroute-with-no-overrides/rule/0/match/-1/grpc-with-no-overrides_envoyproxy_io
         traffic:
           healthCheck:
             active:

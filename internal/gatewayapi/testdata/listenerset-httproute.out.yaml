@@ -94,6 +94,9 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+      matches:
+      - path:
+          value: /route-one
   status:
     parents:
     - conditions:
@@ -107,11 +110,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/route-entire-xls'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         group: gateway.networking.k8s.io
@@ -135,6 +133,9 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+      matches:
+      - path:
+          value: /route-two
   status:
     parents:
     - conditions:
@@ -148,11 +149,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/route-entire-xls'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         group: gateway.networking.k8s.io
@@ -188,12 +184,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/route-extra-http-one,
-          HTTPRoute default/route-extra-http-two'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         group: gateway.networking.k8s.io
@@ -430,7 +420,11 @@ xdsIR:
           kind: HTTPRoute
           name: route-extra-http-one
           namespace: default
-        name: httproute/default/route-extra-http-one/rule/0/match/-1/*
+        name: httproute/default/route-extra-http-one/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-one
       - destination:
           metadata:
             kind: HTTPRoute
@@ -497,7 +491,11 @@ xdsIR:
           kind: HTTPRoute
           name: route-extra-http-two
           namespace: default
-        name: httproute/default/route-extra-http-two/rule/0/match/-1/*
+        name: httproute/default/route-extra-http-two/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-two
       - destination:
           metadata:
             kind: HTTPRoute

@@ -189,6 +189,8 @@ grpcRoutes:
     name: grpcroute-1
     namespace: default
   spec:
+    hostnames:
+    - grpc-1.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -210,11 +212,6 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -226,6 +223,8 @@ grpcRoutes:
     name: grpcroute-2
     namespace: default
   spec:
+    hostnames:
+    - grpc-2.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -247,11 +246,6 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -396,7 +390,7 @@ xdsIR:
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
-        hostname: '*'
+        hostname: grpc-1.envoyproxy.io
         isHTTP2: true
         metadata:
           kind: GRPCRoute
@@ -406,7 +400,7 @@ xdsIR:
           - kind: BackendTrafficPolicy
             name: policy-for-gateway
             namespace: envoy-gateway
-        name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+        name: grpcroute/default/grpcroute-1/rule/0/match/-1/grpc-1_envoyproxy_io
         statName: GRPCRoute/default/grpcroute-1/grpcroute-1
         traffic:
           telemetry:
@@ -431,7 +425,7 @@ xdsIR:
             name: grpcroute/default/grpcroute-2/rule/0/backend/0
             protocol: GRPC
             weight: 1
-        hostname: '*'
+        hostname: grpc-2.envoyproxy.io
         isHTTP2: true
         metadata:
           kind: GRPCRoute
@@ -441,7 +435,7 @@ xdsIR:
           - kind: BackendTrafficPolicy
             name: policy-for-route-rewrite
             namespace: default
-        name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
+        name: grpcroute/default/grpcroute-2/rule/0/match/-1/grpc-2_envoyproxy_io
         statName: route=rewrite
         traffic:
           telemetry:

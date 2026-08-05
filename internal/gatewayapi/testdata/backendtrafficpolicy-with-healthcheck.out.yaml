@@ -487,6 +487,8 @@ grpcRoutes:
     name: grpcroute-1
     namespace: default
   spec:
+    hostnames:
+    - grpc-1.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -508,12 +510,6 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-2,
-          GRPCRoute default/grpcroute-3'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -525,6 +521,8 @@ grpcRoutes:
     name: grpcroute-3
     namespace: default
   spec:
+    hostnames:
+    - grpc-3.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -546,12 +544,6 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-1,
-          GRPCRoute default/grpcroute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -563,6 +555,8 @@ grpcRoutes:
     name: grpcroute-2
     namespace: default
   spec:
+    hostnames:
+    - grpc-2.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -584,12 +578,6 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-1,
-          GRPCRoute default/grpcroute-3'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -665,11 +653,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-4'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -730,7 +713,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /v2
+          value: /v4
   status:
     parents:
     - conditions:
@@ -744,11 +727,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -895,7 +873,7 @@ xdsIR:
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
-        hostname: '*'
+        hostname: grpc-1.envoyproxy.io
         isHTTP2: true
         metadata:
           kind: GRPCRoute
@@ -905,7 +883,7 @@ xdsIR:
           - kind: BackendTrafficPolicy
             name: policy-for-gateway
             namespace: envoy-gateway
-        name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+        name: grpcroute/default/grpcroute-1/rule/0/match/-1/grpc-1_envoyproxy_io
         traffic:
           healthCheck:
             active:
@@ -949,7 +927,7 @@ xdsIR:
             name: grpcroute/default/grpcroute-3/rule/0/backend/0
             protocol: GRPC
             weight: 1
-        hostname: '*'
+        hostname: grpc-3.envoyproxy.io
         isHTTP2: true
         metadata:
           kind: GRPCRoute
@@ -959,7 +937,7 @@ xdsIR:
           - kind: BackendTrafficPolicy
             name: policy-for-grpc-route-3
             namespace: default
-        name: grpcroute/default/grpcroute-3/rule/0/match/-1/*
+        name: grpcroute/default/grpcroute-3/rule/0/match/-1/grpc-3_envoyproxy_io
         traffic:
           healthCheck:
             active:
@@ -988,7 +966,7 @@ xdsIR:
             name: grpcroute/default/grpcroute-2/rule/0/backend/0
             protocol: GRPC
             weight: 1
-        hostname: '*'
+        hostname: grpc-2.envoyproxy.io
         isHTTP2: true
         metadata:
           kind: GRPCRoute
@@ -998,7 +976,7 @@ xdsIR:
           - kind: BackendTrafficPolicy
             name: policy-for-grpc-route
             namespace: default
-        name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
+        name: grpcroute/default/grpcroute-2/rule/0/match/-1/grpc-2_envoyproxy_io
         traffic:
           healthCheck:
             active:
@@ -1194,7 +1172,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /v2
+          prefix: /v4
         traffic:
           healthCheck:
             active:

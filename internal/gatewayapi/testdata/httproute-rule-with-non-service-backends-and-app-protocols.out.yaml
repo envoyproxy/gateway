@@ -110,11 +110,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -135,7 +130,7 @@ httpRoutes:
         name: backend-fqdn
       matches:
       - path:
-          value: /
+          value: /route-2
   status:
     parents:
     - conditions:
@@ -149,11 +144,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -222,6 +212,35 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: primary.foo.com
+              port: 3000
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP2
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
+      - destination:
+          metadata:
+            kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
@@ -256,35 +275,6 @@ xdsIR:
           name: httproute-1
           namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-2
-            namespace: default
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: FQDN
-            endpoints:
-            - host: primary.foo.com
-              port: 3000
-            metadata:
-              kind: Backend
-              name: backend-fqdn
-              namespace: default
-            name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP2
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""

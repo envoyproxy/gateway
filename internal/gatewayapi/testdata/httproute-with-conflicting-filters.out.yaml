@@ -98,11 +98,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/mirror-request-redirect'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -142,7 +137,7 @@ httpRoutes:
       matches:
       - path:
           type: PathPrefix
-          value: /valid
+          value: /valid-redirect
   status:
     parents:
     - conditions:
@@ -162,11 +157,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/mirror-direct-response'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -268,36 +258,6 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: mirror-direct-response
-            namespace: default
-          name: httproute/default/mirror-direct-response/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/mirror-direct-response/rule/1/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: mirror-direct-response
-          namespace: default
-        name: httproute/default/mirror-direct-response/rule/1/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /valid
-      - destination:
-          metadata:
-            kind: HTTPRoute
             name: mirror-request-redirect
             namespace: default
           name: httproute/default/mirror-request-redirect/rule/1
@@ -321,6 +281,36 @@ xdsIR:
           name: mirror-request-redirect
           namespace: default
         name: httproute/default/mirror-request-redirect/rule/1/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /valid-redirect
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: mirror-direct-response
+            namespace: default
+          name: httproute/default/mirror-direct-response/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/mirror-direct-response/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: mirror-direct-response
+          namespace: default
+        name: httproute/default/mirror-direct-response/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""

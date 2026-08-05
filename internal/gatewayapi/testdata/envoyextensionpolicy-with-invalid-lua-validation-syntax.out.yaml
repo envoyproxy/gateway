@@ -164,11 +164,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-2'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -192,7 +187,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo
+          value: /bar
   status:
     parents:
     - conditions:
@@ -206,11 +201,6 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-1'
-        reason: RouteRulesOverlap
-        status: "True"
-        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -371,7 +361,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
+          prefix: /bar
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
