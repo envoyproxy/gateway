@@ -1035,14 +1035,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{
-									ReportingPeriod: new(gwapiv1.Duration("5s")),
-									Port:            new(int32(9001)),
-									Authority:       new("orca.local"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{
+										ReportingPeriod: new(gwapiv1.Duration("5s")),
+										Port:            new(int32(9001)),
+										Authority:       new("orca.local"),
+									},
 								},
 							},
 						},
@@ -1064,11 +1066,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(0))},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(0))},
+								},
 							},
 						},
 					},
@@ -1092,11 +1096,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(70000))},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(70000))},
+								},
 							},
 						},
 					},
@@ -1120,11 +1126,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{ReportingPeriod: new(gwapiv1.Duration("0s"))},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{ReportingPeriod: new(gwapiv1.Duration("0s"))},
+								},
 							},
 						},
 					},
@@ -1148,11 +1156,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("")},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("")},
+								},
 							},
 						},
 					},
@@ -1176,11 +1186,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("foo\nbar")},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("foo\nbar")},
+								},
 							},
 						},
 					},
