@@ -34094,6 +34094,20 @@ spec:
                 items:
                   type: string
                 type: array
+              features:
+                description: Features defines the features that are enabled for this
+                  EnvoyProxy.
+                properties:
+                  detectMisdirectedRequests:
+                    description: |-
+                      DetectMisdirectedRequests enables 421 responses for HTTP/2 requests
+                      coalesced onto a TLS connection selected by a different SNI, as described in
+                      [GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).
+                      When disabled, overlapping TLS listeners keep the default ALPN downgrade to
+                      HTTP/1.1 unless ClientTrafficPolicy configures ALPN.
+                      Default: false
+                    type: boolean
+                type: object
               filterOrder:
                 description: |-
                   FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
