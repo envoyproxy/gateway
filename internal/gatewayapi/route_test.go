@@ -833,29 +833,14 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 		return idx
 	}()
 
-	// clusterSettingsIdx forces HasClusterSettingsBelowGateway to return true for route's own target.
-	clusterSettingsIdx := func() *BTPClusterSettingsIndex {
-		idx := newBTPClusterSettingsIndex()
-		idx.setRouteLevel(types.NamespacedName{Namespace: "default", Name: "route-1"}, "HTTPRoute", true, nil)
-		return idx
-	}()
-
 	tests := []struct {
-		name               string
-		backendRefs        []gwapiv1.BackendObjectReference
-		clusterSettingsIdx *BTPClusterSettingsIndex
-		sessionPersistent  bool
-		gatewayCtx         *GatewayContext
-		lbIndex            *BTPLoadBalancerIndex
-		want               bool
+		name              string
+		backendRefs       []gwapiv1.BackendObjectReference
+		sessionPersistent bool
+		gatewayCtx        *GatewayContext
+		lbIndex           *BTPLoadBalancerIndex
+		want              bool
 	}{
-		{
-			name:               "route-level cluster settings short-circuits regardless of backendRefs",
-			backendRefs:        []gwapiv1.BackendObjectReference{serviceRef1},
-			clusterSettingsIdx: clusterSettingsIdx,
-			gatewayCtx:         gatewayCtx,
-			want:               true,
-		},
 		{
 			name:        "single backendRef is always compatible",
 			backendRefs: []gwapiv1.BackendObjectReference{fallbackRef},
@@ -896,9 +881,8 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tr := &Translator{TranslatorContext: &TranslatorContext{
-				BackendMap:              map[types.NamespacedName]*egv1a1.Backend{{Namespace: "default", Name: "be-fallback"}: fallbackBackend},
-				BTPLoadBalancerIndex:    tc.lbIndex,
-				BTPClusterSettingsIndex: tc.clusterSettingsIdx,
+				BackendMap:           map[types.NamespacedName]*egv1a1.Backend{{Namespace: "default", Name: "be-fallback"}: fallbackBackend},
+				BTPLoadBalancerIndex: tc.lbIndex,
 			}}
 			got := tr.mergeIncompatibleForWeightedRule(tc.gatewayCtx, route, parentRef, nil, tc.backendRefs, tc.sessionPersistent)
 			require.Equal(t, tc.want, got)

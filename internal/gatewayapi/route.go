@@ -556,23 +556,23 @@ func (t *Translator) resolveBTPRoutingType(
 	)
 }
 
-// hasClusterSettingsBelowGateway reports whether the cluster-scoped settings applying to this rule
-// are defined below Gateway scope, in either of two ways:
+// hasClusterSettingsBelowGatewayForListener reports whether listener - and, transitively, the
+// route-rule/route it's serving - has a BTP/CTP-sourced cluster-scoped setting defined below
+// Gateway scope, in either of two ways:
 //
 //   - BTP: a route-rule/route/listener-level BackendTrafficPolicy sets a cluster-scoped field, or
 //     a route-rule/route-level one targets the rule with MergeType unset - replacing the
 //     Gateway's settings instead of merging with them, even when it sets none of its own.
-//   - CTP: a listener-level ClientTrafficPolicy sets an HTTP1 override on any of the rule's
-//     attached listeners (parentRef.listeners), checking each against its own owner (the
-//     Gateway, or the ListenerSet it came from).
+//   - CTP: a ClientTrafficPolicy sets an HTTP1 override on listener itself (or the ListenerSet it
+//     belongs to).
 //
-// Both make cluster deduplication unsafe, though not for the same reason: the BTP settings would
-// wrongly apply to the other routes sharing the cluster, while the CTP ones would be lost
-// entirely, since a merged BackendCluster carries no HTTP1 settings.
-func (t *Translator) hasClusterSettingsBelowGateway(
+// Both make cluster deduplication unsafe for this listener, though not for the same reason: the
+// BTP settings would wrongly apply to the other routes/listeners sharing the cluster, while the
+// CTP ones would be lost entirely, since a merged BackendCluster carries no HTTP1 settings.
+func (t *Translator) hasClusterSettingsBelowGatewayForListener(
 	gatewayCtx *GatewayContext,
 	routeCtx RouteContext,
-	parentRef *RouteParentContext,
+	listener *ListenerContext,
 	routeRuleName *gwapiv1.SectionName,
 ) bool {
 	if gatewayCtx == nil {
@@ -583,12 +583,12 @@ func (t *Translator) hasClusterSettingsBelowGateway(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
 		gatewayNN,
-		parentRef.SectionName,
+		&listener.Name,
 		routeRuleName,
 	) {
 		return true
 	}
-	return t.CTPClusterSettingsIndex.HasClusterSettingsBelowGateway(gatewayNN, parentRef.listeners)
+	return t.CTPClusterSettingsIndex.HasClusterSettingsBelowGateway(gatewayNN, listener)
 }
 
 // gatewayXdsIR resolves the *ir.Xds for gatewayCtx's gateway from xdsIR. Returns nil if
@@ -805,11 +805,6 @@ func (t *Translator) mergeIncompatibleForWeightedRule(
 	backendRefs []gwapiv1.BackendObjectReference,
 	sessionPersistent bool,
 ) bool {
-	// A BTP/CTP cluster-scoped setting below Gateway scope would incorrectly apply uniformly to a
-	// cluster shared with other routes/listeners if merged.
-	if t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, parentRef, routeRuleName) {
-		return true
-	}
 	// A single backendRef has no multi-backend pool for the checks below to protect —
 	// nothing to fragment, so it's always mergeable at this point.
 	if len(backendRefs) <= 1 {
@@ -832,14 +827,8 @@ func (t *Translator) mergeIncompatibleForSingleClusterRule(
 ) bool {
 	// This route type has no weighted-cluster mechanism at the listener layer, so a rule's
 	// backendRefs must always resolve to a single cluster — letting them merge independently
-	// could split the rule across clusters the listener can't reference together. Cheapest
-	// check first: skip the index lookups below when this alone already disqualifies the rule.
-	if len(backendRefs) > 1 {
-		return true
-	}
-	// A BTP/CTP cluster-scoped setting below Gateway scope would incorrectly apply uniformly to a
-	// cluster shared with other routes/listeners if merged.
-	return t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, parentRef, routeRuleName)
+	// could split the rule across clusters the listener can't reference together.
+	return len(backendRefs) > 1
 }
 
 // weightedRuleBackendsMustBeInOneCluster reports whether a feature on this multi-backendRef
