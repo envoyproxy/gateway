@@ -386,7 +386,7 @@ require (
 	mvdan.cc/gofumpt v0.9.2 // indirect
 	mvdan.cc/unparam v0.0.0-20251027182757-5beb8c8f8f15 // indirect
 	mvdan.cc/xurls/v2 v2.6.0 // indirect
-	oras.land/oras-go/v2 v2.6.1 // indirect
+	oras.land/oras-go/v2 v2.6.2 // indirect
 	pluginrpc.com/pluginrpc v0.5.0 // indirect
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20260405152528-6210f847b2c1 // indirect
 	sigs.k8s.io/controller-tools v0.20.1 // indirect
