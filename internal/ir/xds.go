@@ -1033,6 +1033,10 @@ type HTTPRoute struct {
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and
+	// target this route: either the whole HTTPRoute/GRPCRoute (targetRef without sectionName) or one
+	// of its rules (targetRef with a sectionName matching the rule).
+	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	// Security holds the features associated with SecurityPolicy
@@ -2070,6 +2074,8 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
+// that Envoy cannot handle in a single cluster. IP+UDS combinations are allowed since
+// both are static address types; only FQDN mixing with IP or UDS is unsupported.
 func (r *RouteDestination) HasMixedEndpoints() bool {
 	destinationAddressTypes := sets.Set[DestinationAddressType]{}
 	for _, s := range r.Settings {
@@ -2077,7 +2083,14 @@ func (r *RouteDestination) HasMixedEndpoints() bool {
 			destinationAddressTypes.Insert(*s.AddressType)
 		}
 	}
-	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
+	// IP+UDS mix is valid (both are static); only flag as mixed when FQDN is involved.
+	if destinationAddressTypes.Has(MIXED) {
+		return true
+	}
+	if destinationAddressTypes.Has(FQDN) && destinationAddressTypes.Len() > 1 {
+		return true
+	}
+	return false
 }
 
 // HasFiltersInSettings returns true if any setting in the destination has a filter
@@ -2258,10 +2271,11 @@ func (d *DestinationSetting) Validate() error {
 type DestinationAddressType string
 
 const (
-	IP    DestinationAddressType = "IP"
-	FQDN  DestinationAddressType = "FQDN"
-	MIXED DestinationAddressType = "Mixed"
-	UDS   DestinationAddressType = "UDS"
+	IP     DestinationAddressType = "IP"
+	FQDN   DestinationAddressType = "FQDN"
+	MIXED  DestinationAddressType = "Mixed"
+	UDS    DestinationAddressType = "UDS"
+	STATIC DestinationAddressType = "STATIC" // a mix of static addresses (IP and UDS)
 )
 
 // DestinationEndpoint holds the endpoint details associated with the destination

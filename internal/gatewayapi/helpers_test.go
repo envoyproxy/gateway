@@ -1415,7 +1415,7 @@ func TestPolicyScopeGraphGetDirectChildren(t *testing.T) {
 	routeNN := types.NamespacedName{Namespace: "default", Name: "route"}
 	gateway := gatewayScope(gatewayNN)
 	httpListener := gatewayListenerScope(gatewayNN, gwapiv1.SectionName("http"))
-	route := routeScope(routeNN)
+	route := routeScope(routeNN, resource.KindHTTPRoute)
 
 	testCases := []struct {
 		name     string
@@ -1471,11 +1471,11 @@ func TestPolicyScopeGraphGetWithDescendants(t *testing.T) {
 	listenerSetHTTPListener := listenerSetListenerScope(listenerSetNN, gwapiv1.SectionName("ls-http"))
 	listenerSetHTTPSListener := listenerSetListenerScope(listenerSetNN, gwapiv1.SectionName("ls-https"))
 
-	gatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-route"})
-	gatewayListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-listener-route"})
-	listenerSetRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-route"})
-	listenerSetListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-listener-route"})
-	otherGatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "other-gateway-route"})
+	gatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-route"}, resource.KindHTTPRoute)
+	gatewayListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-listener-route"}, resource.KindHTTPRoute)
+	listenerSetRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-route"}, resource.KindHTTPRoute)
+	listenerSetListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-listener-route"}, resource.KindHTTPRoute)
+	otherGatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "other-gateway-route"}, resource.KindHTTPRoute)
 
 	testCases := []struct {
 		name       string

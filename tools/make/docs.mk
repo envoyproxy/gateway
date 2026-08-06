@@ -26,6 +26,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	verve.com \
 	goteleport.com \
 	developer.hashicorp.com \
+	www.signal-ai.com \
 	v0.1 \
 	v0.2 \
 	v0.3 \

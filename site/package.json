@@ -45,6 +45,9 @@
   "optionalDependencies": {
     "npm-check-updates": "^23.0.0"
   },
+  "overrides": {
+    "adm-zip": "^0.6.0"
+  },
   "private": true,
   "prettier": {
     "proseWrap": "always",
