@@ -412,6 +412,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				t.Logger.Info("setting 500 direct response in routes due to all valid destinations having 0 weight",
 					"routes", sets.List(routesWithDirectResponse))
 			}
+		// Host rewrite from path (PathRegex) is rejected for dynamic resolver routes: the upstream host is
+		// derived from request-controlled path text, which is not validated by the dynamic forward proxy
+		// loopback protection (that guard only inspects the rewrite header or :authority). Allowing it would
+		// let a crafted path resolve to a loopback address and bypass the SSRF protection.
+		case hasDynamicResolver && hasPathRegexHostRewrite(ruleRoutes):
+			t.rejectPathRegexHostRewriteWithDynamicResolver(ruleRoutes, ruleIdx, errorCollector)
 		// A route can only have one destination if this destination is a dynamic resolver, because the behavior of
 		// multiple destinations with one being a dynamic resolver just doesn't make sense.
 		case hasDynamicResolver && len(rule.BackendRefs) > 1:
@@ -475,6 +481,49 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
+// hasPathRegexHostRewrite reports whether any of the given IR routes rewrites the upstream host
+// from the request path via a regex substitution (urlRewrite.hostname.type: PathRegex).
+func hasPathRegexHostRewrite(routes []*ir.HTTPRoute) bool {
+	for _, irRoute := range routes {
+		if irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.PathRegex != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// rejectPathRegexHostRewriteWithDynamicResolver fails the rule with a 500 direct response and an
+// UnsupportedValue route error. Both HTTPRoute and GRPCRoute can attach an HTTPRouteFilter that
+// rewrites the host from the path, so both need this guard.
+func (t *Translator) rejectPathRegexHostRewriteWithDynamicResolver(
+	ruleRoutes []*ir.HTTPRoute,
+	ruleIdx int,
+	errorCollector *status.TypedErrorCollector,
+) {
+	routesWithDirectResponse := sets.New[string]()
+	for _, irRoute := range ruleRoutes {
+		// If the route already has a direct response or redirect configured, then it was from a filter so skip
+		// the direct response from errors.
+		if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+			continue
+		}
+		irRoute.DirectResponse = &ir.CustomResponse{
+			StatusCode: new(uint32(500)),
+		}
+		routesWithDirectResponse.Insert(irRoute.Name)
+	}
+	errorCollector.Add(status.NewRouteStatusError(
+		fmt.Errorf(
+			"failed to process route rule %d: host rewrite from path (PathRegex) is not supported with a dynamic resolver backend",
+			ruleIdx),
+		gwapiv1.RouteReasonUnsupportedValue,
+	))
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to dynamic resolver with host rewrite from path",
+			"routes", sets.List(routesWithDirectResponse))
+	}
+}
+
 // resolveBTPRoutingType resolves the effective BTP RoutingType override (if any) for a route
 // rule, given gatewayCtx already resolved.
 func (t *Translator) resolveBTPRoutingType(
@@ -507,9 +556,20 @@ func (t *Translator) resolveBTPRoutingType(
 	)
 }
 
-// hasRouteLevelClusterSettings reports whether a route-rule/route/listener-level BTP contributes
-// cluster-scoped settings for this rule.
-func (t *Translator) hasRouteLevelClusterSettings(
+// hasClusterSettingsBelowGateway reports whether the cluster-scoped settings applying to this rule
+// are defined below Gateway scope, in either of two ways:
+//
+//   - BTP: a route-rule/route/listener-level BackendTrafficPolicy sets a cluster-scoped field, or
+//     a route-rule/route-level one targets the rule with MergeType unset - replacing the
+//     Gateway's settings instead of merging with them, even when it sets none of its own.
+//   - CTP: a listener-level ClientTrafficPolicy sets an HTTP1 override on any of the rule's
+//     attached listeners (parentRef.listeners), checking each against its own owner (the
+//     Gateway, or the ListenerSet it came from).
+//
+// Both make cluster deduplication unsafe, though not for the same reason: the BTP settings would
+// wrongly apply to the other routes sharing the cluster, while the CTP ones would be lost
+// entirely, since a merged BackendCluster carries no HTTP1 settings.
+func (t *Translator) hasClusterSettingsBelowGateway(
 	gatewayCtx *GatewayContext,
 	routeCtx RouteContext,
 	parentRef *RouteParentContext,
@@ -518,25 +578,17 @@ func (t *Translator) hasRouteLevelClusterSettings(
 	if gatewayCtx == nil {
 		return false
 	}
-	return t.BTPClusterSettingsIndex.HasRouteLevelClusterSettings(
+	gatewayNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
+	if t.BTPClusterSettingsIndex.HasClusterSettingsBelowGateway(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
-		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
+		gatewayNN,
 		parentRef.SectionName,
 		routeRuleName,
-	)
-}
-
-// hasListenerLevelClusterSettings reports whether the route rule's attached listener has a
-// ClientTrafficPolicy setting a cluster-affecting field.
-func (t *Translator) hasListenerLevelClusterSettings(gatewayCtx *GatewayContext, parentRef *RouteParentContext) bool {
-	if gatewayCtx == nil {
-		return false
+	) {
+		return true
 	}
-	return t.CTPClusterSettingsIndex.HasListenerLevelClusterSettings(
-		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
-		parentRef.listeners,
-	)
+	return t.CTPClusterSettingsIndex.HasClusterSettingsBelowGateway(gatewayNN, parentRef.listeners)
 }
 
 // gatewayXdsIR resolves the *ir.Xds for gatewayCtx's gateway from xdsIR. Returns nil if
@@ -615,7 +667,8 @@ func (t *Translator) anyGatewayHasMergeBackendsEnabled(gateways []*GatewayContex
 // cluster whose rule resolved it differently.
 func (t *Translator) routingTypeDivergesForRule(gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType) bool {
 	gwNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
-	baseline := t.IsServiceRouting(gatewayCtx.envoyProxy, t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN))
+	gatewayBaseline := t.BTPRoutingTypeIndex.LookupGatewayBTRoutingType(gwNN)
+	baseline := t.IsServiceRouting(gatewayCtx.envoyProxy, gatewayBaseline)
 	effective := t.IsServiceRouting(gatewayCtx.envoyProxy, btpRoutingType)
 	return baseline != effective
 }
@@ -752,14 +805,9 @@ func (t *Translator) mergeIncompatibleForWeightedRule(
 	backendRefs []gwapiv1.BackendObjectReference,
 	sessionPersistent bool,
 ) bool {
-	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
-	// cluster shared with other routes if merged.
-	if t.hasRouteLevelClusterSettings(gatewayCtx, routeCtx, parentRef, routeRuleName) {
-		return true
-	}
-	// A listener-level ClientTrafficPolicy cluster-affecting setting would incorrectly apply to a
-	// cluster shared with routes under a different listener if merged.
-	if t.hasListenerLevelClusterSettings(gatewayCtx, parentRef) {
+	// A BTP/CTP cluster-scoped setting below Gateway scope would incorrectly apply uniformly to a
+	// cluster shared with other routes/listeners if merged.
+	if t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, parentRef, routeRuleName) {
 		return true
 	}
 	// A single backendRef has no multi-backend pool for the checks below to protect —
@@ -789,17 +837,9 @@ func (t *Translator) mergeIncompatibleForSingleClusterRule(
 	if len(backendRefs) > 1 {
 		return true
 	}
-	// A route-level BackendTrafficPolicy's ClusterSettings would incorrectly apply to a
-	// cluster shared with other routes if merged.
-	if t.hasRouteLevelClusterSettings(gatewayCtx, routeCtx, parentRef, routeRuleName) {
-		return true
-	}
-	// A listener-level ClientTrafficPolicy cluster-affecting setting would incorrectly apply to a
-	// cluster shared with routes under a different listener if merged.
-	if t.hasListenerLevelClusterSettings(gatewayCtx, parentRef) {
-		return true
-	}
-	return false
+	// A BTP/CTP cluster-scoped setting below Gateway scope would incorrectly apply uniformly to a
+	// cluster shared with other routes/listeners if merged.
+	return t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, parentRef, routeRuleName)
 }
 
 // weightedRuleBackendsMustBeInOneCluster reports whether a feature on this multi-backendRef
@@ -825,8 +865,10 @@ func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
 		}
 	}
 	// ConsistentHash needs the full combined backend pool, not per-identity split clusters.
-	if gatewayCtx != nil && t.BTPLoadBalancerIndex.IsConsistentHash(utils.NamespacedName(gatewayCtx.Gateway)) {
-		return true
+	if gatewayCtx != nil {
+		if t.BTPLoadBalancerIndex.IsConsistentHash(utils.NamespacedName(gatewayCtx.Gateway)) {
+			return true
+		}
 	}
 	return false
 }
@@ -1413,6 +1455,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			backendRefNames         = make([]string, len(rule.BackendRefs))
 			processDestinationError error
 			failedNoReadyEndpoints  bool
+			hasDynamicResolver      bool
 			routeRuleMetadata       = buildResourceMetadata(grpcRoute, rule.Name)
 		)
 
@@ -1455,6 +1498,11 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
+			}
+
+			// check if there is a dynamic resolver in the backendRefs
+			if ds.IsDynamicResolver {
+				hasDynamicResolver = true
 			}
 
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
@@ -1546,6 +1594,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				t.Logger.Error(errors.New("all valid destinations have 0 weight"), "setting 500 direct response in routes due to all valid destinations having 0 weight",
 					"routes", sets.List(routesWithDirectResponse))
 			}
+		// Host rewrite from path (PathRegex) is rejected for dynamic resolver routes: the upstream host is
+		// derived from request-controlled path text, which is not validated by the dynamic forward proxy
+		// loopback protection (that guard only inspects the rewrite header or :authority). Allowing it would
+		// let a crafted path resolve to a loopback address and bypass the SSRF protection.
+		case hasDynamicResolver && hasPathRegexHostRewrite(ruleRoutes):
+			t.rejectPathRegexHostRewriteWithDynamicResolver(ruleRoutes, ruleIdx, errorCollector)
 		default:
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -3128,8 +3182,14 @@ func (t *Translator) processBackendDestinationSetting(
 		}
 	}
 
+	// more than 1 type of addr
 	if len(addrTypeMap) > 0 && dstAddrType == nil {
-		dstAddrType = new(ir.MIXED)
+		// if one of the types is FQDN, the other is UDS/IP, so mixed endpoints
+		if _, hasFQDN := addrTypeMap[ir.FQDN]; hasFQDN {
+			dstAddrType = new(ir.MIXED)
+		} else { // otherwise
+			dstAddrType = new(ir.STATIC)
+		}
 	}
 
 	ds.Endpoints = dstEndpoints

@@ -37,7 +37,7 @@ func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 	}
 }
 
-func TestBuildCTPClusterSettingsIndex(t *testing.T) {
+func TestCTPClusterSettingsIndex(t *testing.T) {
 	gateway1 := &GatewayContext{
 		Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway-1"}},
 	}
@@ -129,6 +129,79 @@ func TestBuildCTPClusterSettingsIndex(t *testing.T) {
 				HTTP1: &egv1a1.HTTP1Settings{},
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-listener-oldest-accepted"},
+			Spec: egv1a1.ClientTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.GroupName,
+								Kind:  resource.KindGateway,
+								Name:  "gateway-2",
+							},
+							SectionName: &sectionName,
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-listener-younger-conflicting"},
+			Spec: egv1a1.ClientTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.GroupName,
+								Kind:  resource.KindGateway,
+								Name:  "gateway-2",
+							},
+							SectionName: &sectionName,
+						},
+					},
+				},
+				HTTP1: &egv1a1.HTTP1Settings{},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-ls-wide-oldest-accepted"},
+			Spec: egv1a1.ClientTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.GroupName,
+								Kind:  resource.KindListenerSet,
+								Name:  "ls-wide-oldest",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-ls-wide-younger-conflicting"},
+			Spec: egv1a1.ClientTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.GroupName,
+								Kind:  resource.KindListenerSet,
+								Name:  "ls-wide-oldest",
+							},
+						},
+					},
+				},
+				HTTP1: &egv1a1.HTTP1Settings{},
+			},
+		},
+	}
+
+	lsWideOldest := &gwapiv1.ListenerSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ls-wide-oldest"},
+		Spec:       gwapiv1.ListenerSetSpec{ParentRef: gwapiv1.ParentGatewayReference{Name: "gateway-2"}},
 	}
 
 	gwDirectListener := func(name string) []*ListenerContext {
@@ -155,19 +228,21 @@ func TestBuildCTPClusterSettingsIndex(t *testing.T) {
 		{"gateway-direct listener sharing a name with a targeted ListenerSet listener: not targeted", gwNN("gateway-1"), gwDirectListener("ls-http"), false},
 		{"ListenerSet-wide CTP covers any of its own listeners", gwNN("gateway-1"), lsListener(lsWide, "any-listener"), true},
 		{"a different ListenerSet under the same gateway must not inherit ls-wide's setting", gwNN("gateway-1"), lsListener(lsSection, "any-listener"), false},
+		{"oldest accepted listener CTP with no HTTP1 blocks a younger conflicting one", gwNN("gateway-2"), gwDirectListener("http-1"), false},
+		{"oldest accepted ListenerSet-wide CTP with no HTTP1 blocks a younger conflicting one", gwNN("gateway-2"), lsListener(lsWideOldest, "any-listener"), false},
 	}
 
-	idx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1, gateway2, gateway3}, []*gwapiv1.ListenerSet{lsSection, lsWide}, nil, nil, true)
+	idx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1, gateway2, gateway3}, []*gwapiv1.ListenerSet{lsSection, lsWide, lsWideOldest}, nil, nil, true)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, idx.HasListenerLevelClusterSettings(tc.gatewayNN, tc.listeners))
+			require.Equal(t, tc.want, idx.HasClusterSettingsBelowGateway(tc.gatewayNN, tc.listeners))
 		})
 	}
 
 	// mergeBackendsEnabled: false must produce an empty, non-nil index — no lookups should
 	// ever return true.
 	emptyIdx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1}, []*gwapiv1.ListenerSet{lsSection, lsWide}, nil, nil, false)
-	require.False(t, emptyIdx.HasListenerLevelClusterSettings(gwNN("gateway-1"), gwDirectListener("http-1")))
+	require.False(t, emptyIdx.HasClusterSettingsBelowGateway(gwNN("gateway-1"), gwDirectListener("http-1")))
 }
 
 // TestCtpSpecHasClusterScopedFieldsExhaustive locks in today's field-by-field classification for

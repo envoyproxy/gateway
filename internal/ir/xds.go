@@ -63,7 +63,8 @@ var (
 	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrHTTPPathRegexModifierNoSetting           = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
-	ErrHTTPHostModifierDoubleReplace            = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
+	ErrHTTPHostModifierDoubleReplace            = errors.New("url rewrite filter cannot have a host modifier that supplies more than one of Name, Header, Backend and PathRegex")
+	ErrHTTPHostModifierEmptyPathRegex           = errors.New("host modifier with a PathRegex must supply both a Pattern and a Substitution")
 	ErrAddHeaderEmptyName                       = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate                       = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate                    = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
@@ -969,6 +970,14 @@ type TCPClientTimeout struct {
 	// IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
 	// bytes sent or received on either the upstream or downstream connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
+	// TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
+	// (e.g. the TLS handshake) after a connection is accepted.
+	// If this expires before the transport reports connection establishment, the connection is summarily closed.
+	TLSHandshakeTimeout *metav1.Duration `json:"tlsHandshakeTimeout,omitempty" yaml:"tlsHandshakeTimeout,omitempty"`
+	// ConnectionInspectionTimeout is the maximum time to wait for initial inspection
+	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.
+	// If exceeded, the connection is dropped.
+	ConnectionInspectionTimeout *metav1.Duration `json:"connectionInspectionTimeout,omitempty" yaml:"connectionInspectionTimeout,omitempty"`
 }
 
 // HTTPClientTimeout set the configuration for client HTTP.
@@ -977,6 +986,10 @@ type HTTPClientTimeout struct {
 	// The duration envoy waits for the complete request reception. This timer starts upon request
 	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
 	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
+	// RequestHeadersReceivedTimeout is the duration envoy waits for the request headers to arrive.
+	// The timer is activated when the first byte of the headers is received,
+	// and is disarmed when the last byte of the headers has been received.
+	RequestHeadersReceivedTimeout *metav1.Duration `json:"requestHeadersReceivedTimeout,omitempty" yaml:"requestHeadersReceivedTimeout,omitempty"`
 	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 	// The stream idle timeout for connections managed by the connection manager.
@@ -1028,6 +1041,10 @@ type HTTPRoute struct {
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and
+	// target this route: either the whole HTTPRoute/GRPCRoute (targetRef without sectionName) or one
+	// of its rules (targetRef with a sectionName matching the rule).
+	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	// Security holds the features associated with SecurityPolicy
@@ -1238,6 +1255,8 @@ func (b *TrafficFeatures) Validate() error {
 type SecurityFeatures struct {
 	// CORS policy for the route.
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// CSRF policy for the route.
+	CSRF *CSRF `json:"csrf,omitempty" yaml:"csrf,omitempty"`
 	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
@@ -1302,6 +1321,17 @@ type CORS struct {
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
 	// AllowCredentials indicates whether a request can include user credentials.
 	AllowCredentials bool `json:"allowCredentials,omitempty" yaml:"allowCredentials,omitempty"`
+}
+
+// CSRF holds the Cross-Site Request Forgery (CSRF) policy for the route.
+//
+// +k8s:deepcopy-gen=true
+type CSRF struct {
+	// ShadowFraction is the fraction of requests evaluated in shadow/dry-run mode.
+	// The remaining requests are enforced. nil means 0%, i.e. everything is enforced.
+	ShadowFraction *gwapiv1.Fraction `json:"shadowFraction,omitempty" yaml:"shadowFraction,omitempty"`
+	// AdditionalOrigins specifies additional origins that are allowed.
+	AdditionalOrigins []*StringMatch `json:"additionalOrigins,omitempty" yaml:"additionalOrigins,omitempty"`
 }
 
 // JWT defines the schema for authenticating HTTP requests using
@@ -2052,6 +2082,8 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
+// that Envoy cannot handle in a single cluster. IP+UDS combinations are allowed since
+// both are static address types; only FQDN mixing with IP or UDS is unsupported.
 func (r *RouteDestination) HasMixedEndpoints() bool {
 	destinationAddressTypes := sets.Set[DestinationAddressType]{}
 	for _, s := range r.Settings {
@@ -2059,7 +2091,14 @@ func (r *RouteDestination) HasMixedEndpoints() bool {
 			destinationAddressTypes.Insert(*s.AddressType)
 		}
 	}
-	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
+	// IP+UDS mix is valid (both are static); only flag as mixed when FQDN is involved.
+	if destinationAddressTypes.Has(MIXED) {
+		return true
+	}
+	if destinationAddressTypes.Has(FQDN) && destinationAddressTypes.Len() > 1 {
+		return true
+	}
+	return false
 }
 
 // HasFiltersInSettings returns true if any setting in the destination has a filter
@@ -2240,10 +2279,11 @@ func (d *DestinationSetting) Validate() error {
 type DestinationAddressType string
 
 const (
-	IP    DestinationAddressType = "IP"
-	FQDN  DestinationAddressType = "FQDN"
-	MIXED DestinationAddressType = "Mixed"
-	UDS   DestinationAddressType = "UDS"
+	IP     DestinationAddressType = "IP"
+	FQDN   DestinationAddressType = "FQDN"
+	MIXED  DestinationAddressType = "Mixed"
+	UDS    DestinationAddressType = "UDS"
+	STATIC DestinationAddressType = "STATIC" // a mix of static addresses (IP and UDS)
 )
 
 // DestinationEndpoint holds the endpoint details associated with the destination
@@ -2458,16 +2498,17 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 // +k8s:deepcopy-gen=true
 type HTTPHostModifier struct {
 	// Name provides a string to replace the host of the request.
-	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
-	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
-	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
+	Name      *string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Header    *string            `json:"header,omitempty" yaml:"header,omitempty"`
+	Backend   *bool              `json:"backend,omitempty" yaml:"backend,omitempty"`
+	PathRegex *RegexMatchReplace `json:"pathRegex,omitempty" yaml:"pathRegex,omitempty"`
 }
 
 // Validate the fields within the HTTPPathModifier structure
 func (r HTTPHostModifier) Validate() error {
 	var errs error
 
-	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil}
+	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil, r.PathRegex != nil}
 	rwc := 0
 	for _, rw := range rewrites {
 		if rw {
@@ -2477,6 +2518,10 @@ func (r HTTPHostModifier) Validate() error {
 
 	if rwc > 1 {
 		errs = errors.Join(errs, ErrHTTPHostModifierDoubleReplace)
+	}
+
+	if r.PathRegex != nil && (r.PathRegex.Pattern == "" || r.PathRegex.Substitution == "") {
+		errs = errors.Join(errs, ErrHTTPHostModifierEmptyPathRegex)
 	}
 
 	return errs
@@ -3264,13 +3309,26 @@ type Random struct{}
 // BackendUtilization load balancer settings
 // +k8s:deepcopy-gen=true
 type BackendUtilization struct {
-	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
-	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
-	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
-	ErrorUtilizationPenaltyPercent     *uint32          `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
-	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
-	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
-	KeepResponseHeaders                *bool            `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+	BlackoutPeriod                     *metav1.Duration    `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
+	WeightExpirationPeriod             *metav1.Duration    `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
+	WeightUpdatePeriod                 *metav1.Duration    `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
+	ErrorUtilizationPenaltyPercent     *uint32             `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
+	MetricNamesForComputingUtilization []string            `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
+	SlowStart                          *SlowStart          `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	KeepResponseHeaders                *bool               `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+	OutOfBand                          *OutOfBandReporting `json:"outOfBand,omitempty" yaml:"outOfBand,omitempty"`
+}
+
+// OutOfBandReporting configures out-of-band ORCA load reporting for the
+// BackendUtilization load balancer.
+// +k8s:deepcopy-gen=true
+type OutOfBandReporting struct {
+	// ReportingPeriod is how often Envoy requests load reports from the server.
+	ReportingPeriod *metav1.Duration `json:"reportingPeriod,omitempty" yaml:"reportingPeriod,omitempty"`
+	// Port overrides the port used for the out-of-band reporting connection.
+	Port *int32 `json:"port,omitempty" yaml:"port,omitempty"`
+	// Authority overrides the :authority header on the out-of-band gRPC stream.
+	Authority *string `json:"authority,omitempty" yaml:"authority,omitempty"`
 }
 
 // ConsistentHash load balancer settings
