@@ -2232,11 +2232,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		// not on the Route as a whole.
 		// udpRoute must have a single rule, so Spec.Rules[0] is always safe to index below.
 		var (
-			backendClusterRefs []*ir.BackendClusterRef
-			allDs              []*ir.DestinationSetting
-			resolveErrs        = &status.MultiStatusError{}
-			destName           = irRouteDestinationName(udpRoute, -1 /*rule index*/)
-			routeRuleMetadata  = buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name)
+			backendDestinations []backendDestination
+			resolveErrs         = &status.MultiStatusError{}
+			destName            = irRouteDestinationName(udpRoute, -1 /*rule index*/)
+			routeRuleMetadata   = buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name)
 		)
 
 		gatewayCtx := GetRouteParentContext(udpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
@@ -2248,7 +2247,6 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, udpRoute, parentRef, udpRoute.Spec.Rules[0].Name, backendRefs)
 		}
 
-		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
 
@@ -2261,12 +2259,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				if clusterKey != nil {
-					backendCluster := t.getOrCreateBackendCluster(gwIR, clusterKey, ds)
-					backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
-				} else {
-					allDs = append(allDs, ds)
-				}
+				backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
 			}
 		}
 
@@ -2311,16 +2304,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			// Only the oldest route is attached to the listener, and the listener's AttachedRoutes count must reflect this.
 			// https://github.com/kubernetes-sigs/gateway-api/blob/cf34ac933d068c6008598cce945819ce9cee16be/conformance/tests/udproute-multiple-routes-attachment.go#L107
 			if irListener != nil && irListener.Route == nil {
-				irRoute := &ir.UDPRoute{
-					Name: irUDPRouteName(udpRoute),
-					Destination: &ir.RouteDestination{
-						Name:               destName,
-						Settings:           allDs,
-						BackendClusterRefs: backendClusterRefs,
-						Metadata:           routeRuleMetadata,
-					},
+				irListener.Route = &ir.UDPRoute{
+					Name:        irUDPRouteName(udpRoute),
+					Destination: t.routeDestinationForListener(gwXdsIR, gatewayCtx, udpRoute, listener, udpRoute.Spec.Rules[0].Name, destName, routeRuleMetadata, backendDestinations),
 				}
-				irListener.Route = irRoute
 			}
 		}
 
