@@ -79,6 +79,7 @@ type Config struct {
 	grpc              *grpc.Server
 	cache             cache.SnapshotCacheWithCallbacks
 	XdsIR             *message.XdsIR
+	XdsNACKs          *message.XdsNACKs
 	ExtensionManager  extension.Manager
 	ProviderResources *message.ProviderResources
 	RunnerErrors      *message.RunnerErrors
@@ -147,10 +148,58 @@ func getRandomMaxConnectionAge() time.Duration {
 // Close implements Runner interface.
 func (r *Runner) Close() error { return nil }
 
+// handleNACK folds a data-plane rejection (or its clearing ACK) observed by the
+// snapshot cache into the XdsNACKs message map, keyed by irKey.
+//
+// Rejections are tracked per (NodeID, TypeURL): a zero Code is a clean ACK that
+// clears only the matching rejection, leaving any other proxy's or resource
+// type's rejection on the same irKey intact. The irKey entry is removed only once
+// no rejections remain. The snapshot cache serializes all callback invocations
+// under its own lock, so the load-modify-store below is not racy.
+func (r *Runner) handleNACK(e *cache.NACKEvent) {
+	if r.XdsNACKs == nil {
+		return
+	}
+
+	key := message.XdsNACKKey{NodeID: e.NodeID, TypeURL: e.TypeURL}
+	cur, _ := r.XdsNACKs.Load(e.IRKey)
+
+	if e.Code == 0 {
+		if cur == nil {
+			return
+		}
+		if _, ok := cur.Rejections[key]; !ok {
+			return
+		}
+		next := cur.DeepCopy()
+		delete(next.Rejections, key)
+		if len(next.Rejections) == 0 {
+			r.XdsNACKs.Delete(e.IRKey)
+			return
+		}
+		r.XdsNACKs.Store(e.IRKey, next)
+		return
+	}
+
+	// Rejection: record (or update) this proxy's rejection of this resource type.
+	var next *message.XdsNACK
+	if cur != nil {
+		next = cur.DeepCopy()
+	} else {
+		next = &message.XdsNACK{}
+	}
+	if next.Rejections == nil {
+		next.Rejections = make(map[message.XdsNACKKey]message.XdsNACKError)
+	}
+	next.Rejections[key] = message.XdsNACKError{Code: e.Code, Message: e.Message, Version: e.Version}
+	r.XdsNACKs.Store(e.IRKey, next)
+}
+
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	r.cache = cache.NewSnapshotCache(true, r.Logger)
+	r.cache.SetNACKHandler(r.handleNACK)
 
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,

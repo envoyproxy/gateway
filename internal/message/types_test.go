@@ -81,3 +81,45 @@ func TestXdsWithContextEqual(t *testing.T) {
 	assert.True(t, x1.Equal(x2))
 	assert.True(t, x2.Equal(x1))
 }
+
+// TestXdsNACKsRoundTrip verifies that NACK facts can be stored, observed via a
+// subscription, loaded, and deleted on the XdsNACKs message map.
+func TestXdsNACKsRoundTrip(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	nacks := new(message.XdsNACKs)
+	sub := nacks.Subscribe(ctx)
+
+	nack := &message.XdsNACK{
+		Rejections: map[message.XdsNACKKey]message.XdsNACKError{
+			{NodeID: "pod-1", TypeURL: "type.googleapis.com/envoy.config.listener.v3.Listener"}: {
+				Code:    13,
+				Message: "invalid access log format",
+			},
+		},
+	}
+	nacks.Store("default/eg", nack)
+
+	// The Store should be observable on the subscription.
+	gotUpdate := false
+	for snapshot := range sub {
+		for k, v := range snapshot.State {
+			assert.Equal(t, "default/eg", k)
+			assert.Equal(t, nack, v)
+			gotUpdate = true
+		}
+		if gotUpdate {
+			break
+		}
+	}
+	assert.True(t, gotUpdate)
+
+	got, ok := nacks.Load("default/eg")
+	assert.True(t, ok)
+	assert.Equal(t, nack, got)
+
+	nacks.Delete("default/eg")
+	_, ok = nacks.Load("default/eg")
+	assert.False(t, ok)
+}
