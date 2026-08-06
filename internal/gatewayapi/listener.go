@@ -994,11 +994,16 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	// fallback to host and port
 	// TODO: remove support for Host/Port in v1.2
 	if len(ds) == 0 {
-		// Validated here instead of by a CRD CEL rule so that a partial provider
+		// Checked here instead of by a CRD CEL rule so that a partial provider
 		// (e.g. only serviceName) can be completed by the GatewayClass-level and
-		// Gateway-level EnvoyProxy merge before the check runs.
+		// Gateway-level EnvoyProxy merge before the check runs. An incomplete
+		// provider only turns tracing off, it does not stop the Gateway from
+		// being provisioned.
 		if tracing.Provider.Host == nil {
-			return nil, fmt.Errorf("host or backendRefs needs to be set on the tracing provider after merging EnvoyProxy configs")
+			t.Logger.Info("Disabling tracing because the merged tracing provider sets neither host nor backendRefs",
+				"gateway", utils.NamespacedName(gwCtx.Gateway).String(),
+				"envoyProxy", utils.NamespacedName(envoyproxy).String())
+			return nil, nil
 		}
 		host, port := *tracing.Provider.Host, uint32(tracing.Provider.Port)
 		ds = destinationSettingFromHostAndPort(settingName, host, port)
