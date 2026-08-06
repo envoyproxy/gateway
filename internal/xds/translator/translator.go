@@ -391,6 +391,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				&httpListener.CoreListenerDetails,
 				httpListener.TCPKeepalive,
 				httpListener.Connection,
+				httpListener.Timeout,
 				accessLog,
 			); err != nil {
 				errs = errors.Join(errs, err)
@@ -846,6 +847,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				&tcpListener.CoreListenerDetails,
 				tcpListener.TCPKeepalive,
 				tcpListener.Connection,
+				tcpListener.Timeout,
 				accesslog,
 			); err != nil {
 				// skip this listener if failed to build xds listener
