@@ -2359,6 +2359,23 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &corev1.Namespace{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, ns *corev1.Namespace) []reconcile.Request {
+				// Gateway listener restricts route attachment with allowedRoutes.namespaces.from: Selector
+				// changing a namespace's labels after an HTTPRoute in it has been evaluated should trigger re-evaluation.
+				// It's hard to determine which Gateway/GatewayClass(es) are affected by a namespace label change,
+				// so we enqueue all GatewayClasses for reconciliation.
+				// In the worst case, changes unrelated namespace labels will trigger unnecessary reconciliations, but this is a rare event.
+
+				if !r.hasSelectorAllowedRoutesGateway(ctx) {
+					return nil
+				}
+				return r.enqueueClass(ctx, ns)
+			}))); err != nil {
+		return fmt.Errorf("failed to watch Namespace: %w", err)
+	}
+
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	httprPredicates := commonPredicates[*gwapiv1.HTTPRoute]()
 	if r.namespaceLabel != nil {
