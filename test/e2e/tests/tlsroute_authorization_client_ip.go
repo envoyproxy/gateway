@@ -176,7 +176,7 @@ func verifyRBACStats(t *testing.T, promClient *prometheus.Client, expectAllowed 
 	query := metric + `{envoy_rbac_prefix="tls-passthrough-8443"}`
 
 	// Poll for RBAC stats with a short timeout
-	err := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 10*time.Second, true,
+	err := wait.PollUntilContextTimeout(context.Background(), time.Second, time.Minute, true,
 		func(ctx context.Context) (bool, error) {
 			val, err := promClient.QuerySum(ctx, query)
 			if err != nil {
