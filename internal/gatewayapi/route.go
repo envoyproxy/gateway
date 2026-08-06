@@ -2400,11 +2400,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		var (
-			backendClusterRefs []*ir.BackendClusterRef
-			allDs              []*ir.DestinationSetting
-			resolveErrs        = &status.MultiStatusError{}
-			destName           = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
-			routeRuleMetadata  = buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name)
+			backendDestinations []backendDestination
+			resolveErrs         = &status.MultiStatusError{}
+			destName            = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
+			routeRuleMetadata   = buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name)
 		)
 
 		gatewayCtx := GetRouteParentContext(tcpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
@@ -2416,7 +2415,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name, backendRefs)
 		}
 
-		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
 			ds, clusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
@@ -2428,12 +2426,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				if clusterKey != nil {
-					backendCluster := t.getOrCreateBackendCluster(gwIR, clusterKey, ds)
-					backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
-				} else {
-					allDs = append(allDs, ds)
-				}
+				backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
 			}
 		}
 
@@ -2478,14 +2471,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			// https://github.com/kubernetes-sigs/gateway-api/blob/cf34ac933d068c6008598cce945819ce9cee16be/conformance/tests/tcproute-multiple-routes-attachment.go#L104
 			if irListener != nil && len(irListener.Routes) == 0 {
 				irRoute := &ir.TCPRoute{
-					Name: irTCPRouteName(tcpRoute),
-					Destination: &ir.RouteDestination{
-						Name:               destName,
-						Settings:           allDs,
-						BackendClusterRefs: backendClusterRefs,
-						Metadata:           routeRuleMetadata,
-					},
-					Metadata: buildResourceMetadata(tcpRoute, nil),
+					Name:        irTCPRouteName(tcpRoute),
+					Destination: t.routeDestinationForListener(gwXdsIR, gatewayCtx, tcpRoute, listener, tcpRoute.Spec.Rules[0].Name, destName, routeRuleMetadata, backendDestinations),
+					Metadata:    buildResourceMetadata(tcpRoute, nil),
 				}
 
 				if irListener.TLS != nil {
