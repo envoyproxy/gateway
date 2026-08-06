@@ -5541,7 +5541,7 @@ _Appears in:_
 _Underlying type:_ _string_
 
 RateLimitUnit specifies the intervals for setting rate limits.
-Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
+Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Week", "Month" and "Year".
 
 _Appears in:_
 - [RateLimitValue](#ratelimitvalue)
@@ -5552,6 +5552,7 @@ _Appears in:_
 | `Minute` | RateLimitUnitMinute specifies the rate limit interval to be 1 minute.<br /> | 
 | `Hour` | RateLimitUnitHour specifies the rate limit interval to be 1 hour.<br /> | 
 | `Day` | RateLimitUnitDay specifies the rate limit interval to be 1 day.<br /> | 
+| `Week` | RateLimitUnitWeek specifies the rate limit interval to be 1 week.<br /> | 
 | `Month` | RateLimitUnitMonth specifies the rate limit interval to be 1 month.<br /> | 
 | `Year` | RateLimitUnitYear specifies the rate limit interval to be 1 year.<br /> | 
 
