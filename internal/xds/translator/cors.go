@@ -202,3 +202,7 @@ func hasWildcard(array []string) bool {
 func (c *cors) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
 	return nil
 }
+
+func (*cors) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}

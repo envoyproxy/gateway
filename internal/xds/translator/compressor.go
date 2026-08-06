@@ -195,3 +195,7 @@ func compressorPerRouteConfig() *compressorv3.CompressorPerRoute {
 		},
 	}
 }
+
+func (*compressor) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}

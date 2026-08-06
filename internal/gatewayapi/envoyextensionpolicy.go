@@ -946,57 +946,58 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 		listenerNames.Insert(irListenerName(listener))
 	}
 
-	routesWithDirectResponse := sets.New[string]()
+	failed := luaError != nil
+	if wasmError != nil {
+		failed = failed || !wasmFailOpen
+	}
+	if extProcError != nil {
+		failed = failed || !extProcFailOpen
+	}
+	if dynamicModuleError != nil {
+		failed = true
+	}
+
 	for _, http := range x.HTTP {
 		if !listenerNames.Has(http.Name) {
 			continue
 		}
 
-		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway
-		// listener, ListenerSet listener) wins over a policy targeting a lesser
-		// specific scope(Gateway/ListenerSet).
-		for _, r := range http.Routes {
-			// if already set - there's a specific level policy, so skip
-			if r.EnvoyExtensions != nil {
-				continue
-			}
+		// if already set - there's a specific level policy, so skip
+		if http.EnvoyExtensions != nil {
+			continue
+		}
 
-			failRoute := false
-			// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
-			// TODO: we may also add fail open option for Lua extension to align with other extensions
-			if luaError != nil {
-				failRoute = true
-			}
-			if wasmError != nil {
-				failRoute = failRoute || !wasmFailOpen
-			}
-			if extProcError != nil {
-				failRoute = failRoute || !extProcFailOpen
-			}
-			if dynamicModuleError != nil {
-				failRoute = true
-			}
-			if failRoute {
+		if failed {
+			// A fail-closed error in any extension makes every route under this listener
+			// return a 500. That's inherently a per-route action, so it's still set on each
+			// route individually (skipping any route that already has its own policy) rather
+			// than on the listener.
+			for _, r := range http.Routes {
+				// if already set - there's a specific level policy, so skip
+				if r.EnvoyExtensions != nil {
+					continue
+				}
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
-				routesWithDirectResponse.Insert(r.Name)
-			} else {
-				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-					ExtProcs:       extProcs,
-					Wasms:          wasms,
-					Luas:           luas,
-					DynamicModules: dynamicModules,
-				}
+			}
+		} else {
+			// The whole extension set lives on the listener - a route(-rule) targeting policy
+			// wins over this Gateway/ListenerSet-scoped one outright (see
+			// translateEnvoyExtensionPolicyForRoute) and is never merged with it.
+			//
+			// Always set, even when every slice below ends up empty (e.g. a fail-open
+			// ExtProc/Wasm error leaves nothing to actually run): this listener still has a
+			// policy that succeeded and owns the scope, and a nil EnvoyExtensions here would
+			// let a later, less-specific Gateway/ListenerSet policy attach its own filters to
+			// the same listener instead of being blocked by the "if already set" check above.
+			http.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+				ExtProcs:       extProcs,
+				Wasms:          wasms,
+				Luas:           luas,
+				DynamicModules: dynamicModules,
 			}
 		}
-	}
-	if len(routesWithDirectResponse) > 0 {
-		t.Logger.Info("setting 500 direct response in routes due to errors in EnvoyExtensionPolicy",
-			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
-			"routes", sets.List(routesWithDirectResponse),
-			"error", errs,
-		)
 	}
 
 	return errs

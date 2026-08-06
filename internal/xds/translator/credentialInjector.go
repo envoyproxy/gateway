@@ -160,3 +160,7 @@ func (*credentialInjector) patchRoute(route *routev3.Route, irRoute *ir.HTTPRout
 	}
 	return nil
 }
+
+func (*credentialInjector) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}

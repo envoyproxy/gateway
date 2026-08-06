@@ -163,3 +163,7 @@ func basicAuthPerRouteConfig(basicAuth *ir.BasicAuth) *basicauthv3.BasicAuthPerR
 		},
 	}
 }
+
+func (*basicAuth) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}

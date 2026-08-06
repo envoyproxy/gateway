@@ -301,6 +301,29 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      envoyExtensions:
+        extProcs:
+        - authority: grpc-backend.envoy-gateway:9000
+          destination:
+            metadata:
+              kind: EnvoyExtensionPolicy
+              name: policy-for-gateway-1
+              namespace: envoy-gateway
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
+            settings:
+            - addressType: IP
+              endpoints:
+              - host: 7.7.7.1
+                port: 9000
+              metadata:
+                kind: Service
+                name: grpc-backend
+                namespace: envoy-gateway
+                sectionName: "9000"
+              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0/backend/0
+              protocol: GRPC
+              weight: 1
+          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
       externalPort: 80
       hostnames:
       - '*'
@@ -387,29 +410,6 @@ xdsIR:
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          extProcs:
-          - authority: grpc-backend.envoy-gateway:9000
-            destination:
-              metadata:
-                kind: EnvoyExtensionPolicy
-                name: policy-for-gateway-1
-                namespace: envoy-gateway
-              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 7.7.7.1
-                  port: 9000
-                metadata:
-                  kind: Service
-                  name: grpc-backend
-                  namespace: envoy-gateway
-                  sectionName: "9000"
-                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0/backend/0
-                protocol: GRPC
-                weight: 1
-            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

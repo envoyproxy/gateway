@@ -162,3 +162,7 @@ func buildHeaderMutationRules(addHeaders []ir.AddHeader, removeHeaders []string,
 
 	return mutationRules
 }
+
+func (*headerMutation) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}

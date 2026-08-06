@@ -524,3 +524,7 @@ func (c *customResponse) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute,
 	}
 	return nil
 }
+
+func (*customResponse) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}

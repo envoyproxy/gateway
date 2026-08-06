@@ -182,3 +182,7 @@ func buildBandwidthLimitResponseProto(cfg *ir.BandwidthLimitConfig) *bwlimitv3.B
 	}
 	return proto
 }
+
+func (*bandwidthLimit) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}
