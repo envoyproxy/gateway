@@ -24,6 +24,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, route RouteContext,
@@ -515,6 +516,25 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 				fmt.Errorf("certificate refs %d: Secret %s/%s does not exist.", idx, secretNamespace, certificateRef.Name),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
 			))
+			continue
+		}
+
+		if secret.Type == egv1a1.SDSSecretType {
+			if !t.SDSSecretRefEnabled {
+				errs = append(errs, status.NewListenerStatusError(
+					fmt.Errorf("certificate refs %d: SDS Secret reference is not enabled in EnvoyGateway configuration", idx),
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+				))
+				continue
+			}
+			if _, err := ir.NewSDSConfig(secret); err != nil {
+				errs = append(errs, status.NewListenerStatusError(
+					fmt.Errorf("certificate refs %d: invalid SDS reference Secret %s/%s: %w", idx, secretNamespace, certificateRef.Name, err),
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+				))
+				continue
+			}
+			secrets = append(secrets, secret)
 			continue
 		}
 

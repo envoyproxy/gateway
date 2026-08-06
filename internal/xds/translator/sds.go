@@ -152,6 +152,13 @@ func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 	}
 
 	for _, httpListener := range xdsIR.HTTP {
+		if httpListener.TLS != nil {
+			for _, cert := range httpListener.TLS.Certificates {
+				if cert.SDS != nil && cert.SDS.URL != "" {
+					sdsURLs[cert.SDS.URL] = true
+				}
+			}
+		}
 		for _, route := range httpListener.Routes {
 			if route.Destination != nil {
 				collectSDSURLs(route.Destination.Settings)
@@ -159,6 +166,13 @@ func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 		}
 	}
 	for _, tcpListener := range xdsIR.TCP {
+		if tcpListener.TLS != nil {
+			for _, cert := range tcpListener.TLS.Certificates {
+				if cert.SDS != nil && cert.SDS.URL != "" {
+					sdsURLs[cert.SDS.URL] = true
+				}
+			}
+		}
 		for _, route := range tcpListener.Routes {
 			if route.Destination != nil {
 				collectSDSURLs(route.Destination.Settings)
