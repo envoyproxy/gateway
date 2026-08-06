@@ -293,7 +293,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		var mergeUnsafeForRule bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.HTTPBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeUnsafeForRule = t.mergeIncompatibleForWeightedRule(gatewayCtx, httpRoute, parentRef, rule.Name, backendRefs, rule.SessionPersistence != nil)
+			mergeUnsafeForRule = t.mergeIncompatibleForWeightedRule(gatewayCtx, httpRoute, backendRefs, rule.SessionPersistence != nil)
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
@@ -463,14 +463,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				irRoute.ExtensionRefs = append(irRoute.ExtensionRefs, backendCustomRefs...)
 			}
 
-			choice := &httpRouteDestinationChoice{
-				route:             irRoute,
-				destName:          destName,
-				routeRuleMetadata: routeRuleMetadata,
-				routeRuleName:     rule.Name,
-			}
+			choice := &httpRouteDestinationChoice{route: irRoute}
 			if irRoute.DirectResponse == nil && irRoute.Redirect == nil {
 				choice.backendDestinations = backendDestinations
+				choice.destName = destName
+				choice.routeRuleMetadata = routeRuleMetadata
+				choice.routeRuleName = rule.Name
 				if pattern != "" {
 					choice.statName = buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames)
 				}
@@ -803,8 +801,6 @@ func (t *Translator) isFallbackBackend(backendRef gwapiv1.BackendObjectReference
 func (t *Translator) mergeIncompatibleForWeightedRule(
 	gatewayCtx *GatewayContext,
 	routeCtx RouteContext,
-	parentRef *RouteParentContext,
-	routeRuleName *gwapiv1.SectionName,
 	backendRefs []gwapiv1.BackendObjectReference,
 	sessionPersistent bool,
 ) bool {
@@ -822,10 +818,6 @@ func (t *Translator) mergeIncompatibleForWeightedRule(
 // weighted-cluster mechanism at the listener layer, so a rule's backendRefs must always resolve
 // to a single cluster.
 func (t *Translator) mergeIncompatibleForSingleClusterRule(
-	gatewayCtx *GatewayContext,
-	routeCtx RouteContext,
-	parentRef *RouteParentContext,
-	routeRuleName *gwapiv1.SectionName,
 	backendRefs []gwapiv1.BackendObjectReference,
 ) bool {
 	// This route type has no weighted-cluster mechanism at the listener layer, so a rule's
@@ -1509,7 +1501,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.GRPCBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeIncompatible = t.mergeIncompatibleForWeightedRule(gatewayCtx, grpcRoute, parentRef, rule.Name, backendRefs, false)
+			mergeIncompatible = t.mergeIncompatibleForWeightedRule(gatewayCtx, grpcRoute, backendRefs, false)
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
@@ -1648,14 +1640,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		for _, irRoute := range ruleRoutes {
 			irRoute.IsHTTP2 = true
 
-			choice := &httpRouteDestinationChoice{
-				route:             irRoute,
-				destName:          destName,
-				routeRuleMetadata: routeRuleMetadata,
-				routeRuleName:     rule.Name,
-			}
+			choice := &httpRouteDestinationChoice{route: irRoute}
 			if irRoute.DirectResponse == nil && irRoute.Redirect == nil {
 				choice.backendDestinations = backendDestinations
+				choice.destName = destName
+				choice.routeRuleMetadata = routeRuleMetadata
+				choice.routeRuleName = rule.Name
 				if pattern != "" {
 					choice.statName = buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames)
 				}
@@ -2008,7 +1998,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 			var mergeIncompatible bool
 			if mergeBackendsEnabled {
-				mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, tlsRoute, parentRef, rule.Name, allRuleBackendRefs)
+				mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(allRuleBackendRefs)
 			}
 
 			for i := range rule.BackendRefs {
@@ -2240,7 +2230,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(udpRoute.Spec.Rules[0].BackendRefs, func(r gwapiv1.BackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, udpRoute, parentRef, udpRoute.Spec.Rules[0].Name, backendRefs)
+			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(backendRefs)
 		}
 
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
@@ -2395,7 +2385,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(tcpRoute.Spec.Rules[0].BackendRefs, func(r gwapiv1.BackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name, backendRefs)
+			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(backendRefs)
 		}
 
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {

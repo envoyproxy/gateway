@@ -824,7 +824,6 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 
 	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route-1"}}}
 	gatewayCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
-	parentRef := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{}}
 
 	// consistentHashIdx forces IsConsistentHash to return true for gatewayCtx's gateway.
 	consistentHashIdx := func() *BTPLoadBalancerIndex {
@@ -884,7 +883,7 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 				BackendMap:           map[types.NamespacedName]*egv1a1.Backend{{Namespace: "default", Name: "be-fallback"}: fallbackBackend},
 				BTPLoadBalancerIndex: tc.lbIndex,
 			}}
-			got := tr.mergeIncompatibleForWeightedRule(tc.gatewayCtx, route, parentRef, nil, tc.backendRefs, tc.sessionPersistent)
+			got := tr.mergeIncompatibleForWeightedRule(tc.gatewayCtx, route, tc.backendRefs, tc.sessionPersistent)
 			require.Equal(t, tc.want, got)
 		})
 	}
