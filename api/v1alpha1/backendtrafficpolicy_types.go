@@ -132,14 +132,41 @@ type BackendTrafficPolicySpec struct {
 	//
 	// This can have a negative performance impact so should only be enabled when necessary.
 	//
-	// When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
-	// increase in memory usage for Envoy that should be accounted for in your deployment settings.
+	// Envoy sets the request buffer limit for the stream to this limit, so there is no need to also raise the connection buffer size or
+	// requestBodyBufferLimit for it to take effect. Buffering does increase memory usage for Envoy that should be accounted for in your
+	// deployment settings.
 	//
 	// Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option
 	// on routes that need those protocols, because requests can hang instead of being forwarded upstream.
 	//
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
+
+	// RequestBodyBufferLimit specifies the maximum size in bytes that Envoy may buffer for request bodies.
+	// This configures Envoy's request body buffer limit without enabling full request buffering.
+	//
+	// This Request body buffer limit is independent of the connection buffer limits configured by
+	// ClientTrafficPolicy and BackendTrafficPolicy. The connection buffer limits control downstream
+	// and upstream connection read/write buffering and back pressure, while this field sets the
+	// maximum size of an individual request body that Envoy may buffer for HTTP processing.
+	//
+	// For HTTP/1, connection buffer limits can still affect how request body data is read and buffered
+	// before or while the request body limit is enforced. Configure connection buffer limits large
+	// enough for the request body buffering you expect to allow on those connections.
+	//
+	// For HTTP/2, initial stream and connection window sizes control HTTP/2 flow control: how much data
+	// can be in flight before back pressure applies. They affect upload throughput and buffering
+	// behavior, but they are not a replacement for this request body size limit.
+	//
+	// If exceeded, the request will be rejected with HTTP 413 Content Too Large.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	RequestBodyBufferLimit *resource.Quantity `json:"requestBodyBufferLimit,omitempty"`
+
 	// Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
 	// This will override the telemetry settings in the EnvoyProxy resource.
 	//
