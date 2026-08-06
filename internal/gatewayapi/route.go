@@ -2121,15 +2121,10 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
 					TLS:  tlsConfig,
-					// routeRuleName is always nil for TLS: every rule's backends already pool into
-					// routeBackendDestinations above, and a rule-scoped BTP/CTP's settings never reach
-					// TLSRoute's translated output regardless of merge status (buildResourceMetadata
-					// above hardcodes Metadata.SectionName to "", so applyTrafficFeatureToRoute's
-					// rule-targeted match can never succeed) - so there is no real rule-scope
-					// divergence left to protect against merging away. Route-scope and
-					// listener-scope divergence (the actual case this fix addresses) still resolve
-					// correctly with a nil routeRuleName, since policyIndex.Lookup falls straight
-					// through to them.
+					// routeRuleName is always nil for TLS: its route metadata never carries a
+					// rule-scoped section name, so a rule-scoped BTP/CTP setting can never apply
+					// to it - there's no rule-scope divergence to protect against. Route- and
+					// listener-scope divergence still resolve correctly with nil.
 					Destination: t.routeDestinationForListener(
 						gwXdsIR,
 						gatewayCtx,
