@@ -59,27 +59,25 @@ func newCTPClusterSettingsIndex() *CTPClusterSettingsIndex {
 	return &CTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
 }
 
-// HasClusterSettingsBelowGateway reports whether any of listeners (which belong to gatewayNN,
-// either directly or via a ListenerSet) has a ClientTrafficPolicy-sourced cluster-scoped setting,
-// checking each listener against its own owner (the Gateway, or the ListenerSet it came from).
-func (idx *CTPClusterSettingsIndex) HasClusterSettingsBelowGateway(gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
+// HasClusterSettingsBelowGateway reports whether listener (which belongs to gatewayNN, either
+// directly or via a ListenerSet) has a ClientTrafficPolicy-sourced cluster-scoped setting,
+// checked against its own owner (the Gateway, or the ListenerSet it came from).
+func (idx *CTPClusterSettingsIndex) HasClusterSettingsBelowGateway(gatewayNN types.NamespacedName, listener *ListenerContext) bool {
 	if idx == nil {
 		return false
 	}
-	for _, l := range listeners {
-		if l.isFromListenerSet() {
-			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
-			if hasClusterSettings, found := idx.LookupExact(listenerSetScope(lsNN)); found && hasClusterSettings {
-				return true
-			}
-			if hasClusterSettings, found := idx.LookupExact(listenerSetListenerScope(lsNN, l.Name)); found && hasClusterSettings {
-				return true
-			}
-			continue
-		}
-		if hasClusterSettings, found := idx.LookupExact(gatewayListenerScope(gatewayNN, l.Name)); found && hasClusterSettings {
+	if listener.isFromListenerSet() {
+		lsNN := types.NamespacedName{Namespace: listener.listenerSet.Namespace, Name: listener.listenerSet.Name}
+		if hasClusterSettings, found := idx.LookupExact(listenerSetScope(lsNN)); found && hasClusterSettings {
 			return true
 		}
+		if hasClusterSettings, found := idx.LookupExact(listenerSetListenerScope(lsNN, listener.Name)); found && hasClusterSettings {
+			return true
+		}
+		return false
+	}
+	if hasClusterSettings, found := idx.LookupExact(gatewayListenerScope(gatewayNN, listener.Name)); found && hasClusterSettings {
+		return true
 	}
 	return false
 }
