@@ -291,7 +291,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, backendClusterRef, unstructuredRef, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, httpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeUnsafeForRule)
+			ds, clusterKey, unstructuredRef, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, httpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeUnsafeForRule)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -329,8 +329,9 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			backendWeights.AddWeighted(ds, ds.Weight)
 
 			// merged backends are referenced from the shared registry; everything else stays inline
-			if shouldMerge := backendClusterRef != nil; shouldMerge {
-				mergedBackendClusterRefs = append(mergedBackendClusterRefs, backendClusterRef)
+			if clusterKey != nil {
+				backendCluster := t.getOrCreateBackendCluster(t.gatewayXdsIR(gatewayCtx, xdsIR), clusterKey, ds)
+				mergedBackendClusterRefs = append(mergedBackendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 			} else {
 				unmergedSettings = append(unmergedSettings, ds)
 			}
@@ -674,8 +675,10 @@ func (t *Translator) routingTypeDivergesForRule(gatewayCtx *GatewayContext, btpR
 }
 
 // processBackendRef processes backendRefContext into a DestinationSetting and, if it's eligible
-// for cluster deduplication, resolves the shared BackendClusterRef it belongs to (nil otherwise).
-// Callers that must never merge (e.g. mirror backends) pass mergeUnsafeForRule: true unconditionally.
+// for cluster deduplication, the BackendClusterKey identifying the shared cluster it could use -
+// nil otherwise. The key is not registered into any BackendCluster yet - that's deferred to
+// routeDestinationForListener, once a specific listener is known to actually need it. Callers that
+// must never merge (e.g. mirror backends) pass mergeUnsafeForRule: true unconditionally.
 func (t *Translator) processBackendRef(
 	destName string,
 	backendIdx int,
@@ -687,7 +690,7 @@ func (t *Translator) processBackendRef(
 	btpRoutingType *egv1a1.RoutingType,
 	xdsIR resource.XdsIRMap,
 	mergeUnsafeForRule bool,
-) (ds *ir.DestinationSetting, backendClusterRef *ir.BackendClusterRef, unstructuredRef *ir.UnstructuredRef, err status.Error) {
+) (ds *ir.DestinationSetting, clusterKey *BackendClusterKey, unstructuredRef *ir.UnstructuredRef, err status.Error) {
 	ds, unstructuredRef, err = t.processDestination(irDestinationSettingName(destName, backendIdx), backendRefContext, parentRef, route, resources, gatewayCtx, btpRoutingType, xdsIR)
 
 	backendRef := backendRefContext.GetBackendRef().BackendObjectReference
@@ -701,11 +704,11 @@ func (t *Translator) processBackendRef(
 	if ds.Weight != nil && *ds.Weight == 0 {
 		return ds, nil, unstructuredRef, err
 	}
-	// Without a resolved gateway IR there's nowhere to register a shared BackendCluster.
-	if gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR); gwIR == nil {
+	// Without a resolved gateway IR there's nowhere to eventually register a shared BackendCluster.
+	if t.gatewayXdsIR(gatewayCtx, xdsIR) == nil {
 		return ds, nil, unstructuredRef, err
 	}
-	// None of the above is safe to register (or share) a merged BackendCluster for.
+	// None of the above is safe to share a merged BackendCluster for.
 	if !t.shouldMergeBackend(gatewayCtx, btpRoutingType, mergeUnsafeForRule, backendRef, backendNamespace, ds) {
 		return ds, nil, unstructuredRef, err
 	}
@@ -713,11 +716,7 @@ func (t *Translator) processBackendRef(
 	key := backendClusterKey(backendRef, backendNamespace)
 	key = t.backendClusterKeyForGateway(&key, gatewayCtx, ds.Protocol)
 
-	backendCluster := t.getOrCreateBackendCluster(t.gatewayXdsIR(gatewayCtx, xdsIR), &key, ds)
-	backendClusterRef = &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight}
-	ds.Name = backendCluster.Name
-
-	return ds, backendClusterRef, unstructuredRef, err
+	return ds, &key, unstructuredRef, err
 }
 
 // toBackendObjectReferences projects a rule's route-kind-specific backendRefs (HTTPBackendRef,
@@ -1518,7 +1517,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				Filters:    rule.BackendRefs[i].Filters,
 			}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, backendClusterRef, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, grpcRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, clusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, grpcRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -1550,8 +1549,9 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 			backendWeights.AddWeighted(ds, ds.Weight)
 
-			if backendClusterRef != nil {
-				backendClusterRefs = append(backendClusterRefs, backendClusterRef)
+			if clusterKey != nil {
+				backendCluster := t.getOrCreateBackendCluster(t.gatewayXdsIR(gatewayCtx, xdsIR), clusterKey, ds)
+				backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 			} else {
 				allDs = append(allDs, ds)
 			}
@@ -1988,6 +1988,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		)
 
 		gatewayCtx := GetRouteParentContext(tlsRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
+		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 		mergeBackendsEnabled := t.isMergeBackendsEnabledForGateway(gatewayCtx)
 
 		// TLSRouteRule has no match criteria, so every rule's backends pool into one destination -
@@ -2013,7 +2014,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
 
 				// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-				ds, backendClusterRef, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+				ds, clusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
@@ -2021,8 +2022,9 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 				// skip backendRefs with weight 0 as they do not affect the traffic distribution
 				if ds.Weight != nil && *ds.Weight > 0 {
-					if backendClusterRef != nil {
-						backendClusterRefs = append(backendClusterRefs, backendClusterRef)
+					if clusterKey != nil {
+						backendCluster := t.getOrCreateBackendCluster(gwIR, clusterKey, ds)
+						backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 					} else {
 						allDs = append(allDs, ds)
 					}
@@ -2243,11 +2245,12 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, udpRoute, parentRef, udpRoute.Spec.Rules[0].Name, backendRefs)
 		}
 
+		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
 
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, backendClusterRef, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, clusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
@@ -2255,8 +2258,9 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				if backendClusterRef != nil {
-					backendClusterRefs = append(backendClusterRefs, backendClusterRef)
+				if clusterKey != nil {
+					backendCluster := t.getOrCreateBackendCluster(gwIR, clusterKey, ds)
+					backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 				} else {
 					allDs = append(allDs, ds)
 				}
@@ -2409,9 +2413,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(gatewayCtx, tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name, backendRefs)
 		}
 
+		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
-			ds, backendClusterRef, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, clusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				resolveErrs.Add(err)
@@ -2420,8 +2425,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				if backendClusterRef != nil {
-					backendClusterRefs = append(backendClusterRefs, backendClusterRef)
+				if clusterKey != nil {
+					backendCluster := t.getOrCreateBackendCluster(gwIR, clusterKey, ds)
+					backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
 				} else {
 					allDs = append(allDs, ds)
 				}
