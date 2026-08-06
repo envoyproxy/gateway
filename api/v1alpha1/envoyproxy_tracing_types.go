@@ -38,8 +38,9 @@ const (
 //
 // A provider is only required to set host or backendRefs after the
 // GatewayClass-level and Gateway-level EnvoyProxy configs are merged
-// (see EnvoyProxySpec.MergeType), so completeness is validated during
-// translation instead of by a CEL rule here.
+// (see EnvoyProxySpec.MergeType), so completeness is checked during
+// translation instead of by a CEL rule here. A provider that is still
+// incomplete after the merge turns tracing off for that Gateway.
 //
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
