@@ -970,6 +970,14 @@ type TCPClientTimeout struct {
 	// IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
 	// bytes sent or received on either the upstream or downstream connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
+	// TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
+	// (e.g. the TLS handshake) after a connection is accepted.
+	// If this expires before the transport reports connection establishment, the connection is summarily closed.
+	TLSHandshakeTimeout *metav1.Duration `json:"tlsHandshakeTimeout,omitempty" yaml:"tlsHandshakeTimeout,omitempty"`
+	// ConnectionInspectionTimeout is the maximum time to wait for initial inspection
+	// (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection.
+	// If exceeded, the connection is dropped.
+	ConnectionInspectionTimeout *metav1.Duration `json:"connectionInspectionTimeout,omitempty" yaml:"connectionInspectionTimeout,omitempty"`
 }
 
 // HTTPClientTimeout set the configuration for client HTTP.
@@ -978,6 +986,10 @@ type HTTPClientTimeout struct {
 	// The duration envoy waits for the complete request reception. This timer starts upon request
 	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
 	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
+	// RequestHeadersReceivedTimeout is the duration envoy waits for the request headers to arrive.
+	// The timer is activated when the first byte of the headers is received,
+	// and is disarmed when the last byte of the headers has been received.
+	RequestHeadersReceivedTimeout *metav1.Duration `json:"requestHeadersReceivedTimeout,omitempty" yaml:"requestHeadersReceivedTimeout,omitempty"`
 	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 	// The stream idle timeout for connections managed by the connection manager.

@@ -2269,6 +2269,11 @@ func (in *HTTPClientTimeout) DeepCopyInto(out *HTTPClientTimeout) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.RequestHeadersReceivedTimeout != nil {
+		in, out := &in.RequestHeadersReceivedTimeout, &out.RequestHeadersReceivedTimeout
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	if in.IdleTimeout != nil {
 		in, out := &in.IdleTimeout, &out.IdleTimeout
 		*out = new(metav1.Duration)
@@ -4680,6 +4685,16 @@ func (in *TCPClientTimeout) DeepCopyInto(out *TCPClientTimeout) {
 	*out = *in
 	if in.IdleTimeout != nil {
 		in, out := &in.IdleTimeout, &out.IdleTimeout
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.TLSHandshakeTimeout != nil {
+		in, out := &in.TLSHandshakeTimeout, &out.TLSHandshakeTimeout
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ConnectionInspectionTimeout != nil {
+		in, out := &in.ConnectionInspectionTimeout, &out.ConnectionInspectionTimeout
 		*out = new(metav1.Duration)
 		**out = **in
 	}
