@@ -795,9 +795,9 @@ func (t *Translator) isFallbackBackend(backendRef gwapiv1.BackendObjectReference
 }
 
 // mergeIncompatibleForWeightedRule reports whether a rule-level condition makes cluster
-// deduplication unsafe for any of this rule's backendRefs: route-level cluster settings, session
-// persistence, a fallback backend, or ConsistentHash load balancing. For HTTP/GRPC, whose
-// weighted-clusters route action can represent multiple distinct clusters in one rule.
+// deduplication unsafe for any of this rule's backendRefs: session persistence, a fallback
+// backend, or ConsistentHash load balancing. For HTTP/GRPC, whose weighted-clusters route action
+// can represent multiple distinct clusters in one rule.
 func (t *Translator) mergeIncompatibleForWeightedRule(
 	gatewayCtx *GatewayContext,
 	routeCtx RouteContext,
