@@ -903,9 +903,9 @@ func (t *Translator) getOrCreateBackendCluster(
 }
 
 // backendDestination pairs a rule's already-computed DestinationSetting with the merge-cluster
-// key it's eligible to use, if any. clusterKey is nil when this backendRef was never eligible for
-// cluster deduplication in the first place (see shouldMergeBackend) - ds is kept either way, so
-// its content is available whichever way routeDestinationForListener ultimately decides.
+// key it's eligible to use, if any. clusterKey is nil when this backendRef was never merge-eligible
+// in the first place - ds is kept either way, so its content is available whichever way
+// routeDestinationForListener ultimately decides.
 type backendDestination struct {
 	ds         *ir.DestinationSetting
 	clusterKey *BackendClusterKey
@@ -1983,15 +1983,13 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		var (
-			backendClusterRefs []*ir.BackendClusterRef
-			allDs              []*ir.DestinationSetting
-			resolveErrs        = &status.MultiStatusError{}
-			destName           = irRouteDestinationName(tlsRoute, -1 /*rule index*/)
-			routeRuleMetadata  = buildResourceMetadata(tlsRoute, nil)
+			backendDestinations []backendDestination
+			resolveErrs         = &status.MultiStatusError{}
+			destName            = irRouteDestinationName(tlsRoute, -1 /*rule index*/)
+			routeRuleMetadata   = buildResourceMetadata(tlsRoute, nil)
 		)
 
 		gatewayCtx := GetRouteParentContext(tlsRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
-		gwIR := t.gatewayXdsIR(gatewayCtx, xdsIR)
 		mergeBackendsEnabled := t.isMergeBackendsEnabledForGateway(gatewayCtx)
 
 		// TLSRouteRule has no match criteria, so every rule's backends pool into one destination -
@@ -2025,12 +2023,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 				// skip backendRefs with weight 0 as they do not affect the traffic distribution
 				if ds.Weight != nil && *ds.Weight > 0 {
-					if clusterKey != nil {
-						backendCluster := t.getOrCreateBackendCluster(gwIR, clusterKey, ds)
-						backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
-					} else {
-						allDs = append(allDs, ds)
-					}
+					backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
 				}
 			}
 
@@ -2043,24 +2036,23 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 		// A route can only have a single destination if that destination is a dynamic resolver,
 		// because combining a dynamic resolver with other backends doesn't make sense. A dynamic
-		// resolver is never merge-eligible, so it can only ever appear in allDs, never
-		// backendClusterRefs - but the count check must still cover both.
+		// resolver is never merge-eligible, so it can only ever appear with a nil clusterKey - but
+		// the count check must still cover every backendDestination regardless of clusterKey.
 		hasDynamicResolver := false
-		for _, ds := range allDs {
-			if ds.IsDynamicResolver {
+		for _, bd := range backendDestinations {
+			if bd.ds.IsDynamicResolver {
 				hasDynamicResolver = true
 				break
 			}
 		}
-		if hasDynamicResolver && len(allDs)+len(backendClusterRefs) > 1 {
+		if hasDynamicResolver && len(backendDestinations) > 1 {
 			resolveErrs.Add(status.NewRouteStatusError(
 				errors.New("dynamic resolver is not supported for multiple backendRefs"),
 				status.RouteReasonInvalidBackendRef,
 			))
 			// Drop the destinations so neither a dynamic forward proxy cluster nor a regular
 			// cluster is produced from an invalid combination of backends.
-			allDs = nil
-			backendClusterRefs = nil
+			backendDestinations = nil
 		}
 
 		routeStatus := GetRouteStatus(tlsRoute)
@@ -2138,13 +2130,17 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
 					TLS:  tlsConfig,
-					Destination: &ir.RouteDestination{
-						Name:               destName,
-						Settings:           allDs,
-						BackendClusterRefs: backendClusterRefs,
-						Metadata:           routeRuleMetadata,
-					},
-					Metadata: routeRuleMetadata,
+					// routeRuleName is always nil for TLS: every rule's backends already pool into
+					// backendDestinations above, and a rule-scoped BTP/CTP's settings never reach
+					// TLSRoute's translated output regardless of merge status (buildResourceMetadata
+					// above hardcodes Metadata.SectionName to "", so applyTrafficFeatureToRoute's
+					// rule-targeted match can never succeed) - so there is no real rule-scope
+					// divergence left to protect against merging away. Route-scope and
+					// listener-scope divergence (the actual case this fix addresses) still resolve
+					// correctly with a nil routeRuleName, since policyIndex.Lookup falls straight
+					// through to them.
+					Destination: t.routeDestinationForListener(gwXdsIR, gatewayCtx, tlsRoute, listener, nil, destName, routeRuleMetadata, backendDestinations),
+					Metadata:    routeRuleMetadata,
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
 			}
