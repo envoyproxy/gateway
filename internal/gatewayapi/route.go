@@ -217,9 +217,24 @@ func formatDroppedRuleMessage(unacceptedRules []int, err status.Error) string {
 	return fmt.Sprintf("Dropped Rule(s) %v: %s", unacceptedRules, status.Error2ConditionMsg(err))
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*ir.HTTPRoute, []status.Error, []int) {
+// httpRouteDestinationChoice pairs one rule-match's ir.HTTPRoute with its rule's not-yet-resolved
+// backendDestinations, deferring the final Settings/BackendClusterRefs split - and thus whether a
+// merge-eligible backend actually gets a shared cluster - to routeDestinationForListener, once a
+// specific listener is known. backendDestinations is nil for a rule-match that already got a
+// DirectResponse/Redirect while processHTTPRouteRules/processGRPCRouteRules were building it;
+// route.Destination stays nil in that case too, exactly as it does today.
+type httpRouteDestinationChoice struct {
+	route               *ir.HTTPRoute
+	backendDestinations []backendDestination
+	destName            string
+	routeRuleMetadata   *ir.ResourceMetadata
+	routeRuleName       *gwapiv1.SectionName
+	statName            string
+}
+
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*httpRouteDestinationChoice, []status.Error, []int) {
 	var (
-		irRoutes       []*ir.HTTPRoute
+		choices        []*httpRouteDestinationChoice
 		errorCollector = &status.TypedErrorCollector{}
 	)
 	pattern := getStatPattern(httpRoute, parentRef, t.GatewayControllerName)
@@ -262,15 +277,14 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		var (
-			destName                 = irRouteDestinationName(httpRoute, ruleIdx)
-			unmergedSettings         = make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-			mergedBackendClusterRefs []*ir.BackendClusterRef
-			backendWeights           = &ir.BackendWeights{}
-			backendRefNames          = make([]string, len(rule.BackendRefs))
-			backendCustomRefs        = make([]*ir.UnstructuredRef, 0, len(rule.BackendRefs))
-			processDestinationError  error
-			failedNoReadyEndpoints   bool
-			hasDynamicResolver       bool
+			destName                = irRouteDestinationName(httpRoute, ruleIdx)
+			backendDestinations     = make([]backendDestination, 0, len(rule.BackendRefs))
+			backendWeights          = &ir.BackendWeights{}
+			backendRefNames         = make([]string, len(rule.BackendRefs))
+			backendCustomRefs       = make([]*ir.UnstructuredRef, 0, len(rule.BackendRefs))
+			processDestinationError error
+			failedNoReadyEndpoints  bool
+			hasDynamicResolver      bool
 		)
 
 		gatewayCtx := GetRouteParentContext(httpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
@@ -328,13 +342,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 			backendWeights.AddWeighted(ds, ds.Weight)
 
-			// merged backends are referenced from the shared registry; everything else stays inline
-			if clusterKey != nil {
-				backendCluster := t.getOrCreateBackendCluster(t.gatewayXdsIR(gatewayCtx, xdsIR), clusterKey, ds)
-				mergedBackendClusterRefs = append(mergedBackendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
-			} else {
-				unmergedSettings = append(unmergedSettings, ds)
-			}
+			backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
 		}
 
 		switch {
@@ -444,42 +452,38 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				t.Logger.Info("setting 500 direct response in routes due to dynamic resolver with multiple backendRefs",
 					"routes", sets.List(routesWithDirectResponse))
 			}
-		default:
-			for _, irRoute := range ruleRoutes {
-				// If the route already has a direct response or redirect configured, then it was from a filter so skip
-				// processing any destinations for this route.
-				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
-					continue
-				}
-				irRoute.Destination = &ir.RouteDestination{
-					Name:               destName,
-					Settings:           unmergedSettings,
-					BackendClusterRefs: mergedBackendClusterRefs,
-					Metadata:           routeRuleMetadata,
-				}
-			}
 		}
 
-		// finalize the IR routes for this rule
+		// finalize the IR routes for this rule, deferring the Settings/BackendClusterRefs split to
+		// routeDestinationForListener - it needs a specific listener to decide (per the design doc's
+		// §3.1), which isn't known until processHTTPRouteParentRefListener's fan-out.
 		for _, irRoute := range ruleRoutes {
 			// add custom backend refs if any
 			if len(backendCustomRefs) > 0 {
 				irRoute.ExtensionRefs = append(irRoute.ExtensionRefs, backendCustomRefs...)
 			}
 
-			// set the stat name for this route
-			if irRoute.Destination != nil && pattern != "" {
-				irRoute.Destination.StatName = new(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
+			choice := &httpRouteDestinationChoice{
+				route:             irRoute,
+				destName:          destName,
+				routeRuleMetadata: routeRuleMetadata,
+				routeRuleName:     rule.Name,
 			}
+			if irRoute.DirectResponse == nil && irRoute.Redirect == nil {
+				choice.backendDestinations = backendDestinations
+				if pattern != "" {
+					choice.statName = buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames)
+				}
+			}
+			choices = append(choices, choice)
 		}
-
-		irRoutes = append(irRoutes, ruleRoutes...)
 	}
+
 	if errorCollector.Empty() {
-		return irRoutes, nil, nil
+		return choices, nil, nil
 	}
 
-	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
+	return choices, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
 // hasPathRegexHostRewrite reports whether any of the given IR routes rewrites the upstream host
@@ -1444,9 +1448,9 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*ir.HTTPRoute, []status.Error, []int) {
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*httpRouteDestinationChoice, []status.Error, []int) {
 	var (
-		irRoutes       []*ir.HTTPRoute
+		choices        []*httpRouteDestinationChoice
 		errorCollector = &status.TypedErrorCollector{}
 	)
 	pattern := getStatPattern(grpcRoute, parentRef, t.GatewayControllerName)
@@ -1490,8 +1494,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 		var (
 			destName                = irRouteDestinationName(grpcRoute, ruleIdx)
-			allDs                   = make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-			backendClusterRefs      []*ir.BackendClusterRef
+			backendDestinations     = make([]backendDestination, 0, len(rule.BackendRefs))
 			backendWeights          = &ir.BackendWeights{}
 			backendRefNames         = make([]string, len(rule.BackendRefs))
 			processDestinationError error
@@ -1549,12 +1552,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 			backendWeights.AddWeighted(ds, ds.Weight)
 
-			if clusterKey != nil {
-				backendCluster := t.getOrCreateBackendCluster(t.gatewayXdsIR(gatewayCtx, xdsIR), clusterKey, ds)
-				backendClusterRefs = append(backendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: ds.Weight})
-			} else {
-				allDs = append(allDs, ds)
-			}
+			backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
 		}
 
 		switch {
@@ -1642,41 +1640,35 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// let a crafted path resolve to a loopback address and bypass the SSRF protection.
 		case hasDynamicResolver && hasPathRegexHostRewrite(ruleRoutes):
 			t.rejectPathRegexHostRewriteWithDynamicResolver(ruleRoutes, ruleIdx, errorCollector)
-		default:
-			for _, irRoute := range ruleRoutes {
-				// If the route already has a direct response or redirect configured, then it was from a filter so skip
-				// processing any destinations for this route.
-				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
-					continue
-				}
-				irRoute.Destination = &ir.RouteDestination{
-					Name:               destName,
-					Settings:           allDs,
-					BackendClusterRefs: backendClusterRefs,
-					Metadata:           routeRuleMetadata,
-				}
-			}
-
 		}
 
-		// finalize the IR routes for this rule
+		// finalize the IR routes for this rule, deferring the Settings/BackendClusterRefs split to
+		// routeDestinationForListener - it needs a specific listener to decide (per the design doc's
+		// §3.1), which isn't known until processHTTPRouteParentRefListener's fan-out.
 		for _, irRoute := range ruleRoutes {
 			irRoute.IsHTTP2 = true
 
-			// set the stat name for this route
-			if irRoute.Destination != nil && pattern != "" {
-				irRoute.Destination.StatName = new(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
+			choice := &httpRouteDestinationChoice{
+				route:             irRoute,
+				destName:          destName,
+				routeRuleMetadata: routeRuleMetadata,
+				routeRuleName:     rule.Name,
 			}
+			if irRoute.DirectResponse == nil && irRoute.Redirect == nil {
+				choice.backendDestinations = backendDestinations
+				if pattern != "" {
+					choice.statName = buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames)
+				}
+			}
+			choices = append(choices, choice)
 		}
-
-		irRoutes = append(irRoutes, ruleRoutes...)
 	}
 
 	if errorCollector.Empty() {
-		return irRoutes, nil, nil
+		return choices, nil, nil
 	}
 
-	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
+	return choices, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
 // grpcRouteMatchCombination is a single gRPC route match ANDed with the cookie
@@ -1843,7 +1835,7 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 	}
 }
 
-func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) bool {
+func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*httpRouteDestinationChoice, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) bool {
 	// need to check hostname intersection if there are listeners
 	hasHostnameIntersection := len(parentRef.listeners) == 0
 	for _, listener := range parentRef.listeners {
@@ -1857,15 +1849,17 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			continue
 		}
 
+		gwIR := xdsIR[t.getIRKey(listener.gateway.Gateway)]
+
 		perHostRoutes := make([]*ir.HTTPRoute, 0, len(hosts)*len(routeRoutes))
 		for _, host := range hosts {
-			for _, routeRoute := range routeRoutes {
+			for _, choice := range routeRoutes {
 				// Deep copy the route first to avoid modifying the original and
 				// affecting other listeners that may be attached to the same route.
 				// This is important when a route has multiple parent refs (listeners)
 				// with different ports, as the redirect port needs to be derived
 				// independently for each listener.
-				routeRoute := routeRoute.DeepCopy()
+				routeRoute := choice.route.DeepCopy()
 				// If the redirect port is not set, the final redirect port must be derived.
 				if routeRoute.Redirect != nil && routeRoute.Redirect.Port == nil {
 					redirectPort := uint32(listener.Port)
@@ -1888,11 +1882,20 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				underscoredHost := strings.ReplaceAll(host, ".", "_")
 				routeRoute.Name = fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost)
 				routeRoute.Hostname = host
+
+				if choice.backendDestinations != nil {
+					destination := t.routeDestinationForListener(gwIR, listener.gateway, route, listener, choice.routeRuleName, choice.destName, choice.routeRuleMetadata, choice.backendDestinations)
+					if choice.statName != "" {
+						destination.StatName = new(choice.statName)
+					}
+					routeRoute.Destination = destination
+				}
+
 				perHostRoutes = append(perHostRoutes, routeRoute)
 			}
 		}
-		irKey := t.getIRKey(listener.gateway.Gateway)
-		irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+
+		irListener := gwIR.GetHTTPListener(irListenerName(listener))
 
 		if irListener != nil {
 			if route.GetRouteType() == resource.KindGRPCRoute {
