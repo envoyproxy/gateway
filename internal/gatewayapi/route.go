@@ -305,7 +305,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, clusterKey, unstructuredRef, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, httpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeUnsafeForRule)
+			ds, backendClusterKey, unstructuredRef, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, httpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeUnsafeForRule)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -342,7 +342,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 			backendWeights.AddWeighted(ds, ds.Weight)
 
-			backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
+			backendDestinations = append(backendDestinations, backendDestination{ds: ds, backendClusterKey: backendClusterKey})
 		}
 
 		switch {
@@ -559,7 +559,7 @@ func (t *Translator) resolveBTPRoutingType(
 	)
 }
 
-// hasClusterSettingsBelowGatewayForListener reports whether listener - and, transitively, the
+// hasClusterSettingsBelowGateway reports whether listener - and, transitively, the
 // route-rule/route it's serving - has a BTP/CTP-sourced cluster-scoped setting defined below
 // Gateway scope, in either of two ways:
 //
@@ -572,7 +572,7 @@ func (t *Translator) resolveBTPRoutingType(
 // Both make cluster deduplication unsafe for this listener, though not for the same reason: the
 // BTP settings would wrongly apply to the other routes/listeners sharing the cluster, while the
 // CTP ones would be lost entirely, since a merged BackendCluster carries no HTTP1 settings.
-func (t *Translator) hasClusterSettingsBelowGatewayForListener(
+func (t *Translator) hasClusterSettingsBelowGateway(
 	gatewayCtx *GatewayContext,
 	routeCtx RouteContext,
 	listener *ListenerContext,
@@ -692,7 +692,7 @@ func (t *Translator) processBackendRef(
 	btpRoutingType *egv1a1.RoutingType,
 	xdsIR resource.XdsIRMap,
 	mergeUnsafeForRule bool,
-) (ds *ir.DestinationSetting, clusterKey *BackendClusterKey, unstructuredRef *ir.UnstructuredRef, err status.Error) {
+) (ds *ir.DestinationSetting, backendClusterKey *BackendClusterKey, unstructuredRef *ir.UnstructuredRef, err status.Error) {
 	ds, unstructuredRef, err = t.processDestination(irDestinationSettingName(destName, backendIdx), backendRefContext, parentRef, route, resources, gatewayCtx, btpRoutingType, xdsIR)
 
 	backendRef := backendRefContext.GetBackendRef().BackendObjectReference
@@ -715,7 +715,7 @@ func (t *Translator) processBackendRef(
 		return ds, nil, unstructuredRef, err
 	}
 
-	key := backendClusterKey(backendRef, backendNamespace)
+	key := newBackendClusterKey(backendRef, backendNamespace)
 	key = t.backendClusterKeyForGateway(&key, gatewayCtx, ds.Protocol)
 
 	return ds, &key, unstructuredRef, err
@@ -731,8 +731,8 @@ func toBackendObjectReferences[T any](refs []T, get func(T) gwapiv1.BackendObjec
 	return out
 }
 
-// backendClusterKey builds the BackendClusterKey identifying a backendRef's target backend.
-func backendClusterKey(backendRef gwapiv1.BackendObjectReference, backendNamespace string) BackendClusterKey {
+// newBackendClusterKey builds the BackendClusterKey identifying a backendRef's target backend.
+func newBackendClusterKey(backendRef gwapiv1.BackendObjectReference, backendNamespace string) BackendClusterKey {
 	return BackendClusterKey{
 		Kind:      KindDerefOr(backendRef.Kind, resource.KindService),
 		Namespace: backendNamespace,
@@ -757,7 +757,7 @@ func distinctBackendObjectReferences(routeCtx RouteContext, refs []gwapiv1.Backe
 	out := make([]gwapiv1.BackendObjectReference, 0, len(refs))
 	for _, ref := range refs {
 		backendNamespace := NamespaceDerefOr(ref.Namespace, routeCtx.GetNamespace())
-		key := backendClusterKey(ref, backendNamespace)
+		key := newBackendClusterKey(ref, backendNamespace)
 		if _, ok := seen[key]; ok {
 			continue
 		}
@@ -895,16 +895,16 @@ func (t *Translator) getOrCreateBackendCluster(
 }
 
 // backendDestination pairs a rule's already-computed DestinationSetting with the merge-cluster
-// key it's eligible to use, if any. clusterKey is nil when this backendRef was never merge-eligible
+// key it's eligible to use, if any. backendClusterKey is nil when this backendRef was never merge-eligible
 // in the first place - ds is kept either way, so its content is available whichever way
 // routeDestinationForListener ultimately decides.
 type backendDestination struct {
-	ds         *ir.DestinationSetting
-	clusterKey *BackendClusterKey
+	ds                *ir.DestinationSetting
+	backendClusterKey *BackendClusterKey
 }
 
 // routeDestinationForListener builds the RouteDestination for one listener a route attaches to.
-// A merge-eligible backendDestination uses its clusterKey's shared cluster, unless this specific
+// A merge-eligible backendDestination uses its backendClusterKey's shared cluster, unless this specific
 // listener has its own ClusterSettings divergence, in which case it falls back to its own inline
 // ds instead. getOrCreateBackendCluster's registration is deferred to here, lazily, so a backend
 // that turns out divergent on every listener it attaches to never gets a merged cluster
@@ -919,29 +919,18 @@ func (t *Translator) routeDestinationForListener(
 	routeRuleMetadata *ir.ResourceMetadata,
 	backendDestinations []backendDestination,
 ) *ir.RouteDestination {
-	hasMergeCandidate := false
-	for _, bd := range backendDestinations {
-		if bd.clusterKey != nil {
-			hasMergeCandidate = true
-			break
-		}
-	}
-
-	var divergent bool
-	if hasMergeCandidate {
-		divergent = t.hasClusterSettingsBelowGatewayForListener(gatewayCtx, routeCtx, listener, routeRuleName)
-	}
+	hasClusterSettings := t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, listener, routeRuleName)
 
 	destination := &ir.RouteDestination{
 		Name:     destName,
 		Metadata: routeRuleMetadata,
 	}
 	for _, bd := range backendDestinations {
-		if bd.clusterKey == nil || divergent {
+		if bd.backendClusterKey == nil || hasClusterSettings {
 			destination.Settings = append(destination.Settings, bd.ds)
 			continue
 		}
-		backendCluster := t.getOrCreateBackendCluster(gwIR, bd.clusterKey, bd.ds)
+		backendCluster := t.getOrCreateBackendCluster(gwIR, bd.backendClusterKey, bd.ds)
 		destination.BackendClusterRefs = append(destination.BackendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: bd.ds.Weight})
 	}
 	return destination
@@ -1512,7 +1501,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				Filters:    rule.BackendRefs[i].Filters,
 			}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, clusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, grpcRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, backendClusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, grpcRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -1544,7 +1533,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 			backendWeights.AddWeighted(ds, ds.Weight)
 
-			backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
+			backendDestinations = append(backendDestinations, backendDestination{ds: ds, backendClusterKey: backendClusterKey})
 		}
 
 		switch {
@@ -2005,7 +1994,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
 
 				// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-				ds, clusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+				ds, backendClusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
@@ -2013,7 +2002,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 				// skip backendRefs with weight 0 as they do not affect the traffic distribution
 				if ds.Weight != nil && *ds.Weight > 0 {
-					backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
+					backendDestinations = append(backendDestinations, backendDestination{ds: ds, backendClusterKey: backendClusterKey})
 				}
 			}
 
@@ -2026,8 +2015,8 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 		// A route can only have a single destination if that destination is a dynamic resolver,
 		// because combining a dynamic resolver with other backends doesn't make sense. A dynamic
-		// resolver is never merge-eligible, so it can only ever appear with a nil clusterKey - but
-		// the count check must still cover every backendDestination regardless of clusterKey.
+		// resolver is never merge-eligible, so it can only ever appear with a nil backendClusterKey - but
+		// the count check must still cover every backendDestination regardless of backendClusterKey.
 		hasDynamicResolver := false
 		for _, bd := range backendDestinations {
 			if bd.ds.IsDynamicResolver {
@@ -2237,7 +2226,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
 
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, clusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, backendClusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
@@ -2245,7 +2234,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
+				backendDestinations = append(backendDestinations, backendDestination{ds: ds, backendClusterKey: backendClusterKey})
 			}
 		}
 
@@ -2390,7 +2379,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
-			ds, clusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			ds, backendClusterKey, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				resolveErrs.Add(err)
@@ -2399,7 +2388,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if ds.Weight != nil && *ds.Weight > 0 {
-				backendDestinations = append(backendDestinations, backendDestination{ds: ds, clusterKey: clusterKey})
+				backendDestinations = append(backendDestinations, backendDestination{ds: ds, backendClusterKey: backendClusterKey})
 			}
 		}
 

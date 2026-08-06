@@ -537,14 +537,14 @@ func TestIsServiceHeadless(t *testing.T) {
 }
 
 // TestBackendClusterKeyConstruction covers the key-building logic now inlined in processBackendRef
-// (backendClusterKey + backendClusterKeyForGateway). Eligibility itself is covered separately and
+// (newBackendClusterKey + backendClusterKeyForGateway). Eligibility itself is covered separately and
 // exhaustively by TestShouldMergeBackend.
 func TestBackendClusterKeyConstruction(t *testing.T) {
 	serviceBackendRef := gwapiv1.BackendObjectReference{Name: "service-1", Port: PortNumPtr(8080)}
 	tr := &Translator{}
 
 	t.Run("resolves to the backend's own identity", func(t *testing.T) {
-		key := backendClusterKey(serviceBackendRef, "default")
+		key := newBackendClusterKey(serviceBackendRef, "default")
 		require.Equal(t, "Service", key.Kind)
 		require.Equal(t, "service-1", key.Name)
 	})
@@ -553,7 +553,7 @@ func TestBackendClusterKeyConstruction(t *testing.T) {
 		gwCtx1 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
 		gwCtx2 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-2"}}}
 
-		baseKey := backendClusterKey(serviceBackendRef, "default")
+		baseKey := newBackendClusterKey(serviceBackendRef, "default")
 		key1 := tr.backendClusterKeyForGateway(&baseKey, gwCtx1, ir.HTTP)
 		key2 := tr.backendClusterKeyForGateway(&baseKey, gwCtx2, ir.HTTP)
 
@@ -562,7 +562,7 @@ func TestBackendClusterKeyConstruction(t *testing.T) {
 
 	t.Run("HTTPRoute and GRPCRoute targeting the same backend never collide", func(t *testing.T) {
 		gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
-		baseKey := backendClusterKey(serviceBackendRef, "default")
+		baseKey := newBackendClusterKey(serviceBackendRef, "default")
 		key1 := tr.backendClusterKeyForGateway(&baseKey, gwCtx, ir.HTTP)
 		key2 := tr.backendClusterKeyForGateway(&baseKey, gwCtx, ir.GRPC)
 
@@ -929,7 +929,7 @@ func TestRouteDestinationForListener(t *testing.T) {
 
 	weight := uint32(1)
 	key := BackendClusterKey{Kind: "Service", Namespace: "default", Name: "service-1", Port: 8080}
-	backendDestinations := []backendDestination{{ds: &ir.DestinationSetting{Name: "ds-1", Weight: &weight}, clusterKey: &key}}
+	backendDestinations := []backendDestination{{ds: &ir.DestinationSetting{Name: "ds-1", Weight: &weight}, backendClusterKey: &key}}
 	routeRuleMetadata := &ir.ResourceMetadata{Kind: "HTTPRoute", Name: "route-1", Namespace: "default"}
 
 	btpDivergentOnListenerA := func() *BTPClusterSettingsIndex {
@@ -1010,13 +1010,13 @@ func TestRouteDestinationForListener(t *testing.T) {
 		require.Empty(t, tr.BackendClusterMap, "the find-or-create cache itself must stay empty too")
 	})
 
-	t.Run("a backendDestination with no clusterKey is never a merge candidate and always passes through inline", func(t *testing.T) {
+	t.Run("a backendDestination with no backendClusterKey always passes through inline, regardless of listener divergence", func(t *testing.T) {
 		tr := &Translator{TranslatorContext: &TranslatorContext{BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{}}}
 		gwIR := &ir.Xds{}
-		notMergeEligible := []backendDestination{{ds: &ir.DestinationSetting{Name: "ds-2", Weight: &weight}, clusterKey: nil}}
+		notMergeEligible := []backendDestination{{ds: &ir.DestinationSetting{Name: "ds-2", Weight: &weight}, backendClusterKey: nil}}
 		destination := tr.routeDestinationForListener(gwIR, gatewayCtx, routeCtx, listenerA, nil, "dest-1", routeRuleMetadata, notMergeEligible)
 		require.Len(t, destination.Settings, 1)
 		require.Empty(t, destination.BackendClusterRefs)
-		require.Empty(t, gwIR.BackendClusters, "hasClusterSettingsBelowGatewayForListener must never even be consulted when nothing is merge-eligible")
+		require.Empty(t, gwIR.BackendClusters, "nothing was merge-eligible, so no cluster should ever get registered")
 	})
 }

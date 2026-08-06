@@ -1769,7 +1769,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 
 	// Gateway-level Traffic is the only level safe to apply uniformly to a merged cluster: a
 	// route/rule-level BackendTrafficPolicy that would conflict is already excluded from merging
-	// via hasClusterSettingsBelowGatewayForListener, so it never reaches x.BackendClusters here.
+	// via hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here.
 	if applyToBackendClusters && errs == nil {
 		for _, bc := range x.BackendClusters {
 			bc.Traffic = tf.DeepCopy()
