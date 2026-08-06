@@ -899,6 +899,59 @@ func (t *Translator) getOrCreateBackendCluster(
 	return backendCluster
 }
 
+// backendDestination pairs a rule's already-computed DestinationSetting with the merge-cluster
+// key it's eligible to use, if any. clusterKey is nil when this backendRef was never eligible for
+// cluster deduplication in the first place (see shouldMergeBackend) - ds is kept either way, so
+// its content is available whichever way routeDestinationForListener ultimately decides.
+type backendDestination struct {
+	ds         *ir.DestinationSetting
+	clusterKey *BackendClusterKey
+}
+
+// routeDestinationForListener builds the RouteDestination for one listener a route attaches to.
+// A merge-eligible backendDestination uses its clusterKey's shared cluster, unless this specific
+// listener has its own ClusterSettings divergence, in which case it falls back to its own inline
+// ds instead. getOrCreateBackendCluster's registration is deferred to here, lazily, so a backend
+// that turns out divergent on every listener it attaches to never gets a merged cluster
+// registered at all.
+func (t *Translator) routeDestinationForListener(
+	gwIR *ir.Xds,
+	gatewayCtx *GatewayContext,
+	routeCtx RouteContext,
+	listener *ListenerContext,
+	routeRuleName *gwapiv1.SectionName,
+	destName string,
+	routeRuleMetadata *ir.ResourceMetadata,
+	backendDestinations []backendDestination,
+) *ir.RouteDestination {
+	hasMergeCandidate := false
+	for _, bd := range backendDestinations {
+		if bd.clusterKey != nil {
+			hasMergeCandidate = true
+			break
+		}
+	}
+
+	var divergent bool
+	if hasMergeCandidate {
+		divergent = t.hasClusterSettingsBelowGatewayForListener(gatewayCtx, routeCtx, listener, routeRuleName)
+	}
+
+	destination := &ir.RouteDestination{
+		Name:     destName,
+		Metadata: routeRuleMetadata,
+	}
+	for _, bd := range backendDestinations {
+		if bd.clusterKey == nil || divergent {
+			destination.Settings = append(destination.Settings, bd.ds)
+			continue
+		}
+		backendCluster := t.getOrCreateBackendCluster(gwIR, bd.clusterKey, bd.ds)
+		destination.BackendClusterRefs = append(destination.BackendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: bd.ds.Weight})
+	}
+	return destination
+}
+
 type routeMatchCombination struct {
 	gwapiv1.HTTPRouteMatch
 	cookies []egv1a1.HTTPCookieMatch
