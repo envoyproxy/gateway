@@ -5,35 +5,48 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: same-namespace
+  - name: same-namespace
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /header
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: HTTPRouteFilter
-            name: header-host-rewrite
-      backendRefs:
-        - name: infra-backend-v1
-          port: 8080
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /backend
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: HTTPRouteFilter
-            name: backend-host-rewrite
-      backendRefs:
-        - group: gateway.envoyproxy.io
-          kind: Backend
-          name: backend-fqdn
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /header
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: header-host-rewrite
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /backend
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: backend-host-rewrite
+    backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-fqdn
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /path-regex
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: path-regex-host-rewrite
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
@@ -57,12 +70,25 @@ spec:
       type: Backend
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: path-regex-host-rewrite
+  namespace: gateway-conformance-infra
+spec:
+  urlRewrite:
+    hostname:
+      type: PathRegex
+      pathRegex:
+        pattern: "^/path-regex/([^/]+).*"
+        substitution: "\\1.example.internal"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
   name: backend-fqdn
   namespace: gateway-conformance-infra
 spec:
   endpoints:
-    - fqdn:
-        hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
-        port: 8080
+  - fqdn:
+      hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
+      port: 8080

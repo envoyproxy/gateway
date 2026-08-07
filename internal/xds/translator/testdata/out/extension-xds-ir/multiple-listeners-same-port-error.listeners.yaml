@@ -27,6 +27,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: first-listener-error
         serverHeaderTransformation: PASS_THROUGH
@@ -45,6 +46,7 @@
           - name: first-listener
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -72,6 +74,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
@@ -90,6 +93,7 @@
           - name: second-listener
             sdsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true

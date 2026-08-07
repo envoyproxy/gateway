@@ -103,3 +103,18 @@ spec:
         path:
           type: ReplaceFullPath
           replaceFullPath: /status/301
+    - match:
+        responseHeaders:
+          - name: X-Custom-Header
+            value:
+              type: Exact
+              value: custom-value
+      response:
+        contentType: text/plain
+        body:
+          type: Inline
+          inline: "matched on response header"
+        header:
+          set:
+            - name: X-Override-Matched
+              value: "true"

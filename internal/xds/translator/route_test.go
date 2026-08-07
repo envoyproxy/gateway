@@ -10,10 +10,65 @@ import (
 	"testing"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"github.com/stretchr/testify/require"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
+
+func TestBuildRouteTracingSampling(t *testing.T) {
+	tests := []struct {
+		name               string
+		clientSampling     *gwapiv1.Fraction
+		wantClientSampling *xdstype.FractionalPercent
+	}{
+		{
+			name: "client sampling configured",
+			clientSampling: &gwapiv1.Fraction{
+				Numerator:   2,
+				Denominator: new(int32(100)),
+			},
+			wantClientSampling: &xdstype.FractionalPercent{Numerator: 2},
+		},
+		{
+			name: "client sampling defaults to zero",
+			wantClientSampling: &xdstype.FractionalPercent{
+				Numerator:   0,
+				Denominator: xdstype.FractionalPercent_HUNDRED,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			httpRoute := &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					Telemetry: &ir.BackendTelemetry{
+						Tracing: &ir.BackendTracing{
+							SamplingFraction: &gwapiv1.Fraction{
+								Numerator:   1,
+								Denominator: new(int32(100)),
+							},
+							ClientSamplingFraction: tc.clientSampling,
+							OverallSamplingFraction: &gwapiv1.Fraction{
+								Numerator:   3,
+								Denominator: new(int32(100)),
+							},
+						},
+					},
+				},
+			}
+
+			got, err := buildRouteTracing(httpRoute)
+			require.NoError(t, err)
+			require.Equal(t, &xdstype.FractionalPercent{Numerator: 1}, got.RandomSampling)
+			require.Equal(t, tc.wantClientSampling, got.ClientSampling)
+			require.Equal(t, &xdstype.FractionalPercent{Numerator: 3}, got.OverallSampling)
+		})
+	}
+}
 
 func TestBuildHashPolicy(t *testing.T) {
 	tests := []struct {
@@ -35,7 +90,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "Nil ConsistentHash in LoadBalancer",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{},
+					},
 				},
 			},
 			want: nil,
@@ -44,7 +101,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with nil SourceIP and Header",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}},
+					},
 				},
 			},
 			want: nil,
@@ -53,7 +112,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with SourceIP set to false",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(false)}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(false)}},
+					},
 				},
 			},
 			want: nil,
@@ -62,7 +123,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with SourceIP set to true",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(true)}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(true)}},
+					},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
@@ -79,7 +142,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with Header",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{{Name: "name"}}}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{{Name: "name"}}}},
+					},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
@@ -96,11 +161,13 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with multiple Headers",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{
-						{Name: "name"},
-						{Name: "bazz"},
-						{Name: "buzz"},
-					}}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{
+							{Name: "name"},
+							{Name: "bazz"},
+							{Name: "buzz"},
+						}}},
+					},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
@@ -131,11 +198,13 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with multiple QueryParams",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{QueryParams: []*egv1a1.QueryParam{
-						{Name: "name"},
-						{Name: "bazz"},
-						{Name: "buzz"},
-					}}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{QueryParams: []*egv1a1.QueryParam{
+							{Name: "name"},
+							{Name: "bazz"},
+							{Name: "buzz"},
+						}}},
+					},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
@@ -301,9 +370,66 @@ func TestBuildXdsURLRewriteAction_AppendXForwardedHost(t *testing.T) {
 				},
 				AppendXForwardedHost: tt.appendXForwardedHost,
 			}
-			got := buildXdsURLRewriteAction(baseRoute, urlRewrite, nil)
+			got := buildXdsURLRewriteAction(baseRoute, urlRewrite, nil, nil)
 			if got.AppendXForwardedHost != tt.wantAppendXForwardedHost {
 				t.Errorf("AppendXForwardedHost = %v, want %v", got.AppendXForwardedHost, tt.wantAppendXForwardedHost)
+			}
+		})
+	}
+}
+
+func TestBuildXdsURLRewriteAction_PathRegexHostRewrite(t *testing.T) {
+	baseRoute := &ir.HTTPRoute{
+		Name: "test-route",
+		Destination: &ir.RouteDestination{
+			Name: "test-dest",
+			Settings: []*ir.DestinationSetting{
+				{
+					Endpoints: []*ir.DestinationEndpoint{
+						{Host: "1.2.3.4", Port: 8080},
+					},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name                     string
+		appendXForwardedHost     *bool
+		wantAppendXForwardedHost bool
+	}{
+		{
+			name:                     "nil defaults to true",
+			appendXForwardedHost:     nil,
+			wantAppendXForwardedHost: true,
+		},
+		{
+			name:                     "explicit false",
+			appendXForwardedHost:     new(false),
+			wantAppendXForwardedHost: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			urlRewrite := &ir.URLRewrite{
+				Host: &ir.HTTPHostModifier{
+					PathRegex: &ir.RegexMatchReplace{
+						Pattern:      "^/node/([0-9]+)/api.*",
+						Substitution: "backend-\\1.service.namespace.svc.cluster.local",
+					},
+				},
+				AppendXForwardedHost: tt.appendXForwardedHost,
+			}
+			got := buildXdsURLRewriteAction(baseRoute, urlRewrite, nil, nil)
+			if got.AppendXForwardedHost != tt.wantAppendXForwardedHost {
+				t.Errorf("AppendXForwardedHost = %v, want %v", got.AppendXForwardedHost, tt.wantAppendXForwardedHost)
+			}
+			if got.GetHostRewritePathRegex().GetPattern().GetRegex() != "^/node/([0-9]+)/api.*" {
+				t.Errorf("HostRewritePathRegex pattern = %v, want %v", got.GetHostRewritePathRegex().GetPattern().GetRegex(), "^/node/([0-9]+)/api.*")
+			}
+			if got.GetHostRewritePathRegex().GetSubstitution() != "backend-\\1.service.namespace.svc.cluster.local" {
+				t.Errorf("HostRewritePathRegex substitution = %v, want %v", got.GetHostRewritePathRegex().GetSubstitution(), "backend-\\1.service.namespace.svc.cluster.local")
 			}
 		})
 	}

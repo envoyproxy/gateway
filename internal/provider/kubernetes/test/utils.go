@@ -84,6 +84,30 @@ func GetGateway(nsName types.NamespacedName, gwclass string, listenerPort int32)
 	}
 }
 
+// GetListenerSet returns a sample ListenerSet with single listener.
+func GetListenerSet(nsName, parentGateway types.NamespacedName, listenerPort int32) *gwapiv1.ListenerSet {
+	parentNamespace := gwapiv1.Namespace(parentGateway.Namespace)
+	return &gwapiv1.ListenerSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nsName.Namespace,
+			Name:      nsName.Name,
+		},
+		Spec: gwapiv1.ListenerSetSpec{
+			ParentRef: gwapiv1.ParentGatewayReference{
+				Namespace: &parentNamespace,
+				Name:      gwapiv1.ObjectName(parentGateway.Name),
+			},
+			Listeners: []gwapiv1.ListenerEntry{
+				{
+					Name:     "test",
+					Port:     listenerPort,
+					Protocol: gwapiv1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+}
+
 // GetSecureGateway returns a sample Gateway with single TLS listener.
 func GetSecureGateway(nsName types.NamespacedName, gwclass string, secretKindNSName GroupKindNamespacedName) *gwapiv1.Gateway {
 	secureGateway := GetGateway(nsName, gwclass, 8080)
@@ -197,6 +221,23 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 			},
 		},
 	}
+}
+
+// GetGRPCRouteWithHTTPRouteFilter returns a sample GRPCRoute that references an
+// Envoy Gateway HTTPRouteFilter via an extensionRef filter.
+func GetGRPCRouteWithHTTPRouteFilter(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32, httpRouteFilterName string) *gwapiv1.GRPCRoute {
+	grpcRoute := GetGRPCRoute(nsName, parent, serviceName, port)
+	grpcRoute.Spec.Rules[0].Filters = []gwapiv1.GRPCRouteFilter{
+		{
+			Type: gwapiv1.GRPCRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: egv1a1.GroupName,
+				Kind:  egv1a1.KindHTTPRouteFilter,
+				Name:  gwapiv1.ObjectName(httpRouteFilterName),
+			},
+		},
+	}
+	return grpcRoute
 }
 
 // GetTLSRoute returns a sample TLSRoute with a parent reference.

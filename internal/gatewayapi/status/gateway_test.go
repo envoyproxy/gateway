@@ -23,10 +23,11 @@ import (
 // TestUpdateGatewayStatusProgrammedCondition tests whether UpdateGatewayStatusProgrammedCondition correctly updates the addresses in the Gateway status.
 func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	type args struct {
-		gw            *gwapiv1.Gateway
-		svc           *corev1.Service
-		deployment    *appsv1.Deployment
-		nodeAddresses NodeAddresses
+		gw                   *gwapiv1.Gateway
+		svc                  *corev1.Service
+		deployment           *appsv1.Deployment
+		nodeAddresses        NodeAddresses
+		remoteInfrastructure bool
 	}
 	tests := []struct {
 		name          string
@@ -200,6 +201,30 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 				{
 					Type:  new(gwapiv1.IPAddressType),
 					Value: "127.0.0.1",
+				},
+			},
+		},
+		{
+			name: "Nodeport svc with externalTrafficPolicy Local uses pre-filtered addresses",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				nodeAddresses: NodeAddresses{
+					IPv4: []string{"1.1.1.1"},
+				},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeNodePort,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
+						ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  new(gwapiv1.IPAddressType),
+					Value: "1.1.1.1",
 				},
 			},
 		},
@@ -437,8 +462,81 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment, tt.args.nodeAddresses)
+			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment, tt.args.nodeAddresses, tt.args.remoteInfrastructure)
 			assert.True(t, reflect.DeepEqual(tt.wantAddresses, tt.args.gw.Status.Addresses))
+		})
+	}
+}
+
+func TestUpdateGatewayStatusAccepted(t *testing.T) {
+	acceptedListener := gwapiv1.ListenerStatus{
+		Name: "http",
+		Conditions: []metav1.Condition{
+			{Type: string(gwapiv1.ListenerConditionAccepted), Status: metav1.ConditionTrue, Reason: string(gwapiv1.ListenerReasonAccepted)},
+		},
+	}
+	unsupportedProtocolListener := gwapiv1.ListenerStatus{
+		Name: "invalid",
+		Conditions: []metav1.Condition{
+			{Type: string(gwapiv1.ListenerConditionAccepted), Status: metav1.ConditionFalse, Reason: string(gwapiv1.ListenerReasonUnsupportedProtocol)},
+		},
+	}
+
+	testCases := []struct {
+		name            string
+		listeners       []gwapiv1.ListenerStatus
+		expectCondition metav1.Condition
+	}{
+		{
+			name:      "no listeners",
+			listeners: nil,
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1.GatewayReasonAccepted),
+				Message: "The Gateway has been scheduled by Envoy Gateway",
+			},
+		},
+		{
+			name:      "all listeners accepted",
+			listeners: []gwapiv1.ListenerStatus{acceptedListener},
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1.GatewayReasonAccepted),
+				Message: "The Gateway has been scheduled by Envoy Gateway",
+			},
+		},
+		{
+			name:      "no listeners accepted",
+			listeners: []gwapiv1.ListenerStatus{unsupportedProtocolListener},
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gwapiv1.GatewayReasonListenersNotValid),
+				Message: "No listeners are valid: invalid",
+			},
+		},
+		{
+			name:      "some listeners accepted",
+			listeners: []gwapiv1.ListenerStatus{acceptedListener, unsupportedProtocolListener},
+			expectCondition: metav1.Condition{
+				Type:    string(gwapiv1.GatewayConditionAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1.GatewayReasonListenersNotValid),
+				Message: "Listeners not valid: invalid",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gtw := &gwapiv1.Gateway{Status: gwapiv1.GatewayStatus{Listeners: tc.listeners}}
+			UpdateGatewayStatusAccepted(gtw)
+
+			if d := cmp.Diff([]metav1.Condition{tc.expectCondition}, gtw.Status.Conditions, cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")); d != "" {
+				t.Errorf("unexpected condition diff: %s", d)
+			}
 		})
 	}
 }
@@ -447,9 +545,10 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 	testCases := []struct {
 		name string
 		// serviceAddressNum indicates how many addresses are set in the Gateway status.
-		serviceAddressNum int
-		deploymentStatus  appsv1.DeploymentStatus
-		expectCondition   []metav1.Condition
+		serviceAddressNum    int
+		deploymentStatus     appsv1.DeploymentStatus
+		expectCondition      []metav1.Condition
+		remoteInfrastructure bool
 	}{
 		{
 			name:              "ready gateway",
@@ -503,6 +602,19 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:                 "ready gateway with remote infrastructure",
+			serviceAddressNum:    1,
+			remoteInfrastructure: true,
+			expectCondition: []metav1.Condition{
+				{
+					Type:    string(gwapiv1.GatewayConditionProgrammed),
+					Status:  metav1.ConditionTrue,
+					Reason:  string(gwapiv1.GatewayConditionProgrammed),
+					Message: messageFmtProgrammedRemotely,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -518,7 +630,7 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 			}
 
 			deployment := &appsv1.Deployment{Status: tc.deploymentStatus}
-			updateGatewayProgrammedCondition(gtw, deployment)
+			updateGatewayProgrammedCondition(gtw, deployment, tc.remoteInfrastructure)
 
 			if d := cmp.Diff(tc.expectCondition, gtw.Status.Conditions, cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")); d != "" {
 				t.Errorf("unexpected condition diff: %s", d)

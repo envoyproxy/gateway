@@ -1,0 +1,1 @@
+Extension server policies can now target HTTPRoutes, GRPCRoute, HTTPRoute rules (via `sectionName`) and GRPCRoute rules (via `sectionName`) in addition to Gateways and Gateway Listeners. The extension server attachment outcome is now reported in the policy's `status.ancestors`.

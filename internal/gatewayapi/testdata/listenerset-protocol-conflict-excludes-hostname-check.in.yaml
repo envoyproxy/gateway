@@ -1,0 +1,79 @@
+namespaces:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: gateway-conformance-infra
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-with-tls-and-http-conflict
+      namespace: gateway-conformance-infra
+    spec:
+      gatewayClassName: envoy-gateway-class
+      allowedListeners:
+        namespaces:
+          from: Same
+      listeners:
+        # Gateway TLS (Passthrough) listener — establishes the winner protocol on port 443.
+        - name: tls-listener
+          port: 443
+          protocol: TLS
+          hostname: "other.com"
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All
+listenerSets:
+  # This listener uses HTTP on the same port as the Gateway's TLS listener.
+  # It becomes a protocol loser and should NOT participate in hostname conflict
+  # resolution, so the tls-winner listener below is unaffected.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      name: listenerset-http-on-tls-port
+      namespace: gateway-conformance-infra
+    spec:
+      parentRef:
+        kind: Gateway
+        group: gateway.networking.k8s.io
+        name: gateway-with-tls-and-http-conflict
+        namespace: gateway-conformance-infra
+      listeners:
+        # Protocol loser: HTTP conflicts with the Gateway's TLS winner protocol.
+        # Shares hostname "shared.com" with tls-winner but must not win the hostname tie.
+        - name: http-loser
+          port: 443
+          protocol: HTTP
+          hostname: "shared.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+  # This listener uses TLS (same protocol as the Gateway) and shares a hostname
+  # with the HTTP loser above. After the fix it must remain valid — the protocol
+  # loser is excluded from hostname checks and does not steal the hostname slot.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      name: listenerset-tls-winner
+      namespace: gateway-conformance-infra
+    spec:
+      parentRef:
+        kind: Gateway
+        group: gateway.networking.k8s.io
+        name: gateway-with-tls-and-http-conflict
+        namespace: gateway-conformance-infra
+      listeners:
+        # Protocol winner: TLS matches the Gateway's winner protocol.
+        # Shares hostname "shared.com" with http-loser, but http-loser is excluded
+        # from hostname conflict resolution — so this listener must be accepted.
+        - name: tls-winner
+          port: 443
+          protocol: TLS
+          hostname: "shared.com"
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All

@@ -35,6 +35,7 @@ type EnvoyProxy struct {
 }
 
 // EnvoyProxySpec defines the desired state of EnvoyProxy.
+// +kubebuilder:validation:XValidation:message="mergeGateways and mergeBackends cannot both be enabled",rule="!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends))"
 type EnvoyProxySpec struct {
 	// Provider defines the desired resource provider and provider-specific configuration.
 	// If unspecified, the "Kubernetes" resource provider is used with default configuration
@@ -89,8 +90,21 @@ type EnvoyProxySpec struct {
 	// This means that the port, protocol and hostname tuple must be unique for every listener.
 	// If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
 	//
+	// Mutually exclusive with MergeBackends.
+	//
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
+
+	// MergeBackends configures cluster deduplication: routes that reference the same backend
+	// share a single Envoy cluster instead of Envoy Gateway generating one cluster per route
+	// rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
+	// improves upstream connection pooling.
+	//
+	// Disabled when unset; specifying this field at all (even without further configuration)
+	// enables it. Mutually exclusive with MergeGateways.
+	//
+	// +optional
+	MergeBackends *MergeBackendsConfig `json:"mergeBackends,omitempty"`
 
 	// Shutdown defines configuration for graceful envoy shutdown process.
 	//
@@ -218,6 +232,19 @@ type EnvoyProxySpec struct {
 	MergeType *MergeType `json:"mergeType,omitempty"`
 }
 
+// MergeBackendsConfig configures backend cluster deduplication (MergeBackends). Its mere
+// presence on EnvoyProxySpec enables it; a backendRef is only merged into a shared cluster when
+// safe to do so, otherwise it falls back to a dedicated per-route cluster.
+type MergeBackendsConfig struct {
+	// Selector restricts cluster deduplication to backends whose target Service, ServiceImport,
+	// or Backend resource matches this label selector. When unset, every otherwise-eligible
+	// backend is merged. Use this to opt individual backends into deduplication gradually
+	// instead of enabling it for every backend at once.
+	//
+	// +optional
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+}
+
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
 type EnvoyProxyGeoIP struct {
 	// Provider defines the GeoIP provider configuration used by GeoIP filter instances.
@@ -288,7 +315,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
 type EnvoyFilter string
 
 const (
@@ -303,6 +330,9 @@ const (
 
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
+
+	// EnvoyFilterCSRF defines the Envoy HTTP CSRF filter.
+	EnvoyFilterCSRF EnvoyFilter = "envoy.filters.http.csrf"
 
 	// EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter
 	EnvoyFilterHeaderMutation EnvoyFilter = "envoy.filters.http.header_mutation"
@@ -467,7 +497,7 @@ const (
 type EnvoyProxyProvider struct {
 	// Type is the type of resource provider to use. A resource provider provides
 	// infrastructure resources for running the data plane, e.g. Envoy proxy, and
-	// optional auxiliary control planes. Supported types are "Kubernetes"and "Host".
+	// optional auxiliary control planes. Supported types are "Kubernetes" and "Host".
 	//
 	// +unionDiscriminator
 	Type EnvoyProxyProviderType `json:"type"`
@@ -528,6 +558,9 @@ type EnvoyProxyKubernetesProvider struct {
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 
 	// EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.
+	// If the HPA is set, the Replicas field from EnvoyDeployment will be ignored, and the
+	// number of replicas is solely managed by the HPA. Use MinReplicas to control the
+	// lower bound of the replica count instead.
 	//
 	// +optional
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`

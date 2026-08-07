@@ -4,8 +4,11 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 #       find a way to remove github.com from ignore list
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
+# NOTE: envoyproxy.io/slack redirects to a Slack shared invite, and Slack answers 403 to
+#       automated clients, so the redirect target can't be verified by the link checker.
 LINKINATOR_IGNORE := "opentelemetry.io \
 	blog.envoyproxy.io \
+	envoyproxy.io/slack \
 	ntia.gov \
 	github.com \
 	jwt.io \
@@ -16,6 +19,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	gnu.org \
 	_print \
 	canva.com \
+	communityinviter.com \
 	sched.co \
 	sap.com \
 	httpbin.org \
@@ -23,6 +27,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	verve.com \
 	goteleport.com \
 	developer.hashicorp.com \
+	www.signal-ai.com \
 	v0.1 \
 	v0.2 \
 	v0.3 \

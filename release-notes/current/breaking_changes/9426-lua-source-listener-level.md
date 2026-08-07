@@ -1,0 +1,1 @@
+Moved EnvoyExtensionPolicy Lua source code from per-route `LuaPerRoute` overrides to listener-level Lua filters to avoid route-count-dependent memory growth. This changes generated xDS Lua filter names and configuration layout; EnvoyPatchPolicies and extension servers matching the previous `envoy.filters.http.lua/<index>` keys must be updated.
