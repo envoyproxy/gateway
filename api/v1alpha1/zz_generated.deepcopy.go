@@ -5575,6 +5575,11 @@ func (in *KubernetesDeploymentSpec) DeepCopyInto(out *KubernetesDeploymentSpec) 
 		*out = new(int32)
 		**out = **in
 	}
+	if in.ReplicasManagedByExternalAutoscaler != nil {
+		in, out := &in.ReplicasManagedByExternalAutoscaler, &out.ReplicasManagedByExternalAutoscaler
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Strategy != nil {
 		in, out := &in.Strategy, &out.Strategy
 		*out = new(appsv1.DeploymentStrategy)
