@@ -90,7 +90,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "Nil ConsistentHash in LoadBalancer",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{},
+					},
 				},
 			},
 			want: nil,
@@ -99,7 +101,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with nil SourceIP and Header",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{}},
+					},
 				},
 			},
 			want: nil,
@@ -108,7 +112,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with SourceIP set to false",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(false)}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(false)}},
+					},
 				},
 			},
 			want: nil,
@@ -117,7 +123,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with SourceIP set to true",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(true)}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(true)}},
+					},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
@@ -134,7 +142,9 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with Header",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{{Name: "name"}}}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{{Name: "name"}}}},
+					},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
@@ -151,11 +161,13 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with multiple Headers",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{
-						{Name: "name"},
-						{Name: "bazz"},
-						{Name: "buzz"},
-					}}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{
+							{Name: "name"},
+							{Name: "bazz"},
+							{Name: "buzz"},
+						}}},
+					},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
@@ -186,11 +198,13 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with multiple QueryParams",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{QueryParams: []*egv1a1.QueryParam{
-						{Name: "name"},
-						{Name: "bazz"},
-						{Name: "buzz"},
-					}}},
+					ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+						LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{QueryParams: []*egv1a1.QueryParam{
+							{Name: "name"},
+							{Name: "bazz"},
+							{Name: "buzz"},
+						}}},
+					},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{

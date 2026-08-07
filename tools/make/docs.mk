@@ -19,6 +19,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	gnu.org \
 	_print \
 	canva.com \
+	communityinviter.com \
 	sched.co \
 	sap.com \
 	httpbin.org \
@@ -26,6 +27,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	verve.com \
 	goteleport.com \
 	developer.hashicorp.com \
+	www.signal-ai.com \
 	v0.1 \
 	v0.2 \
 	v0.3 \

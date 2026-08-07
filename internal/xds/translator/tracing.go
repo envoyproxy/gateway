@@ -171,7 +171,7 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		metadata:     tracing.Destination.Metadata,
 	}
 
-	applyTraffic(args, tracing.Traffic)
+	applyTraffic(args, tracing.Traffic.ClusterFeatures())
 
 	return addXdsCluster(tCtx, args)
 }

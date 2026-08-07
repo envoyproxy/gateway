@@ -39,6 +39,11 @@ func TestUnitToSeconds(t *testing.T) {
 			want: 60 * 60 * 24,
 		},
 		{
+			name: "week",
+			unit: egv1a1.RateLimitUnitWeek,
+			want: 60 * 60 * 24 * 7,
+		},
+		{
 			name: "month",
 			unit: egv1a1.RateLimitUnitMonth,
 			want: 60 * 60 * 24 * 30,
