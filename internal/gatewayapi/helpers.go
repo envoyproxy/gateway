@@ -590,8 +590,7 @@ func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
 	for i, tlsSecret := range config.secrets {
-		cert := getTLSCertificateFromSecret(tlsSecret)
-		tlsListenerConfigs.Certificates[i] = cert
+		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(tlsSecret)
 	}
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
@@ -629,6 +628,11 @@ func isValidClientCertificateRef(tlsSecret *corev1.Secret) bool {
 }
 
 func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
+	if tlsSecret.Type == egv1a1.SDSSecretType {
+		sdsConfig, _ := ir.NewSDSConfig(tlsSecret)
+		return ir.TLSCertificate{Name: irTLSListenerConfigName(tlsSecret), SDS: sdsConfig}
+	}
+
 	cert := ir.TLSCertificate{
 		Name:        irTLSListenerConfigName(tlsSecret),
 		Certificate: tlsSecret.Data[corev1.TLSCertKey],
