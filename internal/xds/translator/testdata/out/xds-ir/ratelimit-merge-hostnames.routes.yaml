@@ -40,6 +40,9 @@
             - genericKey:
                 descriptorKey: httproute/default/httproute-1/rule/0/match/0/app1_gateway_envoyproxy_io
                 descriptorValue: httproute/default/httproute-1/rule/0/match/0/app1_gateway_envoyproxy_io
+            - genericKey:
+                descriptorKey: default/policy-for-route/rule/0
+                descriptorValue: default/policy-for-route/rule/0
             - headerValueMatch:
                 descriptorKey: rule-0-path
                 descriptorValue: rule-0-path
@@ -101,6 +104,9 @@
             - genericKey:
                 descriptorKey: httproute/default/httproute-1/rule/0/match/0/app2_gateway_envoyproxy_io
                 descriptorValue: httproute/default/httproute-1/rule/0/match/0/app2_gateway_envoyproxy_io
+            - genericKey:
+                descriptorKey: default/policy-for-route/rule/0
+                descriptorValue: default/policy-for-route/rule/0
             - headerValueMatch:
                 descriptorKey: rule-0-path
                 descriptorValue: rule-0-path

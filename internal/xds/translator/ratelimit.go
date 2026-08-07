@@ -257,30 +257,14 @@ func buildRouteRateLimits(listenerName string, route *ir.HTTPRoute) map[string][
 			// Create a list of rate limit actions for the current rule.
 			var rlActions []*routev3.RateLimit_Action
 
-			// Create the route descriptor using the rule's shared attribute
-			var descriptorKey, descriptorValue string
 			if ruleShared {
-				// For shared rule, use full rule name
-				descriptorKey = rule.Name
-				descriptorValue = rule.Name
+				rlActions = append(rlActions, buildGenericKeyRateLimitAction(rule.Name))
 			} else {
-				// For non-shared rule, use route name in descriptor
-				descriptorKey = getRouteDescriptor(route.Name)
-				descriptorValue = descriptorKey
+				rlActions = append(rlActions, buildGenericKeyRateLimitAction(getRouteDescriptor(route.Name)))
+				if rule.Name != "" {
+					rlActions = append(rlActions, buildGenericKeyRateLimitAction(rule.Name))
+				}
 			}
-
-			// Create a generic key action for the route descriptor.
-			routeDescriptor := &routev3.RateLimit_Action{
-				ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
-					GenericKey: &routev3.RateLimit_Action_GenericKey{
-						DescriptorKey:   descriptorKey,
-						DescriptorValue: descriptorValue,
-					},
-				},
-			}
-
-			// Add the generic key action
-			rlActions = append(rlActions, routeDescriptor)
 
 			// Calculate the domain-specific rule index (0-based for each domain)
 			domainRuleIdx := getDomainRuleIndex(global.Rules, rIdx, ruleShared)
@@ -343,6 +327,17 @@ func buildRouteRateLimits(listenerName string, route *ir.HTTPRoute) map[string][
 		}
 	}
 	return rateLimitsByDomain
+}
+
+func buildGenericKeyRateLimitAction(descriptor string) *routev3.RateLimit_Action {
+	return &routev3.RateLimit_Action{
+		ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
+			GenericKey: &routev3.RateLimit_Action_GenericKey{
+				DescriptorKey:   descriptor,
+				DescriptorValue: descriptor,
+			},
+		},
+	}
 }
 
 // toEnvoyXRateLimitOption maps the EG API XRateLimitHeadersOption to the Envoy
@@ -776,6 +771,14 @@ func addRateLimitDescriptor(
 	if !found {
 		descriptorRule = &rlsconfv3.RateLimitDescriptor{Key: descriptorKey, Value: descriptorKey}
 		domainDescriptors[domain] = append(domainDescriptors[domain], descriptorRule)
+	}
+
+	if !isRuleShared(rule) && rule.Name != "" {
+		descriptor = &rlsconfv3.RateLimitDescriptor{
+			Key:         rule.Name,
+			Value:       rule.Name,
+			Descriptors: []*rlsconfv3.RateLimitDescriptor{descriptor},
+		}
 	}
 
 	// Ensure no duplicate descriptors

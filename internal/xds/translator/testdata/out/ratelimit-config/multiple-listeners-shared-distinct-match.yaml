@@ -5,15 +5,24 @@ descriptors:
     value: first-route
     rate_limit: null
     descriptors:
-      - key: rule-0-match-0
-        value: ""
-        rate_limit:
-          requests_per_unit: 5
-          unit: SECOND
-          unlimited: false
-          name: ""
-          replaces: []
-        descriptors: []
+      - key: test-policy-1/rule/0
+        value: test-policy-1/rule/0
+        rate_limit: null
+        descriptors:
+          - key: rule-0-match-0
+            value: ""
+            rate_limit:
+              requests_per_unit: 5
+              unit: SECOND
+              unlimited: false
+              name: ""
+              replaces: []
+            descriptors: []
+            shadow_mode: false
+            quota_mode: false
+            detailed_metric: false
+            value_to_metric: false
+            share_threshold: false
         shadow_mode: false
         quota_mode: false
         detailed_metric: false

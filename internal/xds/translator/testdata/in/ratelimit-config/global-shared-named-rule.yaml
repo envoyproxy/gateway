@@ -1,0 +1,34 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          # A shared rule whose name carries a meaningful suffix instead of the
+          # array index. stripRuleIndexSuffix must still recover the domain
+          # "test-namespace/test-policy-1" by cutting at "/rule/".
+          - name: "test-namespace/test-policy-1/rule/by-user"
+            headerMatches:
+            - name: "x-user-id"
+              distinct: true
+            limit:
+              requests: 5
+              unit: second
+            shared: true
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

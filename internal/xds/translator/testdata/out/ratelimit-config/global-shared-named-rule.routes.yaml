@@ -1,0 +1,12 @@
+rateLimitsByDomain:
+  test-namespace/test-policy-1:
+  - actions:
+    - ActionSpecifier:
+        GenericKey:
+          descriptor_key: test-namespace/test-policy-1/rule/by-user
+          descriptor_value: test-namespace/test-policy-1/rule/by-user
+    - ActionSpecifier:
+        RequestHeaders:
+          descriptor_key: rule-0-match-0
+          header_name: x-user-id
+routeName: first-route

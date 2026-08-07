@@ -22,6 +22,7 @@ spec:
         limit:
           requests: 21
           unit: Hour
+        name: two
         shared: false
     type: Global
 status:
