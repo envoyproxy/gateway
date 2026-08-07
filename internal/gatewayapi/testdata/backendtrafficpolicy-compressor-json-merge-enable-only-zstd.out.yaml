@@ -250,6 +250,7 @@ xdsIR:
           compression:
           - chooseFirst: true
             type: Zstd
+            zstd: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
