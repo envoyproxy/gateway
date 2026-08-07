@@ -340,10 +340,6 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Process all relevant GRPCRoutes.
 	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, acceptedGateways, resources, xdsIR)
 
-	// Check for overlapping route matches across all listeners after all HTTP and
-	// GRPC routes have been processed.
-	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
-
 	// Process all relevant TLSRoutes.
 	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, acceptedGateways, resources, xdsIR)
 
@@ -380,6 +376,12 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 
 	// Process BackendTrafficPolicies
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
+
+	// Check for overlapping route matches across all listeners. This must run
+	// after BackendTrafficPolicies are applied because a CONNECT upgrade
+	// replaces a route's path matcher with Envoy's CONNECT matcher, which
+	// changes which routes can overlap.
+	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
 
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(

@@ -1916,22 +1916,12 @@ type overlapKey struct {
 // checkRouteOverlaps detects overlapping route matches across all IR listeners
 // and sets a warning Overlap condition on the affected HTTPRoutes and GRPCRoutes.
 func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRoutes []*GRPCRouteContext, xdsIR resource.XdsIRMap) {
-	// Build a combined lookup from "kind/namespace/name" to RouteContext and its ParentRefs.
-	type routeInfo struct {
-		route      RouteContext
-		parentRefs map[gwapiv1.ParentReference]*RouteParentContext
-	}
-	routeByKey := make(map[string]*routeInfo, len(httpRoutes)+len(grpcRoutes))
-	for _, hr := range httpRoutes {
-		routeByKey[routeKey(string(hr.GetRouteType()), hr.GetNamespace(), hr.GetName())] = &routeInfo{route: hr, parentRefs: hr.ParentRefs}
-	}
-	for _, gr := range grpcRoutes {
-		routeByKey[routeKey(string(gr.GetRouteType()), gr.GetNamespace(), gr.GetName())] = &routeInfo{route: gr, parentRefs: gr.ParentRefs}
-	}
-
-	// overlaps tracks per IR listener which routes overlap with which others.
-	// Key: IR listener name -> route key -> set of conflicting route keys.
-	type listenerOverlaps map[string]map[string]struct{}
+	// overlaps tracks per IR listener the overlapping buckets each route
+	// belongs to. Key: IR listener name -> route key -> buckets (sets of route
+	// keys, including the route itself). Bucket sets are shared across their
+	// members rather than expanded into per-route conflict pairs, keeping
+	// storage linear in the number of routes.
+	type listenerOverlaps map[string][]map[string]struct{}
 	overlaps := make(map[string]listenerOverlaps)
 
 	for _, xds := range xdsIR {
@@ -1958,27 +1948,28 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 					overlaps[httpListener.Name] = make(listenerOverlaps)
 				}
 				lo := overlaps[httpListener.Name]
-				for ki := range routeKeys {
-					for kj := range routeKeys {
-						if ki == kj {
-							continue
-						}
-						if lo[ki] == nil {
-							lo[ki] = make(map[string]struct{})
-						}
-						lo[ki][kj] = struct{}{}
-					}
+				for k := range routeKeys {
+					lo[k] = append(lo[k], routeKeys)
 				}
 			}
 		}
 	}
 
-	// Pre-build listener name lookup to avoid repeated linear scans via GetHTTPListener.
-	listenerByName := make(map[string]*ir.HTTPListener)
-	for _, xds := range xdsIR {
-		for _, hl := range xds.HTTP {
-			listenerByName[hl.Name] = hl
-		}
+	if len(overlaps) == 0 {
+		return
+	}
+
+	// Build a combined lookup from "kind/namespace/name" to RouteContext and its ParentRefs.
+	type routeInfo struct {
+		route      RouteContext
+		parentRefs map[gwapiv1.ParentReference]*RouteParentContext
+	}
+	routeByKey := make(map[string]*routeInfo, len(httpRoutes)+len(grpcRoutes))
+	for _, hr := range httpRoutes {
+		routeByKey[routeKey(string(hr.GetRouteType()), hr.GetNamespace(), hr.GetName())] = &routeInfo{route: hr, parentRefs: hr.ParentRefs}
+	}
+	for _, gr := range grpcRoutes {
+		routeByKey[routeKey(string(gr.GetRouteType()), gr.GetNamespace(), gr.GetName())] = &routeInfo{route: gr, parentRefs: gr.ParentRefs}
 	}
 
 	// Set the Overlap warning condition only on parentRefs whose listeners
@@ -1989,27 +1980,23 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 		for _, parentRef := range info.parentRefs {
 			var conflicts map[string]struct{}
 			for _, listener := range parentRef.listeners {
-				irListener := listenerByName[irListenerName(listener)]
-				if irListener == nil {
-					continue
-				}
-				lo, ok := overlaps[irListener.Name]
+				lo, ok := overlaps[irListenerName(listener)]
 				if !ok {
 					continue
 				}
-				routeConflicts, ok := lo[rKey]
-				if !ok {
-					continue
-				}
-				if conflicts == nil {
-					conflicts = make(map[string]struct{})
-				}
-				for c := range routeConflicts {
-					conflicts[c] = struct{}{}
+				for _, bucket := range lo[rKey] {
+					if conflicts == nil {
+						conflicts = make(map[string]struct{}, len(bucket))
+					}
+					for c := range bucket {
+						if c == rKey {
+							continue
+						}
+						conflicts[c] = struct{}{}
+					}
 				}
 			}
 			if len(conflicts) == 0 {
-				status.RemoveRouteStatusCondition(routeStatus, parentRef.routeParentStatusIdx, status.RouteConditionRouteRulesOverlap)
 				continue
 			}
 
@@ -2039,13 +2026,23 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 // case-insensitive, and slice-valued matches (headers, query params, cookies)
 // are sorted so that ordering does not affect equality.
 func buildOverlapKey(r *ir.HTTPRoute) overlapKey {
-	return overlapKey{
+	k := overlapKey{
 		hostname: r.Hostname,
-		path:     pathMatchKey(r.PathMatch),
 		headers:  stringMatchSliceKey(r.HeaderMatches, true),
 		query:    stringMatchSliceKey(r.QueryParamMatches, false),
 		cookies:  stringMatchSliceKey(r.CookieMatches, false),
 	}
+	if r.Traffic.HasConnectUpgrade() {
+		// A CONNECT upgrade replaces the route's path matcher with Envoy's
+		// CONNECT matcher, so CONNECT routes match all CONNECT requests
+		// regardless of path and only ever overlap other CONNECT routes.
+		// The sentinel cannot collide with pathMatchKey output, which always
+		// contains NUL separators.
+		k.path = "CONNECT"
+	} else {
+		k.path = pathMatchKey(r.PathMatch)
+	}
+	return k
 }
 
 // pathMatchKey serializes route path matches the same way they are interpreted

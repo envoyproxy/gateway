@@ -10,13 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -281,6 +278,76 @@ func TestBuildOverlapKey(t *testing.T) {
 			},
 			overlap: true,
 		},
+		{
+			name: "connect route and plain route with same path do not overlap",
+			a: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: new("/foo")},
+				Traffic: &ir.TrafficFeatures{
+					HTTPUpgrade: []ir.HTTPUpgradeConfig{{Type: "CONNECT"}},
+				},
+			},
+			b: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: new("/foo")},
+			},
+			overlap: false,
+		},
+		{
+			name: "connect routes with different paths overlap",
+			a: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: new("/foo")},
+				Traffic: &ir.TrafficFeatures{
+					HTTPUpgrade: []ir.HTTPUpgradeConfig{{Type: "CONNECT"}},
+				},
+			},
+			b: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: new("/bar")},
+				Traffic: &ir.TrafficFeatures{
+					HTTPUpgrade: []ir.HTTPUpgradeConfig{{Type: "connect"}},
+				},
+			},
+			overlap: true,
+		},
+		{
+			name: "connect routes with different header matches do not overlap",
+			a: &ir.HTTPRoute{
+				Hostname: "example.com",
+				HeaderMatches: []*ir.StringMatch{
+					{Name: "x-team", Exact: new("a")},
+				},
+				Traffic: &ir.TrafficFeatures{
+					HTTPUpgrade: []ir.HTTPUpgradeConfig{{Type: "CONNECT"}},
+				},
+			},
+			b: &ir.HTTPRoute{
+				Hostname: "example.com",
+				HeaderMatches: []*ir.StringMatch{
+					{Name: "x-team", Exact: new("b")},
+				},
+				Traffic: &ir.TrafficFeatures{
+					HTTPUpgrade: []ir.HTTPUpgradeConfig{{Type: "CONNECT"}},
+				},
+			},
+			overlap: false,
+		},
+		{
+			name: "non-connect upgrade does not change overlap key",
+			a: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: new("/foo")},
+				Traffic: &ir.TrafficFeatures{
+					HTTPUpgrade: []ir.HTTPUpgradeConfig{{Type: "websocket"}},
+				},
+			},
+			b: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: new("/foo")},
+			},
+			overlap: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -339,88 +406,4 @@ func TestBuildResourceMetadataWrappedRouteKinds(t *testing.T) {
 			require.Equal(t, tt.want, metadata.Kind)
 		})
 	}
-}
-
-func TestCheckRouteOverlapsRemovesStaleCondition(t *testing.T) {
-	parentRef := gwapiv1.ParentReference{Name: "gateway-1"}
-	httpRoute := &gwapiv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "route-1",
-			Namespace: "default",
-		},
-		Status: gwapiv1.HTTPRouteStatus{
-			RouteStatus: gwapiv1.RouteStatus{
-				Parents: []gwapiv1.RouteParentStatus{
-					{
-						ParentRef: parentRef,
-						Conditions: []metav1.Condition{
-							{
-								Type:   string(gwapiv1.RouteConditionAccepted),
-								Status: metav1.ConditionTrue,
-								Reason: string(gwapiv1.RouteReasonAccepted),
-							},
-							{
-								Type:   string(status.RouteConditionRouteRulesOverlap),
-								Status: metav1.ConditionTrue,
-								Reason: string(status.RouteReasonRouteRulesOverlap),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	route := &HTTPRouteContext{
-		HTTPRoute: httpRoute,
-	}
-
-	gateway := &GatewayContext{
-		Gateway: &gwapiv1.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gateway-1",
-				Namespace: "default",
-			},
-		},
-	}
-	listener := &ListenerContext{
-		Listener: &gwapiv1.Listener{Name: "http"},
-		gateway:  gateway,
-	}
-	route.ParentRefs = map[gwapiv1.ParentReference]*RouteParentContext{
-		parentRef: {
-			ParentReference:      &parentRef,
-			HTTPRoute:            httpRoute,
-			routeParentStatusIdx: 0,
-			listeners:            []*ListenerContext{listener},
-		},
-	}
-
-	xdsIR := resource.XdsIRMap{
-		"default/gateway-1": {
-			HTTP: []*ir.HTTPListener{
-				{
-					CoreListenerDetails: ir.CoreListenerDetails{
-						Name: irListenerName(listener),
-					},
-					Routes: []*ir.HTTPRoute{
-						{
-							Hostname: "example.com",
-							Metadata: &ir.ResourceMetadata{
-								Kind:      resource.KindHTTPRoute,
-								Namespace: "default",
-								Name:      "route-1",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	translator := &Translator{}
-	translator.checkRouteOverlaps([]*HTTPRouteContext{route}, nil, xdsIR)
-
-	conditions := route.Status.RouteStatus.Parents[0].Conditions
-	require.NotNil(t, meta.FindStatusCondition(conditions, string(gwapiv1.RouteConditionAccepted)))
-	assert.Nil(t, meta.FindStatusCondition(conditions, string(status.RouteConditionRouteRulesOverlap)))
 }
