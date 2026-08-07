@@ -1312,7 +1312,32 @@ func (t *Translator) processHTTPRouteRule(
 		}
 	}
 
+	if priority := t.routePriority(httpRoute); priority != nil {
+		for _, r := range ruleRoutes {
+			r.RouteOrder = *priority
+		}
+	}
+
 	return ruleRoutes, nil
+}
+
+// routePriority parses RoutePriorityAnnotation, returning nil when absent. A
+// malformed value is ignored with a warning rather than failing the route, so a
+// typo can never drop a route.
+func (t *Translator) routePriority(httpRoute *HTTPRouteContext) *uint32 {
+	val, ok := httpRoute.Annotations[egv1a1.RoutePriorityAnnotation]
+	if !ok {
+		return nil
+	}
+	parsed, err := strconv.ParseUint(strings.TrimSpace(val), 10, 32)
+	if err != nil {
+		t.Logger.Info("ignoring invalid route priority annotation, expected a non-negative 32-bit integer",
+			"httproute", httpRoute.Name, "namespace", httpRoute.Namespace,
+			egv1a1.RoutePriorityAnnotation, val)
+		return nil
+	}
+	priority := uint32(parsed)
+	return &priority
 }
 
 func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {

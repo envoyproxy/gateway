@@ -17,6 +17,11 @@ type XdsIRRoutes []*ir.HTTPRoute
 func (x XdsIRRoutes) Len() int      { return len(x) }
 func (x XdsIRRoutes) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 func (x XdsIRRoutes) Less(i, j int) bool {
+	// 0. Explicit route order wins; ties fall through to specificity.
+	if x[i].RouteOrder != x[j].RouteOrder {
+		return x[i].RouteOrder < x[j].RouteOrder
+	}
+
 	// 1. Sort based on path match type
 	// Exact > RegularExpression > PathPrefix
 	if x[i].PathMatch != nil {
@@ -129,10 +134,17 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 func sortXdsIRMap(xdsIR resource.XdsIRMap) {
 	for _, irItem := range xdsIR {
 		for _, http := range irItem.HTTP {
-			if !http.PreserveRouteOrder {
-				// descending order
-				sort.Stable(sort.Reverse(XdsIRRoutes(http.Routes)))
+			if http.PreserveRouteOrder {
+				// Specificity sort is opted out: order by explicit route order
+				// (higher first) only, keeping insertion order on ties. No-op
+				// when no route order is set.
+				sort.SliceStable(http.Routes, func(i, j int) bool {
+					return http.Routes[i].RouteOrder > http.Routes[j].RouteOrder
+				})
+				continue
 			}
+			// Descending: explicit route order first (via Less), then specificity.
+			sort.Stable(sort.Reverse(XdsIRRoutes(http.Routes)))
 		}
 	}
 }

@@ -1,0 +1,1 @@
+Added an optional `gateway.envoyproxy.io/route-priority` HTTPRoute annotation that sets an explicit route matching priority (higher wins). Annotated routes sort ahead of the default specificity order, letting users order routes across HTTPRoutes explicitly; unannotated routes are unaffected, and `EnvoyProxy.spec.preserveRouteOrder` still controls ordering within a priority.

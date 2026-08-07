@@ -1035,6 +1035,10 @@ type HTTPRoute struct {
 	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
 	// IsHTTP2 is set if the route is configured to serve HTTP2 traffic
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
+	// RouteOrder ranks this route (higher first) ahead of the specificity sort,
+	// which breaks ties within a rank (or insertion order under
+	// PreserveRouteOrder). Defaults to 0.
+	RouteOrder uint32 `json:"routeOrder,omitempty" yaml:"routeOrder,omitempty"`
 	// PathMatch defines the match conditions on the path.
 	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
 	// HeaderMatches define the match conditions on the request headers for this route.
