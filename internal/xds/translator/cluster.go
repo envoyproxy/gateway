@@ -22,6 +22,7 @@ import (
 	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	hcfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/health_check/event_sinks/file/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	cluster_providedv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/cluster_provided/v3"
@@ -79,7 +80,7 @@ type xdsClusterArgs struct {
 	routeHostname     string
 	http1Settings     *ir.HTTP1Settings
 	http2Settings     *ir.HTTP2Settings
-	timeout           *ir.Timeout
+	timeout           *ir.ClusterTimeout
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
 	backendConnection *ir.BackendConnection
@@ -92,6 +93,7 @@ type xdsClusterArgs struct {
 	unstructuredRefs  []*unstructured.Unstructured
 	extensionMgr      *extensionTypes.Manager
 	logger            logging.Logger
+	healthCheckLog    *ir.ProxyHealthCheckLog
 	isRoute           bool
 }
 
@@ -485,7 +487,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
-		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname)
+		var err error
+		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {
@@ -622,7 +628,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 	return lbConfig
 }
 
-func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string) []*corev3.HealthCheck {
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
@@ -673,7 +679,30 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			},
 		}
 	}
-	return []*corev3.HealthCheck{hc}
+
+	// BackendHealthCheckLog (per-backend) takes precedence over gateway-level hcLog.
+	effectiveHCLog := hcLog
+	if healthcheck.BackendHealthCheckLog != nil {
+		effectiveHCLog = healthcheck.BackendHealthCheckLog
+	}
+	if effectiveHCLog != nil {
+		hc.AlwaysLogHealthCheckFailures = effectiveHCLog.AlwaysLogHealthCheckFailures
+		hc.AlwaysLogHealthCheckSuccess = effectiveHCLog.AlwaysLogHealthCheckSuccess
+		for _, fs := range effectiveHCLog.FileSinks {
+			fileSinkAny, err := proto.ToAnyWithValidation(&hcfilev3.HealthCheckEventFileSink{
+				EventLogPath: fs.Path,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal HC event file sink: %w", err)
+			}
+			hc.EventLogger = append(hc.EventLogger, &corev3.TypedExtensionConfig{
+				Name:        "envoy.health_check.event_sinks.file",
+				TypedConfig: fileSinkAny,
+			})
+		}
+	}
+
+	return []*corev3.HealthCheck{hc}, nil
 }
 
 func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {
@@ -1327,7 +1356,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 	}
 }
 
-func buildConnectTimeout(to *ir.Timeout) *durationpb.Duration {
+func buildConnectTimeout(to *ir.ClusterTimeout) *durationpb.Duration {
 	if to != nil && to.TCP != nil && to.TCP.ConnectTimeout != nil {
 		return durationpb.New(to.TCP.ConnectTimeout.Duration)
 	}
@@ -1425,8 +1454,9 @@ type ExtraArgs struct {
 	extensionMgr      *extensionTypes.Manager
 	unstructuredRefs  []*unstructured.Unstructured
 	logger            logging.Logger
-	traffic           *ir.TrafficFeatures
+	traffic           *ir.ClusterTrafficFeatures
 	useClientProtocol *bool
+	healthCheckLog    *ir.ProxyHealthCheckLog
 }
 
 type clusterArgs interface {
@@ -1472,13 +1502,14 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		circuitBreaker:    route.CircuitBreaker,
 		tcpkeepalive:      route.TCPKeepalive,
 		healthCheck:       route.HealthCheck,
-		timeout:           route.Timeout,
+		timeout:           route.Timeout.ClusterOnly(),
 		endpointType:      buildEndpointType(settings),
 		metrics:           extra.metrics,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
 		ipFamily:          extra.ipFamily,
 		metadata:          metadata,
+		healthCheckLog:    extra.healthCheckLog,
 		isRoute:           true,
 	}
 }
@@ -1508,11 +1539,12 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		extensionMgr:      extra.extensionMgr,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
+		healthCheckLog:    extra.healthCheckLog,
 		isRoute:           true,
 	}
 
 	// Populate traffic features.
-	applyTraffic(clusterArgs, httpRoute.Traffic)
+	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
 
 	return clusterArgs
 }
@@ -1542,6 +1574,7 @@ func (BackendClusterTranslator) asClusterArgs(name string,
 		extensionMgr:      extra.extensionMgr,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
+		healthCheckLog:    extra.healthCheckLog,
 	}
 
 	applyTraffic(clusterArgs, extra.traffic)

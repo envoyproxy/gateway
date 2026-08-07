@@ -47,6 +47,10 @@ var (
 	ErrTCPRouteSNIsEmpty                        = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrTLSCertEmpty                             = errors.New("field certificate must be specified")
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
+	ErrTLSSDSSecretNameEmpty                    = errors.New("field SDS SecretName must be specified")
+	ErrTLSSDSSchemeEmpty                        = errors.New("field SDS Scheme must be specified")
+	ErrTLSSDSAddressEmpty                       = errors.New("field SDS Address must be specified")
+	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS or inline certificate fields may be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
@@ -169,6 +173,8 @@ type Xds struct {
 	Tracing *Tracing `json:"tracing,omitempty" yaml:"tracing,omitempty"`
 	// Metrics configuration for the gateway.
 	Metrics *Metrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
+	// HealthCheckLog holds gateway-level HC event logging config.
+	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty" yaml:"healthCheckLog,omitempty"`
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.
@@ -356,7 +362,8 @@ type HTTPListener struct {
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
 	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
-	// TLSOverlaps indicates if the listener's certificate SANs overlap with another listener's certificate SANs.
+	// TLSOverlaps indicates that another listener on the same port either has overlapping certificate SANs or uses an
+	// SDS-backed certificate whose SANs cannot be inspected.
 	// HTTP/2 should be disabled if this is true to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
 	// We use a standalone field to avoid messing with the ClientTrafficPolicy ALPN config.
 	TLSOverlaps bool `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
@@ -627,6 +634,21 @@ type SubjectAltName struct {
 
 func (t *TLSCertificate) Validate() error {
 	var errs error
+	if t.SDS != nil {
+		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
+			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
+		}
+		if t.SDS.SecretName == "" {
+			errs = errors.Join(errs, ErrTLSSDSSecretNameEmpty)
+		}
+		if t.SDS.Scheme == "" {
+			errs = errors.Join(errs, ErrTLSSDSSchemeEmpty)
+		}
+		if t.SDS.Address == "" {
+			errs = errors.Join(errs, ErrTLSSDSAddressEmpty)
+		}
+		return errs
+	}
 	if len(t.Certificate) == 0 {
 		errs = errors.Join(errs, ErrTLSCertEmpty)
 	}
@@ -827,10 +849,14 @@ type ResponseOverrideRule struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+// When both statusCodes and responseHeaders are specified, both must match.
 // +k8s:deepcopy-gen=true
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
-	StatusCodes []StatusCodeMatch `json:"statusCodes"`
+	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// Response headers to match on. The match evaluates to true if all matches are successful.
+	ResponseHeaders []StringMatch `json:"responseHeaders,omitempty"`
 }
 
 // StatusCodeMatch defines the configuration for matching a status code.
@@ -1151,32 +1177,27 @@ type Compression struct {
 	MinContentLength *uint32 `json:"minContentLength,omitempty" yaml:"minContentLength,omitempty"`
 }
 
-// TrafficFeatures holds the information associated with the Backend Traffic Policy.
+// ClusterTrafficFeatures holds the TrafficFeatures fields that translate to Envoy cluster (CDS)
+// configuration. Route- and HCM-scoped features live on TrafficFeatures instead.
 // +k8s:deepcopy-gen=true
-type TrafficFeatures struct {
-	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
-	// the requests on this route.
-	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
-	// BandwidthLimit defines bandwidth limiting for the backend.
-	BandwidthLimit *BandwidthLimit `json:"bandwidthLimit,omitempty" yaml:"bandwidthLimit,omitempty"`
+type ClusterTrafficFeatures struct {
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
-	// FaultInjection defines the schema for injecting faults into HTTP requests.
-	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
 	// AdmissionControl defines the schema for admission control based on success rate.
 	AdmissionControl *AdmissionControl `json:"admissionControl,omitempty" yaml:"admissionControl,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
-	// Request and connection timeout settings
+	// Request and connection timeout settings. Holds the full Timeout rather than ClusterTimeout
+	// because TrafficFeatures inlines this struct, and its route and filter paths read the
+	// route-scoped members through the promoted field. Cluster translation takes
+	// Timeout.ClusterOnly(), which is what keeps those members out of CDS.
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// TcpKeepalive settings associated with the upstream client connection.
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
-	// Retry settings
-	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// HTTP2 provides HTTP/2 configuration for clusters
@@ -1184,6 +1205,23 @@ type TrafficFeatures struct {
 	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+}
+
+// TrafficFeatures holds the information associated with the Backend Traffic Policy.
+// +k8s:deepcopy-gen=true
+type TrafficFeatures struct {
+	// ClusterTrafficFeatures holds the cluster (CDS) scoped fields. Inlined, so serialization and
+	// promoted field access (e.g. tf.CircuitBreaker) are unchanged.
+	ClusterTrafficFeatures `json:",inline" yaml:",inline"`
+	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
+	// the requests on this route.
+	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
+	// BandwidthLimit defines bandwidth limiting for the backend.
+	BandwidthLimit *BandwidthLimit `json:"bandwidthLimit,omitempty" yaml:"bandwidthLimit,omitempty"`
+	// FaultInjection defines the schema for injecting faults into HTTP requests.
+	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
+	// Retry settings
+	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 	// ResponseOverride defines the schema for overriding the response.
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
@@ -1194,6 +1232,16 @@ type TrafficFeatures struct {
 	Telemetry *BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+}
+
+// ClusterFeatures returns the cluster-scoped subset of these traffic features, or nil if there are
+// none. Nil-safe, so callers holding a possibly-nil *TrafficFeatures can pass the result straight
+// to the cluster translation path.
+func (b *TrafficFeatures) ClusterFeatures() *ClusterTrafficFeatures {
+	if b == nil {
+		return nil
+	}
+	return &b.ClusterTrafficFeatures
 }
 
 // BackendTelemetry defines the telemetry configuration for the backend.
@@ -2180,9 +2228,10 @@ type BackendCluster struct {
 	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
 	// Metadata describes the backend resource (Service, Backend, etc.)
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// Traffic holds the accepted whole-gateway BackendTrafficPolicy's settings, if any -
-	// gateway level is the only one guaranteed uniform across a merged cluster's routes.
-	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	// Traffic holds the cluster-scoped settings from the accepted whole-gateway
+	// BackendTrafficPolicy, if any - gateway level is the only one guaranteed uniform across a
+	// merged cluster's routes.
+	Traffic *ClusterTrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	// UseClientProtocol holds the accepted whole-gateway BackendTrafficPolicy's UseClientProtocol,
 	// if any - same gateway-level-only reasoning as Traffic.
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
@@ -3452,6 +3501,27 @@ type ActiveHealthCheck struct {
 	// Overrides defines the configuration of the overriding health check settings for all endpoints
 	// in the backend cluster.
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
+	// BackendHealthCheckLog configures HC event logging for this cluster via BTP ClusterSettings.
+	// Takes precedence over the gateway-level HealthCheckLog.
+	BackendHealthCheckLog *ProxyHealthCheckLog `json:"backendHealthCheckLog,omitempty" yaml:"backendHealthCheckLog,omitempty"`
+}
+
+// ProxyHealthCheckLog holds health check event logging configuration.
+// +k8s:deepcopy-gen=true
+type ProxyHealthCheckLog struct {
+	// FileSinks is the list of file-based sinks for health check event logs.
+	FileSinks []FileEnvoyProxyHealthCheckLog `json:"fileSinks,omitempty" yaml:"fileSinks,omitempty"`
+	// AlwaysLogHealthCheckFailures enables logging of all HC failures.
+	AlwaysLogHealthCheckFailures bool `json:"alwaysLogHealthCheckFailures,omitempty" yaml:"alwaysLogHealthCheckFailures,omitempty"`
+	// AlwaysLogHealthCheckSuccess enables logging of all HC successes.
+	AlwaysLogHealthCheckSuccess bool `json:"alwaysLogHealthCheckSuccess,omitempty" yaml:"alwaysLogHealthCheckSuccess,omitempty"`
+}
+
+// FileEnvoyProxyHealthCheckLog is the IR representation of a file-based health check event log sink.
+// +k8s:deepcopy-gen=true
+type FileEnvoyProxyHealthCheckLog struct {
+	// Path is the file path for the health check event log.
+	Path string `json:"path" yaml:"path"`
 }
 
 // Validate the fields within the HealthCheck structure.
@@ -3689,11 +3759,46 @@ type TCPTimeout struct {
 	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty" yaml:"connectTimeout,omitempty"`
 }
 
+// ClusterTimeout holds the Timeout members that translate to Envoy cluster (CDS) configuration.
 // +k8s:deepcopy-gen=true
-type HTTPTimeout struct {
-	// RequestTimeout is the time until which entire response is received from the upstream.
-	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
+type ClusterTimeout struct {
+	// Timeout settings for TCP.
+	TCP *TCPTimeout `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 
+	// Timeout settings for HTTP.
+	HTTP *ClusterHTTPTimeout `json:"http,omitempty" yaml:"http,omitempty"`
+}
+
+// AsTimeout widens t back to a Timeout, for the IR fields that hold the full type.
+func (t *ClusterTimeout) AsTimeout() *Timeout {
+	if t == nil {
+		return nil
+	}
+	out := &Timeout{TCP: t.TCP.DeepCopy()}
+	if t.HTTP != nil {
+		out.HTTP = &HTTPTimeout{ClusterHTTPTimeout: *t.HTTP.DeepCopy()}
+	}
+	return out
+}
+
+// ClusterOnly returns the cluster-scoped subset of t, or nil. It is built from ClusterHTTPTimeout
+// rather than by clearing the route-scoped members, so a member added to HTTPTimeout stays out of
+// cluster configuration unless it is added to ClusterHTTPTimeout deliberately.
+func (t *Timeout) ClusterOnly() *ClusterTimeout {
+	if t == nil {
+		return nil
+	}
+	out := &ClusterTimeout{TCP: t.TCP.DeepCopy()}
+	if t.HTTP != nil {
+		out.HTTP = t.HTTP.ClusterHTTPTimeout.DeepCopy()
+	}
+	return out
+}
+
+// ClusterHTTPTimeout holds the HTTPTimeout members that translate to Envoy cluster (CDS)
+// configuration.
+// +k8s:deepcopy-gen=true
+type ClusterHTTPTimeout struct {
 	// The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	ConnectionIdleTimeout *metav1.Duration `json:"connectionIdleTimeout,omitempty" yaml:"connectionIdleTimeout,omitempty"`
 
@@ -3702,6 +3807,16 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP stream.
 	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type HTTPTimeout struct {
+	// ClusterHTTPTimeout holds the members that translate to cluster (CDS) configuration. Inlined,
+	// so serialization and promoted field access (e.g. to.MaxStreamDuration) are unchanged.
+	ClusterHTTPTimeout `json:",inline" yaml:",inline"`
+
+	// RequestTimeout is the time until which entire response is received from the upstream.
+	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
 
 	// The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
 	// If not specified, StreamIdleTimeout is inherited from the listener-level setting.

@@ -19,6 +19,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	gnu.org \
 	_print \
 	canva.com \
+	communityinviter.com \
 	sched.co \
 	sap.com \
 	httpbin.org \

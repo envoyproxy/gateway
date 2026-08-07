@@ -164,11 +164,13 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 		}
 
 		to.HTTP = &ir.HTTPTimeout{
-			ConnectionIdleTimeout: cit,
-			MaxConnectionDuration: mcd,
-			RequestTimeout:        rt,
-			MaxStreamDuration:     msd,
-			StreamIdleTimeout:     sit,
+			ClusterHTTPTimeout: ir.ClusterHTTPTimeout{
+				ConnectionIdleTimeout: cit,
+				MaxConnectionDuration: mcd,
+				MaxStreamDuration:     msd,
+			},
+			RequestTimeout:    rt,
+			StreamIdleTimeout: sit,
 		}
 	}
 	return to, errs
@@ -540,6 +542,9 @@ func buildHealthCheck(policy *egv1a1.ClusterSettings) *ir.HealthCheck {
 	irhc.Passive = buildPassiveHealthCheck(*policy.HealthCheck)
 	irhc.Active = buildActiveHealthCheck(*policy.HealthCheck)
 	irhc.PanicThreshold = policy.HealthCheck.PanicThreshold
+	if irhc.Active != nil && policy.HealthCheck.Active != nil && policy.HealthCheck.Active.HealthCheckLog != nil {
+		irhc.Active.BackendHealthCheckLog = translateHealthCheckLog(policy.HealthCheck.Active.HealthCheckLog)
+	}
 	return irhc
 }
 
