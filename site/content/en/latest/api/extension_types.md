@@ -139,6 +139,7 @@ _Appears in:_
 | `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  |  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
 | `grpc` | _[GRPCActiveHealthChecker](#grpcactivehealthchecker)_ |  false  |  | GRPC defines the configuration of the GRPC health checker.<br />It's optional, and can only be used if the specified type is GRPC. |
 | `overrides` | _[HealthCheckOverrides](#healthcheckoverrides)_ |  false  |  | Overrides defines the configuration of the overriding health check settings for all endpoints<br />in the backend cluster. This allows customization of port and other settings that may differ<br />from the main service configuration. |
+| `healthCheckLog` | _[ProxyHealthCheckLog](#proxyhealthchecklog)_ |  false  |  | HealthCheckLog defines health check event logging configuration for this cluster.<br />When set, HC probe outcomes are logged to the configured sinks.<br />Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog. |
 
 
 #### ActiveHealthCheckPayload
@@ -2688,6 +2689,22 @@ _Appears in:_
 | `path` | _string_ |  true  |  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
+#### FileEnvoyProxyHealthCheckLog
+
+
+
+FileEnvoyProxyHealthCheckLog writes health check events as JSON to a local file path.
+
+See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/health_check/event_sinks/file/v3/file.proto
+
+_Appears in:_
+- [ProxyHealthCheckLogSink](#proxyhealthchecklogsink)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path specifies the file path for health check event output.<br />Use /dev/stdout to write to standard output. |
+
+
 #### FilterPosition
 
 
@@ -5012,6 +5029,73 @@ _Appears in:_
 | `jsonPatches` | _[JSONPatchOperation](#jsonpatchoperation) array_ |  true  |  | JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are<br />applied in the order in which they are defined. |
 
 
+#### ProxyHealthCheckLog
+
+
+
+ProxyHealthCheckLog configures Envoy health check event logging.
+Health check events (state transitions, failures, successes) are emitted
+to each configured sink.
+
+See the Envoy health check API reference for details on the underlying fields:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto
+
+_Appears in:_
+- [ActiveHealthCheck](#activehealthcheck)
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sinks` | _[ProxyHealthCheckLogSink](#proxyhealthchecklogsink) array_ |  false  |  | Sinks defines where health check events are written.<br />When omitted, events are written to /dev/stdout. |
+| `matches` | _[ProxyHealthCheckLogEventType](#proxyhealthchecklogeventtype) array_ |  false  |  | Matches defines which health check probe outcomes produce a log entry.<br />When omitted or empty, all events are logged.<br />Each value must be unique. Multiple values are ORed. If any failure type is<br />specified then a success type must also be specified, and vice versa. |
+
+
+#### ProxyHealthCheckLogEventType
+
+_Underlying type:_ _string_
+
+ProxyHealthCheckLogEventType specifies which health check probe outcomes produce a log entry.
+
+_Appears in:_
+- [ProxyHealthCheckLog](#proxyhealthchecklog)
+
+| Value | Description |
+| ----- | ----------- |
+| `Failure` | ProxyHealthCheckLogEventTypeFailure logs every failed probe regardless of<br />the host's current health state (Envoy's always_log_health_check_failures=true).<br /> | 
+| `FailureSeriesStart` | ProxyHealthCheckLogEventTypeFailureSeriesStart logs only the first failed probe<br />of a consecutive failure run — the probe that starts a potential healthy→unhealthy<br />transition, regardless of whether unhealthyThreshold is ultimately reached<br />(Envoy's always_log_health_check_failures=false).<br /> | 
+| `Success` | ProxyHealthCheckLogEventTypeSuccess logs every successful probe regardless<br />of the host's current health state (Envoy's always_log_health_check_success=true).<br /> | 
+| `HealthyTransition` | ProxyHealthCheckLogEventTypeHealthyTransition logs the first successful probe of<br />a consecutive success run AND when the host reaches the healthy threshold and<br />transitions back to healthy (Envoy's always_log_health_check_success=false).<br /> | 
+
+
+#### ProxyHealthCheckLogSink
+
+
+
+ProxyHealthCheckLogSink defines a destination for health check event logs.
+
+_Appears in:_
+- [ProxyHealthCheckLog](#proxyhealthchecklog)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[ProxyHealthCheckLogSinkType](#proxyhealthchecklogsinktype)_ |  true  |  | Type defines the type of sink. |
+| `file` | _[FileEnvoyProxyHealthCheckLog](#fileenvoyproxyhealthchecklog)_ |  false  |  | File defines the file sink configuration.<br />Required when type is File. |
+
+
+#### ProxyHealthCheckLogSinkType
+
+_Underlying type:_ _string_
+
+ProxyHealthCheckLogSinkType is the type of a ProxyHealthCheckLog sink.
+
+_Appears in:_
+- [ProxyHealthCheckLogSink](#proxyhealthchecklogsink)
+
+| Value | Description |
+| ----- | ----------- |
+| `File` | ProxyHealthCheckLogSinkTypeFile writes health check events as JSON to a local file.<br /> | 
+
+
 #### ProxyLogComponent
 
 _Underlying type:_ _string_
@@ -5186,6 +5270,7 @@ _Appears in:_
 | `tracing` | _[ProxyTracing](#proxytracing)_ |  false  |  | Tracing defines tracing configuration for managed proxies.<br />If unspecified, will not send tracing data. |
 | `metrics` | _[ProxyMetrics](#proxymetrics)_ |  true  |  | Metrics defines metrics configuration for managed proxies. |
 | `requestID` | _[RequestIDSettings](#requestidsettings)_ |  false  |  | RequestID configures Envoy request ID behavior. |
+| `healthCheckLog` | _[ProxyHealthCheckLog](#proxyhealthchecklog)_ |  false  |  | HealthCheckLog defines health check event logging for xRoute-backed clusters. |
 
 
 #### ProxyTracing
