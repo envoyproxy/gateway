@@ -350,10 +350,13 @@ func TestEnvoyServiceForGatewayIncludesControllerNamespace(t *testing.T) {
 // predicate function.
 func TestValidateConfigMapForReconcile(t *testing.T) {
 	testCases := []struct {
-		name      string
-		configs   []client.Object
-		configMap client.Object
-		expect    bool
+		name string
+		// btlsCRDAbsent simulates a cluster whose Gateway API CRD bundle doesn't
+		// include BackendTLSPolicy, e.g. OpenShift's Ingress-Operator-managed set.
+		btlsCRDAbsent bool
+		configs       []client.Object
+		configMap     client.Object
+		expect        bool
 	}{
 		{
 			name: "references Backend TLS config map",
@@ -482,6 +485,53 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			configMap: test.GetConfigMap(types.NamespacedName{Name: "context-extensions-cm", Namespace: "test"}, nil, nil),
 			expect:    true,
 		},
+		{
+			name: "references BackendTLSPolicy CA config map",
+			configs: []client.Object{
+				&gwapiv1.BackendTLSPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "btls",
+						Namespace: "default",
+					},
+					Spec: gwapiv1.BackendTLSPolicySpec{
+						Validation: gwapiv1.BackendTLSPolicyValidation{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{
+								{
+									Kind: gwapiv1.Kind(resource.KindConfigMap),
+									Name: gwapiv1.ObjectName("btls-ca"),
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Namespace: "default", Name: "btls-ca"}, make(map[string]string), make(map[string]string)),
+			expect:    true,
+		},
+		{
+			name:          "references BackendTLSPolicy CA config map but BackendTLSPolicy CRD is absent",
+			btlsCRDAbsent: true,
+			configs: []client.Object{
+				&gwapiv1.BackendTLSPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "btls",
+						Namespace: "default",
+					},
+					Spec: gwapiv1.BackendTLSPolicySpec{
+						Validation: gwapiv1.BackendTLSPolicyValidation{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{
+								{
+									Kind: gwapiv1.Kind(resource.KindConfigMap),
+									Name: gwapiv1.ObjectName("btls-ca"),
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Namespace: "default", Name: "btls-ca"}, make(map[string]string), make(map[string]string)),
+			expect:    false,
+		},
 	}
 
 	// Create the reconciler.
@@ -503,6 +553,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.btlsCRDExists = !tc.btlsCRDAbsent
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -2009,10 +2060,13 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		})
 
 	testCases := []struct {
-		name    string
-		configs []client.Object
-		ctb     *certificatesv1b1.ClusterTrustBundle
-		expect  bool
+		name string
+		// btlsCRDAbsent simulates a cluster whose Gateway API CRD bundle doesn't
+		// include BackendTLSPolicy, e.g. OpenShift's Ingress-Operator-managed set.
+		btlsCRDAbsent bool
+		configs       []client.Object
+		ctb           *certificatesv1b1.ClusterTrustBundle
+		expect        bool
 	}{
 		{
 			name: "referenced by Backend",
@@ -2033,6 +2087,17 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			},
 			ctb:    ctb,
 			expect: true,
+		},
+		{
+			name:          "referenced by BackendTLSPolicy but BackendTLSPolicy CRD is absent",
+			btlsCRDAbsent: true,
+			configs: []client.Object{
+				gc,
+				gtw,
+				btp,
+			},
+			ctb:    ctb,
+			expect: false,
 		},
 		{
 			name: "referenced by ClientTrafficPolicy",
@@ -2062,6 +2127,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		classController:  egv1a1.GatewayControllerName,
 		log:              logger,
 		backendCRDExists: true,
+		btlsCRDExists:    true,
 		ctpCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -2073,6 +2139,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.btlsCRDExists = !tc.btlsCRDAbsent
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).

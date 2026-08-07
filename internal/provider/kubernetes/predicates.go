@@ -193,8 +193,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		}
 	}
 
-	if r.isBackendTLSPolicyReferencingSecret(&nsName) {
-		return true
+	if r.btlsCRDExists {
+		if r.isBackendTLSPolicyReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
 	if r.hrfCRDExists {
@@ -235,8 +237,10 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 		}
 	}
 
-	if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
-		return true
+	if r.btlsCRDExists {
+		if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
+			return true
+		}
 	}
 
 	if r.ctpCRDExists {
@@ -881,16 +885,18 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
-	btlsList := &gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated BackendTLSPolicy")
-		return false
-	}
+	if r.btlsCRDExists {
+		btlsList := &gwapiv1.BackendTLSPolicyList{}
+		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated BackendTLSPolicy")
+			return false
+		}
 
-	if len(btlsList.Items) > 0 {
-		return true
+		if len(btlsList.Items) > 0 {
+			return true
+		}
 	}
 
 	if r.btpCRDExists {
