@@ -1587,13 +1587,31 @@ _Appears in:_
 
 
 EndpointOverrideExtractFrom defines a source to extract endpoint override information from.
+Exactly one of header or metadata must be specified.
 
 _Appears in:_
 - [EndpointOverride](#endpointoverride)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `header` | _string_ |  false  |  | Header defines the header to get the override endpoint addresses.<br />The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.<br />For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.<br />The IPv6 address is enclosed in square brackets. |
+| `header` | _string_ |  false  |  | Header defines the header to get the override endpoint addresses.<br />The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.<br />For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.<br />The IPv6 address is enclosed in square brackets.<br />The header is not sanitized and is forwarded to the backend, so a client can use it to bypass<br />load balancing. Prefer metadata when the endpoint is selected in-proxy. |
+| `metadata` | _[EndpointOverrideMetadata](#endpointoverridemetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+
+
+#### EndpointOverrideMetadata
+
+
+
+EndpointOverrideMetadata specifies the per-request dynamic metadata to retrieve the override
+endpoint addresses from.
+
+_Appears in:_
+- [EndpointOverrideExtractFrom](#endpointoverrideextractfrom)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `namespace` | _string_ |  true  |  | Namespace is the namespace of the dynamic metadata, for example `envoy.lb`. |
+| `path` | _string array_ |  true  |  | Path is the lookup path within the namespaced filter metadata. A single entry addresses a<br />top-level key, multiple entries traverse nested structs.<br />For example `["x-gateway-destination-endpoint"]`. |
 
 
 #### EnvironmentCustomTag

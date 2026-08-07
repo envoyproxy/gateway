@@ -320,35 +320,25 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: fourteenth-route-dest
-  ignoreHealthOnHostRemoval: true
-  loadBalancingPolicy:
-    policies:
-    - typedExtensionConfig:
-        name: envoy.load_balancing_policies.maglev
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-  name: fourteenth-route-dest
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-- circuitBreakers:
-    thresholds:
-    - maxRetries: 1024
-  commonLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
     serviceName: fifteenth-route-dest
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
-        name: envoy.load_balancing_policies.maglev
+        name: envoy.load_balancing_policies.override_host
         typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.override_host.v3.OverrideHost
+          fallbackPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.round_robin
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.round_robin.v3.RoundRobin
+          overrideHostSources:
+          - metadata:
+              key: envoy.lb
+              path:
+              - key: x-gateway-destination-endpoint
   name: fifteenth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -367,18 +357,44 @@
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
-        name: envoy.load_balancing_policies.client_side_weighted_round_robin
+        name: envoy.load_balancing_policies.override_host
         typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
-          blackoutPeriod: 30s
-          errorUtilizationPenalty: 1
-          metricNamesForComputingUtilization:
-          - cpu_utilization
-          slowStartConfig:
-            slowStartWindow: 45s
-          weightExpirationPeriod: 60s
-          weightUpdatePeriod: 10s
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.override_host.v3.OverrideHost
+          fallbackPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          overrideHostSources:
+          - header: x-custom-host
+          - metadata:
+              key: com.example.picker
+              path:
+              - key: result
+              - key: endpoint
   name: sixteenth-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: fourteenth-route-dest
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.maglev
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
+  name: fourteenth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:

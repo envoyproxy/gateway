@@ -73,6 +73,7 @@ var (
 	ErrAddHeaderDuplicate                       = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate                    = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
 	ErrLoadBalancerInvalid                      = errors.New("loadBalancer setting is invalid, only one setting can be set")
+	ErrEndpointOverrideSourceInvalid            = errors.New("endpointOverride extractFrom source is invalid, exactly one of header or metadata must be set")
 	ErrHealthCheckTimeoutInvalid                = errors.New("field HealthCheck.Timeout must be specified")
 	ErrHealthCheckIntervalInvalid               = errors.New("field HealthCheck.Interval must be specified")
 	ErrHealthCheckInitialJitterInvalid          = errors.New("field HealthCheck.InitialJitter should be greater than or equal to 0")
@@ -3330,6 +3331,16 @@ func (l *LoadBalancer) Validate() error {
 		errs = errors.Join(errs, ErrLoadBalancerInvalid)
 	}
 
+	if l.EndpointOverride != nil {
+		for _, source := range l.EndpointOverride.ExtractFrom {
+			hasHeader := source.Header != nil && *source.Header != ""
+			hasMetadata := source.Metadata != nil && source.Metadata.Namespace != "" && len(source.Metadata.Path) > 0
+			if hasHeader == hasMetadata { // neither set, or both set
+				errs = errors.Join(errs, ErrEndpointOverrideSourceInvalid)
+			}
+		}
+	}
+
 	return errs
 }
 
@@ -4233,6 +4244,18 @@ type EndpointOverride struct {
 type EndpointOverrideExtractFrom struct {
 	// Header defines the header to get the override endpoint addresses.
 	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
+	// Metadata defines the per-request dynamic metadata to get the override endpoint addresses from.
+	Metadata *EndpointOverrideMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+}
+
+// EndpointOverrideMetadata defines the per-request dynamic metadata to get the override endpoint
+// addresses from.
+// +k8s:deepcopy-gen=true
+type EndpointOverrideMetadata struct {
+	// Namespace is the namespace of the dynamic metadata.
+	Namespace string `json:"namespace" yaml:"namespace"`
+	// Path is the path to the value within the namespaced filter metadata.
+	Path []string `json:"path" yaml:"path"`
 }
 
 // LoadBalancerType defines the type of load balancer for IR.

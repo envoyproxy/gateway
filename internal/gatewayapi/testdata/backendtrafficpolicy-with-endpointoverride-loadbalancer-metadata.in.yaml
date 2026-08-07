@@ -29,33 +29,26 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/header-override"
+          value: "/metadata-override"
       backendRefs:
       - name: service-1
         port: 8080
-
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
     namespace: default
-    name: policy-for-header-override
+    name: policy-for-metadata-override
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     loadBalancer:
-      type: RoundRobin
+      type: LeastRequest
       endpointOverride:
         extractFrom:
-        - header: "x-fallback-host"
         - metadata:
             namespace: envoy.lb
             path:
             - x-gateway-destination-endpoint
-        - metadata:
-            namespace: com.example.picker
-            path:
-            - result
-            - endpoint
