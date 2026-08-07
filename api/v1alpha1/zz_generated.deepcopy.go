@@ -812,6 +812,11 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 		*out = new(MergeType)
 		**out = **in
 	}
+	if in.DefaultChildMergeType != nil {
+		in, out := &in.DefaultChildMergeType, &out.DefaultChildMergeType
+		*out = new(MergeType)
+		**out = **in
+	}
 	if in.RateLimit != nil {
 		in, out := &in.RateLimit, &out.RateLimit
 		*out = new(RateLimitSpec)
