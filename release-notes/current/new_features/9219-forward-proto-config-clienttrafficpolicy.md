@@ -1,0 +1,1 @@
+Added a `forwardProtoConfig` field to `proxyProtocol` in `ClientTrafficPolicy`, allowing the `x-forwarded-proto` header to be inferred from the PROXY protocol destination port when PROXY protocol is enabled. This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and forwards traffic to Envoy over PROXY protocol.
