@@ -67,3 +67,18 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "regex-route-dest/backend/0"
+  - name: "cookie-based-session-persistence-route-path-override"
+    hostname: "*"
+    pathMatch:
+      prefix: "/v4/foo/bar"
+    sessionPersistence:
+      cookie:
+        name: "session-cookie"
+        path: "/"
+    destination:
+      name: "regex-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "regex-route-dest/backend/0"
