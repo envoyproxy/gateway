@@ -847,10 +847,14 @@ type ResponseOverrideRule struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+// When both statusCodes and responseHeaders are specified, both must match.
 // +k8s:deepcopy-gen=true
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
-	StatusCodes []StatusCodeMatch `json:"statusCodes"`
+	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// Response headers to match on. The match evaluates to true if all matches are successful.
+	ResponseHeaders []StringMatch `json:"responseHeaders,omitempty"`
 }
 
 // StatusCodeMatch defines the configuration for matching a status code.
