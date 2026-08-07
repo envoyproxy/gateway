@@ -143,6 +143,14 @@ type XdsIRWithContext struct {
 	Context context.Context
 }
 
+// ParentContext returns the trace context stashed on x, or fallback if x is nil or has none.
+func (x *XdsIRWithContext) ParentContext(fallback context.Context) context.Context {
+	if x != nil && x.Context != nil {
+		return x.Context
+	}
+	return fallback
+}
+
 // DeepCopy creates a new ControllerResourcesContext.
 // The Context field is preserved (not deep copied) since contexts are meant to be passed around.
 func (x *XdsIRWithContext) DeepCopy() *XdsIRWithContext {
