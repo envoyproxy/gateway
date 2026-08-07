@@ -41,6 +41,15 @@ go.mod.tidy.examples:
 		popd; \
 	done
 
+.PHONY: go.fix.examples
+go.fix.examples:
+	@$(LOG_TARGET)
+	@for app in $(EXAMPLE_APPS); do \
+		pushd $(ROOT_DIR)/examples/$$app; \
+		go fix ./...; \
+		popd; \
+	done
+
 .PHONY: update-dynamic-module-deps
 update-dynamic-module-deps: ## Update dynamic module SDK and envoy version in examples
 	@$(LOG_TARGET)
