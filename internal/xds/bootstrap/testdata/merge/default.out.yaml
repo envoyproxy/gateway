@@ -34,6 +34,12 @@ layered_runtime:
     static_layer:
       re2.max_program_size.error_level: 4294967295
       re2.max_program_size.warn_level: 1000
+  - name: envoy-gateway-runtime
+    rtds_layer:
+      name: envoy-gateway-runtime
+      rtds_config:
+        ads: {}
+        resource_api_version: V3
   - name: runtime-0
     rtds_layer:
       name: runtime-0

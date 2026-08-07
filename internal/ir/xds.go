@@ -185,6 +185,8 @@ type Xds struct {
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition `json:"filterOrder,omitempty" yaml:"filterOrder,omitempty"`
+	// Runtime holds Envoy runtime values delivered to the proxy over RTDS.
+	Runtime map[string]apiextensionsv1.JSON `json:"runtime,omitempty" yaml:"runtime,omitempty"`
 	// GlobalResources holds the global resources used by the Envoy, for example, the envoy client certificate and the OIDC HMAC secret
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource

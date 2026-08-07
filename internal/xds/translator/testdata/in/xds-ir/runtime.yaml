@@ -1,0 +1,19 @@
+runtime:
+  circuit_breakers.ai-gateway-extproc-uds.default.max_requests: 16384
+  envoy.reloadable_features.some_feature: false
+  overload.global_downstream_max_connections: 50000
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
