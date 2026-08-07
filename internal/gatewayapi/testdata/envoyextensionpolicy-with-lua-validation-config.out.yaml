@@ -7,23 +7,11 @@ envoyExtensionPolicies:
   spec:
     lua:
     - inline: |
-        local json = require("json")
         function envoy_on_response(response_handle)
-            local content_type = response_handle:headers():get("content-type")
-            if content_type and string.find(content_type, "application/json", 1, true) then
-                response_handle:body():setBytes(0, response_handle:body():length())
-                response_handle:UnknownApi()
-                local response_body = response_handle:body():getBytes(0, response_handle:body():length())
-                if response_body and #response_body > 0 then
-                    local parsed_json = json.decode(response_body)
-                    if type(parsed_json) == "table" then
-                        response_handle:logInfo("Successfully parsed JSON response.")
-                    else
-                        response_handle:logWarn("Parsed JSON is not a table, or unexpected format.")
-                    end
-                end
-            end
-            return envoy.lua.ResponseStatus.Continue
+          local value = 10
+          if value > 5
+            print("Value is greater than 5")
+          end
         end
       type: Inline
     targetRef:
@@ -50,47 +38,6 @@ envoyExtensionPolicies:
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
-  metadata:
-    name: policy-for-http-route-2
-    namespace: default
-  spec:
-    lua:
-    - inline: |
-        function envoy_on_response(response_handle)
-          local value = 10
-          if value > 5
-            print("Value is greater than 5")
-          end
-        end
-      type: Inline
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-2
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: |-
-          Lua: validation failed for lua body in policy with name envoyextensionpolicy/default/policy-for-http-route-2/lua/0: failed to validate with envoy_on_response: <string> line:4(column:9) near 'print':   syntax error
-          .
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
@@ -99,7 +46,8 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
   spec:
     logging: {}
-    luaValidation: InsecureSyntax
+    lua:
+      validationType: Disabled
   status:
     ancestors:
     - ancestorRef:
@@ -112,11 +60,6 @@ envoyProxyForGatewayClass:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.luaValidation is deprecated, use spec.lua.validationType instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
@@ -153,7 +96,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -214,43 +157,6 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    name: httproute-2
-    namespace: default
-  spec:
-    hostnames:
-    - www.example.com
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      matches:
-      - path:
-          value: /foo
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -262,7 +168,8 @@ infraIR:
           namespace: envoy-gateway-system
         spec:
           logging: {}
-          luaValidation: InsecureSyntax
+          lua:
+            validationType: Disabled
         status:
           ancestors:
           - ancestorRef:
@@ -275,12 +182,6 @@ infraIR:
               reason: Accepted
               status: "True"
               type: Accepted
-            - lastTransitionTime: null
-              message: spec.luaValidation is deprecated, use spec.lua.validationType
-                instead
-              reason: DeprecatedField
-              status: "True"
-              type: Warning
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -361,23 +262,11 @@ xdsIR:
         envoyExtensions:
           luas:
           - Code: |
-              local json = require("json")
               function envoy_on_response(response_handle)
-                  local content_type = response_handle:headers():get("content-type")
-                  if content_type and string.find(content_type, "application/json", 1, true) then
-                      response_handle:body():setBytes(0, response_handle:body():length())
-                      response_handle:UnknownApi()
-                      local response_body = response_handle:body():getBytes(0, response_handle:body():length())
-                      if response_body and #response_body > 0 then
-                          local parsed_json = json.decode(response_body)
-                          if type(parsed_json) == "table" then
-                              response_handle:logInfo("Successfully parsed JSON response.")
-                          else
-                              response_handle:logWarn("Parsed JSON is not a table, or unexpected format.")
-                          end
-                      end
-                  end
-                  return envoy.lua.ResponseStatus.Continue
+                local value = 10
+                if value > 5
+                  print("Value is greater than 5")
+                end
               end
             FilterContext: null
             Name: envoyextensionpolicy/default/policy-for-http-route/lua/0
@@ -388,38 +277,6 @@ xdsIR:
           name: httproute-1
           namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/www_example_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /foo
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-2
-            namespace: default
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        directResponse:
-          statusCode: 500
-        hostname: www.example.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/www_example_com
         pathMatch:
           distinct: false
           name: ""
