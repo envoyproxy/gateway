@@ -378,22 +378,27 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 		// return 503 if no ready endpoints exist
 		// the error is already added to the error list when processing the destination
+		//
+		// Keep this as a forwarding route (not a direct_response) so that per-route
+		// upgrade_configs (e.g. WebSocket) are preserved. With no ready endpoints,
+		// buildXdsWeightedRouteAction routes all traffic to the non-existent
+		// `invalid-backend-cluster` and returns 503 via ClusterNotFoundResponseCode.
+		// Using a direct_response here would drop upgrade_configs and make Envoy
+		// reject WebSocket upgrades with a misleading 403 (upgrade_failed).
+		// See https://github.com/envoyproxy/gateway/issues/9452
 		case failedNoReadyEndpoints && backendWeights.Valid == 0:
-			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// the direct response from errors.
 				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
 					continue
 				}
-				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: new(uint32(503)),
+				irRoute.Destination = &ir.RouteDestination{
+					Name:               destName,
+					Settings:           unmergedSettings,
+					BackendClusterRefs: mergedBackendClusterRefs,
+					Metadata:           routeRuleMetadata,
 				}
-				routesWithDirectResponse.Insert(irRoute.Name)
-			}
-			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Info("setting 503 direct response in routes due to no ready endpoints",
-					"routes", sets.List(routesWithDirectResponse))
 			}
 		// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
 		case backendWeights.Valid == 0:
