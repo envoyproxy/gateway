@@ -474,9 +474,9 @@ type RateLimitValueMetadata struct {
 }
 
 // RateLimitUnit specifies the intervals for setting rate limits.
-// Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
+// Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Week", "Month" and "Year".
 //
-// +kubebuilder:validation:Enum=Second;Minute;Hour;Day;Month;Year
+// +kubebuilder:validation:Enum=Second;Minute;Hour;Day;Week;Month;Year
 type RateLimitUnit string
 
 // RateLimitUnit constants.
@@ -492,6 +492,9 @@ const (
 
 	// RateLimitUnitDay specifies the rate limit interval to be 1 day.
 	RateLimitUnitDay RateLimitUnit = "Day"
+
+	// RateLimitUnitWeek specifies the rate limit interval to be 1 week.
+	RateLimitUnitWeek RateLimitUnit = "Week"
 
 	// RateLimitUnitMonth specifies the rate limit interval to be 1 month.
 	RateLimitUnitMonth RateLimitUnit = "Month"
