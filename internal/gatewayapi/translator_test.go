@@ -183,7 +183,7 @@ func TestTranslate(t *testing.T) {
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
-				MergeBackends:                   IsMergeBackendsEnabled(resources),
+				MergeBackends:                   ResolveMergeBackendsConfig(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
