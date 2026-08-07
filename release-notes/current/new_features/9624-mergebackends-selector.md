@@ -1,0 +1,1 @@
+Added a `selector` field to `EnvoyProxy.spec.mergeBackends` to restrict cluster deduplication to backends whose Service, ServiceImport, or Backend resource matches a label selector, so operators can opt individual backends in gradually instead of enabling deduplication for every backend at once.
