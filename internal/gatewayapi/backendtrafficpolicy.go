@@ -1572,25 +1572,27 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
-		RateLimit:         rl,
-		BandwidthLimit:    bl,
-		LoadBalancer:      lb,
-		ProxyProtocol:     pp,
-		HealthCheck:       hc,
-		CircuitBreaker:    cb,
-		FaultInjection:    fi,
-		AdmissionControl:  ac,
-		TCPKeepalive:      ka,
-		Retry:             rt,
-		BackendConnection: bc,
-		HTTP2:             h2,
-		DNS:               ds,
-		Timeout:           to,
-		ResponseOverride:  ro,
-		RequestBuffer:     rb,
-		Compression:       cp,
-		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
+		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+			LoadBalancer:      lb,
+			ProxyProtocol:     pp,
+			HealthCheck:       hc,
+			AdmissionControl:  ac,
+			CircuitBreaker:    cb,
+			Timeout:           to,
+			TCPKeepalive:      ka,
+			BackendConnection: bc,
+			HTTP2:             h2,
+			DNS:               ds,
+		},
+		RateLimit:        rl,
+		BandwidthLimit:   bl,
+		FaultInjection:   fi,
+		Retry:            rt,
+		ResponseOverride: ro,
+		Compression:      cp,
+		HTTPUpgrade:      httpUpgrade,
+		Telemetry:        buildBackendTelemetry(policy.Spec.Telemetry),
+		RequestBuffer:    rb,
 	}, errs
 }
 
@@ -1772,7 +1774,10 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 	// via hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here.
 	if applyToBackendClusters && errs == nil {
 		for _, bc := range x.BackendClusters {
-			bc.Traffic = tf.DeepCopy()
+			bc.Traffic = tf.ClusterTrafficFeatures.DeepCopy()
+			// Drop the route-scoped timeout members: they are never read from a cluster, and a
+			// merged cluster must not advertise settings it cannot honor.
+			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
 			bc.UseClientProtocol = policy.Spec.UseClientProtocol
 		}
 	}

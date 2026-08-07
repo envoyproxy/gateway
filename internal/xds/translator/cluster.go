@@ -79,7 +79,7 @@ type xdsClusterArgs struct {
 	routeHostname     string
 	http1Settings     *ir.HTTP1Settings
 	http2Settings     *ir.HTTP2Settings
-	timeout           *ir.Timeout
+	timeout           *ir.ClusterTimeout
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
 	backendConnection *ir.BackendConnection
@@ -1327,7 +1327,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 	}
 }
 
-func buildConnectTimeout(to *ir.Timeout) *durationpb.Duration {
+func buildConnectTimeout(to *ir.ClusterTimeout) *durationpb.Duration {
 	if to != nil && to.TCP != nil && to.TCP.ConnectTimeout != nil {
 		return durationpb.New(to.TCP.ConnectTimeout.Duration)
 	}
@@ -1425,7 +1425,7 @@ type ExtraArgs struct {
 	extensionMgr      *extensionTypes.Manager
 	unstructuredRefs  []*unstructured.Unstructured
 	logger            logging.Logger
-	traffic           *ir.TrafficFeatures
+	traffic           *ir.ClusterTrafficFeatures
 	useClientProtocol *bool
 }
 
@@ -1472,7 +1472,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		circuitBreaker:    route.CircuitBreaker,
 		tcpkeepalive:      route.TCPKeepalive,
 		healthCheck:       route.HealthCheck,
-		timeout:           route.Timeout,
+		timeout:           route.Timeout.ClusterOnly(),
 		endpointType:      buildEndpointType(settings),
 		metrics:           extra.metrics,
 		backendConnection: route.BackendConnection,
@@ -1512,7 +1512,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	}
 
 	// Populate traffic features.
-	applyTraffic(clusterArgs, httpRoute.Traffic)
+	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
 
 	return clusterArgs
 }

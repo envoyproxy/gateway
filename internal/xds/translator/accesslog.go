@@ -536,7 +536,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			endpointType: buildEndpointType(als.Destination.Settings),
 			metadata:     als.Destination.Metadata,
 		}
-		applyTraffic(args, als.Traffic)
+		applyTraffic(args, als.Traffic.ClusterFeatures())
 
 		if err := addXdsCluster(tCtx, args); err != nil {
 			return err
@@ -553,7 +553,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			metrics:      metrics,
 			metadata:     otel.Destination.Metadata,
 		}
-		applyTraffic(args, otel.Traffic)
+		applyTraffic(args, otel.Traffic.ClusterFeatures())
 		if err := addXdsCluster(tCtx, args); err != nil {
 			return err
 		}
