@@ -2323,13 +2323,13 @@ func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
 }
 
 func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
-	triggerSet := sets.NewString()
+	triggerSet := sets.New[string]()
 	for _, r := range in {
 		triggerSet.Insert(string(r))
 	}
 	irTriggers := make([]ir.TriggerEnum, 0, triggerSet.Len())
 
-	for _, r := range triggerSet.List() {
+	for _, r := range sets.List(triggerSet) {
 		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers
