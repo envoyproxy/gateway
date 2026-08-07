@@ -1695,6 +1695,69 @@ func TestValidateLoadBalancer(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "endpoint override with header source",
+			input: LoadBalancer{
+				RoundRobin: &RoundRobin{},
+				EndpointOverride: &EndpointOverride{
+					ExtractFrom: []EndpointOverrideExtractFrom{{Header: new("x-custom-host")}},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "endpoint override with metadata source",
+			input: LoadBalancer{
+				RoundRobin: &RoundRobin{},
+				EndpointOverride: &EndpointOverride{
+					ExtractFrom: []EndpointOverrideExtractFrom{{
+						Metadata: &EndpointOverrideMetadata{
+							Namespace: "envoy.lb",
+							Path:      []string{"x-gateway-destination-endpoint"},
+						},
+					}},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "endpoint override source with neither header nor metadata",
+			input: LoadBalancer{
+				RoundRobin: &RoundRobin{},
+				EndpointOverride: &EndpointOverride{
+					ExtractFrom: []EndpointOverrideExtractFrom{{}},
+				},
+			},
+			want: ErrEndpointOverrideSourceInvalid,
+		},
+		{
+			name: "endpoint override source with both header and metadata",
+			input: LoadBalancer{
+				RoundRobin: &RoundRobin{},
+				EndpointOverride: &EndpointOverride{
+					ExtractFrom: []EndpointOverrideExtractFrom{{
+						Header: new("x-custom-host"),
+						Metadata: &EndpointOverrideMetadata{
+							Namespace: "envoy.lb",
+							Path:      []string{"x-gateway-destination-endpoint"},
+						},
+					}},
+				},
+			},
+			want: ErrEndpointOverrideSourceInvalid,
+		},
+		{
+			name: "endpoint override metadata missing path",
+			input: LoadBalancer{
+				RoundRobin: &RoundRobin{},
+				EndpointOverride: &EndpointOverride{
+					ExtractFrom: []EndpointOverrideExtractFrom{{
+						Metadata: &EndpointOverrideMetadata{Namespace: "envoy.lb"},
+					}},
+				},
+			},
+			want: ErrEndpointOverrideSourceInvalid,
+		},
 	}
 	for i := range tests {
 		test := tests[i]

@@ -3643,6 +3643,100 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "endpointOverride source with valid metadata only",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = endpointOverrideSpec(egv1a1.EndpointOverrideExtractFrom{
+					Metadata: &egv1a1.EndpointOverrideMetadata{
+						Namespace: "envoy.lb",
+						Path:      []string{"x-gateway-destination-endpoint"},
+					},
+				})
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "endpointOverride source with nested metadata path",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = endpointOverrideSpec(egv1a1.EndpointOverrideExtractFrom{
+					Metadata: &egv1a1.EndpointOverrideMetadata{
+						Namespace: "com.example.picker",
+						Path:      []string{"result", "endpoint"},
+					},
+				})
+			},
+			wantErrors: []string{},
+		},
+		{
+			// Exclusivity is per entry, so a header source and a metadata source may coexist.
+			desc: "endpointOverride with separate header and metadata sources",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = endpointOverrideSpec(
+					egv1a1.EndpointOverrideExtractFrom{Header: new("x-custom-host")},
+					egv1a1.EndpointOverrideExtractFrom{
+						Metadata: &egv1a1.EndpointOverrideMetadata{
+							Namespace: "envoy.lb",
+							Path:      []string{"x-gateway-destination-endpoint"},
+						},
+					},
+				)
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "endpointOverride source with both header and metadata set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = endpointOverrideSpec(egv1a1.EndpointOverrideExtractFrom{
+					Header: new("x-custom-host"),
+					Metadata: &egv1a1.EndpointOverrideMetadata{
+						Namespace: "envoy.lb",
+						Path:      []string{"x-gateway-destination-endpoint"},
+					},
+				})
+			},
+			wantErrors: []string{"exactly one of header or metadata must be specified"},
+		},
+		{
+			desc: "endpointOverride source with neither header nor metadata",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = endpointOverrideSpec(egv1a1.EndpointOverrideExtractFrom{})
+			},
+			wantErrors: []string{"exactly one of header or metadata must be specified"},
+		},
+		{
+			desc: "endpointOverride source with empty header",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = endpointOverrideSpec(egv1a1.EndpointOverrideExtractFrom{Header: new("")})
+			},
+			wantErrors: []string{"should be at least 1 chars long"},
+		},
+		{
+			desc: "endpointOverride metadata with empty namespace",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = endpointOverrideSpec(egv1a1.EndpointOverrideExtractFrom{
+					Metadata: &egv1a1.EndpointOverrideMetadata{Namespace: "", Path: []string{"key"}},
+				})
+			},
+			wantErrors: []string{"should be at least 1 chars long"},
+		},
+		{
+			desc: "endpointOverride metadata with empty path",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = endpointOverrideSpec(egv1a1.EndpointOverrideExtractFrom{
+					Metadata: &egv1a1.EndpointOverrideMetadata{Namespace: "envoy.lb", Path: []string{}},
+				})
+			},
+			wantErrors: []string{"should have at least 1 items"},
+		},
+		{
+			desc: "endpointOverride metadata with empty path segment",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = endpointOverrideSpec(egv1a1.EndpointOverrideExtractFrom{
+					Metadata: &egv1a1.EndpointOverrideMetadata{Namespace: "envoy.lb", Path: []string{""}},
+				})
+			},
+			wantErrors: []string{"should be at least 1 chars long"},
+		},
+		{
 			desc: "valid compression field only",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -4124,5 +4218,27 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				t.Errorf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
 			}
 		})
+	}
+}
+
+// endpointOverrideSpec builds a BackendTrafficPolicySpec carrying the given endpoint override
+// sources, so the endpointOverride validation cases stay readable.
+func endpointOverrideSpec(sources ...egv1a1.EndpointOverrideExtractFrom) egv1a1.BackendTrafficPolicySpec {
+	return egv1a1.BackendTrafficPolicySpec{
+		PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+			TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+					Group: gwapiv1.Group("gateway.networking.k8s.io"),
+					Kind:  gwapiv1.Kind("Gateway"),
+					Name:  gwapiv1.ObjectName("eg"),
+				},
+			},
+		},
+		ClusterSettings: egv1a1.ClusterSettings{
+			LoadBalancer: &egv1a1.LoadBalancer{
+				Type:             egv1a1.RoundRobinLoadBalancerType,
+				EndpointOverride: &egv1a1.EndpointOverride{ExtractFrom: sources},
+			},
+		},
 	}
 }
