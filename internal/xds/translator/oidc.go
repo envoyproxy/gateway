@@ -403,7 +403,7 @@ func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
 }
 
 func (*oidc) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute,
+	_ *ir.HTTPListener, routes []*ir.HTTPRoute,
 ) error {
 	if err := createOAuthServerClusters(tCtx, routes); err != nil {
 		return err
@@ -598,5 +598,9 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	}
 
 	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterOAuth2)] = oauth2Any
+	return nil
+}
+
+func (*oidc) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

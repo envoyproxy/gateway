@@ -111,7 +111,7 @@ func routeContainsLocalRateLimit(irRoute *ir.HTTPRoute) bool {
 }
 
 func (*localRateLimit) patchResources(*types.ResourceVersionTable,
-	[]*ir.HTTPRoute,
+	*ir.HTTPListener, []*ir.HTTPRoute,
 ) error {
 	return nil
 }
@@ -482,4 +482,8 @@ func buildQueryParamMatchLocalRateLimitActions(
 		*rlActions = append(*rlActions, action)
 		*descriptorEntries = append(*descriptorEntries, entry)
 	}
+}
+
+func (*localRateLimit) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
 }

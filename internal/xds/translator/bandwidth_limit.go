@@ -106,7 +106,7 @@ func listenerContainsBandwidthLimitResponse(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-func (*bandwidthLimit) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*bandwidthLimit) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 
@@ -181,4 +181,8 @@ func buildBandwidthLimitResponseProto(cfg *ir.BandwidthLimitConfig) *bwlimitv3.B
 		}
 	}
 	return proto
+}
+
+func (*bandwidthLimit) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
 }

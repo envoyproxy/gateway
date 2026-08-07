@@ -31,9 +31,26 @@
         envoy.filters.http.ext_authz/securitypolicy/envoy-gateway/policy-for-gateway-1:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
           checkSettings: {}
-        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-httproute/extproc/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.ext_proc/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+                grpcService:
+                  envoyGrpc:
+                    authority: backend-fqdn2.default:9090
+                    clusterName: envoyextensionpolicy/default/policy-for-httproute/extproc/0
+                  timeout: 10s
+                processingMode:
+                  requestHeaderMode: SKIP
+                  requestTrailerMode: SKIP
+                  responseHeaderMode: SKIP
+                  responseTrailerMode: SKIP
   - domains:
     - '*'
     metadata:

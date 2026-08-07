@@ -94,10 +94,14 @@ func buildHealthCheckFilter(healthCheck *ir.HealthCheckSettings) (*hcmv3.HttpFil
 	}, nil
 }
 
-func (*healthCheck) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*healthCheck) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 
 func (*healthCheck) patchRoute(_ *routev3.Route, _ *ir.HTTPRoute, _ *ir.HTTPListener) error {
+	return nil
+}
+
+func (*healthCheck) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

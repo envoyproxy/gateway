@@ -427,6 +427,27 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 			},
 		},
+		{
+			name: "custom filter order-eep-filter-chain-placeholder",
+			filters: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilter(eepFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilter(eepListenerFCFilterName())),
+			},
+			filterOrder: []egv1a1.FilterPosition{
+				{
+					Name:  egv1a1.EnvoyFilterLua,
+					After: new(egv1a1.EnvoyFilterOAuth2),
+				},
+			},
+			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilter(eepListenerFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilter(eepFCFilterName())),
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

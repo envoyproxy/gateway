@@ -426,7 +426,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 }
 
 // patchResources creates JWKS clusters from the provided routes, if needed.
-func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+func (*jwt) patchResources(tCtx *types.ResourceVersionTable, _ *ir.HTTPListener, routes []*ir.HTTPRoute) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
@@ -507,4 +507,8 @@ func buildJwtFromHeaders(headers []egv1a1.JWTHeaderExtractor) []*jwtauthnv3.JwtH
 	}
 
 	return jwtHeaders
+}
+
+func (*jwt) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
 }

@@ -132,3 +132,99 @@ http:
           distinct: false
           name: ""
           prefix: /bar
+  # Listener-scoped ExtProc (attached at Gateway/Listener scope) with three routes:
+  # - httproute-4: no route-scoped policy, inherits the listener-scoped ExtProc via VirtualHost.
+  # - httproute-5: route-scoped policy with a different ExtProc, fully replacing the listener one.
+  # - httproute-6: route-scoped policy that targets the SAME ExtProc as the listener (a policy can
+  #   target both a Gateway and one of its HTTPRoutes via separate targetRefs), so the filter name
+  #   collides across scopes and must not be disabled then re-enabled.
+  - address: 0.0.0.0
+    hostnames:
+      - '*'
+    name: envoy-gateway/gateway-1/http-listener-scope
+    envoyExtensions:
+      extProcs:
+        - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/extproc/0
+          authority: grpc-backend-listener.envoy-gateway:9000
+          destination:
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/0/grpc-backend-listener
+            settings:
+              - protocol: GRPC
+                weight: 1
+                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/0/grpc-backend-listener/backend/0
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10081
+    routes:
+      - destination:
+          name: httproute/default/httproute-4/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-4/rule/0/backend/0
+        hostname: listener-scope.envoyproxy.io
+        isHTTP2: false
+        name: httproute/default/httproute-4/rule/0/match/0/listener_scope_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /inherit
+      - destination:
+          name: httproute/default/httproute-5/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-5/rule/0/backend/0
+        envoyExtensions:
+          extProcs:
+            - name: envoyextensionpolicy/default/policy-for-route-5/extproc/0
+              authority: grpc-backend-5.default:9500
+              destination:
+                name: envoyextensionpolicy/default/policy-for-route-5/0/grpc-backend-5
+                settings:
+                  - protocol: GRPC
+                    weight: 1
+                    name: envoyextensionpolicy/default/policy-for-route-5/0/grpc-backend-5/backend/0
+        hostname: listener-scope.envoyproxy.io
+        isHTTP2: false
+        name: httproute/default/httproute-5/rule/0/match/0/listener_scope_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /override
+      - destination:
+          name: httproute/default/httproute-6/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-6/rule/0/backend/0
+        envoyExtensions:
+          extProcs:
+            - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/extproc/0
+              authority: grpc-backend-listener.envoy-gateway:9000
+              destination:
+                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/0/grpc-backend-listener
+                settings:
+                  - protocol: GRPC
+                    weight: 1
+                    name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/0/grpc-backend-listener/backend/0
+        hostname: listener-scope.envoyproxy.io
+        isHTTP2: false
+        name: httproute/default/httproute-6/rule/0/match/0/listener_scope_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /same-name
