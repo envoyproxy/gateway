@@ -117,7 +117,7 @@ func (is *InfraSynthesizer) GetDeploymentContainers(ctx context.Context, ir *Inf
 	return []corev1.Container{
 		{
 			Name:            "envoy",
-			Image:           "docker.io/envoyproxy/envoy:distroless-dev",
+			Image:           "docker.io/envoyproxy/envoy:distroless-v1.39.0",
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command:         []string{"envoy"},
 			Args:            args,
