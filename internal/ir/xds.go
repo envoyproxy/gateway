@@ -1524,6 +1524,9 @@ type OIDC struct {
 	// CSRFTokenTTL configures the lifetime of the csrf token Envoy stores in the cookie.
 	CSRFTokenTTL *metav1.Duration `json:"csrfTokenTTL,omitempty"`
 
+	// CodeVerifierTTL configures the lifetime of the PKCE code verifier Envoy stores in the cookie.
+	CodeVerifierTTL *metav1.Duration `json:"codeVerifierTTL,omitempty"`
+
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
 	// These cookies are set by the oauth filter, including: AccessToken,
