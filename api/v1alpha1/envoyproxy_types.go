@@ -124,7 +124,11 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.cors
 	//
+	// - envoy.filters.http.csrf
+	//
 	// - envoy.filters.http.header_mutation
+	//
+	// - envoy.filters.http.geoip
 	//
 	// - envoy.filters.http.ext_authz
 	//
@@ -148,8 +152,6 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.dynamic_modules
 	//
-	// - envoy.filters.http.geoip
-	//
 	// - envoy.filters.http.rbac
 	//
 	// - envoy.filters.http.local_ratelimit
@@ -171,6 +173,16 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.router
 	//
 	// Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
+	//
+	// Note: When authentication-independent authorization rules (rules matching only on
+	// clientCIDRs and/or clientIPGeoLocations) are combined with authentication on the same
+	// route, Envoy Gateway inserts an internal pre-authentication RBAC filter between
+	// "envoy.filters.http.geoip" and the authentication filters to enforce those rules before
+	// authentication runs. This internal filter cannot be referenced in FilterOrder. Moving an
+	// authentication filter before "envoy.filters.http.geoip", or moving
+	// "envoy.filters.http.geoip" after the authentication filters, disables this early
+	// enforcement; the authorization policy is then only enforced by "envoy.filters.http.rbac"
+	// after authentication.
 	//
 	// +optional
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
