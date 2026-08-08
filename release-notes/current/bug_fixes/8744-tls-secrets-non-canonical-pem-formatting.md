@@ -1,1 +1,0 @@
-Fixed TLS secrets with non-canonical PEM formatting (e.g. unusual line endings) being passed verbatim to Envoy, which could cause BoringSSL errors such as `BAD_END_LINE`. Cert and key PEM data is now re-encoded to a canonical form before being delivered as xDS resources.
