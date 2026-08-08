@@ -11,7 +11,8 @@ envoyPatchPolicies:
   generation: 1
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: "first-listener"
+    name:
+      exact: "first-listener"
     operation:
       op: "add"
       path: "/filter_chains/0/filters/0/typed_config/http_filters/0"
@@ -28,7 +29,8 @@ envoyPatchPolicies:
                 cluster_name: rate-limit-cluster
             transport_api_version: V3
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: "first-listener"
+    name:
+      exact: "first-listener"
     operation:
       op: "remove"
       from: "/filter_chains/0/filters/0/typed_config/http_filters/0"
