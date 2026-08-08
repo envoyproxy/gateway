@@ -161,6 +161,12 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		return true
 	}
 
+	if r.listenerSetCRDExists {
+		if r.isListenerSetReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
 	if r.spCRDExists {
 		if r.isSecurityPolicyReferencingSecret(&nsName) {
 			return true
@@ -383,11 +389,44 @@ func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.Namespac
 
 	for i := range gwList.Items {
 		gw := &gwList.Items[i]
-		if !r.validateGatewayForReconcile(gw) {
-			return false
+		if r.validateGatewayForReconcile(gw) {
+			return true
 		}
 	}
-	return true
+	return false
+}
+
+func (r *gatewayAPIReconciler) isListenerSetReferencingSecret(nsName *types.NamespacedName) bool {
+	lsList := &gwapiv1.ListenerSetList{}
+	if err := r.client.List(context.Background(), lsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretListenerSetIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ListenerSets")
+		return false
+	}
+
+	if len(lsList.Items) == 0 {
+		return false
+	}
+
+	for i := range lsList.Items {
+		ls := &lsList.Items[i]
+		parent := ls.Spec.ParentRef
+		gw := &gwapiv1.Gateway{}
+		key := types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, ls.Namespace),
+			Name:      string(parent.Name),
+		}
+		if err := r.client.Get(context.Background(), key, gw); err != nil {
+			r.log.Error(err, "failed to get parent Gateway for ListenerSet",
+				"namespace", ls.Namespace, "name", ls.Name)
+			continue
+		}
+		if r.validateGatewayForReconcile(gw) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.NamespacedName) bool {
