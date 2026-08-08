@@ -71,6 +71,18 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty"`
+	// GeoIP configures GeoIP enrichment for requests on this listener. It
+	// derives geographic attributes from the client IP address and exposes
+	// them as request headers, which are forwarded to the backend and can also
+	// be referenced in access logs.
+	//
+	// The MaxMind database sources must be configured on the target's
+	// EnvoyProxy resource via spec.geoIP.provider; this field only enables the
+	// filter and selects which headers are written. The client IP that is
+	// geolocated is the one determined by ClientIPDetection.
+	//
+	// +optional
+	GeoIP *GeoIPEnrichment `json:"geoIP,omitempty"`
 	// TLS settings configure TLS termination settings with the downstream client.
 	//
 	// +optional
