@@ -11,6 +11,7 @@ import (
 	"os"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -31,104 +32,71 @@ var (
 	minimalConfig string
 )
 
-func TestConfigLoader(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "envoy-gateway-configloader-test")
-	require.NoError(t, err)
-	defer func(path string) {
-		_ = os.RemoveAll(path)
-	}(tmpDir)
+const (
+	reloadTimeout = 30 * time.Second
+	reloadTick    = 10 * time.Millisecond
+)
 
+func TestConfigLoader(t *testing.T) {
+	tmpDir := t.TempDir()
 	cfgPath := tmpDir + "/config.yaml"
 	require.NoError(t, os.WriteFile(cfgPath, []byte(defaultConfig), 0o600))
 	s, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer func() {
-		cancel()
-	}()
-
-	changed := 0
-	loader := New(cfgPath, s, func(hookCtx context.Context, _ *config.Server) error {
-		changed++
-		// Only log if the hook context is still active to avoid panic
-		select {
-		case <-hookCtx.Done():
-			return nil
-		default:
-			t.Logf("config changed %d times", changed)
-		}
-		if changed > 1 {
-			cancel()
-		}
+	var reloads atomic.Int32
+	loader := New(cfgPath, s, func(context.Context, *config.Server) error {
+		reloads.Add(1)
 		return nil
 	})
 
-	require.NoError(t, loader.Start(ctx, os.Stdout))
-	go func() {
-		_ = os.WriteFile(cfgPath, []byte(redisConfig), 0o600)
-	}()
+	require.NoError(t, loader.Start(t.Context(), os.Stdout))
+	require.NoError(t, os.WriteFile(cfgPath, []byte(redisConfig), 0o600))
 
-	<-ctx.Done()
+	require.Eventually(t, func() bool {
+		return reloads.Load() > 1
+	}, reloadTimeout, reloadTick)
+	t.Logf("config reloaded %d times", reloads.Load())
 }
 
 func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "envoy-gateway-configloader-test")
-	require.NoError(t, err)
-	defer func(path string) {
-		_ = os.RemoveAll(path)
-	}(tmpDir)
-
+	tmpDir := t.TempDir()
 	cfgPath := tmpDir + "/config.yaml"
 	require.NoError(t, os.WriteFile(cfgPath, []byte(standaloneConfig), 0o600))
 	s, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer func() {
-		cancel()
-	}()
-
-	type testResult struct {
-		changed int32
-		extMgr  *egv1a1.ExtensionManager
-	}
-	resultChannel := make(chan testResult, 1)
-
-	var changed int32
-	loader := New(cfgPath, s, func(hookCtx context.Context, cfg *config.Server) error {
-		// Check if the hook context is canceled before incrementing
-		select {
-		case <-hookCtx.Done():
-			return nil
-		default:
-		}
-		c := atomic.AddInt32(&changed, 1)
-		t.Logf("config changed %d times", c)
-		if c > 1 {
-			resultChannel <- testResult{changed: c, extMgr: cfg.EnvoyGateway.ExtensionManager}
-			cancel()
-		}
+	var reloads atomic.Int32
+	loader := New(cfgPath, s, func(context.Context, *config.Server) error {
+		reloads.Add(1)
 		return nil
 	})
 
-	require.NoError(t, loader.Start(ctx, os.Stdout))
+	require.NoError(t, loader.Start(t.Context(), os.Stdout))
 	require.NotNil(t, loader.cfg.EnvoyGateway)
 	require.Nil(t, loader.cfg.EnvoyGateway.ExtensionManager)
 
-	go func() {
-		_ = os.WriteFile(cfgPath, []byte(standaloneConfigWithExtensionServer), 0o600)
-	}()
+	require.NoError(t, os.WriteFile(cfgPath, []byte(standaloneConfigWithExtensionServer), 0o600))
 
-	<-ctx.Done()
-	res := <-resultChannel // wait until second reload
-	require.Equal(t, int32(2), res.changed)
-	require.NotNil(t, res.extMgr)
-	require.NotNil(t, res.extMgr.PolicyResources)
-	require.Len(t, res.extMgr.PolicyResources, 1)
-	require.Equal(t, "gateway.example.io", res.extMgr.PolicyResources[0].Group)
-	require.Equal(t, "v1alpha1", res.extMgr.PolicyResources[0].Version)
-	require.Equal(t, "ExampleExtPolicy", res.extMgr.PolicyResources[0].Kind)
+	// Wait for the reload to apply the extension server config.
+	var extMgr *egv1a1.ExtensionManager
+	require.Eventually(t, func() bool {
+		cfg := loader.snapshotConfig()
+		if cfg == nil || cfg.EnvoyGateway == nil || cfg.EnvoyGateway.ExtensionManager == nil {
+			return false
+		}
+		extMgr = cfg.EnvoyGateway.ExtensionManager
+		return reloads.Load() > 1
+	}, reloadTimeout, reloadTick)
+	t.Logf("config reloaded %d times", reloads.Load())
+
+	require.Greater(t, reloads.Load(), int32(1))
+	require.NotNil(t, extMgr)
+	require.NotNil(t, extMgr.PolicyResources)
+	require.Len(t, extMgr.PolicyResources, 1)
+	require.Equal(t, "gateway.example.io", extMgr.PolicyResources[0].Group)
+	require.Equal(t, "v1alpha1", extMgr.PolicyResources[0].Version)
+	require.Equal(t, "ExampleExtPolicy", extMgr.PolicyResources[0].Kind)
 }
 
 // TestConfigLoaderDefaultsBeforeValidate ensures the hot-reload path applies defaults
@@ -137,53 +105,30 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 // Reloading to such a config must therefore succeed and surface the defaulted values
 // to the hook.
 func TestConfigLoaderDefaultsBeforeValidate(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "envoy-gateway-configloader-test")
-	require.NoError(t, err)
-	defer func(path string) {
-		_ = os.RemoveAll(path)
-	}(tmpDir)
-
+	tmpDir := t.TempDir()
 	cfgPath := tmpDir + "/config.yaml"
 	require.NoError(t, os.WriteFile(cfgPath, []byte(defaultConfig), 0o600))
 	s, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	type testResult struct {
-		changed int32
-		eg      *egv1a1.EnvoyGateway
-	}
-	resultChannel := make(chan testResult, 1)
-
-	var changed int32
-	loader := New(cfgPath, s, func(hookCtx context.Context, cfg *config.Server) error {
-		select {
-		case <-hookCtx.Done():
-			return nil
-		default:
-		}
-		c := atomic.AddInt32(&changed, 1)
-		if c > 1 {
-			resultChannel <- testResult{changed: c, eg: cfg.EnvoyGateway}
-			cancel()
-		}
+	var reloads atomic.Int32
+	loader := New(cfgPath, s, func(context.Context, *config.Server) error {
+		reloads.Add(1)
 		return nil
 	})
 
-	require.NoError(t, loader.Start(ctx, os.Stdout))
-	go func() {
-		_ = os.WriteFile(cfgPath, []byte(minimalConfig), 0o600)
-	}()
+	require.NoError(t, loader.Start(t.Context(), os.Stdout))
+	require.NoError(t, os.WriteFile(cfgPath, []byte(minimalConfig), 0o600))
+	require.Eventually(t, func() bool {
+		return reloads.Load() > 1
+	}, reloadTimeout, reloadTick)
+	t.Logf("config reloaded %d times", reloads.Load())
 
-	<-ctx.Done()
-	res := <-resultChannel
-	require.Equal(t, int32(2), res.changed)
-	require.NotNil(t, res.eg)
-	require.NotNil(t, res.eg.Gateway)
-	require.Equal(t, egv1a1.GatewayControllerName, res.eg.Gateway.ControllerName)
-	require.NotNil(t, res.eg.Provider)
-	require.Equal(t, egv1a1.ProviderTypeKubernetes, res.eg.Provider.Type)
-	require.NotNil(t, res.eg.Logging)
+	eg := loader.snapshotConfig().EnvoyGateway
+	require.NotNil(t, eg)
+	require.NotNil(t, eg.Gateway)
+	require.Equal(t, egv1a1.GatewayControllerName, eg.Gateway.ControllerName)
+	require.NotNil(t, eg.Provider)
+	require.Equal(t, egv1a1.ProviderTypeKubernetes, eg.Provider.Type)
+	require.NotNil(t, eg.Logging)
 }
