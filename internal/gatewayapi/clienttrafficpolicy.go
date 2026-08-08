@@ -1011,6 +1011,10 @@ func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSetti
 	httpIR.ClientIPDetection = (*ir.ClientIPDetectionSettings)(clientIPDetection)
 }
 
+// maxRequestHeaderLimitKB is the maximum value (in KiB) that Envoy supports for
+// the HTTP connection manager max_request_headers_kb setting.
+const maxRequestHeaderLimitKB = 8192
+
 func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, httpIR *ir.HTTPListener) error {
 	if headerSettings == nil {
 		return nil
@@ -1044,6 +1048,23 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	}
 
 	var errs error
+
+	if headerSettings.MaxRequestHeaderLimit != nil {
+		// Envoy's max_request_headers_kb is expressed in KiB, so convert the
+		// byte quantity and round up to the nearest KiB.
+		bytes, ok := headerSettings.MaxRequestHeaderLimit.AsInt64()
+		switch {
+		case !ok || bytes < 1024:
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s must be at least 1Ki", headerSettings.MaxRequestHeaderLimit.String()))
+		default:
+			kb := (bytes + 1023) / 1024
+			if kb > maxRequestHeaderLimitKB {
+				errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s exceeds the maximum of %dKi", headerSettings.MaxRequestHeaderLimit.String(), maxRequestHeaderLimitKB))
+			} else {
+				httpIR.Headers.MaxRequestHeadersKB = ptr.To(uint32(kb))
+			}
+		}
+	}
 
 	if headerSettings.EarlyRequestHeaders != nil {
 		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")

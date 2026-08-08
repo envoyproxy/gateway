@@ -978,6 +978,10 @@ type HeaderSettings struct {
 
 	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
 	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
+
+	// MaxRequestHeadersKB defines the maximum request headers size in KiB allowed for incoming connections.
+	// Maps to the Envoy `max_request_headers_kb` HTTP connection manager setting.
+	MaxRequestHeadersKB *uint32 `json:"maxRequestHeadersKB,omitempty" yaml:"maxRequestHeadersKB,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
