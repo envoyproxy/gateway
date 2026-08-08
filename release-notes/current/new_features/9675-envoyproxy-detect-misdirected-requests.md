@@ -1,0 +1,1 @@
+Added the `spec.features.detectMisdirectedRequests` EnvoyProxy API field for future HTTP/2 misdirected request detection support. The field is disabled by default and currently does not change runtime behavior.
