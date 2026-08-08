@@ -486,6 +486,8 @@ const (
 
 // EnvoyProxyProvider defines the desired state of a resource provider.
 // +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type != 'Host' || has(self.host)",message="host must be set when the provider type is 'Host'"
 type EnvoyProxyProvider struct {
 	// Type is the type of resource provider to use. A resource provider provides
 	// infrastructure resources for running the data plane, e.g. Envoy proxy, and
