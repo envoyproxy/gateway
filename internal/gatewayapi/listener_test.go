@@ -916,7 +916,6 @@ func TestProcessTracingServiceName(t *testing.T) {
 		envoyProxy          *egv1a1.EnvoyProxy
 		mergeGateways       bool
 		expectedServiceName string
-		expectError         bool
 	}{
 		{
 			name: "no tracing configuration",
@@ -1088,6 +1087,33 @@ func TestProcessTracingServiceName(t *testing.T) {
 			mergeGateways:       true,
 			expectedServiceName: "test-gateway-class", // Should use gateway class name when merging
 		},
+		{
+			name: "tracing provider without backendRefs or host disables tracing",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-proxy",
+					Namespace: "test-namespace",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type:        egv1a1.TracingProviderTypeOpenTelemetry,
+								ServiceName: new("only-name-overridden"),
+							},
+						},
+					},
+				},
+			},
+			// An empty expectedServiceName asserts that no tracing config is built.
+			expectedServiceName: "",
+		},
 	}
 
 	for _, tc := range cases {
@@ -1150,11 +1176,6 @@ func TestProcessTracingServiceName(t *testing.T) {
 			result, err := translator.processTracing(&GatewayContext{
 				Gateway: tc.gateway,
 			}, tc.envoyProxy, tc.mergeGateways, resources)
-
-			if tc.expectError {
-				assert.Error(t, err)
-				return
-			}
 
 			require.NoError(t, err)
 
