@@ -320,6 +320,7 @@ const (
 // +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges can only be set for LoadBalancer type",rule="!has(self.loadBalancerSourceRanges) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges must contain valid CIDR values",rule="!has(self.loadBalancerSourceRanges) || self.loadBalancerSourceRanges.all(r, isCIDR(r))"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
 	// By default, no annotations are appended.
@@ -361,6 +362,7 @@ type KubernetesServiceSpec struct {
 	// This field may only be set for services with type LoadBalancer and will be cleared if the type
 	// is changed to any other type.
 	// +optional
+	// +kubebuilder:validation:MaxItems=16
 	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
 
 	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
@@ -571,6 +573,8 @@ const (
 // KubernetesPatchSpec defines how to perform the patch operation.
 // Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
 // Note also that, currently, strings containing literal JSON are _rejected_.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || self.type in ['StrategicMerge', 'JSONMerge']",message="patch type must be StrategicMerge or JSONMerge"
 type KubernetesPatchSpec struct {
 	// Type is the type of merge operation to perform
 	//

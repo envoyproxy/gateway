@@ -11446,6 +11446,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                           pod:
                             description: Pod defines the desired specification of
                               pod.
@@ -17003,6 +17007,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                           pod:
                             description: Pod defines the desired specification of
                               pod.
@@ -21151,6 +21159,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                         required:
                         - maxReplicas
                         type: object
@@ -21201,6 +21213,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                         type: object
                         x-kubernetes-validations:
                         - message: only one of minAvailable or maxUnavailable can
@@ -21269,6 +21285,7 @@ spec:
                               is changed to any other type.
                             items:
                               type: string
+                            maxItems: 16
                             type: array
                           name:
                             description: |-
@@ -21292,6 +21309,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                           type:
                             default: LoadBalancer
                             description: |-
@@ -21318,6 +21339,10 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                        - message: loadBalancerSourceRanges must contain valid CIDR
+                            values
+                          rule: '!has(self.loadBalancerSourceRanges) || self.loadBalancerSourceRanges.all(r,
+                            isCIDR(r))'
                       envoyServiceAccount:
                         description: EnvoyServiceAccount defines the desired state
                           of the Envoy service account resource.
@@ -21357,6 +21382,9 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: host must be set when the provider type is 'Host'
+                  rule: self.type != 'Host' || has(self.host)
               routingType:
                 description: |-
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
