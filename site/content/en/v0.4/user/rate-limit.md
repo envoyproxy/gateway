@@ -592,7 +592,7 @@ data:
         rateLimitDeployment:
           replicas: 1
           container:
-            image: envoyproxy/ratelimit:master
+            image: envoyproxy/ratelimit:4969da53
             resources:
               requests:
                 cpu: 100m

@@ -42,7 +42,7 @@ Example done on global level:
 global:
   images:
     ratelimit:
-      image: custom-cr.internal.io/envoyproxy/ratelimit:master
+      image: custom-cr.internal.io/envoyproxy/ratelimit:4969da53
 ```
 
 Furthermore for private registries you might need to define imagePullSecrets.

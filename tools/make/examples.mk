@@ -3,7 +3,7 @@ EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
 
 # Extract envoy proxy version from DefaultEnvoyProxyImage (e.g., "distroless-v1.37.0" -> "v1.37.0").
-# Empty on main branch where the image is "distroless-dev".
+# Empty on main branch where the image is "distroless-v1.39.0".
 ENVOY_PROXY_VERSION := $(shell grep 'DefaultEnvoyProxyImage' api/v1alpha1/shared_types.go | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')
 
 kube-generate-examples:

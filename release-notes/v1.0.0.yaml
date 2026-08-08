@@ -26,7 +26,7 @@ changes:
       Refactored Structure of User Guide docs
       Refactored Move Design docs under "Get Involved"
       Updated crd-ref-docs to 0.0.10
-      Updated Envoy proxy image to envoy:distroless-dev in main
+      Updated Envoy proxy image to envoy:distroless-v1.39.0 in main
 
 
   - area: installation
