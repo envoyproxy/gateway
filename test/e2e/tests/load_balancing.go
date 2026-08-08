@@ -917,12 +917,12 @@ var EndpointOverrideLoadBalancing = suite.ConformanceTest{
 func runEndpointOverrideTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, podIPToName map[string]string, expectedResponse *http.ExpectedResponse) {
 	req := http.MakeRequest(t, expectedResponse, gwAddr, "HTTP", "http")
 
-	allPodNames := sets.NewString()
+	allPodNames := sets.New[string]()
 	for _, podName := range podIPToName {
 		allPodNames.Insert(podName)
 	}
 
-	tlog.Logf(t, "all pods: %v", allPodNames.List())
+	tlog.Logf(t, "all pods: %v", sets.List(allPodNames))
 
 	// Make multiple requests and verify fallback behavior (just check 200 response)
 	for range sendRequests {
