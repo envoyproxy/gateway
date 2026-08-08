@@ -1435,7 +1435,7 @@ data:
         rateLimitDeployment:
           replicas: 1
           container:
-            image: envoyproxy/ratelimit:4969da53
+            image: envoyproxy/ratelimit:master
             env:
             - name: CACHE_KEY_PREFIX
               value: "eg:rl:"
@@ -1489,7 +1489,7 @@ data:
         rateLimitDeployment:
           replicas: 1
           container:
-            image: envoyproxy/ratelimit:4969da53
+            image: envoyproxy/ratelimit:master
             env:
             - name: CACHE_KEY_PREFIX
               value: "eg:rl:"

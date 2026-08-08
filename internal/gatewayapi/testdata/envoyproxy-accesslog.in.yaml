@@ -57,7 +57,7 @@ envoyProxyForGatewayClass:
               value: env_a_value
             - name: env_b
               value: env_b_name
-            image: "envoyproxy/envoy:distroless-v1.39.0"
+            image: "envoyproxy/envoy:distroless-dev"
             resources:
               requests:
                 cpu: 100m

@@ -17,7 +17,7 @@ changes:
       Added User Guide for BackendTrafficPolicy
       Added `Type` and `required` for CRD API doc
       Updated crd-ref-docs to 0.0.10
-      Updated Envoy proxy image to envoy:distroless-v1.39.0 in main
+      Updated Envoy proxy image to envoy:distroless-dev in main
 
 
   - area: installation
