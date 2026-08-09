@@ -202,6 +202,7 @@ xds:
           edsClusterConfig:
             edsConfig:
               ads: {}
+              initialFetchTimeout: 0s
               resourceApiVersion: V3
             serviceName: httproute/envoy-gateway-system/routes/rule/0
           ignoreHealthOnHostRemoval: true

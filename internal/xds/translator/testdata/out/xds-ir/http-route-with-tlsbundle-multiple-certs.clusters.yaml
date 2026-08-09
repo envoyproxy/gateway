@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: httproute/envoy-gateway/httproute-btls/rule/0
   ignoreHealthOnHostRemoval: true
@@ -86,6 +87,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: httproute/envoy-gateway/httproute-btls-2/rule/0
   ignoreHealthOnHostRemoval: true
