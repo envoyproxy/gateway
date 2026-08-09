@@ -204,6 +204,13 @@ type HTTPExtAuthService struct {
 	// original client request.
 	// +optional
 	HeadersToBackend []string `json:"headersToBackend,omitempty"`
+
+	// HeadersToClientOnSuccess are the authorization response headers that will be added
+	// to the response sent to the client when the authorization response is successful.
+	// If not specified, no authorization response headers will be added to the client
+	// response on success.
+	// +optional
+	HeadersToClientOnSuccess []string `json:"headersToClientOnSuccess,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
