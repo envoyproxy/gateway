@@ -139,6 +139,7 @@ _Appears in:_
 | `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  |  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
 | `grpc` | _[GRPCActiveHealthChecker](#grpcactivehealthchecker)_ |  false  |  | GRPC defines the configuration of the GRPC health checker.<br />It's optional, and can only be used if the specified type is GRPC. |
 | `overrides` | _[HealthCheckOverrides](#healthcheckoverrides)_ |  false  |  | Overrides defines the configuration of the overriding health check settings for all endpoints<br />in the backend cluster. This allows customization of port and other settings that may differ<br />from the main service configuration. |
+| `healthCheckLog` | _[ProxyHealthCheckLog](#proxyhealthchecklog)_ |  false  |  | HealthCheckLog defines health check event logging configuration for this cluster.<br />When set, HC probe outcomes are logged to the configured sinks.<br />Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog. |
 
 
 #### ActiveHealthCheckPayload
@@ -643,6 +644,7 @@ _Appears in:_
 | `errorUtilizationPenaltyPercent` | _integer_ |  false  |  | ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).<br />This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.<br />For example:<br />- 100 => 1.0x<br />- 120 => 1.2x<br />- 200 => 2.0x<br />Must be non-negative. |
 | `metricNamesForComputingUtilization` | _string array_ |  false  |  | Metric names used to compute utilization if application_utilization is not set.<br />For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo". |
 | `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
+| `outOfBand` | _[OutOfBandReporting](#outofbandreporting)_ |  false  |  | OutOfBand enables out-of-band ORCA load reporting. When set, Envoy opens a<br />server-streaming gRPC connection to each endpoint's<br />xds.service.orca.v3.OpenRcaService/StreamCoreMetrics and pulls load<br />reports periodically, instead of relying on in-band ORCA metrics<br />carried in response headers/trailers.<br />The backend must implement OpenRcaService for this to take effect. |
 
 
 #### BandwidthLimitRequestConfig
@@ -835,6 +837,24 @@ _Appears in:_
 | `exposeHeaders` | _string array_ |  false  |  | ExposeHeaders defines which response headers should be made accessible to<br />scripts running in the browser.<br />It specifies the headers in the Access-Control-Expose-Headers CORS response header..<br />The value "*" allows any header to be exposed. |
 | `maxAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
 | `allowCredentials` | _boolean_ |  false  |  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
+
+
+#### CSRF
+
+
+
+CSRF defines the configuration for the Cross-Site Request Forgery (CSRF) filter.
+The CSRF filter checks that the Origin header in HTTP requests matches the destination,
+preventing cross-origin mutating requests (POST, PUT, DELETE, PATCH) from being processed.
+GET and HEAD requests are always allowed.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `shadowFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#fraction)_ |  false  |  | ShadowFraction represents the fraction of requests for which the CSRF policy is<br />evaluated in shadow (dry-run) mode. For these requests, the filter records whether<br />the request would have been allowed or rejected in the `csrf.request_valid` and<br />`csrf.request_invalid` stats, but always lets the request through. The remaining<br />requests are enforced, i.e. a mutating request with a missing or non-matching<br />Origin header is rejected with a 403.<br />Defaults to 0% (all requests are enforced) if not specified. Set it to 100% to<br />dry run the filter, watch the stats to find origins that would be rejected, then<br />lower it to roll enforcement out gradually. |
+| `additionalOrigins` | _[Origin](#origin) array_ |  false  |  | AdditionalOrigins specifies additional origins that are allowed to make mutating<br />requests, beyond the destination origin. A request whose Origin header matches one<br />of them is allowed. The value "*" allows any origin, which effectively disables<br />origin validation.<br />Note: Envoy's CSRF filter compares the host and port of the origin only, so the<br />scheme is ignored: "https://www.example.com" and "http://www.example.com" are<br />equivalent here, and both allow the request regardless of the scheme the client<br />used. |
 
 
 #### CircuitBreaker
@@ -1365,13 +1385,15 @@ _Appears in:_
 
 
 CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+When both statusCodes and responseHeaders are specified, both must match.
 
 _Appears in:_
 - [ResponseOverride](#responseoverride)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  true  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  false  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `responseHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Response headers to match on. The match evaluates to true if all matches are successful. |
 
 
 #### CustomTag
@@ -1621,6 +1643,7 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](#localpolicytargetreferencewithsectionname)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing EnvoyExtensionPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent EnvoyExtensionPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `wasm` | _[Wasm](#wasm) array_ |  false  |  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
 | `extProc` | _[ExtProc](#extproc) array_ |  false  |  | ExtProc is an ordered list of external processing filters<br />that should be added to the envoy filter chain |
 | `lua` | _[Lua](#lua) array_ |  false  |  | Lua is an ordered list of Lua filters<br />that should be added to the envoy filter chain |
@@ -1642,6 +1665,7 @@ _Appears in:_
 | `envoy.filters.http.health_check` | EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.<br /> | 
 | `envoy.filters.http.fault` | EnvoyFilterFault defines the Envoy HTTP fault filter.<br /> | 
 | `envoy.filters.http.cors` | EnvoyFilterCORS defines the Envoy HTTP CORS filter.<br /> | 
+| `envoy.filters.http.csrf` | EnvoyFilterCSRF defines the Envoy HTTP CSRF filter.<br /> | 
 | `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
 | `envoy.filters.http.ext_authz` | EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.<br /> | 
 | `envoy.filters.http.api_key_auth` | EnvoyFilterAPIKeyAuth defines the Envoy HTTP api key authentication filter.<br /> | 
@@ -2665,6 +2689,22 @@ _Appears in:_
 | `path` | _string_ |  true  |  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
+#### FileEnvoyProxyHealthCheckLog
+
+
+
+FileEnvoyProxyHealthCheckLog writes health check events as JSON to a local file path.
+
+See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/health_check/event_sinks/file/v3/file.proto
+
+_Appears in:_
+- [ProxyHealthCheckLogSink](#proxyhealthchecklogsink)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path specifies the file path for health check event output.<br />Use /dev/stdout to write to standard output. |
+
+
 #### FilterPosition
 
 
@@ -3069,6 +3109,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `requestReceivedTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request<br />initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
+| `requestHeadersReceivedTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | RequestHeadersReceivedTimeout is the duration envoy waits for the request headers to arrive.<br />The timer is activated when the first byte of the headers is received,<br />and is disarmed when the last byte of the headers has been received.<br />If not specified or set to 0, this timeout is disabled. |
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `streamIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  |  The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.<br /> Default: 5 minutes. |
 
@@ -3180,6 +3221,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[HTTPHostnameModifierType](#httphostnamemodifiertype)_ |  true  |  |  |
 | `header` | _string_ |  false  |  | Header is the name of the header whose value would be used to rewrite the Host header |
+| `pathRegex` | _[HostnamePathRegexRewrite](#hostnamepathregexrewrite)_ |  false  |  | PathRegex defines a regex match and substitution applied to the request path to compute<br />the rewritten Host header.<br />For example, with:<br />pathRegex:<br />  pattern: "^/tenant/([a-z0-9-]+)/.*"<br />  substitution: "\\1.example.internal"<br />a request to "http://foo.bar.com/tenant/tenant1/api/v1" has its upstream Host header rewritten<br />to "tenant1.example.internal" (the request path "/tenant/tenant1/api/v1" is preserved). |
 
 
 #### HTTPHostnameModifierType
@@ -3195,6 +3237,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Header` | HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in header.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header<br /> | 
 | `Backend` | BackendHTTPHostnameModifier indicates that the Host header value would be replaced by the DNS name of the backend if it exists.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite<br /> | 
+| `PathRegex` | PathRegexHTTPHostnameModifier indicates that the Host header value would be rewritten by applying a regex<br />match and substitution to the request path.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-path-regex<br /> | 
 
 
 #### HTTPPathModifier
@@ -3482,6 +3525,21 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `stripTrailingHostDot` | _boolean_ |  false  |  | StripTrailingHostDot determines if the trailing dot of the host should be removed<br />from the Host/Authority header before any processing of the request.<br />This affects the upstream host header as well. Without this option, incoming requests<br />with host "example.com." will not match routes with domains set to "example.com".<br />When the host includes a port (for example "example.com.:443"), only the trailing dot<br />from the host section is stripped, leaving the port as-is ("example.com:443").<br />Defaults to false. |
+
+
+#### HostnamePathRegexRewrite
+
+
+
+HostnamePathRegexRewrite defines a hostname rewrite computed from the request path using regex.
+
+_Appears in:_
+- [HTTPHostnameModifier](#httphostnamemodifier)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `pattern` | _string_ |  true  |  | Pattern matches a regular expression against the value of the HTTP Path. The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
+| `substitution` | _string_ |  true  |  | Substitution is an expression that replaces the matched portion. The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.<br />The resulting value is used as the upstream Host header and should be constrained to a valid<br />DNS hostname by using explicit regex capture groups in Pattern.<br />The NUL, CR, and LF characters are not allowed: they are invalid in an HTTP header value and are<br />rejected by the Envoy proto (well_known_regex HTTP_HEADER_VALUE), which would otherwise cause the<br />generated configuration to be rejected by the data plane. |
 
 
 #### IPEndpoint
@@ -4287,6 +4345,9 @@ safe to do so, otherwise it falls back to a dedicated per-route cluster.
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `selector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  false  |  | Selector restricts cluster deduplication to backends whose target Service, ServiceImport,<br />or Backend resource matches this label selector. When unset, every otherwise-eligible<br />backend is merged. Use this to opt individual backends into deduplication gradually<br />instead of enabling it for every backend at once. |
 
 
 #### MergeType
@@ -4297,6 +4358,7 @@ MergeType defines the type of merge operation
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
 - [EnvoyProxySpec](#envoyproxyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)
 - [SecurityPolicySpec](#securitypolicyspec)
@@ -4582,6 +4644,7 @@ For example, the following are valid origins:
 
 _Appears in:_
 - [CORS](#cors)
+- [CSRF](#csrf)
 
 
 
@@ -4613,6 +4676,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `reportingPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ReportingPeriod is how often Envoy requests load reports from the server.<br />Must be greater than 0. Defaults to 10s. |
+| `port` | _integer_ |  false  |  | Port overrides the port used for the OutOfBand reporting connection, e.g. to<br />reach a separate reporting sidecar. Defaults to the endpoint's port. |
+| `authority` | _string_ |  false  |  | Authority overrides the :authority header on the OutOfBand gRPC stream.<br />If unset, Envoy uses the endpoint hostname, then the dialed address, then<br />the cluster name. |
 
 
 #### PassiveHealthCheck
@@ -4963,6 +5029,73 @@ _Appears in:_
 | `jsonPatches` | _[JSONPatchOperation](#jsonpatchoperation) array_ |  true  |  | JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are<br />applied in the order in which they are defined. |
 
 
+#### ProxyHealthCheckLog
+
+
+
+ProxyHealthCheckLog configures Envoy health check event logging.
+Health check events (state transitions, failures, successes) are emitted
+to each configured sink.
+
+See the Envoy health check API reference for details on the underlying fields:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto
+
+_Appears in:_
+- [ActiveHealthCheck](#activehealthcheck)
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sinks` | _[ProxyHealthCheckLogSink](#proxyhealthchecklogsink) array_ |  false  |  | Sinks defines where health check events are written.<br />When omitted, events are written to /dev/stdout. |
+| `matches` | _[ProxyHealthCheckLogEventType](#proxyhealthchecklogeventtype) array_ |  false  |  | Matches defines which health check probe outcomes produce a log entry.<br />When omitted or empty, all events are logged.<br />Each value must be unique. Multiple values are ORed. If any failure type is<br />specified then a success type must also be specified, and vice versa. |
+
+
+#### ProxyHealthCheckLogEventType
+
+_Underlying type:_ _string_
+
+ProxyHealthCheckLogEventType specifies which health check probe outcomes produce a log entry.
+
+_Appears in:_
+- [ProxyHealthCheckLog](#proxyhealthchecklog)
+
+| Value | Description |
+| ----- | ----------- |
+| `Failure` | ProxyHealthCheckLogEventTypeFailure logs every failed probe regardless of<br />the host's current health state (Envoy's always_log_health_check_failures=true).<br /> | 
+| `FailureSeriesStart` | ProxyHealthCheckLogEventTypeFailureSeriesStart logs only the first failed probe<br />of a consecutive failure run — the probe that starts a potential healthy→unhealthy<br />transition, regardless of whether unhealthyThreshold is ultimately reached<br />(Envoy's always_log_health_check_failures=false).<br /> | 
+| `Success` | ProxyHealthCheckLogEventTypeSuccess logs every successful probe regardless<br />of the host's current health state (Envoy's always_log_health_check_success=true).<br /> | 
+| `HealthyTransition` | ProxyHealthCheckLogEventTypeHealthyTransition logs the first successful probe of<br />a consecutive success run AND when the host reaches the healthy threshold and<br />transitions back to healthy (Envoy's always_log_health_check_success=false).<br /> | 
+
+
+#### ProxyHealthCheckLogSink
+
+
+
+ProxyHealthCheckLogSink defines a destination for health check event logs.
+
+_Appears in:_
+- [ProxyHealthCheckLog](#proxyhealthchecklog)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[ProxyHealthCheckLogSinkType](#proxyhealthchecklogsinktype)_ |  true  |  | Type defines the type of sink. |
+| `file` | _[FileEnvoyProxyHealthCheckLog](#fileenvoyproxyhealthchecklog)_ |  false  |  | File defines the file sink configuration.<br />Required when type is File. |
+
+
+#### ProxyHealthCheckLogSinkType
+
+_Underlying type:_ _string_
+
+ProxyHealthCheckLogSinkType is the type of a ProxyHealthCheckLog sink.
+
+_Appears in:_
+- [ProxyHealthCheckLogSink](#proxyhealthchecklogsink)
+
+| Value | Description |
+| ----- | ----------- |
+| `File` | ProxyHealthCheckLogSinkTypeFile writes health check events as JSON to a local file.<br /> | 
+
+
 #### ProxyLogComponent
 
 _Underlying type:_ _string_
@@ -5137,6 +5270,7 @@ _Appears in:_
 | `tracing` | _[ProxyTracing](#proxytracing)_ |  false  |  | Tracing defines tracing configuration for managed proxies.<br />If unspecified, will not send tracing data. |
 | `metrics` | _[ProxyMetrics](#proxymetrics)_ |  true  |  | Metrics defines metrics configuration for managed proxies. |
 | `requestID` | _[RequestIDSettings](#requestidsettings)_ |  false  |  | RequestID configures Envoy request ID behavior. |
+| `healthCheckLog` | _[ProxyHealthCheckLog](#proxyhealthchecklog)_ |  false  |  | HealthCheckLog defines health check event logging for xRoute-backed clusters. |
 
 
 #### ProxyTracing
@@ -5499,7 +5633,7 @@ _Appears in:_
 _Underlying type:_ _string_
 
 RateLimitUnit specifies the intervals for setting rate limits.
-Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
+Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Week", "Month" and "Year".
 
 _Appears in:_
 - [RateLimitValue](#ratelimitvalue)
@@ -5510,6 +5644,7 @@ _Appears in:_
 | `Minute` | RateLimitUnitMinute specifies the rate limit interval to be 1 minute.<br /> | 
 | `Hour` | RateLimitUnitHour specifies the rate limit interval to be 1 hour.<br /> | 
 | `Day` | RateLimitUnitDay specifies the rate limit interval to be 1 day.<br /> | 
+| `Week` | RateLimitUnitWeek specifies the rate limit interval to be 1 week.<br /> | 
 | `Month` | RateLimitUnitMonth specifies the rate limit interval to be 1 month.<br /> | 
 | `Year` | RateLimitUnitYear specifies the rate limit interval to be 1 year.<br /> | 
 
@@ -5739,6 +5874,21 @@ _Appears in:_
 | `response` | _[CustomResponse](#customresponse)_ |  true  |  | Response configuration. |
 | `redirect` | _[CustomRedirect](#customredirect)_ |  true  |  | Redirect configuration |
 | `source` | _[ResponseOverrideSource](#responseoverridesource)_ |  false  |  | Source specifies which responses this rule applies to.<br />Local overrides only Envoy-generated responses (e.g. auth failures).<br />Backend overrides only upstream responses.<br />All (default) overrides both. |
+
+
+#### ResponseOverrideHeaderMatch
+
+
+
+ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+
+_Appears in:_
+- [CustomResponseMatch](#customresponsematch)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _[HTTPHeaderName](#httpheadername)_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive.<br />For example, "Foo" and "foo" are considered the same header. |
+| `value` | _[StringMatch](#stringmatch)_ |  true  |  | Value within the HTTP header to match against. |
 
 
 #### ResponseOverrideSource
@@ -5971,6 +6121,7 @@ _Appears in:_
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent SecurityPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `apiKeyAuth` | _[APIKeyAuth](#apikeyauth)_ |  false  |  | APIKeyAuth defines the configuration for the API Key Authentication. |
 | `cors` | _[CORS](#cors)_ |  false  |  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+| `csrf` | _[CSRF](#csrf)_ |  false  |  | CSRF defines the configuration for Cross-Site Request Forgery (CSRF) protection.<br />When enabled, the CSRF filter checks that the Origin header matches the destination<br />or one of the additional allowed origins on mutating requests (POST, PUT, DELETE, PATCH). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  |  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` | _[JWT](#jwt)_ |  false  |  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  |  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
@@ -6207,6 +6358,7 @@ _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)
+- [ResponseOverrideHeaderMatch](#responseoverrideheadermatch)
 - [SubjectAltNames](#subjectaltnames)
 
 | Field | Type | Required | Default | Description |
@@ -6280,6 +6432,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
+| `tlsHandshakeTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation<br />(e.g. the TLS handshake) after a connection is accepted.<br />If this expires before the transport reports connection establishment, the connection is summarily closed. |
+| `connectionInspectionTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ConnectionInspectionTimeout is the maximum time to wait for initial inspection<br />(TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection on the listener socket.<br />If exceeded, the connection is dropped.<br />Default: 15 seconds. |
 
 
 #### TCPKeepalive

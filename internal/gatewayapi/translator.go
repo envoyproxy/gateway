@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"maps"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,6 +62,13 @@ type TranslatorManager interface {
 	FiltersTranslator
 }
 
+// MergeBackendsConfig is the resolved MergeBackends config. A nil *MergeBackendsConfig means
+// disabled; any non-nil value means enabled, mirroring egv1a1.MergeBackendsConfig's own
+// mere-presence-enables convention.
+type MergeBackendsConfig struct {
+	Selector *metav1.LabelSelector
+}
+
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
@@ -88,9 +96,8 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
-	// MergeBackends is true when cluster deduplication is enabled: routes referencing the same
-	// backend reuse a single BackendCluster instead of each getting their own.
-	MergeBackends bool
+	// MergeBackends is the resolved MergeBackends config, set via ResolveMergeBackendsConfig.
+	MergeBackends *MergeBackendsConfig
 
 	// PerResourceSystemCASecret restores the old behavior of emitting one SDS secret per
 	// BackendTLSPolicy or Backend resource using WellKnownCACertificates: System, instead of
@@ -386,7 +393,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
 	extServerPolicies, err := t.ProcessExtensionServerPolicies(
-		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
+		resources.ExtensionServerPolicies, acceptedGateways, routes, resources, xdsIR)
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}

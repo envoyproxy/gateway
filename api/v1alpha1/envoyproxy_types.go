@@ -235,7 +235,15 @@ type EnvoyProxySpec struct {
 // MergeBackendsConfig configures backend cluster deduplication (MergeBackends). Its mere
 // presence on EnvoyProxySpec enables it; a backendRef is only merged into a shared cluster when
 // safe to do so, otherwise it falls back to a dedicated per-route cluster.
-type MergeBackendsConfig struct{}
+type MergeBackendsConfig struct {
+	// Selector restricts cluster deduplication to backends whose target Service, ServiceImport,
+	// or Backend resource matches this label selector. When unset, every otherwise-eligible
+	// backend is merged. Use this to opt individual backends into deduplication gradually
+	// instead of enabling it for every backend at once.
+	//
+	// +optional
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+}
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
 type EnvoyProxyGeoIP struct {
@@ -307,7 +315,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
 type EnvoyFilter string
 
 const (
@@ -322,6 +330,9 @@ const (
 
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
+
+	// EnvoyFilterCSRF defines the Envoy HTTP CSRF filter.
+	EnvoyFilterCSRF EnvoyFilter = "envoy.filters.http.csrf"
 
 	// EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter
 	EnvoyFilterHeaderMutation EnvoyFilter = "envoy.filters.http.header_mutation"
@@ -428,6 +439,10 @@ type ProxyTelemetry struct {
 	// RequestID configures Envoy request ID behavior.
 	// +optional
 	RequestID *RequestIDSettings `json:"requestID,omitempty"`
+
+	// HealthCheckLog defines health check event logging for xRoute-backed clusters.
+	// +optional
+	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty"`
 }
 
 // EnvoyProxyProviderType defines the types of providers supported by Envoy Proxy.
