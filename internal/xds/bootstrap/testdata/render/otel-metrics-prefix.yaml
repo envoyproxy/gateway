@@ -56,7 +56,7 @@ stats_sinks:
       envoy_grpc:
         cluster_name: otel_metric_sink_0
     report_histograms_as_deltas: true
-    prefix: envoy
+    prefix: 'envoy'
 static_resources:
   clusters:
   - name: otel_metric_sink_0

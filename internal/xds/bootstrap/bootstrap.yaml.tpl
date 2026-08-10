@@ -97,7 +97,7 @@ stats_sinks:
     report_histograms_as_deltas: true
     {{- end }}
     {{- if $sink.Prefix }}
-    prefix: {{ $sink.Prefix }}
+    prefix: '{{ $sink.Prefix }}'
     {{- end}}
     {{- if $sink.ResourceAttributes }}
     resource_detectors:
