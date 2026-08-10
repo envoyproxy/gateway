@@ -140,7 +140,7 @@ type subscriptions struct {
 
 // defaultReconcileCoalesceWindow is used when
 // EnvoyGatewayKubernetesConfiguration.ReconcileCoalesceWindow is unset. See coalescingQueue.
-const defaultReconcileCoalesceWindow = 100 * time.Millisecond
+const defaultReconcileCoalesceWindow = 10 * time.Millisecond
 
 // coalescingQueue wraps a workqueue.TypedRateLimitingInterface so that every plain Add() is
 // redirected to AddAfter(item, window). client-go's delaying queue dedupes AddAfter calls for

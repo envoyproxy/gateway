@@ -460,7 +460,7 @@ type EnvoyGatewayKubernetesConfiguration struct {
 	// burst of applied manifests (e.g. `kubectl apply -f` on many files) from producing one
 	// Reconcile, and one full translation cycle, per resource touched.
 	// Setting this to "0s" disables coalescing, so every watch event triggers its own Reconcile.
-	// Default: 100ms
+	// Default: 10ms
 	// +optional
 	ReconcileCoalesceWindow *gwapiv1.Duration `json:"reconcileCoalesceWindow,omitempty"`
 }
