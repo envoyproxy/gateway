@@ -11,11 +11,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-
 	clocktesting "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -29,7 +27,7 @@ func TestReconcileCoalesceWindowFor(t *testing.T) {
 
 	t.Run("configured value is parsed and used", func(t *testing.T) {
 		eg := egv1a1.DefaultEnvoyGateway()
-		eg.Provider.Kubernetes.ReconcileCoalesceWindow = ptr.To(gwapiv1.Duration("250ms"))
+		eg.Provider.Kubernetes.ReconcileCoalesceWindow = new(gwapiv1.Duration("250ms"))
 		d, err := reconcileCoalesceWindowFor(eg)
 		require.NoError(t, err)
 		require.Equal(t, 250*time.Millisecond, d)
@@ -37,7 +35,7 @@ func TestReconcileCoalesceWindowFor(t *testing.T) {
 
 	t.Run("invalid duration is rejected", func(t *testing.T) {
 		eg := egv1a1.DefaultEnvoyGateway()
-		eg.Provider.Kubernetes.ReconcileCoalesceWindow = ptr.To(gwapiv1.Duration("not-a-duration"))
+		eg.Provider.Kubernetes.ReconcileCoalesceWindow = new(gwapiv1.Duration("not-a-duration"))
 		_, err := reconcileCoalesceWindowFor(eg)
 		require.Error(t, err)
 	})
