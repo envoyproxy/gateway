@@ -318,6 +318,8 @@ type StrictValidation struct {
 	// When empty, all filesystem access is denied. Blank or whitespace-only entries are rejected,
 	// as they would otherwise match every path and disable the sandbox. The filesystem root ("/")
 	// is likewise rejected, as it would allow access to the entire filesystem and defeat the sandbox.
+	// Note that a built-in set of sensitive paths is always denied, even if they are added to the
+	// allowed paths here: /etc, /proc, /sys, /certs, /var/run/secrets, and /run/secrets.
 	//
 	// +kubebuilder:validation:MaxItems=64
 	// +kubebuilder:validation:items:MinLength=1

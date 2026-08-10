@@ -17,6 +17,21 @@ __lua_allowed_paths = nil
 __lua_allowed_env_vars = nil
 
 -- ============================================================================
+-- DENYLIST (hardcoded; always denied, even when the allowlist would permit them)
+-- ============================================================================
+
+-- Secret and kernel/process paths that are always denied, even if the allowlist permits them.
+local denied_paths = {
+    "/etc",
+    "/proc",
+    "/sys",
+    "/certs",
+    "/var/run/secrets",
+    -- "/var/run" is a symlink to "/run" on Debian-derived (distroless) images.
+    "/run/secrets",
+}
+
+-- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
 
@@ -81,7 +96,27 @@ local function is_allowed_path(path)
     return false
 end
 
--- validate_path rejects traversal segments unconditionally, then enforces the path allowlist.
+-- is_denied_path returns true when the path equals a denied entry or falls within its subtree.
+-- Uses plain (non-pattern) matching so magic characters in entries are treated literally.
+local function is_denied_path(path)
+    if not path or type(path) ~= "string" then
+        return false
+    end
+
+    local normalized = to_absolute_normalized_path(path)
+
+    for _, denied in ipairs(denied_paths) do
+        local normalized_denied = to_absolute_normalized_path(denied)
+        if normalized == normalized_denied
+            or normalized:find(normalized_denied .. "/", 1, true) == 1 then
+            return true
+        end
+    end
+
+    return false
+end
+
+-- validate_path rejects traversal segments and denied paths unconditionally, then enforces the allowlist.
 local function validate_path(fn_name, path)
     if not path or type(path) ~= "string" then
         return
@@ -89,6 +124,10 @@ local function validate_path(fn_name, path)
 
     if contains_traversal(path) then
         error("path traversals are restricted for security")
+    end
+
+    if is_denied_path(path) then
+        error(fn_name .. " restricted for param " .. path .. " (protected system path)")
     end
 
     if not is_allowed_path(path) then

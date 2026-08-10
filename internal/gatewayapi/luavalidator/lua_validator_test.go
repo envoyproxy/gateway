@@ -404,6 +404,61 @@ func Test_path_allowlist_blank_entry_denied(t *testing.T) {
 	runAllowlistCases(t, proxy, tests)
 }
 
+// Test_path_denylist_overrides_allowlist ensures hardcoded sensitive paths (service-account tokens,
+// credentials, kernel/process state) are always denied, even when the allowlist permits their parent.
+func Test_path_denylist_overrides_allowlist(t *testing.T) {
+	// Allow the parents of every denied path to prove the denylist still wins.
+	proxy := allowlistProxy([]string{"/etc", "/proc", "/sys", "/certs", "/var", "/run", "/tmp"}, nil)
+
+	tests := []struct {
+		name                 string
+		code                 string
+		expectedErrSubstring string
+	}{
+		{
+			name:                 "service account token dir denied",
+			code:                 `function envoy_on_response(h) io.open("/var/run/secrets/kubernetes.io/serviceaccount/token", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "run secrets denied",
+			code:                 `function envoy_on_response(h) io.open("/run/secrets/token", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "proc self environ denied",
+			code:                 `function envoy_on_response(h) io.open("/proc/self/environ", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "sys denied",
+			code:                 `function envoy_on_response(h) io.open("/sys/kernel/notes", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "etc denied",
+			code:                 `function envoy_on_response(h) io.open("/etc/shadow", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "certs denied",
+			code:                 `function envoy_on_response(h) io.open("/certs/tls.key", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "os.remove on denied path",
+			code:                 `function envoy_on_response(h) os.remove("/proc/1/mem") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "non-sensitive path under broad allowlist still allowed",
+			code:                 `function envoy_on_response(h) local f = io.open("/tmp/x", "w") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+	}
+	runAllowlistCases(t, proxy, tests)
+}
+
 // Test_io_denied_by_default ensures that with no allowlist configured, all filesystem access is denied.
 func Test_io_denied_by_default(t *testing.T) {
 	code := `function envoy_on_response(h) io.open("/tmp/x", "w") end`
