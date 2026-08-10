@@ -76,6 +76,8 @@ type ResolvedMetricSink struct {
 	ReportCountersAsDeltas bool `json:"reportCountersAsDeltas,omitempty" yaml:"reportCountersAsDeltas,omitempty"`
 	// ReportHistogramsAsDeltas configures histograms to use delta temporality.
 	ReportHistogramsAsDeltas bool `json:"reportHistogramsAsDeltas,omitempty" yaml:"reportHistogramsAsDeltas,omitempty"`
+	// Prefix is prepended to emitted stat names, the full stat name will be `<prefix>.<stat_name>`.
+	Prefix string `json:"prefix,omitempty" yaml:"prefix,omitempty"`
 }
 
 // InfraMetadata defines metadata for the managed proxy infrastructure.

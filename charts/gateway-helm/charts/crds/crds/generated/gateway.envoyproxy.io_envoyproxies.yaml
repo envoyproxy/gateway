@@ -16727,6 +16727,11 @@ spec:
                                   maximum: 65535
                                   minimum: 0
                                   type: integer
+                                prefix:
+                                  description: |-
+                                    Prefix configures the OpenTelemetry sink to prepend the given prefix to emitted stat names,
+                                    the full stat name will be `<prefix>.<stat_name>`.
+                                  type: string
                                 reportCountersAsDeltas:
                                   description: |-
                                     ReportCountersAsDeltas configures the OpenTelemetry sink to report

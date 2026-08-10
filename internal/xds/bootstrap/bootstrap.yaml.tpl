@@ -94,6 +94,9 @@ stats_sinks:
     {{- if $sink.ReportHistogramsAsDeltas }}
     report_histograms_as_deltas: true
     {{- end }}
+    {{- if $sink.Prefix }}
+    prefix: {{ $sink.Prefix }}
+    {{- end}}
     {{- if $sink.ResourceAttributes }}
     resource_detectors:
     - name: envoy.tracers.opentelemetry.resource_detectors.static_config
