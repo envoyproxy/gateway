@@ -1,0 +1,1 @@
+Added `provider.kubernetes.reconcileCoalesceWindow` to the EnvoyGateway config, which coalesces bursts of Kubernetes watch events for the same Gateway API resources into a single Reconcile call instead of one per event, reducing redundant translation cycles when many resources are applied at once. It defaults to 100ms and can be set to `0s` to disable coalescing.
