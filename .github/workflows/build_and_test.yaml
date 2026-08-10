@@ -186,6 +186,10 @@ jobs:
           ipFamily: ipv4
           profile: watch-namespaces
           gwapiChannel: experimental
+        - version: v1.36.1
+          ipFamily: ipv4
+          profile: merge-backends
+          gwapiChannel: experimental
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -356,7 +360,7 @@ jobs:
     - build
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -392,7 +396,7 @@ jobs:
 
     # build and push image
     - name: Login to DockerHub
-      uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0  # v4.4.0
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}

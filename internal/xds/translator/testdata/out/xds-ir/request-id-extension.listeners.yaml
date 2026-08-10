@@ -30,6 +30,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: disable-request-id-extension-listener
         requestIdExtension:
@@ -68,6 +69,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: sample-request-id-extension-listener
         requestIdExtension:
@@ -106,6 +108,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: pack-request-id-extension-listener
         requestIdExtension:
@@ -144,6 +147,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: pack-and-sample-request-id-extension-listener
         serverHeaderTransformation: PASS_THROUGH

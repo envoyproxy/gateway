@@ -19,6 +19,7 @@ import (
 	"net/mail"
 	"net/netip"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -191,49 +192,56 @@ func (t *Translator) ProcessSecurityPolicies(
 			}
 		}
 	}
-	// Process the policies targeting ListenerSets Listeners
-	for i, currPolicy := range securityPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
-		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
-		for _, currTarget := range targetRefs {
-			if isListenerSetListener(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = securityPolicies[i]
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
-				}
 
-				t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+	// Only run the ListenerSet-specific translation when at least one ListenerSet exists.
+	// When none are present, no policy can successfully attach to a ListenerSet (the target resolves to
+	// nil and processing returns early), so these loops would be pure overhead.
+	if len(resources.ListenerSets) > 0 {
+		// Process the policies targeting ListenerSets Listeners
+		for i, currPolicy := range securityPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+			targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+			for _, currTarget := range targetRefs {
+				if isListenerSetListener(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = securityPolicies[i]
+						handledPolicies[policyName] = policy
+						res = append(res, policy)
+					}
+
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+				}
+			}
+		}
+		// Process the policies targeting ListenerSets
+		for i, currPolicy := range securityPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			targetRefs := resolvePolicyTargets(
+				currPolicy.Spec.PolicyTargetReferences,
+				resources.ListenerSets,
+				resources.ReferenceGrants,
+				egv1a1.GroupName,
+				egv1a1.KindSecurityPolicy,
+				currPolicy.Namespace,
+				t.GetNamespace,
+			)
+			for _, currTarget := range targetRefs {
+				if isListenerSet(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = securityPolicies[i]
+						handledPolicies[policyName] = policy
+						res = append(res, policy)
+					}
+
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+				}
 			}
 		}
 	}
-	// Process the policies targeting ListenerSets
-	for i, currPolicy := range securityPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := resolvePolicyTargets(
-			currPolicy.Spec.PolicyTargetReferences,
-			resources.ListenerSets,
-			resources.ReferenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindSecurityPolicy,
-			currPolicy.Namespace,
-			t.GetNamespace,
-		)
-		for _, currTarget := range targetRefs {
-			if isListenerSet(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = securityPolicies[i]
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
-				}
 
-				t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
-			}
-		}
-	}
 	// Process the policies targeting Gateway Listeners
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
@@ -427,7 +435,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
 	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
 	routeNN := utils.NamespacedName(targetedRoute)
-	routeAsChildScope := routeScope(routeNN)
+	routeAsChildScope := routeScope(routeNN, string(targetedRoute.GetRouteType()))
 	for _, p := range parentRefs {
 		parentNamespace := targetedRoute.GetNamespace()
 		if p.Namespace != nil {
@@ -925,6 +933,30 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		if !hasValidJwtExtractor {
 			return errors.New("the OIDC.PassThroughAuthHeader setting must be used in conjunction with a JWT provider that is configured to read from a header")
 		}
+
+		// Envoy rejects (NACKs) an OAuth2 config whose pass_through_matcher keys on the
+		// forward_id_token header. EG builds the pass_through_matcher from
+		// the JWT providers' extractFrom headers (defaulting to "Authorization"), so
+		// reject the equivalent collision here to surface a clear policy error instead
+		// of a listener NACK.
+		if oidc.ForwardIDToken != nil {
+			fwdHeader := oidc.ForwardIDToken.Header
+			for _, provider := range jwt.Providers {
+				// When ExtractFrom is not specified, JWT (and the pass-through matcher)
+				// falls back to the "Authorization" header.
+				if provider.ExtractFrom == nil {
+					if strings.EqualFold(fwdHeader, "Authorization") {
+						return fmt.Errorf("the OIDC.ForwardIDToken header %q cannot be the Authorization header when passThroughAuthHeader is enabled and a JWT provider reads from it", fwdHeader)
+					}
+					continue
+				}
+				for _, h := range provider.ExtractFrom.Headers {
+					if strings.EqualFold(fwdHeader, h.Name) {
+						return fmt.Errorf("the OIDC.ForwardIDToken header %q cannot be the same as a JWT provider extractFrom header when passThroughAuthHeader is enabled", fwdHeader)
+					}
+				}
+			}
+		}
 	}
 
 	basicAuth := p.Spec.BasicAuth
@@ -944,7 +976,7 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // - Empty/no Authorization is allowed and results in no-op on TCP.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
-	if p.Spec.CORS != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
+	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
 		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
@@ -1217,6 +1249,11 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
+	var csrf *ir.CSRF
+	if policy.Spec.CSRF != nil {
+		csrf = t.buildCSRF(policy.Spec.CSRF)
+	}
+
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(
 			policy,
@@ -1330,6 +1367,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		// Pre-create security features to avoid repeated allocations
 		securityFeatures := &ir.SecurityFeatures{
 			CORS:          cors,
+			CSRF:          csrf,
 			JWT:           jwt,
 			OIDC:          oidc,
 			APIKeyAuth:    apiKeyAuth,
@@ -1442,54 +1480,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	return errs
 }
 
-func gatewaySecurityPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if target.SectionName != nil {
-			if listener.isFromListenerSet() || listener.Name != *target.SectionName {
-				continue
-			}
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
-func gatewayDirectListeners(gtwCtx *GatewayContext) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if listener.isFromListenerSet() {
-			continue
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
-func listenerSetSecurityPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	listenerSet *gwapiv1.ListenerSet,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if !listener.isFromListenerSet() {
-			continue
-		}
-		if listener.listenerSet.Namespace != listenerSet.Namespace || listener.listenerSet.Name != listenerSet.Name {
-			continue
-		}
-		if target.SectionName != nil && listener.Name != *target.SectionName {
-			continue
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
 func (t *Translator) translateSecurityPolicyForListenerSet(
 	policy *egv1a1.SecurityPolicy,
 	gtwCtx *GatewayContext,
@@ -1503,7 +1493,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 		gtwCtx,
 		resources,
 		xdsIR,
-		listenerSetSecurityPolicyTargetListeners(gtwCtx, listenerSet, target),
+		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
 	)
 }
 
@@ -1519,7 +1509,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		gtwCtx,
 		resources,
 		xdsIR,
-		gatewaySecurityPolicyTargetListeners(gtwCtx, target),
+		gatewayPolicyTargetListeners(gtwCtx, target),
 	)
 }
 
@@ -1546,6 +1536,11 @@ func (t *Translator) translateSecurityPolicyForListeners(
 
 	if policy.Spec.CORS != nil {
 		cors = t.buildCORS(policy.Spec.CORS)
+	}
+
+	var csrf *ir.CSRF
+	if policy.Spec.CSRF != nil {
+		csrf = t.buildCSRF(policy.Spec.CSRF)
 	}
 
 	if policy.Spec.JWT != nil {
@@ -1632,6 +1627,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	// Pre-create security features and error response to avoid repeated allocations
 	securityFeatures := &ir.SecurityFeatures{
 		CORS:          cors,
+		CSRF:          csrf,
 		JWT:           jwt,
 		OIDC:          oidc,
 		APIKeyAuth:    apiKeyAuth,
@@ -1763,13 +1759,51 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	return irCORS
 }
 
+func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
+	var additionalOrigins []*ir.StringMatch
+
+	for _, origin := range csrf.AdditionalOrigins {
+		// Envoy's CSRF filter matches the host and port of the Origin header against the
+		// target host, so the scheme is dropped before the matcher is built.
+		hostAndPort := originHostAndPort(string(origin))
+		if containsWildcard(hostAndPort) {
+			regexStr := wildcard2regex(hostAndPort)
+			additionalOrigins = append(additionalOrigins, &ir.StringMatch{
+				SafeRegex: &regexStr,
+			})
+		} else {
+			additionalOrigins = append(additionalOrigins, &ir.StringMatch{
+				Exact: &hostAndPort,
+			})
+		}
+	}
+
+	return &ir.CSRF{
+		ShadowFraction:    csrf.ShadowFraction,
+		AdditionalOrigins: additionalOrigins,
+	}
+}
+
+// originHostAndPort strips the scheme from an Origin, leaving its host and optional port.
+// A bare "*" carries no scheme and is returned as is.
+func originHostAndPort(origin string) string {
+	if _, hostAndPort, found := strings.Cut(origin, "://"); found {
+		return hostAndPort
+	}
+	return origin
+}
+
 func containsWildcard(s string) bool {
 	return strings.ContainsAny(s, "*")
 }
 
 func wildcard2regex(wildcard string) string {
-	regexStr := strings.ReplaceAll(wildcard, ".", "\\.")
-	regexStr = strings.ReplaceAll(regexStr, "*", ".*")
+	// Escape every regex metacharacter so that characters that are valid in an
+	// origin but special in a regex (e.g. '.', and '+' which is allowed in
+	// RFC 3986 schemes such as "git+ssh") are matched literally. QuoteMeta
+	// escapes '*' as "\*", so translate those back into the ".*" wildcard.
+	regexStr := regexp.QuoteMeta(wildcard)
+	regexStr = strings.ReplaceAll(regexStr, `\*`, ".*")
 	return regexStr
 }
 
@@ -2016,6 +2050,7 @@ func (t *Translator) buildOIDC(
 		redirectPath           = defaultRedirectPath
 		logoutPath             = defaultLogoutPath
 		forwardAccessToken     = defaultForwardAccessToken
+		forwardIDTokenHeader   *string
 		refreshToken           = defaultRefreshToken
 		passThroughAuthHeader  = defaultPassThroughAuthHeader
 		disableTokenEncryption = false
@@ -2085,6 +2120,9 @@ func (t *Translator) buildOIDC(
 	if oidc.ForwardAccessToken != nil {
 		forwardAccessToken = *oidc.ForwardAccessToken
 	}
+	if oidc.ForwardIDToken != nil {
+		forwardIDTokenHeader = &oidc.ForwardIDToken.Header
+	}
 	if oidc.RefreshToken != nil {
 		refreshToken = *oidc.RefreshToken
 	}
@@ -2128,6 +2166,7 @@ func (t *Translator) buildOIDC(
 		RedirectPath:           redirectPath,
 		LogoutPath:             logoutPath,
 		ForwardAccessToken:     forwardAccessToken,
+		ForwardIDTokenHeader:   forwardIDTokenHeader,
 		RefreshToken:           refreshToken,
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
@@ -3057,17 +3096,6 @@ type securityPolicyOwners struct {
 	jwtProviders             *egv1a1.SecurityPolicy
 }
 
-// policyOwnerOr returns owner if non-nil, otherwise fallback.
-// Used to resolve per-field owners from securityPolicyOwners: the owner is the policy
-// that contributed the field (route overrides parent), falling back to the active policy
-// when no merge occurred or the field was not set by either side.
-func policyOwnerOr(owner, fallback *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if owner != nil {
-		return owner
-	}
-	return fallback
-}
-
 // mergeSecurityPolicy merges a route-level SecurityPolicy with a parent (Gateway/Listener) SecurityPolicy.
 func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, *securityPolicyOwners, error) {
 	if routePolicy.Spec.MergeType == nil || parentPolicy == nil {
@@ -3078,18 +3106,6 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 		return nil, nil, err
 	}
 	return mergedPolicy, buildSecurityPolicyOwners(routePolicy, parentPolicy), nil
-}
-
-// ownerOf returns route if routeOwns(route) is true, otherwise parent.
-// Use this when ownership of a merged field is determined by a single predicate.
-func ownerOf(
-	route, parent *egv1a1.SecurityPolicy,
-	routeOwns func(*egv1a1.SecurityPolicy) bool,
-) *egv1a1.SecurityPolicy {
-	if routeOwns(route) {
-		return route
-	}
-	return parent
 }
 
 // buildSecurityPolicyOwners determines, for each merged field, which policy

@@ -24,6 +24,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: weighted-protocol-listener
         serverHeaderTransformation: PASS_THROUGH

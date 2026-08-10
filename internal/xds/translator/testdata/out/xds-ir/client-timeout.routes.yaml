@@ -12,3 +12,14 @@
         cluster: first-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+  - domains:
+    - '*'
+    name: third-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: third-route
+      route:
+        cluster: third-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
