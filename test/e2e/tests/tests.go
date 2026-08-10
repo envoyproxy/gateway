@@ -14,4 +14,5 @@ var (
 	UpgradeTests       []suite.ConformanceTest
 	MergeGatewaysTests []suite.ConformanceTest
 	MultipleGCTests    map[string][]suite.ConformanceTest
+	RemoteInfraTests   []suite.ConformanceTest
 )

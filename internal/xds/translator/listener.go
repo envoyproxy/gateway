@@ -214,6 +214,7 @@ func (t *Translator) buildXdsTCPListener(
 	listenerDetails *ir.CoreListenerDetails,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
+	timeout *ir.ClientTimeout,
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
 	socketOptions := buildTCPSocketOptions(keepalive)
@@ -247,6 +248,10 @@ func (t *Translator) buildXdsTCPListener(
 	if listenerDetails.IPFamily != nil && *listenerDetails.IPFamily == egv1a1.DualStack {
 		socketAddress := listener.Address.GetSocketAddress()
 		socketAddress.Ipv4Compat = true
+	}
+
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.ConnectionInspectionTimeout != nil {
+		listener.ListenerFiltersTimeout = durationpb.New(timeout.TCP.ConnectionInspectionTimeout.Duration)
 	}
 
 	return listener, nil
@@ -440,6 +445,10 @@ func (t *Translator) addHCMToXDSListener(
 			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
 		}
 
+		if irListener.Timeout.HTTP.RequestHeadersReceivedTimeout != nil {
+			mgr.RequestHeadersTimeout = durationpb.New(irListener.Timeout.HTTP.RequestHeadersReceivedTimeout.Duration)
+		}
+
 		if irListener.Timeout.HTTP.IdleTimeout != nil {
 			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(irListener.Timeout.HTTP.IdleTimeout.Duration)
 		}
@@ -506,6 +515,10 @@ func (t *Translator) addHCMToXDSListener(
 	filterChain := &listenerv3.FilterChain{
 		Name:    httpsListenerFilterChainName(irListener),
 		Filters: filters,
+	}
+
+	if irListener.Timeout != nil && irListener.Timeout.TCP != nil && irListener.Timeout.TCP.TLSHandshakeTimeout != nil {
+		filterChain.TransportSocketConnectTimeout = durationpb.New(irListener.Timeout.TCP.TLSHandshakeTimeout.Duration)
 	}
 
 	if irListener.TLS != nil {
@@ -719,6 +732,14 @@ func (t *Translator) addXdsTCPFilterChain(
 		return err
 	}
 
+	// The SNI dynamic forward proxy relies on the SNI extracted by the tls_inspector listener
+	// filter, so ensure it is present even when no explicit SNI hostnames are configured for matching.
+	if isSNIDynamicForwardProxyRoute(irRoute) {
+		if err := addXdsTLSInspectorFilter(xdsListener, nil); err != nil {
+			return err
+		}
+	}
+
 	if isTLSTerminate {
 		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)
 		if err != nil {
@@ -763,6 +784,22 @@ func buildTCPFilterChain(
 		}
 	}
 
+	// SNI based dynamic forward proxy: deny loopback SNIs, then resolve the upstream host from the
+	// SNI extracted by the tls_inspector listener filter. Both filters run before the tcp_proxy.
+	if isSNIDynamicForwardProxyRoute(irRoute) {
+		loopbackRBAC, err := buildDFPLoopbackNetworkRBAC(statPrefix)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, loopbackRBAC)
+
+		sniDFP, err := buildSNIDynamicForwardProxyFilter(irRoute)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, sniDFP)
+	}
+
 	// TCP proxy last
 	mgr := &tcpv3.TcpProxy{
 		AccessLog:  al,
@@ -781,10 +818,16 @@ func buildTCPFilterChain(
 		return nil, err
 	}
 
-	return &listenerv3.FilterChain{
+	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
 		Name:    tlsListenerFilterChainName(irRoute),
-	}, nil
+	}
+
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.TLSHandshakeTimeout != nil {
+		filterChain.TransportSocketConnectTimeout = durationpb.New(timeout.TCP.TLSHandshakeTimeout.Duration)
+	}
+
+	return filterChain, nil
 }
 
 func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnection) *connection_limitv3.ConnectionLimit {
@@ -853,7 +896,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 		}
 		if cert.SDS != nil {
 			// Use external SDS server instead of ADS
-			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			clusterName := sdsClusterNameFromURL(cert.SDS.GetURL())
 			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
 		}
 		tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
@@ -896,7 +939,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 		}
 		if cert.SDS != nil {
 			// Use external SDS server instead of ADS
-			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			clusterName := sdsClusterNameFromURL(cert.SDS.GetURL())
 			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
 		}
 		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
@@ -980,7 +1023,7 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 
 	if tlsConfig.CACertificate.SDS != nil {
 		// Use external SDS server instead of ADS
-		clusterName := sdsClusterNameFromURL(tlsConfig.CACertificate.SDS.URL)
+		clusterName := sdsClusterNameFromURL(tlsConfig.CACertificate.SDS.GetURL())
 		sdsConfig = sdsSecretConfig(tlsConfig.CACertificate.SDS.SecretName, clusterName)
 	}
 
@@ -1200,6 +1243,7 @@ func makeConfigSource() *corev3.ConfigSource {
 	source.ConfigSourceSpecifier = &corev3.ConfigSource_Ads{
 		Ads: &corev3.AggregatedConfigSource{},
 	}
+	source.InitialFetchTimeout = durationpb.New(0)
 	return source
 }
 

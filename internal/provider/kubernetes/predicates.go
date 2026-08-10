@@ -562,26 +562,30 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 		return true
 	}
 
-	grpcRouteList := &gwapiv1.GRPCRouteList{}
-	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated GRPCRoutes")
-		return false
-	}
-	if len(grpcRouteList.Items) > 0 {
-		return true
+	if r.grpcRouteCRDExists {
+		grpcRouteList := &gwapiv1.GRPCRouteList{}
+		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated GRPCRoutes")
+			return false
+		}
+		if len(grpcRouteList.Items) > 0 {
+			return true
+		}
 	}
 
-	tlsRouteList := &gwapiv1.TLSRouteList{}
-	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated TLSRoutes")
-		return false
-	}
-	if len(tlsRouteList.Items) > 0 {
-		return true
+	if r.tlsRouteCRDExists {
+		tlsRouteList := &gwapiv1.TLSRouteList{}
+		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated TLSRoutes")
+			return false
+		}
+		if len(tlsRouteList.Items) > 0 {
+			return true
+		}
 	}
 
 	if r.tcpRouteCRDExists {
@@ -663,6 +667,11 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	if r.isProxyServiceCluster(ep.GetLabels()) {
 		return true
 	}
+
+	if r.isNodePortLocalEnvoyService(obj.GetNamespace(), svcName, ep.GetLabels()) {
+		return true
+	}
+
 	return false
 }
 
@@ -1007,6 +1016,10 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 		return true
 	}
 
+	if !r.grpcRouteCRDExists {
+		return false
+	}
+
 	grpcRouteList := &gwapiv1.GRPCRouteList{}
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(httpRouteFilterGRPCRouteIndex, nsName.String()),
@@ -1016,6 +1029,20 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 	}
 
 	return len(grpcRouteList.Items) != 0
+}
+
+// isNodePortLocalEnvoyService returns true if the named service is a NodePort
+// service with externalTrafficPolicy: Local that is owned by an Envoy gateway
+func (r *gatewayAPIReconciler) isNodePortLocalEnvoyService(namespace, name string, epLabels map[string]string) bool {
+	if r.findOwningGateway(context.Background(), epLabels) == nil {
+		return false
+	}
+	svc := &corev1.Service{}
+	if err := r.client.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: name}, svc); err != nil {
+		return false
+	}
+	return svc.Spec.Type == corev1.ServiceTypeNodePort &&
+		svc.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal
 }
 
 // isProxyServiceCluster returns true if the provided labels reference an owning Gateway or GatewayClass

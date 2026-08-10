@@ -185,6 +185,26 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			ExpectedCertsCount: 1,
 		},
 		{
+			Name:               "valid-rsa-duplicate-san-domain",
+			CertFiles:          []string{"rsa-cert-dup-san.pem"},
+			KeyFiles:           []string{"rsa-pkcs8-dup-san.key"},
+			ExpectedErrMsg:     "",
+			ExpectedErrReason:  "",
+			ExpectedValidCount: 1,
+			ExpectedCertsCount: 1,
+		},
+		{
+			// Two distinct secrets legitimately claiming the same domain with the
+			// same public key algorithm must still be rejected.
+			Name:               "conflicting-rsa-algorithm-same-domain-different-secrets",
+			CertFiles:          []string{"rsa-cert.pem", "rsa-cert.pem"},
+			KeyFiles:           []string{"rsa-pkcs1.key", "rsa-pkcs1.key"},
+			ExpectedErrMsg:     "test/secret public key algorithm must be unique, certificate domain foo.bar.com has a conflicting algorithm [RSA]",
+			ExpectedErrReason:  status.ListenerReasonPartiallyInvalidCertificateRef,
+			ExpectedValidCount: 1,
+			ExpectedCertsCount: 1,
+		},
+		{
 			Name:               "valid-ecdsa-p256",
 			CertFiles:          []string{"ecdsa-p256-cert.pem"},
 			KeyFiles:           []string{"ecdsa-p256.key"},
@@ -330,6 +350,37 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateTLSSecretsDataWithECParameters(t *testing.T) {
+	const ecParametersPEM = "-----BEGIN EC PARAMETERS-----\nBggqhkjOPQMBBw==\n-----END EC PARAMETERS-----\n"
+
+	t.Run("ec-parameters-before-private-key", func(t *testing.T) {
+		secrets := createTestSecrets(t, []string{"ecdsa-p256-cert.pem"}, []string{"ecdsa-p256.key"})
+		keyData := append([]byte(nil), secrets[0].Data[corev1.TLSPrivateKeyKey]...)
+		secrets[0].Data[corev1.TLSPrivateKeyKey] = append([]byte(ecParametersPEM), keyData...)
+
+		validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
+		require.NoError(t, err)
+		require.Len(t, validSecrets, 1)
+		require.Len(t, certs, 1)
+
+		keyBlock, _ := pem.Decode(keyData)
+		require.NotNil(t, keyBlock)
+		require.Equal(t, pem.EncodeToMemory(keyBlock), validSecrets[0].Data[corev1.TLSPrivateKeyKey])
+	})
+
+	t.Run("ec-parameters-without-private-key", func(t *testing.T) {
+		secrets := createTestSecrets(t, []string{"ecdsa-p256-cert.pem"}, []string{"ecdsa-p256.key"})
+		secrets[0].Data[corev1.TLSPrivateKeyKey] = []byte(ecParametersPEM)
+
+		validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
+		require.Error(t, err)
+		require.Equal(t, "test/secret must contain valid tls.crt and tls.key, EC PARAMETERS key format found in tls.key, supported formats are PKCS1, PKCS8 or EC", err.Error())
+		require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, err.Reason())
+		require.Empty(t, validSecrets)
+		require.Empty(t, certs)
+	})
 }
 
 func TestFilterValidCertificates(t *testing.T) {
@@ -694,4 +745,52 @@ func TestParseCertsExpiredLeafChainRejected(t *testing.T) {
 	require.Error(t, listenerErr)
 	require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, listenerErr.Reason())
 	require.Contains(t, listenerErr.Error(), "has expired")
+}
+
+func TestValidateTerminateModeDeduplicatesSDSCertificateRefs(t *testing.T) {
+	sdsSecretOne := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "sds-one", Namespace: secretNamespace},
+		Type:       egv1a1.SDSSecretType,
+		Data: map[string][]byte{
+			"secretName": []byte("listener-one"),
+			"url":        []byte("unix:///var/run/sds/one.sock"),
+		},
+	}
+	sdsSecretTwo := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "sds-two", Namespace: secretNamespace},
+		Type:       egv1a1.SDSSecretType,
+		Data: map[string][]byte{
+			"secretName": []byte("listener-two"),
+			"url":        []byte("unix:///var/run/sds/two.sock"),
+		},
+	}
+
+	gateway := &GatewayContext{Gateway: &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: secretNamespace},
+		Spec: gwapiv1.GatewaySpec{Listeners: []gwapiv1.Listener{{
+			Name: "https",
+			TLS: &gwapiv1.ListenerTLSConfig{CertificateRefs: []gwapiv1.SecretObjectReference{
+				{Name: "sds-one"},
+				{Name: "sds-one"},
+				{Name: "sds-two"},
+				{Name: "sds-one"},
+			}},
+		}}},
+	}}
+	gateway.ResetListeners()
+
+	translator := &Translator{
+		TranslatorContext:   &TranslatorContext{},
+		SDSSecretRefEnabled: true,
+	}
+	translator.SetSecrets([]*corev1.Secret{sdsSecretOne, sdsSecretTwo})
+
+	resolvedSecrets, certs, ok := translator.validateTerminateModeAndGetTLSSecrets(
+		gateway.listeners[0],
+		&resource.Resources{},
+	)
+
+	require.True(t, ok)
+	require.Empty(t, certs)
+	require.Equal(t, []*corev1.Secret{sdsSecretOne, sdsSecretTwo}, resolvedSecrets)
 }

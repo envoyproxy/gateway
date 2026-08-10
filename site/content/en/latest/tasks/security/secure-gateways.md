@@ -16,6 +16,7 @@ This task uses a self-signed CA, so it should be used for testing and demonstrat
 ## TLS Certificates
 
 Generate the certificates and keys used by the Gateway to terminate client TLS connections.
+For certificates delivered by an external SDS server, see [SDS Certificate References][].
 
 Create a root certificate and private key to sign certificates:
 
@@ -779,3 +780,4 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/
 [ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
+[SDS Certificate References]: ../tls-termination/#sds-certificate-references

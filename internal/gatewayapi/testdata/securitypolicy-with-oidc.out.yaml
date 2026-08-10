@@ -187,6 +187,8 @@ securityPolicies:
       defaultTokenTTL: 1h
       disableTokenEncryption: true
       forwardAccessToken: true
+      forwardIDToken:
+        header: X-Id-Token
       logoutPath: /foo/logout
       provider:
         authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
@@ -399,6 +401,7 @@ xdsIR:
             defaultTokenTTL: 1h0m0s
             disableTokenEncryption: true
             forwardAccessToken: true
+            forwardIDTokenHeader: X-Id-Token
             hmacSecret: '[redacted]'
             logoutPath: /foo/logout
             name: securitypolicy/default/policy-for-http-route

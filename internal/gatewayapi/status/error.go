@@ -38,6 +38,7 @@ const (
 // Listener condition reasons for various error scenarios
 const (
 	ListenerReasonPartiallyInvalidCertificateRef gwapiv1.ListenerConditionReason = "PartiallyInvalidCertificateRef"
+	ListenerReasonSDSCertificateOpaque           gwapiv1.ListenerConditionReason = "SDSCertificateOpaque"
 )
 
 // ListenerError is an error interface that represents errors that need to be reflected

@@ -89,6 +89,23 @@ var (
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
 	}
+	danglingBackendClusterRefHTTPRoute = HTTPRoute{
+		Name:     "dangling-ref",
+		Hostname: "example.com",
+		Destination: &RouteDestination{
+			Name:               "dangling-ref-dest",
+			BackendClusterRefs: []*BackendClusterRef{{Name: "does-not-exist"}},
+		},
+	}
+	danglingBackendClusterRefHTTPListener = HTTPListener{
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "dangling-ref",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Hostnames: []string{"example.com"},
+		Routes:    []*HTTPRoute{&danglingBackendClusterRefHTTPRoute},
+	}
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
@@ -587,6 +604,21 @@ func TestValidateXds(t *testing.T) {
 			},
 			want: nil,
 		},
+		{
+			name: "dangling backend cluster ref",
+			input: Xds{
+				HTTP: []*HTTPListener{&danglingBackendClusterRefHTTPListener},
+			},
+			want: []error{ErrBackendClusterRefNotFound},
+		},
+		{
+			name: "backend cluster ref resolves",
+			input: Xds{
+				HTTP:            []*HTTPListener{&danglingBackendClusterRefHTTPListener},
+				BackendClusters: []*BackendCluster{{Name: "does-not-exist", Setting: &DestinationSetting{Name: "does-not-exist"}}},
+			},
+			want: nil,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -598,6 +630,33 @@ func TestValidateXds(t *testing.T) {
 					require.ErrorContains(t, got, w.Error())
 				}
 			}
+		})
+	}
+}
+
+func TestTLSCertificateValidateDistinguishesMissingSDSFields(t *testing.T) {
+	tests := []struct {
+		name string
+		sds  *SDSConfig
+		want error
+	}{
+		{
+			name: "scheme",
+			sds:  &SDSConfig{SecretName: "listener", Address: "/var/run/sds.sock"},
+			want: ErrTLSSDSSchemeEmpty,
+		},
+		{
+			name: "address",
+			sds:  &SDSConfig{SecretName: "listener", Scheme: "unix"},
+			want: ErrTLSSDSAddressEmpty,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := (&TLSCertificate{SDS: test.sds}).Validate()
+
+			require.ErrorIs(t, err, test.want)
 		})
 	}
 }
@@ -709,9 +768,10 @@ func TestValidateTCPListener(t *testing.T) {
 
 func TestValidateTLSListenerConfig(t *testing.T) {
 	tests := []struct {
-		name  string
-		input TLSConfig
-		want  error
+		name    string
+		input   TLSConfig
+		want    error
+		wantErr bool
 	}{
 		{
 			name: "happy",
@@ -722,6 +782,75 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 				}},
 			},
 			want: nil,
+		},
+		{
+			name: "SDS happy",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{
+						SecretName: "default",
+						Scheme:     "unix",
+						Address:    "/var/run/secrets/workload-spiffe-uds/socket",
+					},
+				}},
+			},
+			want: nil,
+		},
+		{
+			name: "SDS with inline certificate and private key",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{
+						SecretName: "default",
+						Scheme:     "unix",
+						Address:    "/var/run/secrets/workload-spiffe-uds/socket",
+					},
+					Certificate: []byte("server-cert"),
+					PrivateKey:  []byte("priv-key"),
+				}},
+			},
+			want: ErrTLSCertificateMultipleSources,
+		},
+		{
+			name: "SDS with inline OCSP staple",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{
+						SecretName: "default",
+						Scheme:     "unix",
+						Address:    "/var/run/secrets/workload-spiffe-uds/socket",
+					},
+					OCSPStaple: []byte("ocsp-staple"),
+				}},
+			},
+			want: ErrTLSCertificateMultipleSources,
+		},
+		{
+			name: "SDS empty",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "SDS missing URL",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{SecretName: "default"},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "SDS missing secret name",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{Scheme: "unix", Address: "/x"},
+				}},
+			},
+			wantErr: true,
 		},
 		{
 			name: "invalid server cert",
@@ -744,6 +873,10 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			if test.wantErr {
+				require.Error(t, (&test.input).Validate())
+				return
+			}
 			if test.want == nil {
 				require.NoError(t, (&test.input).Validate())
 			} else {
@@ -1377,6 +1510,68 @@ func TestValidateRouteDestination(t *testing.T) {
 				},
 			},
 			want: ErrDestinationNameEmpty,
+		},
+		{
+			name: "valid single backend cluster ref",
+			input: RouteDestination{
+				Name: "single-bc",
+				BackendClusterRefs: []*BackendClusterRef{{
+					Name: "bc-1",
+				}},
+			},
+			want: nil,
+		},
+		{
+			name: "valid multiple backend cluster refs",
+			input: RouteDestination{
+				Name: "multi-bc",
+				BackendClusterRefs: []*BackendClusterRef{
+					{Name: "bc-1"},
+					{Name: "bc-2"},
+				},
+			},
+			want: nil,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, (&test.input).Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateBackendCluster(t *testing.T) {
+	tests := []struct {
+		name  string
+		input BackendCluster
+		want  error
+	}{
+		{
+			name: "happy",
+			input: BackendCluster{
+				Name:    "bc-1",
+				Setting: &DestinationSetting{},
+			},
+			want: nil,
+		},
+		{
+			name: "missing name",
+			input: BackendCluster{
+				Setting: &DestinationSetting{},
+			},
+			want: ErrDestinationNameEmpty,
+		},
+		{
+			name: "dynamic resolver is invalid",
+			input: BackendCluster{
+				Name:    "bc-1",
+				Setting: &DestinationSetting{IsDynamicResolver: true},
+			},
+			want: ErrBackendClusterMergedDynamicResolver,
 		},
 	}
 	for _, test := range tests {
