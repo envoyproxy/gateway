@@ -1303,6 +1303,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 				ResourceAttributes:       sink.OpenTelemetry.ResourceAttributes,
 				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
 				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
+				Prefix:                   ptr.Deref(sink.OpenTelemetry.Prefix, ""),
 			})
 		}
 	}
