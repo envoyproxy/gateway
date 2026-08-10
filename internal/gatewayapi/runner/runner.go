@@ -212,7 +212,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
 			parentCtx := update.Value.ParentContext(context.Background())
-			message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
+			parentCtx = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 
 			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
 			defer span.End()
@@ -360,7 +360,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
 							errChan <- err
 						} else {
-							r.InfraIR.Store(key, val)
+							r.InfraIR.Store(key, &message.InfraIRWithContext{
+								Infra:    val,
+								Context:  translateGCCtx,
+								StoredAt: time.Now(),
+							})
 							infraIRCount++
 							// Track IR key for mark and sweep
 							r.keyCache.IR[key] = true

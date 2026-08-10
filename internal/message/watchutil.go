@@ -27,23 +27,31 @@ type Update[K comparable, V any] watchable.Update[K, V]
 // real gap in the trace waterfall between the producer's span and the subscriber's own
 // processing span, rather than being folded into either one's duration.
 //
+// The returned context carries the (already-ended) wait span as its current span, so the
+// caller's next tracer.Start(...) - the actual processing span - becomes ITS CHILD rather than
+// a sibling under the same parent. That makes "waited, then processed" an unambiguous chain in
+// the trace UI instead of two spans a reader has to infer are related - which matters once a
+// parent has several children in flight at once, e.g. multiple XdsIR keys produced by one
+// translation cycle, each independently waited on by multiple subscribers.
+//
 // storedAt is the zero Time for values that were already present in the map when the
 // subscriber first subscribed (e.g. at process startup) rather than having transited the
-// queue; those carry no meaningful wait, so they are skipped.
+// queue; those carry no meaningful wait, so no span is recorded and ctx is returned unchanged.
 //
 // runnerName identifies the subscriber recording the wait (e.g. r.Name()), so waits from
 // different runners draining the same watchable map can be told apart in a trace backend.
-func RecordQueueWait(ctx context.Context, tracer trace.Tracer, runnerName string, storedAt time.Time) {
+func RecordQueueWait(ctx context.Context, tracer trace.Tracer, runnerName string, storedAt time.Time) context.Context {
 	if storedAt.IsZero() {
-		return
+		return ctx
 	}
 	now := time.Now()
-	_, span := tracer.Start(ctx, "WatchableQueue.Wait", trace.WithTimestamp(storedAt))
+	waitCtx, span := tracer.Start(ctx, "WatchableQueue.Wait", trace.WithTimestamp(storedAt))
 	span.SetAttributes(
 		attribute.String("runner.name", runnerName),
-		attribute.Int64("queue.wait_ms", now.Sub(storedAt).Milliseconds()),
+		attribute.String("queue.wait", now.Sub(storedAt).String()),
 	)
 	span.End(trace.WithTimestamp(now))
+	return waitCtx
 }
 
 type Metadata struct {

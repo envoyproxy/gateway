@@ -203,9 +203,70 @@ type XdsIR struct {
 	watchable.Map[string, *XdsIRWithContext]
 }
 
+// InfraIRWithContext wraps ir.Infra with trace context for propagating spans across the
+// InfraIR watchable-map boundary, the same way XdsIRWithContext does for XdsIR.
+type InfraIRWithContext struct {
+	Infra   *ir.Infra
+	Context context.Context
+	// StoredAt is when this value was Store()'d into the watchable map. Subscribers use it to
+	// record how long the value sat buffered in the map's internal queue before being
+	// dequeued; see RecordQueueWait.
+	StoredAt time.Time
+}
+
+// ParentContext returns the trace context stashed on x, or fallback if x is nil or has none.
+func (x *InfraIRWithContext) ParentContext(fallback context.Context) context.Context {
+	if x != nil && x.Context != nil {
+		return x.Context
+	}
+	return fallback
+}
+
+// StoredAtTime returns the time x was stored in the watchable map, or the zero Time if x is nil.
+func (x *InfraIRWithContext) StoredAtTime() time.Time {
+	if x == nil {
+		return time.Time{}
+	}
+	return x.StoredAt
+}
+
+// DeepCopy creates a new InfraIRWithContext.
+// The Context field is preserved (not deep copied) since contexts are meant to be passed around.
+func (x *InfraIRWithContext) DeepCopy() *InfraIRWithContext {
+	if x == nil {
+		return nil
+	}
+	var infraCopy *ir.Infra
+	if x.Infra != nil {
+		infraCopy = x.Infra.DeepCopy()
+	}
+	return &InfraIRWithContext{
+		Infra:    infraCopy,
+		Context:  x.Context,
+		StoredAt: x.StoredAt,
+	}
+}
+
+func (x *InfraIRWithContext) Equal(other *InfraIRWithContext) bool {
+	if x == nil && other == nil {
+		return true
+	}
+	if x == nil || other == nil {
+		return false
+	}
+	if x.Infra == nil && other.Infra == nil {
+		return true
+	}
+	if x.Infra == nil || other.Infra == nil {
+		return false
+	}
+
+	return reflect.DeepEqual(x.Infra, other.Infra)
+}
+
 // InfraIR message
 type InfraIR struct {
-	watchable.Map[string, *ir.Infra]
+	watchable.Map[string, *InfraIRWithContext]
 }
 
 type MessageName string
