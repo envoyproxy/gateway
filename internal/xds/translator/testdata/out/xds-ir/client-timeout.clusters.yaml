@@ -55,6 +55,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: second-route-dest
   ignoreHealthOnHostRemoval: true
