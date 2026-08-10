@@ -8,6 +8,7 @@ package message
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"github.com/telepresenceio/watchable"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -141,6 +142,10 @@ func (e *ExtensionStatuses) Close() {
 type XdsIRWithContext struct {
 	XdsIR   *ir.Xds
 	Context context.Context
+	// StoredAt is when this value was Store()'d into the watchable map. Subscribers use it
+	// to record how long the value sat buffered in the map's internal queue before being
+	// dequeued; see RecordQueueWait.
+	StoredAt time.Time
 }
 
 // ParentContext returns the trace context stashed on x, or fallback if x is nil or has none.
@@ -149,6 +154,14 @@ func (x *XdsIRWithContext) ParentContext(fallback context.Context) context.Conte
 		return x.Context
 	}
 	return fallback
+}
+
+// StoredAtTime returns the time x was stored in the watchable map, or the zero Time if x is nil.
+func (x *XdsIRWithContext) StoredAtTime() time.Time {
+	if x == nil {
+		return time.Time{}
+	}
+	return x.StoredAt
 }
 
 // DeepCopy creates a new ControllerResourcesContext.
@@ -162,8 +175,9 @@ func (x *XdsIRWithContext) DeepCopy() *XdsIRWithContext {
 		xdsIRCopy = x.XdsIR.DeepCopy()
 	}
 	return &XdsIRWithContext{
-		XdsIR:   xdsIRCopy,
-		Context: x.Context,
+		XdsIR:    xdsIRCopy,
+		Context:  x.Context,
+		StoredAt: x.StoredAt,
 	}
 }
 

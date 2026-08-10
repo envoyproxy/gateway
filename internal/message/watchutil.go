@@ -6,17 +6,45 @@
 package message
 
 import (
+	"context"
 	"fmt"
 	"runtime/debug"
 	"time"
 
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
 type Update[K comparable, V any] watchable.Update[K, V]
+
+// RecordQueueWait records, as a short-lived "WatchableQueue.Wait" span, how long a value sat
+// buffered in a watchable map's internal queue between being Store()'d (storedAt) and being
+// dequeued by this subscriber (now). The span is backdated to storedAt so it shows up as a
+// real gap in the trace waterfall between the producer's span and the subscriber's own
+// processing span, rather than being folded into either one's duration.
+//
+// storedAt is the zero Time for values that were already present in the map when the
+// subscriber first subscribed (e.g. at process startup) rather than having transited the
+// queue; those carry no meaningful wait, so they are skipped.
+//
+// runnerName identifies the subscriber recording the wait (e.g. r.Name()), so waits from
+// different runners draining the same watchable map can be told apart in a trace backend.
+func RecordQueueWait(ctx context.Context, tracer trace.Tracer, runnerName string, storedAt time.Time) {
+	if storedAt.IsZero() {
+		return
+	}
+	now := time.Now()
+	_, span := tracer.Start(ctx, "WatchableQueue.Wait", trace.WithTimestamp(storedAt))
+	span.SetAttributes(
+		attribute.String("runner.name", runnerName),
+		attribute.Int64("queue.wait_ms", now.Sub(storedAt).Milliseconds()),
+	)
+	span.End(trace.WithTimestamp(now))
+}
 
 type Metadata struct {
 	Runner  string

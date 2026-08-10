@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
@@ -211,6 +212,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
 			parentCtx := update.Value.ParentContext(context.Background())
+			message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 
 			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
 			defer span.End()
@@ -376,8 +378,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							errChan <- err
 						} else {
 							m := message.XdsIRWithContext{
-								XdsIR:   val,
-								Context: translateGCCtx,
+								XdsIR:    val,
+								Context:  translateGCCtx,
+								StoredAt: time.Now(),
 							}
 							r.XdsIR.Store(key, &m)
 							xdsIRCount++

@@ -275,6 +275,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
 			parentCtx := update.Value.ParentContext(context.Background())
+			message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 
 			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
 			defer span.End()
