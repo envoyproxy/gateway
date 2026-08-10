@@ -2040,7 +2040,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddRequestHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.AddRequestHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
@@ -2053,7 +2053,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.RemoveRequestHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.RemoveRequestHeaders {
 			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
@@ -2063,7 +2063,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddResponseHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.AddResponseHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
@@ -2076,7 +2076,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.RemoveResponseHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.RemoveResponseHeaders {
 			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)

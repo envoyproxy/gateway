@@ -1232,7 +1232,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	var resolvedSinks []ir.ResolvedMetricSink
-	seen := sets.NewString()
+	seen := sets.New[string]()
 
 	for i, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
 		if sink.OpenTelemetry == nil {
