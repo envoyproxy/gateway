@@ -22,11 +22,6 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Merged with policy default/policy-for-gateway
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -74,11 +69,11 @@ backendTrafficPolicies:
         status: "True"
         type: Warning
       - lastTransitionTime: null
-        message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/httproute-1]'
-        reason: Merged
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these routes: [default/httproute-1]'
+        reason: Overridden
         status: "True"
-        type: Merged
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1

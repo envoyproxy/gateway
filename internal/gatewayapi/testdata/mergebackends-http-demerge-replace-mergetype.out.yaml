@@ -24,19 +24,6 @@ backendTrafficPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/btp-gateway
-        reason: Merged
-        status: "True"
-        type: Merged
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -79,11 +66,11 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/http-route-2]'
-        reason: Merged
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these routes: [default/http-route-2]'
+        reason: Overridden
         status: "True"
-        type: Merged
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
