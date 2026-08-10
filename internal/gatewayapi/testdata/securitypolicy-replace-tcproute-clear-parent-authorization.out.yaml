@@ -77,11 +77,6 @@ securityPolicies:
         sectionName: tcp
       conditions:
       - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/policy-for-gateway
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -121,11 +116,11 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'This policy is being merged by other securityPolicies for these
+        message: 'This policy is being overridden by other securityPolicies for these
           routes: [default/tcproute-1]'
-        reason: Merged
+        reason: Overridden
         status: "True"
-        type: Merged
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1

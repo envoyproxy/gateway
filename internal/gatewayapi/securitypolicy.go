@@ -643,6 +643,14 @@ func (t *Translator) processSecurityPolicyForRoute(
 					continue
 				}
 
+				// Replace discards the parent policy rather than combining with it, so
+				// report it the same way an unset MergeType is reported: the route stays
+				// recorded only under overrides, which makes the parent's status say it
+				// is being overridden by this route instead of merged into it.
+				if *policy.Spec.MergeType == egv1a1.Replace {
+					continue
+				}
+
 				// Record the merged route under the parent scope so the parent's
 				// status can list the routes that were merged into it.
 				merged.Add(parentScope, routeAsChildScope)
