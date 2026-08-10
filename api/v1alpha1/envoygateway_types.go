@@ -453,6 +453,16 @@ type EnvoyGatewayKubernetesConfiguration struct {
 	// Default: 10 hours
 	// +optional
 	CacheSyncPeriod *gwapiv1.Duration `json:"cacheSyncPeriod,omitempty"`
+
+	// ReconcileCoalesceWindow bounds how long a Reconcile request sits in the workqueue before a
+	// worker can pick it up. Multiple watch events for the same request within this window
+	// collapse into a single Reconcile call instead of firing once per event, which keeps a
+	// burst of applied manifests (e.g. `kubectl apply -f` on many files) from producing one
+	// Reconcile, and one full translation cycle, per resource touched.
+	// Setting this to "0s" disables coalescing, so every watch event triggers its own Reconcile.
+	// Default: 100ms
+	// +optional
+	ReconcileCoalesceWindow *gwapiv1.Duration `json:"reconcileCoalesceWindow,omitempty"`
 }
 
 // EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider.

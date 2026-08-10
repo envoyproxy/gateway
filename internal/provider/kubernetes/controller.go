@@ -138,6 +138,46 @@ type subscriptions struct {
 	envoyProxyStatuses           <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.EnvoyProxyStatus]
 }
 
+// defaultReconcileCoalesceWindow is used when
+// EnvoyGatewayKubernetesConfiguration.ReconcileCoalesceWindow is unset. See coalescingQueue.
+const defaultReconcileCoalesceWindow = time.Second
+
+// coalescingQueue wraps a workqueue.TypedRateLimitingInterface so that every plain Add() is
+// redirected to AddAfter(item, window). client-go's delaying queue dedupes AddAfter calls for
+// the same item by keeping the earliest requested fire time rather than pushing it out again
+// (see k8s.io/client-go/util/workqueue's delayingType.insert), so repeated Add()s for the same
+// reconcile.Request within the window don't each schedule their own delayed fire - they collapse
+// into the single one already scheduled by the first Add() of the burst. This is what keeps a
+// burst of applied manifests (e.g. `kubectl apply -f` on many files) from producing one
+// Reconcile, one translation cycle, and one watchable-queue trace per resource touched.
+//
+// A window <= 0 disables coalescing: AddAfter falls through to an immediate Add() in that case.
+//
+// AddRateLimited, used for error-driven backoff/retry, is left untouched.
+type coalescingQueue struct {
+	workqueue.TypedRateLimitingInterface[reconcile.Request]
+	window time.Duration
+}
+
+func (q *coalescingQueue) Add(item reconcile.Request) {
+	q.AddAfter(item, q.window)
+}
+
+// reconcileCoalesceWindowFor returns the coalesce window configured via
+// EnvoyGatewayKubernetesConfiguration.ReconcileCoalesceWindow, or defaultReconcileCoalesceWindow
+// if unset.
+func reconcileCoalesceWindowFor(eg *egv1a1.EnvoyGateway) (time.Duration, error) {
+	w := eg.Provider.GetKubernetesConfiguration().ReconcileCoalesceWindow
+	if w == nil {
+		return defaultReconcileCoalesceWindow, nil
+	}
+	d, err := time.ParseDuration(string(*w))
+	if err != nil {
+		return 0, fmt.Errorf("invalid reconcileCoalesceWindow: %w", err)
+	}
+	return d, nil
+}
+
 // newGatewayAPIController
 func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *config.Server, su Updater,
 	resources *message.ProviderResources,
@@ -185,6 +225,12 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
 	}
 
+	reconcileCoalesceWindow, err := reconcileCoalesceWindowFor(cfg.EnvoyGateway)
+	if err != nil {
+		return err
+	}
+
+	r.log.Info("reconcile coalesce window", "duration", reconcileCoalesceWindow)
 	// controller-runtime doesn't allow run controller with same name for more than once
 	// see https://github.com/kubernetes-sigs/controller-runtime/blob/2b941650bce159006c88bd3ca0d132c7bc40e947/pkg/controller/name.go#L29
 	name := fmt.Sprintf("gatewayapi-%d", time.Now().Unix())
@@ -192,10 +238,13 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		Reconciler:         r,
 		SkipNameValidation: skipNameValidation(),
 		NewQueue: func(controllerName string, rateLimiter workqueue.TypedRateLimiter[reconcile.Request]) workqueue.TypedRateLimitingInterface[reconcile.Request] {
-			return workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[reconcile.Request]{
-				Name:            controllerName,
-				MetricsProvider: workqueuemetrics.WorkqueueMetricsProvider{},
-			})
+			return &coalescingQueue{
+				TypedRateLimitingInterface: workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[reconcile.Request]{
+					Name:            controllerName,
+					MetricsProvider: workqueuemetrics.WorkqueueMetricsProvider{},
+				}),
+				window: reconcileCoalesceWindow,
+			}
 		},
 	})
 	if err != nil {
