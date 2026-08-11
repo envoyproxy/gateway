@@ -47147,6 +47147,39 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
+                                      buffer:
+                                        description: |-
+                                          Buffer defines how access log entries are buffered before being flushed to the
+                                          access log service.
+                                        properties:
+                                          flushInterval:
+                                            description: |-
+                                              FlushInterval defines how often buffered access log entries are flushed to the sink.
+                                              Entries are flushed when this interval elapses or when SizeBytes worth of entries have
+                                              been buffered, whichever comes first.
+                                              Must be greater than 0. Defaults to 1s.
+                                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                            type: string
+                                            x-kubernetes-validations:
+                                            - message: flushInterval must be greater
+                                                than 0
+                                              rule: duration(self) > duration('0s')
+                                          sizeBytes:
+                                            allOf:
+                                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                                            anyOf:
+                                            - type: integer
+                                            - type: string
+                                            description: |-
+                                              SizeBytes defines the soft size limit of the access log entry buffer.
+                                              For example, 20Mi, 1Gi, 256Ki etc.
+                                              Note that when the suffix is not provided, the value is interpreted as bytes.
+                                              Envoy carries this as a 32-bit unsigned integer, so values of 4Gi and above are
+                                              rejected when the EnvoyProxy is translated rather than at admission.
+                                              Defaults to 16384 bytes.
+                                            x-kubernetes-int-or-string: true
+                                        type: object
                                       http:
                                         description: HTTP defines additional configuration
                                           specific to HTTP access logs.
@@ -48841,6 +48874,39 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
+                                      buffer:
+                                        description: |-
+                                          Buffer defines how access log entries are buffered before being flushed to the
+                                          OpenTelemetry collector.
+                                        properties:
+                                          flushInterval:
+                                            description: |-
+                                              FlushInterval defines how often buffered access log entries are flushed to the sink.
+                                              Entries are flushed when this interval elapses or when SizeBytes worth of entries have
+                                              been buffered, whichever comes first.
+                                              Must be greater than 0. Defaults to 1s.
+                                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                            type: string
+                                            x-kubernetes-validations:
+                                            - message: flushInterval must be greater
+                                                than 0
+                                              rule: duration(self) > duration('0s')
+                                          sizeBytes:
+                                            allOf:
+                                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                                            anyOf:
+                                            - type: integer
+                                            - type: string
+                                            description: |-
+                                              SizeBytes defines the soft size limit of the access log entry buffer.
+                                              For example, 20Mi, 1Gi, 256Ki etc.
+                                              Note that when the suffix is not provided, the value is interpreted as bytes.
+                                              Envoy carries this as a 32-bit unsigned integer, so values of 4Gi and above are
+                                              rejected when the EnvoyProxy is translated rather than at admission.
+                                              Defaults to 16384 bytes.
+                                            x-kubernetes-int-or-string: true
+                                        type: object
                                       headers:
                                         description: |-
                                           Headers is a list of additional headers to send with OTLP export requests.

@@ -13,6 +13,7 @@ import (
 	"net/netip"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
@@ -767,7 +768,7 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 	xdsIR.AccessLog, err = t.processAccessLog(gwCtx, envoyProxy, resources)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
-			fmt.Sprintf("Invalid access log backendRefs in the referenced EnvoyProxy: %v", err))
+			fmt.Sprintf("Invalid access log configuration in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
@@ -939,6 +940,11 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					setting.Protocol = ir.GRPC
 				}
 
+				buffer, err := buildAccessLogBuffer(sink.ALS.Buffer)
+				if err != nil {
+					return nil, err
+				}
+
 				al := &ir.ALSAccessLog{
 					LogName: logName,
 					Destination: ir.RouteDestination{
@@ -950,6 +956,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					Type:       sink.ALS.Type,
 					CELMatches: validExprs,
 					LogType:    accessLogType,
+					Buffer:     buffer,
 				}
 
 				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP && sink.ALS.HTTP != nil {
@@ -985,6 +992,11 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					d.Protocol = ir.GRPC
 				}
 
+				buffer, err := buildAccessLogBuffer(sink.OpenTelemetry.Buffer)
+				if err != nil {
+					return nil, err
+				}
+
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches:         validExprs,
 					ResourceAttributes: ir.MapToSlice(sink.OpenTelemetry.GetResourceAttributes()),
@@ -997,6 +1009,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					},
 					Traffic: traffic,
 					LogType: accessLogType,
+					Buffer:  buffer,
 				}
 
 				if len(ds) == 0 {
@@ -1024,6 +1037,40 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 		}
 	}
 	return irAccessLog, nil
+}
+
+// buildAccessLogBuffer translates the buffering settings of a gRPC access log sink to the IR.
+// A nil result leaves Envoy's defaults in place.
+func buildAccessLogBuffer(buffer *egv1a1.GRPCAccessLogBufferSettings) (*ir.AccessLogBuffer, error) {
+	if buffer == nil {
+		return nil, nil
+	}
+
+	irBuffer := &ir.AccessLogBuffer{}
+
+	if buffer.FlushInterval != nil {
+		d, err := time.ParseDuration(string(*buffer.FlushInterval))
+		if err != nil {
+			return nil, fmt.Errorf("invalid access log buffer flushInterval value %s", *buffer.FlushInterval)
+		}
+		irBuffer.FlushInterval = ir.MetaV1DurationPtr(d)
+	}
+
+	if buffer.SizeBytes != nil {
+		size, ok := buffer.SizeBytes.AsInt64()
+		if !ok {
+			return nil, fmt.Errorf("invalid access log buffer sizeBytes value %s", buffer.SizeBytes.String())
+		}
+		// The CRD pattern constrains only the string branch of this int-or-string field,
+		// so a bare YAML number reaches here unchecked. Reject zero and negatives to match
+		// what the pattern accepts.
+		if size <= 0 || size > math.MaxUint32 {
+			return nil, fmt.Errorf("access log buffer sizeBytes value %s is out of range", buffer.SizeBytes.String())
+		}
+		irBuffer.SizeBytes = new(uint32(size))
+	}
+
+	return irBuffer, nil
 }
 
 func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy,
