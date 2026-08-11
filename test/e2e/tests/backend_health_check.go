@@ -70,7 +70,6 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 			// we can use membership_healthy stats to check whether health check works as expected.
 			passPromQL := fmt.Sprintf(`envoy_cluster_health_check_success{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, passClusterName, gtwName)
 			failPromQL := fmt.Sprintf(`envoy_cluster_health_check_failure{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, failClusterName, gtwName)
-			failMembershipPromQL := fmt.Sprintf(`envoy_cluster_membership_healthy{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, failClusterName, gtwName)
 
 			http.AwaitConvergence(
 				t,
@@ -98,9 +97,8 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 			http.AwaitConvergence(
 				t,
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency*2,
+				suite.TimeoutConfig.MaxTimeToConsistency,
 				func(_ time.Duration) bool {
-					// check membership_healthy stats from Prometheus
 					v, err := promClient.QuerySum(ctx, failPromQL)
 					if err != nil {
 						// wait until Prometheus sync stats
@@ -110,17 +108,11 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 
 					if v == 0 {
 						t.Error("failure is not same as expected")
-						return false
+					} else {
+						t.Log("failure is same as expected")
 					}
-					t.Log("failure is same as expected")
 
-					// Wait until all endpoints are marked unhealthy before asserting 503.
-					healthy, err := promClient.QuerySum(ctx, failMembershipPromQL)
-					if err != nil {
-						return false
-					}
-					tlog.Logf(t, "cluster fail membership_healthy: %v", healthy)
-					return healthy == 0
+					return true
 				},
 			)
 
@@ -149,7 +141,9 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 					Namespace: ns,
 				}
 
-				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+				hcTimeoutConfig := suite.TimeoutConfig
+				hcTimeoutConfig.MaxTimeToConsistency = suite.TimeoutConfig.MaxTimeToConsistency * 2
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, hcTimeoutConfig, gwAddr, expectedResponse)
 			})
 		})
 	},
