@@ -10,6 +10,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	blog.envoyproxy.io \
 	envoyproxy.io/slack \
 	ntia.gov \
+	nvd.nist.gov \
 	github.com \
 	jwt.io \
 	githubusercontent.com \
