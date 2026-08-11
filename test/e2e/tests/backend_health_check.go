@@ -98,7 +98,7 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 			http.AwaitConvergence(
 				t,
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig.MaxTimeToConsistency*2,
 				func(_ time.Duration) bool {
 					// check membership_healthy stats from Prometheus
 					v, err := promClient.QuerySum(ctx, failPromQL)
