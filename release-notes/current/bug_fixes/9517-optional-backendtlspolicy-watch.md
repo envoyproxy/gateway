@@ -1,0 +1,1 @@
+Fixed Envoy Gateway crash-looping at startup on clusters whose Gateway API CRD bundle omits BackendTLSPolicy, such as OpenShift's Ingress-Operator-managed set, by making that watch conditional on the CRD being present. This completes the standard-channel guards added in #9583.
