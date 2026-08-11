@@ -138,7 +138,11 @@ func (*csrf) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	return nil
 }
 
-func (*csrf) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*csrf) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
+	return nil
+}
+
+func (*csrf) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }
 

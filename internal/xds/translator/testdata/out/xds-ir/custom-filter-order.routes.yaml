@@ -24,12 +24,59 @@
               regex: https://.*\.test\.com:8080
           - exact: https://www.test.org:8080
           forwardNotMatchingPreflights: false
+        envoy.filters.http.filter_chain.eep.listener:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.wasm/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: '{"parameter1":{"key1":"value1","key2":"value2"},"parameter2":"value3"}'
+                  name: wasm-filter-1
+                  vmConfig:
+                    code:
+                      remote:
+                        httpUri:
+                          cluster: wasm_cluster
+                          timeout: 10s
+                          uri: https://envoy-gateway:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
+                        retryPolicy:
+                          numRetries: 10
+                          retryBackOff:
+                            baseInterval: 1s
+                            maxInterval: 30s
+                        sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+                    runtime: envoy.wasm.runtime.v8
+                    vmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/0
+            - name: envoy.filters.http.wasm/1
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: '{"parameter1":"value1","parameter2":"value2"}'
+                  name: wasm-filter-2
+                  vmConfig:
+                    code:
+                      remote:
+                        httpUri:
+                          cluster: wasm_cluster
+                          timeout: 10s
+                          uri: https://envoy-gateway:18002/7abf116e5cd5a20389604a5ba0f3bd04fdf76f92181fe67506b42c2ee596d3fd.wasm
+                        retryPolicy:
+                          numRetries: 10
+                          retryBackOff:
+                            baseInterval: 1s
+                            maxInterval: 30s
+                        sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+                    runtime: envoy.wasm.runtime.v8
+                    vmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/1
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
           requirementName: example1-or-example2_73a070ef6c8ee8ea
-        envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/0:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
-        envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/1:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}

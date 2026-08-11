@@ -7,13 +7,15 @@ package translator
 
 import (
 	"errors"
+	"fmt"
+	"slices"
+	"strconv"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	luafilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -30,8 +32,24 @@ type lua struct{}
 
 var _ httpFilter = &lua{}
 
-// patchHCM builds and appends the lua Filters to the HTTP Connection Manager
-// Lua filters are created in disabled mode.
+// patchHCM adds disabled envoy.filters.http.filter_chain placeholder filters to the HTTP
+// Connection Manager: one shared placeholder for per-listener (per-connection) EnvoyExtensionPolicy
+// extensions and one shared placeholder for per-route extensions. Lua, ExtProc, Wasm, and
+// DynamicModule all deliver their instances through these same two placeholders instead of each
+// type getting its own, so the HCM's filter list never grows or reorders as extensions of any
+// type are added, removed, or renamed.
+//
+// Both placeholders are added together as soon as either scope has a Lua policy anywhere on
+// this listener, even if the other scope currently has none. This keeps the HCM's filter set
+// stable across that kind of policy churn too: e.g. adding a per-listener Lua policy later to
+// a listener that already has per-route Lua only changes route/virtual host
+// TypedPerFilterConfig (an RDS update), never the listener's filter list (which would require
+// an LDS update and a connection drain).
+//
+// Envoy's LuaPerRoute API can only override one script for one filter instance, while EG's
+// EnvoyExtensionPolicy API allows an ordered list of Lua filters per listener/route. The
+// filter_chain filter wraps an ordered, named sub-chain of Lua filters that is supplied
+// separately (per virtual host for listener-scoped Lua, per route for route-scoped Lua).
 func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
@@ -40,76 +58,57 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 		return errors.New("ir listener is nil")
 	}
 
-	var errs error
-	for _, route := range irListener.Routes {
-		if !routeContainsLua(route) {
+	hasListenerLua := irListener.EnvoyExtensions != nil && len(irListener.EnvoyExtensions.Luas) > 0
+	hasRouteLua := slices.ContainsFunc(irListener.Routes, routeContainsLua)
+	if !hasListenerLua && !hasRouteLua {
+		return nil
+	}
+
+	for _, filterName := range []string{eepListenerFCFilterName(), eepFCFilterName()} {
+		if hcmContainsFilter(mgr, filterName) {
 			continue
 		}
-		for _, ep := range route.EnvoyExtensions.Luas {
-			if hcmContainsFilter(mgr, luaFilterName(ep)) {
-				continue
-			}
-			filter, err := buildHCMLuaFilter(ep)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-			mgr.HttpFilters = append(mgr.HttpFilters, filter)
+		filter, err := buildHCMFilterChainFilter(filterName)
+		if err != nil {
+			return err
 		}
+		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	return errs
+	return nil
 }
 
-// buildHCMLuaFilter returns a Lua filter for HCM.
-func buildHCMLuaFilter(lua ir.Lua) (*hcmv3.HttpFilter, error) {
-	var (
-		luaProto *luafilterv3.Lua
-		luaAny   *anypb.Any
-		err      error
-	)
-	luaProto = &luafilterv3.Lua{
-		DefaultSourceCode: &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineString{
-				InlineString: *lua.Code,
-			},
-		},
-	}
-	if err = luaProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-	if luaAny, err = anypb.New(luaProto); err != nil {
-		return nil, err
-	}
-
-	return &hcmv3.HttpFilter{
-		Name:     luaFilterName(lua),
-		Disabled: true,
-		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: luaAny,
-		},
-	}, nil
+// luaFilterName returns the stable top-level filter name for the per-route Lua slot index.
+// The index is the execution slot within the ordered EnvoyExtensionPolicy Lua
+// list, so route 0th scripts always bind to the same listener-level filter.
+func luaFilterName(idx int) string {
+	return perRouteFilterName(egv1a1.EnvoyFilterLua, strconv.Itoa(idx))
 }
 
-func luaFilterName(lua ir.Lua) string {
-	return perRouteFilterName(egv1a1.EnvoyFilterLua, lua.Name)
+// luaListenerFilterName returns the stable HCM-level filter name for a listener-level
+// Lua slot. Using the envoy.filters.http.lua prefix (instead of the raw policy name)
+// ensures sortHTTPFilters assigns it the correct order relative to route-level slots.
+func luaListenerFilterName(idx int) string {
+	return fmt.Sprintf("%s/listener/%d", egv1a1.EnvoyFilterLua, idx)
 }
 
-// routeContainsLua returns true if Luas exists for the provided route.
+// routeContainsLua returns true if the route has any Lua extensions.
 func routeContainsLua(irRoute *ir.HTTPRoute) bool {
 	if irRoute == nil {
 		return false
 	}
-
 	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.Luas) > 0
 }
 
 // patchResources patches the cluster resources for the http lua code source.
-func (*lua) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
+func (*lua) patchResources(_ *types.ResourceVersionTable, _ *ir.HTTPListener, _ []*ir.HTTPRoute) error {
 	return nil
 }
 
-// patchRoute patches the provided route so Lua filters are enabled if applicable.
+// patchRoute patches the provided route with LuaPerRoute so the Lua filter runs with the route's script.
+// Routes with no Lua entries fall back to the listener-level Lua inherited from the virtual host.
+// Only routes with their own Lua entries disable the inherited listener-level Lua and install
+// their own scripts in its place.
 func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
@@ -121,32 +120,131 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 		return nil
 	}
 
-	for _, ep := range irRoute.EnvoyExtensions.Luas {
-		filterName := luaFilterName(ep)
-		routeCfg, err := buildLuaRouteFilterConfig(ep)
+	// A non-nil EnvoyExtensions means a more specific route policy owns this route and fully
+	// replaces the listener-scoped policy. The extension count is intentionally not checked
+	// here: an empty result (e.g. fail-open invalid Wasm) still represents a more specific
+	// policy that owns this route and must suppress the lower-scope Lua.
+	if err := disableFilterOnRouteOnce(route, eepListenerFCFilterName()); err != nil {
+		return err
+	}
+
+	var newFilters []*corev3.TypedExtensionConfig
+	for idx, ep := range irRoute.EnvoyExtensions.Luas {
+		filterName := luaFilterName(idx)
+		luaOnFCFilter := &luafilterv3.Lua{
+			DefaultSourceCode: &corev3.DataSource{
+				Specifier: &corev3.DataSource_InlineString{
+					InlineString: *ep.Code,
+				},
+			},
+		}
+
+		// TODO: support filterContext in Lua filter make this simpler
+		if ep.FilterContext != nil && ep.FilterContext.Raw != nil {
+			luaPerRoute := &luafilterv3.LuaPerRoute{}
+			filterCtx := &structpb.Struct{}
+			if err := protojson.Unmarshal(ep.FilterContext.Raw, filterCtx); err != nil {
+				return err
+			}
+			luaPerRoute.FilterContext = filterCtx
+			luaPerRouteAny, err := anypb.New(luaPerRoute)
+			if err != nil {
+				return err
+			}
+			if route.TypedPerFilterConfig == nil {
+				route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+			}
+			route.TypedPerFilterConfig[filterName] = luaPerRouteAny
+		}
+		luaOnFCFilterAny, err := anypb.New(luaOnFCFilter)
 		if err != nil {
 			return err
 		}
-		if err := enableFilterOnRoute(route, filterName, routeCfg); err != nil {
-			return err
-		}
+		newFilters = append(newFilters, &corev3.TypedExtensionConfig{
+			Name:        filterName,
+			TypedConfig: luaOnFCFilterAny,
+		})
 	}
+
+	if len(newFilters) == 0 {
+		return nil
+	}
+
+	merged, err := mergeFilterChainConfigPerRoute(route.GetTypedPerFilterConfig()[eepFCFilterName()], newFilters)
+	if err != nil {
+		return err
+	}
+	if route.TypedPerFilterConfig == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+	route.TypedPerFilterConfig[eepFCFilterName()] = merged
 	return nil
 }
 
-func buildLuaRouteFilterConfig(lua ir.Lua) (proto.Message, error) {
-	if lua.FilterContext == nil || lua.FilterContext.Raw == nil {
-		return &routev3.FilterConfig{
-			Config: &anypb.Any{},
-		}, nil
+// patchVirtualHost delivers listener-level Lua source at VirtualHost scope so that a listener's
+// Lua policy does not bleed into virtual hosts belonging to a different listener that shares the
+// same RouteConfiguration (cleartext listeners on the same port). Delivery via VirtualHost
+// TypedPerFilterConfig still goes through RDS, so Lua script changes do not trigger listener drains.
+func (*lua) patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error {
+	if httpListener.EnvoyExtensions == nil || len(httpListener.EnvoyExtensions.Luas) == 0 {
+		return nil
 	}
 
-	filterCtx := &structpb.Struct{}
-	if err := protojson.Unmarshal(lua.FilterContext.Raw, filterCtx); err != nil {
-		return nil, err
+	filterName := eepListenerFCFilterName()
+	existing := vh.GetTypedPerFilterConfig()[filterName]
+	alreadyDelivered, err := filterChainAlreadyHasType(existing, egv1a1.EnvoyFilterLua)
+	if err != nil {
+		return err
+	}
+	if alreadyDelivered {
+		// Already delivered for this VirtualHost, e.g. because patchVirtualHost was called
+		// again for a different IR listener sharing the same RouteConfiguration.
+		return nil
 	}
 
-	return &luafilterv3.LuaPerRoute{
-		FilterContext: filterCtx,
-	}, nil
+	if vh.TypedPerFilterConfig == nil {
+		vh.TypedPerFilterConfig = map[string]*anypb.Any{}
+	}
+
+	var newFilters []*corev3.TypedExtensionConfig
+	for i, ep := range httpListener.EnvoyExtensions.Luas {
+		subFilterName := luaListenerFilterName(i)
+		luaOnFCFilter := &luafilterv3.Lua{
+			DefaultSourceCode: &corev3.DataSource{
+				Specifier: &corev3.DataSource_InlineString{
+					InlineString: *ep.Code,
+				},
+			},
+		}
+
+		// TODO: support filterContext in Lua filter make this simpler
+		if ep.FilterContext != nil && ep.FilterContext.Raw != nil {
+			luaPerRoute := &luafilterv3.LuaPerRoute{}
+			filterCtx := &structpb.Struct{}
+			if err := protojson.Unmarshal(ep.FilterContext.Raw, filterCtx); err != nil {
+				return err
+			}
+			luaPerRoute.FilterContext = filterCtx
+			luaPerRouteAny, err := anypb.New(luaPerRoute)
+			if err != nil {
+				return err
+			}
+			vh.TypedPerFilterConfig[subFilterName] = luaPerRouteAny
+		}
+		luaOnFCFilterAny, err := anypb.New(luaOnFCFilter)
+		if err != nil {
+			return err
+		}
+		newFilters = append(newFilters, &corev3.TypedExtensionConfig{
+			Name:        subFilterName,
+			TypedConfig: luaOnFCFilterAny,
+		})
+	}
+
+	merged, err := mergeFilterChainConfigPerRoute(existing, newFilters)
+	if err != nil {
+		return err
+	}
+	vh.TypedPerFilterConfig[filterName] = merged
+	return nil
 }

@@ -13,12 +13,59 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-1/extproc/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
-        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-2/extproc/0:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.ext_proc/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+                allowModeOverride: true
+                failureModeAllow: true
+                grpcService:
+                  envoyGrpc:
+                    authority: grpc-backend-4.default:4000
+                    clusterName: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
+                  timeout: 10s
+                messageTimeout: 5s
+                metadataOptions:
+                  forwardingNamespaces:
+                    untyped:
+                    - envoy.filters.http.ext_authz
+                  receivingNamespaces:
+                    untyped:
+                    - envoy.filters.http.my_custom
+                processingMode:
+                  requestBodyMode: BUFFERED
+                  requestHeaderMode: SEND
+                  requestTrailerMode: SKIP
+                  responseBodyMode: STREAMED
+                  responseHeaderMode: SKIP
+                  responseTrailerMode: SKIP
+                requestAttributes:
+                - xds.route_metadata
+                - connection.requested_server_name
+                responseAttributes:
+                - request.path
+            - name: envoy.filters.http.ext_proc/1
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+                failureModeAllow: true
+                grpcService:
+                  envoyGrpc:
+                    authority: grpc-backend-2.default:8000
+                    clusterName: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
+                  timeout: 10s
+                messageTimeout: 5s
+                processingMode:
+                  requestBodyMode: BUFFERED_PARTIAL
+                  requestHeaderMode: SKIP
+                  requestTrailerMode: SKIP
+                  responseHeaderMode: SEND
+                  responseTrailerMode: SKIP
     - match:
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
@@ -27,9 +74,28 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-route-3/extproc/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.ext_proc/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+                grpcService:
+                  envoyGrpc:
+                    authority: grpc-backend-3.envoy-gateway:3000
+                    clusterName: envoyextensionpolicy/envoy-gateway/policy-for-route-3/0/grpc-backend-3
+                  timeout: 10s
+                processingMode:
+                  requestBodyMode: FULL_DUPLEX_STREAMED
+                  requestHeaderMode: SKIP
+                  requestTrailerMode: SEND
+                  responseBodyMode: FULL_DUPLEX_STREAMED
+                  responseHeaderMode: SKIP
+                  responseTrailerMode: SEND
   - domains:
     - ""
     name: envoy-gateway/gateway-1/http/
@@ -41,9 +107,140 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
-        envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/extproc/0:
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.ext_proc/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+                grpcService:
+                  envoyGrpc:
+                    authority: grpc-backend-3.envoy-gateway:3000
+                    clusterName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
+                  timeout: 10s
+                processingMode:
+                  requestHeaderMode: SKIP
+                  requestTrailerMode: SKIP
+                  responseHeaderMode: SKIP
+                  responseTrailerMode: SKIP
+            - name: envoy.filters.http.ext_proc/1
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+                grpcService:
+                  envoyGrpc:
+                    authority: grpc-backend.envoy-gateway:9000
+                    clusterName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
+                  timeout: 10s
+                messageTimeout: 15s
+                metadataOptions:
+                  forwardingNamespaces:
+                    untyped:
+                    - envoy.filters.http.ext_proc
+                  receivingNamespaces:
+                    untyped:
+                    - envoy.filters.http.prc_ext
+                observabilityMode: true
+                processingMode:
+                  requestHeaderMode: SKIP
+                  requestTrailerMode: SKIP
+                  responseHeaderMode: SKIP
+                  responseTrailerMode: SKIP
+                requestAttributes:
+                - xds.route_metadata
+                - connection.requested_server_name
+                responseAttributes:
+                - request.path
+                statusOnError:
+                  code: ServiceUnavailable
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-listener-scope
+  virtualHosts:
+  - domains:
+    - listener-scope.envoyproxy.io
+    name: envoy-gateway/gateway-1/http-listener-scope/listener-scope_envoyproxy_io
+    routes:
+    - match:
+        pathSeparatedPrefix: /inherit
+      name: httproute/default/httproute-4/rule/0/match/0/listener_scope_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-4/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /override
+      name: httproute/default/httproute-5/rule/0/match/0/listener_scope_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-5/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.filter_chain.eep.listener:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.ext_proc/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+                grpcService:
+                  envoyGrpc:
+                    authority: grpc-backend-5.default:9500
+                    clusterName: envoyextensionpolicy/default/policy-for-route-5/0/grpc-backend-5
+                  timeout: 10s
+                processingMode:
+                  requestHeaderMode: SKIP
+                  requestTrailerMode: SKIP
+                  responseHeaderMode: SKIP
+                  responseTrailerMode: SKIP
+    - match:
+        pathSeparatedPrefix: /same-name
+      name: httproute/default/httproute-6/rule/0/match/0/listener_scope_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-6/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.filter_chain.eep.listener:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          disabled: true
+        envoy.filters.http.filter_chain.eep.route:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+          filterChain:
+            filters:
+            - name: envoy.filters.http.ext_proc/0
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+                grpcService:
+                  envoyGrpc:
+                    authority: grpc-backend-listener.envoy-gateway:9000
+                    clusterName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/0/grpc-backend-listener
+                  timeout: 10s
+                processingMode:
+                  requestHeaderMode: SKIP
+                  requestTrailerMode: SKIP
+                  responseHeaderMode: SKIP
+                  responseTrailerMode: SKIP
+    typedPerFilterConfig:
+      envoy.filters.http.filter_chain.eep.listener:
+        '@type': type.googleapis.com/envoy.extensions.filters.http.filter_chain.v3.FilterChainConfigPerRoute
+        filterChain:
+          filters:
+          - name: envoy.filters.http.ext_proc/listener/0
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+              grpcService:
+                envoyGrpc:
+                  authority: grpc-backend-listener.envoy-gateway:9000
+                  clusterName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/0/grpc-backend-listener
+                timeout: 10s
+              processingMode:
+                requestHeaderMode: SKIP
+                requestTrailerMode: SKIP
+                responseHeaderMode: SKIP
+                responseTrailerMode: SKIP

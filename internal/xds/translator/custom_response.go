@@ -600,7 +600,7 @@ func (c *customResponse) routeContainsResponseOverride(irRoute *ir.HTTPRoute) bo
 	return false
 }
 
-func (c *customResponse) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
+func (c *customResponse) patchResources(_ *types.ResourceVersionTable, _ *ir.HTTPListener, _ []*ir.HTTPRoute) error {
 	return nil
 }
 
@@ -622,5 +622,9 @@ func (c *customResponse) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute,
 	}); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (*customResponse) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

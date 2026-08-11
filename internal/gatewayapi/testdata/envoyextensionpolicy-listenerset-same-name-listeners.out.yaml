@@ -423,6 +423,13 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      envoyExtensions:
+        luas:
+        - code: |
+            function envoy_on_request(request_handle)
+              request_handle:logInfo("gateway-shared")
+            end
+          name: envoyextensionpolicy/envoy-gateway/target-gateway-shared/lua/0
       externalPort: 80
       hostnames:
       - '*'
@@ -456,14 +463,6 @@ xdsIR:
             name: httproute/default/route-on-gateway/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          luas:
-          - Code: |
-              function envoy_on_request(request_handle)
-                request_handle:logInfo("gateway-shared")
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/target-gateway-shared/lua/0
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -476,6 +475,13 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      envoyExtensions:
+        luas:
+        - code: |
+            function envoy_on_request(request_handle)
+              request_handle:logInfo("listenerset-shared")
+            end
+          name: envoyextensionpolicy/envoy-gateway/target-listenerset-shared/lua/0
       externalPort: 8081
       hostnames:
       - '*'
@@ -509,14 +515,6 @@ xdsIR:
             name: httproute/default/route-on-listenerset/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          luas:
-          - Code: |
-              function envoy_on_request(request_handle)
-                request_handle:logInfo("listenerset-shared")
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/target-listenerset-shared/lua/0
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -529,6 +527,13 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      envoyExtensions:
+        luas:
+        - code: |
+            function envoy_on_request(request_handle)
+              request_handle:logInfo("other-listenerset-shared")
+            end
+          name: envoyextensionpolicy/envoy-gateway/target-other-listenerset-shared/lua/0
       externalPort: 8082
       hostnames:
       - '*'
@@ -562,14 +567,6 @@ xdsIR:
             name: httproute/default/route-on-other-listenerset/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          luas:
-          - Code: |
-              function envoy_on_request(request_handle)
-                request_handle:logInfo("other-listenerset-shared")
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/target-other-listenerset-shared/lua/0
         hostname: '*'
         isHTTP2: false
         metadata:

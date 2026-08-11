@@ -100,7 +100,7 @@ func routeContainsFault(irRoute *ir.HTTPRoute) bool {
 	return false
 }
 
-func (*fault) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+func (*fault) patchResources(*types.ResourceVersionTable, *ir.HTTPListener, []*ir.HTTPRoute) error {
 	return nil
 }
 
@@ -172,5 +172,9 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTP
 
 	route.TypedPerFilterConfig[wellknown.Fault] = routeCfgAny
 
+	return nil
+}
+
+func (*fault) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
 	return nil
 }

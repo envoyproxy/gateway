@@ -222,6 +222,9 @@ func buildEnvoyClientTLSSocket(envoyClientCertificate *ir.TLSCertificate) (*core
 
 func containsWasm(httpListeners []*ir.HTTPListener) bool {
 	for _, httpListener := range httpListeners {
+		if httpListener.EnvoyExtensions != nil && len(httpListener.EnvoyExtensions.Wasms) > 0 {
+			return true
+		}
 		for _, route := range httpListener.Routes {
 			if route.EnvoyExtensions != nil &&
 				len(route.EnvoyExtensions.Wasms) > 0 {

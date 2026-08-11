@@ -98,3 +98,99 @@ http:
         hostKeys:
         - SOME_KEY
         - ANOTHER_KEY
+# Listener-scoped Wasm (attached at Gateway/Listener scope) with three routes:
+# - httproute-3: no route-scoped policy, inherits the listener-scoped Wasm via VirtualHost.
+# - httproute-4: route-scoped policy with a different Wasm, fully replacing the listener one.
+# - httproute-5: route-scoped policy that targets the SAME Wasm as the listener (a policy can
+#   target both a Gateway and one of its HTTPRoutes via separate targetRefs), so the filter name
+#   collides across scopes and must not be disabled then re-enabled.
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  name: envoy-gateway/gateway-1/http-listener-scope
+  envoyExtensions:
+    wasms:
+    - config: null
+      failOpen: false
+      httpWasmCode:
+        servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/8c1f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f.wasm
+        originalDownloadingURL: https://www.example.com/wasm-filter-listener.wasm
+        sha256: 8c1f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f
+      name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/wasm/0
+      wasmName: wasm-filter-listener
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10081
+  routes:
+  - destination:
+      name: httproute/default/httproute-3/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-3/rule/0/backend/0
+    hostname: listener-scope.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-3/rule/0/match/0/listener_scope_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /inherit
+  - destination:
+      name: httproute/default/httproute-4/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-4/rule/0/backend/0
+    envoyExtensions:
+      wasms:
+      - config: null
+        failOpen: false
+        httpWasmCode:
+          servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/9d2e2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a.wasm
+          originalDownloadingURL: https://www.example.com/wasm-filter-route-override.wasm
+          sha256: 9d2e2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a
+        name: envoyextensionpolicy/default/policy-for-route-4/wasm/0
+        wasmName: wasm-filter-route-override
+    hostname: listener-scope.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-4/rule/0/match/0/listener_scope_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /override
+  - destination:
+      name: httproute/default/httproute-5/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-5/rule/0/backend/0
+    envoyExtensions:
+      wasms:
+      - config: null
+        failOpen: false
+        httpWasmCode:
+          servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/8c1f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f.wasm
+          originalDownloadingURL: https://www.example.com/wasm-filter-listener.wasm
+          sha256: 8c1f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f
+        name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-listener/wasm/0
+        wasmName: wasm-filter-listener
+    hostname: listener-scope.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-5/rule/0/match/0/listener_scope_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /same-name

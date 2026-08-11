@@ -7,9 +7,7 @@ package translator
 
 import (
 	"container/list"
-	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -58,13 +56,18 @@ type httpFilter interface {
 	// patchRoute patches the provide Route with a filter's Route level configuration.
 	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error
 
+	// patchVirtualHost patches the provided VirtualHost with a filter's VirtualHost level configuration.
+	// Note: this method may be called multiple times for the same VirtualHost when multiple IR listeners
+	// share the same RouteConfiguration (cleartext listeners on the same port).
+	patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error
+
 	// patchResources adds all the other needed resources referenced by this
 	// filter to the resource version table.
 	// for example:
 	// - a jwt filter needs to add the cluster for the jwks.
 	// - an oidc filter needs to add the cluster for token endpoint and the secret
 	//   for the oauth2 client secret and the hmac secret.
-	patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error
+	patchResources(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener, routes []*ir.HTTPRoute) error
 }
 
 type OrderedHTTPFilter struct {
@@ -128,14 +131,12 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 11
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
 		order = 12
-	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 13 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
-		order = 100 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
-		order = 200 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, egv1a1.EnvoyFilterDynamicModules):
-		order = 250 + mustGetFilterIndex(filter.Name)
+	case filter.Name == eepListenerFCFilterName():
+		// Lua, ExtProc, Wasm, and DynamicModule all share this one placeholder for their
+		// listener-scoped instances, and it runs before the shared route-scoped placeholder.
+		order = 13
+	case filter.Name == eepFCFilterName():
+		order = 63
 	case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
 		order = 300
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
@@ -344,22 +345,34 @@ func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, h
 	return nil
 }
 
+// patchVirtualHost calls each filter's patchVirtualHost to apply VirtualHost-level configuration.
+func patchVirtualHost(vh *routev3.VirtualHost, httpListener *ir.HTTPListener) error {
+	for _, filter := range httpFilters {
+		if err := filter.patchVirtualHost(vh, httpListener); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // isFilterType returns true if the filter is the provided filter type.
 func isFilterType(filter *hcmv3.HttpFilter, filterType egv1a1.EnvoyFilter) bool {
 	// Multiple filters of the same types are added to the HCM filter chain, one for each
 	// route. The filter name is prefixed with the filter type, for example:
 	// "envoy.filters.http.oauth2_first-route".
-	return strings.HasPrefix(filter.Name, string(filterType))
-}
-
-// mustGetFilterIndex returns the index of the filter in its filter type.
-func mustGetFilterIndex(filterName string) int {
-	a := strings.Split(filterName, "/")
-	index, err := strconv.Atoi(a[len(a)-1])
-	if err != nil {
-		panic(fmt.Errorf("cannot get filter index from %s :%w", filterName, err))
+	if strings.HasPrefix(filter.Name, string(filterType)) {
+		return true
 	}
-	return index
+	// Lua, ExtProc, Wasm, and DynamicModules are all delivered via the same two shared
+	// envoy.filters.http.filter_chain placeholder filters rather than under their own
+	// filter-type prefix, so FilterOrder entries that reference any of these types need to
+	// match those placeholder names too. Because the placeholder is shared, moving one of
+	// these types in a custom FilterOrder moves all of them together.
+	switch filterType {
+	case egv1a1.EnvoyFilterLua, egv1a1.EnvoyFilterExtProc, egv1a1.EnvoyFilterWasm, egv1a1.EnvoyFilterDynamicModules:
+		return filter.Name == eepFCFilterName() || filter.Name == eepListenerFCFilterName()
+	}
+	return false
 }
 
 // patchResources adds all the other needed resources referenced by this
@@ -367,9 +380,9 @@ func mustGetFilterIndex(filterName string) int {
 // for example:
 // - a jwt filter needs to add the cluster for the jwks.
 // - an oidc filter needs to add the secret for the oauth2 client secret.
-func patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+func patchResources(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener, routes []*ir.HTTPRoute) error {
 	for _, filter := range httpFilters {
-		if err := filter.patchResources(tCtx, routes); err != nil {
+		if err := filter.patchResources(tCtx, irListener, routes); err != nil {
 			return err
 		}
 	}

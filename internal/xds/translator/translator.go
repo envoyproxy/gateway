@@ -521,7 +521,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 		// Add all the other needed resources referenced by this filter to the
 		// resource version table.
-		if err = patchResources(tCtx, httpListener.Routes); err != nil {
+		if err = patchResources(tCtx, httpListener, httpListener.Routes); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -737,6 +737,10 @@ func (t *Translator) addRouteToRouteConfig(
 	}
 
 	for _, vHost := range vHostList {
+		if err = patchVirtualHost(vHost, httpListener); err != nil {
+			errs = errors.Join(errs, err)
+		}
+
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {

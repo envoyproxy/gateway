@@ -1,0 +1,97 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: listener-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: listener-2
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1     # attached to listener-1, which is owned by an empty fail-open listener policy
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: listener-1
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2     # attached to listener-2, which should still receive the Gateway-wide wasm filter
+  spec:
+    hostnames:
+    - www.bar.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: listener-2
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-1-listener-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: listener-1
+    wasm:
+    - name: wasm-filter-1
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/non-existent.wasm
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+      failOpen: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    wasm:
+    - name: wasm-filter-1
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/wasm-filter-1.wasm
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
