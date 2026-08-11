@@ -81,6 +81,7 @@ type gatewayAPIReconciler struct {
 	gatewayNamespaceMode bool
 
 	backendCRDExists       bool
+	btlsCRDExists          bool
 	btpCRDExists           bool
 	ctpCRDExists           bool
 	eepCRDExists           bool
@@ -497,12 +498,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		// Add all BackendTLSPolies to the resourceTree
-		if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing BackendTLSPolicies")
-				return reconcile.Result{}, err
+		if r.btlsCRDExists {
+			if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
+				if isTransientError(err) {
+					gcLogger.Error(err, "transient error processing BackendTLSPolicies")
+					return reconcile.Result{}, err
+				}
+				gcLogger.Error(err, "failed to process BackendTLSPolicies for GatewayClass")
 			}
-			gcLogger.Error(err, "failed to process BackendTLSPolicies for GatewayClass")
 		}
 
 		if r.eepCRDExists {
@@ -2798,27 +2801,37 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	// Watch BackendTLSPolicy
-	btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
-	}
-	if r.namespaceLabel != nil {
-		btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
-			return r.hasMatchingNamespaceLabels(btp)
-		}))
-	}
-
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
-				return r.enqueueClass(ctx, btp)
-			}),
-			btlsPredicates...)); err != nil {
+	// BackendTLSPolicy is in the standard channel from Gateway API v1.4 onwards,
+	// but a cluster can still be serving an older standard bundle without it.
+	r.btlsCRDExists, err = checkCRD(resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
+	if err != nil {
 		return err
 	}
+	if !r.btlsCRDExists {
+		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
+	} else {
+		// Watch BackendTLSPolicy
+		btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
+		}
+		if r.namespaceLabel != nil {
+			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
+				return r.hasMatchingNamespaceLabels(btp)
+			}))
+		}
 
-	if err := addBtlsIndexers(ctx, mgr); err != nil {
-		return err
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
+					return r.enqueueClass(ctx, btp)
+				}),
+				btlsPredicates...)); err != nil {
+			return err
+		}
+
+		if err := addBtlsIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	r.eepCRDExists, err = checkCRD(resource.KindEnvoyExtensionPolicy, egv1a1.GroupVersion.String())

@@ -102,6 +102,7 @@ func NewOfflineGatewayAPIController(
 		extServerPolicies: extServerPoliciesGVKs,
 		extBackendGVKs:    extBackendPoliciesGVKs,
 		// We assume all CRDs are available in offline mode.
+		btlsCRDExists:          true,
 		btpCRDExists:           true,
 		ctpCRDExists:           true,
 		eepCRDExists:           true,
