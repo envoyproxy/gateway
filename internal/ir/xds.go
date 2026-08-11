@@ -3116,6 +3116,14 @@ type ALSAccessLog struct {
 	Attributes  []MapEntry                        `json:"attributes,omitempty" yaml:"attributes,omitempty"`
 	HTTP        *ALSAccessLogHTTP                 `json:"http,omitempty" yaml:"http,omitempty"`
 	LogType     *ProxyAccessLogType               `json:"logType,omitempty" yaml:"logType,omitempty"`
+	Buffer      *AccessLogBuffer                  `json:"buffer,omitempty" yaml:"buffer,omitempty"`
+}
+
+// AccessLogBuffer holds the buffering configuration for the gRPC access log sinks.
+// +k8s:deepcopy-gen=true
+type AccessLogBuffer struct {
+	FlushInterval *metav1.Duration `json:"flushInterval,omitempty" yaml:"flushInterval,omitempty"`
+	SizeBytes     *uint32          `json:"sizeBytes,omitempty" yaml:"sizeBytes,omitempty"`
 }
 
 // ALSAccessLogHTTP holds the configuration for HTTP ALS access logging.
@@ -3138,6 +3146,7 @@ type OpenTelemetryAccessLog struct {
 	Destination        RouteDestination     `json:"destination,omitempty" yaml:"destination,omitempty"`
 	Traffic            *TrafficFeatures     `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	LogType            *ProxyAccessLogType  `json:"logType,omitempty" yaml:"logType,omitempty"`
+	Buffer             *AccessLogBuffer     `json:"buffer,omitempty" yaml:"buffer,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.

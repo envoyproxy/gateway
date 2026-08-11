@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -367,6 +368,137 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"If AccessLogFormat type is Text, text field needs to be set"},
+		},
+		{
+			desc: "GRPCAccessLogBufferSettings-with-zero-flushInterval",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "otel-collector",
+																Port: new(gwapiv1.PortNumber(4317)),
+															},
+														},
+													},
+												},
+												Buffer: &egv1a1.GRPCAccessLogBufferSettings{
+													FlushInterval: new(gwapiv1.Duration("0s")),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"flushInterval must be greater than 0"},
+		},
+		{
+			desc: "GRPCAccessLogBufferSettings-with-malformed-sizeBytes",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "otel-collector",
+																Port: new(gwapiv1.PortNumber(4317)),
+															},
+														},
+													},
+												},
+												Buffer: &egv1a1.GRPCAccessLogBufferSettings{
+													SizeBytes: new(resource.MustParse("15m")),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
+		},
+		{
+			// Covers both accepted forms of sizeBytes: a suffixed quantity and a bare
+			// byte count. Quantity always marshals as a JSON string, so a typed client
+			// cannot exercise the integer branch of this int-or-string field at all.
+			desc: "valid-GRPCAccessLogBufferSettings",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "otel-collector",
+																Port: new(gwapiv1.PortNumber(4317)),
+															},
+														},
+													},
+												},
+												Buffer: &egv1a1.GRPCAccessLogBufferSettings{
+													FlushInterval: new(gwapiv1.Duration("5s")),
+													SizeBytes:     new(resource.MustParse("4Mi")),
+												},
+											},
+										},
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "envoy-als",
+																Port: new(gwapiv1.PortNumber(9000)),
+															},
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+												Buffer: &egv1a1.GRPCAccessLogBufferSettings{
+													SizeBytes: new(resource.MustParse("16384")),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "ProxyAccessLogFormat-with-TypeJSON-but-no-json",
