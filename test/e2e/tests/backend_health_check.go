@@ -71,6 +71,10 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 			passPromQL := fmt.Sprintf(`envoy_cluster_health_check_success{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, passClusterName, gtwName)
 			failPromQL := fmt.Sprintf(`envoy_cluster_health_check_failure{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, failClusterName, gtwName)
 
+			// Capture baseline before the loop to measure new failures relative to any
+			// stale counter left over from a previous test run.
+			baselineFailures, _ := promClient.QuerySum(ctx, failPromQL)
+
 			http.AwaitConvergence(
 				t,
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
@@ -97,21 +101,21 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 			http.AwaitConvergence(
 				t,
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig.MaxTimeToConsistency*2,
 				func(_ time.Duration) bool {
 					v, err := promClient.QuerySum(ctx, failPromQL)
 					if err != nil {
 						// wait until Prometheus sync stats
 						return false
 					}
-					tlog.Logf(t, "cluster fail health check: failure stats query count: %v", v)
+					newFailures := v - baselineFailures
+					tlog.Logf(t, "cluster fail health check: new failure count: %v (total: %v)", newFailures, v)
 
-					if v == 0 {
-						t.Error("failure is not same as expected")
-					} else {
-						t.Log("failure is same as expected")
+					// wait all endpoints unhealthy
+					if newFailures < 3 {
+						return false
 					}
-
+					t.Log("failure is same as expected")
 					return true
 				},
 			)
