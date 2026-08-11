@@ -1,0 +1,1 @@
+Added a `buffer` field with `flushInterval` and `sizeBytes` to the OpenTelemetry and ALS access log sinks in `EnvoyProxy`, so operators can tune Envoy's access log batching away from its 1s and 16384-byte defaults and trade proxy memory for fewer access logs lost while a sink is unavailable.
