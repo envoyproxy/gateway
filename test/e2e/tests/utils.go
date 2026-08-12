@@ -224,6 +224,29 @@ func SecurityPolicyMustBeMerged(t *testing.T, client client.Client, policyName t
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to have Merged condition")
 }
 
+// SecurityPolicyMustBeOverridden waits for the specified SecurityPolicy to have Overridden condition.
+func SecurityPolicyMustBeOverridden(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		}
+
+		if policyOverriddenByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "SecurityPolicy has Overridden condition: %v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "SecurityPolicy does not have Overridden condition yet: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to have Overridden condition")
+}
+
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
 func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
@@ -244,6 +267,52 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to be accepted")
+}
+
+// BackendTrafficPolicyMustBeMerged waits for the specified BackendTrafficPolicy to have Merged condition.
+func BackendTrafficPolicyMustBeMerged(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.BackendTrafficPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
+		}
+
+		if policyMergedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "BackendTrafficPolicy has Merged condition: %v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "BackendTrafficPolicy does not have Merged condition yet: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to have Merged condition")
+}
+
+// BackendTrafficPolicyMustBeOverridden waits for the specified BackendTrafficPolicy to have Overridden condition.
+func BackendTrafficPolicyMustBeOverridden(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.BackendTrafficPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
+		}
+
+		if policyOverriddenByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "BackendTrafficPolicy has Overridden condition: %v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "BackendTrafficPolicy does not have Overridden condition yet: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to have Overridden condition")
 }
 
 // BackendTrafficPolicyMustFail waits for an BackendTrafficPolicy to fail with the specified reason.
@@ -436,6 +505,19 @@ func policyMergedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controller
 	return false
 }
 
+func policyOverriddenByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(egv1a1.PolicyConditionOverridden) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // EnvoyExtensionPolicyMustFail waits for an EnvoyExtensionPolicy to fail with the specified reason.
 func EnvoyExtensionPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
@@ -499,6 +581,29 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
+}
+
+// EnvoyExtensionPolicyMustBeMerged waits for the specified EnvoyExtensionPolicy to have Merged condition.
+func EnvoyExtensionPolicyMustBeMerged(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.EnvoyExtensionPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyExtensionPolicy: %w", err)
+		}
+
+		if policyMergedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "EnvoyExtensionPolicy has Merged condition: %+v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "EnvoyExtensionPolicy does not have Merged condition yet: %+v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to have Merged condition")
 }
 
 // BackendMustBeAccepted waits for the specified Backend to be accepted.
@@ -926,6 +1031,10 @@ func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, g
 
 func IsGatewayNamespaceMode() bool {
 	return DeployProfile == "gateway-namespace-mode"
+}
+
+func IsRemoteInfraMode() bool {
+	return DeployProfile == "remote-infra-mode"
 }
 
 func UseStandardChannel() bool {

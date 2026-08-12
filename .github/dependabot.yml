@@ -118,6 +118,8 @@ updates:
       - dependency-name: "github.com/envoyproxy/go-control-plane*"
       # Ignore all k8s.io packages on release branches to avoid unintended k8s version bumps
       - dependency-name: "k8s.io/*"
+      # Ignore sigs.k8s.io/gateway-api on release branches to avoid unintended Gateway API version bumps
+      - dependency-name: "sigs.k8s.io/gateway-api"
     groups:
       gomod:
         patterns:
@@ -169,6 +171,8 @@ updates:
       - dependency-name: "github.com/envoyproxy/go-control-plane*"
       # Ignore all k8s.io packages on release branches to avoid unintended k8s version bumps
       - dependency-name: "k8s.io/*"
+      # Ignore sigs.k8s.io/gateway-api on release branches to avoid unintended Gateway API version bumps
+      - dependency-name: "sigs.k8s.io/gateway-api"
     groups:
       gomod:
         patterns:

@@ -493,3 +493,97 @@ spec:
             timeoutSeconds: 1
             successThreshold: 1
             failureThreshold: 3
+# Gateway API conformance test required namespaces contains pods,
+# see: https://github.com/kubernetes-sigs/gateway-api/pull/4917
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-backend-v1
+  namespace: gateway-conformance-app-backend
+spec:
+  selector:
+    app: app-backend-v1
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-backend-v1
+  namespace: gateway-conformance-app-backend
+  labels:
+    app: app-backend-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-backend-v1
+  template:
+    metadata:
+      labels:
+        app: app-backend-v1
+    spec:
+      containers:
+        - name: app-backend-v1
+          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            requests:
+              cpu: 10m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-backend
+  namespace: gateway-conformance-web-backend
+spec:
+  selector:
+    app: web-backend
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-backend
+  namespace: gateway-conformance-web-backend
+  labels:
+    app: web-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-backend
+  template:
+    metadata:
+      labels:
+        app: web-backend
+    spec:
+      containers:
+        - name: web-backend
+          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            requests:
+              cpu: 10m

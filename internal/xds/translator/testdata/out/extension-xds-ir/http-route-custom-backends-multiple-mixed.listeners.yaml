@@ -24,6 +24,7 @@
         rds:
           configSource:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: multiple-custom-backends-listener
         serverHeaderTransformation: PASS_THROUGH

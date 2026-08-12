@@ -6,6 +6,10 @@ Direct responses are valuable in cases where you want the gateway itself
 to handle certain requests without forwarding them to backend services.
 This task shows you how to configure them.
 
+The `HTTPRouteFilter` used below can also be referenced from a `GRPCRoute` via an `extensionRef` filter. For gRPC, Envoy
+adds gRPC status trailers to the direct response so gRPC clients handle it correctly. See
+[Gateway API support](./gatewayapi-support#grpcroute) for details.
+
 ## Installation
 
 Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.

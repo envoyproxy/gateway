@@ -41,6 +41,28 @@ Gateway API resources, use a compatible Gateway API CRD installation method befo
 
 Some manual migration steps are required to upgrade Envoy Gateway.
 
+{{% alert title="Gateway API v1.6 CRD upgrade required before Envoy Gateway upgrade" color="warning" %}}
+This release reconciles `TCPRoute` and `UDPRoute` via the `gateway.networking.k8s.io/v1` API group (promoted in Gateway API v1.6).
+**You must upgrade the Gateway API CRDs to v1.6 before upgrading Envoy Gateway** to avoid traffic disruption.
+
+**Standard channel users:** `v1alpha2` is no longer served in the Gateway API v1.6 standard channel.
+You must update all `TCPRoute` and `UDPRoute` manifests to `apiVersion: gateway.networking.k8s.io/v1`
+before upgrading the CRDs, or those routes will stop being served and traffic will be dropped.
+
+**Experimental channel users:** both `v1` and `v1alpha2` are served after the CRD upgrade, so existing
+`v1alpha2` manifests continue to work without immediate changes. Updating manifests to `v1` is still recommended.
+
+If the v1.6 CRDs are not installed before Envoy Gateway is upgraded, TCP and UDP routes will be silently skipped until the CRDs are applied.
+
+The stored version of `TCPRoute` and `UDPRoute` moves from `v1alpha2` to `v1`. Plan a storage-version migration
+before `v1alpha2` is eventually removed:
+
+```shell
+kubectl get tcproutes.gateway.networking.k8s.io -A -o json | kubectl replace -f -
+kubectl get udproutes.gateway.networking.k8s.io -A -o json | kubectl replace -f -
+```
+{{% /alert %}}
+
 1. Update Gateway-API and Envoy Gateway CRDs:
 
 ```shell

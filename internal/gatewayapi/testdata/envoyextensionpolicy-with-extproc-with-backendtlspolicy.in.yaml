@@ -218,6 +218,7 @@ envoyExtensionPolicies:
         - envoy.filters.http.my_custom
       messageTimeout: 5s
       failOpen: true
+      statusOnError: 503
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:

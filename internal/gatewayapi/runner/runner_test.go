@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -121,9 +120,9 @@ func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	r.ProviderResources.HTTPRouteStatuses.Store(keys[1], &gwapiv1.HTTPRouteStatus{})
 	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1.GRPCRouteStatus{})
 	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1.TLSRouteStatus{})
-	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
-	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
-	r.ProviderResources.UDPRouteStatuses.Store(keys[6], &gwapiv1a2.UDPRouteStatus{})
+	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1.TCPRouteStatus{})
+	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1.UDPRouteStatus{})
+	r.ProviderResources.UDPRouteStatuses.Store(keys[6], &gwapiv1.UDPRouteStatus{})
 	r.ProviderResources.BackendStatuses.Store(keys[7], &egv1a1.BackendStatus{})
 	r.ProviderResources.BackendTLSPolicyStatuses.Store(keys[8], &gwapiv1.PolicyStatus{})
 	r.ProviderResources.ClientTrafficPolicyStatuses.Store(keys[9], &gwapiv1.PolicyStatus{})
@@ -255,7 +254,7 @@ func TestMergePolicyStatus(t *testing.T) {
 				Ancestors: []gwapiv1.PolicyAncestorStatus{
 					{
 						AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
-						ControllerName: gwapiv1a2.GatewayController(controllerName),
+						ControllerName: gwapiv1.GatewayController(controllerName),
 					},
 				},
 			},
@@ -271,7 +270,7 @@ func TestMergePolicyStatus(t *testing.T) {
 			Ancestors: []gwapiv1.PolicyAncestorStatus{
 				{
 					AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
-					ControllerName: gwapiv1a2.GatewayController(controllerName),
+					ControllerName: gwapiv1.GatewayController(controllerName),
 				},
 			},
 		}
@@ -286,7 +285,7 @@ func TestMergePolicyStatus(t *testing.T) {
 			Ancestors: []gwapiv1.PolicyAncestorStatus{
 				{
 					AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
-					ControllerName: gwapiv1a2.GatewayController(controllerName),
+					ControllerName: gwapiv1.GatewayController(controllerName),
 				},
 			},
 		}
@@ -294,7 +293,7 @@ func TestMergePolicyStatus(t *testing.T) {
 			Ancestors: []gwapiv1.PolicyAncestorStatus{
 				{
 					AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-b")},
-					ControllerName: gwapiv1a2.GatewayController(controllerName),
+					ControllerName: gwapiv1.GatewayController(controllerName),
 				},
 			},
 		}
@@ -316,7 +315,7 @@ func TestMergePolicyStatus(t *testing.T) {
 			Ancestors: []gwapiv1.PolicyAncestorStatus{
 				{
 					AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
-					ControllerName: gwapiv1a2.GatewayController(controllerName),
+					ControllerName: gwapiv1.GatewayController(controllerName),
 				},
 			},
 		}

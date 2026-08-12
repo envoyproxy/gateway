@@ -19,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -200,7 +199,7 @@ func runStatus(ctx context.Context, logOut io.Writer, cli client.Client, inputRe
 		resourceKind = resource.KindGRPCRoute
 
 	case "tcproute":
-		tcproute := gwapiv1a2.TCPRouteList{}
+		tcproute := gwapiv1.TCPRouteList{}
 		if err := cli.List(ctx, &tcproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -208,7 +207,7 @@ func runStatus(ctx context.Context, logOut io.Writer, cli client.Client, inputRe
 		resourceKind = resource.KindTCPRoute
 
 	case "udproute":
-		udproute := gwapiv1a2.UDPRouteList{}
+		udproute := gwapiv1.UDPRouteList{}
 		if err := cli.List(ctx, &udproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}

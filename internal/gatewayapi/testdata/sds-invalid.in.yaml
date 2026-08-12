@@ -76,6 +76,21 @@ backendTLSPolicies:
           - name: regular-ca-secret
             kind: Secret
         hostname: example.com
+  # Test case 4: Invalid SDS URL (should be rejected)
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-invalid-sds-url
+      namespace: default
+    spec:
+      targetRefs:
+        - kind: Service
+          name: service-4
+      validation:
+        caCertificateRefs:
+          - name: sds-ref-invalid-url
+            kind: Secret
+        hostname: example.com
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
@@ -108,6 +123,13 @@ httpRoutes:
                 value: "/service3"
           backendRefs:
             - name: service-3
+              port: 8080
+        - matches:
+            - path:
+                type: Exact
+                value: "/service4"
+          backendRefs:
+            - name: service-4
               port: 8080
 services:
   - apiVersion: v1
@@ -207,7 +229,8 @@ secrets:
       namespace: default
     type: gateway.envoyproxy.io/sds
     data:
-      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==  # /var/run/secrets/workload-spiffe-uds/socket
+      # unix:///var/run/secrets/workload-spiffe-uds/socket
+      url: dW5peDovLy92YXIvcnVuL3NlY3JldHMvd29ya2xvYWQtc3BpZmZlLXVkcy9zb2NrZXQ=
       secretName: Uk9PVENB  # ROOTCA
   - apiVersion: v1
     kind: Secret
@@ -216,8 +239,19 @@ secrets:
       namespace: default
     type: gateway.envoyproxy.io/sds
     data:
-      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==  # /var/run/secrets/workload-spiffe-uds/socket
+      # unix:///var/run/secrets/workload-spiffe-uds/socket
+      url: dW5peDovLy92YXIvcnVuL3NlY3JldHMvd29ya2xvYWQtc3BpZmZlLXVkcy9zb2NrZXQ=
       secretName: Uk9PVENBMg==  # ROOTCA2
+  # SDS reference secret with an invalid (scheme-less) URL
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: sds-ref-invalid-url
+      namespace: default
+    type: gateway.envoyproxy.io/sds
+    data:
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==  # /var/run/secrets/workload-spiffe-uds/socket
+      secretName: Uk9PVENBMw==  # ROOTCA3
   # Regular secret with CA certificate
   - apiVersion: v1
     kind: Secret

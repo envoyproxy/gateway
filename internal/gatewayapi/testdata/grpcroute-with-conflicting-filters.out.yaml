@@ -77,10 +77,9 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: |-
-          Dropped Rule(s) [0]: Invalid filter ExtensionRef: unknown kind gateway.envoyproxy.io/HTTPRouteFilter.
-          RequestMirror filter cannot be used when the rule also configures a DirectResponse filter.
-        reason: IncompatibleFilters,UnsupportedValue
+        message: 'Dropped Rule(s) [0]: RequestMirror filter cannot be used when the
+          rule also configures a DirectResponse filter.'
+        reason: IncompatibleFilters
         status: "True"
         type: PartiallyInvalid
       - lastTransitionTime: null
@@ -157,7 +156,13 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
+      - addResponseHeaders:
+        - addIfAbsent: false
+          append: false
+          name: Content-Type
+          value:
+          - text/plain
+        directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: true

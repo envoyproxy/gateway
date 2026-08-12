@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -200,7 +199,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		return
 	}
 	cacheOption := wasm.CacheOptions{}
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+	if r.EnvoyGateway.Provider.IsRunningOnKubernetes() {
 		cacheOption.CacheDir = "/var/lib/eg/wasm"
 	} else {
 		h, _ := os.UserHomeDir() // Assume we always get the home directory.
@@ -317,8 +316,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					ControllerNamespace:             r.ControllerNamespace,
 					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
 					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
+					MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
+					PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
 					WasmCache:                       r.wasmCache,
 					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
 					Logger:                          traceLogger,
 					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
 				}
@@ -568,7 +570,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			for key, entry := range aggregatedStatuses.TCPRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
 				stampGatewayGeneration(entry.status, entry.gatewayGeneration)
-				s := gwapiv1a2.TCPRouteStatus{RouteStatus: *entry.status}
+				s := gwapiv1.TCPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.TCPRouteStatuses.Store(key, &s)
 				tcpRouteStatusCount++
 				delete(keysToDelete.TCPRouteStatus, key)
@@ -577,7 +579,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			for key, entry := range aggregatedStatuses.UDPRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
 				stampGatewayGeneration(entry.status, entry.gatewayGeneration)
-				s := gwapiv1a2.UDPRouteStatus{RouteStatus: *entry.status}
+				s := gwapiv1.UDPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.UDPRouteStatuses.Store(key, &s)
 				udpRouteStatusCount++
 				delete(keysToDelete.UDPRouteStatus, key)

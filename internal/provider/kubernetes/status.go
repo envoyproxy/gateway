@@ -9,12 +9,15 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -216,7 +219,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.TCPRouteStatusMessageName},
 			r.subscriptions.tcpRouteStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.TCPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -225,9 +228,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a2.TCPRoute),
+					Resource:       new(gwapiv1.TCPRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a2.TCPRoute)
+						t, ok := obj.(*gwapiv1.TCPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -235,11 +238,11 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 						}
 						valCopy := val.DeepCopy()
 						setLastTransitionTimeInConditionsForRouteStatus(&valCopy.RouteStatus, metav1.Now())
-						tCopy := &gwapiv1a2.TCPRoute{
+						tCopy := &gwapiv1.TCPRoute{
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status: gwapiv1a2.TCPRouteStatus{
+							Status: gwapiv1.TCPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
 									Parents: mergeRouteParentStatus(t.Namespace, t.Status.Parents, valCopy.Parents),
 								},
@@ -258,7 +261,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.UDPRouteStatusMessageName},
 			r.subscriptions.udpRouteStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.UDPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -267,9 +270,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a2.UDPRoute),
+					Resource:       new(gwapiv1.UDPRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						u, ok := obj.(*gwapiv1a2.UDPRoute)
+						u, ok := obj.(*gwapiv1.UDPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -277,11 +280,11 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 						}
 						valCopy := val.DeepCopy()
 						setLastTransitionTimeInConditionsForRouteStatus(&valCopy.RouteStatus, metav1.Now())
-						uCopy := &gwapiv1a2.UDPRoute{
+						uCopy := &gwapiv1.UDPRoute{
 							TypeMeta:   u.TypeMeta,
 							ObjectMeta: u.ObjectMeta,
 							Spec:       u.Spec,
-							Status: gwapiv1a2.UDPRouteStatus{
+							Status: gwapiv1.UDPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
 									Parents: mergeRouteParentStatus(u.Namespace, u.Status.Parents, valCopy.Parents),
 								},
@@ -739,28 +742,27 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		return
 	}
 
-	// Get envoyObjects
-	envoyObj, err := r.envoyObjectForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Deployment for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-
-	// Get service
-	svc, err := r.envoyServiceForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Service for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-
 	if status.GatewayAccepted(gtw) {
-		// update accepted condition to true if it is not false
-		// this is needed because the accepted condition is not set to true by the Gateway API translator
+		// Get envoyObjects
+		envoyObj, err := r.envoyObjectForGateway(ctx, gtw)
+		if err != nil {
+			r.log.Info("failed to get Deployment for gateway",
+				"namespace", gtw.Namespace, "name", gtw.Name)
+		}
+
+		// Get service
+		svc, err := r.envoyServiceForGateway(ctx, gtw)
+		if err != nil {
+			r.log.Info("failed to get Service for gateway",
+				"namespace", gtw.Namespace, "name", gtw.Name)
+		}
+		// Not already explicitly rejected (e.g. invalid EnvoyProxy/address) earlier in translation,
+		// so derive Accepted from the per-listener Accepted conditions the translator already set.
 		// TODO (huabing): this is tricky and confusing for later readers, we should remove this and set the accepted condition
 		// to true in the Gateway API translator
 		status.UpdateGatewayStatusAccepted(gtw)
 		// update address field and programmed condition
-		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses())
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.nodeAddressesForGateway(ctx, gtw, svc), r.envoyGateway.Provider.IsInfraManagedRemotely())
 	}
 
 	key := utils.NamespacedName(gtw)
@@ -788,6 +790,46 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 			return gCopy
 		}),
 	})
+}
+
+// nodeAddressesForGateway returns the node addresses to use for the gateway status.
+// For NodePort services with externalTrafficPolicy: Local, only nodes with a Ready
+// endpoint are returned; otherwise all cluster node addresses are returned.
+func (r *gatewayAPIReconciler) nodeAddressesForGateway(ctx context.Context, gtw *gwapiv1.Gateway, svc *corev1.Service) status.NodeAddresses {
+	if svc != nil && svc.Spec.Type == corev1.ServiceTypeNodePort &&
+		svc.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal {
+		nodeNames, err := r.envoyEndpointNodeNamesForService(ctx, svc)
+		if err != nil {
+			r.log.Info("failed to list EndpointSlices for gateway node filtering",
+				"namespace", gtw.Namespace, "name", gtw.Name, "error", err)
+			return r.store.listNodeAddresses()
+		}
+		return r.store.listNodeAddressesForNodes(nodeNames)
+	}
+	return r.store.listNodeAddresses()
+}
+
+// envoyEndpointNodeNamesForService returns the names of nodes that have a Ready
+// endpoint in the EndpointSlices for the given service.
+func (r *gatewayAPIReconciler) envoyEndpointNodeNamesForService(ctx context.Context, svc *corev1.Service) ([]string, error) {
+	epSlices := &discoveryv1.EndpointSliceList{}
+	if err := r.client.List(ctx, epSlices, &client.ListOptions{
+		Namespace:     svc.Namespace,
+		LabelSelector: labels.SelectorFromSet(labels.Set{discoveryv1.LabelServiceName: svc.Name}),
+	}); err != nil {
+		return nil, err
+	}
+	seen := sets.New[string]()
+	for i := range epSlices.Items {
+		for j := range epSlices.Items[i].Endpoints {
+			ep := &epSlices.Items[i].Endpoints[j]
+			if ep.NodeName != nil && *ep.NodeName != "" &&
+				(ep.Conditions.Ready == nil || *ep.Conditions.Ready) {
+				seen.Insert(*ep.NodeName)
+			}
+		}
+	}
+	return sets.List(seen), nil
 }
 
 // setLastTransitionTimeInConditions sets LastTransitionTime to the given time for all conditions in a slice

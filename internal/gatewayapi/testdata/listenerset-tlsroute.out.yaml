@@ -327,7 +327,7 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: tlsroute/default/tls-app-passthrough/rule/-1/backend/0
-            protocol: HTTPS
+            protocol: TCP
             weight: 1
         metadata:
           kind: TLSRoute
@@ -365,7 +365,7 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: tlsroute/default/tls-app-terminate/rule/-1/backend/0
-            protocol: HTTPS
+            protocol: TCP
             weight: 1
         metadata:
           kind: TLSRoute

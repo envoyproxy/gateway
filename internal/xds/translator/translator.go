@@ -33,7 +33,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils"
-	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -70,6 +69,10 @@ type Translator struct {
 	RuntimeFlags *egv1a1.RuntimeFlags
 
 	Logger logging.Logger
+
+	// backendIndex resolves BackendClusterRef.Name against the current Translate() call's
+	// xdsIR.BackendClusters registry. Rebuilt at the start of every Translate() call.
+	backendIndex backendClusterIndex
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -99,6 +102,8 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		return nil, errors.New("ir is nil")
 	}
 
+	t.backendIndex = newBackendClusterIndex(xdsIR)
+
 	tCtx := new(types.ResourceVersionTable)
 
 	// xDS translation is done in a best-effort manner, so we collect all errors
@@ -117,15 +122,15 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	}
 
 	if err := t.processHTTPListenerXdsTranslation(
-		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics); err != nil {
+		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := t.processUDPListenerXdsTranslation(tCtx, xdsIR.UDP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+	if err := t.processUDPListenerXdsTranslation(tCtx, xdsIR.UDP, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -133,7 +138,11 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+	if err := t.processMergedBackendClusters(tCtx, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -141,7 +150,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
+	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -176,6 +185,13 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		}
 	}
 
+	// Repair system_ca_certificates before validation so the restored canonical secret
+	// passes ValidateAll and the snapshot remains publishable.
+	// EnvoyPatchPolicy tampering is caught earlier per-policy inside processJSONPatches.
+	if err := t.ensureSystemTrustStoreSecret(tCtx); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	// Validate all the xds resources in the table before returning
 	// This is necessary to catch any misconfigurations that might have been missed during translation
 	if err := tCtx.ValidateAll(); err != nil {
@@ -183,6 +199,37 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	}
 
 	return tCtx, errs
+}
+
+// ensureSystemTrustStoreSecret detects and repairs any tampering with system_ca_certificates
+// by a post-translation extension hook. If tampering is detected the secret is restored to
+// the canonical form and a warning is logged. Returns an error only if re-emission fails —
+// in that case the snapshot would have clusters referencing a missing secret, so the caller
+// should propagate the error to block publishing.
+func (t *Translator) ensureSystemTrustStoreSecret(tCtx *types.ResourceVersionTable) error {
+	err := validateSystemTrustStoreSecret(tCtx)
+	if err == nil {
+		return nil
+	}
+	t.Logger.Info("system trust store secret was tampered with by extension; restoring", "reason", err.Error())
+	// Remove all existing copies (handles modified and duplicate cases).
+	if tCtx.XdsResources != nil {
+		secrets := tCtx.XdsResources[resourcev3.SecretType]
+		filtered := secrets[:0]
+		for _, r := range secrets {
+			if s, ok := r.(*tlsv3.Secret); ok && s.Name == SystemTrustStoreSecretName {
+				continue
+			}
+			filtered = append(filtered, r)
+		}
+		tCtx.XdsResources[resourcev3.SecretType] = filtered
+	}
+	// Re-emit the canonical secret.
+	tCtx.SystemTrustStore = false // reset so emitSystemTrustStoreSecret re-emits
+	if emitErr := emitSystemTrustStoreSecret(tCtx, SystemTrustStoreSecretName); emitErr != nil {
+		return fmt.Errorf("failed to restore system trust store secret after tampering: %w", emitErr)
+	}
+	return nil
 }
 
 func findIRListenersByXDSListener(xdsIR *ir.Xds, listener *listenerv3.Listener) []ir.Listener {
@@ -278,6 +325,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	accessLog *ir.AccessLog,
 	tracing *ir.Tracing,
 	metrics *ir.Metrics,
+	healthCheckLog *ir.ProxyHealthCheckLog,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -344,6 +392,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				&httpListener.CoreListenerDetails,
 				httpListener.TCPKeepalive,
 				httpListener.Connection,
+				httpListener.Timeout,
 				accessLog,
 			); err != nil {
 				errs = errors.Join(errs, err)
@@ -466,7 +515,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 		// Generate xDS virtual hosts and routes for the given HTTPListener,
 		// and add them to the xDS route config.
-		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings); err != nil {
+		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, healthCheckLog, http3Settings); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
@@ -477,6 +526,30 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 	}
 
+	return errs
+}
+
+// processMergedBackendClusters builds the Envoy Cluster and client-cert secrets for each distinct
+// merged backend cluster in xdsIR.BackendClusters.
+func (t *Translator) processMergedBackendClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
+	var errs error
+	for _, bc := range xdsIR.BackendClusters {
+		ea := &ExtraArgs{
+			metrics:           xdsIR.Metrics,
+			ipFamily:          determineIPFamily([]*ir.DestinationSetting{bc.Setting}),
+			extensionMgr:      t.ExtensionManager,
+			logger:            t.Logger,
+			traffic:           bc.Traffic,
+			useClientProtocol: bc.UseClientProtocol,
+			healthCheckLog:    xdsIR.HealthCheckLog,
+		}
+		if err := processXdsCluster(tCtx, bc.Name, []*ir.DestinationSetting{bc.Setting}, &BackendClusterTranslator{}, ea, bc.Metadata); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if err := processClientCertificates(tCtx, []*ir.DestinationSetting{bc.Setting}); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 	return errs
 }
 
@@ -495,6 +568,7 @@ func (t *Translator) addRouteToRouteConfig(
 	xdsRouteCfg *routev3.RouteConfiguration,
 	httpListener *ir.HTTPListener,
 	metrics *ir.Metrics,
+	healthCheckLog *ir.ProxyHealthCheckLog,
 	http3Settings *ir.HTTP3Settings,
 ) error {
 	var (
@@ -550,7 +624,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
@@ -596,6 +670,7 @@ func (t *Translator) addRouteToRouteConfig(
 				unstructuredRefs: extensionResources,
 				extensionMgr:     t.ExtensionManager,
 				logger:           t.Logger,
+				healthCheckLog:   healthCheckLog,
 			}
 
 			if httpRoute.Traffic != nil && httpRoute.Traffic.HTTP2 != nil {
@@ -603,40 +678,43 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 
 			var err error
-			// In these cases we create a cluster per setting
-			//
-			// * ZoneAware routing is enabled
-			// * There are filters in the destination settings
-			// * There are multiple Address	Type of destination settings(IP, FQDN, UDC, etc.)
-			// * There are invalid/empty settings in the destination settings
-			if !httpRoute.NeedsClusterPerSetting() {
-				err = processXdsCluster(
-					tCtx,
-					httpRoute.Destination.Name,
-					httpRoute.Destination.Settings,
-					&HTTPRouteTranslator{httpRoute},
-					ea,
-					httpRoute.Destination.Metadata,
-				)
-				if err != nil {
-					errs = errors.Join(errs, err)
-				}
-			} else {
-				for _, setting := range httpRoute.Destination.Settings {
-					tSettings := []*ir.DestinationSetting{setting}
+			if needsRouteCluster(httpRoute.Destination) {
+				// In these cases we create a cluster per setting
+				//
+				// * ZoneAware routing is enabled
+				// * There are filters in the destination settings
+				// * There are multiple Address Type of destination settings(IP, FQDN, UDC, etc.)
+				// * There are invalid/empty settings in the destination settings
+				// * The rule also has a merged BackendClusterRef, whose weighted route action
+				//   entry always names each Settings entry individually (buildXdsWeightedRouteAction)
+				if !httpRoute.NeedsClusterPerSetting() && len(httpRoute.Destination.BackendClusterRefs) == 0 {
 					err = processXdsCluster(
 						tCtx,
-						setting.Name,
-						tSettings,
+						httpRoute.Destination.Name,
+						httpRoute.Destination.Settings,
 						&HTTPRouteTranslator{httpRoute},
 						ea,
-						httpRoute.Destination.Metadata)
+						httpRoute.Destination.Metadata,
+					)
 					if err != nil {
 						errs = errors.Join(errs, err)
 					}
+				} else {
+					for _, setting := range httpRoute.Destination.Settings {
+						tSettings := []*ir.DestinationSetting{setting}
+						err = processXdsCluster(
+							tCtx,
+							setting.Name,
+							tSettings,
+							&HTTPRouteTranslator{httpRoute},
+							ea,
+							httpRoute.Destination.Metadata)
+						if err != nil {
+							errs = errors.Join(errs, err)
+						}
+					}
 				}
 			}
-
 		}
 
 		if httpRoute.Mirrors != nil {
@@ -758,6 +836,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	tcpListeners []*ir.TCPListener,
 	accesslog *ir.AccessLog,
 	metrics *ir.Metrics,
+	healthCheckLog *ir.ProxyHealthCheckLog,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -773,6 +852,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				&tcpListener.CoreListenerDetails,
 				tcpListener.TCPKeepalive,
 				tcpListener.Connection,
+				tcpListener.Timeout,
 				accesslog,
 			); err != nil {
 				// skip this listener if failed to build xds listener
@@ -795,13 +875,15 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.ProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
-			if err := processXdsCluster(tCtx,
-				route.Destination.Name,
-				route.Destination.Settings,
-				&TCPRouteTranslator{route},
-				&ExtraArgs{metrics: metrics},
-				route.Destination.Metadata); err != nil {
-				errs = errors.Join(errs, err)
+			if needsRouteCluster(route.Destination) {
+				if err := processXdsCluster(tCtx,
+					route.Destination.Name,
+					route.Destination.Settings,
+					&TCPRouteTranslator{route},
+					&ExtraArgs{metrics: metrics, healthCheckLog: healthCheckLog},
+					route.Destination.Metadata); err != nil {
+					errs = errors.Join(errs, err)
+				}
 			}
 			if route.TLS != nil && route.TLS.Terminate != nil {
 				// add tls route client certs
@@ -840,7 +922,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
 				route,
-				route.Destination.Name,
+				singleClusterDestinationName(route.Destination),
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
@@ -896,6 +978,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 	udpListeners []*ir.UDPListener,
 	accesslog *ir.AccessLog,
 	metrics *ir.Metrics,
+	healthCheckLog *ir.ProxyHealthCheckLog,
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
@@ -906,13 +989,15 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		// translator
 		if udpListener.Route != nil {
 			// 1:1 between IR UDPRoute and xDS Cluster
-			if err := processXdsCluster(tCtx,
-				udpListener.Route.Destination.Name,
-				udpListener.Route.Destination.Settings,
-				&UDPRouteTranslator{udpListener.Route},
-				&ExtraArgs{metrics: metrics},
-				udpListener.Route.Destination.Metadata); err != nil {
-				errs = errors.Join(errs, err)
+			if needsRouteCluster(udpListener.Route.Destination) {
+				if err := processXdsCluster(tCtx,
+					udpListener.Route.Destination.Name,
+					udpListener.Route.Destination.Settings,
+					&UDPRouteTranslator{udpListener.Route},
+					&ExtraArgs{metrics: metrics, healthCheckLog: healthCheckLog},
+					udpListener.Route.Destination.Metadata); err != nil {
+					errs = errors.Join(errs, err)
+				}
 			}
 		} else {
 			udpListener.Route = &ir.UDPRoute{
@@ -931,7 +1016,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		}
 
 		xdsListener, err := buildXdsUDPListener(
-			udpListener.Route.Destination.Name,
+			singleClusterDestinationName(udpListener.Route.Destination),
 			udpListener,
 			accesslog,
 			t.xdsNameSchemeV2(),
@@ -1067,7 +1152,8 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 	extras *ExtraArgs,
 	metadata *ir.ResourceMetadata,
 ) error {
-	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras, metadata))
+	args := route.asClusterArgs(name, settings, extras, metadata)
+	return addXdsCluster(tCtx, args)
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
@@ -1121,11 +1207,20 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	for _, ds := range args.settings {
 		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
 		if shouldValidateTLS {
-			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref
-			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
-			if secret != nil {
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+			if ds.TLS.UseSystemTrustStore {
+				// Ensure the system CA secret exists under the name already set in the IR.
+				// When dedup is on this is SystemTrustStoreSecretName (shared); when off
+				// it is a per-policy name and each cluster gets its own idempotent copy.
+				if err := emitSystemTrustStoreSecret(tCtx, ds.TLS.CACertificate.Name); err != nil {
 					return err
+				}
+			} else {
+				// Create an SDS secret for the CA certificate — inline bytes or filesystem ref.
+				secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+				if secret != nil {
+					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -1183,19 +1278,6 @@ const (
 )
 
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
-	if tlsConfig.UseSystemTrustStore {
-		return &tlsv3.Secret{
-			Name: tlsConfig.CACertificate.Name,
-			Type: &tlsv3.Secret_ValidationContext{
-				ValidationContext: &tlsv3.CertificateValidationContext{
-					TrustedCa: &corev3.DataSource{
-						Specifier: &corev3.DataSource_Filename{Filename: cert.SystemCertPath},
-					},
-				},
-			},
-		}
-	}
-
 	// For SDS based CA certificate, the secret will be generated by SDS server, so we can skip adding the secret here
 	if tlsConfig.CACertificate.SDS != nil {
 		return nil
@@ -1214,17 +1296,20 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 }
 
 func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsContext_CombinedValidationContext, bool) {
+	// CACertificate.Name already holds the correct secret name set during gatewayapi→IR translation.
+	secretName := tlsConfig.CACertificate.Name
+
 	validationContext := &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
 		ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-			Name:      tlsConfig.CACertificate.Name,
+			Name:      secretName,
 			SdsConfig: makeConfigSource(),
 		},
 		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
 	}
 	if tlsConfig.CACertificate.SDS != nil {
-		// get secret from SDS
+		// CA certificate is served by an external SDS server; use its config.
 		sds := tlsConfig.CACertificate.SDS
-		clusterName := sdsClusterNameFromURL(sds.URL)
+		clusterName := sdsClusterNameFromURL(sds.GetURL())
 		validationContext.ValidationContextSdsSecretConfig = sdsSecretConfig(sds.SecretName, clusterName)
 	}
 	hasSANValidations := false
@@ -1319,7 +1404,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 
 	for _, clientCert := range tlsConfig.ClientCertificates {
 		if sds := clientCert.SDS; sds != nil {
-			clusterName := sdsClusterNameFromURL(sds.URL)
+			clusterName := sdsClusterNameFromURL(sds.GetURL())
 			sds := sdsSecretConfig(sds.SecretName, clusterName)
 			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs, sds)
 			continue
@@ -1351,7 +1436,7 @@ func processClientCertificates(tCtx *types.ResourceVersionTable, settings []*ir.
 			for _, c := range st.TLS.ClientCertificates {
 				secret := buildXdsTLSCertSecret(&c)
 				if secret != nil {
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					if err := addXdsSecret(tCtx, secret); err != nil {
 						errs = errors.Join(errs, err)
 					}
 				}

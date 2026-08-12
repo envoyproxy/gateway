@@ -89,6 +89,20 @@ func FromFraction(fraction *gwapiv1.Fraction) *xdstype.FractionalPercent {
 	}
 }
 
+// FromFractionOrZero translates a gwapiv1.Fraction instance to envoy.type.FractionalPercent.
+// If fraction is nil, it returns an explicit zero percent value.
+func FromFractionOrZero(fraction *gwapiv1.Fraction) *xdstype.FractionalPercent {
+	fp := FromFraction(fraction)
+	if fp != nil {
+		return fp
+	}
+
+	return &xdstype.FractionalPercent{
+		Numerator:   0,
+		Denominator: xdstype.FractionalPercent_HUNDRED,
+	}
+}
+
 func ToPercent(fp *gwapiv1.Fraction) float64 {
 	if fp == nil {
 		return 0

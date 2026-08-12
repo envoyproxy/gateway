@@ -1,83 +1,83 @@
-rateLimits:
-- actions:
-  - ActionSpecifier:
-      GenericKey:
-        descriptor_key: test-namespace/test-policy-1/rule/0
-        descriptor_value: test-namespace/test-policy-1/rule/0
-  - ActionSpecifier:
-      HeaderValueMatch:
-        descriptor_key: rule-0-match-0
-        descriptor_value: rule-0-match-0
-        expect_match:
-          value: true
-        headers:
-        - HeaderMatchSpecifier:
-            StringMatch:
-              MatchPattern:
-                Exact: one
-          name: x-user-id
+rateLimitsByDomain:
+  test-namespace/test-policy-1:
+  - actions:
+    - ActionSpecifier:
+        GenericKey:
+          descriptor_key: test-namespace/test-policy-1/rule/0
+          descriptor_value: test-namespace/test-policy-1/rule/0
+    - ActionSpecifier:
+        HeaderValueMatch:
+          descriptor_key: rule-0-match-0
+          descriptor_value: rule-0-match-0
+          expect_match:
+            value: true
+          headers:
+          - HeaderMatchSpecifier:
+              StringMatch:
+                MatchPattern:
+                  Exact: one
+            name: x-user-id
 routeName: first-route
-useRouteRateLimits: true
 ---
-rateLimits:
-- actions:
-  - ActionSpecifier:
-      GenericKey:
-        descriptor_key: test-namespace/test-policy-1/rule/0
-        descriptor_value: test-namespace/test-policy-1/rule/0
-  - ActionSpecifier:
-      HeaderValueMatch:
-        descriptor_key: rule-0-match-0
-        descriptor_value: rule-0-match-0
-        expect_match:
-          value: true
-        headers:
-        - HeaderMatchSpecifier:
-            StringMatch:
-              MatchPattern:
-                Exact: one
-          name: x-user-id
+rateLimitsByDomain:
+  test-namespace/test-policy-1:
+  - actions:
+    - ActionSpecifier:
+        GenericKey:
+          descriptor_key: test-namespace/test-policy-1/rule/0
+          descriptor_value: test-namespace/test-policy-1/rule/0
+    - ActionSpecifier:
+        HeaderValueMatch:
+          descriptor_key: rule-0-match-0
+          descriptor_value: rule-0-match-0
+          expect_match:
+            value: true
+          headers:
+          - HeaderMatchSpecifier:
+              StringMatch:
+                MatchPattern:
+                  Exact: one
+            name: x-user-id
 routeName: second-route
-useRouteRateLimits: true
 ---
-rateLimits:
-- actions:
-  - ActionSpecifier:
-      GenericKey:
-        descriptor_key: test-namespace/test-policy-2/rule/0
-        descriptor_value: test-namespace/test-policy-2/rule/0
-  - ActionSpecifier:
-      HeaderValueMatch:
-        descriptor_key: rule-0-match-0
-        descriptor_value: rule-0-match-0
-        expect_match:
-          value: true
-        headers:
-        - HeaderMatchSpecifier:
-            StringMatch:
-              MatchPattern:
-                Exact: two
-          name: x-user-id
+rateLimitsByDomain:
+  test-namespace/test-policy-2:
+  - actions:
+    - ActionSpecifier:
+        GenericKey:
+          descriptor_key: test-namespace/test-policy-2/rule/0
+          descriptor_value: test-namespace/test-policy-2/rule/0
+    - ActionSpecifier:
+        HeaderValueMatch:
+          descriptor_key: rule-0-match-0
+          descriptor_value: rule-0-match-0
+          expect_match:
+            value: true
+          headers:
+          - HeaderMatchSpecifier:
+              StringMatch:
+                MatchPattern:
+                  Exact: two
+            name: x-user-id
 routeName: third-route
-useRouteRateLimits: true
 ---
-rateLimits:
-- actions:
-  - ActionSpecifier:
-      GenericKey:
-        descriptor_key: fourth-route
-        descriptor_value: fourth-route
-  - ActionSpecifier:
-      HeaderValueMatch:
-        descriptor_key: rule-0-match-0
-        descriptor_value: rule-0-match-0
-        expect_match:
-          value: true
-        headers:
-        - HeaderMatchSpecifier:
-            StringMatch:
-              MatchPattern:
-                Exact: three
-          name: x-user-id
+rateLimitsByDomain:
+  first-listener:
+  - actions:
+    - ActionSpecifier:
+        GenericKey:
+          descriptor_key: fourth-route
+          descriptor_value: fourth-route
+    - ActionSpecifier:
+        HeaderValueMatch:
+          descriptor_key: rule-0-match-0
+          descriptor_value: rule-0-match-0
+          expect_match:
+            value: true
+          headers:
+          - HeaderMatchSpecifier:
+              StringMatch:
+                MatchPattern:
+                  Exact: three
+            name: x-user-id
 routeName: fourth-route
-useRouteRateLimits: false

@@ -1,25 +1,25 @@
-rateLimits:
-- actions:
-  - ActionSpecifier:
-      GenericKey:
-        descriptor_key: first-route
-        descriptor_value: first-route
-  - ActionSpecifier:
-      RequestHeaders:
-        descriptor_key: rule-0-match-0
-        header_name: x-user-id
+rateLimitsByDomain:
+  first-listener:
+  - actions:
+    - ActionSpecifier:
+        GenericKey:
+          descriptor_key: first-route
+          descriptor_value: first-route
+    - ActionSpecifier:
+        RequestHeaders:
+          descriptor_key: rule-0-match-0
+          header_name: x-user-id
 routeName: first-route
-useRouteRateLimits: false
 ---
-rateLimits:
-- actions:
-  - ActionSpecifier:
-      GenericKey:
-        descriptor_key: test-namespace/test-policy-2/rule/0
-        descriptor_value: test-namespace/test-policy-2/rule/0
-  - ActionSpecifier:
-      RequestHeaders:
-        descriptor_key: rule-0-match-0
-        header_name: x-user-id
+rateLimitsByDomain:
+  test-namespace/test-policy-2:
+  - actions:
+    - ActionSpecifier:
+        GenericKey:
+          descriptor_key: test-namespace/test-policy-2/rule/0
+          descriptor_value: test-namespace/test-policy-2/rule/0
+    - ActionSpecifier:
+        RequestHeaders:
+          descriptor_key: rule-0-match-0
+          header_name: x-user-id
 routeName: first-route
-useRouteRateLimits: true

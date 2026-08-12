@@ -116,10 +116,12 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 
 	return &hcm.HttpConnectionManager_Tracing{
 		ClientSampling: &xdstype.Percent{
-			Value: 100.0,
+			// Default to 0 so Envoy Gateway does not honor client-forced tracing
+			// unless users explicitly opt in with clientSamplingFraction.
+			Value: ptr.Deref(tracing.ClientSamplingRate, 0),
 		},
 		OverallSampling: &xdstype.Percent{
-			Value: 100.0,
+			Value: ptr.Deref(tracing.OverallSamplingRate, 100),
 		},
 		RandomSampling: &xdstype.Percent{
 			Value: randomSamplingValue(tracing),
@@ -155,21 +157,22 @@ func buildTracingOperation(span *egv1a1.TracingSpanName) (string, string) {
 	return span.Client, span.Server
 }
 
-func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics) error {
+func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics, healthCheckLog *ir.ProxyHealthCheckLog) error {
 	if tracing == nil {
 		return nil
 	}
 
 	args := &xdsClusterArgs{
-		name:         tracing.Destination.Name,
-		settings:     tracing.Destination.Settings,
-		tSocket:      nil,
-		endpointType: buildEndpointType(tracing.Destination.Settings),
-		metrics:      metrics,
-		metadata:     tracing.Destination.Metadata,
+		name:           tracing.Destination.Name,
+		settings:       tracing.Destination.Settings,
+		tSocket:        nil,
+		endpointType:   buildEndpointType(tracing.Destination.Settings),
+		metrics:        metrics,
+		metadata:       tracing.Destination.Metadata,
+		healthCheckLog: healthCheckLog,
 	}
 
-	applyTraffic(args, tracing.Traffic)
+	applyTraffic(args, tracing.Traffic.ClusterFeatures())
 
 	return addXdsCluster(tCtx, args)
 }

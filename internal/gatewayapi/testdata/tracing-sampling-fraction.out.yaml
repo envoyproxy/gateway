@@ -194,6 +194,12 @@ infraIR:
           mergeGateways: true
           telemetry:
             tracing:
+              clientSamplingFraction:
+                denominator: 100
+                numerator: 20
+              overallSamplingFraction:
+                denominator: 100
+                numerator: 30
               provider:
                 host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
@@ -361,6 +367,7 @@ xdsIR:
       port: 19003
     tracing:
       authority: otel-collector.monitoring.svc.cluster.local
+      clientSamplingRate: 20
       destination:
         metadata:
           kind: EnvoyProxy
@@ -375,6 +382,7 @@ xdsIR:
           name: tracing/backend/-1
           protocol: GRPC
           weight: 1
+      overallSamplingRate: 30
       provider:
         host: otel-collector.monitoring.svc.cluster.local
         port: 4317

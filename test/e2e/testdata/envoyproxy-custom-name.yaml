@@ -134,6 +134,10 @@ kind: ServiceAccount
 metadata:
   name: custom-sa
   namespace: gateway-conformance-infra
+  labels:
+    app.kubernetes.io/managed-by: envoy-gateway
+    gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
+    gateway.envoyproxy.io/owning-gateway-name: eg-deployment
 ---
 # custom sa for controller namespace mode
 apiVersion: v1
@@ -141,3 +145,5 @@ kind: ServiceAccount
 metadata:
   name: custom-sa
   namespace: envoy-gateway-system
+  labels:
+    app.kubernetes.io/managed-by: envoy-gateway

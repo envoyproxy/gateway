@@ -34,6 +34,8 @@ import (
 
 var _ ListenersTranslator = (*Translator)(nil)
 
+const sdsCertificateOpaqueConditionMessage = "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default."
+
 type ListenersTranslator interface {
 	ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources)
 }
@@ -297,7 +299,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 	// Phase 2: Run conflict detection.
 	// Only listeners that haven't been marked as invalid will participate in conflict resolution.
 	t.validateConflictedProtocolsListeners(gateways)
-	t.validateConflictedLayer7Listeners(gateways)
+	t.validateConflictedHostnameListeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
 	if t.MergeGateways {
@@ -338,6 +340,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
+				tlsConfig := irTLSConfigs(&listener.tls)
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -347,7 +350,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Metadata:     buildListenerMetadata(listener, gateway),
 						IPFamily:     ipFamily,
 					},
-					TLS: irTLSConfigs(&listener.tls),
+					TLS: tlsConfig,
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -368,6 +371,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
 				listener.httpIR = irListener
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
+				tlsConfig := irTLSConfigsForTCPListener(&listener.tls)
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -382,7 +386,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
 					// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
 					// refers to the Listener TLS.
-					TLS: irTLSConfigsForTCPListener(&listener.tls),
+					TLS: tlsConfig,
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
@@ -536,6 +540,61 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 // checkOverlappingCertificates checks for overlapping certificates SANs between HTTPSlisteners and sets
 // the `OverlappingTLSConfig` condition if there are overlapping certificates.
 func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
+	// Envoy Gateway cannot inspect certificates served over SDS. When multiple
+	// valid listeners share a port, disable HTTP/2 on SDS-backed listeners and on
+	// peers whose known certificate SANs may overlap the SDS listener hostname. A
+	// nil SDS listener hostname matches every peer because it accepts all hostnames.
+	validListenerCountByPort := make(map[gwapiv1.PortNumber]int)
+	sdsListenersByPort := make(map[gwapiv1.PortNumber][]*ListenerContext)
+	for _, listener := range httpsListeners {
+		if hasInvalidCondition(listener) {
+			continue
+		}
+		validListenerCountByPort[listener.Port]++
+
+		for _, secret := range listener.tls.secrets {
+			if secret.Type == egv1a1.SDSSecretType {
+				sdsListenersByPort[listener.Port] = append(sdsListenersByPort[listener.Port], listener)
+				break
+			}
+		}
+	}
+
+	for _, listener := range httpsListeners {
+		if hasInvalidCondition(listener) || validListenerCountByPort[listener.Port] < 2 {
+			continue
+		}
+
+		disableHTTP2 := false
+		for _, sdsListener := range sdsListenersByPort[listener.Port] {
+			if listener == sdsListener || sdsListener.Hostname == nil {
+				disableHTTP2 = true
+				break
+			}
+			for _, dnsName := range listener.tls.certDNSNames {
+				if areOverlappingHostnames(sdsListener.Hostname, new(gwapiv1.Hostname(dnsName))) {
+					disableHTTP2 = true
+					break
+				}
+			}
+			if disableHTTP2 {
+				break
+			}
+		}
+		if !disableHTTP2 {
+			continue
+		}
+		if listener.httpIR != nil {
+			listener.httpIR.TLSOverlaps = true
+		}
+		listener.SetCondition(
+			gwapiv1.ListenerConditionOverlappingTLSConfig,
+			metav1.ConditionTrue,
+			status.ListenerReasonSDSCertificateOpaque,
+			sdsCertificateOpaqueConditionMessage,
+		)
+	}
+
 	type overlappingListener struct {
 		gateway1  *GatewayContext
 		gateway2  *GatewayContext
@@ -727,6 +786,8 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 		return
 	}
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
+
+	xdsIR.HealthCheckLog = processHealthCheckLog(envoyProxy)
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
@@ -1015,12 +1076,14 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	return &ir.Tracing{
-		Authority:          authority,
-		ServiceName:        serviceName,
-		SamplingRate:       proxySamplingRate(tracing),
-		CustomTags:         ir.CustomTagMapToSlice(tracing.CustomTags),
-		Tags:               ir.MapToSlice(tracing.Tags),
-		ResourceAttributes: ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
+		Authority:           authority,
+		ServiceName:         serviceName,
+		SamplingRate:        proxySamplingRate(tracing.SamplingRate, tracing.SamplingFraction),
+		ClientSamplingRate:  proxySamplingFractionPtr(tracing.ClientSamplingFraction),
+		OverallSamplingRate: proxySamplingFractionPtr(tracing.OverallSamplingFraction),
+		CustomTags:          ir.CustomTagMapToSlice(tracing.CustomTags),
+		Tags:                ir.MapToSlice(tracing.Tags),
+		ResourceAttributes:  ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
 		Destination: ir.RouteDestination{
 			Name:     destName,
 			Settings: ds,
@@ -1033,20 +1096,29 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}, nil
 }
 
-func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
-	rate := 100.0
-	if tracing.SamplingRate != nil {
-		rate = float64(*tracing.SamplingRate)
-	} else if tracing.SamplingFraction != nil {
-		numerator := float64(tracing.SamplingFraction.Numerator)
-		denominator := ptr.Deref(tracing.SamplingFraction.Denominator, 100)
-
-		rate = numerator * 100 / float64(denominator)
-		// Identifies a percentage, in the range [0.0, 100.0]
-		rate = math.Max(0, rate)
-		rate = math.Min(100, rate)
+func proxySamplingFractionPtr(fraction *gwapiv1.Fraction) *float64 {
+	if fraction == nil {
+		return nil
 	}
-	return rate
+	return new(proxySamplingRate(nil, fraction))
+}
+
+func proxySamplingRate(rate *uint32, fraction *gwapiv1.Fraction) float64 {
+	if rate != nil {
+		return float64(*rate)
+	}
+	if fraction == nil {
+		return 100.0
+	}
+
+	numerator := float64(fraction.Numerator)
+	denominator := ptr.Deref(fraction.Denominator, 100)
+
+	value := numerator * 100 / float64(denominator)
+	// Identifies a percentage, in the range [0.0, 100.0]
+	value = math.Max(0, value)
+	value = math.Min(100, value)
+	return value
 }
 
 // getAuthorityFromDestination extracts the gRPC authority from a destination setting.
@@ -1099,6 +1171,59 @@ func getOpenTelemetryTracingResourceAttributes(provider *egv1a1.TracingProvider)
 	return nil
 }
 
+// processHealthCheckLog extracts the gateway-level HC event log config from EnvoyProxy telemetry.
+func processHealthCheckLog(envoyProxy *egv1a1.EnvoyProxy) *ir.ProxyHealthCheckLog {
+	if envoyProxy == nil ||
+		envoyProxy.Spec.Telemetry == nil ||
+		envoyProxy.Spec.Telemetry.HealthCheckLog == nil {
+		return nil
+	}
+	return translateHealthCheckLog(envoyProxy.Spec.Telemetry.HealthCheckLog)
+}
+
+// translateHealthCheckLog converts a ProxyHealthCheckLog API type to its IR representation.
+func translateHealthCheckLog(hcLogging *egv1a1.ProxyHealthCheckLog) *ir.ProxyHealthCheckLog {
+	if hcLogging == nil {
+		return nil
+	}
+
+	irHCLogging := &ir.ProxyHealthCheckLog{}
+
+	// Empty/omitted Matches means log everything.
+	if len(hcLogging.Matches) == 0 {
+		irHCLogging.AlwaysLogHealthCheckFailures = true
+		irHCLogging.AlwaysLogHealthCheckSuccess = true
+	} else {
+		for _, et := range hcLogging.Matches {
+			switch et {
+			case egv1a1.ProxyHealthCheckLogEventTypeFailure:
+				irHCLogging.AlwaysLogHealthCheckFailures = true
+			case egv1a1.ProxyHealthCheckLogEventTypeSuccess:
+				irHCLogging.AlwaysLogHealthCheckSuccess = true
+			case egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart,
+				egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition:
+				// Intentional no-op: leaving the flag false tells Envoy transition-only mode
+			}
+		}
+	}
+
+	// Default to /dev/stdout when no sinks are configured, matching access log behavior.
+	if len(hcLogging.Sinks) == 0 {
+		irHCLogging.FileSinks = append(irHCLogging.FileSinks, ir.FileEnvoyProxyHealthCheckLog{
+			Path: "/dev/stdout",
+		})
+	}
+	for _, sink := range hcLogging.Sinks {
+		if sink.Type == egv1a1.ProxyHealthCheckLogSinkTypeFile && sink.File != nil {
+			irHCLogging.FileSinks = append(irHCLogging.FileSinks, ir.FileEnvoyProxyHealthCheckLog{
+				Path: sink.File.Path,
+			})
+		}
+	}
+
+	return irHCLogging
+}
+
 func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, []ir.ResolvedMetricSink, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
@@ -1107,7 +1232,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	var resolvedSinks []ir.ResolvedMetricSink
-	seen := sets.NewString()
+	seen := sets.New[string]()
 
 	for i, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
 		if sink.OpenTelemetry == nil {
@@ -1276,9 +1401,9 @@ func validCELExpression(expr string) bool {
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
 func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
-	// When running on the local host using the Host infrastructure provider, disable translating the
-	// gateway listener port into a non-privileged port and reuse the specified value.
-	if t.RunningOnHost {
+	// When running on the local host using the Host infrastructure provider or being managed in a remote data plane,
+	// disable translating the gateway listener port into a non-privileged port and reuse the specified value.
+	if t.RunningOnHost || t.InfraRemotelyManaged {
 		return servicePort
 	}
 

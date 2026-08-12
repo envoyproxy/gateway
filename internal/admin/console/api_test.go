@@ -20,7 +20,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -489,7 +488,7 @@ func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 					},
 				},
 			},
-			TCPRoutes: []*gwapiv1a2.TCPRoute{
+			TCPRoutes: []*gwapiv1.TCPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "tcr",
@@ -497,7 +496,7 @@ func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 					},
 				},
 			},
-			UDPRoutes: []*gwapiv1a2.UDPRoute{
+			UDPRoutes: []*gwapiv1.UDPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "ur",

@@ -21,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/luavalidator"
@@ -83,7 +84,12 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// EnvoyExtensionPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
-	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{}
+	routeMapSize := len(routes)
+	gatewayMapSize := len(gateways)
+	policyMapSize := len(envoyExtensionPolicies)
+	listenerSetMapSize := len(resources.ListenerSets)
+
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext, routeMapSize)
 	for _, route := range routes {
 		key := policyTargetRouteKey{
 			Kind:      string(route.GetRouteType()),
@@ -93,25 +99,46 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 		routeMap[key] = &policyRouteTargetContext{RouteContext: route}
 	}
 
-	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
+	gatewayMap := make(map[types.NamespacedName]*policyGatewayTargetContext, gatewayMapSize)
 	for _, gw := range gateways {
 		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
-	// Map of Gateway to the routes attached to it.
-	// The routes are grouped by sectionNames of their targetRefs.
-	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
+	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext, listenerSetMapSize)
+	for _, ls := range resources.ListenerSets {
+		key := utils.NamespacedName(ls)
+		listenerSetMap[key] = &policyListenerSetTargetContext{ListenerSet: ls}
+	}
 
-	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
+	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy, policyMapSize)
 
-	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
+	// Map of attached policy to Gateway. Used for policy merge process.
+	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.EnvoyExtensionPolicy, gatewayMapSize)
+
+	// Map of attached policy to ListenerSet. Used for policy merge process.
+	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.EnvoyExtensionPolicy, listenerSetMapSize)
+
+	// overrides records child scopes whose policies displace policies attached
+	// to their parent scopes.
+	overrides := newPolicyScopeGraph()
+
+	// merged records Route scopes whose policies were merged into policies
+	// attached to their parent scopes.
+	merged := newPolicyScopeGraph()
 
 	// Translate
 	// 1. First translate Policies targeting RouteRules
 	// 2. Next translate Policies targeting xRoutes
-	// 3. Then translate Policies targeting Listeners
-	// 4. Finally, the policies targeting Gateways
+	// 3. Then translate Policies targeting ListenerSet Listeners
+	// 4. Then translate Policies targeting ListenerSets
+	// 5. Then translate Policies targeting Gateway Listeners
+	// 6. Finally, the policies targeting Gateways
+
+	// Build gateway policy maps, which are needed when processing the policies targeting xRoutes.
+	t.buildGatewayEnvoyExtensionPolicyMap(envoyExtensionPolicies, gateways, gatewayMap, gatewayPolicyMap, resources.ReferenceGrants)
+	// Build ListenerSet policy maps, which are needed when processing the policies targeting xRoutes.
+	t.buildListenerSetEnvoyExtensionPolicyMap(envoyExtensionPolicies, listenerSetMap, listenerSetPolicyMap, resources)
 
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range envoyExtensionPolicies {
@@ -122,13 +149,13 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
 
 				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
 	}
@@ -148,18 +175,70 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
 
 				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
 	}
 
-	// Process the policies targeting Listeners
+	// Only run the ListenerSet-specific translation when at least one ListenerSet exists.
+	// When none are present, no policy can successfully attach to a ListenerSet (the target resolves to
+	// nil and processing returns early), so these loops would be pure overhead.
+	if len(resources.ListenerSets) > 0 {
+		// Process the policies targeting ListenerSet Listeners
+		for i, currPolicy := range envoyExtensionPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+			targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+			for _, currTarget := range targetRefs {
+				if isListenerSetListener(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = envoyExtensionPolicies[i]
+						res = append(res, policy)
+						handledPolicies[policyName] = policy
+					}
+
+					t.processEnvoyExtensionPolicyForListenerSet(resources, xdsIR,
+						gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+				}
+			}
+		}
+
+		// Process the policies targeting ListenerSets
+		for i, currPolicy := range envoyExtensionPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			targetRefs := resolvePolicyTargets(
+				currPolicy.Spec.PolicyTargetReferences,
+				resources.ListenerSets,
+				resources.ReferenceGrants,
+				egv1a1.GroupName,
+				egv1a1.KindEnvoyExtensionPolicy,
+				currPolicy.Namespace,
+				t.GetNamespace,
+			)
+			for _, currTarget := range targetRefs {
+				if isListenerSet(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = envoyExtensionPolicies[i]
+						res = append(res, policy)
+						handledPolicies[policyName] = policy
+					}
+
+					t.processEnvoyExtensionPolicyForListenerSet(resources, xdsIR,
+						gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+				}
+			}
+		}
+	}
+
+	// Process the policies targeting Gateway Listeners
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
@@ -168,13 +247,13 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
 
 				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
-					gatewayMap, gatewayRouteMap, policy, currTarget)
+					gatewayMap, overrides, merged, policy, currTarget)
 			}
 		}
 	}
@@ -194,13 +273,13 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = policyCopies[i]
+					policy = envoyExtensionPolicies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
 
 				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
-					gatewayMap, gatewayRouteMap, policy, currTarget)
+					gatewayMap, overrides, merged, policy, currTarget)
 			}
 		}
 	}
@@ -214,11 +293,117 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	return res
 }
 
+func (t *Translator) buildGatewayEnvoyExtensionPolicyMap(
+	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
+	gateways []*GatewayContext,
+	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
+	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.EnvoyExtensionPolicy,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+) {
+	for _, currPolicy := range envoyExtensionPolicies {
+		targetRefs := resolvePolicyTargets(
+			currPolicy.Spec.PolicyTargetReferences,
+			gateways,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindEnvoyExtensionPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace)
+		for _, currTarget := range targetRefs {
+			if currTarget.Kind == resource.KindGateway {
+				// Check if the gateway exists
+				key := types.NamespacedName{
+					Name:      string(currTarget.Name),
+					Namespace: string(currTarget.Namespace),
+				}
+				gateway, ok := gatewayMap[key]
+				if !ok {
+					continue
+				}
+
+				// Check if the specified listener exists when sectionName is set
+				if currTarget.SectionName != nil {
+					if err := validateGatewayListenerSectionName(
+						*currTarget.SectionName,
+						key,
+						gatewayDirectListeners(gateway.GatewayContext),
+					); err != nil {
+						continue
+					}
+				}
+
+				mapKey := NamespacedNameWithSection{
+					NamespacedName: key,
+					SectionName:    ptr.Deref(currTarget.SectionName, ""),
+				}
+
+				// Only store the first policy for this Gateway/Listener - conflicts are handled elsewhere
+				if _, ok := gatewayPolicyMap[mapKey]; ok {
+					continue
+				}
+				gatewayPolicyMap[mapKey] = currPolicy
+			}
+		}
+	}
+}
+
+func (t *Translator) buildListenerSetEnvoyExtensionPolicyMap(
+	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
+	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
+	listenerSetPolicyMap map[NamespacedNameWithSection]*egv1a1.EnvoyExtensionPolicy,
+	resources *resource.Resources,
+) {
+	for _, currPolicy := range envoyExtensionPolicies {
+		targetRefs := resolvePolicyTargets(
+			currPolicy.Spec.PolicyTargetReferences,
+			resources.ListenerSets,
+			resources.ReferenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindEnvoyExtensionPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace)
+		for _, currTarget := range targetRefs {
+			if currTarget.Kind != resource.KindListenerSet {
+				continue
+			}
+			key := types.NamespacedName{
+				Name:      string(currTarget.Name),
+				Namespace: string(currTarget.Namespace),
+			}
+			ls, ok := listenerSetMap[key]
+			if !ok {
+				continue
+			}
+			if currTarget.SectionName != nil {
+				if err := validateListenerSetListenerSectionName(
+					*currTarget.SectionName,
+					key,
+					ls.Spec.Listeners,
+				); err != nil {
+					continue
+				}
+			}
+			mapKey := NamespacedNameWithSection{
+				NamespacedName: key,
+				SectionName:    ptr.Deref(currTarget.SectionName, ""),
+			}
+			if _, ok := listenerSetPolicyMap[mapKey]; ok {
+				continue
+			}
+			listenerSetPolicyMap[mapKey] = currPolicy
+		}
+	}
+}
+
 func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
-	gatewayRouteMap map[string]map[string]sets.Set[string],
+	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
+	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.EnvoyExtensionPolicy,
+	listenerSetPolicyMap map[NamespacedNameWithSection]*egv1a1.EnvoyExtensionPolicy,
+	overrides policyScopeGraph,
+	merged policyScopeGraph,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -237,38 +422,68 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 		return
 	}
 
-	// Find the Gateway that the route belongs to and add it to the
-	// gatewayRouteMap and ancestor list, which will be used to check
-	// policy overrides and populate its ancestor status.
+	// Find the parent resource that the route belongs to and record its
+	// ancestor status and override relationship.
 	parentRefs := GetManagedParentReferences(targetedRoute)
+	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
+	routeNN := utils.NamespacedName(targetedRoute)
+	routeAsChildScope := routeScope(routeNN, string(targetedRoute.GetRouteType()))
 	for _, p := range parentRefs {
-		if p.Kind == nil || *p.Kind == resource.KindGateway {
-			namespace := targetedRoute.GetNamespace()
-			if p.Namespace != nil {
-				namespace = string(*p.Namespace)
-			}
-			gwNN := types.NamespacedName{
-				Namespace: namespace,
-				Name:      string(p.Name),
-			}
+		parentNamespace := targetedRoute.GetNamespace()
+		if p.Namespace != nil {
+			parentNamespace = string(*p.Namespace)
+		}
+		parentNN := types.NamespacedName{Namespace: parentNamespace, Name: string(p.Name)}
 
-			key := gwNN.String()
-			if _, ok := gatewayRouteMap[key]; !ok {
-				gatewayRouteMap[key] = make(map[string]sets.Set[string])
-			}
-			listenerRouteMap := gatewayRouteMap[key]
-			sectionName := ""
+		if p.Kind == nil || *p.Kind == resource.KindGateway {
+			// Record the Route under the Gateway scope it attaches to:
+			// Gateway listener when sectionName is set, otherwise Gateway.
 			if p.SectionName != nil {
-				sectionName = string(*p.SectionName)
+				overrides.Add(gatewayListenerScope(parentNN, *p.SectionName), routeAsChildScope)
+			} else {
+				overrides.Add(gatewayScope(parentNN), routeAsChildScope)
 			}
-			if _, ok := listenerRouteMap[sectionName]; !ok {
-				listenerRouteMap[sectionName] = make(sets.Set[string])
-			}
-			listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
 
 			// Do need a section name since the policy is targeting to a route
-			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+			ancestorRef := getAncestorRefForPolicy(parentNN, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
+
+			// Only process parentRefs that were handled by this translator
+			// (skip those referencing Gateways with different GatewayClasses)
+			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
+				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
+			}
+		} else if *p.Kind == resource.KindListenerSet {
+			// The Route attaches through a ListenerSet. Resolve the ListenerSet
+			// so its parent Gateway can be registered as structural containment;
+			// the Route relationship itself is recorded under the ListenerSet
+			// scope below.
+			lsCtx, ok := listenerSetMap[parentNN]
+			if !ok {
+				continue
+			}
+			parentGwNN := types.NamespacedName{
+				Name:      string(lsCtx.Spec.ParentRef.Name),
+				Namespace: NamespaceDerefOr(lsCtx.Spec.ParentRef.Namespace, lsCtx.Namespace),
+			}
+			overrides.RegisterListenerSet(parentNN, parentGwNN)
+
+			if p.SectionName != nil {
+				overrides.Add(listenerSetListenerScope(parentNN, *p.SectionName), routeAsChildScope)
+			} else {
+				overrides.Add(listenerSetScope(parentNN), routeAsChildScope)
+			}
+
+			// ListenerSet-attached Route policies report status against the
+			// ListenerSet itself.
+			ancestorRef := getAncestorRefForListenerSetPolicy(parentNN, p.SectionName)
+			ancestorRefs = append(ancestorRefs, &ancestorRef)
+
+			// Only process parentRefs that were handled by this translator
+			// (skip those referencing Gateways with different GatewayClasses)
+			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
+				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
+			}
 		}
 	}
 
@@ -283,14 +498,121 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 		return
 	}
 
-	// Set conditions for translation error if it got any
-	if err := t.translateEnvoyExtensionPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, resources); err != nil {
-		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-			ancestorRefs,
-			t.GatewayControllerName,
-			policy.Generation,
-			status.Error2ConditionMsg(err),
-		)
+	// Check if merging is enabled
+	if policy.Spec.MergeType == nil {
+		// No merging - use existing translation logic
+		if err := t.translateEnvoyExtensionPolicyForRoute(policy, &envoyExtensionPolicyOwners{}, targetedRoute, currTarget, xdsIR, resources, nil); err != nil {
+			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				status.Error2ConditionMsg(err),
+			)
+		}
+	} else {
+		// Merge with the closest policy in the Route's attachment hierarchy.
+		// Gateway listeners check the Gateway listener policy first, then the
+		// Gateway policy. ListenerSet listeners check the ListenerSet listener
+		// policy, then the ListenerSet policy, then the parent Gateway policy;
+		// they intentionally skip Gateway listener policies because those are
+		// sibling scopes.
+		for _, parentRefCtx := range parentRefCtxs {
+			for _, listener := range parentRefCtx.listeners {
+				gwNN := utils.NamespacedName(listener.gateway.Gateway)
+
+				var (
+					parentPolicy *egv1a1.EnvoyExtensionPolicy
+					parentScope  policyScope
+					ancestorRef  gwapiv1.ParentReference
+				)
+				if listener.isFromListenerSet() {
+					lsNN := types.NamespacedName{
+						Namespace: listener.listenerSet.Namespace,
+						Name:      listener.listenerSet.Name,
+					}
+					ancestorRef = getAncestorRefForListenerSetPolicy(lsNN, &listener.Name)
+
+					lsListenerKey := NamespacedNameWithSection{NamespacedName: lsNN, SectionName: listener.Name}
+					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
+					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
+
+					if p, ok := listenerSetPolicyMap[lsListenerKey]; ok {
+						parentPolicy, parentScope = p, listenerSetListenerScope(lsNN, listener.Name)
+					} else if p, ok := listenerSetPolicyMap[lsKey]; ok {
+						parentPolicy, parentScope = p, listenerSetScope(lsNN)
+					} else if p, ok := gatewayPolicyMap[gwKey]; ok {
+						parentPolicy, parentScope = p, gatewayScope(gwNN)
+					}
+				} else {
+					ancestorRef = getAncestorRefForPolicy(gwNN, &listener.Name)
+
+					listenerKey := NamespacedNameWithSection{NamespacedName: gwNN, SectionName: listener.Name}
+					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
+
+					if p, ok := gatewayPolicyMap[listenerKey]; ok {
+						parentPolicy, parentScope = p, gatewayListenerScope(gwNN, listener.Name)
+					} else if p, ok := gatewayPolicyMap[gwKey]; ok {
+						parentPolicy, parentScope = p, gatewayScope(gwNN)
+					}
+				}
+
+				if parentPolicy == nil {
+					// No parent policy found, fall back to current policy
+					if err := t.translateEnvoyExtensionPolicyForRoute(policy, &envoyExtensionPolicyOwners{}, targetedRoute, currTarget, xdsIR, resources, listener); err != nil {
+						status.SetConditionForPolicyAncestor(&policy.Status,
+							&ancestorRef,
+							t.GatewayControllerName,
+							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+							egv1a1.PolicyReasonInvalid,
+							status.Error2ConditionMsg(err),
+							policy.Generation,
+						)
+					}
+					continue
+				}
+
+				// Merge with parent policy
+				mergedPolicy, owners, err := mergeEnvoyExtensionPolicy(policy, parentPolicy)
+				if err != nil {
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						&ancestorRef,
+						t.GatewayControllerName,
+						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+						egv1a1.PolicyReasonInvalid,
+						fmt.Sprintf("error merging policies: %v", err),
+						policy.Generation,
+					)
+					continue
+				}
+
+				// Apply merged policy
+				if err := t.translateEnvoyExtensionPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, xdsIR, resources, listener); err != nil {
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						&ancestorRef,
+						t.GatewayControllerName,
+						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+						egv1a1.PolicyReasonInvalid,
+						status.Error2ConditionMsg(err),
+						policy.Generation,
+					)
+					continue
+				}
+
+				// Record the merged route under the parent scope so the parent's
+				// status can list the routes that were merged into it.
+				merged.Add(parentScope, routeAsChildScope)
+
+				status.SetConditionForPolicyAncestor(&policy.Status,
+					&ancestorRef,
+					t.GatewayControllerName,
+					egv1a1.PolicyConditionMerged,
+					metav1.ConditionTrue,
+					egv1a1.PolicyReasonMerged,
+					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
+					policy.Generation,
+				)
+			}
+		}
 	}
 
 	// Set Accepted condition if it is unset
@@ -299,6 +621,12 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// Check for deprecated fields and set warning if any are found
 	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+
+	// Check if this policy is overridden by other policies targeting at route rule levels
+	// If policy target is route rule, we can skip the check
+	if currTarget.SectionName != nil {
+		return
 	}
 
 	// Check if this policy is overridden by other policies targeting at route rule levels
@@ -321,11 +649,122 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	}
 }
 
+func (t *Translator) processEnvoyExtensionPolicyForListenerSet(
+	resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
+	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
+	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
+	overrides policyScopeGraph,
+	merged policyScopeGraph,
+	policy *egv1a1.EnvoyExtensionPolicy,
+	currTarget policyTargetReferenceWithSectionName,
+) {
+	var (
+		targeted   *gwapiv1.ListenerSet
+		resolveErr *status.PolicyResolveError
+	)
+
+	targeted, resolveErr = resolveEnvoyExtensionPolicyListenerSetTargetRef(currTarget, listenerSetMap)
+	// Skip if the ListenerSet is not found. The EnvoyExtensionPolicy may be
+	// reconciled by multiple controllers, and another controller may own it.
+	if targeted == nil {
+		return
+	}
+
+	parentGatewayNN := types.NamespacedName{
+		Name:      string(targeted.Spec.ParentRef.Name),
+		Namespace: NamespaceDerefOr(targeted.Spec.ParentRef.Namespace, targeted.Namespace),
+	}
+	gateway, ok := gatewayMap[parentGatewayNN]
+	if !ok {
+		return
+	}
+
+	// Use the ListenerSet itself as the policy ancestor (not the parent Gateway).
+	listenerSetNN := utils.NamespacedName(targeted)
+	ancestorRef := getAncestorRefForListenerSetPolicy(listenerSetNN, currTarget.SectionName)
+
+	// Set conditions for resolve error, then skip current ListenerSet
+	if resolveErr != nil {
+		status.SetResolveErrorForPolicyAncestor(&policy.Status,
+			&ancestorRef,
+			t.GatewayControllerName,
+			policy.Generation,
+			resolveErr,
+		)
+		return
+	}
+
+	// Record the ListenerSet policy under the scope it attaches to. Listener
+	// policies are children of the ListenerSet scope; ListenerSet-wide policies
+	// are children of the parent Gateway scope.
+	if currTarget.SectionName != nil {
+		overrides.RegisterListenerSet(listenerSetNN, parentGatewayNN)
+		overrides.Add(listenerSetScope(listenerSetNN), listenerSetListenerScope(listenerSetNN, *currTarget.SectionName))
+	} else {
+		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
+	}
+
+	if err := t.translateEnvoyExtensionPolicyForListenerSet(policy, currTarget, gateway.GatewayContext, targeted, xdsIR, resources); err != nil {
+		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+			&ancestorRef,
+			t.GatewayControllerName,
+			policy.Generation,
+			status.Error2ConditionMsg(err),
+		)
+	}
+
+	// Set Accepted condition if it is unset
+	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+
+	// Determine this policy's own scope so we can look up overriding child scopes from the relation maps.
+	var lsParentScope policyScope
+	if currTarget.SectionName == nil {
+		lsParentScope = listenerSetScope(listenerSetNN)
+	} else {
+		lsParentScope = listenerSetListenerScope(listenerSetNN, *currTarget.SectionName)
+	}
+
+	mergedScopes := merged.GetDirectChildren(lsParentScope)
+	mergedMessage := formatPolicyScopes(mergedScopes)
+	// Merged routes are excluded from the override message so a route doesn't
+	// appear in both sections.
+	overriddenMessage := formatPolicyScopes(overrides.GetWithDescendants(lsParentScope).Difference(mergedScopes))
+	if mergedMessage != "" {
+		status.SetConditionForPolicyAncestor(&policy.Status,
+			&ancestorRef,
+			t.GatewayControllerName,
+			egv1a1.PolicyConditionMerged,
+			metav1.ConditionTrue,
+			egv1a1.PolicyReasonMerged,
+			"This policy is being merged by other envoyExtensionPolicies for "+mergedMessage,
+			policy.Generation,
+		)
+	}
+	if overriddenMessage != "" {
+		status.SetConditionForPolicyAncestor(&policy.Status,
+			&ancestorRef,
+			t.GatewayControllerName,
+			egv1a1.PolicyConditionOverridden,
+			metav1.ConditionTrue,
+			egv1a1.PolicyReasonOverridden,
+			"This policy is being overridden by other envoyExtensionPolicies for "+overriddenMessage,
+			policy.Generation,
+		)
+	}
+}
+
 func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
-	gatewayRouteMap map[string]map[string]sets.Set[string],
+	overrides policyScopeGraph,
+	merged policyScopeGraph,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -359,6 +798,12 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 		return
 	}
 
+	// Record this policy as an override of the parent Gateway scope when the
+	// target is a Gateway listener (sectionName set).
+	if currTarget.SectionName != nil {
+		overrides.Add(gatewayScope(gatewayNN), gatewayListenerScope(gatewayNN, *currTarget.SectionName))
+	}
+
 	// Set conditions for translation error if it got any
 	if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, xdsIR, resources); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
@@ -377,17 +822,38 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 
-	// Check if this policy is overridden by other policies targeting at route rule, route and listener levels
-	overriddenTargetsMessage := getOverriddenTargetsMessageForGateway(
-		gatewayMap[gatewayNN], gatewayRouteMap[gatewayNN.String()], currTarget.SectionName)
-	if overriddenTargetsMessage != "" {
+	// Determine this policy's own scope so we can look up overriding child scopes from the relation maps.
+	var parentScope policyScope
+	if currTarget.SectionName == nil {
+		parentScope = gatewayScope(gatewayNN)
+	} else {
+		parentScope = gatewayListenerScope(gatewayNN, *currTarget.SectionName)
+	}
+
+	mergedScopes := merged.GetDirectChildren(parentScope)
+	mergedMessage := formatPolicyScopes(mergedScopes)
+	// Merged routes are excluded from the override message so a route doesn't
+	// appear in both sections.
+	overriddenMessage := formatPolicyScopes(overrides.GetWithDescendants(parentScope).Difference(mergedScopes))
+	if mergedMessage != "" {
+		status.SetConditionForPolicyAncestor(&policy.Status,
+			&ancestorRef,
+			t.GatewayControllerName,
+			egv1a1.PolicyConditionMerged,
+			metav1.ConditionTrue,
+			egv1a1.PolicyReasonMerged,
+			"This policy is being merged by other envoyExtensionPolicies for "+mergedMessage,
+			policy.Generation,
+		)
+	}
+	if overriddenMessage != "" {
 		status.SetConditionForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
 			egv1a1.PolicyConditionOverridden,
 			metav1.ConditionTrue,
 			egv1a1.PolicyReasonOverridden,
-			"This policy is being overridden by other envoyExtensionPolicies for "+overriddenTargetsMessage,
+			"This policy is being overridden by other envoyExtensionPolicies for "+overriddenMessage,
 			policy.Generation,
 		)
 	}
@@ -414,7 +880,7 @@ func resolveEnvoyExtensionPolicyGatewayTargetRef(
 		if err := validateGatewayListenerSectionName(
 			*target.SectionName,
 			key,
-			gateway.listeners,
+			gatewayDirectListeners(gateway.GatewayContext),
 		); err != nil {
 			return gateway.GatewayContext, err
 		}
@@ -452,6 +918,65 @@ func resolveEnvoyExtensionPolicyGatewayTargetRef(
 	gateways[key] = gateway
 
 	return gateway.GatewayContext, nil
+}
+
+func resolveEnvoyExtensionPolicyListenerSetTargetRef(
+	target policyTargetReferenceWithSectionName,
+	listenerSets map[types.NamespacedName]*policyListenerSetTargetContext,
+) (*gwapiv1.ListenerSet, *status.PolicyResolveError) {
+	// Find the ListenerSet
+	key := types.NamespacedName{
+		Name:      string(target.Name),
+		Namespace: string(target.Namespace),
+	}
+	ls, ok := listenerSets[key]
+	if !ok {
+		return nil, nil
+	}
+
+	// If sectionName is set, make sure its valid
+	if target.SectionName != nil {
+		if err := validateListenerSetListenerSectionName(
+			*target.SectionName,
+			key,
+			ls.Spec.Listeners,
+		); err != nil {
+			return ls.ListenerSet, err
+		}
+	}
+
+	if target.SectionName == nil {
+		// Check if another policy targeting the same ListenerSet exists
+		if ls.attached {
+			message := fmt.Sprintf("Unable to target ListenerSet %s, another EnvoyExtensionPolicy has already attached to it",
+				string(target.Name))
+
+			return ls.ListenerSet, &status.PolicyResolveError{
+				Reason:  gwapiv1.PolicyReasonConflicted,
+				Message: message,
+			}
+		}
+		ls.attached = true
+	} else {
+		listenerName := string(*target.SectionName)
+		if ls.attachedToListeners != nil && ls.attachedToListeners.Has(listenerName) {
+			message := fmt.Sprintf("Unable to target Listener %s/%s, another EnvoyExtensionPolicy has already attached to it",
+				string(target.Name), listenerName)
+
+			return ls.ListenerSet, &status.PolicyResolveError{
+				Reason:  gwapiv1.PolicyReasonConflicted,
+				Message: message,
+			}
+		}
+		if ls.attachedToListeners == nil {
+			ls.attachedToListeners = make(sets.Set[string])
+		}
+		ls.attachedToListeners.Insert(listenerName)
+	}
+
+	listenerSets[key] = ls
+
+	return ls.ListenerSet, nil
 }
 
 func resolveEnvoyExtensionPolicyRouteTargetRef(
@@ -514,10 +1039,12 @@ func resolveEnvoyExtensionPolicyRouteTargetRef(
 
 func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	policy *egv1a1.EnvoyExtensionPolicy,
+	owners *envoyExtensionPolicyOwners,
 	route RouteContext,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
+	targetListener *ListenerContext,
 ) error {
 	var (
 		wasms                                                 []ir.Wasm
@@ -527,7 +1054,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		errs                                                  error
 	)
 
-	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
+	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, owners, resources); wasmError != nil {
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
@@ -536,6 +1063,16 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
 	routesWithDirectResponse := sets.New[string]()
+
+	var targetListenerName string
+	var targetGatewayNN types.NamespacedName
+	if targetListener != nil {
+		targetListenerName = irListenerName(targetListener)
+		targetGatewayNN = types.NamespacedName{
+			Namespace: targetListener.gateway.Namespace,
+			Name:      targetListener.gateway.Name,
+		}
+	}
 	for _, p := range parentRefs {
 		// Skip if this parentRef was not processed by this translator
 		// (e.g., references a Gateway with a different GatewayClass)
@@ -548,25 +1085,40 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			continue
 		}
 
-		if luas, luaError = t.buildLuas(policy, gtwCtx.envoyProxy); luaError != nil {
+		// If targetListener is set, only apply within its parent Gateway.
+		if targetListener != nil {
+			gtwNN := types.NamespacedName{
+				Namespace: gtwCtx.Namespace,
+				Name:      gtwCtx.Name,
+			}
+			if gtwNN != targetGatewayNN {
+				continue
+			}
+		}
+
+		if luas, luaError = t.buildLuas(policy, owners, gtwCtx.envoyProxy); luaError != nil {
 			luaError = perr.WithMessage(luaError, "Lua")
 			errs = errors.Join(errs, luaError)
 		}
 
 		var extProcs []ir.ExtProc
-		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx); extProcError != nil {
+		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, owners, resources, gtwCtx); extProcError != nil {
 			extProcError = perr.WithMessage(extProcError, "ExtProc")
 			errs = errors.Join(errs, extProcError)
 		}
 
 		var dynamicModules []ir.DynamicModule
-		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gtwCtx.envoyProxy); dynamicModuleError != nil {
+		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, owners, gtwCtx.envoyProxy); dynamicModuleError != nil {
 			dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 			errs = errors.Join(errs, dynamicModuleError)
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
+			// If targetListener is set, only apply to that exact listener.
+			if targetListener != nil && targetListenerName != irListenerName(listener) {
+				continue
+			}
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 			if irListener != nil {
 				for _, r := range irListener.Routes {
@@ -634,6 +1186,39 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
 ) error {
+	return t.translateEnvoyExtensionPolicyForListeners(
+		policy,
+		gateway,
+		xdsIR,
+		resources,
+		gatewayPolicyTargetListeners(gateway, target),
+	)
+}
+
+func (t *Translator) translateEnvoyExtensionPolicyForListenerSet(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	target policyTargetReferenceWithSectionName,
+	gateway *GatewayContext,
+	listenerSet *gwapiv1.ListenerSet,
+	xdsIR resource.XdsIRMap,
+	resources *resource.Resources,
+) error {
+	return t.translateEnvoyExtensionPolicyForListeners(
+		policy,
+		gateway,
+		xdsIR,
+		resources,
+		listenerSetPolicyTargetListeners(gateway, listenerSet, target),
+	)
+}
+
+func (t *Translator) translateEnvoyExtensionPolicyForListeners(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	gateway *GatewayContext,
+	xdsIR resource.XdsIRMap,
+	resources *resource.Resources,
+	targetListeners []*ListenerContext,
+) error {
 	var (
 		extProcs                                              []ir.ExtProc
 		wasms                                                 []ir.Wasm
@@ -644,19 +1229,20 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		errs                                                  error
 	)
 
-	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway); extProcError != nil {
+	noOwners := &envoyExtensionPolicyOwners{}
+	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, noOwners, resources, gateway); extProcError != nil {
 		extProcError = perr.WithMessage(extProcError, "ExtProc")
 		errs = errors.Join(errs, extProcError)
 	}
-	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
+	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, noOwners, resources); wasmError != nil {
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
-	if luas, luaError = t.buildLuas(policy, gateway.envoyProxy); luaError != nil {
+	if luas, luaError = t.buildLuas(policy, noOwners, gateway.envoyProxy); luaError != nil {
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
 	}
-	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gateway.envoyProxy); dynamicModuleError != nil {
+	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, noOwners, gateway.envoyProxy); dynamicModuleError != nil {
 		dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 		errs = errors.Join(errs, dynamicModuleError)
 	}
@@ -664,22 +1250,20 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
 	x := xdsIR[irKey]
-
-	policyTarget := irStringKey(policy.Namespace, string(target.Name))
+	listenerNames := sets.New[string]()
+	for _, listener := range targetListeners {
+		listenerNames.Insert(irListenerName(listener))
+	}
 
 	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
-		gatewayName := extractGatewayNameFromListener(http.Name)
-		if t.MergeGateways && gatewayName != policyTarget {
-			continue
-		}
-		// If specified the sectionName must match listenerName from ir listener metadata.
-		if target.SectionName != nil && string(*target.SectionName) != http.Metadata.SectionName {
+		if !listenerNames.Has(http.Name) {
 			continue
 		}
 
-		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
-		// targeting a lesser specific scope(Gateway).
+		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway
+		// listener, ListenerSet listener) wins over a policy targeting a lesser
+		// specific scope(Gateway/ListenerSet).
 		for _, r := range http.Routes {
 			// if already set - there's a specific level policy, so skip
 			if r.EnvoyExtensions != nil {
@@ -729,6 +1313,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 func (t *Translator) buildLuas(
 	policy *egv1a1.EnvoyExtensionPolicy,
+	owners *envoyExtensionPolicyOwners,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) ([]ir.Lua, error) {
 	if policy == nil {
@@ -742,9 +1327,10 @@ func (t *Translator) buildLuas(
 
 	luaIRList := make([]ir.Lua, 0, len(policy.Spec.Lua))
 
+	ownerPolicy := policyOwnerOr(owners.lua, policy)
 	for idx, ep := range policy.Spec.Lua {
-		name := irConfigNameForLua(policy, idx)
-		luaIR, err := t.buildLua(name, policy, ep, envoyProxy)
+		name := irConfigNameForLua(ownerPolicy, idx)
+		luaIR, err := t.buildLua(name, ownerPolicy, ep, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -806,7 +1392,12 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 	}
 }
 
-func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, gtwCtx *GatewayContext) ([]ir.ExtProc, error, bool) {
+func (t *Translator) buildExtProcs(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	owners *envoyExtensionPolicyOwners,
+	resources *resource.Resources,
+	gtwCtx *GatewayContext,
+) ([]ir.ExtProc, error, bool) {
 	var (
 		failOpen bool
 		errs     error
@@ -819,9 +1410,10 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	extProcIRList := make([]ir.ExtProc, 0, len(policy.Spec.ExtProc))
 
 	hasFailClose := false
+	ownerPolicy := policyOwnerOr(owners.extProc, policy)
 	for idx, ep := range policy.Spec.ExtProc {
-		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
+		name := irConfigNameForExtProc(ownerPolicy, idx)
+		extProcIR, err := t.buildExtProc(name, ownerPolicy, &ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -842,7 +1434,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 func (t *Translator) buildExtProc(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
-	extProc egv1a1.ExtProc,
+	extProc *egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
@@ -890,8 +1482,16 @@ func (t *Translator) buildExtProc(
 		extProcIR.MessageTimeout = ir.MetaV1DurationPtr(d)
 	}
 
+	if extProc.ShadowMode != nil {
+		extProcIR.ShadowMode = extProc.ShadowMode
+	}
+
 	if extProc.FailOpen != nil {
 		extProcIR.FailOpen = extProc.FailOpen
+	}
+
+	if extProc.StatusOnError != nil {
+		extProcIR.StatusOnError = extProc.StatusOnError
 	}
 
 	if extProc.ProcessingMode != nil {
@@ -950,6 +1550,7 @@ func irConfigNameForLua(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
 
 func (t *Translator) buildWasms(
 	policy *egv1a1.EnvoyExtensionPolicy,
+	owners *envoyExtensionPolicyOwners,
 	resources *resource.Resources,
 ) ([]ir.Wasm, error, bool) {
 	var (
@@ -972,9 +1573,10 @@ func (t *Translator) buildWasms(
 	}
 
 	hasFailClose := false
+	ownerPolicy := policyOwnerOr(owners.wasm, policy)
 	for idx, wasm := range policy.Spec.Wasm {
-		name := irConfigNameForWasm(policy, idx)
-		wasmIR, err := t.buildWasm(name, &wasm, policy, idx, resources)
+		name := irConfigNameForWasm(ownerPolicy, idx)
+		wasmIR, err := t.buildWasm(name, &wasm, ownerPolicy, idx, resources)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if wasm.FailOpen == nil || !*wasm.FailOpen {
@@ -1048,7 +1650,7 @@ func (t *Translator) buildWasm(
 				kind:      resource.KindEnvoyExtensionPolicy,
 				namespace: policy.Namespace,
 			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
 				return nil, err
 			}
 		}
@@ -1090,7 +1692,7 @@ func (t *Translator) buildWasm(
 				kind:      resource.KindEnvoyExtensionPolicy,
 				namespace: policy.Namespace,
 			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
 				return nil, err
 			}
 		}
@@ -1200,6 +1802,7 @@ func irConfigNameForDynamicModule(policy *egv1a1.EnvoyExtensionPolicy, index int
 
 func (t *Translator) buildDynamicModules(
 	policy *egv1a1.EnvoyExtensionPolicy,
+	owners *envoyExtensionPolicyOwners,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) ([]ir.DynamicModule, error) {
 	var errs error
@@ -1218,9 +1821,9 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	dmIRList := make([]ir.DynamicModule, 0, len(policy.Spec.DynamicModule))
-
+	ownerPolicy := policyOwnerOr(owners.dynamicModule, policy)
 	for idx, dm := range policy.Spec.DynamicModule {
-		name := irConfigNameForDynamicModule(policy, idx)
+		name := irConfigNameForDynamicModule(ownerPolicy, idx)
 
 		// Validate module exists in registry
 		entry, ok := registry[dm.Name]
@@ -1279,14 +1882,42 @@ func (t *Translator) buildDynamicModules(
 	return dmIRList, errs
 }
 
-// envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
-// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
-func envoyExtensionPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyExtensionPolicy) []*egv1a1.EnvoyExtensionPolicy {
-	copies := make([]*egv1a1.EnvoyExtensionPolicy, len(policies))
-	for i, p := range policies {
-		out := *p
-		p.Status.DeepCopyInto(&out.Status)
-		copies[i] = &out
+type envoyExtensionPolicyOwners struct {
+	wasm          *egv1a1.EnvoyExtensionPolicy
+	extProc       *egv1a1.EnvoyExtensionPolicy
+	lua           *egv1a1.EnvoyExtensionPolicy
+	dynamicModule *egv1a1.EnvoyExtensionPolicy
+}
+
+// mergeEnvoyExtensionPolicy merges a route-level EnvoyExtensionPolicy with a parent (Gateway/Listener) EnvoyExtensionPolicy.
+func mergeEnvoyExtensionPolicy(routePolicy, parentPolicy *egv1a1.EnvoyExtensionPolicy) (*egv1a1.EnvoyExtensionPolicy, *envoyExtensionPolicyOwners, error) {
+	if routePolicy.Spec.MergeType == nil || parentPolicy == nil {
+		return routePolicy, nil, nil
 	}
-	return copies
+	mergedPolicy, err := utils.Merge(parentPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	if err != nil {
+		return nil, nil, err
+	}
+	return mergedPolicy, buildEnvoyExtensionPolicyOwners(routePolicy, parentPolicy), nil
+}
+
+// buildEnvoyExtensionPolicyOwners determines, for each merged field, which policy
+// (route or parent) is considered the owner. The owner is used later to resolve
+// references (e.g. Secrets, BackendRefs) scoped to the owning policy's namespace,
+// and to derive IR resource names tied to the owning policy.
+func buildEnvoyExtensionPolicyOwners(route, parent *egv1a1.EnvoyExtensionPolicy) *envoyExtensionPolicyOwners {
+	return &envoyExtensionPolicyOwners{
+		wasm: ownerOf(route, parent, func(p *egv1a1.EnvoyExtensionPolicy) bool {
+			return len(p.Spec.Wasm) > 0
+		}),
+		extProc: ownerOf(route, parent, func(p *egv1a1.EnvoyExtensionPolicy) bool {
+			return len(p.Spec.ExtProc) > 0
+		}),
+		lua: ownerOf(route, parent, func(p *egv1a1.EnvoyExtensionPolicy) bool {
+			return len(p.Spec.Lua) > 0
+		}),
+		dynamicModule: ownerOf(route, parent, func(p *egv1a1.EnvoyExtensionPolicy) bool {
+			return len(p.Spec.DynamicModule) > 0
+		}),
+	}
 }

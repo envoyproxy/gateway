@@ -76,6 +76,18 @@ spec:
                     required:
                     - name
                     type: object
+                  directSourceIP:
+                    description: |-
+                      DirectSourceIP configures the geoip filter to use the downstream connection
+                      source address (the TCP peer of the connection terminated by Envoy) as the client IP.
+
+                      Use this in L4-transparent topologies where a load balancer preserves the original
+                      client source IP at TCP level and does not populate XFF or a custom header — for
+                      example, AWS NLB with target-type=instance + externalTrafficPolicy=Local, or
+                      Azure Standard Load Balancer.
+
+                      Mutually exclusive with XForwardedFor and CustomHeader.
+                    type: object
                   xForwardedFor:
                     description: XForwardedForSettings provides configuration for
                       using X-Forwarded-For headers for determining the client IP
@@ -130,8 +142,10 @@ spec:
                         || (!has(self.numTrustedHops) && has(self.trustedCIDRs))
                 type: object
                 x-kubernetes-validations:
-                - message: customHeader cannot be used in conjunction with xForwardedFor
-                  rule: '!(has(self.xForwardedFor) && has(self.customHeader))'
+                - message: exactly one of xForwardedFor, customHeader, or directSourceIP
+                    must be set
+                  rule: '[has(self.xForwardedFor), has(self.customHeader), has(self.directSourceIP)].filter(x,
+                    x).size() == 1'
               connection:
                 description: Connection includes client connection settings.
                 properties:
@@ -484,6 +498,21 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
+                  host:
+                    description: Host enables managing how the Host/Authority header
+                      set by clients can be normalized.
+                    properties:
+                      stripTrailingHostDot:
+                        description: |-
+                          StripTrailingHostDot determines if the trailing dot of the host should be removed
+                          from the Host/Authority header before any processing of the request.
+                          This affects the upstream host header as well. Without this option, incoming requests
+                          with host "example.com." will not match routes with domains set to "example.com".
+                          When the host includes a port (for example "example.com.:443"), only the trailing dot
+                          from the host section is stripped, leaving the port as-is ("example.com:443").
+                          Defaults to false.
+                        type: boolean
+                    type: object
                   lateResponseHeaders:
                     description: LateResponseHeaders defines settings for global response
                       header modification.
@@ -1306,6 +1335,14 @@ spec:
                           Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      requestHeadersReceivedTimeout:
+                        description: |-
+                          RequestHeadersReceivedTimeout is the duration envoy waits for the request headers to arrive.
+                          The timer is activated when the first byte of the headers is received,
+                          and is disarmed when the last byte of the headers has been received.
+                          If not specified or set to 0, this timeout is disabled.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       requestReceivedTimeout:
                         description: |-
                           RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
@@ -1322,11 +1359,26 @@ spec:
                   tcp:
                     description: Timeout settings for TCP.
                     properties:
+                      connectionInspectionTimeout:
+                        description: |-
+                          ConnectionInspectionTimeout is the maximum time to wait for initial inspection
+                          (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection on the listener socket.
+                          If exceeded, the connection is dropped.
+                          Default: 15 seconds.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       idleTimeout:
                         description: |-
                           IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
                           bytes sent or received on either the upstream or downstream connection.
                           Default: 1 hour.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      tlsHandshakeTimeout:
+                        description: |-
+                          TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
+                          (e.g. the TLS handshake) after a connection is accepted.
+                          If this expires before the transport reports connection establishment, the connection is summarily closed.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
@@ -1411,6 +1463,13 @@ spec:
                       ClientValidation specifies the configuration to validate the client
                       initiating the TLS connection to the Gateway listener.
                     properties:
+                      allowExpiredCertificate:
+                        description: |-
+                          AllowExpiredCertificate permits client certificates that have expired
+                          but are otherwise valid (CA chain, signature). When true, Envoy skips
+                          the NotAfter check during client certificate validation.
+                          Defaults to false.
+                        type: boolean
                       caCertificateRefs:
                         description: |-
                           CACertificateRefs contains one or more references to
@@ -1733,6 +1792,11 @@ spec:
                             type: array
                         type: object
                     type: object
+                    x-kubernetes-validations:
+                    - message: allowExpiredCertificate can only be set when mode is
+                        VerifyIfGiven or RequireAndVerify
+                      rule: '!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate
+                        || !has(self.mode) || self.mode in [''VerifyIfGiven'', ''RequireAndVerify'']'
                   ecdhCurves:
                     description: |-
                       ECDHCurves specifies the set of supported ECDH curves.
