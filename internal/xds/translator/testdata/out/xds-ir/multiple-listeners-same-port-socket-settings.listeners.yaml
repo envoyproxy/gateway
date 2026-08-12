@@ -46,6 +46,7 @@
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  listenerFiltersTimeout: 5s
   maxConnectionsToAcceptPerSocketEvent: 64
   name: first-listener
   perConnectionBufferLimitBytes: 1048576
