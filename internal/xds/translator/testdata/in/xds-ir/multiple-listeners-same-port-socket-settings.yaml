@@ -1,8 +1,8 @@
 # The listeners below all share the same address and port, so they collapse into a
 # single xDS listener. The first one leaves every socket setting unset and must not
 # make the shared socket fall back to the defaults: the buffer limit and the keepalive
-# come from the second HTTP listener, and the max accept per socket event comes from
-# the TCP listener.
+# come from the second HTTP listener, and the max accept per socket event and the
+# connection inspection timeout come from the TCP listener.
 http:
 - name: "first-listener"
   address: "::"
@@ -52,6 +52,9 @@ tcp:
   port: 10080
   connection:
     maxAcceptPerSocketEvent: 64
+  timeout:
+    tcp:
+      connectionInspectionTimeout: 5s
   routes:
   - name: "third-route"
     tls:
