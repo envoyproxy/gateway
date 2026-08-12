@@ -1059,7 +1059,8 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 			if kb > maxRequestHeaderLimitKB {
 				errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s exceeds the maximum of %dKi", headerSettings.MaxRequestHeaderLimit.String(), maxRequestHeaderLimitKB))
 			} else {
-				httpIR.Headers.MaxRequestHeadersKB = ptr.To(uint32(kb))
+				httpIR.Headers.MaxRequestHeadersKB = new(uint32)
+				*httpIR.Headers.MaxRequestHeadersKB = uint32(kb)
 			}
 		}
 	}
