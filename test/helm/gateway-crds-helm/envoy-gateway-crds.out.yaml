@@ -4624,6 +4624,10 @@ spec:
                       For example, 20Mi, 1Gi, 256Ki etc.
                       Note that when the suffix is not provided, the value is interpreted as bytes.
                       Default: 32768 bytes.
+
+                      This setting belongs to the listener socket, which is shared by every Gateway
+                      listener on the same address and port, so it applies to all of them. If more
+                      than one of those listeners configures it, the first one wins.
                     x-kubernetes-int-or-string: true
                   connectionLimit:
                     description: ConnectionLimit defines limits related to connections
@@ -4672,6 +4676,10 @@ spec:
                       per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
                       this threshold will be accepted in later event loop iterations.
                       Defaults to 1 and can be disabled by setting to 0 for allowing unlimited accepted connections.
+
+                      This setting belongs to the listener socket, which is shared by every Gateway
+                      listener on the same address and port, so it applies to all of them. If more
+                      than one of those listeners configures it, the first one wins.
                     format: int32
                     type: integer
                   socketBufferLimit:
@@ -5762,6 +5770,10 @@ spec:
                   TcpKeepalive settings associated with the downstream client connection.
                   If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.
                   Disabled by default.
+
+                  This setting belongs to the listener socket, which is shared by every Gateway
+                  listener on the same address and port, so it applies to all of them. If more
+                  than one of those listeners configures it, the first one wins.
                 properties:
                   idleTime:
                     description: |-
@@ -5827,6 +5839,10 @@ spec:
                           (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection on the listener socket.
                           If exceeded, the connection is dropped.
                           Default: 15 seconds.
+
+                          This setting belongs to the listener socket, which is shared by every Gateway
+                          listener on the same address and port, so it applies to all of them. If more
+                          than one of those listeners configures it, the first one wins.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       idleTimeout:
