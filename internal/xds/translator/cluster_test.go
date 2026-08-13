@@ -667,3 +667,82 @@ func TestBackendClusterTranslatorAsClusterArgsAppliesTraffic(t *testing.T) {
 
 	require.Equal(t, circuitBreaker, args.circuitBreaker)
 }
+
+func TestHTTPRouteTranslatorAsClusterArgsPrefersSettingTraffic(t *testing.T) {
+	httpRoute := &ir.HTTPRoute{
+		Name: "test-route",
+		Traffic: &ir.TrafficFeatures{
+			ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+				CircuitBreaker: &ir.CircuitBreaker{MaxConnections: new(uint32(50))},
+			},
+		},
+	}
+	settingTraffic := &ir.ClusterTrafficFeatures{
+		CircuitBreaker: &ir.CircuitBreaker{MaxConnections: new(uint32(100))},
+	}
+	settings := []*ir.DestinationSetting{
+		{Name: "backend-1", Traffic: settingTraffic},
+	}
+
+	translator := &HTTPRouteTranslator{httpRoute}
+	args := translator.asClusterArgs("test-cluster", settings, &ExtraArgs{}, nil)
+
+	require.NotNil(t, args.circuitBreaker)
+	require.Equal(t, uint32(100), *args.circuitBreaker.MaxConnections)
+}
+
+func TestHTTPRouteTranslatorAsClusterArgsFallsBackToRouteTrafficWhenMultipleSettings(t *testing.T) {
+	httpRoute := &ir.HTTPRoute{
+		Name: "test-route",
+		Traffic: &ir.TrafficFeatures{
+			ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+				CircuitBreaker: &ir.CircuitBreaker{MaxConnections: new(uint32(50))},
+			},
+		},
+	}
+	// Two settings in this call - even though one has its own Traffic, the bundled-call case
+	// (multiple settings passed together) must never happen for a Traffic-bearing setting once
+	// Task 2's NeedsClusterPerSetting forces a split - but asClusterArgs itself only needs to
+	// guard len(settings) == 1, since it has no other way to know which single setting it's for.
+	settings := []*ir.DestinationSetting{
+		{Name: "backend-1", Traffic: &ir.ClusterTrafficFeatures{CircuitBreaker: &ir.CircuitBreaker{MaxConnections: new(uint32(100))}}},
+		{Name: "backend-2"},
+	}
+
+	translator := &HTTPRouteTranslator{httpRoute}
+	args := translator.asClusterArgs("test-cluster", settings, &ExtraArgs{}, nil)
+
+	require.NotNil(t, args.circuitBreaker)
+	require.Equal(t, uint32(50), *args.circuitBreaker.MaxConnections, "must use route-level Traffic when settings is not exactly length 1")
+}
+
+func TestTCPRouteTranslatorAsClusterArgsPrefersSettingTraffic(t *testing.T) {
+	tcpRoute := &ir.TCPRoute{
+		Name:           "test-route",
+		CircuitBreaker: &ir.CircuitBreaker{MaxConnections: new(uint32(50))},
+	}
+	settings := []*ir.DestinationSetting{
+		{Name: "backend-1", Traffic: &ir.ClusterTrafficFeatures{CircuitBreaker: &ir.CircuitBreaker{MaxConnections: new(uint32(100))}}},
+	}
+
+	translator := &TCPRouteTranslator{tcpRoute}
+	args := translator.asClusterArgs("test-cluster", settings, &ExtraArgs{}, nil)
+
+	require.NotNil(t, args.circuitBreaker)
+	require.Equal(t, uint32(100), *args.circuitBreaker.MaxConnections)
+}
+
+func TestUDPRouteTranslatorAsClusterArgsPrefersSettingTraffic(t *testing.T) {
+	udpRoute := &ir.UDPRoute{
+		Name: "test-route",
+	}
+	settings := []*ir.DestinationSetting{
+		{Name: "backend-1", Traffic: &ir.ClusterTrafficFeatures{CircuitBreaker: &ir.CircuitBreaker{MaxConnections: new(uint32(100))}}},
+	}
+
+	translator := &UDPRouteTranslator{udpRoute}
+	args := translator.asClusterArgs("test-cluster", settings, &ExtraArgs{}, nil)
+
+	require.NotNil(t, args.circuitBreaker)
+	require.Equal(t, uint32(100), *args.circuitBreaker.MaxConnections)
+}
