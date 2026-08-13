@@ -1,0 +1,1 @@
+Added support for BackendTrafficPolicy to target a Service, ServiceImport, or Backend directly, applying cluster-scoped settings to every merged BackendCluster that resolves to it (requires `mergeType` and the `MergeBackends` EnvoyProxy feature).
