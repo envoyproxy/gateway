@@ -520,8 +520,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 // Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for
 // conflict detection, then merges it into the Traffic of every already-registered BackendCluster,
 // across every gateway's xdsIR, whose Metadata identifies the same backend. A backend that never
-// resolves to a registered BackendCluster (mergeBackends disabled for its gateway, excluded by
-// per-listener ClusterSettings divergence, dynamic resolver, etc.) gets no settings and no error.
+// resolves to a registered BackendCluster for some other reason (per-listener ClusterSettings
+// divergence, dynamic resolver, etc.) gets no settings and no error.
 func (t *Translator) processBackendTrafficPolicyForBackend(
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
@@ -555,6 +555,18 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			continue
 		}
 		gwNN := utils.NamespacedName(gw)
+
+		// mergeBackends off here: backend targeting can never take effect on this gateway.
+		if !t.isMergeBackendsEnabledForGateway(gw) {
+			ref := getAncestorRefForPolicy(gwNN, nil)
+			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
+				&status.PolicyResolveError{
+					Reason:  egv1a1.PolicyReasonDisabled,
+					Message: "Backend targeting in BackendTrafficPolicy requires mergeBackends to be enabled on the EnvoyProxy for this Gateway",
+				})
+			continue
+		}
+
 		var gwPolicy *egv1a1.BackendTrafficPolicy
 		if p, ok := gatewayPolicyMap[NamespacedNameWithSection{NamespacedName: gwNN}]; ok {
 			gwPolicy = p
