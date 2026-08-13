@@ -34,6 +34,8 @@ func TestMergePolicy(t *testing.T) {
 				runMergePolicyTest[*egv1a1.BackendTrafficPolicy](t, caseFile)
 			case "securitypolicy":
 				runMergePolicyTest[*egv1a1.SecurityPolicy](t, caseFile)
+			case "envoyextensionpolicy":
+				runMergePolicyTest[*egv1a1.EnvoyExtensionPolicy](t, caseFile)
 			default:
 				t.Fatalf("unsupported policy type %q in %s", policyType, caseFile)
 			}

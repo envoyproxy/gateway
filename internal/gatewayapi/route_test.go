@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -591,12 +592,15 @@ func TestShouldMergeBackend(t *testing.T) {
 	tests := []struct {
 		name              string
 		mergeEnabled      bool
+		mergeSelector     *metav1.LabelSelector
 		gatewayEnvoyProxy *egv1a1.EnvoyProxy
 		gatewayBaselineRT *egv1a1.RoutingType
 		effectiveRT       *egv1a1.RoutingType
 		mergeIncompatible bool
 		backendRef        gwapiv1.BackendObjectReference
 		backend           *egv1a1.Backend
+		service           *corev1.Service
+		serviceImport     *mcsapiv1a1.ServiceImport
 		filters           *ir.DestinationFilters
 		want              bool
 	}{
@@ -665,6 +669,94 @@ func TestShouldMergeBackend(t *testing.T) {
 			filters:      &ir.DestinationFilters{AddRequestHeaders: []ir.AddHeader{{Name: "x-foo", Value: []string{"bar"}}}},
 			want:         false,
 		},
+		{
+			name:         "nil default-level selector: matches everything",
+			mergeEnabled: true,
+			backendRef:   serviceBackendRef,
+			want:         true,
+		},
+		{
+			name:          "default-level selector matches the Service's labels: merges",
+			mergeEnabled:  true,
+			mergeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "dedup"}},
+			backendRef:    serviceBackendRef,
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+			},
+			want: true,
+		},
+		{
+			name:          "default-level selector does not match the Service's labels: excluded",
+			mergeEnabled:  true,
+			mergeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "dedup"}},
+			backendRef:    serviceBackendRef,
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "other"}},
+			},
+			want: false,
+		},
+		{
+			name:          "selector configured but target Service not found: excluded (fail-closed)",
+			mergeEnabled:  true,
+			mergeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "dedup"}},
+			backendRef:    serviceBackendRef,
+			want:          false,
+		},
+		{
+			name:         "selector fails to parse (In operator with no values): excluded (fail-closed)",
+			mergeEnabled: true,
+			mergeSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+				{Key: "tier", Operator: metav1.LabelSelectorOpIn, Values: nil},
+			}},
+			backendRef: serviceBackendRef,
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+			},
+			want: false,
+		},
+		{
+			name:          "selector matches a Backend CR's labels, not just Service",
+			mergeEnabled:  true,
+			mergeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "dedup"}},
+			backendRef:    dynamicResolverBackendRef,
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+				// deliberately NOT a dynamic-resolver type here, so isMergeableBackendKind doesn't
+				// exclude it first and this case actually exercises the selector path; reuse
+				// dynamicResolverBackendRef only for its Kind=Backend, with a plain Spec.
+				Spec: egv1a1.BackendSpec{},
+			},
+			want: true,
+		},
+		{
+			name:          "selector matches a ServiceImport's labels",
+			mergeEnabled:  true,
+			mergeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "dedup"}},
+			backendRef: gwapiv1.BackendObjectReference{
+				Group: GroupPtr(mcsapiv1a1.GroupName),
+				Kind:  KindPtr(resource.KindServiceImport),
+				Name:  "service-import-1",
+			},
+			serviceImport: &mcsapiv1a1.ServiceImport{
+				ObjectMeta: metav1.ObjectMeta{Name: "service-import-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+			},
+			want: true,
+		},
+		{
+			name:          "Gateway-level EnvoyProxy selector overrides the default-level selector entirely",
+			mergeEnabled:  true,
+			mergeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "dedup"}},
+			gatewayEnvoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{MergeBackends: &egv1a1.MergeBackendsConfig{
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "other"}},
+				}},
+			},
+			backendRef: serviceBackendRef,
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+			},
+			want: false, // matches the DEFAULT-level selector's labels, not the Gateway-level override's — must be excluded, proving the override, not the default, was actually applied
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -672,10 +764,24 @@ func TestShouldMergeBackend(t *testing.T) {
 			if tc.backend != nil {
 				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
 			}
+			serviceMap := map[types.NamespacedName]*corev1.Service{}
+			if tc.service != nil {
+				serviceMap[types.NamespacedName{Namespace: tc.service.Namespace, Name: tc.service.Name}] = tc.service
+			}
+			serviceImportMap := map[types.NamespacedName]*mcsapiv1a1.ServiceImport{}
+			if tc.serviceImport != nil {
+				serviceImportMap[types.NamespacedName{Namespace: tc.serviceImport.Namespace, Name: tc.serviceImport.Name}] = tc.serviceImport
+			}
+			var mergeBackends *MergeBackendsConfig
+			if tc.mergeEnabled {
+				mergeBackends = &MergeBackendsConfig{Selector: tc.mergeSelector}
+			}
 			tr := &Translator{
-				MergeBackends: tc.mergeEnabled,
+				MergeBackends: mergeBackends,
 				TranslatorContext: &TranslatorContext{
-					BackendMap: backendMap,
+					BackendMap:       backendMap,
+					ServiceMap:       serviceMap,
+					ServiceImportMap: serviceImportMap,
 					BTPRoutingTypeIndex: func() *BTPRoutingTypeIndex {
 						idx := newBTPRoutingTypeIndex()
 						idx.setGatewayLevel(gwNN, tc.gatewayBaselineRT)

@@ -139,6 +139,7 @@ _Appears in:_
 | `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  |  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
 | `grpc` | _[GRPCActiveHealthChecker](#grpcactivehealthchecker)_ |  false  |  | GRPC defines the configuration of the GRPC health checker.<br />It's optional, and can only be used if the specified type is GRPC. |
 | `overrides` | _[HealthCheckOverrides](#healthcheckoverrides)_ |  false  |  | Overrides defines the configuration of the overriding health check settings for all endpoints<br />in the backend cluster. This allows customization of port and other settings that may differ<br />from the main service configuration. |
+| `healthCheckLog` | _[ProxyHealthCheckLog](#proxyhealthchecklog)_ |  false  |  | HealthCheckLog defines health check event logging configuration for this cluster.<br />When set, HC probe outcomes are logged to the configured sinks.<br />Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog. |
 
 
 #### ActiveHealthCheckPayload
@@ -1384,13 +1385,15 @@ _Appears in:_
 
 
 CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+When both statusCodes and responseHeaders are specified, both must match.
 
 _Appears in:_
 - [ResponseOverride](#responseoverride)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  true  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  false  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `responseHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Response headers to match on. The match evaluates to true if all matches are successful. |
 
 
 #### CustomTag
@@ -1640,6 +1643,7 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](#localpolicytargetreferencewithsectionname)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing EnvoyExtensionPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent EnvoyExtensionPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `wasm` | _[Wasm](#wasm) array_ |  false  |  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
 | `extProc` | _[ExtProc](#extproc) array_ |  false  |  | ExtProc is an ordered list of external processing filters<br />that should be added to the envoy filter chain |
 | `lua` | _[Lua](#lua) array_ |  false  |  | Lua is an ordered list of Lua filters<br />that should be added to the envoy filter chain |
@@ -2683,6 +2687,22 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `path` | _string_ |  true  |  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
+
+
+#### FileEnvoyProxyHealthCheckLog
+
+
+
+FileEnvoyProxyHealthCheckLog writes health check events as JSON to a local file path.
+
+See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/health_check/event_sinks/file/v3/file.proto
+
+_Appears in:_
+- [ProxyHealthCheckLogSink](#proxyhealthchecklogsink)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path specifies the file path for health check event output.<br />Use /dev/stdout to write to standard output. |
 
 
 #### FilterPosition
@@ -4325,6 +4345,9 @@ safe to do so, otherwise it falls back to a dedicated per-route cluster.
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `selector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  false  |  | Selector restricts cluster deduplication to backends whose target Service, ServiceImport,<br />or Backend resource matches this label selector. When unset, every otherwise-eligible<br />backend is merged. Use this to opt individual backends into deduplication gradually<br />instead of enabling it for every backend at once. |
 
 
 #### MergeType
@@ -4335,6 +4358,7 @@ MergeType defines the type of merge operation
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
 - [EnvoyProxySpec](#envoyproxyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)
 - [SecurityPolicySpec](#securitypolicyspec)
@@ -5005,6 +5029,73 @@ _Appears in:_
 | `jsonPatches` | _[JSONPatchOperation](#jsonpatchoperation) array_ |  true  |  | JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are<br />applied in the order in which they are defined. |
 
 
+#### ProxyHealthCheckLog
+
+
+
+ProxyHealthCheckLog configures Envoy health check event logging.
+Health check events (state transitions, failures, successes) are emitted
+to each configured sink.
+
+See the Envoy health check API reference for details on the underlying fields:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto
+
+_Appears in:_
+- [ActiveHealthCheck](#activehealthcheck)
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sinks` | _[ProxyHealthCheckLogSink](#proxyhealthchecklogsink) array_ |  false  |  | Sinks defines where health check events are written.<br />When omitted, events are written to /dev/stdout. |
+| `matches` | _[ProxyHealthCheckLogEventType](#proxyhealthchecklogeventtype) array_ |  false  |  | Matches defines which health check probe outcomes produce a log entry.<br />When omitted or empty, all events are logged.<br />Each value must be unique. Multiple values are ORed. If any failure type is<br />specified then a success type must also be specified, and vice versa. |
+
+
+#### ProxyHealthCheckLogEventType
+
+_Underlying type:_ _string_
+
+ProxyHealthCheckLogEventType specifies which health check probe outcomes produce a log entry.
+
+_Appears in:_
+- [ProxyHealthCheckLog](#proxyhealthchecklog)
+
+| Value | Description |
+| ----- | ----------- |
+| `Failure` | ProxyHealthCheckLogEventTypeFailure logs every failed probe regardless of<br />the host's current health state (Envoy's always_log_health_check_failures=true).<br /> | 
+| `FailureSeriesStart` | ProxyHealthCheckLogEventTypeFailureSeriesStart logs only the first failed probe<br />of a consecutive failure run — the probe that starts a potential healthy→unhealthy<br />transition, regardless of whether unhealthyThreshold is ultimately reached<br />(Envoy's always_log_health_check_failures=false).<br /> | 
+| `Success` | ProxyHealthCheckLogEventTypeSuccess logs every successful probe regardless<br />of the host's current health state (Envoy's always_log_health_check_success=true).<br /> | 
+| `HealthyTransition` | ProxyHealthCheckLogEventTypeHealthyTransition logs the first successful probe of<br />a consecutive success run AND when the host reaches the healthy threshold and<br />transitions back to healthy (Envoy's always_log_health_check_success=false).<br /> | 
+
+
+#### ProxyHealthCheckLogSink
+
+
+
+ProxyHealthCheckLogSink defines a destination for health check event logs.
+
+_Appears in:_
+- [ProxyHealthCheckLog](#proxyhealthchecklog)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[ProxyHealthCheckLogSinkType](#proxyhealthchecklogsinktype)_ |  true  |  | Type defines the type of sink. |
+| `file` | _[FileEnvoyProxyHealthCheckLog](#fileenvoyproxyhealthchecklog)_ |  false  |  | File defines the file sink configuration.<br />Required when type is File. |
+
+
+#### ProxyHealthCheckLogSinkType
+
+_Underlying type:_ _string_
+
+ProxyHealthCheckLogSinkType is the type of a ProxyHealthCheckLog sink.
+
+_Appears in:_
+- [ProxyHealthCheckLogSink](#proxyhealthchecklogsink)
+
+| Value | Description |
+| ----- | ----------- |
+| `File` | ProxyHealthCheckLogSinkTypeFile writes health check events as JSON to a local file.<br /> | 
+
+
 #### ProxyLogComponent
 
 _Underlying type:_ _string_
@@ -5179,6 +5270,7 @@ _Appears in:_
 | `tracing` | _[ProxyTracing](#proxytracing)_ |  false  |  | Tracing defines tracing configuration for managed proxies.<br />If unspecified, will not send tracing data. |
 | `metrics` | _[ProxyMetrics](#proxymetrics)_ |  true  |  | Metrics defines metrics configuration for managed proxies. |
 | `requestID` | _[RequestIDSettings](#requestidsettings)_ |  false  |  | RequestID configures Envoy request ID behavior. |
+| `healthCheckLog` | _[ProxyHealthCheckLog](#proxyhealthchecklog)_ |  false  |  | HealthCheckLog defines health check event logging for xRoute-backed clusters. |
 
 
 #### ProxyTracing
@@ -5541,7 +5633,7 @@ _Appears in:_
 _Underlying type:_ _string_
 
 RateLimitUnit specifies the intervals for setting rate limits.
-Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
+Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Week", "Month" and "Year".
 
 _Appears in:_
 - [RateLimitValue](#ratelimitvalue)
@@ -5552,6 +5644,7 @@ _Appears in:_
 | `Minute` | RateLimitUnitMinute specifies the rate limit interval to be 1 minute.<br /> | 
 | `Hour` | RateLimitUnitHour specifies the rate limit interval to be 1 hour.<br /> | 
 | `Day` | RateLimitUnitDay specifies the rate limit interval to be 1 day.<br /> | 
+| `Week` | RateLimitUnitWeek specifies the rate limit interval to be 1 week.<br /> | 
 | `Month` | RateLimitUnitMonth specifies the rate limit interval to be 1 month.<br /> | 
 | `Year` | RateLimitUnitYear specifies the rate limit interval to be 1 year.<br /> | 
 
@@ -5781,6 +5874,21 @@ _Appears in:_
 | `response` | _[CustomResponse](#customresponse)_ |  true  |  | Response configuration. |
 | `redirect` | _[CustomRedirect](#customredirect)_ |  true  |  | Redirect configuration |
 | `source` | _[ResponseOverrideSource](#responseoverridesource)_ |  false  |  | Source specifies which responses this rule applies to.<br />Local overrides only Envoy-generated responses (e.g. auth failures).<br />Backend overrides only upstream responses.<br />All (default) overrides both. |
+
+
+#### ResponseOverrideHeaderMatch
+
+
+
+ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+
+_Appears in:_
+- [CustomResponseMatch](#customresponsematch)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _[HTTPHeaderName](#httpheadername)_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive.<br />For example, "Foo" and "foo" are considered the same header. |
+| `value` | _[StringMatch](#stringmatch)_ |  true  |  | Value within the HTTP header to match against. |
 
 
 #### ResponseOverrideSource
@@ -6094,6 +6202,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `healthCheckFailureDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | HealthCheckFailureDelay defines the delay before failing health checks during the graceful drain process.<br />If unspecified, defaults to 0 seconds. |
 | `drainTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 60 seconds. |
 | `minDrainDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 10 seconds. |
 
@@ -6249,6 +6358,7 @@ _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)
+- [ResponseOverrideHeaderMatch](#responseoverrideheadermatch)
 - [SubjectAltNames](#subjectaltnames)
 
 | Field | Type | Required | Default | Description |

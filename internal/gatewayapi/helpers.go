@@ -309,7 +309,7 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		return []string{"*"}
 	}
 
-	hostnamesSet := sets.NewString()
+	hostnamesSet := sets.New[string]()
 
 	// Find intersecting hostnames
 	for i := range routeHostnames {
@@ -377,7 +377,7 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		hostnamesSet.Delete(string(*listener.Hostname))
 	}
 
-	return hostnamesSet.List()
+	return sets.List(hostnamesSet)
 }
 
 // wildcardHostnameMatchesHostname returns true if wildcardHostname matches hostname.
@@ -703,19 +703,23 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return false
 }
 
-func IsMergeBackendsEnabled(resources *resource.Resources) bool {
-	// Check GatewayClass-level EnvoyProxy first (higher priority)
+// ResolveMergeBackendsConfig resolves MergeBackends config, preferring the GatewayClass-level
+// EnvoyProxy over the global default. Returns nil when MergeBackends is unset in both.
+func ResolveMergeBackendsConfig(resources *resource.Resources) *MergeBackendsConfig {
 	if resources.EnvoyProxyForGatewayClass != nil &&
 		resources.EnvoyProxyForGatewayClass.Spec.MergeBackends != nil {
-		return true
+		cfg := resources.EnvoyProxyForGatewayClass.Spec.MergeBackends
+		return &MergeBackendsConfig{Selector: cfg.Selector}
 	}
 
 	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
-	if resources.EnvoyProxyDefaultSpec != nil {
-		return resources.EnvoyProxyDefaultSpec.MergeBackends != nil
+	if resources.EnvoyProxyDefaultSpec != nil &&
+		resources.EnvoyProxyDefaultSpec.MergeBackends != nil {
+		cfg := resources.EnvoyProxyDefaultSpec.MergeBackends
+		return &MergeBackendsConfig{Selector: cfg.Selector}
 	}
 
-	return false
+	return nil
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
@@ -1425,6 +1429,29 @@ func resolvePolicyTargetsForGatewayAndListenerSet(
 	plainTargetRefs := resolvePolicyTargetsFromReferences(targetRefs, policyNamespace)
 	selectorTargetRefsGateways = append(selectorTargetRefsGateways, selectorTargetRefsLS...)
 	return composePolicyTargetRefs(selectorTargetRefsGateways, plainTargetRefs)
+}
+
+// policyOwnerOr returns owner if non-nil, otherwise fallback.
+// Used to resolve per-field owners from PolicyOwners: the owner is the policy
+// that contributed the field (route overrides parent), falling back to the active policy
+// when no merge occurred or the field was not set by either side.
+func policyOwnerOr[T any](owner, fallback *T) *T {
+	if owner != nil {
+		return owner
+	}
+	return fallback
+}
+
+// ownerOf returns route if routeOwns(route) is true, otherwise parent.
+// Use this when ownership of a merged field is determined by a single predicate.
+func ownerOf[T any](
+	route, parent *T,
+	routeOwns func(*T) bool,
+) *T {
+	if routeOwns(route) {
+		return route
+	}
+	return parent
 }
 
 // Sets *target to value if and only if *target is nil
