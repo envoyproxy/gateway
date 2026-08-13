@@ -2337,3 +2337,22 @@ func TestJSONPatchOperationValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestDestinationSettingTrafficDeepCopy(t *testing.T) {
+	original := &DestinationSetting{
+		Name: "test-setting",
+		Traffic: &ClusterTrafficFeatures{
+			CircuitBreaker: &CircuitBreaker{
+				MaxConnections: new(uint32(100)),
+			},
+		},
+	}
+
+	copied := original.DeepCopy()
+	require.NotNil(t, copied.Traffic)
+	require.Equal(t, original.Traffic.CircuitBreaker.MaxConnections, copied.Traffic.CircuitBreaker.MaxConnections)
+
+	// Mutating the copy must not affect the original.
+	*copied.Traffic.CircuitBreaker.MaxConnections = 200
+	require.Equal(t, uint32(100), *original.Traffic.CircuitBreaker.MaxConnections)
+}
