@@ -26,7 +26,7 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Merged with the Gateway's BackendTrafficPolicy, if any
+        message: Merged with policy envoy-gateway/btp-gateway
         reason: Merged
         status: "True"
         type: Merged
