@@ -1,0 +1,1 @@
+Fixed `mergeBackends` incorrectly sharing or splitting clusters when a route's `parentRef` omitted `sectionName`, by checking `ClusterSettings` merge-eligibility against each listener the route actually attaches to instead of the route's literal `sectionName`.
