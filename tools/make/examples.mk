@@ -7,7 +7,8 @@ EXAMPLE_APPS := \
 	static-file-server \
 	dynamic-module-test \
 	backend-utilization \
-	sds-test-server
+	sds-test-server \
+	remote-infra
 
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
