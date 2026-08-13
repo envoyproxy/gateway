@@ -162,7 +162,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					MergeType: new(egv1a1.StrategicMerge),
 				}
 			},
-			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+			wantErrors: []string{"mergeType can only be used with xRoute or backend targets"},
 		},
 		{
 			desc: "mergeType rejected on ListenerSet targetRefs",
@@ -182,7 +182,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					MergeType: new(egv1a1.StrategicMerge),
 				}
 			},
-			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+			wantErrors: []string{"mergeType can only be used with xRoute or backend targets"},
 		},
 		{
 			desc: "mergeType rejected on ListenerSet targetSelector",
@@ -199,7 +199,92 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					MergeType: new(egv1a1.StrategicMerge),
 				}
 			},
-			wantErrors: []string{"mergeType can only be used with xRoute targets"},
+			wantErrors: []string{"mergeType can only be used with xRoute or backend targets"},
+		},
+		{
+			desc: "valid Service targetRef with mergeType",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(""),
+								Kind:  gwapiv1.Kind("Service"),
+								Name:  gwapiv1.ObjectName("svc-1"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+					ClusterSettings: egv1a1.ClusterSettings{
+						CircuitBreaker: &egv1a1.CircuitBreaker{},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Service targetRef without mergeType is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(""),
+								Kind:  gwapiv1.Kind("Service"),
+								Name:  gwapiv1.ObjectName("svc-1"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						CircuitBreaker: &egv1a1.CircuitBreaker{},
+					},
+				}
+			},
+			wantErrors: []string{"mergeType is required when targeting a backend"},
+		},
+		{
+			desc: "Backend targetRef with rateLimit is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.envoyproxy.io"),
+								Kind:  gwapiv1.Kind("Backend"),
+								Name:  gwapiv1.ObjectName("backend-1"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{{
+								Limit: egv1a1.RateLimitValue{Requests: 1, Unit: egv1a1.RateLimitUnitSecond},
+							}},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"rateLimit is not allowed when targeting a backend"},
+		},
+		{
+			desc: "ServiceImport targetRef with sectionName is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("multicluster.x-k8s.io"),
+								Kind:  gwapiv1.Kind("ServiceImport"),
+								Name:  gwapiv1.ObjectName("svcimport-1"),
+							},
+							SectionName: new(gwapiv1.SectionName("8080")),
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
 		},
 		{
 			desc: "valid admissionControl percentage bounds",
