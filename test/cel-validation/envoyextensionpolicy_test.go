@@ -44,7 +44,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("gateway.networking.k8s.io"),
 								Kind:  gwapiv1.Kind("Gateway"),
@@ -61,7 +61,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("gateway.networking.k8s.io"),
 								Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -78,7 +78,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("gateway.networking.k8s.io"),
 								Kind:  gwapiv1.Kind("ListenerSet"),
@@ -114,7 +114,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("gateway.networking.k8s.io"),
 								Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -149,7 +149,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("gateway.networking.k8s.io"),
 								Kind:  gwapiv1.Kind("ListenerSet"),
@@ -204,7 +204,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("gateway.networking.k8s.io"),
 								Kind:  gwapiv1.Kind("foo"),
@@ -243,7 +243,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("gateway.networking.k8s.io"),
 								Kind:  gwapiv1.Kind("foo"),
@@ -285,7 +285,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("foo"),
 								Kind:  gwapiv1.Kind("Gateway"),
@@ -327,7 +327,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("foo"),
 								Kind:  gwapiv1.Kind("bar"),
@@ -371,7 +371,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group("gateway.networking.k8s.io"),
 								Kind:  gwapiv1.Kind("Gateway"),
@@ -425,7 +425,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -458,7 +458,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -490,7 +490,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -525,7 +525,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -567,7 +567,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -607,7 +607,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -644,7 +644,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -676,7 +676,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -716,7 +716,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -756,7 +756,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -795,7 +795,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -835,7 +835,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -878,7 +878,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -904,7 +904,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -931,7 +931,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -958,7 +958,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -984,7 +984,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1014,7 +1014,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1044,7 +1044,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1075,7 +1075,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1103,7 +1103,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1125,7 +1125,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1147,7 +1147,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1177,7 +1177,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1200,7 +1200,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1314,7 +1314,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1362,7 +1362,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1407,7 +1407,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1446,7 +1446,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
@@ -1486,7 +1486,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",

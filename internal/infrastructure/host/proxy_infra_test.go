@@ -620,8 +620,8 @@ func TestUserConfiguredMetricSinksPreserved(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: new("otel-collector.example.com"),
-								Port: 4317,
+								Host: new("otel-collector.example.com"), //nolint:staticcheck
+								Port: 4317,                              //nolint:staticcheck
 							},
 						},
 					},

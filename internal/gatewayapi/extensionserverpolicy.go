@@ -188,10 +188,10 @@ func extractTargetRefs(policy *unstructured.Unstructured) (egv1a1.PolicyTargetRe
 	if err := json.Unmarshal(specAsJSON, &targetRefs); err != nil {
 		return targetRefs, fmt.Errorf("no targets found for the policy")
 	}
-	if (targetRefs.TargetRef == nil ||
-		targetRefs.TargetRef.Group == "" ||
-		targetRefs.TargetRef.Kind == "" ||
-		targetRefs.TargetRef.Name == "") &&
+	if (targetRefs.TargetRef == nil || //nolint:staticcheck
+		targetRefs.TargetRef.Group == "" || //nolint:staticcheck
+		targetRefs.TargetRef.Kind == "" || //nolint:staticcheck
+		targetRefs.TargetRef.Name == "") && //nolint:staticcheck
 		len(targetRefs.TargetRefs) < 1 &&
 		len(targetRefs.TargetSelectors) < 1 {
 		return targetRefs, fmt.Errorf("no targets found for the policy")

@@ -104,7 +104,7 @@ var BackendTrafficPolicyMergedTest = suite.ConformanceTest{
 			expectedResponse := http.ExpectedResponse{
 				Namespace: ns,
 				Request:   http.Request{Host: "listener1.merged.example.com", Path: "/bar"},
-				Response:  http.Response{StatusCode: 419},
+				Response:  http.Response{StatusCodes: []int{419}},
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
@@ -114,7 +114,7 @@ var BackendTrafficPolicyMergedTest = suite.ConformanceTest{
 			expectedResponse = http.ExpectedResponse{
 				Namespace: ns,
 				Request:   http.Request{Host: "listener1.merged.example.com", Path: "/foo"},
-				Response:  http.Response{StatusCode: 500},
+				Response:  http.Response{StatusCodes: []int{500}},
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
@@ -124,7 +124,7 @@ var BackendTrafficPolicyMergedTest = suite.ConformanceTest{
 			expectedResponse = http.ExpectedResponse{
 				Namespace: ns,
 				Request:   http.Request{Host: "listener2.merged.example.com", Path: "/foo"},
-				Response:  http.Response{StatusCode: 420},
+				Response:  http.Response{StatusCodes: []int{420}},
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})

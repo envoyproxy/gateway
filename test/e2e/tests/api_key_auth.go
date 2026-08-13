@@ -263,7 +263,7 @@ var APIKeyAuthTest = suite.ConformanceTest{
 					AbsentHeaders: []string{"X-API-KEY"},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -278,7 +278,7 @@ var APIKeyAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCodes: []int{401},
 				},
 				Namespace: ns,
 			}

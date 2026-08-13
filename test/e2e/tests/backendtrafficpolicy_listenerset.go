@@ -164,7 +164,7 @@ func expectBackendTrafficPolicyStatus(t *testing.T, suite *suite.ConformanceTest
 			Path: path,
 		},
 		Response: httputils.Response{
-			StatusCode: statusCode,
+			StatusCodes: []int{statusCode},
 		},
 	}
 	httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, addr, expectedResponse)

@@ -137,19 +137,19 @@ func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 // deprecatedFieldsUsedInClientTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
-	if policy.Spec.EnableProxyProtocol != nil {
+	if policy.Spec.EnableProxyProtocol != nil { //nolint:staticcheck
 		deprecatedFields["spec.enableProxyProtocol"] = "spec.proxyProtocol"
 	}
-	if policy.Spec.Headers != nil && policy.Spec.Headers.PreserveXRequestID != nil {
+	if policy.Spec.Headers != nil && policy.Spec.Headers.PreserveXRequestID != nil { //nolint:staticcheck
 		deprecatedFields["spec.headers.preserveXRequestID"] = "spec.headers.requestID"
 	}
-	if policy.Spec.TargetRef != nil {
+	if policy.Spec.TargetRef != nil { //nolint:staticcheck
 		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
 	}
 	// Optional is a non-pointer bool, so deprecated usage is only observable when it changes behavior.
 	if policy.Spec.TLS != nil &&
 		policy.Spec.TLS.ClientValidation != nil &&
-		policy.Spec.TLS.ClientValidation.Optional {
+		policy.Spec.TLS.ClientValidation.Optional { //nolint:staticcheck
 		deprecatedFields["spec.tls.clientValidation.optional"] = "spec.tls.clientValidation.mode"
 	}
 	return deprecatedFields
@@ -757,7 +757,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		proxyProtocol = &ir.ProxyProtocolSettings{
 			Optional: ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
 		}
-	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
+	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) { //nolint:staticcheck
 		// Fallback to legacy EnableProxyProtocol field
 		proxyProtocol = &ir.ProxyProtocolSettings{
 			Optional: false, // Default behavior for legacy field
@@ -1024,7 +1024,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	}
 	if headerSettings.RequestID != nil {
 		httpIR.Headers.RequestID = (*ir.RequestIDAction)(headerSettings.RequestID)
-	} else if headerSettings.PreserveXRequestID != nil && *headerSettings.PreserveXRequestID {
+	} else if headerSettings.PreserveXRequestID != nil && *headerSettings.PreserveXRequestID { //nolint:staticcheck
 		httpIR.Headers.RequestID = new(ir.RequestIDActionPreserveOrGenerate)
 	}
 
@@ -1253,7 +1253,7 @@ func (t *Translator) buildListenerTLSParameters(
 		mode := egv1a1.ClientValidationRequireAndVerify
 		if tlsParams.ClientValidation.Mode != nil {
 			mode = *tlsParams.ClientValidation.Mode
-		} else if tlsParams.ClientValidation.Optional {
+		} else if tlsParams.ClientValidation.Optional { //nolint:staticcheck
 			// Legacy mapping: Optional=true means VerifyIfGiven.
 			mode = egv1a1.ClientValidationVerifyIfGiven
 		}
@@ -1288,7 +1288,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		// CA certificates are required for verification modes.
 		if (mode == egv1a1.ClientValidationVerifyIfGiven || mode == egv1a1.ClientValidationRequireAndVerify) && len(irCACert.Certificate) == 0 {
-			if tlsParams.ClientValidation.Mode == nil && tlsParams.ClientValidation.Optional {
+			if tlsParams.ClientValidation.Mode == nil && tlsParams.ClientValidation.Optional { //nolint:staticcheck
 				return irTLSConfig, fmt.Errorf(`tls.clientValidation.optional=true requires caCertificateRefs (maps to mode %q)`, mode)
 			}
 			return irTLSConfig, fmt.Errorf(`tls.clientValidation.mode %q requires caCertificateRefs`, mode)

@@ -87,8 +87,8 @@ func (l *LuaValidator) getLuaValidation() egv1a1.LuaValidation {
 		if cfg := l.envoyProxy.Spec.Lua; cfg != nil && cfg.ValidationType != nil {
 			return *cfg.ValidationType
 		}
-		if l.envoyProxy.Spec.LuaValidation != nil {
-			return *l.envoyProxy.Spec.LuaValidation
+		if l.envoyProxy.Spec.LuaValidation != nil { //nolint:staticcheck
+			return *l.envoyProxy.Spec.LuaValidation //nolint:staticcheck
 		}
 	}
 	return egv1a1.LuaValidationStrict

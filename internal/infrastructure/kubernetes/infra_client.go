@@ -27,7 +27,7 @@ func New(cli client.Client) *InfraClient {
 
 func (cli *InfraClient) ServerSideApply(ctx context.Context, obj client.Object) error {
 	opts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("envoy-gateway")}
-	if err := cli.Patch(ctx, obj, client.Apply, opts...); err != nil {
+	if err := cli.Patch(ctx, obj, client.Apply, opts...); err != nil { //nolint:staticcheck
 		return fmt.Errorf("failed to create/update resource with server-side apply for obj %v: %w", obj, err)
 	}
 

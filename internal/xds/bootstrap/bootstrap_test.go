@@ -99,8 +99,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: new("otel-collector.monitoring.svc"),
-								Port: 4317,
+								Host: new("otel-collector.monitoring.svc"), //nolint:staticcheck
+								Port: 4317,                                 //nolint:staticcheck
 							},
 						},
 					},
@@ -119,8 +119,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: new("otel-collector.monitoring.svc"),
-								Port: 4317,
+								Host: new("otel-collector.monitoring.svc"), //nolint:staticcheck
+								Port: 4317,                                 //nolint:staticcheck
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -150,8 +150,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host:                     new("otel-collector.monitoring.svc"),
-								Port:                     4317,
+								Host:                     new("otel-collector.monitoring.svc"), //nolint:staticcheck
+								Port:                     4317,                                 //nolint:staticcheck
 								ReportCountersAsDeltas:   new(true),
 								ReportHistogramsAsDeltas: new(true),
 							},
@@ -172,8 +172,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: new("otel-collector.monitoring.svc"),
-								Port: 4317,
+								Host: new("otel-collector.monitoring.svc"), //nolint:staticcheck
+								Port: 4317,                                 //nolint:staticcheck
 								Headers: []gwapiv1.HTTPHeader{
 									{
 										Name:  "Authorization",

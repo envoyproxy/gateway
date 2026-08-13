@@ -366,8 +366,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 80,
+							Host: "foo.extension", //nolint:staticcheck
+							Port: 80,              //nolint:staticcheck
 						},
 					},
 				},
@@ -400,8 +400,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 443,
+							Host: "foo.extension", //nolint:staticcheck
+							Port: 443,             //nolint:staticcheck
 							TLS: &egv1a1.ExtensionTLS{
 								CertificateRef: gwapiv1.SecretObjectReference{
 									Kind: &TLSSecretKind,
@@ -437,8 +437,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 443,
+							Host: "foo.extension", //nolint:staticcheck
+							Port: 443,             //nolint:staticcheck
 							TLS: &egv1a1.ExtensionTLS{
 								CertificateRef: gwapiv1.SecretObjectReference{
 									Kind: &TLSSecretKind,
@@ -481,8 +481,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 8080,
+							Host: "foo.extension", //nolint:staticcheck
+							Port: 8080,            //nolint:staticcheck
 							TLS: &egv1a1.ExtensionTLS{
 								CertificateRef: gwapiv1.SecretObjectReference{
 									Kind: &TLSUnrecognizedKind,
@@ -544,8 +544,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 8080,
+							Host: "foo.extension", //nolint:staticcheck
+							Port: 8080,            //nolint:staticcheck
 						},
 					},
 				},
@@ -823,7 +823,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Port: 8080,
+							Port: 8080, //nolint:staticcheck
 						},
 					},
 				},
@@ -906,8 +906,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.example.com",
-							Port: 8080,
+							Host: "foo.example.com", //nolint:staticcheck
+							Port: 8080,              //nolint:staticcheck
 							BackendEndpoint: egv1a1.BackendEndpoint{
 								FQDN: &egv1a1.FQDNEndpoint{
 									Hostname: "foo.example.com",
@@ -932,7 +932,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 							},
 						},
-						Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80}, //nolint:staticcheck
 					},
 					ExtensionManagers: []egv1a1.ExtensionManager{
 						{
@@ -942,7 +942,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80}, //nolint:staticcheck
 						},
 					},
 				},
@@ -974,7 +974,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80}, //nolint:staticcheck
 						},
 						{
 							Name: "ext1",
@@ -983,7 +983,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80}, //nolint:staticcheck
 						},
 					},
 				},
@@ -1003,7 +1003,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80}, //nolint:staticcheck
 						},
 					},
 				},
@@ -1024,12 +1024,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "good.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{Host: "good.extension", Port: 80}, //nolint:staticcheck
 						},
 						{
 							Name: "bad-ext",
 							// Missing hooks → should fail individual validation
-							Service: &egv1a1.ExtensionService{Host: "bad.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{Host: "bad.extension", Port: 80}, //nolint:staticcheck
 						},
 					},
 				},
@@ -1050,7 +1050,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute, egv1a1.XDSTranslation},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "ai-gw.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{Host: "ai-gw.extension", Port: 80}, //nolint:staticcheck
 						},
 						{
 							Name: "observability",
@@ -1059,7 +1059,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSHTTPListener},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "obs.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{Host: "obs.extension", Port: 80}, //nolint:staticcheck
 						},
 					},
 				},
@@ -1417,7 +1417,7 @@ func TestWarnEnvoyGateway(t *testing.T) {
 					Gateway:  egv1a1.DefaultGateway(),
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-						DisableLua: new(true),
+						DisableLua: new(true), //nolint:staticcheck
 					},
 				},
 			},
@@ -1469,17 +1469,17 @@ func TestLuaDisabled(t *testing.T) {
 		},
 		{
 			name:     "disableLua true",
-			ext:      &egv1a1.ExtensionAPISettings{DisableLua: new(true)},
+			ext:      &egv1a1.ExtensionAPISettings{DisableLua: new(true)}, //nolint:staticcheck
 			expected: true,
 		},
 		{
 			name:     "disableLua false (explicit enable via deprecated field)",
-			ext:      &egv1a1.ExtensionAPISettings{DisableLua: new(false)},
+			ext:      &egv1a1.ExtensionAPISettings{DisableLua: new(false)}, //nolint:staticcheck
 			expected: false,
 		},
 		{
 			name:     "enableLua takes precedence over disableLua",
-			ext:      &egv1a1.ExtensionAPISettings{EnableLua: true, DisableLua: new(true)},
+			ext:      &egv1a1.ExtensionAPISettings{EnableLua: true, DisableLua: new(true)}, //nolint:staticcheck
 			expected: false,
 		},
 	}

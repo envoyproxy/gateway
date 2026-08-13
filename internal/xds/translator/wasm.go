@@ -163,7 +163,7 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 				VmConfig: vmConfig,
 			},
 			Configuration: configAny,
-			FailOpen:      wasm.FailOpen,
+			FailOpen:      wasm.FailOpen, //nolint:staticcheck
 		},
 	}
 

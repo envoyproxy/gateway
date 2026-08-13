@@ -696,7 +696,7 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 
 func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
 	deprecatedFields := make(map[string]string)
-	if ep.Spec.LuaValidation != nil {
+	if ep.Spec.LuaValidation != nil { //nolint:staticcheck
 		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
 	}
 

@@ -246,8 +246,8 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 
 				var host string
 				var port uint32
-				if sink.OpenTelemetry.Host != nil {
-					host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
+				if sink.OpenTelemetry.Host != nil { //nolint:staticcheck
+					host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port) //nolint:staticcheck
 				}
 				if len(sink.OpenTelemetry.BackendRefs) > 0 {
 					ref := sink.OpenTelemetry.BackendRefs[0].BackendObjectReference

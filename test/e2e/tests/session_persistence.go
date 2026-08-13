@@ -164,7 +164,7 @@ var SessionPersistenceTest = suite.ConformanceTest{
 					Path: "/cookie-session-persistence-multiple-backends",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

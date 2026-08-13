@@ -132,7 +132,7 @@ var BackendTLSTest = suite.ConformanceTest{
 					Path: "/backend-auto-sni",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -162,7 +162,7 @@ var BackendTLSTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 			}
 

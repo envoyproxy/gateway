@@ -99,7 +99,7 @@ func buildSDSCluster(sdsURL string) *cluster.Cluster {
 			},
 		},
 		ConnectTimeout:       durationpb.New(defaultConnectionTimeout),
-		Http2ProtocolOptions: &corev3.Http2ProtocolOptions{},
+		Http2ProtocolOptions: &corev3.Http2ProtocolOptions{}, //nolint:staticcheck
 	}
 }
 

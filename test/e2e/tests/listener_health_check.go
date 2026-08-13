@@ -8,11 +8,11 @@
 package tests
 
 import (
+	"slices"
 	"testing"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubectl/pkg/util/slice"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -67,7 +67,7 @@ var ListenerHealthCheckTest = suite.ConformanceTest{
 				// directly check the status code of the response, since health check request will be
 				// terminated by envoy instead of echo server in backend, no request will be captured
 				// from the response.
-				return slice.Contains(expectedResponse.Response.StatusCodes, cResp.StatusCode, nil)
+				return slices.Contains(expectedResponse.Response.StatusCodes, cResp.StatusCode)
 			})
 		})
 	},
