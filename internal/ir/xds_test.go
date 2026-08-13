@@ -2356,3 +2356,50 @@ func TestDestinationSettingTrafficDeepCopy(t *testing.T) {
 	*copied.Traffic.CircuitBreaker.MaxConnections = 200
 	require.Equal(t, uint32(100), *original.Traffic.CircuitBreaker.MaxConnections)
 }
+
+func TestRouteDestinationHasSettingWithTraffic(t *testing.T) {
+	cases := []struct {
+		name     string
+		dest     *RouteDestination
+		expected bool
+	}{
+		{
+			name: "no settings",
+			dest: &RouteDestination{},
+			expected: false,
+		},
+		{
+			name: "settings without traffic",
+			dest: &RouteDestination{
+				Settings: []*DestinationSetting{{Name: "a"}, {Name: "b"}},
+			},
+			expected: false,
+		},
+		{
+			name: "one setting with traffic",
+			dest: &RouteDestination{
+				Settings: []*DestinationSetting{
+					{Name: "a"},
+					{Name: "b", Traffic: &ClusterTrafficFeatures{}},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.dest.HasSettingWithTraffic())
+		})
+	}
+}
+
+func TestRouteDestinationNeedsClusterPerSettingWithTraffic(t *testing.T) {
+	dest := &RouteDestination{
+		Settings: []*DestinationSetting{
+			{Name: "a"},
+			{Name: "b", Traffic: &ClusterTrafficFeatures{}},
+		},
+	}
+	require.True(t, dest.NeedsClusterPerSetting())
+}
