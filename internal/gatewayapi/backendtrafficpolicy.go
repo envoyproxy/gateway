@@ -549,7 +549,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	}
 	backendPolicyMap[key] = policy
 
-	matchedGWs := sets.New[types.NamespacedName]()
+	matchedGWs := make(map[types.NamespacedName]bool)
 	for _, gw := range gateways {
 		x, ok := xdsIR[t.getIRKey(gw.Gateway)]
 		if !ok {
@@ -570,18 +570,32 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
 				continue
 			}
-			tf, errs := t.buildTrafficFeatures(mergedPolicy, owners)
-			if errs != nil || tf == nil {
+			tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
+			if err != nil || tf == nil {
+				if err != nil {
+					status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+						status.Error2ConditionMsg(err))
+				}
 				continue
 			}
 			bc.Traffic = tf.ClusterFeatures()
-			matchedGWs.Insert(gwNN)
+			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
+			matchedGWs[gwNN] = matchedGWs[gwNN] || gwPolicy != nil
 		}
 	}
 
-	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+	matchedRefs := make([]*gwapiv1.ParentReference, 0, len(matchedGWs))
+	for gwNN := range matchedGWs {
+		ref := getAncestorRefForPolicy(gwNN, nil)
+		matchedRefs = append(matchedRefs, &ref)
+	}
+
+	status.SetAcceptedForPolicyAncestors(&policy.Status, matchedRefs, t.GatewayControllerName, policy.Generation)
 	if policy.Spec.MergeType != nil {
-		for gwNN := range matchedGWs {
+		for gwNN, hadGWPolicy := range matchedGWs {
+			if !hadGWPolicy {
+				continue
+			}
 			ancestorRef := getAncestorRefForPolicy(gwNN, nil)
 			status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
 				egv1a1.PolicyConditionMerged, metav1.ConditionTrue, egv1a1.PolicyReasonMerged,
