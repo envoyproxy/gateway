@@ -593,6 +593,63 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
 			matchedGWs[gwNN] = gwPolicy
 		}
+
+		blockedRoutes := make(map[string]bool) // dedupe within this gateway
+
+		for _, http := range x.HTTP {
+			for _, route := range http.Routes {
+				rd := route.Destination
+				if rd == nil {
+					continue
+				}
+				for _, ds := range rd.Settings {
+					if backendPolicyKeyFromMetadata(ds.Metadata) != key {
+						continue
+					}
+					if len(rd.Settings) > 1 {
+						if rd.Metadata != nil {
+							blockedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
+						}
+						continue
+					}
+
+					mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
+					if err != nil {
+						status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+							&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
+						continue
+					}
+					tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
+					if err != nil || tf == nil {
+						if err != nil {
+							status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+								status.Error2ConditionMsg(err))
+						}
+						continue
+					}
+
+					backendTraffic := tf.ClusterFeatures()
+					resolved := route.Traffic.ClusterFeatures().DeepCopy()
+					if resolved == nil {
+						resolved = &ir.ClusterTrafficFeatures{}
+					}
+					overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
+					overrideIfSet(&resolved.ProxyProtocol, backendTraffic.ProxyProtocol)
+					overrideIfSet(&resolved.HealthCheck, backendTraffic.HealthCheck)
+					overrideIfSet(&resolved.AdmissionControl, backendTraffic.AdmissionControl)
+					overrideIfSet(&resolved.CircuitBreaker, backendTraffic.CircuitBreaker)
+					overrideIfSet(&resolved.Timeout, backendTraffic.Timeout)
+					overrideIfSet(&resolved.TCPKeepalive, backendTraffic.TCPKeepalive)
+					overrideIfSet(&resolved.BackendConnection, backendTraffic.BackendConnection)
+					overrideIfSet(&resolved.HTTP2, backendTraffic.HTTP2)
+					overrideIfSet(&resolved.DNS, backendTraffic.DNS)
+					resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
+
+					ds.Traffic = resolved
+					matchedGWs[gwNN] = gwPolicy
+				}
+			}
+		}
 	}
 
 	matchedRefs := make([]*gwapiv1.ParentReference, 0, len(matchedGWs))
