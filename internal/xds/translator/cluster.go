@@ -1472,10 +1472,9 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 	extra *ExtraArgs,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
-	return &xdsClusterArgs{
+	clusterArgs := &xdsClusterArgs{
 		name:         name,
 		settings:     settings,
-		loadBalancer: route.LoadBalancer,
 		endpointType: buildEndpointType(settings),
 		metrics:      extra.metrics,
 		dns:          route.DNS,
@@ -1483,6 +1482,16 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		metadata:     metadata,
 		isRoute:      true,
 	}
+
+	// A single setting carrying its own Traffic (from a backend-targeted BackendTrafficPolicy)
+	// takes precedence over the route's, per the same rule as HTTPRouteTranslator above.
+	if len(settings) == 1 && settings[0].Traffic != nil {
+		applyTraffic(clusterArgs, settings[0].Traffic)
+	} else {
+		clusterArgs.loadBalancer = route.LoadBalancer
+	}
+
+	return clusterArgs
 }
 
 type TCPRouteTranslator struct {
@@ -1494,15 +1503,9 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 	extra *ExtraArgs,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
-	return &xdsClusterArgs{
+	clusterArgs := &xdsClusterArgs{
 		name:              name,
 		settings:          settings,
-		loadBalancer:      route.LoadBalancer,
-		proxyProtocol:     route.ProxyProtocol,
-		circuitBreaker:    route.CircuitBreaker,
-		tcpkeepalive:      route.TCPKeepalive,
-		healthCheck:       route.HealthCheck,
-		timeout:           route.Timeout.ClusterOnly(),
 		endpointType:      buildEndpointType(settings),
 		metrics:           extra.metrics,
 		backendConnection: route.BackendConnection,
@@ -1512,6 +1515,21 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		healthCheckLog:    extra.healthCheckLog,
 		isRoute:           true,
 	}
+
+	// A single setting carrying its own Traffic (from a backend-targeted BackendTrafficPolicy)
+	// takes precedence over the route's, per the same rule as HTTPRouteTranslator above.
+	if len(settings) == 1 && settings[0].Traffic != nil {
+		applyTraffic(clusterArgs, settings[0].Traffic)
+	} else {
+		clusterArgs.loadBalancer = route.LoadBalancer
+		clusterArgs.proxyProtocol = route.ProxyProtocol
+		clusterArgs.circuitBreaker = route.CircuitBreaker
+		clusterArgs.tcpkeepalive = route.TCPKeepalive
+		clusterArgs.healthCheck = route.HealthCheck
+		clusterArgs.timeout = route.Timeout.ClusterOnly()
+	}
+
+	return clusterArgs
 }
 
 type HTTPRouteTranslator struct {
@@ -1543,8 +1561,16 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// Populate traffic features.
-	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
+	// Populate traffic features. A single setting carrying its own Traffic (from a
+	// backend-targeted BackendTrafficPolicy, already merged on top of the route's own Traffic
+	// upstream in gatewayapi) takes precedence over the route's - Task 2's NeedsClusterPerSetting
+	// extension guarantees this call only ever sees such a setting alone, never bundled with
+	// siblings.
+	if len(settings) == 1 && settings[0].Traffic != nil {
+		applyTraffic(clusterArgs, settings[0].Traffic)
+	} else {
+		applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
+	}
 
 	return clusterArgs
 }
