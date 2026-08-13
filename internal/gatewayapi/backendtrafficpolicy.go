@@ -651,12 +651,14 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 
 					backendTraffic := tf.ClusterFeatures()
 					resolved := &ir.ClusterTrafficFeatures{
-						LoadBalancer:   tcpRoute.LoadBalancer,
-						ProxyProtocol:  tcpRoute.ProxyProtocol,
-						CircuitBreaker: tcpRoute.CircuitBreaker,
-						HealthCheck:    tcpRoute.HealthCheck,
-						Timeout:        tcpRoute.Timeout,
-						TCPKeepalive:   tcpRoute.TCPKeepalive,
+						LoadBalancer:      tcpRoute.LoadBalancer,
+						ProxyProtocol:     tcpRoute.ProxyProtocol,
+						CircuitBreaker:    tcpRoute.CircuitBreaker,
+						HealthCheck:       tcpRoute.HealthCheck,
+						Timeout:           tcpRoute.Timeout,
+						TCPKeepalive:      tcpRoute.TCPKeepalive,
+						BackendConnection: tcpRoute.BackendConnection,
+						DNS:               tcpRoute.DNS,
 					}
 					overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
 					overrideIfSet(&resolved.ProxyProtocol, backendTraffic.ProxyProtocol)
@@ -664,6 +666,8 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					overrideIfSet(&resolved.HealthCheck, backendTraffic.HealthCheck)
 					overrideIfSet(&resolved.Timeout, backendTraffic.Timeout)
 					overrideIfSet(&resolved.TCPKeepalive, backendTraffic.TCPKeepalive)
+					overrideIfSet(&resolved.BackendConnection, backendTraffic.BackendConnection)
+					overrideIfSet(&resolved.DNS, backendTraffic.DNS)
 					resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
 
 					ds.Traffic = resolved
@@ -710,8 +714,10 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 				backendTraffic := tf.ClusterFeatures()
 				resolved := &ir.ClusterTrafficFeatures{
 					LoadBalancer: udpRoute.LoadBalancer,
+					DNS:          udpRoute.DNS,
 				}
 				overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
+				overrideIfSet(&resolved.DNS, backendTraffic.DNS)
 
 				ds.Traffic = resolved
 				matchedGWs[gwNN] = gwPolicy
