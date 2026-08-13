@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -1279,6 +1280,19 @@ type HTTPUpgradeConfig struct {
 // +k8s:deepcopy-gen=true
 type ConnectConfig struct {
 	Terminate bool `json:"terminate" yaml:"terminate"`
+}
+
+// HasConnectUpgrade returns true if the HTTP CONNECT upgrade is enabled.
+func (b *TrafficFeatures) HasConnectUpgrade() bool {
+	if b == nil {
+		return false
+	}
+	for _, protocol := range b.HTTPUpgrade {
+		if strings.EqualFold(protocol.Type, "CONNECT") {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *TrafficFeatures) Validate() error {

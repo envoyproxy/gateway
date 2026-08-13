@@ -1,6 +1,3 @@
-# this file contains test to ensure that
-# HTTPRoute match rule merged properly.
-# The match-all HTTPRoute should be the lower priority.
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -13,7 +10,6 @@ gateways:
         - name: http
           protocol: HTTP
           port: 80
-          hostname: "*.envoyproxy.io"
           allowedRoutes:
             namespaces:
               from: All
@@ -24,18 +20,14 @@ httpRoutes:
       namespace: default
       name: httproute-1
     spec:
-      hostnames:
-        - gateway.envoyproxy.io
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
-          sectionName: http
       rules:
         - matches:
-            - headers:
-                - type: Exact
-                  name: x-org-id
-                  value: test-org
+            - path:
+                type: Exact
+                value: "/testPath"
           backendRefs:
             - name: service-1
               port: 8080
@@ -45,28 +37,29 @@ httpRoutes:
       namespace: default
       name: httproute-2
     spec:
-      hostnames:
-        - gateway.envoyproxy.io
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
-          sectionName: http
       rules:
         - matches:
             - path:
-                type: PathPrefix
-                value: "/"
-              headers:
-                - type: Exact
-                  name: x-org-id
-                  value: test-org-2
+                type: Exact
+                value: "/testPath"
           backendRefs:
-            - name: service-1
+            - name: service-2
               port: 8080
-        - matches:
-            - path:
-                type: PathPrefix
-                value: "/"
-          backendRefs:
-            - name: service-1
-              port: 8080
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-1
+      httpUpgrade:
+        - type: CONNECT
+          connect:
+            terminate: true

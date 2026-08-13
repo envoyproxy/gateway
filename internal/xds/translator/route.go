@@ -46,7 +46,7 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 }
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex) (*routev3.Route, error) {
-	connectMatch := trafficUpgradeConnect(httpRoute.Traffic)
+	connectMatch := httpRoute.Traffic.HasConnectUpgrade()
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
 		Match:    buildXdsRouteMatch(connectMatch, httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches, httpRoute.CookieMatches),
@@ -163,20 +163,6 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 	}
 
 	return router, nil
-}
-
-func trafficUpgradeConnect(trafficFeatures *ir.TrafficFeatures) bool {
-	if trafficFeatures == nil || trafficFeatures.HTTPUpgrade == nil {
-		return false
-	}
-
-	for _, protocol := range trafficFeatures.HTTPUpgrade {
-		if strings.EqualFold(protocol.Type, ConnectProtocol) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAction_UpgradeConfig {

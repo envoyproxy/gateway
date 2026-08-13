@@ -1584,7 +1584,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		},
 	}
 	backendEndpoints := []*ir.DestinationEndpoint{{Host: "otel.example.com", Port: 443}}
-	backendMetadata := &ir.ResourceMetadata{Name: backendName, Namespace: ns}
+	backendMetadata := &ir.ResourceMetadata{Kind: resource.KindBackend, Name: backendName, Namespace: ns}
 	backendPolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel.example.com"), UseSystemTrustStore: true,
 		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
@@ -1623,7 +1623,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		},
 	}
 	serviceEndpoints := []*ir.DestinationEndpoint{{Host: "7.7.7.7", Port: 4317}}
-	serviceMetadata := &ir.ResourceMetadata{Name: serviceName, Namespace: ns, SectionName: "4317"}
+	serviceMetadata := &ir.ResourceMetadata{Kind: resource.KindService, Name: serviceName, Namespace: ns, SectionName: "4317"}
 	servicePolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel-svc.example.com"), UseSystemTrustStore: true,
 		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
