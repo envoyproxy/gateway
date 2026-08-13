@@ -596,11 +596,19 @@ func (t *Translator) hasClusterSettingsBelowGateway(
 		return false
 	}
 	gatewayNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
+	var listenerSetNN *types.NamespacedName
+	if listener.isFromListenerSet() {
+		listenerSetNN = &types.NamespacedName{
+			Namespace: listener.listenerSet.Namespace,
+			Name:      listener.listenerSet.Name,
+		}
+	}
 	if t.BTPClusterSettingsIndex.HasClusterSettingsBelowGateway(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
 		gatewayNN,
 		&listener.Name,
+		listenerSetNN,
 		routeRuleName,
 	) {
 		return true
