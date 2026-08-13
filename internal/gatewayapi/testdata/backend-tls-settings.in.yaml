@@ -117,7 +117,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: "/"
+                value: "/route-2"
           backendRefs:
             - group: gateway.envoyproxy.io
               kind: Backend
@@ -134,7 +134,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: "/"
+                value: "/route-3"
           backendRefs:
             - group: gateway.envoyproxy.io
               kind: Backend
@@ -151,7 +151,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: "/"
+                value: "/route-4"
           backendRefs:
             - group: gateway.envoyproxy.io
               kind: Backend
@@ -169,7 +169,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: "/"
+                value: "/route-5"
           backendRefs:
             - group: gateway.envoyproxy.io
               kind: Backend
@@ -186,7 +186,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: "/"
+                value: "/route-6"
           backendRefs:
             - group: gateway.envoyproxy.io
               kind: Backend
@@ -204,7 +204,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: "/"
+                value: "/route-7"
           backendRefs:
             - group: gateway.envoyproxy.io
               kind: Backend
@@ -242,7 +242,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: "/"
+                value: "/route-9"
           backendRefs:
             - group: gateway.envoyproxy.io
               kind: Backend

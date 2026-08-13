@@ -1,31 +1,14 @@
-envoyExtensionPolicies:
+backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
+  kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-http-route
+    name: policy-for-route
     namespace: default
   spec:
-    lua:
-    - inline: |
-        local json = require("json")
-        function envoy_on_response(response_handle)
-            local content_type = response_handle:headers():get("content-type")
-            if content_type and string.find(content_type, "application/json", 1, true) then
-                response_handle:body():setBytes(0, response_handle:body():length())
-                response_handle:UnknownApi()
-                local response_body = response_handle:body():getBytes(0, response_handle:body():length())
-                if response_body and #response_body > 0 then
-                    local parsed_json = json.decode(response_body)
-                    if type(parsed_json) == "table" then
-                        response_handle:logInfo("Successfully parsed JSON response.")
-                    else
-                        response_handle:logWarn("Parsed JSON is not a table, or unexpected format.")
-                    end
-                end
-            end
-            return envoy.lua.ResponseStatus.Continue
-        end
-      type: Inline
+    httpUpgrade:
+    - connect:
+        terminate: true
+      type: CONNECT
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -37,53 +20,11 @@ envoyExtensionPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
-  metadata:
-    name: policy-for-http-route-2
-    namespace: default
-  spec:
-    lua:
-    - inline: |
-        function envoy_on_response(response_handle)
-          local value = 10
-          if value > 5
-            print("Value is greater than 5")
-          end
-        end
-      type: Inline
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-2
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: |-
-          Lua: validation failed for lua body in policy with name envoyextensionpolicy/default/policy-for-http-route-2/lua/0: failed to validate with envoy_on_response: <string> line:4(column:9) near 'print':   syntax error
-          .
-        reason: Invalid
-        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: spec.targetRef is deprecated, use spec.targetRefs instead
@@ -138,19 +79,17 @@ httpRoutes:
     name: httproute-1
     namespace: default
   spec:
-    hostnames:
-    - www.example.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: http
     rules:
     - backendRefs:
       - name: service-1
         port: 8080
       matches:
       - path:
-          value: /foo
+          type: Exact
+          value: /testPath
   status:
     parents:
     - conditions:
@@ -168,26 +107,23 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     name: httproute-2
     namespace: default
   spec:
-    hostnames:
-    - www.example.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: http
     rules:
     - backendRefs:
-      - name: service-1
+      - name: service-2
         port: 8080
       matches:
       - path:
-          value: /bar
+          type: Exact
+          value: /testPath
   status:
     parents:
     - conditions:
@@ -205,20 +141,9 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          name: test
-          namespace: envoy-gateway-system
-        spec:
-          logging: {}
-          luaValidation: InsecureSyntax
-        status: {}
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -296,40 +221,26 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          luas:
-          - Code: |
-              local json = require("json")
-              function envoy_on_response(response_handle)
-                  local content_type = response_handle:headers():get("content-type")
-                  if content_type and string.find(content_type, "application/json", 1, true) then
-                      response_handle:body():setBytes(0, response_handle:body():length())
-                      response_handle:UnknownApi()
-                      local response_body = response_handle:body():getBytes(0, response_handle:body():length())
-                      if response_body and #response_body > 0 then
-                          local parsed_json = json.decode(response_body)
-                          if type(parsed_json) == "table" then
-                              response_handle:logInfo("Successfully parsed JSON response.")
-                          else
-                              response_handle:logWarn("Parsed JSON is not a table, or unexpected format.")
-                          end
-                      end
-                  end
-                  return envoy.lua.ResponseStatus.Continue
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/default/policy-for-http-route/lua/0
-        hostname: www.example.com
+        hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
+          exact: /testPath
           name: ""
-          prefix: /foo
+        traffic:
+          httpUpgrade:
+          - connect:
+              terminate: true
+            type: CONNECT
       - destination:
           metadata:
             kind: HTTPRoute
@@ -343,25 +254,23 @@ xdsIR:
               port: 8080
             metadata:
               kind: Service
-              name: service-1
+              name: service-2
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        directResponse:
-          statusCode: 500
-        hostname: www.example.com
+        hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/www_example_com
+        name: httproute/default/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
+          exact: /testPath
           name: ""
-          prefix: /bar
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
