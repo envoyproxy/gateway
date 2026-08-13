@@ -1,0 +1,1 @@
+Fixed ConsistentHash load balancing not pinning a client to a single backend when a route splits traffic across multiple weighted backendRefs. Envoy Gateway now sets `use_hash_policy` on the generated weighted clusters when a ConsistentHash load balancer is configured, so the request's hash policy selects the weighted cluster deterministically instead of at random per request.
