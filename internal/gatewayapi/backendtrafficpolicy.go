@@ -579,11 +579,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			}
 			bc.Traffic = tf.ClusterFeatures()
 			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
-			if gwPolicy != nil {
-				matchedGWs[gwNN] = gwPolicy
-			} else if _, ok := matchedGWs[gwNN]; !ok {
-				matchedGWs[gwNN] = nil
-			}
+			matchedGWs[gwNN] = gwPolicy
 		}
 	}
 
