@@ -2330,6 +2330,12 @@ type DestinationSetting struct {
 	// * invalid 500
 	// * without endpoints 503
 	Invalid bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
+	// Traffic holds the cluster-scoped settings from the accepted backend-targeted
+	// BackendTrafficPolicy, if any, already merged on top of whatever route-level Traffic
+	// applies - only ever set when this Setting is the sole occupant of its RouteDestination,
+	// so it is safe to write directly. See ir.BackendCluster.Traffic for the equivalent on
+	// merged clusters.
+	Traffic *ClusterTrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
