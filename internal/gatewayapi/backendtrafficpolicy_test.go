@@ -22,6 +22,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -3179,4 +3180,41 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 			t.Errorf("classification map has stale entry %q - field no longer exists on BackendTrafficPolicySpec", name)
 		}
 	}
+}
+
+func TestIsBackendTrafficPolicyTarget(t *testing.T) {
+	tests := []struct {
+		name string
+		kind gwapiv1.Kind
+		want bool
+	}{
+		{name: "Service", kind: gwapiv1.Kind(gwapiresource.KindService), want: true},
+		{name: "ServiceImport", kind: gwapiv1.Kind(gwapiresource.KindServiceImport), want: true},
+		{name: "Backend", kind: gwapiv1.Kind(gwapiresource.KindBackend), want: true},
+		{name: "Gateway", kind: gwapiv1.Kind(gwapiresource.KindGateway), want: false},
+		{name: "HTTPRoute", kind: gwapiv1.Kind(gwapiresource.KindHTTPRoute), want: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			target := policyTargetReferenceWithSectionName{Kind: tc.kind}
+			require.Equal(t, tc.want, isBackendTrafficPolicyTarget(target))
+		})
+	}
+}
+
+func TestBackendPolicyKeyFromTarget(t *testing.T) {
+	target := policyTargetReferenceWithSectionName{
+		Kind:      gwapiv1.Kind(gwapiresource.KindService),
+		Name:      gwapiv1.ObjectName("svc-1"),
+		Namespace: gwapiv1.Namespace("default"),
+	}
+	want := backendPolicyKey{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	require.Equal(t, want, backendPolicyKeyFromTarget(target))
+}
+
+func TestBackendPolicyKeyFromMetadata(t *testing.T) {
+	md := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1", SectionName: "8080"}
+	want := backendPolicyKey{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	require.Equal(t, want, backendPolicyKeyFromMetadata(md))
+	require.Equal(t, backendPolicyKey{}, backendPolicyKeyFromMetadata(nil))
 }
