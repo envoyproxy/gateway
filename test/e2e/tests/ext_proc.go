@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -22,7 +23,6 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -216,7 +216,6 @@ var ExtProcTest = suite.ConformanceTest{
 		})
 
 		t.Run("health check events appear in logs for ext-proc cluster", func(t *testing.T) {
-
 			http.AwaitConvergence(
 				t,
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
