@@ -764,7 +764,7 @@ type policyTargetRouteKey struct {
 }
 
 // backendPolicyKey identifies a backend-targeted BackendTrafficPolicy's target, for conflict
-// detection. Backend targeting is same-namespace only, so Namespace is always the policy's own.
+// detection.
 type backendPolicyKey struct {
 	Kind      string
 	Namespace string
@@ -1160,9 +1160,9 @@ func isListener(target policyTargetReferenceWithSectionName) bool {
 	return target.Kind == resource.KindGateway && target.SectionName != nil
 }
 
-// isBackendTrafficPolicyTarget reports whether target is a Service, ServiceImport, or Backend -
-// i.e. a backend-targeted BackendTrafficPolicy.
-func isBackendTrafficPolicyTarget(target policyTargetReferenceWithSectionName) bool {
+// isBackendTargetKind reports whether target's kind is Service, ServiceImport, or Backend -
+// i.e. the target is a backend, not a Gateway/ListenerSet/xRoute.
+func isBackendTargetKind(target policyTargetReferenceWithSectionName) bool {
 	switch target.Kind {
 	case gwapiv1.Kind(resource.KindService), gwapiv1.Kind(resource.KindServiceImport), gwapiv1.Kind(resource.KindBackend):
 		return true

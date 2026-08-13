@@ -495,7 +495,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		// Same-namespace only - backend targeting does not support cross-namespace ReferenceGrants.
 		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
-			if isBackendTrafficPolicyTarget(currTarget) {
+			if isBackendTargetKind(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = backendTrafficPolicies[i]
@@ -517,12 +517,11 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 }
 
 // processBackendTrafficPolicyForBackend resolves policy's target (already confirmed to be a
-// Service/ServiceImport/Backend by isBackendTrafficPolicyTarget) against backendPolicyMap for
+// Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for
 // conflict detection, then merges it into the Traffic of every already-registered BackendCluster,
 // across every gateway's xdsIR, whose Metadata identifies the same backend. A backend that never
 // resolves to a registered BackendCluster (mergeBackends disabled for its gateway, excluded by
-// per-listener ClusterSettings divergence, dynamic resolver, etc.) gets no settings and no error -
-// Phase 1 only ever writes into clusters route.go has already decided to merge.
+// per-listener ClusterSettings divergence, dynamic resolver, etc.) gets no settings and no error.
 func (t *Translator) processBackendTrafficPolicyForBackend(
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
@@ -549,7 +548,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	}
 	backendPolicyMap[key] = policy
 
-	matchedGWs := make(map[types.NamespacedName]bool)
+	matchedGWs := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
 	for _, gw := range gateways {
 		x, ok := xdsIR[t.getIRKey(gw.Gateway)]
 		if !ok {
@@ -580,7 +579,11 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			}
 			bc.Traffic = tf.ClusterFeatures()
 			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
-			matchedGWs[gwNN] = matchedGWs[gwNN] || gwPolicy != nil
+			if gwPolicy != nil {
+				matchedGWs[gwNN] = gwPolicy
+			} else if _, ok := matchedGWs[gwNN]; !ok {
+				matchedGWs[gwNN] = nil
+			}
 		}
 	}
 
@@ -592,15 +595,19 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 
 	status.SetAcceptedForPolicyAncestors(&policy.Status, matchedRefs, t.GatewayControllerName, policy.Generation)
 	if policy.Spec.MergeType != nil {
-		for gwNN, hadGWPolicy := range matchedGWs {
-			if !hadGWPolicy {
+		for gwNN, gwPolicy := range matchedGWs {
+			if gwPolicy == nil {
 				continue
 			}
 			ancestorRef := getAncestorRefForPolicy(gwNN, nil)
 			status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
 				egv1a1.PolicyConditionMerged, metav1.ConditionTrue, egv1a1.PolicyReasonMerged,
-				"Merged with the Gateway's BackendTrafficPolicy, if any", policy.Generation)
+				status.MergedConditionMessage(gwPolicy), policy.Generation)
 		}
+	}
+
+	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 }
 
