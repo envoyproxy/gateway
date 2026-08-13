@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -35,6 +35,19 @@ var ExtProcTest = suite.ConformanceTest{
 	Description: "Test ExtProc service that adds request and response headers",
 	Manifests:   []string{"testdata/ext-proc-service.yaml", "testdata/ext-proc-envoyextensionpolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		gatewayNS := GetGatewayResourceNamespace()
+		lokiLabels := map[string]string{
+			"job":       fmt.Sprintf("%s/envoy", gatewayNS),
+			"namespace": gatewayNS,
+			"container": "envoy",
+		}
+		// The ext-proc cluster name includes the EEP name; scope to this test's cluster only.
+		const hcLogMatch = `health_checker_type.*ext-proc-test`
+		// get the baseline count of ext-proc health check events in the logs before we make any requests
+		baseline, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
+		require.NoError(t, err, "loki query failed")
+		tlog.Logf(t, "ext-proc HC event log baseline count=%d", baseline)
+
 		t.Run("http route with ext proc", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-ext-proc", Namespace: ns}
@@ -203,18 +216,6 @@ var ExtProcTest = suite.ConformanceTest{
 		})
 
 		t.Run("health check events appear in logs for ext-proc cluster", func(t *testing.T) {
-			gatewayNS := GetGatewayResourceNamespace()
-			lokiLabels := map[string]string{
-				"job":       fmt.Sprintf("%s/envoy", gatewayNS),
-				"namespace": gatewayNS,
-				"container": "envoy",
-			}
-			// The ext-proc cluster name includes the EEP name; scope to this test's cluster only.
-			const hcLogMatch = `health_checker_type.*ext-proc-test`
-
-			baseline, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
-			require.NoError(t, err, "loki query failed")
-			tlog.Logf(t, "ext-proc HC event log baseline count=%d", baseline)
 
 			http.AwaitConvergence(
 				t,
