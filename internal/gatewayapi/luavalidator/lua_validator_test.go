@@ -705,6 +705,30 @@ func Test_Blocked(t *testing.T) {
                      setmetatable({}, {})
                    end`,
 		},
+		{
+			name: "getfenv",
+			code: `function envoy_on_response(response_handle)
+                     local g = getfenv(0)
+                   end`,
+		},
+		{
+			name: "setfenv",
+			code: `function envoy_on_response(response_handle)
+                     setfenv(1, {})
+                   end`,
+		},
+		{
+			name: "newproxy",
+			code: `function envoy_on_response(response_handle)
+                     local p = newproxy(true)
+                   end`,
+		},
+		{
+			name: "module",
+			code: `function envoy_on_response(response_handle)
+                     module("m")
+                   end`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
