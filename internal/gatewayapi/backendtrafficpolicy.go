@@ -322,6 +322,10 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Map of attached Policy to ListenerSet. It is used for merge policy processing.
 	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy, listenerSetMapSize)
 
+	// Map of attached Policy to backend identity (Service/ServiceImport/Backend). Used for
+	// conflict detection when resolving Policies targeting Backends.
+	backendPolicyMap := make(map[backendPolicyKey]*egv1a1.BackendTrafficPolicy, policyMapSize)
+
 	// overrides records child scopes whose policies displace policies attached
 	// to their parent scopes.
 	overrides := newPolicyScopeGraph()
@@ -485,6 +489,24 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		}
 	}
 
+	// Process the policies targeting Backends (Service/ServiceImport/Backend)
+	for i, currPolicy := range backendTrafficPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		// Same-namespace only - backend targeting does not support cross-namespace ReferenceGrants.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+		for _, currTarget := range targetRefs {
+			if isBackendTrafficPolicyTarget(currTarget) {
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = backendTrafficPolicies[i]
+					handledPolicies[policyName] = policy
+					res = append(res, policy)
+				}
+				t.processBackendTrafficPolicyForBackend(xdsIR, gateways, gatewayPolicyMap, policy, currTarget, backendPolicyMap)
+			}
+		}
+	}
+
 	for _, policy := range res {
 		// Truncate Ancestor list of longer than 16
 		if len(policy.Status.Ancestors) > 16 {
@@ -492,6 +514,80 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		}
 	}
 	return res
+}
+
+// processBackendTrafficPolicyForBackend resolves policy's target (already confirmed to be a
+// Service/ServiceImport/Backend by isBackendTrafficPolicyTarget) against backendPolicyMap for
+// conflict detection, then merges it into the Traffic of every already-registered BackendCluster,
+// across every gateway's xdsIR, whose Metadata identifies the same backend. A backend that never
+// resolves to a registered BackendCluster (mergeBackends disabled for its gateway, excluded by
+// per-listener ClusterSettings divergence, dynamic resolver, etc.) gets no settings and no error -
+// Phase 1 only ever writes into clusters route.go has already decided to merge.
+func (t *Translator) processBackendTrafficPolicyForBackend(
+	xdsIR resource.XdsIRMap,
+	gateways []*GatewayContext,
+	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
+	policy *egv1a1.BackendTrafficPolicy,
+	target policyTargetReferenceWithSectionName,
+	backendPolicyMap map[backendPolicyKey]*egv1a1.BackendTrafficPolicy,
+) {
+	key := backendPolicyKeyFromTarget(target)
+
+	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(gateways))
+	for _, gw := range gateways {
+		ref := getAncestorRefForPolicy(utils.NamespacedName(gw), nil)
+		ancestorRefs = append(ancestorRefs, &ref)
+	}
+
+	if winner, ok := backendPolicyMap[key]; ok && utils.NamespacedName(winner) != utils.NamespacedName(policy) {
+		status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+			&status.PolicyResolveError{
+				Reason:  gwapiv1.PolicyReasonConflicted,
+				Message: fmt.Sprintf("Unable to target %s %s, another BackendTrafficPolicy has already attached to it", string(target.Kind), string(target.Name)),
+			})
+		return
+	}
+	backendPolicyMap[key] = policy
+
+	matchedGWs := sets.New[types.NamespacedName]()
+	for _, gw := range gateways {
+		x, ok := xdsIR[t.getIRKey(gw.Gateway)]
+		if !ok {
+			continue
+		}
+		gwNN := utils.NamespacedName(gw)
+		var gwPolicy *egv1a1.BackendTrafficPolicy
+		if p, ok := gatewayPolicyMap[NamespacedNameWithSection{NamespacedName: gwNN}]; ok {
+			gwPolicy = p
+		}
+		for _, bc := range x.BackendClusters {
+			if backendPolicyKeyFromMetadata(bc.Metadata) != key {
+				continue
+			}
+			mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
+			if err != nil {
+				status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+					&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
+				continue
+			}
+			tf, errs := t.buildTrafficFeatures(mergedPolicy, owners)
+			if errs != nil || tf == nil {
+				continue
+			}
+			bc.Traffic = tf.ClusterFeatures()
+			matchedGWs.Insert(gwNN)
+		}
+	}
+
+	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+	if policy.Spec.MergeType != nil {
+		for gwNN := range matchedGWs {
+			ancestorRef := getAncestorRefForPolicy(gwNN, nil)
+			status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+				egv1a1.PolicyConditionMerged, metav1.ConditionTrue, egv1a1.PolicyReasonMerged,
+				"Merged with the Gateway's BackendTrafficPolicy, if any", policy.Generation)
+		}
+	}
 }
 
 func (t *Translator) buildGatewayPolicyMap(
