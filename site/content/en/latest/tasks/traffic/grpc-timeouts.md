@@ -156,7 +156,7 @@ Then confirm the timeout is actually programmed into the Envoy route config with
 
 ```shell
 egctl config envoy-proxy route \
-  --labels gateway.envoyproxy.io/owning-gateway-name=eg,gateway.envoyproxy.io/owning-gateway-namespace=default \
+  --labels gateway.envoyproxy.io/owning-gateway-name=example-gateway,gateway.envoyproxy.io/owning-gateway-namespace=default \
   -o yaml | grep -A2 -E 'timeout|maxStreamDuration'
 ```
 
