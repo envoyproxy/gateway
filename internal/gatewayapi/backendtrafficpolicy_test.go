@@ -3210,7 +3210,7 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 	}
 }
 
-func TestIsBackendTrafficPolicyTarget(t *testing.T) {
+func TestIsBackendTargetKind(t *testing.T) {
 	tests := []struct {
 		name string
 		kind gwapiv1.Kind
@@ -3225,7 +3225,7 @@ func TestIsBackendTrafficPolicyTarget(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			target := policyTargetReferenceWithSectionName{Kind: tc.kind}
-			require.Equal(t, tc.want, isBackendTrafficPolicyTarget(target))
+			require.Equal(t, tc.want, isBackendTargetKind(target))
 		})
 	}
 }
