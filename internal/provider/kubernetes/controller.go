@@ -1147,8 +1147,8 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 
 func getBackendRefs(backendCluster egv1a1.BackendCluster) []gwapiv1.BackendObjectReference {
 	backendRefs := make([]gwapiv1.BackendObjectReference, 0, 1+len(backendCluster.BackendRefs))
-	if backendCluster.BackendRef != nil {
-		backendRefs = append(backendRefs, *backendCluster.BackendRef)
+	if backendCluster.BackendRef != nil { //nolint:staticcheck
+		backendRefs = append(backendRefs, *backendCluster.BackendRef) //nolint:staticcheck
 	}
 	// There is a CEL validation rule to ensure that backendRefs and backendRef
 	// cannot both be set at the same time.

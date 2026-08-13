@@ -249,7 +249,7 @@ func Test_TLS(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, opts)
 
-	conn, err := grpc.DialContext(context.Background(), fmt.Sprintf("localhost:%d", port),
+	conn, err := grpc.NewClient(fmt.Sprintf("localhost:%d", port),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -361,7 +361,7 @@ func Test_mTLS(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, opts)
 
-	conn, err := grpc.DialContext(context.Background(), fmt.Sprintf("localhost:%d", port),
+	conn, err := grpc.NewClient(fmt.Sprintf("localhost:%d", port),
 		opts...,
 	)
 	require.NoError(t, err)

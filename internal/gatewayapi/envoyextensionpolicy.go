@@ -42,7 +42,7 @@ const (
 // deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
-	if policy.Spec.TargetRef != nil {
+	if policy.Spec.TargetRef != nil { //nolint:staticcheck
 		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
 	}
 	return deprecatedFields

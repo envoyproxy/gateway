@@ -140,7 +140,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 			if tt.xdsListener != nil && tt.expectTLSInspector {
 				hasTLSInspector := false
 				for _, filter := range tt.xdsListener.ListenerFilters {
-					if filter.Name == wellknown.TlsInspector {
+					if filter.Name == wellknown.TLSInspector {
 						hasTLSInspector = true
 						break
 					}
@@ -150,7 +150,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 				// For non-nil listeners that shouldn't have TLS inspector
 				hasTLSInspector := false
 				for _, filter := range tt.xdsListener.ListenerFilters {
-					if filter.Name == wellknown.TlsInspector {
+					if filter.Name == wellknown.TLSInspector {
 						hasTLSInspector = true
 						break
 					}

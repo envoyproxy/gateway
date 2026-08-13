@@ -267,10 +267,10 @@ func BuildBTPIndexes(
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
-	if policy.Spec.TargetRef != nil {
+	if policy.Spec.TargetRef != nil { //nolint:staticcheck
 		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
 	}
-	if len(policy.Spec.Compression) > 0 {
+	if len(policy.Spec.Compression) > 0 { //nolint:staticcheck
 		deprecatedFields["spec.compression"] = "spec.compressor"
 	}
 	return deprecatedFields
@@ -1561,7 +1561,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
+	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor) //nolint:staticcheck
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 	if rb != nil && len(httpUpgrade) > 0 {
 		err = errors.New("requestBuffer cannot be used together with httpUpgrade")
@@ -1614,7 +1614,7 @@ func buildBackendTracing(tracing *egv1a1.Tracing) *ir.BackendTracing {
 		SamplingFraction:        tracing.SamplingFraction,
 		ClientSamplingFraction:  tracing.ClientSamplingFraction,
 		OverallSamplingFraction: tracing.OverallSamplingFraction,
-		CustomTags:              ir.CustomTagMapToSlice(tracing.CustomTags),
+		CustomTags:              ir.CustomTagMapToSlice(tracing.CustomTags), //nolint:staticcheck
 		Tags:                    ir.MapToSlice(tracing.Tags),
 		SpanName:                tracing.SpanName,
 	}
@@ -1799,14 +1799,14 @@ func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.Backend
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
 	// For backward compatibility, process the deprecated Type field if specified.
-	if policy.Spec.RateLimit.Type != nil {
-		switch *policy.Spec.RateLimit.Type {
+	if policy.Spec.RateLimit.Type != nil { //nolint:staticcheck
+		switch *policy.Spec.RateLimit.Type { //nolint:staticcheck
 		case egv1a1.GlobalRateLimitType:
 			return t.buildGlobalRateLimit(policy)
 		case egv1a1.LocalRateLimitType:
 			return t.buildLocalRateLimit(policy)
 		}
-		return nil, fmt.Errorf("invalid rateLimit type: %s", *policy.Spec.RateLimit.Type)
+		return nil, fmt.Errorf("invalid rateLimit type: %s", *policy.Spec.RateLimit.Type) //nolint:staticcheck
 	}
 
 	return t.buildBothRateLimit(policy)

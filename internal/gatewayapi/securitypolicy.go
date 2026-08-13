@@ -63,14 +63,14 @@ const (
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
-	if policy.Spec.TargetRef != nil {
+	if policy.Spec.TargetRef != nil { //nolint:staticcheck
 		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
 	}
 	if policy.Spec.ExtAuth != nil {
-		if policy.Spec.ExtAuth.GRPC != nil && policy.Spec.ExtAuth.GRPC.BackendRef != nil {
+		if policy.Spec.ExtAuth.GRPC != nil && policy.Spec.ExtAuth.GRPC.BackendRef != nil { //nolint:staticcheck
 			deprecatedFields["spec.extAuth.grpc.backendRef"] = "spec.extAuth.grpc.backendRefs"
 		}
-		if policy.Spec.ExtAuth.HTTP != nil && policy.Spec.ExtAuth.HTTP.BackendRef != nil {
+		if policy.Spec.ExtAuth.HTTP != nil && policy.Spec.ExtAuth.HTTP.BackendRef != nil { //nolint:staticcheck
 			deprecatedFields["spec.extAuth.http.backendRef"] = "spec.extAuth.http.backendRefs"
 		}
 	}
@@ -2694,10 +2694,10 @@ func (t *Translator) buildExtAuth(
 		switch {
 		case len(http.BackendRefs) > 0:
 			backendRefs = http.BackendRefs
-		case http.BackendRef != nil:
+		case http.BackendRef != nil: //nolint:staticcheck
 			backendRefs = []egv1a1.BackendRef{
 				{
-					BackendObjectReference: *http.BackendRef,
+					BackendObjectReference: *http.BackendRef, //nolint:staticcheck
 				},
 			}
 		default:
@@ -2710,10 +2710,10 @@ func (t *Translator) buildExtAuth(
 		switch {
 		case len(grpc.BackendRefs) > 0:
 			backendRefs = grpc.BackendRefs
-		case grpc.BackendRef != nil:
+		case grpc.BackendRef != nil: //nolint:staticcheck
 			backendRefs = []egv1a1.BackendRef{
 				{
-					BackendObjectReference: *grpc.BackendRef,
+					BackendObjectReference: *grpc.BackendRef, //nolint:staticcheck
 				},
 			}
 		default:
@@ -3131,10 +3131,10 @@ func buildSecurityPolicyOwners(route, parent *egv1a1.SecurityPolicy) *securityPo
 			if ea == nil {
 				return false
 			}
-			if ea.HTTP != nil && (len(ea.HTTP.BackendRefs) > 0 || ea.HTTP.BackendRef != nil) {
+			if ea.HTTP != nil && (len(ea.HTTP.BackendRefs) > 0 || ea.HTTP.BackendRef != nil) { //nolint:staticcheck
 				return true
 			}
-			if ea.GRPC != nil && (len(ea.GRPC.BackendRefs) > 0 || ea.GRPC.BackendRef != nil) {
+			if ea.GRPC != nil && (len(ea.GRPC.BackendRefs) > 0 || ea.GRPC.BackendRef != nil) { //nolint:staticcheck
 				return true
 			}
 			return false

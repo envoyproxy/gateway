@@ -846,7 +846,7 @@ func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnecti
 func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener, fingerprints []ir.TLSFingerprintType) error {
 	// Return early if it exists
 	for _, filter := range xdsListener.ListenerFilters {
-		if filter.Name == wellknown.TlsInspector {
+		if filter.Name == wellknown.TLSInspector {
 			return nil
 		}
 	}
@@ -868,7 +868,7 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener, fingerprints []i
 	}
 
 	filter := &listenerv3.ListenerFilter{
-		Name: wellknown.TlsInspector,
+		Name: wellknown.TLSInspector,
 		ConfigType: &listenerv3.ListenerFilter_TypedConfig{
 			TypedConfig: tlsInspectorAny,
 		},
