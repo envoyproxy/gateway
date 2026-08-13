@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -649,6 +650,122 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					matchedGWs[gwNN] = gwPolicy
 				}
 			}
+		}
+
+		for _, tcpListener := range x.TCP {
+			for _, tcpRoute := range tcpListener.Routes {
+				rd := tcpRoute.Destination
+				if rd == nil {
+					continue
+				}
+				for _, ds := range rd.Settings {
+					if backendPolicyKeyFromMetadata(ds.Metadata) != key {
+						continue
+					}
+					if len(rd.Settings) > 1 {
+						if rd.Metadata != nil {
+							blockedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
+						}
+						continue
+					}
+
+					mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
+					if err != nil {
+						status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+							&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
+						continue
+					}
+					tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
+					if err != nil || tf == nil {
+						if err != nil {
+							status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+								status.Error2ConditionMsg(err))
+						}
+						continue
+					}
+
+					backendTraffic := tf.ClusterFeatures()
+					resolved := &ir.ClusterTrafficFeatures{
+						LoadBalancer:   tcpRoute.LoadBalancer,
+						ProxyProtocol:  tcpRoute.ProxyProtocol,
+						CircuitBreaker: tcpRoute.CircuitBreaker,
+						HealthCheck:    tcpRoute.HealthCheck,
+						Timeout:        tcpRoute.Timeout,
+						TCPKeepalive:   tcpRoute.TCPKeepalive,
+					}
+					overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
+					overrideIfSet(&resolved.ProxyProtocol, backendTraffic.ProxyProtocol)
+					overrideIfSet(&resolved.CircuitBreaker, backendTraffic.CircuitBreaker)
+					overrideIfSet(&resolved.HealthCheck, backendTraffic.HealthCheck)
+					overrideIfSet(&resolved.Timeout, backendTraffic.Timeout)
+					overrideIfSet(&resolved.TCPKeepalive, backendTraffic.TCPKeepalive)
+					resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
+
+					ds.Traffic = resolved
+					matchedGWs[gwNN] = gwPolicy
+				}
+			}
+		}
+
+		for _, udpListener := range x.UDP {
+			if udpListener.Route == nil {
+				continue
+			}
+			udpRoute := udpListener.Route
+			rd := udpRoute.Destination
+			if rd == nil {
+				continue
+			}
+			for _, ds := range rd.Settings {
+				if backendPolicyKeyFromMetadata(ds.Metadata) != key {
+					continue
+				}
+				if len(rd.Settings) > 1 {
+					if rd.Metadata != nil {
+						blockedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
+					}
+					continue
+				}
+
+				mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
+				if err != nil {
+					status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+						&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
+					continue
+				}
+				tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
+				if err != nil || tf == nil {
+					if err != nil {
+						status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+							status.Error2ConditionMsg(err))
+					}
+					continue
+				}
+
+				backendTraffic := tf.ClusterFeatures()
+				resolved := &ir.ClusterTrafficFeatures{
+					LoadBalancer: udpRoute.LoadBalancer,
+				}
+				overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
+
+				ds.Traffic = resolved
+				matchedGWs[gwNN] = gwPolicy
+			}
+		}
+
+		// Now that the HTTP/GRPC, TCP, and UDP walks have all had a chance to add to
+		// blockedRoutes for this gateway, emit one combined Warning - never per-occurrence.
+		if len(blockedRoutes) > 0 {
+			names := make([]string, 0, len(blockedRoutes))
+			for name := range blockedRoutes {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			ref := getAncestorRefForPolicy(gwNN, nil)
+			status.SetWarningForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName,
+				egv1a1.PolicyReasonUnsupportedBackendTrafficPolicy,
+				fmt.Sprintf("This backend-targeted BackendTrafficPolicy cannot apply because these rules share a single Envoy cluster with other backendRefs, which this route kind cannot split: %s", strings.Join(names, ", ")),
+				policy.Generation)
 		}
 	}
 
