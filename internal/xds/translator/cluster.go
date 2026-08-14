@@ -1480,7 +1480,6 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		settings:     settings,
 		endpointType: buildEndpointType(settings),
 		metrics:      extra.metrics,
-		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
 		metadata:     metadata,
 		isRoute:      true,
@@ -1490,6 +1489,7 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		applyTraffic(clusterArgs, traffic)
 	} else {
 		clusterArgs.loadBalancer = route.LoadBalancer
+		clusterArgs.dns = route.DNS
 	}
 
 	return clusterArgs
@@ -1505,16 +1505,14 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
-		name:              name,
-		settings:          settings,
-		endpointType:      buildEndpointType(settings),
-		metrics:           extra.metrics,
-		backendConnection: route.BackendConnection,
-		dns:               route.DNS,
-		ipFamily:          extra.ipFamily,
-		metadata:          metadata,
-		healthCheckLog:    extra.healthCheckLog,
-		isRoute:           true,
+		name:           name,
+		settings:       settings,
+		endpointType:   buildEndpointType(settings),
+		metrics:        extra.metrics,
+		ipFamily:       extra.ipFamily,
+		metadata:       metadata,
+		healthCheckLog: extra.healthCheckLog,
+		isRoute:        true,
 	}
 
 	if traffic := determineSettingTraffic(settings); traffic != nil {
@@ -1526,6 +1524,8 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		clusterArgs.tcpkeepalive = route.TCPKeepalive
 		clusterArgs.healthCheck = route.HealthCheck
 		clusterArgs.timeout = route.Timeout.ClusterOnly()
+		clusterArgs.backendConnection = route.BackendConnection
+		clusterArgs.dns = route.DNS
 	}
 
 	return clusterArgs
