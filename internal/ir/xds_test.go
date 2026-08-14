@@ -2364,8 +2364,8 @@ func TestRouteDestinationHasSettingWithTraffic(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "no settings",
-			dest: &RouteDestination{},
+			name:     "no settings",
+			dest:     &RouteDestination{},
 			expected: false,
 		},
 		{
