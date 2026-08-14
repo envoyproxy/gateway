@@ -607,12 +607,6 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					if backendPolicyKeyFromMetadata(ds.Metadata) != key {
 						continue
 					}
-					if len(rd.Settings) > 1 {
-						if rd.Metadata != nil {
-							blockedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
-						}
-						continue
-					}
 
 					mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
 					if err != nil {
