@@ -1054,14 +1054,15 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		switch {
 		case !ok || bytes < 1024:
 			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s must be at least 1Ki", headerSettings.MaxRequestHeaderLimit.String()))
+		// Compare against the byte-equivalent of the max before rounding up, so a
+		// bytes value close to math.MaxInt64 can't overflow the "bytes + 1023"
+		// addition below and slip past the maximum check.
+		case bytes > maxRequestHeaderLimitKB*1024:
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s exceeds the maximum of %dKi", headerSettings.MaxRequestHeaderLimit.String(), maxRequestHeaderLimitKB))
 		default:
 			kb := (bytes + 1023) / 1024
-			if kb > maxRequestHeaderLimitKB {
-				errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s exceeds the maximum of %dKi", headerSettings.MaxRequestHeaderLimit.String(), maxRequestHeaderLimitKB))
-			} else {
-				httpIR.Headers.MaxRequestHeadersKB = new(uint32)
-				*httpIR.Headers.MaxRequestHeadersKB = uint32(kb)
-			}
+			httpIR.Headers.MaxRequestHeadersKB = new(uint32)
+			*httpIR.Headers.MaxRequestHeadersKB = uint32(kb)
 		}
 	}
 
