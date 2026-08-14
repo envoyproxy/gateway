@@ -129,6 +129,9 @@ httpRoutes:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-with-system-ca
+      matches:
+      - path:
+          value: /route-2
   status:
     parents:
     - conditions:
@@ -211,6 +214,35 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - isDynamicResolver: true
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                name: system_ca_certificates
+              maxVersion: "1.3"
+              minVersion: "1.2"
+              useSystemTrustStore: true
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
+      - destination:
+          metadata:
+            kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
@@ -233,31 +265,6 @@ xdsIR:
           name: httproute-1
           namespace: default
         name: httproute/default/httproute-1/rule/0/match/-1/gateway_envoyproxy_io
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-2
-            namespace: default
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - isDynamicResolver: true
-            name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP
-            tls:
-              alpnProtocols: null
-              caCertificate:
-                name: system_ca_certificates
-              maxVersion: "1.3"
-              minVersion: "1.2"
-              useSystemTrustStore: true
-            weight: 1
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: default
-        name: httproute/default/httproute-2/rule/0/match/-1/gateway_envoyproxy_io
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

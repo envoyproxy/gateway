@@ -52,7 +52,7 @@ httpRoutes:
         - name: rule-1
           matches:
             - path:
-                value: /rule-1
+                value: /rule-2
           backendRefs:
             - name: service-1
               port: 8080

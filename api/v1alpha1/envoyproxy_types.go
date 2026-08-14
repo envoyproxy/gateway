@@ -439,6 +439,10 @@ type ProxyTelemetry struct {
 	// RequestID configures Envoy request ID behavior.
 	// +optional
 	RequestID *RequestIDSettings `json:"requestID,omitempty"`
+
+	// HealthCheckLog defines health check event logging for xRoute-backed clusters.
+	// +optional
+	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty"`
 }
 
 // EnvoyProxyProviderType defines the types of providers supported by Envoy Proxy.
@@ -519,6 +523,11 @@ type EnvoyProxyProvider struct {
 
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
 type ShutdownConfig struct {
+	// HealthCheckFailureDelay defines the delay before failing health checks during the graceful drain process.
+	// If unspecified, defaults to 0 seconds.
+	//
+	// +optional
+	HealthCheckFailureDelay *gwapiv1.Duration `json:"healthCheckFailureDelay,omitempty"`
 	// DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
 	// If unspecified, defaults to 60 seconds.
 	//

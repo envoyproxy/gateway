@@ -1,0 +1,61 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends: {}
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: grpc-1
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+            kinds:
+              - kind: GRPCRoute
+        - name: grpc-2
+          protocol: HTTP
+          port: 8080
+          allowedRoutes:
+            namespaces:
+              from: All
+            kinds:
+              - kind: GRPCRoute
+clientTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: ClientTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: ctp-grpc-1-preserve-case
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
+          sectionName: grpc-1
+      http1:
+        preserveHeaderCase: true
+grpcRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: GRPCRoute
+    metadata:
+      namespace: default
+      name: grpc-route-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080

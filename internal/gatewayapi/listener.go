@@ -786,6 +786,8 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 		return
 	}
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
+
+	xdsIR.HealthCheckLog = processHealthCheckLog(envoyProxy)
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
@@ -1169,6 +1171,59 @@ func getOpenTelemetryTracingResourceAttributes(provider *egv1a1.TracingProvider)
 	return nil
 }
 
+// processHealthCheckLog extracts the gateway-level HC event log config from EnvoyProxy telemetry.
+func processHealthCheckLog(envoyProxy *egv1a1.EnvoyProxy) *ir.ProxyHealthCheckLog {
+	if envoyProxy == nil ||
+		envoyProxy.Spec.Telemetry == nil ||
+		envoyProxy.Spec.Telemetry.HealthCheckLog == nil {
+		return nil
+	}
+	return translateHealthCheckLog(envoyProxy.Spec.Telemetry.HealthCheckLog)
+}
+
+// translateHealthCheckLog converts a ProxyHealthCheckLog API type to its IR representation.
+func translateHealthCheckLog(hcLogging *egv1a1.ProxyHealthCheckLog) *ir.ProxyHealthCheckLog {
+	if hcLogging == nil {
+		return nil
+	}
+
+	irHCLogging := &ir.ProxyHealthCheckLog{}
+
+	// Empty/omitted Matches means log everything.
+	if len(hcLogging.Matches) == 0 {
+		irHCLogging.AlwaysLogHealthCheckFailures = true
+		irHCLogging.AlwaysLogHealthCheckSuccess = true
+	} else {
+		for _, et := range hcLogging.Matches {
+			switch et {
+			case egv1a1.ProxyHealthCheckLogEventTypeFailure:
+				irHCLogging.AlwaysLogHealthCheckFailures = true
+			case egv1a1.ProxyHealthCheckLogEventTypeSuccess:
+				irHCLogging.AlwaysLogHealthCheckSuccess = true
+			case egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart,
+				egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition:
+				// Intentional no-op: leaving the flag false tells Envoy transition-only mode
+			}
+		}
+	}
+
+	// Default to /dev/stdout when no sinks are configured, matching access log behavior.
+	if len(hcLogging.Sinks) == 0 {
+		irHCLogging.FileSinks = append(irHCLogging.FileSinks, ir.FileEnvoyProxyHealthCheckLog{
+			Path: "/dev/stdout",
+		})
+	}
+	for _, sink := range hcLogging.Sinks {
+		if sink.Type == egv1a1.ProxyHealthCheckLogSinkTypeFile && sink.File != nil {
+			irHCLogging.FileSinks = append(irHCLogging.FileSinks, ir.FileEnvoyProxyHealthCheckLog{
+				Path: sink.File.Path,
+			})
+		}
+	}
+
+	return irHCLogging
+}
+
 func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, []ir.ResolvedMetricSink, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
@@ -1177,7 +1232,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	var resolvedSinks []ir.ResolvedMetricSink
-	seen := sets.NewString()
+	seen := sets.New[string]()
 
 	for i, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
 		if sink.OpenTelemetry == nil {

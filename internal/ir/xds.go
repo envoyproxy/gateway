@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -173,6 +174,8 @@ type Xds struct {
 	Tracing *Tracing `json:"tracing,omitempty" yaml:"tracing,omitempty"`
 	// Metrics configuration for the gateway.
 	Metrics *Metrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
+	// HealthCheckLog holds gateway-level HC event logging config.
+	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty" yaml:"healthCheckLog,omitempty"`
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.
@@ -1279,6 +1282,19 @@ type ConnectConfig struct {
 	Terminate bool `json:"terminate" yaml:"terminate"`
 }
 
+// HasConnectUpgrade returns true if the HTTP CONNECT upgrade is enabled.
+func (b *TrafficFeatures) HasConnectUpgrade() bool {
+	if b == nil {
+		return false
+	}
+	for _, protocol := range b.HTTPUpgrade {
+		if strings.EqualFold(protocol.Type, "CONNECT") {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *TrafficFeatures) Validate() error {
 	var errs error
 
@@ -2024,7 +2040,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddRequestHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.AddRequestHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
@@ -2037,7 +2053,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.RemoveRequestHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.RemoveRequestHeaders {
 			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
@@ -2047,7 +2063,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddResponseHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.AddResponseHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
@@ -2060,7 +2076,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.RemoveResponseHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.RemoveResponseHeaders {
 			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
@@ -3499,6 +3515,27 @@ type ActiveHealthCheck struct {
 	// Overrides defines the configuration of the overriding health check settings for all endpoints
 	// in the backend cluster.
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
+	// BackendHealthCheckLog configures HC event logging for this cluster via BTP ClusterSettings.
+	// Takes precedence over the gateway-level HealthCheckLog.
+	BackendHealthCheckLog *ProxyHealthCheckLog `json:"backendHealthCheckLog,omitempty" yaml:"backendHealthCheckLog,omitempty"`
+}
+
+// ProxyHealthCheckLog holds health check event logging configuration.
+// +k8s:deepcopy-gen=true
+type ProxyHealthCheckLog struct {
+	// FileSinks is the list of file-based sinks for health check event logs.
+	FileSinks []FileEnvoyProxyHealthCheckLog `json:"fileSinks,omitempty" yaml:"fileSinks,omitempty"`
+	// AlwaysLogHealthCheckFailures enables logging of all HC failures.
+	AlwaysLogHealthCheckFailures bool `json:"alwaysLogHealthCheckFailures,omitempty" yaml:"alwaysLogHealthCheckFailures,omitempty"`
+	// AlwaysLogHealthCheckSuccess enables logging of all HC successes.
+	AlwaysLogHealthCheckSuccess bool `json:"alwaysLogHealthCheckSuccess,omitempty" yaml:"alwaysLogHealthCheckSuccess,omitempty"`
+}
+
+// FileEnvoyProxyHealthCheckLog is the IR representation of a file-based health check event log sink.
+// +k8s:deepcopy-gen=true
+type FileEnvoyProxyHealthCheckLog struct {
+	// Path is the file path for the health check event log.
+	Path string `json:"path" yaml:"path"`
 }
 
 // Validate the fields within the HealthCheck structure.

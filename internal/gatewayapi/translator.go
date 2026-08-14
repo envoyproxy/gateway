@@ -388,6 +388,12 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Process BackendTrafficPolicies
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
 
+	// Check for overlapping route matches across all listeners. This must run
+	// after BackendTrafficPolicies are applied because a CONNECT upgrade
+	// replaces a route's path matcher with Envoy's CONNECT matcher, which
+	// changes which routes can overlap.
+	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
+
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, acceptedGateways, routes, resources, xdsIR)
