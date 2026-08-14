@@ -700,10 +700,8 @@ func TestHTTPRouteTranslatorAsClusterArgsFallsBackToRouteTrafficWhenMultipleSett
 			},
 		},
 	}
-	// Two settings in this call - even though one has its own Traffic, the bundled-call case
-	// (multiple settings passed together) must never happen for a Traffic-bearing setting once
-	// Task 2's NeedsClusterPerSetting forces a split - but asClusterArgs itself only needs to
-	// guard len(settings) == 1, since it has no other way to know which single setting it's for.
+	// A Traffic-bearing setting never arrives bundled with siblings in practice, but
+	// asClusterArgs can only guard on len(settings) == 1 - it has no other way to tell.
 	settings := []*ir.DestinationSetting{
 		{Name: "backend-1", Traffic: &ir.ClusterTrafficFeatures{CircuitBreaker: &ir.CircuitBreaker{MaxConnections: new(uint32(100))}}},
 		{Name: "backend-2"},
