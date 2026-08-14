@@ -1,1 +1,0 @@
-Bumped Go to 1.26.6, which includes security fixes to the `crypto/tls`, `encoding/asn1`, `encoding/xml`, `html/template`, `net/http`, `net/url`, `golang.org/x/net/idna` and `golang.org/x/net/dns/dnsmessage` packages.
