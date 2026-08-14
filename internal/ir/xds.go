@@ -2180,9 +2180,9 @@ func (r *RouteDestination) HasFiltersInSettings() bool {
 }
 
 // HasTrafficInSettings returns true if any setting in the destination has its own Traffic
-// override from a backend-targeted BackendTrafficPolicy. Forces per-setting cluster splitting
-// (see NeedsClusterPerSetting) so the override doesn't silently bundle away into a shared cluster
-// with sibling backendRefs that lack one.
+// override from a backend-targeted BackendTrafficPolicy. Forces per-setting cluster splitting so
+// the override doesn't silently bundle away into a shared cluster with sibling backendRefs that
+// lack one.
 func (r *RouteDestination) HasTrafficInSettings() bool {
 	for _, setting := range r.Settings {
 		if setting.Traffic != nil {
@@ -2344,7 +2344,7 @@ type DestinationSetting struct {
 	Invalid bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
 	// Traffic holds cluster-scoped settings from a backend-targeted BackendTrafficPolicy,
 	// already merged over whatever route-level Traffic applies. A Setting that carries this is
-	// always split into its own Envoy cluster (see RouteDestination.NeedsClusterPerSetting).
+	// always split into its own Envoy cluster.
 	Traffic *ClusterTrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
