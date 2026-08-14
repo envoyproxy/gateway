@@ -36,13 +36,11 @@
                 name: oauth2/hmac_secret/securitypolicy/envoy-gateway/security-policy-1
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/envoy-gateway/security-policy-1
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             passThroughMatcher:
             - name: Authorization
