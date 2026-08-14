@@ -766,6 +766,7 @@ loki:
       storage:
         type: "local"
     limits_config:
+      max_structured_metadata_size: 131072
       otlp_config:
         resource_attributes:
           attributes_config:
