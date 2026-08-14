@@ -1,0 +1,69 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends:
+      selector:
+        matchLabels:
+          merge-eligible: "true"
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tcp
+          protocol: TCP
+          port: 90
+          allowedRoutes:
+            namespaces:
+              from: All
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: btp-backend-target
+    spec:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: service-1
+      mergeType: StrategicMerge
+      circuitBreaker:
+        maxConnections: 100
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: btp-route
+    spec:
+      mergeType: StrategicMerge
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: TCPRoute
+          name: tcproute-1
+      tcpKeepalive:
+        probes: 5
+      circuitBreaker:
+        maxConnections: 999
+tcpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: TCPRoute
+    metadata:
+      namespace: default
+      name: tcproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
