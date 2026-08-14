@@ -1483,7 +1483,6 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		isRoute:      true,
 	}
 
-	// A destination setting's own Traffic takes precedence over the route's.
 	if traffic := determineSettingTraffic(settings); traffic != nil {
 		applyTraffic(clusterArgs, traffic)
 	} else {
@@ -1515,7 +1514,6 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// A destination setting's own Traffic takes precedence over the route's.
 	if traffic := determineSettingTraffic(settings); traffic != nil {
 		applyTraffic(clusterArgs, traffic)
 	} else {
@@ -1559,9 +1557,6 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// A destination setting's own Traffic (from a backend-targeted BackendTrafficPolicy, already
-	// merged over the route's own Traffic) takes precedence over the route's -
-	// RouteDestination.NeedsClusterPerSetting guarantees such a setting always arrives alone.
 	if traffic := determineSettingTraffic(settings); traffic != nil {
 		applyTraffic(clusterArgs, traffic)
 	} else {
