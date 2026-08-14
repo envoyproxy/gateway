@@ -753,7 +753,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			}
 		}
 
-		// Now that the HTTP/GRPC, TCP, and UDP walks have all had a chance to add to
+		// Now that the TCP and UDP walks have had a chance to add to
 		// blockedRoutes for this gateway, emit one combined Warning - never per-occurrence.
 		if len(blockedRoutes) > 0 {
 			names := make([]string, 0, len(blockedRoutes))
