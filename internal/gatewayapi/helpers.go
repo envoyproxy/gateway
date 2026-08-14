@@ -1501,8 +1501,7 @@ func setIfNil[T any](target **T, value *T) {
 }
 
 // overrideIfSet sets *target to value if value is non-nil, leaving *target unchanged otherwise.
-// The inverse of setIfNil: setIfNil fills a gap only if *target is nil; overrideIfSet replaces
-// *target only if the incoming value is set, regardless of what *target already holds.
+// The inverse of setIfNil.
 func overrideIfSet[T any](target **T, value *T) {
 	if value != nil {
 		*target = value
