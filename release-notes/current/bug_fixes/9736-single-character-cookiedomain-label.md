@@ -1,1 +1,0 @@
-Fixed SecurityPolicy rejecting OIDC cookieDomain values that contain a single-character label anywhere after the first label, such as example.m.com, because the validation pattern required every label but the first to be at least two characters. This applies to cookieDomain the same fix made for Backend FQDN endpoint hostnames in #4803.
