@@ -518,11 +518,15 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 }
 
 // processBackendTrafficPolicyForBackend resolves policy's target (already confirmed to be a
-// Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for
-// conflict detection, then merges it into the Traffic of every already-registered BackendCluster,
-// across every gateway's xdsIR, whose Metadata identifies the same backend. A backend that never
-// resolves to a registered BackendCluster for some other reason (per-listener ClusterSettings
-// divergence, dynamic resolver, etc.) gets no settings and no error.
+// Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for conflict
+// detection, then applies it wherever the backend actually resolves: into the Traffic of every
+// matching, already-registered BackendCluster, or, for a backend that isn't merged, directly onto
+// the matching inline DestinationSetting(s) for HTTPRoute/GRPCRoute/TCPRoute/UDPRoute. A
+// TCPRoute/UDPRoute/TLSRoute rule with more than one backendRef sharing a single Envoy cluster
+// can't isolate the policy to just its target and gets a Warning instead. A backend that never
+// resolves anywhere (mergeBackends disabled for its gateway aside - see the earlier explicit
+// Disabled check - per-listener ClusterSettings divergence, dynamic resolver, simply unreferenced,
+// etc.) gets no settings and no error.
 func (t *Translator) processBackendTrafficPolicyForBackend(
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
@@ -746,15 +750,22 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					DNS:          udpRoute.DNS,
 				}
 				overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
+				overrideIfSet(&resolved.ProxyProtocol, backendTraffic.ProxyProtocol)
+				overrideIfSet(&resolved.HealthCheck, backendTraffic.HealthCheck)
+				overrideIfSet(&resolved.CircuitBreaker, backendTraffic.CircuitBreaker)
+				overrideIfSet(&resolved.Timeout, backendTraffic.Timeout)
+				overrideIfSet(&resolved.TCPKeepalive, backendTraffic.TCPKeepalive)
+				overrideIfSet(&resolved.BackendConnection, backendTraffic.BackendConnection)
+				overrideIfSet(&resolved.HTTP2, backendTraffic.HTTP2)
 				overrideIfSet(&resolved.DNS, backendTraffic.DNS)
+				resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
 
 				ds.Traffic = resolved
 				matchedGWs[gwNN] = gwPolicy
 			}
 		}
 
-		// Now that the TCP and UDP walks have had a chance to add to
-		// blockedRoutes for this gateway, emit one combined Warning - never per-occurrence.
+		// One combined Warning per gateway, never per occurrence.
 		if len(blockedRoutes) > 0 {
 			names := make([]string, 0, len(blockedRoutes))
 			for name := range blockedRoutes {

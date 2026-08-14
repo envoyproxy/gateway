@@ -1483,8 +1483,7 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		isRoute:      true,
 	}
 
-	// A single setting carrying its own Traffic (from a backend-targeted BackendTrafficPolicy)
-	// takes precedence over the route's, per the same rule as HTTPRouteTranslator above.
+	// A single setting carrying its own Traffic takes precedence over the route's.
 	if len(settings) == 1 && settings[0].Traffic != nil {
 		applyTraffic(clusterArgs, settings[0].Traffic)
 	} else {
@@ -1516,8 +1515,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// A single setting carrying its own Traffic (from a backend-targeted BackendTrafficPolicy)
-	// takes precedence over the route's, per the same rule as HTTPRouteTranslator above.
+	// A single setting carrying its own Traffic takes precedence over the route's.
 	if len(settings) == 1 && settings[0].Traffic != nil {
 		applyTraffic(clusterArgs, settings[0].Traffic)
 	} else {
@@ -1561,11 +1559,9 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// Populate traffic features. A single setting carrying its own Traffic (from a
-	// backend-targeted BackendTrafficPolicy, already merged on top of the route's own Traffic
-	// upstream in gatewayapi) takes precedence over the route's - Task 2's NeedsClusterPerSetting
-	// extension guarantees this call only ever sees such a setting alone, never bundled with
-	// siblings.
+	// A single setting carrying its own Traffic (from a backend-targeted BackendTrafficPolicy,
+	// already merged over the route's own Traffic) takes precedence over the route's -
+	// RouteDestination.NeedsClusterPerSetting guarantees such a setting always arrives alone.
 	if len(settings) == 1 && settings[0].Traffic != nil {
 		applyTraffic(clusterArgs, settings[0].Traffic)
 	} else {
