@@ -221,8 +221,8 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.ClusterTrafficFeatures) {
 // there is exactly one setting and it carries one; nil otherwise.
 func determineSettingTraffic(settings []*ir.DestinationSetting) *ir.ClusterTrafficFeatures {
 	// A shared cluster (more than one setting) never gets a Traffic override applied to it -
-	// NeedsClusterPerSetting always splits a Traffic-bearing setting into its own cluster
-	// first. Return nil here so the caller falls back to the route's own Traffic.
+	// a Traffic-bearing setting is always split into its own cluster first. Return nil here
+	// so the caller falls back to the route's own Traffic.
 	if len(settings) != 1 {
 		return nil
 	}
