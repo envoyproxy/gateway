@@ -99,7 +99,7 @@ httpRoutes:
       - headers:
         - name: x-org-id
           type: Exact
-          value: test-org
+          value: test-org-2
         path:
           type: PathPrefix
           value: /
@@ -240,7 +240,7 @@ xdsIR:
             weight: 1
         headerMatches:
         - distinct: false
-          exact: test-org
+          exact: test-org-2
           name: x-org-id
         hostname: gateway.envoyproxy.io
         isHTTP2: false
