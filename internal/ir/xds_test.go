@@ -2357,7 +2357,7 @@ func TestDestinationSettingTrafficDeepCopy(t *testing.T) {
 	require.Equal(t, uint32(100), *original.Traffic.CircuitBreaker.MaxConnections)
 }
 
-func TestRouteDestinationHasSettingWithTraffic(t *testing.T) {
+func TestRouteDestinationHasTrafficInSettings(t *testing.T) {
 	cases := []struct {
 		name     string
 		dest     *RouteDestination
@@ -2389,7 +2389,7 @@ func TestRouteDestinationHasSettingWithTraffic(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.expected, tc.dest.HasSettingWithTraffic())
+			require.Equal(t, tc.expected, tc.dest.HasTrafficInSettings())
 		})
 	}
 }

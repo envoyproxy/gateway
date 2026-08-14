@@ -2147,7 +2147,7 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
 		r.HasMixedUpstreamProtocolRequirements() ||
 		r.HasMixedAutoSNISettings() ||
-		r.HasSettingWithTraffic()
+		r.HasTrafficInSettings()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -2181,11 +2181,11 @@ func (r *RouteDestination) HasFiltersInSettings() bool {
 	return false
 }
 
-// HasSettingWithTraffic returns true if any setting in the destination has its own Traffic
+// HasTrafficInSettings returns true if any setting in the destination has its own Traffic
 // override from a backend-targeted BackendTrafficPolicy. Forces per-setting cluster splitting
 // (see NeedsClusterPerSetting) so the override doesn't silently bundle away into a shared cluster
 // with sibling backendRefs that lack one.
-func (r *RouteDestination) HasSettingWithTraffic() bool {
+func (r *RouteDestination) HasTrafficInSettings() bool {
 	for _, setting := range r.Settings {
 		if setting.Traffic != nil {
 			return true
