@@ -915,7 +915,7 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
 	if artifactsDir := os.Getenv("E2E_ARTIFACTS_DIR"); artifactsDir != "" {
 		bundlePath := filepath.Join(artifactsDir, t.Name())
-		if err := os.MkdirAll(bundlePath, 0o755); err != nil {
+		if err := os.MkdirAll(bundlePath, 0o755); err != nil { // nolint:gosec
 			tlog.Logf(t, "failed to create e2e artifacts directory %s: %v", bundlePath, err)
 		} else {
 			opts = append(opts, tb.WithBundlePath(bundlePath))
