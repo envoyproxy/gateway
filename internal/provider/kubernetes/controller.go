@@ -317,7 +317,7 @@ func isTransientError(err error) bool {
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
 // same reconcile.Request containing the gateway controller name. This allows multiple resource updates to
 // be handled by a single call to Reconcile. The reconcile.Request DOES NOT map to a specific resource.
-func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	ctx, span := tracer.Start(ctx, "GatewayAPIReconciler.Reconcile")
 	defer span.End()
 	logger := r.log.WithTrace(ctx)
