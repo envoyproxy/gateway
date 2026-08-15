@@ -282,8 +282,17 @@ jobs:
         # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
         # which means to dump the current state when there's a case failed.
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
+        E2E_ARTIFACTS_DIR: artifacts/e2e
         SKIP_GO_BUILD: "true"
       run: make e2e
+
+    - name: Upload E2E failure artifacts
+      if: failure()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: e2e-failure-artifacts-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}
+        path: artifacts/e2e/
+        if-no-files-found: ignore
 
   benchmark-test:
     runs-on: ubuntu-latest

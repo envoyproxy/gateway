@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -908,17 +909,19 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 
 	runCollectAndDump(t, rest,
 		tb.WithCollectedNamespaces(dumpedNamespaces),
-		tb.DisableCollector(tb.CollectorTypePodLogs),
-		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
-		tb.DisableCollector(tb.CollectorTypePodLogs),
 	)
 }
 
 func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
-	result, _ := tb.CollectResult(t.Context(), rest, opts...)
-	for r, data := range result {
-		tlog.Logf(t, "\nfilename: %s", r)
-		tlog.Logf(t, "\ndata: \n%s\n", data)
+	if artifactsDir := os.Getenv("E2E_ARTIFACTS_DIR"); artifactsDir != "" {
+		bundlePath := filepath.Join(artifactsDir, t.Name())
+		if err := os.MkdirAll(bundlePath, 0o755); err != nil {
+			tlog.Logf(t, "failed to create e2e artifacts directory %s: %v", bundlePath, err)
+		} else {
+			opts = append(opts, tb.WithBundlePath(bundlePath))
+		}
+
+		_, _ = tb.CollectResult(t.Context(), rest, opts...)
 	}
 }
 
