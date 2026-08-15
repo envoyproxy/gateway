@@ -57,6 +57,12 @@ var NamespaceSelectorRelabelTest = suite.ConformanceTest{
 			routeNN, nsSelectorRelabelNamespace)
 		// Before labeling the namespace, we expect the HTTPRoute to be rejected because the namespace does not match the listener's allowedRoutes selector.
 		// and the Gateway must be programmed before the HTTPRoute can be evaluated.
+		//
+		// Wait for the Gateway's conditions to reflect its current generation first:
+		// GatewayMustHaveCondition treats a stale observedGeneration as a fatal error rather than
+		// a retryable one, so calling it right after creating the Gateway can race with the
+		// controller's first reconcile and fail before the configured timeout is ever used.
+		kubernetes.GatewayMustHaveLatestConditions(t, suite.Client, suite.TimeoutConfig, gwNN)
 		kubernetes.GatewayMustHaveCondition(t, suite.Client, suite.TimeoutConfig, gwNN, metav1.Condition{
 			Type:   string(gwapiv1.GatewayConditionProgrammed),
 			Status: metav1.ConditionTrue,
