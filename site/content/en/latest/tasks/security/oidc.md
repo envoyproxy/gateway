@@ -571,6 +571,12 @@ spec:
     cookieDomain: "example.com"
     cookieNames:
       accessToken: "azure-access-token"
+      oauthHmac: "azure-oauth-hmac"
+      oauthExpires: "azure-oauth-expires"
+      idToken: "azure-id-token"
+      refreshToken: "azure-refresh-token"
+      oauthNonce: "azure-oauth-nonce"
+      codeVerifier: "azure-code-verifier"
 
     provider:
       issuer: "https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0"

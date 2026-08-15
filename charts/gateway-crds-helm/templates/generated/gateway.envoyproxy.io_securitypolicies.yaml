@@ -6020,7 +6020,7 @@ spec:
                     type: string
                   cookieNames:
                     description: |-
-                      The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+                      The optional cookie name overrides to be used for the Envoy OAuth2 cookies in the
                       [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                       If not specified, uses a randomly generated suffix
                     properties:
@@ -6030,11 +6030,36 @@ spec:
                           [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                           If not specified, defaults to "AccessToken-(randomly generated uid)"
                         type: string
+                      codeVerifier:
+                        description: |-
+                          The name of the cookie used to store the PKCE code verifier.
+                          If not specified, defaults to "CodeVerifier-(randomly generated uid)"
+                        type: string
                       idToken:
                         description: |-
                           The name of the cookie used to store the IdToken in the
                           [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                           If not specified, defaults to "IdToken-(randomly generated uid)"
+                        type: string
+                      oauthExpires:
+                        description: |-
+                          The name of the cookie used to store the OAuth expires value.
+                          If not specified, defaults to "OauthExpires-(randomly generated uid)"
+                        type: string
+                      oauthHmac:
+                        description: |-
+                          The name of the cookie used to store the OAuth HMAC value.
+                          If not specified, defaults to "OauthHMAC-(randomly generated uid)"
+                        type: string
+                      oauthNonce:
+                        description: |-
+                          The name of the cookie used to store the OAuth nonce value.
+                          If not specified, defaults to "OauthNonce-(randomly generated uid)"
+                        type: string
+                      refreshToken:
+                        description: |-
+                          The name of the cookie used to store the RefreshToken.
+                          If not specified, defaults to "RefreshToken-(randomly generated uid)"
                         type: string
                     type: object
                   csrfTokenTTL:
