@@ -2646,6 +2646,28 @@ func TestIsTransientError(t *testing.T) {
 	}
 }
 
+// TestEnqueueClassForceTranslation guards against regressing to a Reconcile that treats every
+// enqueued request as a namespace-relabel force-translation request. Only requests produced by
+// enqueueClassForceTranslation (used solely by the Namespace watch handler) should carry the
+// namespaceForceTranslation marker; every other watch enqueues through the plain enqueueClass,
+// which must NOT carry it.
+func TestEnqueueClassForceTranslation(t *testing.T) {
+	r := &gatewayAPIReconciler{classController: "some-gateway-class"}
+
+	plain := r.enqueueClass(context.Background(), &gwapiv1.Gateway{})
+	require.Len(t, plain, 1)
+	require.Equal(t, string(r.classController), plain[0].Name)
+	require.Empty(t, plain[0].Namespace, "enqueueClass must not carry the namespace-relabel force marker")
+
+	forced := r.enqueueClassForceTranslation(context.Background(), &corev1.Namespace{})
+	require.Len(t, forced, 1)
+	require.Equal(t, string(r.classController), forced[0].Name)
+	require.Equal(t, namespaceForceTranslation, forced[0].Namespace)
+
+	// The marker must be distinguishable from every other request's (empty) Namespace.
+	require.NotEqual(t, plain[0].Namespace, forced[0].Namespace)
+}
+
 func TestProcessCTPCrlRefs(t *testing.T) {
 	ns := "default"
 	crlSecret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "crl-secret"})
