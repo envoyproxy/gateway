@@ -318,13 +318,6 @@ func isTransientError(err error) bool {
 // same reconcile.Request containing the gateway controller name. This allows multiple resource updates to
 // be handled by a single call to Reconcile. The reconcile.Request DOES NOT map to a specific resource.
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	// Only the Namespace watch handler enqueues a request carrying this marker (see
-	// enqueueClassForceTranslation); every other watch goes through r.enqueueClass, which leaves
-	// Namespace empty. Reconcile.Request otherwise doesn't map to a specific resource (see the
-	// comment above), so this is the only way to tell "this reconcile may need to bypass the
-	// ControllerResources equality dedup" apart from the common case. Match both fields, exactly
-	// as enqueueClassForceTranslation sets them, rather than relying on the marker alone.
-	forceTranslation := req.Name == string(r.classController) && req.Namespace == namespaceForceTranslation
 	ctx, span := tracer.Start(ctx, "GatewayAPIReconciler.Reconcile")
 	defer span.End()
 	logger := r.log.WithTrace(ctx)
@@ -622,7 +615,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 	resourcesWithContext := &resource.ControllerResourcesContext{
 		Resources: &gwcResources,
 		Context:   ctx,
-		Force:     forceTranslation,
 	}
 	r.resources.GatewayAPIResources.Store(string(r.classController), resourcesWithContext)
 	message.PublishMetric(message.Metadata{
@@ -1807,6 +1799,13 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
 
 		for _, listener := range gtw.Spec.Listeners {
+			// Track namespaces currently matched by this listener's allowedRoutes.namespaces.selector,
+			// even if they contain no other tracked resource yet, so a later label change that flips
+			// selector matching always shows up as a diff in Resources.Namespaces.
+			for _, ns := range r.namespacesMatchingSelector(ctx, listener.AllowedRoutes) {
+				resourceMap.allAssociatedNamespaces.Insert(ns)
+			}
+
 			// Get Secret for gateway if it exists.
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
@@ -2116,6 +2115,13 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 		}
 
 		for _, listener := range ls.Spec.Listeners {
+			// Track namespaces currently matched by this listener's allowedRoutes.namespaces.selector,
+			// even if they contain no other tracked resource yet, so a later label change that flips
+			// selector matching always shows up as a diff in Resources.Namespaces.
+			for _, ns := range r.namespacesMatchingSelector(ctx, listener.AllowedRoutes) {
+				resourceMap.allAssociatedNamespaces.Insert(ns)
+			}
+
 			// Listener TLS is optional; only process when TLS termination occurs.
 			if !isListenerEntryTerminatesTLS(&listener) {
 				continue
@@ -2377,11 +2383,15 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				// changing a namespace's labels after an HTTPRoute in it has been evaluated should trigger re-evaluation.
 				// It's hard to determine which Gateway/GatewayClass(es) are affected by a namespace label change,
 				// so we enqueue all GatewayClasses for reconciliation.
-				// In the worst case, changes unrelated namespace labels will trigger unnecessary reconciliations, but this is a rare event.
+				// processGateways/processListenerSets track every namespace matched by a listener's
+				// allowedRoutes.namespaces.selector (see namespacesMatchingSelector), so the resulting
+				// Resources.Namespaces diff (or lack of one) lets the normal reflect.DeepEqual dedup
+				// decide whether a retranslation is actually needed; changes to unrelated namespace
+				// labels reconcile but correctly no-op instead of forcing a retranslation.
 				if !r.hasSelectorAllowedRoutesListener(ctx) {
 					return nil
 				}
-				return r.enqueueClassForceTranslation(ctx, ns)
+				return r.enqueueClass(ctx, ns)
 			}),
 			predicate.NewTypedPredicateFuncs(func(_ *corev1.Namespace) bool {
 				// TODO: respect the namespaceLabel filter here, but we need to be careful
@@ -3017,27 +3027,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 func (r *gatewayAPIReconciler) enqueueClass(_ context.Context, _ client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{
 		Name: string(r.classController),
-	}}}
-}
-
-// namespaceForceTranslation is a synthetic reconcile.Request.Namespace value used only by the
-// Namespace watch handler in watchResources. A Namespace label change can flip
-// allowedRoutes.namespaces.from: Selector matching without altering any resource that Reconcile
-// tracks in ControllerResources, so Reconcile can't rely on the reflect.DeepEqual dedup to notice
-// the change; it instead checks for this exact marker to force a translation via
-// ControllerResourcesContext.Force. Every other watch enqueues through r.enqueueClass, which
-// always leaves Namespace empty, so this marker never collides with a reconcile triggered by any
-// other watched resource. The value itself is deliberately NOT a valid Kubernetes namespace name
-// (RFC 1123 labels can't contain '/'), so it can never collide with a real namespace either, even
-// if some future change starts keying requests by namespace.
-const namespaceForceTranslation = "envoy-gateway/FORCE-TRANSLATION"
-
-// enqueueClassForceTranslation is like enqueueClass, but tags the request with
-// namespaceForceTranslation so Reconcile forces a translation for it.
-func (r *gatewayAPIReconciler) enqueueClassForceTranslation(_ context.Context, _ client.Object) []reconcile.Request {
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{
-		Name:      string(r.classController),
-		Namespace: namespaceForceTranslation,
 	}}}
 }
 

@@ -153,16 +153,6 @@ type ControllerResources []*Resources
 type ControllerResourcesContext struct {
 	Resources *ControllerResources
 	Context   context.Context
-	// Force, when true, makes Equal always report this context as changed, bypassing the
-	// reflect.DeepEqual comparison on Resources.
-	//
-	// GatewayAPIResources is a watchable.Map, and the GatewayAPI runner only re-translates
-	// when a Store()'d value is Equal-different from what's already there. Some reconciles
-	// are triggered by inputs that never show up as a diff in ControllerResources itself
-	// (e.g. a Namespace label change that flips allowedRoutes.namespaces.from: Selector
-	// matching without altering any tracked resource), so without Force the update would be
-	// silently coalesced away and the affected Gateways would never be retranslated.
-	Force bool
 }
 
 // DeepCopy creates a new ControllerResourcesContext.
@@ -178,7 +168,6 @@ func (c *ControllerResourcesContext) DeepCopy() *ControllerResourcesContext {
 	return &ControllerResourcesContext{
 		Resources: resourcesCopy,
 		Context:   c.Context,
-		Force:     c.Force,
 	}
 }
 
@@ -188,9 +177,6 @@ func (c *ControllerResourcesContext) Equal(other *ControllerResourcesContext) bo
 		return true
 	}
 	if c == nil || other == nil {
-		return false
-	}
-	if c.Force {
 		return false
 	}
 	if c.Resources == nil && other.Resources == nil {

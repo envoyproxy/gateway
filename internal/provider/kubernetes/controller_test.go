@@ -2646,26 +2646,113 @@ func TestIsTransientError(t *testing.T) {
 	}
 }
 
-// TestEnqueueClassForceTranslation guards against regressing to a Reconcile that treats every
-// enqueued request as a namespace-relabel force-translation request. Only requests produced by
-// enqueueClassForceTranslation (used solely by the Namespace watch handler) should carry the
-// namespaceForceTranslation marker; every other watch enqueues through the plain enqueueClass,
-// which must NOT carry it.
-func TestEnqueueClassForceTranslation(t *testing.T) {
-	r := &gatewayAPIReconciler{classController: "some-gateway-class"}
+// TestNamespacesMatchingSelector verifies that namespacesMatchingSelector returns exactly the
+// namespaces whose labels currently satisfy allowedRoutes.namespaces.selector, and returns nothing
+// when the listener doesn't use Selector-based namespace matching. This is the mechanism that lets
+// processGateways/processListenerSets track a selector-matched namespace in allAssociatedNamespaces
+// even when it contains no other resource yet, so that a later label change surfaces as a genuine
+// diff in Resources.Namespaces instead of relying on a force-translation escape hatch.
+func TestNamespacesMatchingSelector(t *testing.T) {
+	matching := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "matching",
+			Labels: map[string]string{"env": "prod"},
+		},
+	}
+	nonMatching := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "non-matching",
+			Labels: map[string]string{"env": "dev"},
+		},
+	}
 
-	plain := r.enqueueClass(context.Background(), &gwapiv1.Gateway{})
-	require.Len(t, plain, 1)
-	require.Equal(t, string(r.classController), plain[0].Name)
-	require.Empty(t, plain[0].Namespace, "enqueueClass must not carry the namespace-relabel force marker")
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(matching, nonMatching).
+		Build()
 
-	forced := r.enqueueClassForceTranslation(context.Background(), &corev1.Namespace{})
-	require.Len(t, forced, 1)
-	require.Equal(t, string(r.classController), forced[0].Name)
-	require.Equal(t, namespaceForceTranslation, forced[0].Namespace)
+	r := &gatewayAPIReconciler{
+		client: fakeClient,
+		log:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+	}
 
-	// The marker must be distinguishable from every other request's (empty) Namespace.
-	require.NotEqual(t, plain[0].Namespace, forced[0].Namespace)
+	fromSelector := gwapiv1.NamespacesFromSelector
+	selectorRoutes := &gwapiv1.AllowedRoutes{
+		Namespaces: &gwapiv1.RouteNamespaces{
+			From:     &fromSelector,
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+		},
+	}
+	names := r.namespacesMatchingSelector(context.Background(), selectorRoutes)
+	require.ElementsMatch(t, []string{"matching"}, names)
+
+	// Nil AllowedRoutes, and AllowedRoutes without Selector-based namespace matching, must not list.
+	require.Empty(t, r.namespacesMatchingSelector(context.Background(), nil))
+	require.Empty(t, r.namespacesMatchingSelector(context.Background(), &gwapiv1.AllowedRoutes{}))
+}
+
+// TestProcessListenerSetsTracksSelectorMatchedNamespace verifies that processListenerSets tracks a
+// namespace matched by a listener's allowedRoutes.namespaces.selector in allAssociatedNamespaces even
+// when that namespace contains no ListenerSet, route, or other resource of its own. Without this, a
+// namespace label change that newly (or no longer) matches the selector would never show up as a diff
+// in Resources.Namespaces, and translation would never be re-evaluated for it.
+func TestProcessListenerSetsTracksSelectorMatchedNamespace(t *testing.T) {
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+	scheme := envoygateway.GetScheme()
+
+	fromSelector := gwapiv1.NamespacesFromSelector
+	xls := &gwapiv1.ListenerSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-xls",
+			Namespace: "default",
+		},
+		Spec: gwapiv1.ListenerSetSpec{
+			ParentRef: gwapiv1.ParentGatewayReference{
+				Name:      gwapiv1.ObjectName("test-gateway"),
+				Namespace: new(gwapiv1.Namespace("default")),
+			},
+			Listeners: []gwapiv1.ListenerEntry{
+				{
+					Name:     gwapiv1.SectionName("http"),
+					Protocol: gwapiv1.ProtocolType("HTTP"),
+					Port:     gwapiv1.PortNumber(8080),
+					AllowedRoutes: &gwapiv1.AllowedRoutes{
+						Namespaces: &gwapiv1.RouteNamespaces{
+							From:     &fromSelector,
+							Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	// This namespace has no route, secret, or any other resource in it -- the only reason it should
+	// be tracked is that its labels match the ListenerSet listener's allowedRoutes selector.
+	matchingEmptyNS := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "matching-empty",
+			Labels: map[string]string{"env": "prod"},
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(xls, matchingEmptyNS).
+		WithIndex(&gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc).
+		Build()
+
+	r := &gatewayAPIReconciler{
+		client: fakeClient,
+		log:    logger,
+	}
+
+	resourceTree := resource.NewResources()
+	resourceMap := newResourceMapping()
+	err := r.processListenerSets(context.Background(), "default/test-gateway", resourceMap, resourceTree)
+	require.NoError(t, err)
+
+	require.True(t, resourceMap.allAssociatedNamespaces.Has("matching-empty"),
+		"namespace matched by allowedRoutes.namespaces.selector must be tracked even without any resource in it")
 }
 
 func TestProcessCTPCrlRefs(t *testing.T) {

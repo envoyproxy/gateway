@@ -129,6 +129,33 @@ func hasNamespacesFromSelector(ar *gwapiv1.AllowedRoutes) bool {
 	return ptr.Deref(ar.Namespaces.From, gwapiv1.NamespacesFromSame) == gwapiv1.NamespacesFromSelector
 }
 
+// namespacesMatchingSelector returns the names of all namespaces whose labels currently
+// satisfy allowedRoutes.namespaces.selector. Callers use this to track selector-matched
+// namespaces in allAssociatedNamespaces even when they contain no other tracked resource yet,
+// so a later label change that flips selector matching always shows up as a genuine diff in
+// Resources.Namespaces (see ControllerResourcesContext.Equal) instead of being silently
+// coalesced away by the reflect.DeepEqual dedup.
+func (r *gatewayAPIReconciler) namespacesMatchingSelector(ctx context.Context, ar *gwapiv1.AllowedRoutes) []string {
+	if !hasNamespacesFromSelector(ar) {
+		return nil
+	}
+	selector, err := metav1.LabelSelectorAsSelector(ar.Namespaces.Selector)
+	if err != nil {
+		r.log.Error(err, "invalid allowedRoutes.namespaces.selector")
+		return nil
+	}
+	nsList := &corev1.NamespaceList{}
+	if err := r.client.List(ctx, nsList, &client.ListOptions{LabelSelector: selector}); err != nil {
+		r.log.Error(err, "failed to list namespaces for allowedRoutes.namespaces.selector")
+		return nil
+	}
+	names := make([]string, 0, len(nsList.Items))
+	for i := range nsList.Items {
+		names = append(names, nsList.Items[i].Name)
+	}
+	return names
+}
+
 type NamespaceGetter interface {
 	GetNamespace() string
 }
