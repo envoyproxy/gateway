@@ -317,7 +317,8 @@ func isTransientError(err error) bool {
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
 // same reconcile.Request containing the gateway controller name. This allows multiple resource updates to
 // be handled by a single call to Reconcile. The reconcile.Request DOES NOT map to a specific resource.
-func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
+func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	enqueueClass := req.Name == string(r.classController) && req.Namespace == ""
 	ctx, span := tracer.Start(ctx, "GatewayAPIReconciler.Reconcile")
 	defer span.End()
 	logger := r.log.WithTrace(ctx)
@@ -615,6 +616,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	resourcesWithContext := &resource.ControllerResourcesContext{
 		Resources: &gwcResources,
 		Context:   ctx,
+		Force:     enqueueClass,
 	}
 	r.resources.GatewayAPIResources.Store(string(r.classController), resourcesWithContext)
 	message.PublishMetric(message.Metadata{
@@ -2370,11 +2372,17 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				// It's hard to determine which Gateway/GatewayClass(es) are affected by a namespace label change,
 				// so we enqueue all GatewayClasses for reconciliation.
 				// In the worst case, changes unrelated namespace labels will trigger unnecessary reconciliations, but this is a rare event.
-
-				if !r.hasSelectorAllowedRoutesGateway(ctx) {
+				r.log.Info("Watched namespace changed", "name", ns.Name)
+				if !r.hasSelectorAllowedRoutesListener(ctx) {
 					return nil
 				}
+				r.log.Info("Watched namespace changed, enqueued for reconciliation", "name", ns.Name)
 				return r.enqueueClass(ctx, ns)
+			}),
+			predicate.NewTypedPredicateFuncs(func(ns *corev1.Namespace) bool {
+				// TODO: respect the namespaceLabel filter here, but we need to be careful
+				// about the case where the label is removed from a namespace, which should trigger a reconciliation.
+				return true
 			}))); err != nil {
 		return fmt.Errorf("failed to watch Namespace: %w", err)
 	}

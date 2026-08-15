@@ -83,7 +83,7 @@ func isNamespaceSelectorBypassInfrastructureResource(obj any) bool {
 	}
 }
 
-func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesGateway(ctx context.Context) bool {
+func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesListener(ctx context.Context) bool {
 	gtwList := &gwapiv1.GatewayList{}
 	if err := r.client.List(ctx, gtwList, &client.ListOptions{}); err != nil {
 		// If we can't list Gateways, we can't determine if
@@ -105,7 +105,7 @@ func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesGateway(ctx context.Conte
 	}
 
 	listenerSetList := &gwapiv1.ListenerSetList{}
-	if err := r.client.List(ctx, gtwList, &client.ListOptions{}); err != nil {
+	if err := r.client.List(ctx, listenerSetList, &client.ListOptions{}); err != nil {
 		// If we can't list ListenerSet, we can't determine if
 		// any of them have SelectorAllowedRoutes set to true, so we return true.
 		return true
