@@ -126,3 +126,7 @@ adopters:
     logo: "/logos/pollinate.png"
     url: "https://www.pollinate.global"
     description: "Pollinate uses Envoy Gateway to manage and route traffic across its platform, providing a scalable and reliable layer for handling API and service communication."
+  - name: "kdvz Rhein-Erft-Rur"
+    logo: "/logos/kdvz.png"
+    url: "https://kdvz.nrw"
+    description: "The KDVZ uses Envoy Gateway in Kubernetes for traffic management and OIDC authentication, delivering secure network routing for both cloud-native and legacy applications in the public sector."

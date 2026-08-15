@@ -102,6 +102,7 @@ func NewOfflineGatewayAPIController(
 		extServerPolicies: extServerPoliciesGVKs,
 		extBackendGVKs:    extBackendPoliciesGVKs,
 		// We assume all CRDs are available in offline mode.
+		btlsCRDExists:          true,
 		btpCRDExists:           true,
 		ctpCRDExists:           true,
 		eepCRDExists:           true,
@@ -163,6 +164,7 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind, ena
 		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
 		WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
 		WithIndex(&gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc).
+		WithIndex(&gwapiv1.ListenerSet{}, secretListenerSetIndex, secretListenerSetIndexFunc).
 		WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
 		WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 		WithIndex(&gwapiv1.HTTPRoute{}, listenerSetHTTPRouteIndex, listenerSetHTTPRouteIndexFunc).

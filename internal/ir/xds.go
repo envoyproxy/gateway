@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -1281,6 +1282,19 @@ type ConnectConfig struct {
 	Terminate bool `json:"terminate" yaml:"terminate"`
 }
 
+// HasConnectUpgrade returns true if the HTTP CONNECT upgrade is enabled.
+func (b *TrafficFeatures) HasConnectUpgrade() bool {
+	if b == nil {
+		return false
+	}
+	for _, protocol := range b.HTTPUpgrade {
+		if strings.EqualFold(protocol.Type, "CONNECT") {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *TrafficFeatures) Validate() error {
 	var errs error
 
@@ -2026,7 +2040,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddRequestHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.AddRequestHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
@@ -2039,7 +2053,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.RemoveRequestHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.RemoveRequestHeaders {
 			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
@@ -2049,7 +2063,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddResponseHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.AddResponseHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
@@ -2062,7 +2076,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.RemoveResponseHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.RemoveResponseHeaders {
 			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)

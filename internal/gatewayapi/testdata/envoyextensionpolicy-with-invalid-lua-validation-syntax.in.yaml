@@ -56,7 +56,7 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/foo"
+          value: "/bar"
       backendRefs:
       - name: service-1
         port: 8080
