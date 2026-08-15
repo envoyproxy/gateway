@@ -47,7 +47,7 @@ type OIDC struct {
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1.SecretObjectReference `json:"clientSecret"`
 
-	// The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+	// The optional cookie name overrides to be used for the Envoy OAuth2 cookies in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, uses a randomly generated suffix
 	// +optional
@@ -242,11 +242,31 @@ type OIDCCookieNames struct {
 	// If not specified, defaults to "AccessToken-(randomly generated uid)"
 	// +optional
 	AccessToken *string `json:"accessToken,omitempty"`
+	// The name of the cookie used to store the OAuth expires value.
+	// If not specified, defaults to "OauthExpires-(randomly generated uid)"
+	// +optional
+	OAuthExpires *string `json:"oauthExpires,omitempty"`
+	// The name of the cookie used to store the OAuth HMAC value.
+	// If not specified, defaults to "OauthHMAC-(randomly generated uid)"
+	// +optional
+	OAuthHMAC *string `json:"oauthHmac,omitempty"`
 	// The name of the cookie used to store the IdToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, defaults to "IdToken-(randomly generated uid)"
 	// +optional
 	IDToken *string `json:"idToken,omitempty"`
+	// The name of the cookie used to store the RefreshToken.
+	// If not specified, defaults to "RefreshToken-(randomly generated uid)"
+	// +optional
+	RefreshToken *string `json:"refreshToken,omitempty"`
+	// The name of the cookie used to store the OAuth nonce value.
+	// If not specified, defaults to "OauthNonce-(randomly generated uid)"
+	// +optional
+	OAuthNonce *string `json:"oauthNonce,omitempty"`
+	// The name of the cookie used to store the PKCE code verifier.
+	// If not specified, defaults to "OauthCodeVerifier-(randomly generated uid)"
+	// +optional
+	CodeVerifier *string `json:"codeVerifier,omitempty"`
 }
 
 // OIDCTokenForwarding defines how an OIDC token is forwarded upstream.

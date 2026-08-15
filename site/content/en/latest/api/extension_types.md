@@ -4415,7 +4415,7 @@ _Appears in:_
 | `clientID` | _string_ |  false  |  | The client ID to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />Only one of clientID or clientIDRef must be set. |
 | `clientIDRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  false  |  | The Kubernetes secret which contains the client ID to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />Exactly one of clientID or clientIDRef must be set.<br />This is an Opaque secret. The client ID should be stored in the key "client-id".<br />Only one of clientID or clientIDRef must be set. |
 | `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
-| `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | The optional cookie name overrides to be used for Bearer and IdToken cookies in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses a randomly generated suffix |
+| `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | The optional cookie name overrides to be used for the Envoy OAuth2 cookies in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses a randomly generated suffix |
 | `cookieConfig` | _[OIDCCookieConfig](#oidccookieconfig)_ |  false  |  | CookieConfigs allows setting the SameSite attribute for OIDC cookies.<br />By default, its unset. |
 | `cookieDomain` | _string_ |  false  |  | The optional domain to set the access and ID token cookies on.<br />If not set, the cookies will default to the host of the request, not including the subdomains.<br />If set, the cookies will be set on the specified domain and all subdomains.<br />This means that requests to any subdomain will not require reauthentication after users log in to the parent domain. |
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
@@ -4459,7 +4459,12 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `accessToken` | _string_ |  false  |  | The name of the cookie used to store the AccessToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "AccessToken-(randomly generated uid)" |
+| `oauthExpires` | _string_ |  false  |  | The name of the cookie used to store the OAuth expires value.<br />If not specified, defaults to "OauthExpires-(randomly generated uid)" |
+| `oauthHmac` | _string_ |  false  |  | The name of the cookie used to store the OAuth HMAC value.<br />If not specified, defaults to "OauthHMAC-(randomly generated uid)" |
 | `idToken` | _string_ |  false  |  | The name of the cookie used to store the IdToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "IdToken-(randomly generated uid)" |
+| `refreshToken` | _string_ |  false  |  | The name of the cookie used to store the RefreshToken.<br />If not specified, defaults to "RefreshToken-(randomly generated uid)" |
+| `oauthNonce` | _string_ |  false  |  | The name of the cookie used to store the OAuth nonce value.<br />If not specified, defaults to "OauthNonce-(randomly generated uid)" |
+| `codeVerifier` | _string_ |  false  |  | The name of the cookie used to store the PKCE code verifier.<br />If not specified, defaults to "OauthCodeVerifier-(randomly generated uid)" |
 
 
 #### OIDCDenyRedirect

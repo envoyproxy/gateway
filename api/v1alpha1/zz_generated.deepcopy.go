@@ -6346,8 +6346,33 @@ func (in *OIDCCookieNames) DeepCopyInto(out *OIDCCookieNames) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.OAuthExpires != nil {
+		in, out := &in.OAuthExpires, &out.OAuthExpires
+		*out = new(string)
+		**out = **in
+	}
+	if in.OAuthHMAC != nil {
+		in, out := &in.OAuthHMAC, &out.OAuthHMAC
+		*out = new(string)
+		**out = **in
+	}
 	if in.IDToken != nil {
 		in, out := &in.IDToken, &out.IDToken
+		*out = new(string)
+		**out = **in
+	}
+	if in.RefreshToken != nil {
+		in, out := &in.RefreshToken, &out.RefreshToken
+		*out = new(string)
+		**out = **in
+	}
+	if in.OAuthNonce != nil {
+		in, out := &in.OAuthNonce, &out.OAuthNonce
+		*out = new(string)
+		**out = **in
+	}
+	if in.CodeVerifier != nil {
+		in, out := &in.CodeVerifier, &out.CodeVerifier
 		*out = new(string)
 		**out = **in
 	}

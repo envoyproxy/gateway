@@ -44,6 +44,7 @@
               clientId: prometheus
               cookieNames:
                 bearerToken: AccessToken-5f93c2e4
+                codeVerifier: OauthCodeVerifier-5f93c2e4
                 idToken: IdToken
                 oauthExpires: OauthExpires-5f93c2e4
                 oauthHmac: OauthHMAC-5f93c2e4

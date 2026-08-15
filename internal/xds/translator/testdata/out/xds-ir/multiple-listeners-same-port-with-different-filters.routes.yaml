@@ -53,6 +53,7 @@
               clientId: client.oauth.foo.com
               cookieNames:
                 bearerToken: AccessToken-5F93C2E4
+                codeVerifier: OauthCodeVerifier-5F93C2E4
                 idToken: IdToken-5F93C2E4
                 oauthExpires: OauthExpires-5F93C2E4
                 oauthHmac: OauthHMAC-5F93C2E4
