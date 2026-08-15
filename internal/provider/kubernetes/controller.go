@@ -2372,11 +2372,9 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				// It's hard to determine which Gateway/GatewayClass(es) are affected by a namespace label change,
 				// so we enqueue all GatewayClasses for reconciliation.
 				// In the worst case, changes unrelated namespace labels will trigger unnecessary reconciliations, but this is a rare event.
-				r.log.Info("Watched namespace changed", "name", ns.Name)
 				if !r.hasSelectorAllowedRoutesListener(ctx) {
 					return nil
 				}
-				r.log.Info("Watched namespace changed, enqueued for reconciliation", "name", ns.Name)
 				return r.enqueueClass(ctx, ns)
 			}),
 			predicate.NewTypedPredicateFuncs(func(ns *corev1.Namespace) bool {
