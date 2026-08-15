@@ -2377,7 +2377,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				}
 				return r.enqueueClass(ctx, ns)
 			}),
-			predicate.NewTypedPredicateFuncs(func(ns *corev1.Namespace) bool {
+			predicate.NewTypedPredicateFuncs(func(_ *corev1.Namespace) bool {
 				// TODO: respect the namespaceLabel filter here, but we need to be careful
 				// about the case where the label is removed from a namespace, which should trigger a reconciliation.
 				return true
