@@ -914,7 +914,16 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 
 func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
 	if artifactsDir := os.Getenv("E2E_ARTIFACTS_DIR"); artifactsDir != "" {
-		bundlePath := filepath.Join(artifactsDir, t.Name())
+		root := filepath.Clean(artifactsDir)
+		bundlePath := filepath.Join(root, t.Name())
+		// Guard against t.Name() escaping the artifacts root (e.g. via "..") before
+		// it reaches the filesystem sink below.
+		if bundlePath != root && !strings.HasPrefix(bundlePath, root+string(os.PathSeparator)) {
+			tlog.Logf(t, "refusing to create e2e artifacts directory outside of %s: %s", root, bundlePath)
+			return
+		}
+
+		// bundlePath is validated above to stay within root
 		if err := os.MkdirAll(bundlePath, 0o755); err != nil { // nolint:gosec
 			tlog.Logf(t, "failed to create e2e artifacts directory %s: %v", bundlePath, err)
 		} else {
