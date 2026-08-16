@@ -282,7 +282,7 @@ jobs:
         # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
         # which means to dump the current state when there's a case failed.
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
-        E2E_ARTIFACTS_DIR: artifacts/e2e
+        E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/e2e
         SKIP_GO_BUILD: "true"
       run: make e2e
 
