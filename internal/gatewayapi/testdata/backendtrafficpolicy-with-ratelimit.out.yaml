@@ -70,6 +70,7 @@ backendTrafficPolicies:
           - methods:
             - invert: true
               value: GET
+          detailedMetric: true
           limit:
             requests: 30
             unit: Hour
@@ -1031,7 +1032,8 @@ xdsIR:
           rateLimit:
             global:
               rules:
-              - headerMatches: []
+              - detailedMetric: true
+                headerMatches: []
                 limit:
                   requests: 30
                   unit: Hour
