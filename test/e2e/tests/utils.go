@@ -936,12 +936,9 @@ func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption
 	}
 
 	tlog.Logf(t, "creating e2e artifacts directory %s", bundlePath)
-	result, err := tb.CollectResult(t.Context(), rest, opts...)
-	if err != nil {
+	if _, err := tb.CollectResult(t.Context(), rest, opts...); err != nil {
 		tlog.Logf(t, "failed to collect all data: %v", err)
 	}
-	tlog.Logf(t, "dumping e2e artifacts to %s.tar.gz", filepath.Base(bundlePath))
-	_ = result.ArchiveBundle(bundlePath, fmt.Sprintf("%s.tar.gz", filepath.Base(bundlePath)))
 }
 
 func consistentHashDump(t *testing.T, rest *rest.Config) {
