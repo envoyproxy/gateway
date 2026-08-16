@@ -915,7 +915,8 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
 	if artifactsDir := os.Getenv("E2E_ARTIFACTS_DIR"); artifactsDir != "" {
 		root := filepath.Clean(artifactsDir)
-		bundlePath := filepath.Join(root, t.Name())
+		basename := fmt.Sprintf("%s-%s", t.Name(), time.Now().Format("2006-01-02T15_04_05"))
+		bundlePath := filepath.Join(root, strings.TrimSuffix(basename, ".tar.gz"))
 		// Guard against t.Name() escaping the artifacts root (e.g. via "..") before
 		// it reaches the filesystem sink below.
 		if bundlePath != root && !strings.HasPrefix(bundlePath, root+string(os.PathSeparator)) {
@@ -930,7 +931,13 @@ func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption
 			opts = append(opts, tb.WithBundlePath(bundlePath))
 		}
 
-		_, _ = tb.CollectResult(t.Context(), rest, opts...)
+		tlog.Logf(t, "creating e2e artifacts directory %s", bundlePath)
+		result, err := tb.CollectResult(t.Context(), rest, opts...)
+		if err != nil {
+			tlog.Logf(t, "failed to collect all data: %v", err)
+		}
+		tlog.Logf(t, "dumping e2e artifacts to %s.tar.gz", filepath.Base(bundlePath))
+		_ = result.ArchiveBundle(bundlePath, fmt.Sprintf("%s.tar.gz", filepath.Base(bundlePath)))
 	}
 }
 
