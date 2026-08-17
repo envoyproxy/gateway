@@ -39,11 +39,23 @@ func recordSpans(t *testing.T) *tracetest.SpanRecorder {
 }
 
 func TestProcessJSONPatchesSpan(t *testing.T) {
-	t.Run("no span is recorded when there are no EnvoyPatchPolicies", func(t *testing.T) {
+	// A zero-valued span is what tells an operator that EnvoyPatchPolicy is not the
+	// suspect, so the phase is always recorded, even with nothing to patch.
+	t.Run("span reports zero counts when there are no EnvoyPatchPolicies", func(t *testing.T) {
 		sr := recordSpans(t)
 
 		require.NoError(t, processJSONPatches(t.Context(), new(types.ResourceVersionTable), nil))
-		require.Empty(t, sr.Ended())
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		require.Equal(t, "Translator.processJSONPatches", spans[0].Name())
+		require.ElementsMatch(t, []attribute.KeyValue{
+			attribute.Int("envoy-patch-policies.count", 0),
+			attribute.Int("json-patch.count", 0),
+			attribute.Int("json-patch.applied", 0),
+			attribute.Int("json-patch.resource-not-found", 0),
+			attribute.Int("json-patch.failed", 0),
+		}, spans[0].Attributes())
 	})
 
 	t.Run("span reports the outcome of every patch", func(t *testing.T) {
@@ -104,7 +116,7 @@ func TestProcessJSONPatchesSpan(t *testing.T) {
 		require.Len(t, spans, 1)
 		require.Equal(t, "Translator.processJSONPatches", spans[0].Name())
 		require.ElementsMatch(t, []attribute.KeyValue{
-			attribute.Int("envoy-patch-policy.count", 1),
+			attribute.Int("envoy-patch-policies.count", 1),
 			attribute.Int("json-patch.count", 3),
 			attribute.Int("json-patch.applied", 1),
 			attribute.Int("json-patch.resource-not-found", 1),

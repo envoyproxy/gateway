@@ -305,7 +305,7 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 		}
 	}
 
-	result, _ := t.Translate(resources)
+	result, _ := t.Translate(context.Background(), resources)
 
 	return result, nil
 }
@@ -325,7 +325,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 		BackendEnabled:          true,
 		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
-	gRes, _ := gTranslator.Translate(resources)
+	gRes, _ := gTranslator.Translate(context.Background(), resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
 	if resources.EnvoyProxyForGatewayClass != nil {
@@ -368,7 +368,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		BackendEnabled:          opts.BackendEnabled,
 		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
-	gRes, _ := gTranslator.Translate(resources)
+	gRes, _ := gTranslator.Translate(context.Background(), resources)
 
 	keys := []string{}
 	for key := range gRes.XdsIR {

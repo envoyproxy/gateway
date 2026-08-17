@@ -324,8 +324,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
-				_, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
-				result, err := t.Translate(resources)
+				translateToIRCtx, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
+				result, err := t.Translate(translateToIRCtx, resources)
 				translateToIRSpan.End()
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged

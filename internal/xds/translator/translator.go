@@ -22,7 +22,8 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -44,8 +45,6 @@ const (
 	// The dummy cluster name for TCP/UDP listeners that have no routes
 	emptyClusterName = "EmptyCluster"
 )
-
-var tracer = otel.Tracer("envoy-gateway/xds/translator")
 
 // The dummy cluster for TCP/UDP listeners that have no routes
 var emptyRouteCluster = &clusterv3.Cluster{
@@ -108,6 +107,18 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		return nil, errors.New("ir is nil")
 	}
 
+	// Record what this translation is about to chew through on the enclosing span, so
+	// that a slow build can be told apart from a build of a bigger input.
+	trace.SpanFromContext(ctx).SetAttributes(
+		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
+		attribute.Int("http-routes.count", countIRHTTPRoutes(xdsIR.HTTP)),
+		attribute.Int("tcp-listeners.count", len(xdsIR.TCP)),
+		attribute.Int("udp-listeners.count", len(xdsIR.UDP)),
+		attribute.Int("backend-clusters.count", len(xdsIR.BackendClusters)),
+		attribute.Int("envoy-patch-policies.count", len(xdsIR.EnvoyPatchPolicies)),
+		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
+	)
+
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 
 	tCtx := new(types.ResourceVersionTable)
@@ -127,10 +138,15 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		errs = errors.Join(errs, err)
 	}
 
+	endHTTPListeners := startPhase(ctx, "Translator.processHTTPListenerXdsTranslation",
+		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
+		attribute.Int("http-routes.count", countIRHTTPRoutes(xdsIR.HTTP)),
+	)
 	if err := t.processHTTPListenerXdsTranslation(
 		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	endHTTPListeners()
 
 	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
@@ -140,9 +156,15 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		errs = errors.Join(errs, err)
 	}
 
+	// This span stays at zero duration when no extension server is loaded, which is
+	// itself the answer to "are the extension hooks in play?".
+	endExtListeners := startPhase(ctx, "Translator.notifyExtensionServerAboutListeners",
+		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
+	)
 	if err := t.notifyExtensionServerAboutListeners(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	endExtListeners()
 
 	if err := t.processMergedBackendClusters(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
@@ -181,7 +203,12 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 
 	// Check if an extension want to modify the generated xDS resources
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
-	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies); err != nil {
+	endPostTranslationHook := startPhase(ctx, "Translator.processExtensionPostTranslationHook",
+		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
+	)
+	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies)
+	endPostTranslationHook()
+	if err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
 		// then propagate the error
 		if !(*t.ExtensionManager).FailOpen() {
@@ -200,9 +227,14 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 
 	// Validate all the xds resources in the table before returning
 	// This is necessary to catch any misconfigurations that might have been missed during translation
+	//
+	// ValidateAll walks every field of every generated resource, so its cost grows with
+	// the size of the snapshot rather than with the size of the input IR.
+	endValidate := startPhase(ctx, "ResourceVersionTable.ValidateAll", xdsResourceCountAttrs(tCtx)...)
 	if err := tCtx.ValidateAll(); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	endValidate()
 
 	return tCtx, errs
 }

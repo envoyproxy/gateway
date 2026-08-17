@@ -6,11 +6,14 @@
 package gatewayapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -53,7 +56,7 @@ const (
 var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
-	Translate(resources *resource.Resources) (*TranslateResult, error)
+	Translate(ctx context.Context, resources *resource.Resources) (*TranslateResult, error)
 	GetRelevantGateways(resources *resource.Resources) (acceptedGateways, failedGateways []*GatewayContext)
 
 	RoutesTranslator
@@ -264,17 +267,31 @@ func newTranslateResult(
 	return translateResult
 }
 
-func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
+// Translate translates the Gateway API resources into the xDS IR and the infra IR.
+// The ctx is only used to record tracing spans for the phases of the translation,
+// it does not cancel an in-flight translation.
+func (t *Translator) Translate(ctx context.Context, resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
+
+	// Record what this translation is about to chew through on the enclosing span, so
+	// that a slow translation can be told apart from a translation of a bigger input.
+	trace.SpanFromContext(ctx).SetAttributes(inputSizeAttrs(resources)...)
 
 	// The input resource tree is shared with the watchable coalesce goroutine, which
 	// walks it with reflect.DeepEqual. The translator mutates resource Status in place
 	// while computing status updates, which races with that walk. Work on a copy whose
 	// status-bearing objects are shallow-copied with only their Status fields deep-copied,
 	// isolating those mutations without the memory cost of a full DeepCopy.
+	endStatusDeepCopy := startPhase(ctx, "GatewayApiTranslator.StatusDeepCopy")
 	resources = resources.StatusDeepCopy()
+	endStatusDeepCopy()
 
 	// Preprocessing to improve get resources operations performance.
+	endTranslatorContext := startPhase(ctx, "GatewayApiTranslator.BuildTranslatorContext",
+		attribute.Int("services.count", len(resources.Services)),
+		attribute.Int("endpointslices.count", len(resources.EndpointSlices)),
+		attribute.Int("secrets.count", len(resources.Secrets)),
+	)
 	translatorContext := &TranslatorContext{}
 	translatorContext.SetNamespaces(resources.Namespaces)
 	translatorContext.SetServices(resources.Services)
@@ -286,6 +303,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
 
 	t.TranslatorContext = translatorContext
+	endTranslatorContext()
 
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
@@ -296,6 +314,10 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
 	// Build pre-computed BTP indexes for O(1) lookups in processDestination.
+	endPolicyIndexes := startPhase(ctx, "GatewayApiTranslator.BuildPolicyIndexes",
+		attribute.Int("backendtrafficpolicies.count", len(resources.BackendTrafficPolicies)),
+		attribute.Int("clienttrafficpolicies.count", len(resources.ClientTrafficPolicies)),
+	)
 	btpIndexes := BuildBTPIndexes(
 		resources.BackendTrafficPolicies,
 		routesToObjects(resources),
@@ -319,6 +341,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		t.GetNamespace,
 		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
 	)
+	endPolicyIndexes()
 
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
@@ -326,7 +349,12 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessGatewayTLS(acceptedGateways, resources)
 
 	// Process all Listeners for all relevant Gateways.
+	endListeners := startPhase(ctx, "GatewayApiTranslator.ProcessListeners",
+		attribute.Int("gateways.count", len(acceptedGateways)),
+		attribute.Int("listenersets.count", len(resources.ListenerSets)),
+	)
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
+	endListeners()
 
 	// Compute ListenerSet status based on listener processing results
 	// This should be done after ProcessListeners because ListenerSet status depends on listener processing results
@@ -339,25 +367,45 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessAddresses(acceptedGateways, xdsIR, infraIR)
 
 	// process all Backends
+	endBackends := startPhase(ctx, "GatewayApiTranslator.ProcessBackends",
+		attribute.Int("backends.count", len(resources.Backends)),
+	)
 	backends := t.ProcessBackends(resources.Backends, resources.BackendTLSPolicies)
+	endBackends()
 
 	// Process all relevant HTTPRoutes.
+	endHTTPRoutes := startPhase(ctx, "GatewayApiTranslator.ProcessHTTPRoutes",
+		attribute.Int("httproutes.count", len(resources.HTTPRoutes)),
+	)
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, acceptedGateways, resources, xdsIR)
+	endHTTPRoutes()
 
 	// Process all relevant GRPCRoutes.
+	endGRPCRoutes := startPhase(ctx, "GatewayApiTranslator.ProcessGRPCRoutes",
+		attribute.Int("grpcroutes.count", len(resources.GRPCRoutes)),
+	)
 	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, acceptedGateways, resources, xdsIR)
+	endGRPCRoutes()
 
-	// Process all relevant TLSRoutes.
+	// Process all relevant TLSRoutes, TCPRoutes and UDPRoutes. The three share a span
+	// because they are cheap next to the HTTP and GRPC routes on a large cluster.
+	endL4Routes := startPhase(ctx, "GatewayApiTranslator.ProcessL4Routes",
+		attribute.Int("tlsroutes.count", len(resources.TLSRoutes)),
+		attribute.Int("tcproutes.count", len(resources.TCPRoutes)),
+		attribute.Int("udproutes.count", len(resources.UDPRoutes)),
+	)
 	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, acceptedGateways, resources, xdsIR)
-
-	// Process all relevant TCPRoutes.
 	tcpRoutes := t.ProcessTCPRoutes(resources.TCPRoutes, acceptedGateways, resources, xdsIR)
-
-	// Process all relevant UDPRoutes.
 	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, acceptedGateways, resources, xdsIR)
+	endL4Routes()
 
 	// Process ClientTrafficPolicies
+	endClientTrafficPolicies := startPhase(ctx, "GatewayApiTranslator.ProcessClientTrafficPolicies",
+		attribute.Int("clienttrafficpolicies.count", len(resources.ClientTrafficPolicies)),
+		attribute.Int("gateways.count", len(acceptedGateways)),
+	)
 	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
+	endClientTrafficPolicies()
 
 	routes := make([]RouteContext, len(httpRoutes)+len(grpcRoutes)+len(tlsRoutes)+len(tcpRoutes)+len(udpRoutes))
 	offset := 0
@@ -382,30 +430,58 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process BackendTrafficPolicies
+	endBackendTrafficPolicies := startPhase(ctx, "GatewayApiTranslator.ProcessBackendTrafficPolicies",
+		attribute.Int("backendtrafficpolicies.count", len(resources.BackendTrafficPolicies)),
+		attribute.Int("routes.count", len(routes)),
+	)
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
+	endBackendTrafficPolicies()
 
 	// Check for overlapping route matches across all listeners. This must run
 	// after BackendTrafficPolicies are applied because a CONNECT upgrade
 	// replaces a route's path matcher with Envoy's CONNECT matcher, which
 	// changes which routes can overlap.
+	endRouteOverlaps := startPhase(ctx, "GatewayApiTranslator.checkRouteOverlaps",
+		attribute.Int("httproutes.count", len(httpRoutes)),
+		attribute.Int("grpcroutes.count", len(grpcRoutes)),
+	)
 	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
+	endRouteOverlaps()
 
 	// Process SecurityPolicies
+	endSecurityPolicies := startPhase(ctx, "GatewayApiTranslator.ProcessSecurityPolicies",
+		attribute.Int("securitypolicies.count", len(resources.SecurityPolicies)),
+		attribute.Int("routes.count", len(routes)),
+	)
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, acceptedGateways, routes, resources, xdsIR)
+	endSecurityPolicies()
 
 	// Process EnvoyExtensionPolicies
+	endEnvoyExtensionPolicies := startPhase(ctx, "GatewayApiTranslator.ProcessEnvoyExtensionPolicies",
+		attribute.Int("envoyextensionpolicies.count", len(resources.EnvoyExtensionPolicies)),
+		attribute.Int("routes.count", len(routes)),
+	)
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
+	endEnvoyExtensionPolicies()
 
+	endExtensionServerPolicies := startPhase(ctx, "GatewayApiTranslator.ProcessExtensionServerPolicies",
+		attribute.Int("extensionserverpolicies.count", len(resources.ExtensionServerPolicies)),
+		attribute.Int("routes.count", len(routes)),
+	)
 	extServerPolicies, err := t.ProcessExtensionServerPolicies(
 		resources.ExtensionServerPolicies, acceptedGateways, routes, resources, xdsIR)
+	endExtensionServerPolicies()
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}
 
 	// Process global resources that are not tied to a specific listener or route
-	if err := t.ProcessGlobalResources(resources, xdsIR, acceptedGateways); err != nil {
+	endGlobalResources := startPhase(ctx, "GatewayApiTranslator.ProcessGlobalResources")
+	err = t.ProcessGlobalResources(resources, xdsIR, acceptedGateways)
+	endGlobalResources()
+	if err != nil {
 		errs = errors.Join(errs, err)
 	}
 
