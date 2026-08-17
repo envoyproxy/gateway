@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"google.golang.org/protobuf/types/known/durationpb"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -71,7 +70,7 @@ func TestProcessJSONPatchesSpan(t *testing.T) {
 						Name: "test-cluster",
 						Operation: ir.JSONPatchOperation{
 							Op:    ir.JSONPatchOpReplace,
-							Path:  ptr.To("/connect_timeout"),
+							Path:  new("/connect_timeout"),
 							Value: &apiextensionsv1.JSON{Raw: []byte(`"30s"`)},
 						},
 					},
@@ -81,7 +80,7 @@ func TestProcessJSONPatchesSpan(t *testing.T) {
 						Name: "missing-cluster",
 						Operation: ir.JSONPatchOperation{
 							Op:    ir.JSONPatchOpReplace,
-							Path:  ptr.To("/connect_timeout"),
+							Path:  new("/connect_timeout"),
 							Value: &apiextensionsv1.JSON{Raw: []byte(`"30s"`)},
 						},
 					},
