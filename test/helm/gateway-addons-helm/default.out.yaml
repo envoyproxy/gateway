@@ -32,7 +32,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.2.0
+    helm.sh/chart: loki-7.3.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -197,7 +197,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.2.0
+    helm.sh/chart: loki-7.3.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -234,6 +234,7 @@ data:
       mode: simple
     limits_config:
       max_cache_freshness_per_query: 10m
+      max_structured_metadata_size: 131072
       otlp_config:
         resource_attributes:
           attributes_config:
@@ -297,7 +298,7 @@ metadata:
   name: loki-runtime
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.2.0
+    helm.sh/chart: loki-7.3.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10127,7 +10128,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: loki-7.2.0
+    helm.sh/chart: loki-7.3.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10231,7 +10232,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: loki-clusterrolebinding
   labels:
-    helm.sh/chart: loki-7.2.0
+    helm.sh/chart: loki-7.3.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10350,7 +10351,7 @@ metadata:
   name: loki-memberlist
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.2.0
+    helm.sh/chart: loki-7.3.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10375,7 +10376,7 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.2.0
+    helm.sh/chart: loki-7.3.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10400,7 +10401,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.2.0
+    helm.sh/chart: loki-7.3.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10845,7 +10846,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.2.0
+    helm.sh/chart: loki-7.3.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10867,7 +10868,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 6b4509c66d127c358eaec628ad628a06a82b9eea1a0d0b619b774e1938e660da
+        checksum/config: 11cf4e31138a898d46620bf2c85ab2b39eba10d307d42f7faaa395ba84dfb732
         storage/size: "10Gi"
         kubectl.kubernetes.io/default-container: "loki"
       labels:
