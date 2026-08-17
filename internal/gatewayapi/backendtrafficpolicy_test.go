@@ -920,6 +920,105 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name: "sourceCIDR Distinct override requires an IP address",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						SourceCIDR: &egv1a1.SourceMatch{
+							Type:  new(egv1a1.SourceMatchDistinct),
+							Value: "192.168.0.0/16",
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 10,
+					Unit:     egv1a1.RateLimitUnitSecond,
+				},
+				Overrides: []egv1a1.RateLimitOverride{
+					{
+						Value: "client-a",
+						Limit: egv1a1.RateLimitValue{Requests: 15, Unit: egv1a1.RateLimitUnitSecond},
+					},
+				},
+			},
+			expected:    nil,
+			expectError: true,
+			errorMsg:    "must be an IP address",
+		},
+		{
+			name: "sourceCIDR Distinct override rejects CIDR notation",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						SourceCIDR: &egv1a1.SourceMatch{
+							Type:  new(egv1a1.SourceMatchDistinct),
+							Value: "192.168.0.0/16",
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 10,
+					Unit:     egv1a1.RateLimitUnitSecond,
+				},
+				Overrides: []egv1a1.RateLimitOverride{
+					{
+						Value: "192.168.0.10/32",
+						Limit: egv1a1.RateLimitValue{Requests: 15, Unit: egv1a1.RateLimitUnitSecond},
+					},
+				},
+			},
+			expected:    nil,
+			expectError: true,
+			errorMsg:    "must be an IP address",
+		},
+		{
+			name: "sourceCIDR Distinct override accepts an IP address",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						SourceCIDR: &egv1a1.SourceMatch{
+							Type:  new(egv1a1.SourceMatchDistinct),
+							Value: "192.168.0.0/16",
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 10,
+					Unit:     egv1a1.RateLimitUnitSecond,
+				},
+				Overrides: []egv1a1.RateLimitOverride{
+					{
+						Value: "192.168.0.10",
+						Limit: egv1a1.RateLimitValue{Requests: 15, Unit: egv1a1.RateLimitUnitSecond},
+					},
+				},
+			},
+			expected: &ir.RateLimitRule{
+				HeaderMatches: []*ir.StringMatch{},
+				MethodMatches: []*ir.StringMatch{},
+				CIDRMatch: &ir.CIDRMatch{
+					CIDR:     "192.168.0.0/16",
+					MaskLen:  16,
+					Distinct: true,
+				},
+				Limit: ir.RateLimitValue{
+					Requests: 10,
+					Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitSecond),
+				},
+				Overrides: []ir.RateLimitOverride{
+					{
+						Value: "192.168.0.10",
+						Limit: ir.RateLimitValue{
+							Requests: 15,
+							Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitSecond),
+						},
+					},
+				},
+				Shared: nil,
+			},
+			expectError: false,
+		},
+		{
 			name: "query parameters with no client selectors",
 			rule: egv1a1.RateLimitRule{
 				ClientSelectors: nil,

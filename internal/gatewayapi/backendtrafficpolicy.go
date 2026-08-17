@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -2183,6 +2184,9 @@ func validateRateLimitOverrides(rule *egv1a1.RateLimitRule) error {
 		seen.Insert(override.Value)
 		if override.Limit.FromMetadata != nil {
 			return fmt.Errorf("overrides[%d].limit.fromMetadata is not supported", i)
+		}
+		if rule.ClientSelectors[0].SourceCIDR != nil && net.ParseIP(override.Value) == nil {
+			return fmt.Errorf("overrides[%d].value %q must be an IP address when the Distinct identity is sourceCIDR", i, override.Value)
 		}
 	}
 	return nil
