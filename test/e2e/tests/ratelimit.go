@@ -60,6 +60,9 @@ func init() {
 		RateLimitGlobalShadowModeTest,
 		RateLimitQueryParametersTest,
 		RateLimitGlobalSharedWithCost,
+		RateLimitDistinctOverridesTest,
+		RateLimitDistinctOverridesMethodTest,
+		RateLimitDistinctOverridesPathTest,
 	)
 }
 
@@ -461,6 +464,238 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 			if err := GotExactExpectedResponseExceptErrors(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
 				t.Errorf("failed to get expected responses for the request: %v", err)
 			}
+		})
+	},
+}
+
+var RateLimitDistinctOverridesTest = suite.ConformanceTest{
+	ShortName:   "RateLimitDistinctOverrides",
+	Description: "Distinct default quota with per-value overrides on the same identity key",
+	Manifests:   []string{"testdata/ratelimit-distinct-overrides.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "distinct-overrides-ratelimit", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
+			types.NamespacedName{Name: "ratelimit-distinct-overrides", Namespace: ns},
+			suite.ControllerName, gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			})
+
+		t.Run("unnamed identity uses the Distinct default", func(t *testing.T) {
+			other := map[string]string{"x-user-id": "other"}
+			expectOK := http.ExpectedResponse{
+				Request: http.Request{Path: "/get", Headers: other},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     map[string]string{"X-Ratelimit-Limit": "3, 3;w=3600"},
+				},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
+				Request:   http.Request{Path: "/get", Headers: other},
+				Response:  http.Response{StatusCodes: []int{429}},
+				Namespace: ns,
+			})
+		})
+
+		t.Run("override client-a does not share the Distinct default bucket", func(t *testing.T) {
+			// Default bucket is already exhausted by "other". If overrides were OR-ed or
+			// shared that bucket, client-a would already be 429.
+			overrideA := map[string]string{"x-user-id": "client-a"}
+			expectOK := http.ExpectedResponse{
+				Request: http.Request{Path: "/get", Headers: overrideA},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     map[string]string{"X-Ratelimit-Limit": "5, 5;w=3600"},
+				},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
+				Request:   http.Request{Path: "/get", Headers: overrideA},
+				Response:  http.Response{StatusCodes: []int{429}},
+				Namespace: ns,
+			})
+		})
+
+		t.Run("override client-c uses the lower limit", func(t *testing.T) {
+			clientC := map[string]string{"x-user-id": "client-c"}
+			expectOK := http.ExpectedResponse{
+				Request: http.Request{Path: "/get", Headers: clientC},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     map[string]string{"X-Ratelimit-Limit": "1, 1;w=3600"},
+				},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
+				Request:   http.Request{Path: "/get", Headers: clientC},
+				Response:  http.Response{StatusCodes: []int{429}},
+				Namespace: ns,
+			})
+		})
+
+		t.Run("missing Distinct header is not rate limited", func(t *testing.T) {
+			expectOK := http.ExpectedResponse{
+				Request:   http.Request{Path: "/get"},
+				Response:  http.Response{StatusCodes: []int{200}},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			if err := GotExactExpectedResponseExceptErrors(t, 3, suite.RoundTripper, http.MakeRequest(t, &expectOK, gwAddr, "HTTP", "http"), expectOK); err != nil {
+				t.Errorf("requests without x-user-id should skip the Distinct action: %v", err)
+			}
+		})
+	},
+}
+
+var RateLimitDistinctOverridesMethodTest = suite.ConformanceTest{
+	ShortName:   "RateLimitDistinctOverridesMethod",
+	Description: "Distinct overrides ANDed with method: POST is limited, GET is not",
+	Manifests:   []string{"testdata/ratelimit-distinct-overrides-method.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "distinct-overrides-method-ratelimit", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
+			types.NamespacedName{Name: "ratelimit-distinct-overrides-method", Namespace: ns},
+			suite.ControllerName, gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			})
+
+		t.Run("GET is not rate limited", func(t *testing.T) {
+			other := map[string]string{"x-user-id": "other"}
+			expectOK := http.ExpectedResponse{
+				Request:   http.Request{Path: "/get", Method: "GET", Headers: other},
+				Response:  http.Response{StatusCodes: []int{200}},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			if err := GotExactExpectedResponseExceptErrors(t, 3, suite.RoundTripper, http.MakeRequest(t, &expectOK, gwAddr, "HTTP", "http"), expectOK); err != nil {
+				t.Errorf("GET should skip the POST-only Distinct override rule: %v", err)
+			}
+		})
+
+		t.Run("POST unnamed identity uses the Distinct default", func(t *testing.T) {
+			other := map[string]string{"x-user-id": "other"}
+			expectOK := http.ExpectedResponse{
+				Request: http.Request{Path: "/get", Method: "POST", Headers: other},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     map[string]string{"X-Ratelimit-Limit": "3, 3;w=3600"},
+				},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
+				Request:   http.Request{Path: "/get", Method: "POST", Headers: other},
+				Response:  http.Response{StatusCodes: []int{429}},
+				Namespace: ns,
+			})
+		})
+
+		t.Run("POST override client-a does not share the Distinct default bucket", func(t *testing.T) {
+			// Default POST bucket is already exhausted by "other". If the
+			// override suffix was not cloned, client-a would be unlimited
+			// (limit on Distinct, leftover method descriptor) or already 429.
+			overrideA := map[string]string{"x-user-id": "client-a"}
+			expectOK := http.ExpectedResponse{
+				Request: http.Request{Path: "/get", Method: "POST", Headers: overrideA},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     map[string]string{"X-Ratelimit-Limit": "5, 5;w=3600"},
+				},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
+				Request:   http.Request{Path: "/get", Method: "POST", Headers: overrideA},
+				Response:  http.Response{StatusCodes: []int{429}},
+				Namespace: ns,
+			})
+		})
+	},
+}
+
+var RateLimitDistinctOverridesPathTest = suite.ConformanceTest{
+	ShortName:   "RateLimitDistinctOverridesPath",
+	Description: "Distinct overrides ANDed with path: only the matched prefix is limited",
+	Manifests:   []string{"testdata/ratelimit-distinct-overrides-path.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "distinct-overrides-path-ratelimit", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
+			types.NamespacedName{Name: "ratelimit-distinct-overrides-path", Namespace: ns},
+			suite.ControllerName, gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			})
+
+		t.Run("unmatched path is not rate limited", func(t *testing.T) {
+			other := map[string]string{"x-user-id": "other"}
+			expectOK := http.ExpectedResponse{
+				Request:   http.Request{Path: "/get/free", Headers: other},
+				Response:  http.Response{StatusCodes: []int{200}},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			if err := GotExactExpectedResponseExceptErrors(t, 3, suite.RoundTripper, http.MakeRequest(t, &expectOK, gwAddr, "HTTP", "http"), expectOK); err != nil {
+				t.Errorf("path outside /get/limited should skip the Distinct override rule: %v", err)
+			}
+		})
+
+		t.Run("matched path unnamed identity uses the Distinct default", func(t *testing.T) {
+			other := map[string]string{"x-user-id": "other"}
+			expectOK := http.ExpectedResponse{
+				Request: http.Request{Path: "/get/limited", Headers: other},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     map[string]string{"X-Ratelimit-Limit": "3, 3;w=3600"},
+				},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
+				Request:   http.Request{Path: "/get/limited", Headers: other},
+				Response:  http.Response{StatusCodes: []int{429}},
+				Namespace: ns,
+			})
+		})
+
+		t.Run("matched path override client-a does not share the Distinct default bucket", func(t *testing.T) {
+			overrideA := map[string]string{"x-user-id": "client-a"}
+			expectOK := http.ExpectedResponse{
+				Request: http.Request{Path: "/get/limited", Headers: overrideA},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     map[string]string{"X-Ratelimit-Limit": "5, 5;w=3600"},
+				},
+				Namespace: ns,
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOK)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
+				Request:   http.Request{Path: "/get/limited", Headers: overrideA},
+				Response:  http.Response{StatusCodes: []int{429}},
+				Namespace: ns,
+			})
 		})
 	},
 }
