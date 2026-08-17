@@ -1029,8 +1029,8 @@ spec:
                 description: |-
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
                   If not specified, the default upgrade configuration (websocket) will be used.
-                  However, if requestBuffer is configured, the default upgrade configuration
-                  will be ignored.
+                  However, if requestBuffer is configured with mode FullBuffer, the default
+                  upgrade configuration will be ignored.
                 items:
                   description: ProtocolUpgradeConfig specifies the configuration for
                     protocol upgrades.
@@ -2304,48 +2304,16 @@ spec:
                     - Local
                     type: string
                 type: object
-              requestBodyBufferLimit:
-                allOf:
-                - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
-                anyOf:
-                - type: integer
-                - type: string
-                description: |-
-                  RequestBodyBufferLimit specifies the maximum size in bytes that Envoy may buffer for request bodies.
-                  This configures Envoy's request body buffer limit without enabling full request buffering.
-
-                  This Request body buffer limit is independent of the connection buffer limits configured by
-                  ClientTrafficPolicy and BackendTrafficPolicy. The connection buffer limits control downstream
-                  and upstream connection read/write buffering and back pressure, while this field sets the
-                  maximum size of an individual request body that Envoy may buffer for HTTP processing.
-
-                  For HTTP/1, connection buffer limits can still affect how request body data is read and buffered
-                  before or while the request body limit is enforced. Configure connection buffer limits large
-                  enough for the request body buffering you expect to allow on those connections.
-
-                  For HTTP/2, initial stream and connection window sizes control HTTP/2 flow control: how much data
-                  can be in flight before back pressure applies. They affect upload throughput and buffering
-                  behavior, but they are not a replacement for this request body size limit.
-
-                  If exceeded, the request will be rejected with HTTP 413 Content Too Large.
-
-                  Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
-                x-kubernetes-int-or-string: true
               requestBuffer:
                 description: |-
-                  RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
-                  upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request
-                  as any requests larger than the buffer size will be rejected.
+                  RequestBuffer configures how much of a request body Envoy is allowed to buffer for a route,
+                  and whether the gateway fully buffers each request before forwarding it upstream.
 
-                  This can have a negative performance impact so should only be enabled when necessary.
+                  A request whose buffered body exceeds the configured limit is rejected with HTTP 413 Content Too
+                  Large. How much of a request is buffered, and therefore whether the limit acts as a maximum request
+                  body size, depends on the mode: see the mode field.
 
-                  Envoy sets the request buffer limit for the stream to this limit, so there is no need to also raise the connection buffer size or
-                  requestBodyBufferLimit for it to take effect. Buffering does increase memory usage for Envoy that should be accounted for in your
-                  deployment settings.
-
-                  Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option
-                  on routes that need those protocols, because requests can hang instead of being forwarded upstream.
+                  Buffering increases memory usage for Envoy that should be accounted for in your deployment settings.
                 properties:
                   limit:
                     allOf:
@@ -2355,11 +2323,52 @@ spec:
                     - type: integer
                     - type: string
                     description: |-
-                      Limit specifies the maximum allowed size in bytes for each incoming request buffer.
-                      If exceeded, the request will be rejected with HTTP 413 Content Too Large.
+                      Limit specifies the maximum size in bytes that Envoy may buffer for an incoming request body.
+                      If a request's buffered body exceeds this limit, the request is rejected with HTTP 413 Content
+                      Too Large.
+
+                      In FullBuffer mode the entire body is always buffered, so this acts as a maximum request body size.
+                      In LimitOnly mode only what a filter later in the chain actually buffers counts against the limit,
+                      so a streamed request that nothing buffers can exceed it and still be forwarded upstream.
 
                       Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
                     x-kubernetes-int-or-string: true
+                  mode:
+                    default: FullBuffer
+                    description: |-
+                      Mode determines how Limit is enforced. Defaults to FullBuffer.
+
+                      FullBuffer makes the gateway buffer and fully receive each request from a client before continuing
+                      to send the request upstream to the backends. This can be helpful to shield your backend servers
+                      from slow clients. Envoy sets the request buffer limit for the stream to Limit, so there is no need
+                      to also raise the connection buffer size for it to take effect.
+                      This can have a negative performance impact so should only be used when necessary. It is also
+                      incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket: do not
+                      use this mode on routes that need those protocols, because requests can hang instead of being
+                      forwarded upstream.
+
+                      LimitOnly only raises Envoy's request body buffer limit for the route, without enabling full request
+                      buffering. Use this mode when a filter later in the chain (ext_proc, Lua, WASM, ...) buffers the
+                      request body and the default buffer limit is too small. Unlike FullBuffer, this mode is compatible
+                      with streaming APIs and protocol upgrades, because Envoy does not wait for the whole request body
+                      before forwarding it upstream.
+
+                      In both modes, the request body buffer limit is independent of the connection buffer limits
+                      configured by ClientTrafficPolicy and BackendTrafficPolicy. The connection buffer limits control
+                      downstream and upstream connection read/write buffering and back pressure, while Limit sets the
+                      maximum size of an individual request body that Envoy may buffer for HTTP processing.
+
+                      For HTTP/1, connection buffer limits can still affect how request body data is read and buffered
+                      before or while the request body limit is enforced. Configure connection buffer limits large
+                      enough for the request body buffering you expect to allow on those connections.
+
+                      For HTTP/2, initial stream and connection window sizes control HTTP/2 flow control: how much data
+                      can be in flight before back pressure applies. They affect upload throughput and buffering
+                      behavior, but they are not a replacement for this request body size limit.
+                    enum:
+                    - FullBuffer
+                    - LimitOnly
+                    type: string
                 type: object
               responseOverride:
                 description: |-
@@ -3417,9 +3426,10 @@ spec:
                 : true '
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
-            - message: requestBuffer cannot be used together with httpUpgrade
-              rule: '!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size()
-                == 0'
+            - message: requestBuffer with mode FullBuffer cannot be used together
+                with httpUpgrade
+              rule: '!has(self.requestBuffer) || self.requestBuffer.mode == ''LimitOnly''
+                || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0'
             - message: admissionControl can only be used with HTTPRoute, GRPCRoute,
                 or Gateway targets
               rule: '!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind

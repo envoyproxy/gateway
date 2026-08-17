@@ -15,7 +15,6 @@ import (
 
 	perr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -1135,13 +1134,8 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer); err != nil {
+	if rb, rbbl, err = buildRequestBuffer(policy.Spec.RequestBuffer); err != nil {
 		err = perr.WithMessage(err, "RequestBuffer")
-		errs = errors.Join(errs, err)
-	}
-
-	if rbbl, err = buildRequestBodyBufferLimit(policy.Spec.RequestBodyBufferLimit); err != nil {
-		err = perr.WithMessage(err, "RequestBodyBufferLimit")
 		errs = errors.Join(errs, err)
 	}
 
@@ -1153,7 +1147,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 	if rb != nil && len(httpUpgrade) > 0 {
-		err = errors.New("requestBuffer cannot be used together with httpUpgrade")
+		err = errors.New("requestBuffer with mode FullBuffer cannot be used together with httpUpgrade")
 		err = perr.WithMessage(err, "RequestBuffer")
 		errs = errors.Join(errs, err)
 	}
@@ -1894,43 +1888,41 @@ func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
 	return irTriggers
 }
 
-func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
+// buildRequestBuffer translates the request buffer spec into its IR representation. Depending on the
+// configured mode it returns either the full request buffering settings, which are translated into the
+// Envoy Buffer filter, or a plain request body buffer limit, which is translated into the route-level
+// request body buffer limit.
+func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, *uint64, error) {
 	if spec == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	maxBytes, ok := spec.Limit.AsInt64()
 	if !ok {
-		return nil, fmt.Errorf("limit must be convertible to an int64")
+		return nil, nil, fmt.Errorf("limit must be convertible to an int64")
 	}
 
-	if maxBytes < 0 || maxBytes > math.MaxUint32 {
-		return nil, fmt.Errorf("limit value %s is out of range, must be between 0 and %d",
+	// Limit is optional in the schema, so an omitted limit reaches us as a zero Quantity. A zero limit
+	// would reject every buffered request with a 413, so treat it as invalid rather than propagating it.
+	if maxBytes <= 0 {
+		return nil, nil, fmt.Errorf("limit value %s is out of range, must be greater than 0", spec.Limit.String())
+	}
+
+	if ptr.Deref(spec.Mode, egv1a1.RequestBufferModeFullBuffer) == egv1a1.RequestBufferModeLimitOnly {
+		// The route-level request body buffer limit is a uint64, so it is not capped at MaxUint32 like
+		// the Buffer filter is. Anything above MaxInt64 is already rejected by the AsInt64 check above.
+		return nil, new(uint64(maxBytes)), nil
+	}
+
+	// The Envoy Buffer filter's max_request_bytes is a uint32.
+	if maxBytes > math.MaxUint32 {
+		return nil, nil, fmt.Errorf("limit value %s is out of range, must be between 1 and %d",
 			spec.Limit.String(), math.MaxUint32)
 	}
 
 	return &ir.RequestBuffer{
 		Limit: spec.Limit,
-	}, nil
-}
-
-// buildRequestBodyBufferLimit converts the request body buffer limit Quantity into a byte count.
-func buildRequestBodyBufferLimit(limit *apiresource.Quantity) (*uint64, error) {
-	if limit == nil {
-		return nil, nil
-	}
-
-	v, ok := limit.AsInt64()
-	if !ok {
-		return nil, fmt.Errorf("invalid RequestBodyBufferLimit value %s", limit.String())
-	}
-
-	if v < 0 {
-		return nil, fmt.Errorf("RequestBodyBufferLimit value %s is out of range, must be >= 0", limit.String())
-	}
-
-	out := uint64(v)
-	return &out, nil
+	}, nil, nil
 }
 
 func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.ResponseOverride, error) {
