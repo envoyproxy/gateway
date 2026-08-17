@@ -337,10 +337,17 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						t.ExtensionGroupKinds = extGKs
 						traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 					}
-					// Translate to IR
-					_, translateToIRSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
-					defer translateToIRSpan.End()
-					result, err := t.Translate(resources)
+					// Translate to IR.
+					// The span is ended by a deferred call inside the closure: the translator
+					// panics on some inputs and HandleSubscription recovers from it, and an
+					// unended span is never exported, so a plain End() here would drop the
+					// stage span and the input sizes recorded on it. The closure keeps that
+					// defer scoped to this iteration instead of the whole update.
+					result, err := func() (*gatewayapi.TranslateResult, error) {
+						translateToIRCtx, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
+						defer translateToIRSpan.End()
+						return t.Translate(translateToIRCtx, resources)
+					}()
 					if err != nil {
 						// Currently all errors that Translate returns should just be logged
 						traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
