@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -36,8 +38,26 @@ func (t typedName) String() string {
 }
 
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
-func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*ir.EnvoyPatchPolicy) error {
-	var errs error
+func processJSONPatches(ctx context.Context, tCtx *types.ResourceVersionTable, envoyPatchPolicies []*ir.EnvoyPatchPolicy) error {
+	if len(envoyPatchPolicies) == 0 {
+		return nil
+	}
+
+	// Marshalling, patching and re-validating the xDS resources can dominate the
+	// xDS translation time when there are many EnvoyPatchPolicies or expensive
+	// JSON patches, so this phase gets its own span to make its share of
+	// Translator.Translate visible.
+	_, span := tracer.Start(ctx, "Translator.processJSONPatches")
+	defer span.End()
+
+	var (
+		errs error
+		// Patch counters, reported as span attributes. Every patch ends up in
+		// exactly one of applied/notFound/failed.
+		totalPatches int
+		applied      int
+		notFound     int
+	)
 
 	for _, e := range envoyPatchPolicies {
 		var (
@@ -45,6 +65,8 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			tErrs             error
 			notFoundResources []string
 		)
+
+		totalPatches += len(e.JSONPatches)
 
 		for _, p := range e.JSONPatches {
 			var (
@@ -101,6 +123,8 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
+
+				applied++
 
 				// Skip further processing
 				continue
@@ -178,7 +202,11 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				tErrs = errors.Join(tErrs, tErr)
 				continue
 			}
+
+			applied++
 		}
+
+		notFound += len(notFoundResources)
 
 		// Set translation errors for every policy ancestor references
 		if tErrs != nil {
@@ -197,6 +225,14 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 		// Set output context
 		tCtx.EnvoyPatchPolicyStatuses = append(tCtx.EnvoyPatchPolicyStatuses, &e.EnvoyPatchPolicyStatus)
 	}
+
+	span.SetAttributes(
+		attribute.Int("envoy-patch-policy.count", len(envoyPatchPolicies)),
+		attribute.Int("json-patch.count", totalPatches),
+		attribute.Int("json-patch.applied", applied),
+		attribute.Int("json-patch.resource-not-found", notFound),
+		attribute.Int("json-patch.failed", totalPatches-applied-notFound),
+	)
 
 	return errs
 }

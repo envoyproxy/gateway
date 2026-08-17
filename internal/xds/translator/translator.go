@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"go.opentelemetry.io/otel"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -42,6 +44,8 @@ const (
 	// The dummy cluster name for TCP/UDP listeners that have no routes
 	emptyClusterName = "EmptyCluster"
 )
+
+var tracer = otel.Tracer("envoy-gateway/xds/translator")
 
 // The dummy cluster for TCP/UDP listeners that have no routes
 var emptyRouteCluster = &clusterv3.Cluster{
@@ -96,8 +100,10 @@ type GlobalRateLimitSettings struct {
 	FailClosed bool
 }
 
-// Translate translates the XDS IR into xDS resources
-func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
+// Translate translates the XDS IR into xDS resources.
+// The ctx is only used to record tracing spans for the expensive phases of the
+// translation, it does not cancel an in-flight translation.
+func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 	if xdsIR == nil {
 		return nil, errors.New("ir is nil")
 	}
@@ -167,7 +173,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	}
 
 	// All XDS resources is ready, let's do the patch.
-	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
+	if err := processJSONPatches(ctx, tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
 		// Since JSONPatch error is user-triggered, we don't fail the entire xDS translation so that the remaining
 		// valid xDS resources can be sent to the proxy.
 		t.Logger.Error(err, "Failed to process JSON patches")

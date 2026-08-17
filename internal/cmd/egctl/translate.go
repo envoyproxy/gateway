@@ -7,6 +7,7 @@ package egctl
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -390,7 +391,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		if resources.EnvoyProxyForGatewayClass != nil {
 			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
 		}
-		xRes, err := xTranslator.Translate(val)
+		xRes, err := xTranslator.Translate(context.Background(), val)
 		if err != nil {
 			return nil, fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
 		}

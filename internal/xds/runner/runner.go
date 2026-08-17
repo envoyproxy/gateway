@@ -329,8 +329,8 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					}
 				}
 
-				_, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
-				result, err := t.Translate(val.XdsIR)
+				translateCtx, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
+				result, err := t.Translate(translateCtx, val.XdsIR)
 				translateSpan.End()
 				if err != nil {
 					traceLogger.Error(err, "skipped publishing xds resources: failed to translate xds ir")
