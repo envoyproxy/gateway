@@ -502,8 +502,7 @@ spec:
                   enableRetryAfterHeader:
                     description: |-
                       EnableRetryAfterHeader configures Envoy Proxy to emit the "Retry-After" response header
-                      on rate-limited 429 responses.
-                      Defaults to false.
+                      when rate limiting is enabled.
                     type: boolean
                   host:
                     description: Host enables managing how the Host/Authority header
