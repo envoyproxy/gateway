@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package traces
+package phase
 
 import (
 	"testing"
@@ -15,13 +15,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
-func TestPhaseTracker(t *testing.T) {
+func TestTracker(t *testing.T) {
 	t.Run("records one span per phase", func(t *testing.T) {
 		sr := tracetest.NewSpanRecorder()
 		tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)).Tracer("test")
 
 		ctx, parent := tracer.Start(t.Context(), "stage")
-		phases := NewPhaseTracker(ctx, tracer)
+		phases := NewTracker(ctx, tracer)
 		defer phases.EndInFlight()
 
 		phases.Start("first", attribute.Int("routes.count", 3))
@@ -50,7 +50,7 @@ func TestPhaseTracker(t *testing.T) {
 		// A panicking phase is the one an operator most needs to see, and an unended
 		// span is never exported, so the deferred EndInFlight has to close it.
 		require.Panics(t, func() {
-			phases := NewPhaseTracker(t.Context(), tracer)
+			phases := NewTracker(t.Context(), tracer)
 			defer phases.EndInFlight()
 
 			phases.Start("completed")
@@ -72,7 +72,7 @@ func TestPhaseTracker(t *testing.T) {
 		sr := tracetest.NewSpanRecorder()
 		tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)).Tracer("test")
 
-		phases := NewPhaseTracker(t.Context(), tracer)
+		phases := NewTracker(t.Context(), tracer)
 		phases.End()
 		phases.EndInFlight()
 		require.Empty(t, sr.Ended())

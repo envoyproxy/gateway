@@ -29,7 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/envoyproxy/gateway/internal/traces"
+	"github.com/envoyproxy/gateway/internal/traces/phase"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -312,7 +312,7 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 
 	// Each phase ends its own span; the deferred call closes and marks the phase that
 	// was in flight when a phase panics, so the failing phase stays in the trace.
-	phases := traces.NewPhaseTracker(ctx, tracer)
+	phases := phase.NewTracker(ctx, tracer)
 	defer phases.EndInFlight()
 
 	// The input resource tree is shared with the watchable coalesce goroutine, which
