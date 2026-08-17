@@ -130,3 +130,7 @@ adopters:
     logo: "/logos/kdvz.png"
     url: "https://kdvz.nrw"
     description: "The KDVZ uses Envoy Gateway in Kubernetes for traffic management and OIDC authentication, delivering secure network routing for both cloud-native and legacy applications in the public sector."
+  - name: "OpenAI"
+    logo: "/logos/openai.svg"
+    url: "https://openai.com/"
+    description: ""
