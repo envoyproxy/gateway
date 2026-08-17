@@ -684,6 +684,165 @@ server: envoy
 
 ```
 
+## Rate Limit Distinct Users With Per-Value Overrides
+
+Use `overrides` when most Distinct identities should share one default quota, but a few named values need a higher or lower limit. This is one Envoy rate-limit action and sibling rate-limit-service descriptors, so the named values **replace** the default instead of OR-ing with it.
+
+The invert-except example above is still the right tool for fully exempting a value (for example `admin`). `overrides` is for changing the quota of specific identities.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - type: Distinct
+            name: x-user-id
+        limit:
+          requests: 10
+          unit: Second
+        overrides:
+        - value: client-a
+          limit:
+            requests: 15
+            unit: Second
+        - value: client-b
+          limit:
+            requests: 20
+            unit: Second
+        - value: client-c
+          limit:
+            requests: 5
+            unit: Second
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - type: Distinct
+            name: x-user-id
+        limit:
+          requests: 10
+          unit: Second
+        overrides:
+        - value: client-a
+          limit:
+            requests: 15
+            unit: Second
+        - value: client-b
+          limit:
+            requests: 20
+            unit: Second
+        - value: client-c
+          limit:
+            requests: 5
+            unit: Second
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+In this example, every unseen `x-user-id` is limited at 10 requests/second. `client-a` is limited at 15/s, `client-b` at 20/s, and `client-c` at 5/s. Each identity has one Redis key; `client-a` traffic does not increment the default bucket.
+
+`overrides` is only supported on **global** rules whose `clientSelectors` contain exactly one Distinct identity (header, query parameter, or CIDR). Method and path matches may be combined with that identity; extra headers, query parameters, or a second Distinct identity may not. It cannot be combined with `limit.fromMetadata`. Do not also add Exact `rules[]` entries for the same override values; those still OR independently.
+
+### HTTPRoute
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Verify a default identity is limited at 10/s, while `client-a` can still succeed on the 11th request:
+
+```shell
+for i in {1..11}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: other" http://${GATEWAY_HOST}/get ; done
+for i in {1..16}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: client-a" http://${GATEWAY_HOST}/get ; done
+```
+
 ## Rate Limit All Requests
 
 This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.

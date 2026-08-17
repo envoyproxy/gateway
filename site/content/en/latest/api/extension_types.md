@@ -5483,6 +5483,21 @@ _Appears in:_
 | `disable` | _boolean_ |  true  |  | Disable the Prometheus endpoint. |
 
 
+#### RateLimitOverride
+
+
+
+RateLimitOverride replaces the parent Distinct rule limit for one identity value.
+
+_Appears in:_
+- [RateLimitRule](#ratelimitrule)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `value` | _string_ |  true  |  | Value is the Distinct identity value this override applies to, for example<br />a specific header or query parameter value, or a single client IP.<br />Must be unique across overrides on the same rule. The wildcard "*" is not allowed. |
+| `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  |  | Limit is the rate limit applied when the Distinct identity equals Value. |
+
+
 #### RateLimitRedisSettings
 
 
@@ -5518,6 +5533,7 @@ _Appears in:_
 | `shared` | _boolean_ |  false  |  | Shared determines whether this rate limit rule applies across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Default: false. |
 | `shadowMode` | _boolean_ |  false  |  | ShadowMode indicates whether this rate-limit rule runs in shadow mode.<br />When enabled, all rate-limiting operations are performed (cache lookups,<br />counter updates, telemetry generation), but the outcome is never enforced.<br />The request always succeeds, even if the configured limit is exceeded.<br />Only supported for Global Rate Limits. |
 | `xRateLimitHeaders` | _[XRateLimitHeadersOption](#xratelimitheadersoption)_ |  false  |  | XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.<br />When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.<br />If not set, the rule inherits the listener-level setting (default behavior). |
+| `overrides` | _[RateLimitOverride](#ratelimitoverride) array_ |  false  |  | Overrides replaces the rule limit for specific Distinct identity values.<br />Each override shares the parent rule's identity key (header, query parameter,<br />or CIDR) and Envoy rate-limit action. The rate limit service applies<br />most-specific-wins: a matching override value uses that override's limit;<br />any other Distinct value uses the parent rule limit.<br />Only supported on Global rate limit rules whose clientSelectors contain<br />exactly one Distinct identity. Method and path matches may be combined<br />with that identity; extra headers, query parameters, or a second Distinct<br />identity may not. Mutually exclusive with limit.fromMetadata.<br />Distinct-only shape and unique override values are enforced at translate time. |
 
 
 #### RateLimitSelectCondition
@@ -5656,6 +5672,7 @@ _Appears in:_
 RateLimitValue defines the limits for rate limiting.
 
 _Appears in:_
+- [RateLimitOverride](#ratelimitoverride)
 - [RateLimitRule](#ratelimitrule)
 
 | Field | Type | Required | Default | Description |

@@ -2938,6 +2938,20 @@ type RateLimitRule struct {
 	XRateLimitOption *egv1a1.XRateLimitHeadersOption `json:"xRateLimitOption,omitempty" yaml:"xRateLimitOption,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Overrides replaces the rule limit for specific Distinct identity values.
+	// The rate limit service applies most-specific-wins against the same
+	// descriptor key as the parent Distinct match.
+	// +optional
+	Overrides []RateLimitOverride `json:"overrides,omitempty" yaml:"overrides,omitempty"`
+}
+
+// RateLimitOverride replaces the parent Distinct rule limit for one identity value.
+// +k8s:deepcopy-gen=true
+type RateLimitOverride struct {
+	// Value is the Distinct identity value this override applies to.
+	Value string `json:"value" yaml:"value"`
+	// Limit is the rate limit applied when the Distinct identity equals Value.
+	Limit RateLimitValue `json:"limit" yaml:"limit"`
 }
 
 // RateLimitCost specifies the cost of the request or response.
