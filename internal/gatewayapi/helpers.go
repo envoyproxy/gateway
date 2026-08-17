@@ -368,6 +368,9 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		if listenerContext == listener {
 			continue
 		}
+		if listener.hostnameConflictLoser {
+			continue
+		}
 		if listenerContext != nil && listenerContext.Port != listener.Port {
 			continue
 		}
