@@ -10,10 +10,27 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
+
+// recordSpans installs a span recorder for the duration of the test and returns it.
+func recordSpans(t *testing.T) *tracetest.SpanRecorder {
+	t.Helper()
+
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	original := tracer
+	tracer = tp.Tracer("test")
+	t.Cleanup(func() {
+		tracer = original
+	})
+
+	return sr
+}
 
 // TestTranslatePhaseSpans pins the phase spans emitted by a single Translate call.
 // The fan-out is fixed and small on purpose: it must not grow with the number of
@@ -43,10 +60,23 @@ func TestTranslatePhaseSpans(t *testing.T) {
 	}
 	require.ElementsMatch(t, []string{
 		"Translator.Translate",
-		"Translator.processHTTPListenerXdsTranslation",
-		"Translator.notifyExtensionServerAboutListeners",
-		"Translator.processJSONPatches",
-		"Translator.processExtensionPostTranslationHook",
+		"XdsTranslator.processHTTPListenerXdsTranslation",
+		"XdsTranslator.notifyExtensionServerAboutListeners",
+		"XdsTranslator.processMergedBackendClusters",
+		"XdsTranslator.processJSONPatches",
+		"XdsTranslator.processExtensionPostTranslationHook",
 		"ResourceVersionTable.ValidateAll",
 	}, names)
+}
+
+// TestCountIRHTTPRoutes checks that the instrumentation does not become the first
+// thing to panic on a malformed IR, which would move the failure ahead of the phase
+// span that is supposed to report it.
+func TestCountIRHTTPRoutes(t *testing.T) {
+	require.Equal(t, 0, countIRHTTPRoutes(nil))
+	require.Equal(t, 3, countIRHTTPRoutes([]*ir.HTTPListener{
+		{Routes: []*ir.HTTPRoute{{}, {}}},
+		nil,
+		{Routes: []*ir.HTTPRoute{{}}},
+	}))
 }

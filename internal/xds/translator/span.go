@@ -6,12 +6,9 @@
 package translator
 
 import (
-	"context"
-
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -19,26 +16,15 @@ import (
 
 var tracer = otel.Tracer("envoy-gateway/xds/translator")
 
-// startPhase starts a child span for one phase of the xDS translation and returns
-// a function that ends it. The phases run sequentially, so the returned function
-// is called at the end of the phase rather than deferred.
-//
-// The attrs are meant to record the size of the input the phase is about to
-// process: without them a slow build cannot be told apart from a bigger one.
-//
-// Spans are per-phase, never per-resource. A span per route or per extension hook
-// call would emit tens of thousands of spans for a single build on a large cluster,
-// which bloats every trace and makes the exporter itself a cost inside the build.
-// Per-resource latency belongs in a histogram metric instead.
-func startPhase(ctx context.Context, name string, attrs ...attribute.KeyValue) func() {
-	_, span := tracer.Start(ctx, name, trace.WithAttributes(attrs...))
-	return func() { span.End() }
-}
-
 // countIRHTTPRoutes returns the total number of routes across all the HTTP listeners.
+// Nil listeners are skipped: instrumentation must not be the first thing to panic on a
+// malformed IR, otherwise it moves the failure ahead of the phase that would report it.
 func countIRHTTPRoutes(listeners []*ir.HTTPListener) int {
 	var routes int
 	for _, l := range listeners {
+		if l == nil {
+			continue
+		}
 		routes += len(l.Routes)
 	}
 	return routes

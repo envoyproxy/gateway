@@ -48,7 +48,7 @@ func processJSONPatches(ctx context.Context, tCtx *types.ResourceVersionTable, e
 	for _, e := range envoyPatchPolicies {
 		totalPatches += len(e.JSONPatches)
 	}
-	_, span := tracer.Start(ctx, "Translator.processJSONPatches", trace.WithAttributes(
+	_, span := tracer.Start(ctx, "XdsTranslator.processJSONPatches", trace.WithAttributes(
 		attribute.Int("envoy-patch-policies.count", len(envoyPatchPolicies)),
 		attribute.Int("json-patch.count", totalPatches),
 	))

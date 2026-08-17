@@ -35,6 +35,7 @@ import (
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/traces"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -108,10 +109,17 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	}
 
 	// Record what this translation is about to chew through on the enclosing span, so
-	// that a slow build can be told apart from a build of a bigger input.
+	// that a slow build can be told apart from a build of a bigger input. This covers
+	// the whole input, including the phases below that are too cheap to get a span.
+	httpRoutes := countIRHTTPRoutes(xdsIR.HTTP)
+	// The phase spans are ended as each phase completes; EndInFlight only fires when a
+	// phase panicked, so that the phase that failed is still in the trace.
+	phases := traces.NewPhaseTracker(ctx, tracer)
+	defer phases.EndInFlight()
+
 	trace.SpanFromContext(ctx).SetAttributes(
 		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
-		attribute.Int("http-routes.count", countIRHTTPRoutes(xdsIR.HTTP)),
+		attribute.Int("http-routes.count", httpRoutes),
 		attribute.Int("tcp-listeners.count", len(xdsIR.TCP)),
 		attribute.Int("udp-listeners.count", len(xdsIR.UDP)),
 		attribute.Int("backend-clusters.count", len(xdsIR.BackendClusters)),
@@ -138,16 +146,19 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		errs = errors.Join(errs, err)
 	}
 
-	endHTTPListeners := startPhase(ctx, "Translator.processHTTPListenerXdsTranslation",
+	phases.Start("XdsTranslator.processHTTPListenerXdsTranslation",
 		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
-		attribute.Int("http-routes.count", countIRHTTPRoutes(xdsIR.HTTP)),
+		attribute.Int("http-routes.count", httpRoutes),
 	)
 	if err := t.processHTTPListenerXdsTranslation(
 		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
-	endHTTPListeners()
+	phases.End()
 
+	// The TCP and UDP listeners get no phase span: they are cheap next to the HTTP
+	// listeners on a large cluster. Their input sizes are on the enclosing span, so a
+	// cluster where that assumption does not hold is still visible.
 	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -158,17 +169,21 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 
 	// This span stays at zero duration when no extension server is loaded, which is
 	// itself the answer to "are the extension hooks in play?".
-	endExtListeners := startPhase(ctx, "Translator.notifyExtensionServerAboutListeners",
+	phases.Start("XdsTranslator.notifyExtensionServerAboutListeners",
 		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
 	)
 	if err := t.notifyExtensionServerAboutListeners(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
-	endExtListeners()
+	phases.End()
 
+	phases.Start("XdsTranslator.processMergedBackendClusters",
+		attribute.Int("backend-clusters.count", len(xdsIR.BackendClusters)),
+	)
 	if err := t.processMergedBackendClusters(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	phases.End()
 
 	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
@@ -203,11 +218,11 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 
 	// Check if an extension want to modify the generated xDS resources
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
-	endPostTranslationHook := startPhase(ctx, "Translator.processExtensionPostTranslationHook",
+	phases.Start("XdsTranslator.processExtensionPostTranslationHook",
 		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
 	)
 	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies)
-	endPostTranslationHook()
+	phases.End()
 	if err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
 		// then propagate the error
@@ -230,11 +245,11 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	//
 	// ValidateAll walks every field of every generated resource, so its cost grows with
 	// the size of the snapshot rather than with the size of the input IR.
-	endValidate := startPhase(ctx, "ResourceVersionTable.ValidateAll", xdsResourceCountAttrs(tCtx)...)
+	phases.Start("ResourceVersionTable.ValidateAll", xdsResourceCountAttrs(tCtx)...)
 	if err := tCtx.ValidateAll(); err != nil {
 		errs = errors.Join(errs, err)
 	}
-	endValidate()
+	phases.End()
 
 	return tCtx, errs
 }

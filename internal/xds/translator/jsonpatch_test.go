@@ -13,8 +13,6 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"google.golang.org/protobuf/types/known/durationpb"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -22,21 +20,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
-
-// recordSpans installs a span recorder for the duration of the test and returns it.
-func recordSpans(t *testing.T) *tracetest.SpanRecorder {
-	t.Helper()
-
-	sr := tracetest.NewSpanRecorder()
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	original := tracer
-	tracer = tp.Tracer("test")
-	t.Cleanup(func() {
-		tracer = original
-	})
-
-	return sr
-}
 
 func TestProcessJSONPatchesSpan(t *testing.T) {
 	// A zero-valued span is what tells an operator that EnvoyPatchPolicy is not the
@@ -48,7 +31,7 @@ func TestProcessJSONPatchesSpan(t *testing.T) {
 
 		spans := sr.Ended()
 		require.Len(t, spans, 1)
-		require.Equal(t, "Translator.processJSONPatches", spans[0].Name())
+		require.Equal(t, "XdsTranslator.processJSONPatches", spans[0].Name())
 		require.ElementsMatch(t, []attribute.KeyValue{
 			attribute.Int("envoy-patch-policies.count", 0),
 			attribute.Int("json-patch.count", 0),
@@ -114,7 +97,7 @@ func TestProcessJSONPatchesSpan(t *testing.T) {
 
 		spans := sr.Ended()
 		require.Len(t, spans, 1)
-		require.Equal(t, "Translator.processJSONPatches", spans[0].Name())
+		require.Equal(t, "XdsTranslator.processJSONPatches", spans[0].Name())
 		require.ElementsMatch(t, []attribute.KeyValue{
 			attribute.Int("envoy-patch-policies.count", 1),
 			attribute.Int("json-patch.count", 3),

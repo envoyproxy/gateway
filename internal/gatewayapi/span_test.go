@@ -49,21 +49,15 @@ func TestTranslatePhaseSpans(t *testing.T) {
 		names = append(names, s.Name())
 	}
 	require.ElementsMatch(t, []string{
-		"GatewayApiTranslator.StatusDeepCopy",
-		"GatewayApiTranslator.BuildTranslatorContext",
 		"GatewayApiTranslator.BuildPolicyIndexes",
 		"GatewayApiTranslator.ProcessListeners",
-		"GatewayApiTranslator.ProcessBackends",
 		"GatewayApiTranslator.ProcessHTTPRoutes",
 		"GatewayApiTranslator.ProcessGRPCRoutes",
-		"GatewayApiTranslator.ProcessL4Routes",
 		"GatewayApiTranslator.ProcessClientTrafficPolicies",
 		"GatewayApiTranslator.ProcessBackendTrafficPolicies",
 		"GatewayApiTranslator.checkRouteOverlaps",
 		"GatewayApiTranslator.ProcessSecurityPolicies",
 		"GatewayApiTranslator.ProcessEnvoyExtensionPolicies",
-		"GatewayApiTranslator.ProcessExtensionServerPolicies",
-		"GatewayApiTranslator.ProcessGlobalResources",
 		"TranslateToIR",
 	}, names)
 
@@ -73,6 +67,37 @@ func TestTranslatePhaseSpans(t *testing.T) {
 		if s.Name() != "TranslateToIR" {
 			continue
 		}
-		require.Contains(t, s.Attributes(), attribute.Int("httproutes.count", 3))
+		require.Contains(t, s.Attributes(), attribute.Int("http-routes.count", 3))
 	}
+}
+
+// TestTranslatePhaseSpanEndedOnPanic covers the path an operator most needs the span
+// for: the translator panics on some inputs and the runner recovers from it, so the
+// phase that panicked has to reach the exporter instead of being dropped.
+func TestTranslatePhaseSpanEndedOnPanic(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	original := tracer
+	tracer = tp.Tracer("test")
+	t.Cleanup(func() { tracer = original })
+
+	tr := &Translator{
+		GatewayControllerName: egv1a1.GatewayControllerName,
+		GatewayClassName:      "envoy-gateway-class",
+		Logger:                logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+	}
+
+	// A nil HTTPRoute panics inside ProcessHTTPRoutes.
+	require.Panics(t, func() {
+		_, _ = tr.Translate(t.Context(), &resource.Resources{HTTPRoutes: []*gwapiv1.HTTPRoute{nil}})
+	})
+
+	var found bool
+	for _, s := range sr.Ended() {
+		if s.Name() == "GatewayApiTranslator.ProcessHTTPRoutes" {
+			found = true
+			require.Equal(t, "phase did not complete", s.Status().Description)
+		}
+	}
+	require.True(t, found, "the panicking phase span should still be exported")
 }
