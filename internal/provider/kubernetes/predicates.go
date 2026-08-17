@@ -161,6 +161,12 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		return true
 	}
 
+	if r.listenerSetCRDExists {
+		if r.isListenerSetReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
 	if r.spCRDExists {
 		if r.isSecurityPolicyReferencingSecret(&nsName) {
 			return true
@@ -193,8 +199,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		}
 	}
 
-	if r.isBackendTLSPolicyReferencingSecret(&nsName) {
-		return true
+	if r.btlsCRDExists {
+		if r.isBackendTLSPolicyReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
 	if r.hrfCRDExists {
@@ -235,8 +243,10 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 		}
 	}
 
-	if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
-		return true
+	if r.btlsCRDExists {
+		if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
+			return true
+		}
 	}
 
 	if r.ctpCRDExists {
@@ -383,11 +393,44 @@ func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.Namespac
 
 	for i := range gwList.Items {
 		gw := &gwList.Items[i]
-		if !r.validateGatewayForReconcile(gw) {
-			return false
+		if r.validateGatewayForReconcile(gw) {
+			return true
 		}
 	}
-	return true
+	return false
+}
+
+func (r *gatewayAPIReconciler) isListenerSetReferencingSecret(nsName *types.NamespacedName) bool {
+	lsList := &gwapiv1.ListenerSetList{}
+	if err := r.client.List(context.Background(), lsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretListenerSetIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ListenerSets")
+		return false
+	}
+
+	if len(lsList.Items) == 0 {
+		return false
+	}
+
+	for i := range lsList.Items {
+		ls := &lsList.Items[i]
+		parent := ls.Spec.ParentRef
+		gw := &gwapiv1.Gateway{}
+		key := types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, ls.Namespace),
+			Name:      string(parent.Name),
+		}
+		if err := r.client.Get(context.Background(), key, gw); err != nil {
+			r.log.Error(err, "failed to get parent Gateway for ListenerSet",
+				"namespace", ls.Namespace, "name", ls.Name)
+			continue
+		}
+		if r.validateGatewayForReconcile(gw) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.NamespacedName) bool {
@@ -667,6 +710,11 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	if r.isProxyServiceCluster(ep.GetLabels()) {
 		return true
 	}
+
+	if r.isNodePortLocalEnvoyService(obj.GetNamespace(), svcName, ep.GetLabels()) {
+		return true
+	}
+
 	return false
 }
 
@@ -876,16 +924,18 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
-	btlsList := &gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated BackendTLSPolicy")
-		return false
-	}
+	if r.btlsCRDExists {
+		btlsList := &gwapiv1.BackendTLSPolicyList{}
+		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated BackendTLSPolicy")
+			return false
+		}
 
-	if len(btlsList.Items) > 0 {
-		return true
+		if len(btlsList.Items) > 0 {
+			return true
+		}
 	}
 
 	if r.btpCRDExists {
@@ -1024,6 +1074,20 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 	}
 
 	return len(grpcRouteList.Items) != 0
+}
+
+// isNodePortLocalEnvoyService returns true if the named service is a NodePort
+// service with externalTrafficPolicy: Local that is owned by an Envoy gateway
+func (r *gatewayAPIReconciler) isNodePortLocalEnvoyService(namespace, name string, epLabels map[string]string) bool {
+	if r.findOwningGateway(context.Background(), epLabels) == nil {
+		return false
+	}
+	svc := &corev1.Service{}
+	if err := r.client.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: name}, svc); err != nil {
+		return false
+	}
+	return svc.Spec.Type == corev1.ServiceTypeNodePort &&
+		svc.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal
 }
 
 // isProxyServiceCluster returns true if the provided labels reference an owning Gateway or GatewayClass

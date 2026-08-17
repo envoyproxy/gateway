@@ -1155,6 +1155,17 @@ func TestGetCaCertFromConfigMap(t *testing.T) {
 			expected:      "fake-cert",
 		},
 		{
+			name: "get from tls.crt",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{
+					"tls.crt":       "fake-cert",
+					"root-cert.pem": "fake-root",
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-cert",
+		},
+		{
 			name: "get from first key",
 			cm: &corev1.ConfigMap{
 				Data: map[string]string{
@@ -1171,11 +1182,21 @@ func TestGetCaCertFromConfigMap(t *testing.T) {
 			},
 			expectedFound: false,
 		},
+		{
+			name: "not found multiple keys",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{
+					"fake.crt":      "fake-cert",
+					"root-cert.pem": "fake-root",
+				},
+			},
+			expectedFound: false,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, found := getOrFirstFromData(tc.cm.Data, CACertKey)
+			got, found := getFirstMatchOrFirstFromData(tc.cm.Data, CACertKey, TLSCertKey)
 			require.Equal(t, tc.expectedFound, found)
 			require.Equal(t, tc.expected, got)
 		})
@@ -1201,6 +1222,17 @@ func TestGetCaCertFromSecret(t *testing.T) {
 			expected:      "fake-cert",
 		},
 		{
+			name: "get from tls.crt",
+			s: &corev1.Secret{
+				Data: map[string][]byte{
+					"tls.crt":       []byte("fake-cert"),
+					"root-cert.pem": []byte("fake-root"),
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-cert",
+		},
+		{
 			name: "get from first key",
 			s: &corev1.Secret{
 				Data: map[string][]byte{
@@ -1217,11 +1249,21 @@ func TestGetCaCertFromSecret(t *testing.T) {
 			},
 			expectedFound: false,
 		},
+		{
+			name: "not found multiple keys",
+			s: &corev1.Secret{
+				Data: map[string][]byte{
+					"fake.crt":      []byte("fake-cert"),
+					"root-cert.pem": []byte("fake-root"),
+				},
+			},
+			expectedFound: false,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, found := getOrFirstFromData(tc.s.Data, CACertKey)
+			got, found := getFirstMatchOrFirstFromData(tc.s.Data, CACertKey, TLSCertKey)
 			require.Equal(t, tc.expectedFound, found)
 			require.Equal(t, tc.expected, string(got))
 		})
@@ -1373,7 +1415,7 @@ func TestPolicyScopeGraphGetDirectChildren(t *testing.T) {
 	routeNN := types.NamespacedName{Namespace: "default", Name: "route"}
 	gateway := gatewayScope(gatewayNN)
 	httpListener := gatewayListenerScope(gatewayNN, gwapiv1.SectionName("http"))
-	route := routeScope(routeNN)
+	route := routeScope(routeNN, resource.KindHTTPRoute)
 
 	testCases := []struct {
 		name     string
@@ -1429,11 +1471,11 @@ func TestPolicyScopeGraphGetWithDescendants(t *testing.T) {
 	listenerSetHTTPListener := listenerSetListenerScope(listenerSetNN, gwapiv1.SectionName("ls-http"))
 	listenerSetHTTPSListener := listenerSetListenerScope(listenerSetNN, gwapiv1.SectionName("ls-https"))
 
-	gatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-route"})
-	gatewayListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-listener-route"})
-	listenerSetRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-route"})
-	listenerSetListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-listener-route"})
-	otherGatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "other-gateway-route"})
+	gatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-route"}, resource.KindHTTPRoute)
+	gatewayListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "gateway-listener-route"}, resource.KindHTTPRoute)
+	listenerSetRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-route"}, resource.KindHTTPRoute)
+	listenerSetListenerRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "listener-set-listener-route"}, resource.KindHTTPRoute)
+	otherGatewayRoute := routeScope(types.NamespacedName{Namespace: "default", Name: "other-gateway-route"}, resource.KindHTTPRoute)
 
 	testCases := []struct {
 		name       string
@@ -1607,27 +1649,29 @@ func TestIrBackendClusterName(t *testing.T) {
 	}
 }
 
-func TestIsMergeBackendsEnabled(t *testing.T) {
+func TestResolveMergeBackendsConfig(t *testing.T) {
+	fooSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
+	barSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "qux"}}
 	enabled := &egv1a1.MergeBackendsConfig{}
 
 	tests := []struct {
 		name string
 		res  *resource.Resources
-		want bool
+		want *MergeBackendsConfig
 	}{
 		{
 			name: "gatewayclass envoyproxy set",
 			res: &resource.Resources{
 				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{MergeBackends: enabled}},
 			},
-			want: true,
+			want: &MergeBackendsConfig{},
 		},
 		{
 			name: "default spec set",
 			res: &resource.Resources{
 				EnvoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{MergeBackends: enabled},
 			},
-			want: true,
+			want: &MergeBackendsConfig{},
 		},
 		{
 			name: "gatewayclass envoyproxy set but MergeBackends nil falls back to default spec",
@@ -1635,17 +1679,38 @@ func TestIsMergeBackendsEnabled(t *testing.T) {
 				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{}},
 				EnvoyProxyDefaultSpec:     &egv1a1.EnvoyProxySpec{MergeBackends: enabled},
 			},
-			want: true,
+			want: &MergeBackendsConfig{},
 		},
 		{
 			name: "unset",
 			res:  &resource.Resources{},
-			want: false,
+			want: nil,
+		},
+		{
+			name: "gatewayclass-level selector wins over global default's selector",
+			res: &resource.Resources{
+				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+					MergeBackends: &egv1a1.MergeBackendsConfig{Selector: fooSelector},
+				}},
+				EnvoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+					MergeBackends: &egv1a1.MergeBackendsConfig{Selector: barSelector},
+				},
+			},
+			want: &MergeBackendsConfig{Selector: fooSelector},
+		},
+		{
+			name: "falls back to global default's selector when gatewayclass-level MergeBackends is unset",
+			res: &resource.Resources{
+				EnvoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+					MergeBackends: &egv1a1.MergeBackendsConfig{Selector: barSelector},
+				},
+			},
+			want: &MergeBackendsConfig{Selector: barSelector},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, IsMergeBackendsEnabled(tc.res))
+			require.Equal(t, tc.want, ResolveMergeBackendsConfig(tc.res))
 		})
 	}
 }

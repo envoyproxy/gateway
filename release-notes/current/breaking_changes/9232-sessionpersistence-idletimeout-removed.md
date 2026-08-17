@@ -1,1 +1,0 @@
-The `SessionPersistence.IdleTimeout` field has been removed from the Gateway API `HTTPRoute` spec in v1.6. Envoy Gateway no longer validates or rejects routes that previously set this field; any existing manifests referencing `sessionPersistence.idleTimeout` must remove the field before upgrading the Gateway API CRDs to v1.6.

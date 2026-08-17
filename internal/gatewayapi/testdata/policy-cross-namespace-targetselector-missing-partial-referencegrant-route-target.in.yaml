@@ -67,7 +67,7 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: /denied
+          value: /denied-c
       backendRefs:
       - name: denied-service
         port: 8080
