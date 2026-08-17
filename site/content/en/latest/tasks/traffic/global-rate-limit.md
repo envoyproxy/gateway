@@ -775,7 +775,7 @@ spec:
 
 In this example, every unseen `x-user-id` is limited at 10 requests/second. `client-a` is limited at 15/s, `client-b` at 20/s, and `client-c` at 5/s. Each identity has one Redis key; `client-a` traffic does not increment the default bucket.
 
-`overrides` is only supported on **global** rules whose `clientSelectors` contain exactly one Distinct identity (header, query parameter, or CIDR). Method and path matches may be combined with that identity; extra headers, query parameters, or a second Distinct identity may not. It cannot be combined with `limit.fromMetadata`. Do not also add Exact `rules[]` entries for the same override values; those still OR independently.
+`overrides` is only supported on **global** rules whose `clientSelectors` contain exactly one Distinct identity (header, query parameter, or CIDR). Method and path matches may be combined with that identity; extra headers, query parameters, or a second Distinct identity may not. It cannot be combined with `limit.fromMetadata`. Do not also add Exact `rules[]` entries for the same override values; those still OR independently. When the Distinct identity is `sourceCIDR`, each override `value` must be a single IP address, not a CIDR.
 
 ### HTTPRoute
 
