@@ -229,6 +229,7 @@ data:
       mode: simple
     limits_config:
       max_cache_freshness_per_query: 10m
+      max_structured_metadata_size: 131072
       otlp_config:
         resource_attributes:
           attributes_config:
@@ -11158,7 +11159,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 6b4509c66d127c358eaec628ad628a06a82b9eea1a0d0b619b774e1938e660da
+        checksum/config: 11cf4e31138a898d46620bf2c85ab2b39eba10d307d42f7faaa395ba84dfb732
         storage/size: "10Gi"
         kubectl.kubernetes.io/default-container: "loki"
       labels:
