@@ -1,4 +1,4 @@
-# This manifest exercises the BackendTrafficPolicy requestBodyBufferLimit field.
+# This manifest exercises the BackendTrafficPolicy requestBuffer field with mode LimitOnly.
 #
 # Both routes are forced to buffer the request body via an inline Lua filter that
 # calls request_handle:body(). Buffering is what makes Envoy enforce the request
@@ -7,16 +7,17 @@
 # size). The Lua filter is used purely as the buffering trigger and, unlike the
 # Buffer filter, does not impose its own max_request_bytes.
 #
-# - request-body-buffer-limit-default has no requestBodyBufferLimit, so the limit
-#   defaults to the listener per_connection_buffer_limit_bytes (32768 bytes). A body
-#   larger than that is rejected with HTTP 413.
-# - request-body-buffer-limit-high sets requestBodyBufferLimit to 1Mi, which raises
-#   the stream decoder buffer limit so the same body is buffered and forwarded (200).
+# - request-buffer-limit-only-default has no requestBuffer, so the limit defaults to
+#   the listener per_connection_buffer_limit_bytes (32768 bytes). A body larger than
+#   that is rejected with HTTP 413.
+# - request-buffer-limit-only-high sets requestBuffer with mode LimitOnly and a 1Mi
+#   limit, which raises the stream decoder buffer limit so the same body is buffered
+#   and forwarded (200). Unlike mode FullBuffer, the Buffer filter is not inserted.
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: request-body-buffer-limit-default
+  name: request-buffer-limit-only-default
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -25,7 +26,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /request-body-buffer-limit-default
+            value: /request-buffer-limit-only-default
       backendRefs:
         - name: infra-backend-v1
           port: 8080
@@ -33,7 +34,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: request-body-buffer-limit-high
+  name: request-buffer-limit-only-high
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -42,7 +43,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /request-body-buffer-limit-high
+            value: /request-buffer-limit-only-high
       backendRefs:
         - name: infra-backend-v1
           port: 8080
@@ -50,16 +51,16 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyExtensionPolicy
 metadata:
-  name: request-body-buffer-limit-buffer-body
+  name: request-buffer-limit-only-buffer-body
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: request-body-buffer-limit-default
+      name: request-buffer-limit-only-default
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: request-body-buffer-limit-high
+      name: request-buffer-limit-only-high
   lua:
     - type: Inline
       inline: |
@@ -72,11 +73,13 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: request-body-buffer-limit-high
+  name: request-buffer-limit-only-high
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: request-body-buffer-limit-high
-  requestBodyBufferLimit: 1Mi
+      name: request-buffer-limit-only-high
+  requestBuffer:
+    limit: 1Mi
+    mode: LimitOnly

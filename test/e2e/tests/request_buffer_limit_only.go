@@ -26,17 +26,17 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, RequestBodyBufferLimitTest)
+	ConformanceTests = append(ConformanceTests, RequestBufferLimitOnlyTest)
 }
 
-var RequestBodyBufferLimitTest = suite.ConformanceTest{
-	ShortName:   "RequestBodyBufferLimit",
-	Description: "Verify that BackendTrafficPolicy requestBodyBufferLimit bounds the request body size Envoy will buffer",
-	Manifests:   []string{"testdata/request-body-buffer-limit.yaml"},
+var RequestBufferLimitOnlyTest = suite.ConformanceTest{
+	ShortName:   "RequestBufferLimitOnly",
+	Description: "Verify that BackendTrafficPolicy requestBuffer with mode LimitOnly bounds the request body size Envoy will buffer",
+	Manifests:   []string{"testdata/request-buffer-limit-only.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		defaultRouteNN := types.NamespacedName{Name: "request-body-buffer-limit-default", Namespace: ns}
-		highRouteNN := types.NamespacedName{Name: "request-body-buffer-limit-high", Namespace: ns}
+		defaultRouteNN := types.NamespacedName{Name: "request-buffer-limit-only-default", Namespace: ns}
+		highRouteNN := types.NamespacedName{Name: "request-buffer-limit-only-high", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(
@@ -52,23 +52,23 @@ var RequestBodyBufferLimitTest = suite.ConformanceTest{
 		}
 		// The inline Lua filter forces the request body to be buffered on both routes.
 		EnvoyExtensionPolicyMustBeAccepted(t, suite.Client,
-			types.NamespacedName{Name: "request-body-buffer-limit-buffer-body", Namespace: ns},
+			types.NamespacedName{Name: "request-buffer-limit-only-buffer-body", Namespace: ns},
 			suite.ControllerName, ancestorRef)
-		// The requestBodyBufferLimit policy raises the buffer limit on the "high" route.
+		// The requestBuffer LimitOnly policy raises the buffer limit on the "high" route.
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
-			types.NamespacedName{Name: "request-body-buffer-limit-high", Namespace: ns},
+			types.NamespacedName{Name: "request-buffer-limit-only-high", Namespace: ns},
 			suite.ControllerName, ancestorRef)
 
 		// 100 KiB body: larger than the default per-connection buffer limit (32768 bytes)
-		// but smaller than the 1Mi requestBodyBufferLimit configured on the "high" route.
+		// but smaller than the 1Mi requestBuffer limit configured on the "high" route.
 		body := strings.Repeat("x", 100*1024)
 
 		t.Run("request exceeding the default buffer limit is rejected with 413", func(t *testing.T) {
-			expectRequestBodyStatus(t, suite, gwAddr, "/request-body-buffer-limit-default", body, http.StatusRequestEntityTooLarge)
+			expectRequestBodyStatus(t, suite, gwAddr, "/request-buffer-limit-only-default", body, http.StatusRequestEntityTooLarge)
 		})
 
 		t.Run("request within the configured buffer limit succeeds", func(t *testing.T) {
-			expectRequestBodyStatus(t, suite, gwAddr, "/request-body-buffer-limit-high", body, http.StatusOK)
+			expectRequestBodyStatus(t, suite, gwAddr, "/request-buffer-limit-only-high", body, http.StatusOK)
 		})
 	},
 }

@@ -5,7 +5,9 @@ backendTrafficPolicies:
     name: policy-for-route
     namespace: default
   spec:
-    requestBodyBufferLimit: 4Mi
+    requestBuffer:
+      limit: 4Mi
+      mode: LimitOnly
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -36,7 +38,9 @@ backendTrafficPolicies:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
-    requestBodyBufferLimit: 4Mi
+    requestBuffer:
+      limit: 4Mi
+      mode: LimitOnly
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
