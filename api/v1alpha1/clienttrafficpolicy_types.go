@@ -139,6 +139,12 @@ type HeaderSettings struct {
 	// +optional
 	DisableRateLimitHeaders *bool `json:"disableRateLimitHeaders,omitempty"`
 
+	// EnableRetryAfterHeader configures Envoy Proxy to emit the "Retry-After" response header
+	// on rate-limited 429 responses.
+	// Defaults to false.
+	// +optional
+	EnableRetryAfterHeader *bool `json:"enableRetryAfterHeader,omitempty"`
+
 	// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
 	//
 	// x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate

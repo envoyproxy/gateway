@@ -498,6 +498,12 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
+                  enableRetryAfterHeader:
+                    description: |-
+                      EnableRetryAfterHeader configures Envoy Proxy to emit the "Retry-After" response header
+                      on rate-limited 429 responses.
+                      Defaults to false.
+                    type: boolean
                   host:
                     description: Host enables managing how the Host/Authority header
                       set by clients can be normalized.
