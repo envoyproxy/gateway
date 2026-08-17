@@ -1,1 +1,0 @@
-Added optional `unhealthyPodEvictionPolicy` field to envoy-gateway chart's PodDisruptionBudget template.
