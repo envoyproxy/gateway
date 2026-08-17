@@ -34,10 +34,10 @@ func TestProcessJSONPatchesSpan(t *testing.T) {
 		require.Equal(t, "XdsTranslator.processJSONPatches", spans[0].Name())
 		require.ElementsMatch(t, []attribute.KeyValue{
 			attribute.Int("envoy-patch-policies.count", 0),
-			attribute.Int("json-patch.count", 0),
-			attribute.Int("json-patch.applied", 0),
-			attribute.Int("json-patch.resource-not-found", 0),
-			attribute.Int("json-patch.failed", 0),
+			attribute.Int("json-patches.count", 0),
+			attribute.Int("json-patches.applied", 0),
+			attribute.Int("json-patches.resource-not-found", 0),
+			attribute.Int("json-patches.failed", 0),
 		}, spans[0].Attributes())
 	})
 
@@ -100,10 +100,10 @@ func TestProcessJSONPatchesSpan(t *testing.T) {
 		require.Equal(t, "XdsTranslator.processJSONPatches", spans[0].Name())
 		require.ElementsMatch(t, []attribute.KeyValue{
 			attribute.Int("envoy-patch-policies.count", 1),
-			attribute.Int("json-patch.count", 3),
-			attribute.Int("json-patch.applied", 1),
-			attribute.Int("json-patch.resource-not-found", 1),
-			attribute.Int("json-patch.failed", 1),
+			attribute.Int("json-patches.count", 3),
+			attribute.Int("json-patches.applied", 1),
+			attribute.Int("json-patches.resource-not-found", 1),
+			attribute.Int("json-patches.failed", 1),
 		}, spans[0].Attributes())
 	})
 }

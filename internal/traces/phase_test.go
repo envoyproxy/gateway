@@ -20,20 +20,27 @@ func TestPhaseTracker(t *testing.T) {
 		sr := tracetest.NewSpanRecorder()
 		tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)).Tracer("test")
 
-		phases := NewPhaseTracker(t.Context(), tracer)
+		ctx, parent := tracer.Start(t.Context(), "stage")
+		phases := NewPhaseTracker(ctx, tracer)
 		defer phases.EndInFlight()
 
 		phases.Start("first", attribute.Int("routes.count", 3))
 		phases.End()
 		phases.Start("second")
 		phases.End()
+		parent.End()
 
 		spans := sr.Ended()
-		require.Len(t, spans, 2)
+		require.Len(t, spans, 3)
 		require.Equal(t, "first", spans[0].Name())
 		require.Contains(t, spans[0].Attributes(), attribute.Int("routes.count", 3))
 		require.Equal(t, "second", spans[1].Name())
 		require.Equal(t, codes.Unset, spans[1].Status().Code)
+
+		// The phases have to hang off the enclosing stage span. Without this a phase
+		// span becomes an orphan root and the stage it belongs to cannot be told.
+		require.Equal(t, parent.SpanContext().SpanID(), spans[0].Parent().SpanID())
+		require.Equal(t, parent.SpanContext().SpanID(), spans[1].Parent().SpanID())
 	})
 
 	t.Run("ends the in-flight phase when one panics", func(t *testing.T) {

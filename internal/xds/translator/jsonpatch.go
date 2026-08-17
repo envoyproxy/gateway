@@ -50,7 +50,7 @@ func processJSONPatches(ctx context.Context, tCtx *types.ResourceVersionTable, e
 	}
 	_, span := tracer.Start(ctx, "XdsTranslator.processJSONPatches", trace.WithAttributes(
 		attribute.Int("envoy-patch-policies.count", len(envoyPatchPolicies)),
-		attribute.Int("json-patch.count", totalPatches),
+		attribute.Int("json-patches.count", totalPatches),
 	))
 	defer span.End()
 
@@ -228,9 +228,9 @@ func processJSONPatches(ctx context.Context, tCtx *types.ResourceVersionTable, e
 	}
 
 	span.SetAttributes(
-		attribute.Int("json-patch.applied", applied),
-		attribute.Int("json-patch.resource-not-found", notFound),
-		attribute.Int("json-patch.failed", totalPatches-applied-notFound),
+		attribute.Int("json-patches.applied", applied),
+		attribute.Int("json-patches.resource-not-found", notFound),
+		attribute.Int("json-patches.failed", totalPatches-applied-notFound),
 	)
 
 	return errs

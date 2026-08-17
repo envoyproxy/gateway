@@ -22,6 +22,7 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	protobuf "google.golang.org/protobuf/proto"
@@ -51,6 +52,55 @@ const (
 var emptyRouteCluster = &clusterv3.Cluster{
 	Name:                 emptyClusterName,
 	ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+}
+
+var tracer = otel.Tracer("envoy-gateway/xds/translator")
+
+// countIRHTTPRoutes returns the total number of IR routes across all the HTTP
+// listeners. This is not the number of HTTPRoute resources: the Gateway API
+// translator expands each rule into its own IR route and folds GRPCRoutes into the
+// same listeners, hence the distinct ir- prefix on the attribute key.
+//
+// Nil listeners are skipped: instrumentation must not be the first thing to panic on
+// a malformed IR, otherwise it moves the failure ahead of the phase that reports it.
+func countIRHTTPRoutes(listeners []*ir.HTTPListener) int {
+	var routes int
+	for _, l := range listeners {
+		if l == nil {
+			continue
+		}
+		routes += len(l.Routes)
+	}
+	return routes
+}
+
+// xdsResourceCountAttrs reports how many resources of each type the table holds. The
+// same set of keys is always emitted, so the counts of two builds are comparable.
+func xdsResourceCountAttrs(tCtx *types.ResourceVersionTable) []attribute.KeyValue {
+	countedTypes := []struct {
+		key     string
+		xdsType resourcev3.Type
+	}{
+		{"listeners", resourcev3.ListenerType},
+		{"route-configurations", resourcev3.RouteType},
+		{"clusters", resourcev3.ClusterType},
+		{"endpoints", resourcev3.EndpointType},
+		{"secrets", resourcev3.SecretType},
+	}
+
+	attrs := make([]attribute.KeyValue, 0, len(countedTypes)+1)
+	for _, ct := range countedTypes {
+		attrs = append(attrs, attribute.Int("xds-resources."+ct.key+".count", len(tCtx.XdsResources[ct.xdsType])))
+	}
+
+	// Counted over the whole table so that resource types not listed above, for
+	// example those injected by an extension server, are still reflected.
+	var total int
+	for _, resources := range tCtx.XdsResources {
+		total += len(resources)
+	}
+
+	return append(attrs, attribute.Int("xds-resources.total.count", total))
 }
 
 // Translator translates the xDS IR into xDS resources.
@@ -111,21 +161,21 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	// Record what this translation is about to chew through on the enclosing span, so
 	// that a slow build can be told apart from a build of a bigger input. This covers
 	// the whole input, including the phases below that are too cheap to get a span.
-	httpRoutes := countIRHTTPRoutes(xdsIR.HTTP)
-	// The phase spans are ended as each phase completes; EndInFlight only fires when a
-	// phase panicked, so that the phase that failed is still in the trace.
-	phases := traces.NewPhaseTracker(ctx, tracer)
-	defer phases.EndInFlight()
-
+	irHTTPRoutes := countIRHTTPRoutes(xdsIR.HTTP)
 	trace.SpanFromContext(ctx).SetAttributes(
 		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
-		attribute.Int("http-routes.count", httpRoutes),
+		attribute.Int("ir-http-routes.count", irHTTPRoutes),
 		attribute.Int("tcp-listeners.count", len(xdsIR.TCP)),
 		attribute.Int("udp-listeners.count", len(xdsIR.UDP)),
 		attribute.Int("backend-clusters.count", len(xdsIR.BackendClusters)),
 		attribute.Int("envoy-patch-policies.count", len(xdsIR.EnvoyPatchPolicies)),
 		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
 	)
+
+	// Each phase ends its own span; the deferred call closes and marks the phase that
+	// was in flight when a phase panics, so the failing phase stays in the trace.
+	phases := traces.NewPhaseTracker(ctx, tracer)
+	defer phases.EndInFlight()
 
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 
@@ -148,7 +198,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 
 	phases.Start("XdsTranslator.processHTTPListenerXdsTranslation",
 		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
-		attribute.Int("http-routes.count", httpRoutes),
+		attribute.Int("ir-http-routes.count", irHTTPRoutes),
 	)
 	if err := t.processHTTPListenerXdsTranslation(
 		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
@@ -168,9 +218,10 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	}
 
 	// This span stays at zero duration when no extension server is loaded, which is
-	// itself the answer to "are the extension hooks in play?".
+	// itself the answer to "are the extension hooks in play?". The hook runs once per
+	// generated xDS listener, which is what drives its duration, not the IR listeners.
 	phases.Start("XdsTranslator.notifyExtensionServerAboutListeners",
-		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
+		attribute.Int("xds-resources.listeners.count", len(tCtx.XdsResources[resourcev3.ListenerType])),
 	)
 	if err := t.notifyExtensionServerAboutListeners(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
@@ -245,7 +296,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	//
 	// ValidateAll walks every field of every generated resource, so its cost grows with
 	// the size of the snapshot rather than with the size of the input IR.
-	phases.Start("ResourceVersionTable.ValidateAll", xdsResourceCountAttrs(tCtx)...)
+	phases.Start("XdsTranslator.validateAllXdsResources", xdsResourceCountAttrs(tCtx)...)
 	if err := tCtx.ValidateAll(); err != nil {
 		errs = errors.Join(errs, err)
 	}

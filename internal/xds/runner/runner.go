@@ -42,6 +42,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	"github.com/envoyproxy/gateway/internal/xds/server/kubejwt"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
+	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
@@ -329,9 +330,15 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					}
 				}
 
-				translateCtx, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
-				result, err := t.Translate(translateCtx, val.XdsIR)
-				translateSpan.End()
+				// The span is ended by a deferred call inside the closure: the translator
+				// panics on some inputs and HandleSubscription recovers from it, and an
+				// unended span is never exported, so a plain End() here would drop the
+				// stage span and the input sizes recorded on it.
+				result, err := func() (*xtypes.ResourceVersionTable, error) {
+					translateCtx, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
+					defer translateSpan.End()
+					return t.Translate(translateCtx, val.XdsIR)
+				}()
 				if err != nil {
 					traceLogger.Error(err, "skipped publishing xds resources: failed to translate xds ir")
 					errChan <- err

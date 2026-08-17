@@ -25,6 +25,9 @@ import (
 //	phases.Start("Translator.processRoutes", attribute.Int("routes.count", len(routes)))
 //	processRoutes(routes)
 //	phases.End()
+//
+// Phase spans stay flat: Start does not hand back the phase's context, so a span
+// started inside a phase parents to the enclosing span, not to the phase.
 type PhaseTracker struct {
 	ctx      context.Context
 	tracer   trace.Tracer

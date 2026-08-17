@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"maps"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,6 +54,37 @@ const (
 	// to convert it into an ephemeral port.
 	wellKnownPortShift = 10000
 )
+
+var tracer = otel.Tracer("envoy-gateway/gateway-api/translator")
+
+// inputSizeAttrs reports the size of the resource tree a translation is about to
+// process, so that a slow translation can be attributed to a bigger input instead
+// of being correlated against other signals by hand.
+//
+// These are the counts of the resources as they arrive. Counts derived during the
+// translation, for example the gateways that were accepted or the routes that are
+// relevant to them, use distinct keys so that the two are never conflated.
+func inputSizeAttrs(resources *resource.Resources) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		attribute.Int("gateways.count", len(resources.Gateways)),
+		attribute.Int("listener-sets.count", len(resources.ListenerSets)),
+		attribute.Int("http-routes.count", len(resources.HTTPRoutes)),
+		attribute.Int("grpc-routes.count", len(resources.GRPCRoutes)),
+		attribute.Int("tls-routes.count", len(resources.TLSRoutes)),
+		attribute.Int("tcp-routes.count", len(resources.TCPRoutes)),
+		attribute.Int("udp-routes.count", len(resources.UDPRoutes)),
+		attribute.Int("backends.count", len(resources.Backends)),
+		attribute.Int("services.count", len(resources.Services)),
+		attribute.Int("endpoint-slices.count", len(resources.EndpointSlices)),
+		attribute.Int("client-traffic-policies.count", len(resources.ClientTrafficPolicies)),
+		attribute.Int("backend-traffic-policies.count", len(resources.BackendTrafficPolicies)),
+		attribute.Int("security-policies.count", len(resources.SecurityPolicies)),
+		attribute.Int("backend-tls-policies.count", len(resources.BackendTLSPolicies)),
+		attribute.Int("envoy-extension-policies.count", len(resources.EnvoyExtensionPolicies)),
+		attribute.Int("extension-server-policies.count", len(resources.ExtensionServerPolicies)),
+		attribute.Int("envoy-patch-policies.count", len(resources.EnvoyPatchPolicies)),
+	}
+}
 
 var _ TranslatorManager = (*Translator)(nil)
 
@@ -278,8 +310,8 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	// that a slow translation can be told apart from a translation of a bigger input.
 	trace.SpanFromContext(ctx).SetAttributes(inputSizeAttrs(resources)...)
 
-	// The phase spans are ended as each phase completes; EndInFlight only fires when a
-	// phase panicked, so that the phase that failed is still in the trace.
+	// Each phase ends its own span; the deferred call closes and marks the phase that
+	// was in flight when a phase panics, so the failing phase stays in the trace.
 	phases := traces.NewPhaseTracker(ctx, tracer)
 	defer phases.EndInFlight()
 
@@ -420,7 +452,7 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	// Process BackendTrafficPolicies
 	phases.Start("GatewayApiTranslator.ProcessBackendTrafficPolicies",
 		attribute.Int("backend-traffic-policies.count", len(resources.BackendTrafficPolicies)),
-		attribute.Int("attached-routes.count", len(routes)),
+		attribute.Int("relevant-routes.count", len(routes)),
 	)
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
 	phases.End()
@@ -429,11 +461,11 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	// after BackendTrafficPolicies are applied because a CONNECT upgrade
 	// replaces a route's path matcher with Envoy's CONNECT matcher, which
 	// changes which routes can overlap.
-	// These count the routes that actually attached to a listener, not the routes in
-	// the input, hence the distinct keys.
+	// These count the routes that are relevant to our Gateways, which is what the
+	// phase actually walks, not the routes in the input, hence the distinct keys.
 	phases.Start("GatewayApiTranslator.checkRouteOverlaps",
-		attribute.Int("attached-http-routes.count", len(httpRoutes)),
-		attribute.Int("attached-grpc-routes.count", len(grpcRoutes)),
+		attribute.Int("relevant-http-routes.count", len(httpRoutes)),
+		attribute.Int("relevant-grpc-routes.count", len(grpcRoutes)),
 	)
 	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
 	phases.End()
@@ -441,7 +473,7 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	// Process SecurityPolicies
 	phases.Start("GatewayApiTranslator.ProcessSecurityPolicies",
 		attribute.Int("security-policies.count", len(resources.SecurityPolicies)),
-		attribute.Int("attached-routes.count", len(routes)),
+		attribute.Int("relevant-routes.count", len(routes)),
 	)
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, acceptedGateways, routes, resources, xdsIR)
@@ -450,7 +482,7 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	// Process EnvoyExtensionPolicies
 	phases.Start("GatewayApiTranslator.ProcessEnvoyExtensionPolicies",
 		attribute.Int("envoy-extension-policies.count", len(resources.EnvoyExtensionPolicies)),
-		attribute.Int("attached-routes.count", len(routes)),
+		attribute.Int("relevant-routes.count", len(routes)),
 	)
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
