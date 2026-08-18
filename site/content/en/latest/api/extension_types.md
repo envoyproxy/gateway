@@ -1472,13 +1472,15 @@ _Appears in:_
 Debounce defines how Envoy Gateway coalesces bursts of resource changes before
 retranslating and pushing new configuration to Envoy Proxy.
 
-Without debouncing, every resource change is translated and pushed on its own.
-In large clusters with heavy EndpointSlice churn this can push updates to Envoy
-multiple times per second, causing redundant load balancer rebuilds in the
-proxies and wasted translation work in the control plane.
+Without debouncing, each resource change is translated and pushed on its own, so a
+burst of changes costs a translation and a push per change even though only the
+resulting state matters. That spends control plane CPU on work that is immediately
+superseded, and makes the proxies apply configuration that will be replaced moments
+later.
 
-Debouncing merges changes that arrive close together into a single translation.
-The tradeoff is that propagation of a change may be delayed by up to Max.
+Debouncing merges changes that arrive close together into a single translation, so
+the cost of a burst approaches that of a single change. The tradeoff is that
+propagation of a change may be delayed by up to Max.
 
 _Appears in:_
 - [EnvoyGateway](#envoygateway)

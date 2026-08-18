@@ -160,8 +160,6 @@ func (r *Runner) Name() string {
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
-	// Resolve the debounce settings up front so that a malformed duration fails
-	// startup loudly instead of on every update.
 	debounceEnabled, debounceAfter, debounceMax, err := r.EnvoyGateway.DebounceSettings()
 	if err != nil {
 		return err
