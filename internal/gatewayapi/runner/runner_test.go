@@ -67,6 +67,57 @@ func TestRunner(t *testing.T) {
 	}, time.Second*1, time.Millisecond*20)
 }
 
+func TestRunnerDebounceConfig(t *testing.T) {
+	newRunner := func(t *testing.T, debounce *egv1a1.Debounce) *Runner {
+		cfg, err := config.New(os.Stdout, os.Stderr)
+		require.NoError(t, err)
+		cfg.EnvoyGateway.Debounce = debounce
+		return New(&Config{
+			Server:            *cfg,
+			ProviderResources: new(message.ProviderResources),
+			RunnerErrors:      new(message.RunnerErrors),
+			XdsIR:             new(message.XdsIR),
+			InfraIR:           new(message.InfraIR),
+		})
+	}
+	duration := func(s string) *gwapiv1.Duration {
+		d := gwapiv1.Duration(s)
+		return &d
+	}
+
+	t.Run("disabled", func(t *testing.T) {
+		r := newRunner(t, nil)
+		require.NoError(t, r.Start(t.Context()))
+	})
+
+	t.Run("enabled with valid durations", func(t *testing.T) {
+		r := newRunner(t, &egv1a1.Debounce{
+			Enable: new(true),
+			After:  duration("50ms"),
+			Max:    duration("1s"),
+		})
+		require.NoError(t, r.Start(t.Context()))
+	})
+
+	// A malformed duration must fail startup rather than surface on every update.
+	t.Run("malformed after fails startup", func(t *testing.T) {
+		r := newRunner(t, &egv1a1.Debounce{
+			Enable: new(true),
+			After:  duration("not-a-duration"),
+		})
+		require.ErrorContains(t, r.Start(t.Context()), "debounce.after")
+	})
+
+	t.Run("max shorter than after fails startup", func(t *testing.T) {
+		r := newRunner(t, &egv1a1.Debounce{
+			Enable: new(true),
+			After:  duration("5s"),
+			Max:    duration("1s"),
+		})
+		require.ErrorContains(t, r.Start(t.Context()), "debounce.max")
+	})
+}
+
 // setupTestRunner creates a test runner with populated stores and keyCache
 func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	pResources := new(message.ProviderResources)

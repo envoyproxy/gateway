@@ -23,6 +23,17 @@ type Metadata struct {
 	Message MessageName
 }
 
+// DebounceOptions configures time-based coalescing of watchable updates.
+type DebounceOptions struct {
+	// After is the quiet period. A pending batch of updates is flushed once no
+	// new update has arrived for this duration.
+	After time.Duration
+
+	// Max bounds how long an update may be held before a flush is forced, so
+	// that sustained churn cannot delay propagation indefinitely.
+	Max time.Duration
+}
+
 func PublishMetric(meta Metadata, count int) {
 	watchablePublishTotal.WithSuccess(meta.LabelValues()...).Add(float64(count))
 }
@@ -87,6 +98,33 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 	subscription <-chan watchable.Snapshot[K, V],
 	handle func(updateFunc Update[K, V], errChans chan error),
 ) {
+	handleSubscription(l, meta, subscription, handle, nil)
+}
+
+// HandleSubscriptionWithDebounce is HandleSubscription with time-based coalescing:
+// bursts of updates are merged before being handed off, which bounds how often the
+// handler runs when the upstream source is churning.
+//
+// A pending batch is flushed when either no new update has arrived for After, or the
+// batch has been held for Max. The former keeps propagation fast for isolated changes;
+// the latter caps how long propagation can be delayed while changes keep arriving.
+func HandleSubscriptionWithDebounce[K comparable, V any](l logging.Logger,
+	meta Metadata,
+	subscription <-chan watchable.Snapshot[K, V],
+	handle func(updateFunc Update[K, V], errChans chan error),
+	debounce DebounceOptions,
+) {
+	handleSubscription(l, meta, subscription, handle, &debounce)
+}
+
+// handleSubscription implements both entry points. A nil debounce selects the
+// undebounced loop, in which every delivered snapshot is handled immediately.
+func handleSubscription[K comparable, V any](l logging.Logger,
+	meta Metadata,
+	subscription <-chan watchable.Snapshot[K, V],
+	handle func(updateFunc Update[K, V], errChans chan error),
+	debounce *DebounceOptions,
+) {
 	// TODO: find a suitable value
 	errChans := make(chan error, 10)
 	go func() {
@@ -97,6 +135,8 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 	}()
 	defer close(errChans)
 
+	// The initial snapshot is never debounced: it is the bootstrap state, and
+	// delaying it would delay the first translation for no benefit.
 	if snapshot, ok := <-subscription; ok {
 		for k, v := range snapshot.State {
 			handleWithCrashRecovery(l, handle, Update[K, V]{
@@ -105,11 +145,119 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 			}, meta, errChans)
 		}
 	}
+
+	if debounce != nil {
+		handleDebounced(l, meta, subscription, handle, errChans, *debounce)
+		return
+	}
+
 	for snapshot := range subscription {
 		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
 
 		for _, update := range coalesceUpdates(l, snapshot.Updates) {
 			handleWithCrashRecovery(l, handle, Update[K, V](update), meta, errChans)
+		}
+	}
+}
+
+// handleDebounced consumes the subscription, merging updates that arrive close
+// together into a single batch before calling handle.
+//
+// A batch is flushed when the quiet period elapses with no new update, when the
+// maximum delay is reached, or when the subscription closes. Note that while
+// handle is running the subscription is not being read, so further updates
+// accumulate in the watchable library's own coalescer; the next batch therefore
+// starts fresh once handle returns.
+func handleDebounced[K comparable, V any](
+	l logging.Logger,
+	meta Metadata,
+	subscription <-chan watchable.Snapshot[K, V],
+	handle func(updateFunc Update[K, V], errChans chan error),
+	errChans chan error,
+	debounce DebounceOptions,
+) {
+	var (
+		pending []watchable.Update[K, V]
+		// quietTimer is reset by every new update; maxTimer is armed once per
+		// batch and deliberately not reset, so it caps the total hold time.
+		quietTimer, maxTimer *time.Timer
+		quietC, maxC         <-chan time.Time
+		batchStartedAt       time.Time
+	)
+
+	// Go 1.23 and later guarantee that Stop and Reset never leave a stale value
+	// in the timer channel, so no draining is needed here.
+	disarm := func() {
+		if quietTimer != nil {
+			quietTimer.Stop()
+		}
+		if maxTimer != nil {
+			maxTimer.Stop()
+		}
+		quietC, maxC = nil, nil
+	}
+
+	flush := func(reason string) {
+		disarm()
+		if len(pending) == 0 {
+			return
+		}
+
+		batched := len(pending)
+		updates := coalesceUpdates(l, pending)
+		pending = nil
+
+		// coalesceUpdates already logs when it merges anything, and the flush
+		// reason is carried on the metric below, so nothing is logged here: this
+		// runs on the hot path of a churning cluster.
+		labels := meta.LabelValues()
+		watchableDebouncePending.With(labels...).Record(float64(batched))
+		watchableDebounceDelaySeconds.With(labels...).Record(time.Since(batchStartedAt).Seconds())
+		watchableDebounceFlushTotal.With(append(meta.LabelValues(), debounceReasonLabel.Value(reason))...).Increment()
+
+		for _, update := range updates {
+			handleWithCrashRecovery(l, handle, Update[K, V](update), meta, errChans)
+		}
+	}
+
+	for {
+		select {
+		case snapshot, ok := <-subscription:
+			if !ok {
+				// Deliver whatever is still pending rather than dropping it.
+				flush(debounceReasonClose)
+				return
+			}
+			watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
+
+			if len(snapshot.Updates) == 0 {
+				continue
+			}
+
+			if len(pending) == 0 {
+				batchStartedAt = time.Now()
+				if maxTimer == nil {
+					maxTimer = time.NewTimer(debounce.Max)
+				} else {
+					maxTimer.Reset(debounce.Max)
+				}
+				maxC = maxTimer.C
+			}
+			pending = append(pending, snapshot.Updates...)
+
+			if quietTimer == nil {
+				quietTimer = time.NewTimer(debounce.After)
+			} else {
+				quietTimer.Stop()
+				quietTimer.Reset(debounce.After)
+			}
+			quietC = quietTimer.C
+
+		case <-quietC:
+			flush(debounceReasonQuiet)
+
+		case <-maxC:
+			flush(debounceReasonMax)
 		}
 	}
 }

@@ -68,6 +68,10 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		return err
 	}
 
+	if err := validateEnvoyGatewayDebounce(eg.Debounce); err != nil {
+		return err
+	}
+
 	if eg.ExtensionAPIs != nil && eg.ExtensionAPIs.DisableLua != nil && *eg.ExtensionAPIs.DisableLua == eg.ExtensionAPIs.EnableLua {
 		return fmt.Errorf("disableLua and enableLua must not have the same value")
 	}
@@ -350,6 +354,42 @@ func validateEnvoyGatewayXDSServer(xdsServer *egv1a1.XDSServer) error {
 		if !ok || v <= 0 {
 			return fmt.Errorf("xdsServer.maxReceiveMessageSize must be greater than zero")
 		}
+	}
+
+	return nil
+}
+
+func validateEnvoyGatewayDebounce(debounce *egv1a1.Debounce) error {
+	if debounce == nil {
+		return nil
+	}
+
+	after := egv1a1.DefaultDebounceAfter
+	if debounce.After != nil {
+		d, err := time.ParseDuration(string(*debounce.After))
+		if err != nil {
+			return fmt.Errorf("invalid debounce.after: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("debounce.after must be greater than zero")
+		}
+		after = d
+	}
+
+	maxDelay := egv1a1.DefaultDebounceMax
+	if debounce.Max != nil {
+		d, err := time.ParseDuration(string(*debounce.Max))
+		if err != nil {
+			return fmt.Errorf("invalid debounce.max: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("debounce.max must be greater than zero")
+		}
+		maxDelay = d
+	}
+
+	if maxDelay < after {
+		return fmt.Errorf("debounce.max (%s) must be greater than or equal to debounce.after (%s)", maxDelay, after)
 	}
 
 	return nil

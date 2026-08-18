@@ -82,6 +82,14 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	XDSServer *XDSServer `json:"xdsServer,omitempty"`
 
+	// Debounce defines how Envoy Gateway coalesces bursts of resource changes
+	// before retranslating and pushing new configuration to Envoy Proxy.
+	// If unspecified, debouncing is disabled and every change is translated and
+	// pushed on its own.
+	//
+	// +optional
+	Debounce *Debounce `json:"debounce,omitempty"`
+
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
 	// functionality. The specific rate limit service used here is the reference
@@ -244,6 +252,44 @@ type XDSServer struct {
 	//
 	// +optional
 	MaxReceiveMessageSize *resource.Quantity `json:"maxReceiveMessageSize,omitempty"`
+}
+
+// Debounce defines how Envoy Gateway coalesces bursts of resource changes before
+// retranslating and pushing new configuration to Envoy Proxy.
+//
+// Without debouncing, every resource change is translated and pushed on its own.
+// In large clusters with heavy EndpointSlice churn this can push updates to Envoy
+// multiple times per second, causing redundant load balancer rebuilds in the
+// proxies and wasted translation work in the control plane.
+//
+// Debouncing merges changes that arrive close together into a single translation.
+// The tradeoff is that propagation of a change may be delayed by up to Max.
+type Debounce struct {
+	// Enable turns on debouncing of resource changes.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Enable *bool `json:"enable,omitempty"`
+
+	// After is the quiet period. A pending batch of changes is flushed once no new
+	// change has arrived for this duration, so isolated changes still propagate
+	// promptly.
+	//
+	// If unspecified, defaults to 100ms.
+	//
+	// +optional
+	// +kubebuilder:default="100ms"
+	After *gwapiv1.Duration `json:"after,omitempty"`
+
+	// Max bounds how long a change may be held before a flush is forced. Under
+	// sustained churn the quiet period never elapses, so this caps how far behind
+	// the proxies' configuration can fall.
+	//
+	// Must be greater than or equal to After. If unspecified, defaults to 10s.
+	//
+	// +optional
+	// +kubebuilder:default="10s"
+	Max *gwapiv1.Duration `json:"max,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.

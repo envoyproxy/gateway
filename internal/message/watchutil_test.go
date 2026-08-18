@@ -292,3 +292,168 @@ func TestControllerResourceUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleSubscriptionDebounceQuietPeriod(t *testing.T) {
+	var m watchable.Map[string, any]
+
+	// Subscribe before producing anything, so the map is empty when the initial
+	// (deliberately undebounced) snapshot is delivered.
+	sub := m.Subscribe(context.Background())
+
+	go func() {
+		// Let HandleSubscription consume the empty initial snapshot first.
+		time.Sleep(150 * time.Millisecond)
+		// A burst of stores well inside the quiet period. These should all be
+		// merged into a single call carrying only the last value.
+		for i := range 10 {
+			m.Store("foo", i)
+			time.Sleep(5 * time.Millisecond)
+		}
+		// Idle long enough for the quiet period to elapse and flush, then close.
+		time.Sleep(500 * time.Millisecond)
+		m.Close()
+	}()
+
+	var updates []any
+	message.HandleSubscriptionWithDebounce(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		message.Metadata{Runner: "demo", Message: "demo"},
+		sub,
+		func(update message.Update[string, any], _ chan error) {
+			updates = append(updates, update.Value)
+		},
+		message.DebounceOptions{After: 200 * time.Millisecond, Max: 10 * time.Second},
+	)
+
+	// Without debouncing this burst yields up to 10 calls; with it the batch is
+	// coalesced down to the newest value for the key.
+	require.Len(t, updates, 1)
+	require.Equal(t, 9, updates[0])
+}
+
+func TestHandleSubscriptionDebounceMaxDelay(t *testing.T) {
+	var m watchable.Map[string, any]
+
+	stop := make(chan struct{})
+	go func() {
+		// Store continuously at an interval shorter than the quiet period, so the
+		// quiet period can never elapse. Only the max delay can force a flush.
+		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
+		i := 0
+		for {
+			select {
+			case <-stop:
+				m.Close()
+				return
+			case <-ticker.C:
+				i++
+				m.Store("foo", i)
+			}
+		}
+	}()
+
+	go func() {
+		// Give the max timer room to fire more than once, then stop the producer.
+		time.Sleep(700 * time.Millisecond)
+		close(stop)
+	}()
+
+	firstFlush := make(chan time.Duration, 1)
+	start := time.Now()
+
+	var updates int
+	message.HandleSubscriptionWithDebounce(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		message.Metadata{Runner: "demo", Message: "demo"},
+		m.Subscribe(context.Background()),
+		func(_ message.Update[string, any], _ chan error) {
+			updates++
+			select {
+			case firstFlush <- time.Since(start):
+			default:
+			}
+		},
+		// Quiet period far longer than the store interval, so only max can flush.
+		message.DebounceOptions{After: time.Hour, Max: 200 * time.Millisecond},
+	)
+
+	require.NotZero(t, updates, "max delay should have forced at least one flush")
+
+	elapsed := <-firstFlush
+	require.GreaterOrEqual(t, elapsed, 200*time.Millisecond,
+		"flush must not happen before the max delay")
+	require.Less(t, elapsed, 2*time.Second,
+		"max delay must not be reset by newly arriving updates")
+}
+
+func TestHandleSubscriptionDebounceFlushesOnClose(t *testing.T) {
+	var m watchable.Map[string, any]
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		m.Store("foo", "bar")
+		// Close well before the quiet period elapses; the pending update must
+		// still be delivered rather than dropped.
+		m.Close()
+	}()
+
+	var updates []message.Update[string, any]
+	message.HandleSubscriptionWithDebounce(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		message.Metadata{Runner: "demo", Message: "demo"},
+		m.Subscribe(context.Background()),
+		func(update message.Update[string, any], _ chan error) {
+			updates = append(updates, update)
+		},
+		message.DebounceOptions{After: 30 * time.Second, Max: time.Hour},
+	)
+
+	require.Len(t, updates, 1)
+	require.Equal(t, "foo", updates[0].Key)
+	require.Equal(t, "bar", updates[0].Value)
+}
+
+func TestHandleSubscriptionDebounceCoalescesAcrossKeys(t *testing.T) {
+	var m watchable.Map[string, any]
+
+	// Subscribe before producing anything, so the burst arrives as debounced
+	// updates rather than as part of the initial snapshot.
+	sub := m.Subscribe(context.Background())
+
+	go func() {
+		// Let HandleSubscription consume the empty initial snapshot first.
+		time.Sleep(150 * time.Millisecond)
+		m.Store("foo", 1)
+		m.Store("bar", 1)
+		m.Store("foo", 2)
+		m.Store("baz", 1)
+		m.Store("bar", 2)
+		m.Delete("baz")
+		// Let the quiet period elapse so the whole burst flushes as one batch.
+		time.Sleep(400 * time.Millisecond)
+		m.Close()
+	}()
+
+	got := map[string]any{}
+	deletes := map[string]bool{}
+	message.HandleSubscriptionWithDebounce(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		message.Metadata{Runner: "demo", Message: "demo"},
+		sub,
+		func(update message.Update[string, any], _ chan error) {
+			if update.Delete {
+				deletes[update.Key] = true
+				return
+			}
+			got[update.Key] = update.Value
+		},
+		message.DebounceOptions{After: 150 * time.Millisecond, Max: 10 * time.Second},
+	)
+
+	// Last write wins per key, and the trailing delete for "baz" survives.
+	require.Equal(t, 2, got["foo"])
+	require.Equal(t, 2, got["bar"])
+	require.True(t, deletes["baz"])
+	require.NotContains(t, got, "baz")
+}

@@ -7,8 +7,12 @@ package v1alpha1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestIsRunningOnKubernetes(t *testing.T) {
@@ -427,6 +431,95 @@ func TestGetKubernetesInfrastructureConfiguration(t *testing.T) {
 				got = tt.provider.GetKubernetesInfrastructureConfiguration()
 			})
 			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestDebounceDefaultsToDisabled(t *testing.T) {
+	eg := &EnvoyGateway{}
+	eg.SetEnvoyGatewayDefaults()
+
+	require.NotNil(t, eg.Debounce)
+	require.False(t, ptr.Deref(eg.Debounce.Enable, true))
+	require.Equal(t, gwapiv1.Duration("100ms"), *eg.Debounce.After)
+	require.Equal(t, gwapiv1.Duration("10s"), *eg.Debounce.Max)
+
+	enabled, after, maxDelay, err := eg.DebounceSettings()
+	require.NoError(t, err)
+	require.False(t, enabled, "debouncing must be opt-in")
+	require.Equal(t, DefaultDebounceAfter, after)
+	require.Equal(t, DefaultDebounceMax, maxDelay)
+}
+
+func TestDebounceSettings(t *testing.T) {
+	duration := func(s string) *gwapiv1.Duration {
+		d := gwapiv1.Duration(s)
+		return &d
+	}
+
+	tests := []struct {
+		name        string
+		debounce    *Debounce
+		wantEnabled bool
+		wantAfter   time.Duration
+		wantMax     time.Duration
+		wantErr     bool
+	}{
+		{
+			name:      "nil debounce",
+			wantAfter: DefaultDebounceAfter,
+			wantMax:   DefaultDebounceMax,
+		},
+		{
+			name:      "explicitly disabled ignores durations",
+			debounce:  &Debounce{Enable: new(false), After: duration("1s"), Max: duration("2s")},
+			wantAfter: DefaultDebounceAfter,
+			wantMax:   DefaultDebounceMax,
+		},
+		{
+			name:        "enabled with defaults",
+			debounce:    &Debounce{Enable: new(true)},
+			wantEnabled: true,
+			wantAfter:   DefaultDebounceAfter,
+			wantMax:     DefaultDebounceMax,
+		},
+		{
+			name:        "enabled with overrides",
+			debounce:    &Debounce{Enable: new(true), After: duration("250ms"), Max: duration("30s")},
+			wantEnabled: true,
+			wantAfter:   250 * time.Millisecond,
+			wantMax:     30 * time.Second,
+		},
+		{
+			name:     "enabled with malformed after",
+			debounce: &Debounce{Enable: new(true), After: duration("nope")},
+			wantErr:  true,
+		},
+		{
+			name:     "enabled with non positive max",
+			debounce: &Debounce{Enable: new(true), Max: duration("0s")},
+			wantErr:  true,
+		},
+		{
+			name:     "enabled with max shorter than after",
+			debounce: &Debounce{Enable: new(true), After: duration("5s"), Max: duration("1s")},
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			eg := &EnvoyGateway{EnvoyGatewaySpec: EnvoyGatewaySpec{Debounce: tt.debounce}}
+
+			enabled, after, maxDelay, err := eg.DebounceSettings()
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantEnabled, enabled)
+			require.Equal(t, tt.wantAfter, after)
+			require.Equal(t, tt.wantMax, maxDelay)
 		})
 	}
 }
