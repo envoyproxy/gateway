@@ -2646,57 +2646,15 @@ func TestIsTransientError(t *testing.T) {
 	}
 }
 
-// TestNamespacesMatchingSelector verifies that namespacesMatchingSelector returns exactly the
-// namespaces whose labels currently satisfy allowedRoutes.namespaces.selector, and returns nothing
-// when the listener doesn't use Selector-based namespace matching. This is the mechanism that lets
-// processGateways/processListenerSets track a selector-matched namespace in allAssociatedNamespaces
-// even when it contains no other resource yet, so that a later label change surfaces as a genuine
-// diff in Resources.Namespaces instead of relying on a force-translation escape hatch.
-func TestNamespacesMatchingSelector(t *testing.T) {
-	matching := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "matching",
-			Labels: map[string]string{"env": "prod"},
-		},
-	}
-	nonMatching := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "non-matching",
-			Labels: map[string]string{"env": "dev"},
-		},
-	}
-
-	fakeClient := fakeclient.NewClientBuilder().
-		WithScheme(envoygateway.GetScheme()).
-		WithObjects(matching, nonMatching).
-		Build()
-
-	r := &gatewayAPIReconciler{
-		client: fakeClient,
-		log:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
-	}
-
-	fromSelector := gwapiv1.NamespacesFromSelector
-	selectorRoutes := &gwapiv1.AllowedRoutes{
-		Namespaces: &gwapiv1.RouteNamespaces{
-			From:     &fromSelector,
-			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
-		},
-	}
-	names := r.namespacesMatchingSelector(context.Background(), selectorRoutes)
-	require.ElementsMatch(t, []string{"matching"}, names)
-
-	// Nil AllowedRoutes, and AllowedRoutes without Selector-based namespace matching, must not list.
-	require.Empty(t, r.namespacesMatchingSelector(context.Background(), nil))
-	require.Empty(t, r.namespacesMatchingSelector(context.Background(), &gwapiv1.AllowedRoutes{}))
-}
-
-// TestProcessListenerSetsTracksSelectorMatchedNamespace verifies that processListenerSets tracks a
-// namespace matched by a listener's allowedRoutes.namespaces.selector in allAssociatedNamespaces even
-// when that namespace contains no ListenerSet, route, or other resource of its own. Without this, a
-// namespace label change that newly (or no longer) matches the selector would never show up as a diff
-// in Resources.Namespaces, and translation would never be re-evaluated for it.
-func TestProcessListenerSetsTracksSelectorMatchedNamespace(t *testing.T) {
+// TestProcessListenerSetsDoesNotTrackRouteslessSelectorMatchedNamespace verifies that
+// processListenerSets does NOT track a namespace in allAssociatedNamespaces merely because its
+// labels satisfy a listener's allowedRoutes.namespaces.selector. Only namespaces containing an
+// indexed candidate Route (or another tracked resource) need tracking: the route processors
+// already add those namespaces regardless of selector matching, and re-fetch them fresh on every
+// reconcile, so a namespace with nothing in it has no effect on translation either way. Broadly
+// materializing every selector match would force a cluster-wide Namespace list per listener on
+// every reconcile and needlessly expand the translated snapshot.
+func TestProcessListenerSetsDoesNotTrackRouteslessSelectorMatchedNamespace(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 	scheme := envoygateway.GetScheme()
 
@@ -2726,8 +2684,8 @@ func TestProcessListenerSetsTracksSelectorMatchedNamespace(t *testing.T) {
 			},
 		},
 	}
-	// This namespace has no route, secret, or any other resource in it -- the only reason it should
-	// be tracked is that its labels match the ListenerSet listener's allowedRoutes selector.
+	// This namespace has no route, secret, or any other resource in it. Its labels match the
+	// ListenerSet listener's allowedRoutes selector, but that alone must not cause it to be tracked.
 	matchingEmptyNS := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "matching-empty",
@@ -2751,8 +2709,8 @@ func TestProcessListenerSetsTracksSelectorMatchedNamespace(t *testing.T) {
 	err := r.processListenerSets(context.Background(), "default/test-gateway", resourceMap, resourceTree)
 	require.NoError(t, err)
 
-	require.True(t, resourceMap.allAssociatedNamespaces.Has("matching-empty"),
-		"namespace matched by allowedRoutes.namespaces.selector must be tracked even without any resource in it")
+	require.False(t, resourceMap.allAssociatedNamespaces.Has("matching-empty"),
+		"a namespace matched only by allowedRoutes.namespaces.selector, with no candidate route or other resource, must not be tracked")
 }
 
 func TestProcessCTPCrlRefs(t *testing.T) {

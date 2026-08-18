@@ -1799,13 +1799,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
 
 		for _, listener := range gtw.Spec.Listeners {
-			// Track namespaces currently matched by this listener's allowedRoutes.namespaces.selector,
-			// even if they contain no other tracked resource yet, so a later label change that flips
-			// selector matching always shows up as a diff in Resources.Namespaces.
-			for _, ns := range r.namespacesMatchingSelector(ctx, listener.AllowedRoutes) {
-				resourceMap.allAssociatedNamespaces.Insert(ns)
-			}
-
 			// Get Secret for gateway if it exists.
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
@@ -2115,13 +2108,6 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 		}
 
 		for _, listener := range ls.Spec.Listeners {
-			// Track namespaces currently matched by this listener's allowedRoutes.namespaces.selector,
-			// even if they contain no other tracked resource yet, so a later label change that flips
-			// selector matching always shows up as a diff in Resources.Namespaces.
-			for _, ns := range r.namespacesMatchingSelector(ctx, listener.AllowedRoutes) {
-				resourceMap.allAssociatedNamespaces.Insert(ns)
-			}
-
 			// Listener TLS is optional; only process when TLS termination occurs.
 			if !isListenerEntryTerminatesTLS(&listener) {
 				continue
@@ -2383,11 +2369,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				// changing a namespace's labels after an HTTPRoute in it has been evaluated should trigger re-evaluation.
 				// It's hard to determine which Gateway/GatewayClass(es) are affected by a namespace label change,
 				// so we enqueue all GatewayClasses for reconciliation.
-				// processGateways/processListenerSets track every namespace matched by a listener's
-				// allowedRoutes.namespaces.selector (see namespacesMatchingSelector), so the resulting
-				// Resources.Namespaces diff (or lack of one) lets the normal reflect.DeepEqual dedup
-				// decide whether a retranslation is actually needed; changes to unrelated namespace
-				// labels reconcile but correctly no-op instead of forcing a retranslation.
+				// Any namespace holding a candidate Route is already tracked in allAssociatedNamespaces by
+				// the route processors (processHTTPRoutes et al.) regardless of whether it currently
+				// satisfies any listener's selector, and is re-fetched fresh on every reconcile (see the
+				// allAssociatedNamespaces loop that builds gwcResource.Namespaces). So a label change on a
+				// namespace that actually contains a candidate route always shows up as a genuine diff in
+				// Resources.Namespaces and triggers a retranslation; a label change on any other namespace
+				// touches nothing tracked and correctly no-ops via the normal reflect.DeepEqual dedup.
 				if !r.hasSelectorAllowedRoutesListener(ctx) {
 					return nil
 				}
