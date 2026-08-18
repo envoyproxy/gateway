@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -901,23 +902,42 @@ type LokiQueryResponse struct {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
-	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
-		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
-		return
-	}
 	dumpedNamespaces := []string{"envoy-gateway-system"}
 	if IsGatewayNamespaceMode() {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
 	}
 
-	runCollectAndDump(t, rest, tb.WithCollectedNamespaces(dumpedNamespaces))
+	runCollectAndDump(t, rest,
+		tb.WithCollectedNamespaces(dumpedNamespaces),
+	)
 }
 
 func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
-	result, _ := tb.CollectResult(t.Context(), rest, opts...)
-	for r, data := range result {
-		tlog.Logf(t, "\nfilename: %s", r)
-		tlog.Logf(t, "\ndata: \n%s\n", data)
+	artifactsDir := os.Getenv("E2E_ARTIFACTS_DIR")
+	if artifactsDir == "" {
+		artifactsDir = "artifacts/e2e"
+	}
+
+	root := filepath.Clean(artifactsDir)
+	basename := fmt.Sprintf("%s-%s", t.Name(), time.Now().Format("2006-01-02T15_04_05"))
+	bundlePath := filepath.Join(root, strings.TrimSuffix(basename, ".tar.gz"))
+	// Guard against t.Name() escaping the artifacts root (e.g. via "..") before
+	// it reaches the filesystem sink below.
+	if bundlePath != root && !strings.HasPrefix(bundlePath, root+string(os.PathSeparator)) {
+		tlog.Logf(t, "refusing to create e2e artifacts directory outside of %s: %s", root, bundlePath)
+		return
+	}
+
+	// bundlePath is validated above to stay within root
+	if err := os.MkdirAll(bundlePath, 0o755); err != nil { // nolint:gosec
+		tlog.Logf(t, "failed to create e2e artifacts directory %s: %v", bundlePath, err)
+	} else {
+		opts = append(opts, tb.WithBundlePath(bundlePath))
+	}
+
+	tlog.Logf(t, "creating e2e artifacts directory %s", bundlePath)
+	if _, err := tb.CollectResult(t.Context(), rest, opts...); err != nil {
+		tlog.Logf(t, "failed to collect all data: %v", err)
 	}
 }
 

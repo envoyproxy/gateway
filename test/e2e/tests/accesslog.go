@@ -308,7 +308,7 @@ var ALSTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 1)
 		})
 	},
 }

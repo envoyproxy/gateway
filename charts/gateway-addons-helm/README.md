@@ -116,6 +116,7 @@ helm uninstall eg-addons -n monitoring
 | loki.loki.commonConfig.replication_factor | int | `1` |  |
 | loki.loki.commonConfig.ring.kvstore.store | string | `"memberlist"` |  |
 | loki.loki.compactorAddress | string | `"loki"` |  |
+| loki.loki.limits_config.max_structured_metadata_size | int | `131072` |  |
 | loki.loki.limits_config.otlp_config.resource_attributes.attributes_config[0].action | string | `"index_label"` |  |
 | loki.loki.limits_config.otlp_config.resource_attributes.attributes_config[0].attributes[0] | string | `"exporter"` |  |
 | loki.loki.memberlist | string | `"loki-memberlist"` |  |
