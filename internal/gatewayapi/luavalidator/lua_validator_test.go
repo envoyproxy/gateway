@@ -6,6 +6,8 @@
 package luavalidator
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -454,6 +456,56 @@ func Test_path_denylist_overrides_allowlist(t *testing.T) {
 			name:                 "non-sensitive path under broad allowlist still allowed",
 			code:                 `function envoy_on_response(h) local f = io.open("/tmp/x", "w") if f then f:close() end end`,
 			expectedErrSubstring: "",
+		},
+	}
+	runAllowlistCases(t, proxy, tests)
+}
+
+// Test_path_symlink_resolution ensures the allowlist/denylist apply to the real symlink target, not
+// the lexical path: io.open resolves symlinks at open time, so a symlink under an allowed directory
+// must not be usable to escape the allowlist or reach a denied path.
+func Test_path_symlink_resolution(t *testing.T) {
+	dir := t.TempDir()
+	allowed := filepath.Join(dir, "allowed")
+	outside := filepath.Join(dir, "outside")
+	for _, d := range []string{allowed, outside} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// A symlink inside the allowed dir that escapes to a non-allowed sibling.
+	escape := filepath.Join(allowed, "escape")
+	if err := os.Symlink(outside, escape); err != nil {
+		t.Skipf("symlinks unsupported on this platform: %v", err)
+	}
+	// A symlink inside the allowed dir that aliases a hardcoded denied path.
+	etcLink := filepath.Join(allowed, "etclink")
+	if err := os.Symlink("/etc", etcLink); err != nil {
+		t.Skipf("symlinks unsupported on this platform: %v", err)
+	}
+
+	proxy := allowlistProxy([]string{allowed}, nil)
+
+	tests := []struct {
+		name                 string
+		code                 string
+		expectedErrSubstring string
+	}{
+		{
+			name:                 "real file under allowed dir is permitted",
+			code:                 `function envoy_on_response(h) local f = io.open("` + filepath.Join(allowed, "ok.txt") + `", "w") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "symlink escaping the allowed dir is denied",
+			code:                 `function envoy_on_response(h) io.open("` + filepath.Join(escape, "secret") + `", "r") end`,
+			expectedErrSubstring: "restricted for param",
+		},
+		{
+			name:                 "symlink aliasing a denied path is denied",
+			code:                 `function envoy_on_response(h) io.open("` + filepath.Join(etcLink, "passwd") + `", "r") end`,
+			expectedErrSubstring: "protected system path",
 		},
 	}
 	runAllowlistCases(t, proxy, tests)

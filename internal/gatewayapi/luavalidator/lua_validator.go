@@ -9,6 +9,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -151,6 +152,32 @@ func luaStringLiteral(s string) string {
 	return "[" + eq + "[" + prefix + s + "]" + eq + "]"
 }
 
+// resolveSymlinks returns an absolute, symlink-resolved form of p so the sandbox enforces its
+// allowlist/denylist against the real target rather than a lexical alias (e.g. an allowed dir that
+// contains a symlink pointing at /etc). Because p may not exist yet (e.g. a file opened for
+// writing), it resolves the longest existing ancestor and re-appends the remaining components,
+// falling back to the lexical clean when nothing resolves.
+func resolveSymlinks(p string) string {
+	abs := p
+	if !filepath.IsAbs(abs) {
+		abs = "/" + abs
+	}
+	abs = filepath.Clean(abs)
+
+	cur, tail := abs, ""
+	for {
+		if resolved, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(resolved, tail)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return abs
+		}
+		tail = filepath.Join(filepath.Base(cur), tail)
+		cur = parent
+	}
+}
+
 // newLuaState creates a new Lua state with global settings and resource limits applied
 // Returns the Lua state and a cancel function that must be called when done
 func (l *LuaValidator) newLuaState() (*lua.LState, context.CancelFunc) {
@@ -186,6 +213,12 @@ func (l *LuaValidator) runLua(code string) error {
 	_ = L.DoString(mockData)
 	// Inject the allowlists before security.lua, which reads and then clears them.
 	_ = L.DoString(l.allowlistData())
+	// Expose a symlink resolver so security.lua enforces the allowlist/denylist against the real
+	// filesystem target rather than a lexical alias. security.lua captures and then clears it.
+	L.SetGlobal("__lua_resolve_path", L.NewFunction(func(s *lua.LState) int {
+		s.Push(lua.LString(resolveSymlinks(s.CheckString(1))))
+		return 1
+	}))
 	// Execute Lua security wrappers (trusted code) to protect the gateway controller
 	// See security advisory: https://github.com/envoyproxy/gateway/security/advisories/GHSA-xrwg-mqj6-6m22
 	_ = L.DoString(securityData)

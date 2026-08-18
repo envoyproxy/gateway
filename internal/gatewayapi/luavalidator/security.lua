@@ -16,6 +16,10 @@ local allowed_env_vars = __lua_allowed_env_vars or {}
 __lua_allowed_paths = nil
 __lua_allowed_env_vars = nil
 
+-- Capture the Go-provided symlink resolver, then clear the global so user code cannot reach it.
+local resolve_path = __lua_resolve_path
+__lua_resolve_path = nil
+
 -- ============================================================================
 -- DENYLIST (hardcoded; always denied, even when the allowlist would permit them)
 -- ============================================================================
@@ -54,6 +58,18 @@ local function to_absolute_normalized_path(path)
     return absolute_path:match("^(.-)/*$")
 end
 
+-- normalized_real returns the normalized, symlink-resolved absolute form of path. Resolving through
+-- the Go helper means a symlink under an allowed directory cannot alias a path outside it (or a
+-- denied path): io.open resolves symlinks at open time, so lexical checks alone can be bypassed.
+-- Falls back to the lexical normalized form when no resolver is available (e.g. in unit tests).
+local function normalized_real(path)
+    local normalized = to_absolute_normalized_path(path)
+    if resolve_path and type(normalized) == "string" then
+        return to_absolute_normalized_path(resolve_path(normalized))
+    end
+    return normalized
+end
+
 local function contains_traversal(path)
     if not path or type(path) ~= "string" then
         return false
@@ -71,44 +87,34 @@ local function contains_traversal(path)
     return false
 end
 
--- is_allowed_path returns true when the path equals an allowed entry or falls within its subtree.
--- Both sides are normalized so relative, backslash, and double-slash forms match consistently.
--- The subtree check uses plain (non-pattern) string matching so allowed prefixes containing Lua
--- magic characters (e.g. "." in "/var/lib/app.v1") are treated literally and define an exact boundary.
-local function is_allowed_path(path)
-    if not path or type(path) ~= "string" then
-        return false
-    end
-
-    local normalized = to_absolute_normalized_path(path)
-
+-- is_allowed_path returns true when resolved (an already symlink-resolved, normalized path) equals
+-- an allowed entry or falls within its subtree. Entries are symlink-resolved too so both sides match
+-- consistently. The subtree check uses plain (non-pattern) string matching so allowed prefixes
+-- containing Lua magic characters (e.g. "." in "/var/lib/app.v1") are treated literally and define
+-- an exact boundary.
+local function is_allowed_path(resolved)
     for _, allowed in ipairs(allowed_paths) do
-        local normalized_allowed = to_absolute_normalized_path(allowed)
-
-        -- Skip blank entries: "" would match every absolute path and disable the sandbox.
-        if normalized_allowed ~= "" and
-            (normalized == normalized_allowed
-                or normalized:find(normalized_allowed .. "/", 1, true) == 1) then
-            return true
+        -- Skip blank entries (checked on the lexical form): "" would match every path.
+        if to_absolute_normalized_path(allowed) ~= "" then
+            local normalized_allowed = normalized_real(allowed)
+            if resolved == normalized_allowed
+                or resolved:find(normalized_allowed .. "/", 1, true) == 1 then
+                return true
+            end
         end
     end
 
     return false
 end
 
--- is_denied_path returns true when the path equals a denied entry or falls within its subtree.
--- Uses plain (non-pattern) matching so magic characters in entries are treated literally.
-local function is_denied_path(path)
-    if not path or type(path) ~= "string" then
-        return false
-    end
-
-    local normalized = to_absolute_normalized_path(path)
-
+-- is_denied_path returns true when resolved (an already symlink-resolved, normalized path) equals a
+-- denied entry or falls within its subtree. Entries are symlink-resolved too so both sides match
+-- consistently. Uses plain (non-pattern) matching so magic characters in entries are treated literally.
+local function is_denied_path(resolved)
     for _, denied in ipairs(denied_paths) do
-        local normalized_denied = to_absolute_normalized_path(denied)
-        if normalized == normalized_denied
-            or normalized:find(normalized_denied .. "/", 1, true) == 1 then
+        local normalized_denied = normalized_real(denied)
+        if resolved == normalized_denied
+            or resolved:find(normalized_denied .. "/", 1, true) == 1 then
             return true
         end
     end
@@ -126,11 +132,14 @@ local function validate_path(fn_name, path)
         error("path traversals are restricted for security")
     end
 
-    if is_denied_path(path) then
+    -- Resolve symlinks so the denylist/allowlist apply to the real target, not a lexical alias.
+    local resolved = normalized_real(path)
+
+    if is_denied_path(resolved) then
         error(fn_name .. " restricted for param " .. path .. " (protected system path)")
     end
 
-    if not is_allowed_path(path) then
+    if not is_allowed_path(resolved) then
         error(fn_name .. " restricted for param " .. path)
     end
 end
