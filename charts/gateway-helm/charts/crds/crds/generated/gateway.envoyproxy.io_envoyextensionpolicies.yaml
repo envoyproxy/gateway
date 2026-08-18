@@ -2345,6 +2345,23 @@ spec:
                           required:
                           - url
                           type: object
+                        local:
+                          description: |-
+                            Local is the local file containing the Wasm code.
+
+                            The file must be present on the Envoy proxy's filesystem.
+                            This is useful when the Wasm module is shipped as part of the Envoy
+                            proxy image or mounted via a volume.
+                          properties:
+                            filename:
+                              description: |-
+                                Filename is the path to the local file containing the Wasm code.
+                                The file must be present on the Envoy proxy's filesystem at the time
+                                the Wasm extension is loaded.
+                              type: string
+                          required:
+                          - filename
+                          type: object
                         pullPolicy:
                           description: |-
                             PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.
@@ -2364,13 +2381,15 @@ spec:
                           - enum:
                             - HTTP
                             - Image
+                            - Local
                           - enum:
                             - HTTP
                             - Image
                             - ConfigMap
+                            - Local
                           description: |-
                             Type is the type of the source of the Wasm code.
-                            Valid WasmCodeSourceType values are "HTTP" or "Image".
+                            Valid WasmCodeSourceType values are "HTTP", "Image", or "Local".
                           type: string
                       required:
                       - type
@@ -2380,6 +2399,8 @@ spec:
                         rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
                       - message: If type is Image, image field needs to be set.
                         rule: 'self.type == ''Image'' ? has(self.image) : !has(self.image)'
+                      - message: If type is Local, local field needs to be set.
+                        rule: 'self.type == ''Local'' ? has(self.local) : !has(self.local)'
                     config:
                       description: |-
                         Config is the configuration for the Wasm extension.

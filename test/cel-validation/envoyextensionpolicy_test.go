@@ -1115,6 +1115,92 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		// Wasm Local code source
+		{
+			desc: "valid Wasm with Local code source",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.LocalWasmCodeSourceType,
+								Local: &egv1a1.LocalWasmCodeSource{
+									Filename: "/etc/wasm/plugin.wasm",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid Wasm with Local type but no local field",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.LocalWasmCodeSourceType,
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"If type is Local, local field needs to be set.",
+			},
+		},
+		{
+			desc: "invalid Wasm with Local type but http field set",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.LocalWasmCodeSourceType,
+								Local: &egv1a1.LocalWasmCodeSource{
+									Filename: "/etc/wasm/plugin.wasm",
+								},
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/plugin.wasm",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"If type is HTTP, http field needs to be set.",
+			},
+		},
 		{
 			desc: "valid DynamicModule with minimal fields",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {

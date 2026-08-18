@@ -4117,9 +4117,21 @@ type Wasm struct {
 	// local HTTP server.
 	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
 
+	// LocalCode is the local file Wasm code source.
+	// The Wasm module is read directly from the Envoy proxy's filesystem,
+	// no download is needed.
+	LocalCode *LocalWasmCode `json:"localWasmCode,omitempty"`
+
 	// HostKeys is a list of keys for environment variables from the host envoy process
 	// that should be passed into the Wasm VM.
 	HostKeys []string `json:"hostKeys,omitempty"`
+}
+
+// LocalWasmCode holds the information associated with the local file Wasm code source.
+// +k8s:deepcopy-gen=true
+type LocalWasmCode struct {
+	// Filename is the path to the local file containing the Wasm code.
+	Filename string `json:"filename"`
 }
 
 // HTTPWasmCode holds the information associated with the HTTP Wasm code source.

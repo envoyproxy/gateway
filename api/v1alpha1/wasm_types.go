@@ -74,11 +74,12 @@ type Wasm struct {
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If type is HTTP, http field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Image' ? has(self.image) : !has(self.image)",message="If type is Image, image field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Local' ? has(self.local) : !has(self.local)",message="If type is Local, local field needs to be set."
 type WasmCodeSource struct {
 	// Type is the type of the source of the Wasm code.
-	// Valid WasmCodeSourceType values are "HTTP" or "Image".
+	// Valid WasmCodeSourceType values are "HTTP", "Image", or "Local".
 	//
-	// +kubebuilder:validation:Enum=HTTP;Image;ConfigMap
+	// +kubebuilder:validation:Enum=HTTP;Image;ConfigMap;Local
 	// +unionDiscriminator
 	Type WasmCodeSourceType `json:"type"`
 
@@ -94,6 +95,14 @@ type WasmCodeSource struct {
 	// +optional
 	Image *ImageWasmCodeSource `json:"image,omitempty"`
 
+	// Local is the local file containing the Wasm code.
+	//
+	// The file must be present on the Envoy proxy's filesystem.
+	// This is useful when the Wasm module is shipped as part of the Envoy
+	// proxy image or mounted via a volume.
+	// +optional
+	Local *LocalWasmCodeSource `json:"local,omitempty"`
+
 	// PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.
 	// This field is only applicable when the SHA256 field is not set.
 	//
@@ -107,7 +116,7 @@ type WasmCodeSource struct {
 }
 
 // WasmCodeSourceType specifies the types of sources for the Wasm code.
-// +kubebuilder:validation:Enum=HTTP;Image
+// +kubebuilder:validation:Enum=HTTP;Image;Local
 type WasmCodeSourceType string
 
 const (
@@ -116,7 +125,19 @@ const (
 
 	// ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.
 	ImageWasmCodeSourceType WasmCodeSourceType = "Image"
+
+	// LocalWasmCodeSourceType allows the user to specify the Wasm code as a local file
+	// on the Envoy proxy's filesystem.
+	LocalWasmCodeSourceType WasmCodeSourceType = "Local"
 )
+
+// LocalWasmCodeSource defines a local file containing the Wasm code.
+type LocalWasmCodeSource struct {
+	// Filename is the path to the local file containing the Wasm code.
+	// The file must be present on the Envoy proxy's filesystem at the time
+	// the Wasm extension is loaded.
+	Filename string `json:"filename"`
+}
 
 // HTTPWasmCodeSource defines the HTTP URL containing the Wasm code.
 type HTTPWasmCodeSource struct {
