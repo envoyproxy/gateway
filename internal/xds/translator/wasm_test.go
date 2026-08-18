@@ -1,6 +1,6 @@
 // Copyright Envoy Gateway Authors
 // SPDX-License-Identifier: Apache-2.0
-// The full text of the Apache license is available at the LICENSE file at
+// The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
 package translator
@@ -18,7 +18,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func getVmConfig(t *testing.T, cfg *wasmfilterv3.Wasm) *wasmv3.VmConfig {
+func getVMConfig(t *testing.T, cfg *wasmfilterv3.Wasm) *wasmv3.VmConfig {
 	t.Helper()
 	vmWrapper, ok := cfg.Config.Vm.(*wasmv3.PluginConfig_VmConfig)
 	require.True(t, ok, "expected PluginConfig_VmConfig")
@@ -44,7 +44,7 @@ func TestWasmConfigLocalSource(t *testing.T) {
 	require.Equal(t, "my-wasm", cfg.Config.Name)
 	require.False(t, cfg.Config.FailOpen)
 
-	vmConfig := getVmConfig(t, cfg)
+	vmConfig := getVMConfig(t, cfg)
 	require.Equal(t, "test-wasm", vmConfig.VmId)
 	require.Equal(t, vmRuntimeV8, vmConfig.Runtime)
 
@@ -74,7 +74,7 @@ func TestWasmConfigRemoteSource(t *testing.T) {
 	require.Equal(t, "my-wasm", cfg.Config.Name)
 	require.True(t, cfg.Config.FailOpen)
 
-	vmConfig := getVmConfig(t, cfg)
+	vmConfig := getVMConfig(t, cfg)
 
 	remote, ok := vmConfig.Code.Specifier.(*corev3.AsyncDataSource_Remote)
 	require.True(t, ok, "expected remote specifier")
@@ -111,7 +111,7 @@ func TestWasmConfigWithEnvVariables(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
-	vmConfig := getVmConfig(t, cfg)
+	vmConfig := getVMConfig(t, cfg)
 	require.NotNil(t, vmConfig.EnvironmentVariables)
 	require.Equal(t, []string{"API_KEY", "SECRET_TOKEN"}, vmConfig.EnvironmentVariables.HostEnvKeys)
 }
@@ -157,7 +157,7 @@ func TestBuildHCMWasmFilterLocal(t *testing.T) {
 	err = filter.GetTypedConfig().UnmarshalTo(wasmProto)
 	require.NoError(t, err)
 
-	vmConfig := getVmConfig(t, wasmProto)
+	vmConfig := getVMConfig(t, wasmProto)
 
 	local, ok := vmConfig.Code.Specifier.(*corev3.AsyncDataSource_Local)
 	require.True(t, ok, "expected local specifier")

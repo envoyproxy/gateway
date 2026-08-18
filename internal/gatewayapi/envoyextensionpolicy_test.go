@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -228,14 +227,14 @@ func Test_buildWasmLocalSource(t *testing.T) {
 	}
 
 	wasmConfig := &egv1a1.Wasm{
-		Name: ptr.To("my-local-wasm"),
+		Name: new("my-local-wasm"),
 		Code: egv1a1.WasmCodeSource{
 			Type: egv1a1.LocalWasmCodeSourceType,
 			Local: &egv1a1.LocalWasmCodeSource{
 				Filename: "/etc/wasm/plugins/test.wasm",
 			},
 		},
-		FailOpen: ptr.To(false),
+		FailOpen: new(false),
 	}
 
 	result, err := tr.buildWasm(
@@ -267,7 +266,7 @@ func Test_buildWasmLocalSourceNoCache(t *testing.T) {
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
 			Wasm: []egv1a1.Wasm{
 				{
-					Name: ptr.To("my-local-wasm"),
+					Name: new("my-local-wasm"),
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.LocalWasmCodeSourceType,
 						Local: &egv1a1.LocalWasmCodeSource{
