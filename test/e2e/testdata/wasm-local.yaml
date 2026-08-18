@@ -48,16 +48,16 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: local-wasm-gateway
+    - name: local-wasm-gateway
   hostnames: ["www.example.com"]
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /wasm-local
-    backendRefs:
-    - name: infra-backend-v1
-      port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /wasm-local
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyExtensionPolicy
@@ -66,13 +66,13 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-local-wasm-source
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-local-wasm-source
   wasm:
-  - name: wasm-filter
-    rootID: my_root_id
-    code:
-      type: Local
-      local:
-        filename: /etc/wasm/plugin.wasm
+    - name: wasm-filter
+      rootID: my_root_id
+      code:
+        type: Local
+        local:
+          filename: /etc/wasm/plugin.wasm
