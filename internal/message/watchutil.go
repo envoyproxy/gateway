@@ -85,7 +85,7 @@ func handleWithCrashRecovery[K comparable, V any](
 	watchableSubscribeDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
 }
 
-// HandleSubscription takes a channel returned by
+// HandleSubscriptionWithDebounce takes a channel returned by
 // watchable.Map.Subscribe() (or .SubscribeSubset()), and calls the
 // given function for each initial value in the map, and for any
 // updates.
@@ -93,33 +93,13 @@ func handleWithCrashRecovery[K comparable, V any](
 // This is better than simply iterating over snapshot.Updates because
 // it handles the case where the watchable.Map already contains
 // entries before .Subscribe is called.
-func HandleSubscription[K comparable, V any](l logging.Logger,
-	meta Metadata,
-	subscription <-chan watchable.Snapshot[K, V],
-	handle func(updateFunc Update[K, V], errChans chan error),
-) {
-	handleSubscription(l, meta, subscription, handle, nil)
-}
-
-// HandleSubscriptionWithDebounce is HandleSubscription with time-based coalescing:
-// bursts of updates are merged before being handed off, which bounds how often the
-// handler runs when the upstream source is churning.
 //
-// A pending batch is flushed when either no new update has arrived for After, or the
-// batch has been held for Max. The former keeps propagation fast for isolated changes;
-// the latter caps how long propagation can be delayed while changes keep arriving.
+// A non-nil debounce merges bursts of updates before handing them off, which bounds
+// how often handle runs when the upstream source is churning. A pending batch is
+// flushed when either no new update has arrived for After, or the batch has been held
+// for Max. The former keeps propagation fast for isolated changes; the latter caps how
+// long propagation can be delayed while changes keep arriving.
 func HandleSubscriptionWithDebounce[K comparable, V any](l logging.Logger,
-	meta Metadata,
-	subscription <-chan watchable.Snapshot[K, V],
-	handle func(updateFunc Update[K, V], errChans chan error),
-	debounce DebounceOptions,
-) {
-	handleSubscription(l, meta, subscription, handle, &debounce)
-}
-
-// handleSubscription implements both entry points. A nil debounce selects the
-// undebounced loop, in which every delivered snapshot is handled immediately.
-func handleSubscription[K comparable, V any](l logging.Logger,
 	meta Metadata,
 	subscription <-chan watchable.Snapshot[K, V],
 	handle func(updateFunc Update[K, V], errChans chan error),
@@ -158,6 +138,16 @@ func handleSubscription[K comparable, V any](l logging.Logger,
 			handleWithCrashRecovery(l, handle, Update[K, V](update), meta, errChans)
 		}
 	}
+}
+
+// HandleSubscription is HandleSubscriptionWithDebounce without debouncing: every
+// delivered snapshot is handled as soon as it arrives.
+func HandleSubscription[K comparable, V any](l logging.Logger,
+	meta Metadata,
+	subscription <-chan watchable.Snapshot[K, V],
+	handle func(updateFunc Update[K, V], errChans chan error),
+) {
+	HandleSubscriptionWithDebounce(l, meta, subscription, handle, nil)
 }
 
 // handleDebounced consumes the subscription, merging updates that arrive close

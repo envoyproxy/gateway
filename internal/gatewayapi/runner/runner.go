@@ -220,411 +220,409 @@ func (r *Runner) subscribeAndTranslate(
 	sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext],
 	debounce *message.DebounceOptions,
 ) {
-	handle := func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
-		message.PublishRunnerEventMetric(r.Name(), update.Delete)
+	message.HandleSubscriptionWithDebounce(
+		r.Logger,
+		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
+		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
+			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
-		parentCtx := context.Background()
-		if update.Value != nil && update.Value.Context != nil {
-			parentCtx = update.Value.Context
-		}
-
-		traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
-		defer span.End()
-		traceLogger := r.Logger.WithTrace(traceCtx)
-		traceLogger.Info("received an update", "key", update.Key)
-
-		valWrapper := update.Value
-		// There is only 1 key which is the controller name
-		// so when a delete is triggered, delete all keys
-		if update.Delete || valWrapper == nil || valWrapper.Resources == nil {
-			// Clear EnvoyProxy statuses before deleting to remove stale ancestor conditions
-			for key := range r.keyCache.EnvoyProxyStatus {
-				emptyStatus := &egv1a1.EnvoyProxyStatus{
-					Ancestors: []egv1a1.EnvoyProxyAncestorStatus{},
-				}
-				r.ProviderResources.EnvoyProxyStatuses.Store(key, emptyStatus)
-			}
-			r.deleteAllKeys()
-			return
-		}
-
-		val := valWrapper.Resources
-
-		// Add span attributes for observability
-		span.SetAttributes(
-			attribute.String("controller.key", update.Key),
-			attribute.Bool("update.delete", update.Delete),
-		)
-		if val != nil {
-			span.SetAttributes(attribute.Int("resources.count", len(*val)))
-		}
-
-		// Initialize keysToDelete with tracked keys (mark and sweep approach)
-		keysToDelete := r.keyCache.copy()
-
-		// Aggregate metric counters for batch publishing
-		var infraIRCount, xdsIRCount, gatewayStatusCount, listenerSetStatusCount, httpRouteStatusCount, grpcRouteStatusCount int
-		var tlsRouteStatusCount, tcpRouteStatusCount, udpRouteStatusCount int
-		var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
-		var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
-		var envoyproxyStatusCount int
-
-		// `aggregatedStatuses` aggregates status result of resources from all
-		// parents/ancestors, and then stores the status once for every resource.
-		aggregatedStatuses := struct {
-			HTTPRoutes              map[types.NamespacedName]aggregatedRouteStatus
-			GRPCRoutes              map[types.NamespacedName]aggregatedRouteStatus
-			TLSRoutes               map[types.NamespacedName]aggregatedRouteStatus
-			TCPRoutes               map[types.NamespacedName]aggregatedRouteStatus
-			UDPRoutes               map[types.NamespacedName]aggregatedRouteStatus
-			BackendTLSPolicies      map[types.NamespacedName]aggregatedPolicyStatus
-			ClientTrafficPolicies   map[types.NamespacedName]aggregatedPolicyStatus
-			BackendTrafficPolicies  map[types.NamespacedName]aggregatedPolicyStatus
-			SecurityPolicies        map[types.NamespacedName]aggregatedPolicyStatus
-			EnvoyExtensionPolicies  map[types.NamespacedName]aggregatedPolicyStatus
-			ExtensionServerPolicies map[message.NamespacedNameAndGVK]aggregatedPolicyStatus
-			EnvoyProxies            map[types.NamespacedName]*egv1a1.EnvoyProxyStatus
-		}{
-			HTTPRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
-			GRPCRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
-			TLSRoutes:               make(map[types.NamespacedName]aggregatedRouteStatus),
-			TCPRoutes:               make(map[types.NamespacedName]aggregatedRouteStatus),
-			UDPRoutes:               make(map[types.NamespacedName]aggregatedRouteStatus),
-			BackendTLSPolicies:      make(map[types.NamespacedName]aggregatedPolicyStatus),
-			ClientTrafficPolicies:   make(map[types.NamespacedName]aggregatedPolicyStatus),
-			BackendTrafficPolicies:  make(map[types.NamespacedName]aggregatedPolicyStatus),
-			SecurityPolicies:        make(map[types.NamespacedName]aggregatedPolicyStatus),
-			EnvoyExtensionPolicies:  make(map[types.NamespacedName]aggregatedPolicyStatus),
-			ExtensionServerPolicies: make(map[message.NamespacedNameAndGVK]aggregatedPolicyStatus),
-			EnvoyProxies:            make(map[types.NamespacedName]*egv1a1.EnvoyProxyStatus),
-		}
-
-		span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
-		for _, resources := range *val {
-			// Translate and publish IRs.
-			t := &gatewayapi.Translator{
-				GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
-				GatewayClassName:                gwapiv1.ObjectName(resources.GatewayClass.Name),
-				GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
-				EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-				BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-				SDSSecretRefEnabled:             r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableSDSSecretRef,
-				ControllerNamespace:             r.ControllerNamespace,
-				GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
-				MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
-				MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
-				PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
-				WasmCache:                       r.wasmCache,
-				RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
-				InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
-				Logger:                          traceLogger,
-				LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
+			parentCtx := context.Background()
+			if update.Value != nil && update.Value.Context != nil {
+				parentCtx = update.Value.Context
 			}
 
-			// If extensions are loaded, pass their supported groups/kinds to the translator
-			if extensions := r.EnvoyGateway.GetExtensionManagers(); len(extensions) > 0 {
-				var extGKs []schema.GroupKind
-				for _, em := range extensions {
-					for _, gvk := range em.Resources {
-						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
+			defer span.End()
+			traceLogger := r.Logger.WithTrace(traceCtx)
+			traceLogger.Info("received an update", "key", update.Key)
+
+			valWrapper := update.Value
+			// There is only 1 key which is the controller name
+			// so when a delete is triggered, delete all keys
+			if update.Delete || valWrapper == nil || valWrapper.Resources == nil {
+				// Clear EnvoyProxy statuses before deleting to remove stale ancestor conditions
+				for key := range r.keyCache.EnvoyProxyStatus {
+					emptyStatus := &egv1a1.EnvoyProxyStatus{
+						Ancestors: []egv1a1.EnvoyProxyAncestorStatus{},
 					}
-					// Include backend resources in extension group kinds for custom backend support
-					for _, gvk := range em.BackendResources {
-						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+					r.ProviderResources.EnvoyProxyStatuses.Store(key, emptyStatus)
+				}
+				r.deleteAllKeys()
+				return
+			}
+
+			val := valWrapper.Resources
+
+			// Add span attributes for observability
+			span.SetAttributes(
+				attribute.String("controller.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
+			if val != nil {
+				span.SetAttributes(attribute.Int("resources.count", len(*val)))
+			}
+
+			// Initialize keysToDelete with tracked keys (mark and sweep approach)
+			keysToDelete := r.keyCache.copy()
+
+			// Aggregate metric counters for batch publishing
+			var infraIRCount, xdsIRCount, gatewayStatusCount, listenerSetStatusCount, httpRouteStatusCount, grpcRouteStatusCount int
+			var tlsRouteStatusCount, tcpRouteStatusCount, udpRouteStatusCount int
+			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
+			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
+			var envoyproxyStatusCount int
+
+			// `aggregatedStatuses` aggregates status result of resources from all
+			// parents/ancestors, and then stores the status once for every resource.
+			aggregatedStatuses := struct {
+				HTTPRoutes              map[types.NamespacedName]aggregatedRouteStatus
+				GRPCRoutes              map[types.NamespacedName]aggregatedRouteStatus
+				TLSRoutes               map[types.NamespacedName]aggregatedRouteStatus
+				TCPRoutes               map[types.NamespacedName]aggregatedRouteStatus
+				UDPRoutes               map[types.NamespacedName]aggregatedRouteStatus
+				BackendTLSPolicies      map[types.NamespacedName]aggregatedPolicyStatus
+				ClientTrafficPolicies   map[types.NamespacedName]aggregatedPolicyStatus
+				BackendTrafficPolicies  map[types.NamespacedName]aggregatedPolicyStatus
+				SecurityPolicies        map[types.NamespacedName]aggregatedPolicyStatus
+				EnvoyExtensionPolicies  map[types.NamespacedName]aggregatedPolicyStatus
+				ExtensionServerPolicies map[message.NamespacedNameAndGVK]aggregatedPolicyStatus
+				EnvoyProxies            map[types.NamespacedName]*egv1a1.EnvoyProxyStatus
+			}{
+				HTTPRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
+				GRPCRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
+				TLSRoutes:               make(map[types.NamespacedName]aggregatedRouteStatus),
+				TCPRoutes:               make(map[types.NamespacedName]aggregatedRouteStatus),
+				UDPRoutes:               make(map[types.NamespacedName]aggregatedRouteStatus),
+				BackendTLSPolicies:      make(map[types.NamespacedName]aggregatedPolicyStatus),
+				ClientTrafficPolicies:   make(map[types.NamespacedName]aggregatedPolicyStatus),
+				BackendTrafficPolicies:  make(map[types.NamespacedName]aggregatedPolicyStatus),
+				SecurityPolicies:        make(map[types.NamespacedName]aggregatedPolicyStatus),
+				EnvoyExtensionPolicies:  make(map[types.NamespacedName]aggregatedPolicyStatus),
+				ExtensionServerPolicies: make(map[message.NamespacedNameAndGVK]aggregatedPolicyStatus),
+				EnvoyProxies:            make(map[types.NamespacedName]*egv1a1.EnvoyProxyStatus),
+			}
+
+			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
+			for _, resources := range *val {
+				// Translate and publish IRs.
+				t := &gatewayapi.Translator{
+					GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:                gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					SDSSecretRefEnabled:             r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableSDSSecretRef,
+					ControllerNamespace:             r.ControllerNamespace,
+					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
+					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
+					MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
+					PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
+					WasmCache:                       r.wasmCache,
+					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
+					Logger:                          traceLogger,
+					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
+				}
+
+				// If extensions are loaded, pass their supported groups/kinds to the translator
+				if extensions := r.EnvoyGateway.GetExtensionManagers(); len(extensions) > 0 {
+					var extGKs []schema.GroupKind
+					for _, em := range extensions {
+						for _, gvk := range em.Resources {
+							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+						}
+						// Include backend resources in extension group kinds for custom backend support
+						for _, gvk := range em.BackendResources {
+							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+						}
+					}
+					t.ExtensionGroupKinds = extGKs
+					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
+				}
+				// Translate to IR
+				_, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
+				result, err := t.Translate(resources)
+				translateToIRSpan.End()
+				if err != nil {
+					// Currently all errors that Translate returns should just be logged
+					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					// Notify the main control loop about translation errors. This may be a critical error in standalone mode, so
+					// notify the control loop in case this needs to be handled.
+					r.RunnerErrors.Store(r.Name(), message.NewWatchableError(err))
+				}
+
+				// Publish the IRs.
+				// Also validate the ir before sending it.
+				for key, val := range result.InfraIR {
+					logV := traceLogger.V(1).WithValues(string(message.InfraIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
+					}
+					if err := val.Validate(); err != nil {
+						traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
+						errChan <- err
+					} else {
+						r.InfraIR.Store(key, val)
+						infraIRCount++
+						// Track IR key for mark and sweep
+						r.keyCache.IR[key] = true
+						delete(keysToDelete.IR, key)
 					}
 				}
-				t.ExtensionGroupKinds = extGKs
-				traceLogger.Info("extension resources", "GVKs count", len(extGKs))
-			}
-			// Translate to IR
-			_, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
-			result, err := t.Translate(resources)
-			translateToIRSpan.End()
-			if err != nil {
-				// Currently all errors that Translate returns should just be logged
-				traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
-				// Notify the main control loop about translation errors. This may be a critical error in standalone mode, so
-				// notify the control loop in case this needs to be handled.
-				r.RunnerErrors.Store(r.Name(), message.NewWatchableError(err))
-			}
 
-			// Publish the IRs.
-			// Also validate the ir before sending it.
-			for key, val := range result.InfraIR {
-				logV := traceLogger.V(1).WithValues(string(message.InfraIRMessageName), key)
-				if logV.Enabled() {
-					logV.Info(val.JSONString())
-				}
-				if err := val.Validate(); err != nil {
-					traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
-					errChan <- err
-				} else {
-					r.InfraIR.Store(key, val)
-					infraIRCount++
-					// Track IR key for mark and sweep
-					r.keyCache.IR[key] = true
-					delete(keysToDelete.IR, key)
-				}
-			}
-
-			for key, val := range result.XdsIR {
-				logV := traceLogger.V(1).WithValues(string(message.XDSIRMessageName), key)
-				if logV.Enabled() {
-					logV.Info(val.JSONString())
-				}
-				if err := val.Validate(); err != nil {
-					traceLogger.Error(err, "unable to validate xds ir, skipped sending it")
-					errChan <- err
-				} else {
-					m := message.XdsIRWithContext{
-						XdsIR:   val,
-						Context: traceCtx,
+				for key, val := range result.XdsIR {
+					logV := traceLogger.V(1).WithValues(string(message.XDSIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
 					}
-					r.XdsIR.Store(key, &m)
-					xdsIRCount++
-				}
-			}
-
-			// Update Status
-			_, statusUpdateSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
-			if result.GatewayClass != nil {
-				key := utils.NamespacedName(result.GatewayClass)
-				r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
-			}
-
-			// Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
-			for _, gateway := range result.Gateways {
-				key := utils.NamespacedName(gateway)
-				r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
-				gatewayStatusCount++
-				delete(keysToDelete.GatewayStatus, key)
-				r.keyCache.GatewayStatus[key] = true
-			}
-			for _, listenerSet := range result.ListenerSets {
-				key := utils.NamespacedName(listenerSet)
-				r.ProviderResources.ListenerSetStatuses.Store(key, &listenerSet.Status)
-				listenerSetStatusCount++
-				delete(keysToDelete.ListenerSetStatus, key)
-				r.keyCache.ListenerSetStatus[key] = true
-			}
-
-			// Backend statuses have no parents, so they are not aggregated.
-			for _, backend := range result.Backends {
-				key := utils.NamespacedName(backend)
-				if len(backend.Status.Conditions) > 0 {
-					r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
-					backendStatusCount++
-				}
-				delete(keysToDelete.BackendStatus, key)
-				r.keyCache.BackendStatus[key] = true
-			}
-
-			// Resources which can belong to multiple GatewayClasses get their statuses aggregated,
-			// then stored once after iterating over all GatewayClasses.
-			for _, httpRoute := range result.HTTPRoutes {
-				if len(httpRoute.Status.Parents) != 0 {
-					key := utils.NamespacedName(httpRoute)
-					aggregatedStatuses.HTTPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.HTTPRoutes[key], &httpRoute.Status.RouteStatus, httpRoute.Generation)
-				}
-			}
-			for _, grpcRoute := range result.GRPCRoutes {
-				if len(grpcRoute.Status.Parents) != 0 {
-					key := utils.NamespacedName(grpcRoute)
-					aggregatedStatuses.GRPCRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.GRPCRoutes[key], &grpcRoute.Status.RouteStatus, grpcRoute.Generation)
-				}
-			}
-			for _, tlsRoute := range result.TLSRoutes {
-				if len(tlsRoute.Status.Parents) != 0 {
-					key := utils.NamespacedName(tlsRoute)
-					aggregatedStatuses.TLSRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TLSRoutes[key], &tlsRoute.Status.RouteStatus, tlsRoute.Generation)
-				}
-			}
-			for _, tcpRoute := range result.TCPRoutes {
-				if len(tcpRoute.Status.Parents) != 0 {
-					key := utils.NamespacedName(tcpRoute)
-					aggregatedStatuses.TCPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TCPRoutes[key], &tcpRoute.Status.RouteStatus, tcpRoute.Generation)
-				}
-			}
-			for _, udpRoute := range result.UDPRoutes {
-				if len(udpRoute.Status.Parents) != 0 {
-					key := utils.NamespacedName(udpRoute)
-					aggregatedStatuses.UDPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.UDPRoutes[key], &udpRoute.Status.RouteStatus, udpRoute.Generation)
-				}
-			}
-			for _, backendTLSPolicy := range result.BackendTLSPolicies {
-				if len(backendTLSPolicy.Status.Ancestors) != 0 {
-					key := utils.NamespacedName(backendTLSPolicy)
-					aggregatedStatuses.BackendTLSPolicies[key] = mergePolicyStatus(aggregatedStatuses.BackendTLSPolicies[key], &backendTLSPolicy.Status, backendTLSPolicy.Generation)
-				}
-			}
-			for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
-				if len(clientTrafficPolicy.Status.Ancestors) != 0 {
-					key := utils.NamespacedName(clientTrafficPolicy)
-					aggregatedStatuses.ClientTrafficPolicies[key] = mergePolicyStatus(aggregatedStatuses.ClientTrafficPolicies[key], &clientTrafficPolicy.Status, clientTrafficPolicy.Generation)
-				}
-			}
-			for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
-				if len(backendTrafficPolicy.Status.Ancestors) != 0 {
-					key := utils.NamespacedName(backendTrafficPolicy)
-					aggregatedStatuses.BackendTrafficPolicies[key] = mergePolicyStatus(aggregatedStatuses.BackendTrafficPolicies[key], &backendTrafficPolicy.Status, backendTrafficPolicy.Generation)
-				}
-			}
-			for _, securityPolicy := range result.SecurityPolicies {
-				if len(securityPolicy.Status.Ancestors) != 0 {
-					key := utils.NamespacedName(securityPolicy)
-					aggregatedStatuses.SecurityPolicies[key] = mergePolicyStatus(aggregatedStatuses.SecurityPolicies[key], &securityPolicy.Status, securityPolicy.Generation)
-				}
-			}
-			for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
-				if len(envoyExtensionPolicy.Status.Ancestors) != 0 {
-					key := utils.NamespacedName(envoyExtensionPolicy)
-					aggregatedStatuses.EnvoyExtensionPolicies[key] = mergePolicyStatus(aggregatedStatuses.EnvoyExtensionPolicies[key], &envoyExtensionPolicy.Status, envoyExtensionPolicy.Generation)
-				}
-			}
-			for _, extServerPolicy := range result.ExtensionServerPolicies {
-				policyStatus := gatewayapi.ExtServerPolicyStatusAsPolicyStatus(&extServerPolicy)
-				if len(policyStatus.Ancestors) != 0 {
-					key := message.NamespacedNameAndGVK{
-						NamespacedName:   utils.NamespacedName(&extServerPolicy),
-						GroupVersionKind: extServerPolicy.GroupVersionKind(),
+					if err := val.Validate(); err != nil {
+						traceLogger.Error(err, "unable to validate xds ir, skipped sending it")
+						errChan <- err
+					} else {
+						m := message.XdsIRWithContext{
+							XdsIR:   val,
+							Context: traceCtx,
+						}
+						r.XdsIR.Store(key, &m)
+						xdsIRCount++
 					}
-					aggregatedStatuses.ExtensionServerPolicies[key] = mergePolicyStatus(aggregatedStatuses.ExtensionServerPolicies[key], &policyStatus, extServerPolicy.GetGeneration())
 				}
-			}
-			// EnvoyProxy status
-			for _, ep := range result.EnvoyProxiesForGateways {
-				r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
-				aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
-			}
-			if ep := result.EnvoyProxyForGatewayClass; ep != nil {
-				r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
-				aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
-			}
-			statusUpdateSpan.End()
-		}
 
-		// Store the stauses of all objects atomically with the aggregated status.
-		for key, entry := range aggregatedStatuses.HTTPRoutes {
-			status.TruncateRouteParents(entry.status, entry.generation)
-			s := gwapiv1.HTTPRouteStatus{RouteStatus: *entry.status}
-			r.ProviderResources.HTTPRouteStatuses.Store(key, &s)
-			httpRouteStatusCount++
-			delete(keysToDelete.HTTPRouteStatus, key)
-			r.keyCache.HTTPRouteStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.GRPCRoutes {
-			status.TruncateRouteParents(entry.status, entry.generation)
-			s := gwapiv1.GRPCRouteStatus{RouteStatus: *entry.status}
-			r.ProviderResources.GRPCRouteStatuses.Store(key, &s)
-			grpcRouteStatusCount++
-			delete(keysToDelete.GRPCRouteStatus, key)
-			r.keyCache.GRPCRouteStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.TLSRoutes {
-			status.TruncateRouteParents(entry.status, entry.generation)
-			s := gwapiv1.TLSRouteStatus{RouteStatus: *entry.status}
-			r.ProviderResources.TLSRouteStatuses.Store(key, &s)
-			tlsRouteStatusCount++
-			delete(keysToDelete.TLSRouteStatus, key)
-			r.keyCache.TLSRouteStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.TCPRoutes {
-			status.TruncateRouteParents(entry.status, entry.generation)
-			s := gwapiv1.TCPRouteStatus{RouteStatus: *entry.status}
-			r.ProviderResources.TCPRouteStatuses.Store(key, &s)
-			tcpRouteStatusCount++
-			delete(keysToDelete.TCPRouteStatus, key)
-			r.keyCache.TCPRouteStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.UDPRoutes {
-			status.TruncateRouteParents(entry.status, entry.generation)
-			s := gwapiv1.UDPRouteStatus{RouteStatus: *entry.status}
-			r.ProviderResources.UDPRouteStatuses.Store(key, &s)
-			udpRouteStatusCount++
-			delete(keysToDelete.UDPRouteStatus, key)
-			r.keyCache.UDPRouteStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.BackendTLSPolicies {
-			status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
-			r.ProviderResources.BackendTLSPolicyStatuses.Store(key, entry.status)
-			backendTLSPolicyStatusCount++
-			delete(keysToDelete.BackendTLSPolicyStatus, key)
-			r.keyCache.BackendTLSPolicyStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.ClientTrafficPolicies {
-			status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
-			r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, entry.status)
-			clientTrafficPolicyStatusCount++
-			delete(keysToDelete.ClientTrafficPolicyStatus, key)
-			r.keyCache.ClientTrafficPolicyStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.BackendTrafficPolicies {
-			status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
-			r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, entry.status)
-			backendTrafficPolicyStatusCount++
-			delete(keysToDelete.BackendTrafficPolicyStatus, key)
-			r.keyCache.BackendTrafficPolicyStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.SecurityPolicies {
-			status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
-			r.ProviderResources.SecurityPolicyStatuses.Store(key, entry.status)
-			securityPolicyStatusCount++
-			delete(keysToDelete.SecurityPolicyStatus, key)
-			r.keyCache.SecurityPolicyStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.EnvoyExtensionPolicies {
-			status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
-			r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, entry.status)
-			envoyExtensionPolicyStatusCount++
-			delete(keysToDelete.EnvoyExtensionPolicyStatus, key)
-			r.keyCache.EnvoyExtensionPolicyStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.ExtensionServerPolicies {
-			status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
-			r.ProviderResources.ExtensionPolicyStatuses.Store(key, entry.status)
-			extensionServerPolicyStatusCount++
-			delete(keysToDelete.ExtensionServerPolicyStatus, key)
-			r.keyCache.ExtensionServerPolicyStatus[key] = true
-		}
-		for key, entry := range aggregatedStatuses.EnvoyProxies {
-			s := egv1a1.EnvoyProxyStatus{
-				Ancestors: entry.Ancestors,
+				// Update Status
+				_, statusUpdateSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
+				if result.GatewayClass != nil {
+					key := utils.NamespacedName(result.GatewayClass)
+					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
+				}
+
+				// Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
+				for _, gateway := range result.Gateways {
+					key := utils.NamespacedName(gateway)
+					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
+					gatewayStatusCount++
+					delete(keysToDelete.GatewayStatus, key)
+					r.keyCache.GatewayStatus[key] = true
+				}
+				for _, listenerSet := range result.ListenerSets {
+					key := utils.NamespacedName(listenerSet)
+					r.ProviderResources.ListenerSetStatuses.Store(key, &listenerSet.Status)
+					listenerSetStatusCount++
+					delete(keysToDelete.ListenerSetStatus, key)
+					r.keyCache.ListenerSetStatus[key] = true
+				}
+
+				// Backend statuses have no parents, so they are not aggregated.
+				for _, backend := range result.Backends {
+					key := utils.NamespacedName(backend)
+					if len(backend.Status.Conditions) > 0 {
+						r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
+						backendStatusCount++
+					}
+					delete(keysToDelete.BackendStatus, key)
+					r.keyCache.BackendStatus[key] = true
+				}
+
+				// Resources which can belong to multiple GatewayClasses get their statuses aggregated,
+				// then stored once after iterating over all GatewayClasses.
+				for _, httpRoute := range result.HTTPRoutes {
+					if len(httpRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(httpRoute)
+						aggregatedStatuses.HTTPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.HTTPRoutes[key], &httpRoute.Status.RouteStatus, httpRoute.Generation)
+					}
+				}
+				for _, grpcRoute := range result.GRPCRoutes {
+					if len(grpcRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(grpcRoute)
+						aggregatedStatuses.GRPCRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.GRPCRoutes[key], &grpcRoute.Status.RouteStatus, grpcRoute.Generation)
+					}
+				}
+				for _, tlsRoute := range result.TLSRoutes {
+					if len(tlsRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(tlsRoute)
+						aggregatedStatuses.TLSRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TLSRoutes[key], &tlsRoute.Status.RouteStatus, tlsRoute.Generation)
+					}
+				}
+				for _, tcpRoute := range result.TCPRoutes {
+					if len(tcpRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(tcpRoute)
+						aggregatedStatuses.TCPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TCPRoutes[key], &tcpRoute.Status.RouteStatus, tcpRoute.Generation)
+					}
+				}
+				for _, udpRoute := range result.UDPRoutes {
+					if len(udpRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(udpRoute)
+						aggregatedStatuses.UDPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.UDPRoutes[key], &udpRoute.Status.RouteStatus, udpRoute.Generation)
+					}
+				}
+				for _, backendTLSPolicy := range result.BackendTLSPolicies {
+					if len(backendTLSPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(backendTLSPolicy)
+						aggregatedStatuses.BackendTLSPolicies[key] = mergePolicyStatus(aggregatedStatuses.BackendTLSPolicies[key], &backendTLSPolicy.Status, backendTLSPolicy.Generation)
+					}
+				}
+				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
+					if len(clientTrafficPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(clientTrafficPolicy)
+						aggregatedStatuses.ClientTrafficPolicies[key] = mergePolicyStatus(aggregatedStatuses.ClientTrafficPolicies[key], &clientTrafficPolicy.Status, clientTrafficPolicy.Generation)
+					}
+				}
+				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
+					if len(backendTrafficPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(backendTrafficPolicy)
+						aggregatedStatuses.BackendTrafficPolicies[key] = mergePolicyStatus(aggregatedStatuses.BackendTrafficPolicies[key], &backendTrafficPolicy.Status, backendTrafficPolicy.Generation)
+					}
+				}
+				for _, securityPolicy := range result.SecurityPolicies {
+					if len(securityPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(securityPolicy)
+						aggregatedStatuses.SecurityPolicies[key] = mergePolicyStatus(aggregatedStatuses.SecurityPolicies[key], &securityPolicy.Status, securityPolicy.Generation)
+					}
+				}
+				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
+					if len(envoyExtensionPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(envoyExtensionPolicy)
+						aggregatedStatuses.EnvoyExtensionPolicies[key] = mergePolicyStatus(aggregatedStatuses.EnvoyExtensionPolicies[key], &envoyExtensionPolicy.Status, envoyExtensionPolicy.Generation)
+					}
+				}
+				for _, extServerPolicy := range result.ExtensionServerPolicies {
+					policyStatus := gatewayapi.ExtServerPolicyStatusAsPolicyStatus(&extServerPolicy)
+					if len(policyStatus.Ancestors) != 0 {
+						key := message.NamespacedNameAndGVK{
+							NamespacedName:   utils.NamespacedName(&extServerPolicy),
+							GroupVersionKind: extServerPolicy.GroupVersionKind(),
+						}
+						aggregatedStatuses.ExtensionServerPolicies[key] = mergePolicyStatus(aggregatedStatuses.ExtensionServerPolicies[key], &policyStatus, extServerPolicy.GetGeneration())
+					}
+				}
+				// EnvoyProxy status
+				for _, ep := range result.EnvoyProxiesForGateways {
+					r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
+					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
+				}
+				if ep := result.EnvoyProxyForGatewayClass; ep != nil {
+					r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
+					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
+				}
+				statusUpdateSpan.End()
 			}
-			r.ProviderResources.EnvoyProxyStatuses.Store(key, &s)
-			envoyproxyStatusCount++
-			delete(keysToDelete.EnvoyProxyStatus, key)
-			r.keyCache.EnvoyProxyStatus[key] = true
-		}
-		// Publish aggregated metrics
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, infraIRCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayClassStatusMessageName}, 1)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayStatusMessageName}, gatewayStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ListenerSetStatusMessageName}, listenerSetStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.HTTPRouteStatusMessageName}, httpRouteStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GRPCRouteStatusMessageName}, grpcRouteStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TLSRouteStatusMessageName}, tlsRouteStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TCPRouteStatusMessageName}, tcpRouteStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.UDPRouteStatusMessageName}, udpRouteStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendTLSPolicyStatusMessageName}, backendTLSPolicyStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ClientTrafficPolicyStatusMessageName}, clientTrafficPolicyStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendTrafficPolicyStatusMessageName}, backendTrafficPolicyStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.SecurityPolicyStatusMessageName}, securityPolicyStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyExtensionPolicyStatusMessageName}, envoyExtensionPolicyStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendStatusMessageName}, backendStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ExtensionServerPoliciesStatusMessageName}, extensionServerPolicyStatusCount)
-		message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyProxyStatusMessageName}, envoyproxyStatusCount)
 
-		// Delete keys using mark and sweep
-		r.deleteKeys(keysToDelete)
-	}
+			// Store the stauses of all objects atomically with the aggregated status.
+			for key, entry := range aggregatedStatuses.HTTPRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1.HTTPRouteStatus{RouteStatus: *entry.status}
+				r.ProviderResources.HTTPRouteStatuses.Store(key, &s)
+				httpRouteStatusCount++
+				delete(keysToDelete.HTTPRouteStatus, key)
+				r.keyCache.HTTPRouteStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.GRPCRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1.GRPCRouteStatus{RouteStatus: *entry.status}
+				r.ProviderResources.GRPCRouteStatuses.Store(key, &s)
+				grpcRouteStatusCount++
+				delete(keysToDelete.GRPCRouteStatus, key)
+				r.keyCache.GRPCRouteStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.TLSRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1.TLSRouteStatus{RouteStatus: *entry.status}
+				r.ProviderResources.TLSRouteStatuses.Store(key, &s)
+				tlsRouteStatusCount++
+				delete(keysToDelete.TLSRouteStatus, key)
+				r.keyCache.TLSRouteStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.TCPRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1.TCPRouteStatus{RouteStatus: *entry.status}
+				r.ProviderResources.TCPRouteStatuses.Store(key, &s)
+				tcpRouteStatusCount++
+				delete(keysToDelete.TCPRouteStatus, key)
+				r.keyCache.TCPRouteStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.UDPRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1.UDPRouteStatus{RouteStatus: *entry.status}
+				r.ProviderResources.UDPRouteStatuses.Store(key, &s)
+				udpRouteStatusCount++
+				delete(keysToDelete.UDPRouteStatus, key)
+				r.keyCache.UDPRouteStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.BackendTLSPolicies {
+				status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
+				r.ProviderResources.BackendTLSPolicyStatuses.Store(key, entry.status)
+				backendTLSPolicyStatusCount++
+				delete(keysToDelete.BackendTLSPolicyStatus, key)
+				r.keyCache.BackendTLSPolicyStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.ClientTrafficPolicies {
+				status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
+				r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, entry.status)
+				clientTrafficPolicyStatusCount++
+				delete(keysToDelete.ClientTrafficPolicyStatus, key)
+				r.keyCache.ClientTrafficPolicyStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.BackendTrafficPolicies {
+				status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
+				r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, entry.status)
+				backendTrafficPolicyStatusCount++
+				delete(keysToDelete.BackendTrafficPolicyStatus, key)
+				r.keyCache.BackendTrafficPolicyStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.SecurityPolicies {
+				status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
+				r.ProviderResources.SecurityPolicyStatuses.Store(key, entry.status)
+				securityPolicyStatusCount++
+				delete(keysToDelete.SecurityPolicyStatus, key)
+				r.keyCache.SecurityPolicyStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.EnvoyExtensionPolicies {
+				status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
+				r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, entry.status)
+				envoyExtensionPolicyStatusCount++
+				delete(keysToDelete.EnvoyExtensionPolicyStatus, key)
+				r.keyCache.EnvoyExtensionPolicyStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.ExtensionServerPolicies {
+				status.TruncatePolicyAncestors(entry.status, r.EnvoyGateway.Gateway.ControllerName, entry.generation)
+				r.ProviderResources.ExtensionPolicyStatuses.Store(key, entry.status)
+				extensionServerPolicyStatusCount++
+				delete(keysToDelete.ExtensionServerPolicyStatus, key)
+				r.keyCache.ExtensionServerPolicyStatus[key] = true
+			}
+			for key, entry := range aggregatedStatuses.EnvoyProxies {
+				s := egv1a1.EnvoyProxyStatus{
+					Ancestors: entry.Ancestors,
+				}
+				r.ProviderResources.EnvoyProxyStatuses.Store(key, &s)
+				envoyproxyStatusCount++
+				delete(keysToDelete.EnvoyProxyStatus, key)
+				r.keyCache.EnvoyProxyStatus[key] = true
+			}
+			// Publish aggregated metrics
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, infraIRCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayClassStatusMessageName}, 1)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayStatusMessageName}, gatewayStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ListenerSetStatusMessageName}, listenerSetStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.HTTPRouteStatusMessageName}, httpRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GRPCRouteStatusMessageName}, grpcRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TLSRouteStatusMessageName}, tlsRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TCPRouteStatusMessageName}, tcpRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.UDPRouteStatusMessageName}, udpRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendTLSPolicyStatusMessageName}, backendTLSPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ClientTrafficPolicyStatusMessageName}, clientTrafficPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendTrafficPolicyStatusMessageName}, backendTrafficPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.SecurityPolicyStatusMessageName}, securityPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyExtensionPolicyStatusMessageName}, envoyExtensionPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendStatusMessageName}, backendStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ExtensionServerPoliciesStatusMessageName}, extensionServerPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyProxyStatusMessageName}, envoyproxyStatusCount)
 
-	meta := message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}
-	if debounce != nil {
-		message.HandleSubscriptionWithDebounce(r.Logger, meta, sub, handle, *debounce)
-	} else {
-		message.HandleSubscription(r.Logger, meta, sub, handle)
-	}
+			// Delete keys using mark and sweep
+			r.deleteKeys(keysToDelete)
+		},
+		debounce,
+	)
 	r.Logger.Info("shutting down")
 }
 

@@ -322,7 +322,7 @@ func TestHandleSubscriptionDebounceQuietPeriod(t *testing.T) {
 		func(update message.Update[string, any], _ chan error) {
 			updates = append(updates, update.Value)
 		},
-		message.DebounceOptions{After: 200 * time.Millisecond, Max: 10 * time.Second},
+		&message.DebounceOptions{After: 200 * time.Millisecond, Max: 10 * time.Second},
 	)
 
 	// Without debouncing this burst yields up to 10 calls; with it the batch is
@@ -375,7 +375,7 @@ func TestHandleSubscriptionDebounceMaxDelay(t *testing.T) {
 			}
 		},
 		// Quiet period far longer than the store interval, so only max can flush.
-		message.DebounceOptions{After: time.Hour, Max: 200 * time.Millisecond},
+		&message.DebounceOptions{After: time.Hour, Max: 200 * time.Millisecond},
 	)
 
 	require.NotZero(t, updates, "max delay should have forced at least one flush")
@@ -406,7 +406,7 @@ func TestHandleSubscriptionDebounceFlushesOnClose(t *testing.T) {
 		func(update message.Update[string, any], _ chan error) {
 			updates = append(updates, update)
 		},
-		message.DebounceOptions{After: 30 * time.Second, Max: time.Hour},
+		&message.DebounceOptions{After: 30 * time.Second, Max: time.Hour},
 	)
 
 	require.Len(t, updates, 1)
@@ -448,7 +448,7 @@ func TestHandleSubscriptionDebounceCoalescesAcrossKeys(t *testing.T) {
 			}
 			got[update.Key] = update.Value
 		},
-		message.DebounceOptions{After: 150 * time.Millisecond, Max: 10 * time.Second},
+		&message.DebounceOptions{After: 150 * time.Millisecond, Max: 10 * time.Second},
 	)
 
 	// Last write wins per key, and the trailing delete for "baz" survives.
