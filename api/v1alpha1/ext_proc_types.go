@@ -73,6 +73,16 @@ type ExtProcProcessingMode struct {
 type ExtProc struct {
 	BackendCluster `json:",inline"`
 
+	// Matches defines request attributes that must match before the external
+	// processor is invoked. Multiple entries are ORed; header matches within
+	// a single entry are ANDed.
+	//
+	// Only exact header matches are currently supported.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=16
+	Matches []ExtProcMatch `json:"matches,omitempty"`
+
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	// Default: 200ms
 	//
@@ -124,6 +134,19 @@ type ExtProc struct {
 	// +optional
 	// +kubebuilder:validation:Enum=400;401;402;403;404;405;406;407;408;409;410;411;412;413;414;415;416;417;421;422;423;424;426;428;429;431;500;501;502;503;504;505;506;507;508;510;511
 	StatusOnError *int32 `json:"statusOnError,omitempty"`
+}
+
+// ExtProcMatch defines the request headers that select an external processor.
+// All header matches in this object must match.
+//
+// +kubebuilder:validation:XValidation:rule="size(self.headers) > 0",message="at least one header match must be specified"
+// +kubebuilder:validation:XValidation:rule="self.headers.all(h, (!has(h.type) || h.type == 'Exact') && has(h.value))",message="only Exact header matches with a value are supported"
+type ExtProcMatch struct {
+	// Headers is a list of request headers to match. Header matches are ANDed.
+	//
+	// +required
+	// +kubebuilder:validation:MaxItems=16
+	Headers []HeaderMatch `json:"headers"`
 }
 
 // ExtProcMetadata defines options related to the sending and receiving of dynamic metadata to and from the
