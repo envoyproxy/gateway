@@ -9066,6 +9066,7 @@ spec:
                                 Filename is the path to the local file containing the Wasm code.
                                 The file must be present on the Envoy proxy's filesystem at the time
                                 the Wasm extension is loaded.
+                              minLength: 1
                               type: string
                           required:
                           - filename

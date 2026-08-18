@@ -136,6 +136,8 @@ type LocalWasmCodeSource struct {
 	// Filename is the path to the local file containing the Wasm code.
 	// The file must be present on the Envoy proxy's filesystem at the time
 	// the Wasm extension is loaded.
+	//
+	// +kubebuilder:validation:MinLength=1
 	Filename string `json:"filename"`
 }
 
