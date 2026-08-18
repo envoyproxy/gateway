@@ -101,7 +101,7 @@ func handleWithCrashRecovery[K comparable, V any](
 // long propagation can be delayed while changes keep arriving.
 func HandleSubscriptionWithDebounce[K comparable, V any](l logging.Logger,
 	meta Metadata,
-	subscription <-chan watchable.Snapshot[K, V],
+	snapshots <-chan watchable.Snapshot[K, V],
 	handle func(updateFunc Update[K, V], errChans chan error),
 	debounce *DebounceOptions,
 ) {
@@ -117,7 +117,7 @@ func HandleSubscriptionWithDebounce[K comparable, V any](l logging.Logger,
 
 	// The initial snapshot is never debounced: it is the bootstrap state, and
 	// delaying it would delay the first translation for no benefit.
-	if snapshot, ok := <-subscription; ok {
+	if snapshot, ok := <-snapshots; ok {
 		for k, v := range snapshot.State {
 			handleWithCrashRecovery(l, handle, Update[K, V]{
 				Key:   k,
@@ -127,14 +127,14 @@ func HandleSubscriptionWithDebounce[K comparable, V any](l logging.Logger,
 	}
 
 	if debounce != nil {
-		handleDebounced(l, meta, subscription, handle, errChans, *debounce)
+		handleDebounced(l, meta, snapshots, handle, errChans, *debounce)
 		return
 	}
 
-	for snapshot := range subscription {
-		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
+	for snapshot := range snapshots {
+		watchableDepth.With(meta.LabelValues()...).Record(float64(len(snapshots)))
 
-		for _, update := range coalesceUpdates(l, snapshot.Updates) {
+		for _, update := range coalesceUpdates(l, meta, snapshot.Updates) {
 			handleWithCrashRecovery(l, handle, Update[K, V](update), meta, errChans)
 		}
 	}
@@ -144,10 +144,10 @@ func HandleSubscriptionWithDebounce[K comparable, V any](l logging.Logger,
 // delivered snapshot is handled as soon as it arrives.
 func HandleSubscription[K comparable, V any](l logging.Logger,
 	meta Metadata,
-	subscription <-chan watchable.Snapshot[K, V],
+	snapshots <-chan watchable.Snapshot[K, V],
 	handle func(updateFunc Update[K, V], errChans chan error),
 ) {
-	HandleSubscriptionWithDebounce(l, meta, subscription, handle, nil)
+	HandleSubscriptionWithDebounce(l, meta, snapshots, handle, nil)
 }
 
 // handleDebounced consumes the subscription, merging updates that arrive close
@@ -161,7 +161,7 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 func handleDebounced[K comparable, V any](
 	l logging.Logger,
 	meta Metadata,
-	subscription <-chan watchable.Snapshot[K, V],
+	snapshots <-chan watchable.Snapshot[K, V],
 	handle func(updateFunc Update[K, V], errChans chan error),
 	errChans chan error,
 	debounce DebounceOptions,
@@ -175,8 +175,8 @@ func handleDebounced[K comparable, V any](
 		batchStartedAt       time.Time
 	)
 
-	// Go 1.23 and later guarantee that Stop and Reset never leave a stale value
-	// in the timer channel, so no draining is needed here.
+	// Stopping is what keeps an idle debouncer from holding armed timers that fire
+	// for nothing; nilling the channels is what takes the cases out of the select.
 	disarm := func() {
 		if quietTimer != nil {
 			quietTimer.Stop()
@@ -194,7 +194,7 @@ func handleDebounced[K comparable, V any](
 		}
 
 		batched := len(pending)
-		updates := coalesceUpdates(l, pending)
+		updates := coalesceUpdates(l, meta, pending)
 		pending = nil
 
 		// coalesceUpdates already logs when it merges anything, and the flush
@@ -212,14 +212,12 @@ func handleDebounced[K comparable, V any](
 
 	for {
 		select {
-		case snapshot, ok := <-subscription:
+		case snapshot, ok := <-snapshots:
 			if !ok {
 				// Deliver whatever is still pending rather than dropping it.
 				flush(debounceReasonClose)
 				return
 			}
-			watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
-
 			if len(snapshot.Updates) == 0 {
 				continue
 			}
@@ -238,7 +236,6 @@ func handleDebounced[K comparable, V any](
 			if quietTimer == nil {
 				quietTimer = time.NewTimer(debounce.After)
 			} else {
-				quietTimer.Stop()
 				quietTimer.Reset(debounce.After)
 			}
 			quietC = quietTimer.C
@@ -255,7 +252,7 @@ func handleDebounced[K comparable, V any](
 // coalesceUpdates merges multiple updates for the same key into a single update,
 // preserving the latest state for each key.
 // This helps reduce redundant processing and ensures that only the most recent update per key is handled.
-func coalesceUpdates[K comparable, V any](logger logging.Logger, updates []watchable.Update[K, V]) []watchable.Update[K, V] {
+func coalesceUpdates[K comparable, V any](logger logging.Logger, meta Metadata, updates []watchable.Update[K, V]) []watchable.Update[K, V] {
 	if len(updates) <= 1 {
 		return updates
 	}
@@ -274,7 +271,8 @@ func coalesceUpdates[K comparable, V any](logger logging.Logger, updates []watch
 	}
 
 	result := updates[write+1:]
-	if len(result) != len(updates) {
+	if dropped := len(updates) - len(result); dropped > 0 {
+		watchableCoalescedTotal.With(meta.LabelValues()...).Add(float64(dropped))
 		logger.Info(
 			"coalesced updates",
 			"count", len(result),

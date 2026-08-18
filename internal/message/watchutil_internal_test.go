@@ -65,7 +65,7 @@ func TestCoalesceUpdates(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual := coalesceUpdates(logger, tc.input)
+			actual := coalesceUpdates(logger, Metadata{Runner: "demo", Message: "demo"}, tc.input)
 			require.Equal(t, tc.expected, actual)
 		})
 	}

@@ -8,10 +8,10 @@ package message
 import "github.com/envoyproxy/gateway/internal/metrics"
 
 var (
-	// watchableDepth is recorded as len(subscription). Note that the watchable
-	// library delivers snapshots over an unbuffered channel, so this gauge is
-	// always 0 in practice; it is kept for backwards compatibility only. To
-	// observe how many updates are being merged, use watchableDebouncePending.
+	// watchableDepth is recorded as the length of the snapshot channel. Note that the
+	// watchable library delivers snapshots over an unbuffered channel, so this gauge is
+	// always 0 in practice; it is kept for backwards compatibility only. To observe how
+	// many updates are being merged, use watchableDebouncePending.
 	watchableDepth = metrics.NewGauge(
 		"watchable_depth",
 		"Current depth of watchable queue.",
@@ -44,6 +44,11 @@ var (
 	watchableEventTotal = metrics.NewCounter(
 		"watchable_event_total",
 		"Total number of runner events.",
+	)
+
+	watchableCoalescedTotal = metrics.NewCounter(
+		"watchable_coalesced_updates_total",
+		"Total number of updates dropped by coalescing because a newer update for the same key superseded them.",
 	)
 
 	watchableDebouncePending = metrics.NewGauge(
