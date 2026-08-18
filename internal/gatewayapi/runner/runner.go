@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
@@ -23,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -160,14 +162,12 @@ func (r *Runner) Name() string {
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
-	debounceEnabled, debounceAfter, debounceMax, err := r.EnvoyGateway.DebounceSettings()
+	debounce, err := r.debounceOptions()
 	if err != nil {
 		return err
 	}
-	var debounce *message.DebounceOptions
-	if debounceEnabled {
-		debounce = &message.DebounceOptions{After: debounceAfter, Max: debounceMax}
-		r.Logger.Info("debouncing resource updates", "after", debounceAfter, "max", debounceMax)
+	if debounce != nil {
+		r.Logger.Info("debouncing resource updates", "after", debounce.After, "max", debounce.Max)
 	}
 
 	r.done.Go(func() {
@@ -212,6 +212,47 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		},
 		cacheOption, r.ControllerNamespace, r.Logger)
 	r.wasmCache.Start(ctx)
+}
+
+// debounceOptions returns the debounce settings to apply to the resource
+// subscription, or nil when debouncing is disabled. The durations are validated at
+// config load time; they are parsed again here because the API type carries them as
+// strings.
+func (r *Runner) debounceOptions() (*message.DebounceOptions, error) {
+	if r.EnvoyGateway == nil || r.EnvoyGateway.Debounce == nil ||
+		!ptr.Deref(r.EnvoyGateway.Debounce.Enable, false) {
+		return nil, nil
+	}
+
+	cfg := r.EnvoyGateway.Debounce
+	opts := &message.DebounceOptions{
+		After: egv1a1.DefaultDebounceAfter,
+		Max:   egv1a1.DefaultDebounceMax,
+	}
+
+	if cfg.After != nil {
+		d, err := time.ParseDuration(string(*cfg.After))
+		if err != nil {
+			return nil, fmt.Errorf("invalid debounce.after: %w", err)
+		}
+		if d <= 0 {
+			return nil, fmt.Errorf("debounce.after must be greater than zero")
+		}
+		opts.After = d
+	}
+
+	if cfg.Max != nil {
+		d, err := time.ParseDuration(string(*cfg.Max))
+		if err != nil {
+			return nil, fmt.Errorf("invalid debounce.max: %w", err)
+		}
+		if d <= 0 {
+			return nil, fmt.Errorf("debounce.max must be greater than zero")
+		}
+		opts.Max = d
+	}
+
+	return opts, nil
 }
 
 func (r *Runner) subscribeAndTranslate(

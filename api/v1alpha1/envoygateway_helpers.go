@@ -6,8 +6,6 @@
 package v1alpha1
 
 import (
-	"errors"
-	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -263,42 +261,6 @@ func DefaultDebounce() *Debounce {
 		After:  new(gwapiv1.Duration(DefaultDebounceAfter.String())),
 		Max:    new(gwapiv1.Duration(DefaultDebounceMax.String())),
 	}
-}
-
-// DebounceSettings returns whether debouncing is enabled along with the resolved
-// quiet period and maximum delay. Unset durations fall back to their defaults.
-// An error is returned if either duration is malformed or non-positive, or if max
-// is shorter than after.
-func (e *EnvoyGateway) DebounceSettings() (enabled bool, after, maxDelay time.Duration, err error) {
-	after, maxDelay = DefaultDebounceAfter, DefaultDebounceMax
-
-	if e == nil || e.Debounce == nil || !ptr.Deref(e.Debounce.Enable, false) {
-		return false, after, maxDelay, nil
-	}
-
-	if e.Debounce.After != nil {
-		if after, err = time.ParseDuration(string(*e.Debounce.After)); err != nil {
-			return false, 0, 0, fmt.Errorf("invalid debounce.after: %w", err)
-		}
-		if after <= 0 {
-			return false, 0, 0, errors.New("debounce.after must be greater than zero")
-		}
-	}
-
-	if e.Debounce.Max != nil {
-		if maxDelay, err = time.ParseDuration(string(*e.Debounce.Max)); err != nil {
-			return false, 0, 0, fmt.Errorf("invalid debounce.max: %w", err)
-		}
-		if maxDelay <= 0 {
-			return false, 0, 0, errors.New("debounce.max must be greater than zero")
-		}
-	}
-
-	if maxDelay < after {
-		return false, 0, 0, fmt.Errorf("debounce.max (%s) must be greater than or equal to debounce.after (%s)", maxDelay, after)
-	}
-
-	return true, after, maxDelay, nil
 }
 
 // DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.
