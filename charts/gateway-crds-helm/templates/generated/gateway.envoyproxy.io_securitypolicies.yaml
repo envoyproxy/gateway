@@ -6029,37 +6029,51 @@ spec:
                           The name of the cookie used to store the AccessToken in the
                           [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                           If not specified, defaults to "AccessToken-(randomly generated uid)"
+                        maxLength: 256
+                        minLength: 1
                         type: string
                       codeVerifier:
                         description: |-
                           The name of the cookie used to store the PKCE code verifier.
                           If not specified, defaults to "OauthCodeVerifier-(randomly generated uid)"
+                        maxLength: 256
+                        minLength: 1
                         type: string
                       idToken:
                         description: |-
                           The name of the cookie used to store the IdToken in the
                           [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                           If not specified, defaults to "IdToken-(randomly generated uid)"
+                        maxLength: 256
+                        minLength: 1
                         type: string
                       oauthExpires:
                         description: |-
                           The name of the cookie used to store the OAuth expires value.
                           If not specified, defaults to "OauthExpires-(randomly generated uid)"
+                        maxLength: 256
+                        minLength: 1
                         type: string
                       oauthHmac:
                         description: |-
                           The name of the cookie used to store the OAuth HMAC value.
                           If not specified, defaults to "OauthHMAC-(randomly generated uid)"
+                        maxLength: 256
+                        minLength: 1
                         type: string
                       oauthNonce:
                         description: |-
                           The name of the cookie used to store the OAuth nonce value.
                           If not specified, defaults to "OauthNonce-(randomly generated uid)"
+                        maxLength: 256
+                        minLength: 1
                         type: string
                       refreshToken:
                         description: |-
                           The name of the cookie used to store the RefreshToken.
                           If not specified, defaults to "RefreshToken-(randomly generated uid)"
+                        maxLength: 256
+                        minLength: 1
                         type: string
                     type: object
                   csrfTokenTTL:

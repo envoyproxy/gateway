@@ -241,31 +241,45 @@ type OIDCCookieNames struct {
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, defaults to "AccessToken-(randomly generated uid)"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	AccessToken *string `json:"accessToken,omitempty"`
 	// The name of the cookie used to store the OAuth expires value.
 	// If not specified, defaults to "OauthExpires-(randomly generated uid)"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	OAuthExpires *string `json:"oauthExpires,omitempty"`
 	// The name of the cookie used to store the OAuth HMAC value.
 	// If not specified, defaults to "OauthHMAC-(randomly generated uid)"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	OAuthHMAC *string `json:"oauthHmac,omitempty"`
 	// The name of the cookie used to store the IdToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, defaults to "IdToken-(randomly generated uid)"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	IDToken *string `json:"idToken,omitempty"`
 	// The name of the cookie used to store the RefreshToken.
 	// If not specified, defaults to "RefreshToken-(randomly generated uid)"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	RefreshToken *string `json:"refreshToken,omitempty"`
 	// The name of the cookie used to store the OAuth nonce value.
 	// If not specified, defaults to "OauthNonce-(randomly generated uid)"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	OAuthNonce *string `json:"oauthNonce,omitempty"`
 	// The name of the cookie used to store the PKCE code verifier.
 	// If not specified, defaults to "OauthCodeVerifier-(randomly generated uid)"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	CodeVerifier *string `json:"codeVerifier,omitempty"`
 }
 
