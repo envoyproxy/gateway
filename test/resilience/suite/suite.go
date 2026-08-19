@@ -108,7 +108,10 @@ func (rts *ResilienceTestSuite) Run(t *testing.T, tests []ResilienceTest) {
 
 	for _, test := range tests {
 		tlog.Logf(t, "Running resilience test: %s", test.ShortName)
+
 		t.Run(test.ShortName, func(t *testing.T) {
+			// recover welcome route
+			ap.MustApplyWithCleanup(t, rts.Client, rts.TimeoutConfig, "testdata/route_welcome.yaml", true)
 			test.Test(t, rts)
 		})
 	}
