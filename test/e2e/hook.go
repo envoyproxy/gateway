@@ -15,7 +15,6 @@ import (
 )
 
 var Hook = func(t *testing.T, test suite.ConformanceTest, suite *suite.ConformanceTestSuite) {
-	tlog.Logf(t, "Run hook for test: %s for result: %v", test.ShortName, t.Failed())
 	if t.Failed() {
 		tlog.Logf(t, "Test %s failed, collecting and dumping resources", test.ShortName)
 		tests.CollectAndDump(t, suite)
