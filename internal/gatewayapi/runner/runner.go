@@ -215,9 +215,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 }
 
 // debounceOptions returns the debounce settings to apply to the resource
-// subscription, or nil when debouncing is disabled. The durations are validated at
-// config load time; they are parsed again here because the API type carries them as
-// strings.
+// subscription, or nil when debouncing is disabled.
 func (r *Runner) debounceOptions() (*message.DebounceOptions, error) {
 	if r.EnvoyGateway == nil || r.EnvoyGateway.Debounce == nil ||
 		!ptr.Deref(r.EnvoyGateway.Debounce.Enable, false) {

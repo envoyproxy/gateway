@@ -154,10 +154,7 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 // together into a single batch before calling handle.
 //
 // A batch is flushed when the quiet period elapses with no new update, when the
-// maximum delay is reached, or when the subscription closes. Note that while
-// handle is running the subscription is not being read, so further updates
-// accumulate in the watchable library's own coalescer; the next batch therefore
-// starts fresh once handle returns.
+// maximum delay is reached, or when the subscription closes.
 func handleDebounced[K comparable, V any](
 	l logging.Logger,
 	meta Metadata,
@@ -197,9 +194,7 @@ func handleDebounced[K comparable, V any](
 		updates := coalesceUpdates(l, meta, pending)
 		pending = nil
 
-		// coalesceUpdates already logs when it merges anything, and the flush
-		// reason is carried on the metric below, so nothing is logged here: this
-		// runs on the hot path of a churning cluster.
+		// Record metrics for the batch flush.
 		labels := meta.LabelValues()
 		watchableDebouncePending.With(labels...).Record(float64(batched))
 		watchableDebounceDelaySeconds.With(labels...).Record(time.Since(batchStartedAt).Seconds())
