@@ -955,20 +955,6 @@ func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption
 	}
 }
 
-func consistentHashDump(t *testing.T, rest *rest.Config) {
-	dumpedNamespaces := []string{"envoy-gateway-system"}
-	if IsGatewayNamespaceMode() {
-		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
-	}
-
-	runCollectAndDump(t, rest,
-		tb.WithCollectedNamespaces(dumpedNamespaces),
-		tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
-		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
-		tb.WithSelector("gateway.envoyproxy.io/owning-gateway-name=lb-backend-gateway"),
-	)
-}
-
 func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
 	svc := &corev1.Service{}
 	if err := c.Get(context.Background(), nn, svc); err != nil {
