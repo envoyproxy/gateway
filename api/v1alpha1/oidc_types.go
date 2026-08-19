@@ -234,6 +234,10 @@ type OIDCDenyRedirectHeader struct {
 }
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+// Each cookie holds a different value, so the configured names must be distinct,
+// otherwise the cookies would overwrite each other and break the OIDC flow.
+//
+// +kubebuilder:validation:XValidation:rule="[(has(self.accessToken) ? [self.accessToken] : []) + (has(self.oauthExpires) ? [self.oauthExpires] : []) + (has(self.oauthHmac) ? [self.oauthHmac] : []) + (has(self.idToken) ? [self.idToken] : []) + (has(self.refreshToken) ? [self.refreshToken] : []) + (has(self.oauthNonce) ? [self.oauthNonce] : []) + (has(self.codeVerifier) ? [self.codeVerifier] : [])].all(names, names.all(n, names.filter(m, m == n).size() == 1))",message="cookie names must be unique"
 type OIDCCookieNames struct {
 	// The name of the cookie used to store the AccessToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).

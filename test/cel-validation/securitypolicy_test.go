@@ -2552,6 +2552,17 @@ func TestSecurityPolicyOIDCCookieNames(t *testing.T) {
 			},
 		},
 		{
+			desc: "duplicate cookie names",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				OAuthHMAC:    new("oauth-cookie"),
+				OAuthExpires: new("oauth-cookie"),
+			},
+			wantErrors: []string{
+				"spec.oidc.cookieNames",
+				"cookie names must be unique",
+			},
+		},
+		{
 			desc:        "accessToken longer than 256 chars",
 			cookieNames: &egv1a1.OIDCCookieNames{AccessToken: new(strings.Repeat("a", 257))},
 			// The exact wording after "Too long" varies across apiserver versions,

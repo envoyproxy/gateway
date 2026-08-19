@@ -4471,6 +4471,8 @@ _Appears in:_
 
 
 OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+Each cookie holds a different value, so the configured names must be distinct,
+otherwise the cookies would overwrite each other and break the OIDC flow.
 
 _Appears in:_
 - [OIDC](#oidc)
