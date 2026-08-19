@@ -6075,6 +6075,15 @@ spec:
                         minLength: 1
                         type: string
                     type: object
+                    x-kubernetes-validations:
+                    - message: cookie names must be unique
+                      rule: '[(has(self.accessToken) ? [self.accessToken] : []) +
+                        (has(self.oauthExpires) ? [self.oauthExpires] : []) + (has(self.oauthHmac)
+                        ? [self.oauthHmac] : []) + (has(self.idToken) ? [self.idToken]
+                        : []) + (has(self.refreshToken) ? [self.refreshToken] : [])
+                        + (has(self.oauthNonce) ? [self.oauthNonce] : []) + (has(self.codeVerifier)
+                        ? [self.codeVerifier] : [])].all(names, names.all(n, names.filter(m,
+                        m == n).size() == 1))'
                   csrfTokenTTL:
                     description: |-
                       CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.
