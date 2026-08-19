@@ -8333,6 +8333,72 @@ spec:
 
                         If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
                       type: boolean
+                    matches:
+                      description: |-
+                        Matches defines request attributes that must match before the external
+                        processor is invoked. Multiple entries are ORed; header matches within
+                        a single entry are ANDed.
+
+                        Only exact header matches are currently supported.
+                      items:
+                        description: |-
+                          ExtProcMatch defines the request headers that select an external processor.
+                          All header matches in this object must match.
+                        properties:
+                          headers:
+                            description: Headers is a list of request headers to match.
+                              Header matches are ANDed.
+                            items:
+                              description: HeaderMatch defines the match attributes
+                                within the HTTP Headers of the request.
+                              properties:
+                                invert:
+                                  default: false
+                                  description: |-
+                                    Invert specifies whether the value match result will be inverted.
+                                    Do not set this field when Type="Distinct", implying matching on any/all unique
+                                    values within the header.
+                                  type: boolean
+                                name:
+                                  description: |-
+                                    Name of the HTTP header.
+                                    The header name is case-insensitive unless PreserveHeaderCase is set to true.
+                                    For example, "Foo" and "foo" are considered the same header.
+                                  maxLength: 256
+                                  minLength: 1
+                                  type: string
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    the value of the header.
+                                  enum:
+                                  - Exact
+                                  - RegularExpression
+                                  - Distinct
+                                  type: string
+                                value:
+                                  description: |-
+                                    Value within the HTTP header.
+                                    Do not set this field when Type="Distinct", implying matching on any/all unique
+                                    values within the header.
+                                  maxLength: 1024
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            maxItems: 16
+                            type: array
+                        required:
+                        - headers
+                        type: object
+                        x-kubernetes-validations:
+                        - message: at least one header match must be specified
+                          rule: size(self.headers) > 0
+                        - message: only Exact header matches with a value are supported
+                          rule: self.headers.all(h, (!has(h.type) || h.type == 'Exact')
+                            && has(h.value))
+                      maxItems: 16
+                      type: array
                     messageTimeout:
                       description: |-
                         MessageTimeout is the timeout for a response to be returned from the external processor

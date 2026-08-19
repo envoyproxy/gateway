@@ -32,7 +32,7 @@ const (
 	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
 	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
-	DefaultShutdownManagerImage = "quay.io/hrushikesh_patil_nutanix/gateway:extproc-matches"
+	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "docker.io/envoyproxy/ratelimit:master"
 	// HTTPProtocol is the common-used http protocol.

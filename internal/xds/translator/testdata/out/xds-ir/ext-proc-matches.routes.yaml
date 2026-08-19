@@ -1,0 +1,67 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: envoy-gateway/gateway-1/http/gateway_envoyproxy_io
+    routes:
+    - match:
+        pathSeparatedPrefix: /route
+      name: httproute/default/route-target/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/route-target/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ext_proc/envoyextensionpolicy/default/route-matches/extproc/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config:
+            '@type': type.googleapis.com/envoy.extensions.common.matching.v3.ExtensionWithMatcherPerRoute
+            xdsMatcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: skip-ext-proc
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.filters.common.matcher.action.v3.SkipFilter
+                  predicate:
+                    notMatcher:
+                      singlePredicate:
+                        input:
+                          name: http_header
+                          typedConfig:
+                            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                            headerName: x-ai-eg-model
+                        valueMatch:
+                          exact: mock-server
+    - match:
+        pathSeparatedPrefix: /gateway
+      name: httproute/default/gateway-target/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/gateway-target/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ext_proc/envoyextensionpolicy/default/gateway-matches/extproc/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config:
+            '@type': type.googleapis.com/envoy.extensions.common.matching.v3.ExtensionWithMatcherPerRoute
+            xdsMatcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: skip-ext-proc
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.filters.common.matcher.action.v3.SkipFilter
+                  predicate:
+                    notMatcher:
+                      singlePredicate:
+                        input:
+                          name: http_header
+                          typedConfig:
+                            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                            headerName: x-ai-eg-model
+                        valueMatch:
+                          exact: mock-server

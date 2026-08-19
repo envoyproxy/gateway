@@ -100,25 +100,12 @@ func buildHCMExtProcFilter(extProc *ir.ExtProc) (*hcmv3.HttpFilter, error) {
 	// All extproc filters for all Routes are aggregated on HCM and disabled by default
 	// Per-route config is used to enable the relevant filters on appropriate routes
 	return &hcmv3.HttpFilter{
-		Name: extProcFilterName(extProc),
+		Name:     extProcFilterName(extProc),
 		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: extProcAny,
 		},
 	}, nil
-}
-
-// buildExtProcMatchWrapper gates an ext_proc filter with ExtensionWithMatcher.
-// Envoy skips the wrapped filter when a SkipFilter action is selected. Therefore,
-// this matcher applies SkipFilter to NOT(matches), allowing the processor to run
-// only when at least one ExtProcMatch branch matches the current request headers.
-func buildExtProcMatchWrapper(extProc *ir.ExtProc, extProcAny *anypb.Any) (*anypb.Any, error) {
-	matcher, err := buildExtProcMatcher(extProc.Matches)
-	if err != nil {
-		return nil, err
-	}
-
-	return buildExtProcWrapper(extProc, extProcAny, matcher)
 }
 
 func buildExtProcWrapper(extProc *ir.ExtProc, extProcAny *anypb.Any, matcher *matcherv3.Matcher) (*anypb.Any, error) {
