@@ -495,6 +495,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+			status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
 		}
 	}
 
@@ -570,6 +571,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			if gCtx.envoyProxyFromGateway {
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
 			}
 		}
 
@@ -598,6 +600,15 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 	}
 
 	return nil
+}
+
+func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if ep.Spec.LuaValidation != nil {
+		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
+	}
+
+	return deprecatedFields
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.

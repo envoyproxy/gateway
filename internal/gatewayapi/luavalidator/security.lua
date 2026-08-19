@@ -1,11 +1,31 @@
--- Security sandbox for Lua execution in Envoy Gateway
--- Blocks dangerous functions and validates paths to prevent access to sensitive system resources
+-- Security sandbox for Lua execution in Envoy Gateway: blocks dangerous functions and enforces a
+-- fail-closed allowlist of filesystem paths and environment variables during validation.
+--
+-- The allowed sets are injected by the Go validator before this script runs, as the globals
+-- `__lua_allowed_paths` (array of path prefixes) and `__lua_allowed_env_vars` (map name -> true).
+-- An absent or empty table denies that entire category.
 
 -- ============================================================================
--- CRITICAL PATHS
+-- ALLOWLISTS (injected by the Go validator; default to empty = deny all)
 -- ============================================================================
 
-local critical_paths = {
+local allowed_paths = __lua_allowed_paths or {}
+local allowed_env_vars = __lua_allowed_env_vars or {}
+
+-- Remove the injected globals so user code cannot read or mutate the allowlists.
+__lua_allowed_paths = nil
+__lua_allowed_env_vars = nil
+
+-- Capture the Go-provided symlink resolver, then clear the global so user code cannot reach it.
+local resolve_path = __lua_resolve_path
+__lua_resolve_path = nil
+
+-- ============================================================================
+-- DENYLIST (hardcoded; always denied, even when the allowlist would permit them)
+-- ============================================================================
+
+-- Secret and kernel/process paths that are always denied, even if the allowlist permits them.
+local denied_paths = {
     "/etc",
     "/proc",
     "/sys",
@@ -16,14 +36,6 @@ local critical_paths = {
 }
 
 -- ============================================================================
--- CRITICAL ENVIRONMENT VARIABLES
--- ============================================================================
-
-local critical_env_vars = {
-    ["PWD"] = true,
-}
-
--- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
 
@@ -31,7 +43,7 @@ local function to_absolute_normalized_path(path)
     if not path or type(path) ~= "string" then
         return path
     end
-    
+
     local normalized_separators = path:gsub("\\", "/")
 
     local collapsed_separators = normalized_separators:gsub("/+", "/")
@@ -44,6 +56,18 @@ local function to_absolute_normalized_path(path)
     end
 
     return absolute_path:match("^(.-)/*$")
+end
+
+-- normalized_real returns the normalized, symlink-resolved absolute form of path. Resolving through
+-- the Go helper means a symlink under an allowed directory cannot alias a path outside it (or a
+-- denied path): io.open resolves symlinks at open time, so lexical checks alone can be bypassed.
+-- Falls back to the lexical normalized form when no resolver is available (e.g. in unit tests).
+local function normalized_real(path)
+    local normalized = to_absolute_normalized_path(path)
+    if resolve_path and type(normalized) == "string" then
+        return to_absolute_normalized_path(resolve_path(normalized))
+    end
+    return normalized
 end
 
 local function contains_traversal(path)
@@ -63,44 +87,68 @@ local function contains_traversal(path)
     return false
 end
 
-local function is_critical_path(path)
-    if not path or type(path) ~= "string" then
-        return false
-    end
-    
-    local normalized = to_absolute_normalized_path(path)
-    
-    for _, critical_path in ipairs(critical_paths) do
-        local normalized_critical = to_absolute_normalized_path(critical_path)
-        local escaped_critical = normalized_critical:gsub("%-", "%%-")
-        
-        if normalized == normalized_critical or normalized:match("^" .. escaped_critical .. "/") then
-            return true
+-- is_allowed_path returns true when resolved (an already symlink-resolved, normalized path) equals
+-- an allowed entry or falls within its subtree. Entries are symlink-resolved too so both sides match
+-- consistently. The subtree check uses plain (non-pattern) string matching so allowed prefixes
+-- containing Lua magic characters (e.g. "." in "/var/lib/app.v1") are treated literally and define
+-- an exact boundary.
+local function is_allowed_path(resolved)
+    for _, allowed in ipairs(allowed_paths) do
+        -- Skip blank entries (checked on the lexical form): "" would match every path.
+        if to_absolute_normalized_path(allowed) ~= "" then
+            local normalized_allowed = normalized_real(allowed)
+            if resolved == normalized_allowed
+                or resolved:find(normalized_allowed .. "/", 1, true) == 1 then
+                return true
+            end
         end
     end
-    
+
     return false
 end
 
-local function validate_path(path)
+-- is_denied_path returns true when resolved (an already symlink-resolved, normalized path) equals a
+-- denied entry or falls within its subtree. Entries are symlink-resolved too so both sides match
+-- consistently. Uses plain (non-pattern) matching so magic characters in entries are treated literally.
+local function is_denied_path(resolved)
+    for _, denied in ipairs(denied_paths) do
+        local normalized_denied = normalized_real(denied)
+        if resolved == normalized_denied
+            or resolved:find(normalized_denied .. "/", 1, true) == 1 then
+            return true
+        end
+    end
+
+    return false
+end
+
+-- validate_path rejects traversal segments and denied paths unconditionally, then enforces the allowlist.
+local function validate_path(fn_name, path)
     if not path or type(path) ~= "string" then
         return
     end
-    
+
     if contains_traversal(path) then
         error("path traversals are restricted for security")
     end
-    
-    if is_critical_path(path) then
-        error("access to critical path " .. path .. " is restricted for security")
+
+    -- Resolve symlinks so the denylist/allowlist apply to the real target, not a lexical alias.
+    local resolved = normalized_real(path)
+
+    if is_denied_path(resolved) then
+        error(fn_name .. " restricted for param " .. path .. " (protected system path)")
+    end
+
+    if not is_allowed_path(resolved) then
+        error(fn_name .. " restricted for param " .. path)
     end
 end
 
-local function is_critical_env_var(env_var)
-    if not env_var or type(env_var) ~= "string" then
-        return false
+-- validate_env_var enforces the env var allowlist (exact, case-sensitive match).
+local function validate_env_var(fn_name, env_var)
+    if not env_var or type(env_var) ~= "string" or allowed_env_vars[env_var] ~= true then
+        error(fn_name .. " restricted for param " .. tostring(env_var))
     end
-    return critical_env_vars[env_var:upper()] == true
 end
 
 -- ============================================================================
@@ -125,7 +173,7 @@ setmetatable = nil
 _G = nil
 
 -- ============================================================================
--- SANITIZED IO FUNCTIONS (path validation)
+-- SANITIZED IO FUNCTIONS (path allowlist)
 -- ============================================================================
 
 do
@@ -135,7 +183,7 @@ do
     local _unsafe_io_lines = io.lines
 
     io.open = function(filename, mode)
-        validate_path(filename)
+        validate_path("io.open", filename)
         return _unsafe_io_open(filename, mode)
     end
 
@@ -144,7 +192,7 @@ do
             return _unsafe_io_input()
         end
         if type(file) == "string" then
-            validate_path(file)
+            validate_path("io.input", file)
         end
         return _unsafe_io_input(file)
     end
@@ -154,21 +202,21 @@ do
             return _unsafe_io_output()
         end
         if type(file) == "string" then
-            validate_path(file)
+            validate_path("io.output", file)
         end
         return _unsafe_io_output(file)
     end
 
     io.lines = function(filename)
         if filename then
-            validate_path(filename)
+            validate_path("io.lines", filename)
         end
         return _unsafe_io_lines(filename)
     end
 end
 
 -- ============================================================================
--- SANITIZED OS FUNCTIONS (path/env var validation)
+-- SANITIZED OS FUNCTIONS (path / env var allowlist)
 -- ============================================================================
 
 do
@@ -178,27 +226,23 @@ do
     local _unsafe_os_setenv = os.setenv
 
     os.remove = function(pathname)
-        validate_path(pathname)
+        validate_path("os.remove", pathname)
         return _unsafe_os_remove(pathname)
     end
 
     os.rename = function(oldname, newname)
-        validate_path(oldname)
-        validate_path(newname)
+        validate_path("os.rename", oldname)
+        validate_path("os.rename", newname)
         return _unsafe_os_rename(oldname, newname)
     end
 
     os.getenv = function(varname)
-        if is_critical_env_var(varname) then
-            error("access to critical environment variable " .. varname .. " is restricted for security")
-        end
+        validate_env_var("os.getenv", varname)
         return _unsafe_os_getenv(varname)
     end
 
     os.setenv = function(varname, value)
-        if is_critical_env_var(varname) then
-            error("setting critical environment variable " .. varname .. " is restricted for security")
-        end
+        validate_env_var("os.setenv", varname)
         return _unsafe_os_setenv(varname, value)
     end
 end

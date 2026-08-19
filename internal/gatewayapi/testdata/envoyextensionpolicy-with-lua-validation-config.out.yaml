@@ -46,7 +46,8 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
   spec:
     logging: {}
-    luaValidation: Disabled
+    lua:
+      validationType: Disabled
   status:
     ancestors:
     - ancestorRef:
@@ -59,11 +60,6 @@ envoyProxyForGatewayClass:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.luaValidation is deprecated, use spec.lua.validationType instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
@@ -172,7 +168,8 @@ infraIR:
           namespace: envoy-gateway-system
         spec:
           logging: {}
-          luaValidation: Disabled
+          lua:
+            validationType: Disabled
         status:
           ancestors:
           - ancestorRef:
@@ -185,12 +182,6 @@ infraIR:
               reason: Accepted
               status: "True"
               type: Accepted
-            - lastTransitionTime: null
-              message: spec.luaValidation is deprecated, use spec.lua.validationType
-                instead
-              reason: DeprecatedField
-              status: "True"
-              type: Warning
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
