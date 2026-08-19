@@ -905,13 +905,27 @@ type LokiQueryResponse struct {
 
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
-func CollectAndDump(t *testing.T, rest *rest.Config) {
+func CollectAndDump(t *testing.T, suite *suite.ConformanceTestSuite) {
 	dumpedNamespaces := []string{"envoy-gateway-system"}
 	if IsGatewayNamespaceMode() {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+
+		// collect all Gateways in the cluster, and dump their namespaces for troubleshooting.
+		gtwList := &gwapiv1.GatewayList{}
+		if err := suite.Client.List(t.Context(), gtwList, &client.ListOptions{
+			Namespace: corev1.NamespaceAll,
+		}); err != nil {
+			tlog.Logf(t, "failed to list Gateways: %v", err)
+		}
+		for i := range gtwList.Items {
+			gtw := &gtwList.Items[i]
+			if gtw.Namespace != ConformanceInfraNamespace {
+				dumpedNamespaces = append(dumpedNamespaces, gtw.Namespace)
+			}
+		}
 	}
 
-	runCollectAndDump(t, rest,
+	runCollectAndDump(t, suite.RestConfig,
 		tb.WithCollectedNamespaces(dumpedNamespaces),
 	)
 }
