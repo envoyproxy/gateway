@@ -15,7 +15,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	k8sutils "sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	opt "github.com/envoyproxy/gateway/internal/cmd/options"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
@@ -83,10 +85,10 @@ func NewResilienceTestSuite(client client.Client, reportDir string, manifestFS [
 func (rts *ResilienceTestSuite) WithResCleanUp(ctx context.Context, t *testing.T, f func() (client.Object, error)) error {
 	res, err := f()
 	t.Cleanup(func() {
-		t.Logf("Start to cleanup resilsence test resources")
+		tlog.Logf(t, "Start to cleanup resilsence test resources")
 		_ = rts.Client.Delete(ctx, res)
 
-		t.Logf("Clean up complete!")
+		tlog.Logf(t, "Clean up complete!")
 	})
 	return err
 }
@@ -96,18 +98,27 @@ func (rts *ResilienceTestSuite) Kube() *kubernetes.KubeActions {
 }
 
 func (rts *ResilienceTestSuite) Run(t *testing.T, tests []ResilienceTest) {
-	t.Logf("Running %d resilience tests", len(tests))
+	tlog.Logf(t, "Running %d resilience tests", len(tests))
+	ap := k8sutils.Applier{
+		ManifestFS:     rts.ManifestFS,
+		GatewayClass:   rts.GatewayClassName,
+		ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+	}
+	ap.MustApplyWithCleanup(t, rts.Client, rts.TimeoutConfig, "testdata/base.yaml", true)
+
 	for _, test := range tests {
-		t.Logf("Running resilience test: %s", test.ShortName)
-		test.Test(t, rts)
+		tlog.Logf(t, "Running resilience test: %s", test.ShortName)
+		t.Run(test.ShortName, func(t *testing.T) {
+			test.Test(t, rts)
+		})
 	}
 }
 
 func (rts *ResilienceTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object client.Object) {
 	t.Cleanup(func() {
-		t.Logf("Start to cleanup resilsence test resources")
+		tlog.Logf(t, "Start to cleanup resilience test resources")
 		_ = rts.Client.Delete(ctx, object)
 
-		t.Logf("Clean up complete!")
+		tlog.Logf(t, "Clean up complete!")
 	})
 }
