@@ -440,7 +440,6 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 		tlog.Logf(t, "traffic map: %v", trafficMap)
 		// wait for a while to let envoy flush all the logs.
 		time.Sleep(6 * time.Second)
-		consistentHashDump(t, suite.RestConfig)
 		t.FailNow()
 	}
 

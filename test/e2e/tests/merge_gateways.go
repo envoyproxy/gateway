@@ -247,7 +247,7 @@ var MergeGatewaysTest = suite.ConformanceTest{
 		t.Cleanup(func() {
 			if t.Failed() {
 				// Collect and dump every config before removing the created resource.
-				CollectAndDump(t, suite.RestConfig)
+				CollectAndDump(t, suite)
 			}
 
 			conflictedGateway := new(gwapiv1.Gateway)

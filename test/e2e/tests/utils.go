@@ -36,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -901,18 +902,36 @@ type LokiQueryResponse struct {
 
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
-func CollectAndDump(t *testing.T, rest *rest.Config) {
-	dumpedNamespaces := []string{"envoy-gateway-system"}
-	if IsGatewayNamespaceMode() {
-		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+func CollectAndDump(t *testing.T, suite *suite.ConformanceTestSuite) {
+	dumpedNamespaces := sets.New(
+		"envoy-gateway-system",
+		"gateway-conformance-infra",
+	)
+
+	// don't use t.Context() here, because t.Cleanup is called
+	// after the test has finished, and t.Context() will be canceled at that point.
+	ctx := context.Background()
+
+	// collect all Gateways in the cluster, and dump their namespaces for troubleshooting.
+	gtwList := &gwapiv1.GatewayList{}
+	if err := suite.Client.List(ctx, gtwList, &client.ListOptions{
+		Namespace: corev1.NamespaceAll,
+	}); err != nil {
+		tlog.Logf(t, "failed to list Gateways: %v", err)
+	}
+	for i := range gtwList.Items {
+		gtw := &gtwList.Items[i]
+		if gtw.Namespace != ConformanceInfraNamespace {
+			dumpedNamespaces.Insert(gtw.Namespace)
+		}
 	}
 
-	runCollectAndDump(t, rest,
-		tb.WithCollectedNamespaces(dumpedNamespaces),
+	runCollectAndDump(t, ctx, suite.RestConfig,
+		tb.WithCollectedNamespaces(dumpedNamespaces.UnsortedList()),
 	)
 }
 
-func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
+func runCollectAndDump(t *testing.T, ctx context.Context, rest *rest.Config, opts ...tb.CollectOption) {
 	artifactsDir := os.Getenv("E2E_ARTIFACTS_DIR")
 	if artifactsDir == "" {
 		artifactsDir = "artifacts/e2e"
@@ -936,23 +955,9 @@ func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption
 	}
 
 	tlog.Logf(t, "creating e2e artifacts directory %s", bundlePath)
-	if _, err := tb.CollectResult(t.Context(), rest, opts...); err != nil {
+	if _, err := tb.CollectResult(ctx, rest, opts...); err != nil {
 		tlog.Logf(t, "failed to collect all data: %v", err)
 	}
-}
-
-func consistentHashDump(t *testing.T, rest *rest.Config) {
-	dumpedNamespaces := []string{"envoy-gateway-system"}
-	if IsGatewayNamespaceMode() {
-		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
-	}
-
-	runCollectAndDump(t, rest,
-		tb.WithCollectedNamespaces(dumpedNamespaces),
-		tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
-		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
-		tb.WithSelector("gateway.envoyproxy.io/owning-gateway-name=lb-backend-gateway"),
-	)
 }
 
 func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
