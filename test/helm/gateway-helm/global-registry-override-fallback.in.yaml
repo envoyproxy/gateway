@@ -1,0 +1,7 @@
+global:
+  imageRegistry: "private.registry"
+  images:
+    envoyGateway:
+      image: ""
+    ratelimit:
+      image: "docker.io/envoyproxy/ratelimit:master"
