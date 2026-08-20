@@ -1,0 +1,76 @@
+- clusterName: plaintext-http2-auto-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: plaintext-http2-auto-dest/backend/0
+- clusterName: tls-auto-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-auto-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tls-auto-dest/backend/0
+- clusterName: tls-explicit-http2-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-explicit-http2-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tls-explicit-http2-dest/backend/0
+- clusterName: tls-custom-alpn-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-custom-alpn-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tls-custom-alpn-dest/backend/0
+- clusterName: tls-grpc-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-grpc-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tls-grpc-dest/backend/0

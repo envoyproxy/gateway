@@ -1,0 +1,129 @@
+http:
+  - name: "first-listener"
+    address: "::"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      # Plaintext HTTP/2 backend: the codec is derived from the backend protocol, and
+      # there is no TLS handshake to keep consistent with it.
+      - name: "plaintext-http2-auto"
+        hostname: "*"
+        traffic:
+          healthCheck:
+            active:
+              timeout: "1s"
+              interval: "3s"
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              http:
+                path: "/healthz"
+                expectedStatuses:
+                  - 200
+        destination:
+          name: "plaintext-http2-auto-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "plaintext-http2-auto-dest/backend/0"
+              protocol: HTTP2
+      # TLS backend without an explicit version: the codec is HTTP1, and the ALPN of
+      # health check connections is pinned to it.
+      - name: "tls-auto"
+        hostname: "*"
+        traffic:
+          healthCheck:
+            active:
+              timeout: "1s"
+              interval: "3s"
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              http:
+                path: "/healthz"
+                expectedStatuses:
+                  - 200
+        destination:
+          name: "tls-auto-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "tls-auto-dest/backend/0"
+              tls:
+                insecureSkipVerify: true
+      # TLS backend whose health check endpoint uses a different protocol than its
+      # application endpoint.
+      - name: "tls-explicit-http2"
+        hostname: "*"
+        traffic:
+          healthCheck:
+            active:
+              timeout: "1s"
+              interval: "3s"
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              http:
+                path: "/healthz"
+                version: HTTP2
+                expectedStatuses:
+                  - 200
+        destination:
+          name: "tls-explicit-http2-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "tls-explicit-http2-dest/backend/0"
+              tls:
+                insecureSkipVerify: true
+      # TLS backend that requires its own ALPN protocol: pinning it to the codec would
+      # break the handshake, so the cluster ALPN is inherited as-is.
+      - name: "tls-custom-alpn"
+        hostname: "*"
+        traffic:
+          healthCheck:
+            active:
+              timeout: "1s"
+              interval: "3s"
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              http:
+                path: "/healthz"
+                expectedStatuses:
+                  - 200
+        destination:
+          name: "tls-custom-alpn-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "tls-custom-alpn-dest/backend/0"
+              tls:
+                insecureSkipVerify: true
+                alpnProtocols:
+                  - istio
+      # gRPC health checks are always sent over HTTP/2 by Envoy.
+      - name: "tls-grpc"
+        hostname: "*"
+        traffic:
+          healthCheck:
+            active:
+              timeout: "1s"
+              interval: "3s"
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              grpc:
+                service: "health"
+        destination:
+          name: "tls-grpc-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "tls-grpc-dest/backend/0"
+              tls:
+                insecureSkipVerify: true
