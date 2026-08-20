@@ -36,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -902,27 +903,26 @@ type LokiQueryResponse struct {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, suite *suite.ConformanceTestSuite) {
-	dumpedNamespaces := []string{"envoy-gateway-system"}
-	if IsGatewayNamespaceMode() {
-		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
-
-		// collect all Gateways in the cluster, and dump their namespaces for troubleshooting.
-		gtwList := &gwapiv1.GatewayList{}
-		if err := suite.Client.List(t.Context(), gtwList, &client.ListOptions{
-			Namespace: corev1.NamespaceAll,
-		}); err != nil {
-			tlog.Logf(t, "failed to list Gateways: %v", err)
-		}
-		for i := range gtwList.Items {
-			gtw := &gtwList.Items[i]
-			if gtw.Namespace != ConformanceInfraNamespace {
-				dumpedNamespaces = append(dumpedNamespaces, gtw.Namespace)
-			}
+	dumpedNamespaces := sets.New(
+		"envoy-gateway-system",
+		"gateway-conformance-infra",
+	)
+	// collect all Gateways in the cluster, and dump their namespaces for troubleshooting.
+	gtwList := &gwapiv1.GatewayList{}
+	if err := suite.Client.List(t.Context(), gtwList, &client.ListOptions{
+		Namespace: corev1.NamespaceAll,
+	}); err != nil {
+		tlog.Logf(t, "failed to list Gateways: %v", err)
+	}
+	for i := range gtwList.Items {
+		gtw := &gtwList.Items[i]
+		if gtw.Namespace != ConformanceInfraNamespace {
+			dumpedNamespaces.Insert(gtw.Namespace)
 		}
 	}
 
 	runCollectAndDump(t, suite.RestConfig,
-		tb.WithCollectedNamespaces(dumpedNamespaces),
+		tb.WithCollectedNamespaces(dumpedNamespaces.UnsortedList()),
 	)
 }
 
