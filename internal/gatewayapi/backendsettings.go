@@ -632,8 +632,9 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 	}
 
 	irHTTP := &ir.HTTPHealthChecker{
-		Path:   h.Path,
-		Method: h.Method,
+		Path:    h.Path,
+		Method:  h.Method,
+		Version: h.Version,
 	}
 	if irHTTP.Method != nil {
 		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)
