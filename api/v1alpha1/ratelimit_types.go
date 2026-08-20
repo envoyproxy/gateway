@@ -55,6 +55,7 @@ type GlobalRateLimit struct {
 	// to rate limit the request.
 	//
 	// +kubebuilder:validation:MaxItems=256
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.name) || self.filter(r2, has(r2.name) && r2.name == r.name).size() == 1)", message="rate limit rule names must be unique within the global rules slice"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -69,6 +70,7 @@ type LocalRateLimit struct {
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.limit.fromMetadata))", message="limit fromMetadata is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.name) || self.filter(r2, has(r2.name) && r2.name == r.name).size() == 1)", message="rate limit rule names must be unique within the local rules slice"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -92,6 +94,22 @@ const (
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
 type RateLimitRule struct {
+	// Name is a user-facing name for this rule that can be used for debugging
+	// and observability. When set, the rate limit key will include this name,
+	// making it easier to identify in metrics and dashboards.
+	// The name must be unique within a policy and should be a stable identifier
+	// that won't change when the rule order changes.
+	//
+	// When name is set, the rate limit key format becomes:
+	// <policy-namespace>/<policy-name>/rule/<rule-name>
+	// When name is not set, the format remains:
+	// <policy-namespace>/<policy-name>/rule/<rule-index>
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9._-]+$`
+	// +kubebuilder:validation:XValidation:rule="!self.matches('^[0-9]+$')", message="rate limit rule name must not be purely numeric to avoid collision with auto-generated index-based rule names"
+	Name *string `json:"name,omitempty"`
 	// ClientSelectors holds the list of select conditions to select
 	// specific clients using attributes from the traffic flow.
 	// All individual select conditions must hold True for this rule

@@ -6,6 +6,10 @@ rateLimitsByDomain:
           descriptor_key: first-route
           descriptor_value: first-route
     - ActionSpecifier:
+        GenericKey:
+          descriptor_key: test-namespace/test-policy-1/rule/0
+          descriptor_value: test-namespace/test-policy-1/rule/0
+    - ActionSpecifier:
         HeaderValueMatch:
           descriptor_key: rule-0-match-0
           descriptor_value: rule-0-match-0
@@ -22,6 +26,10 @@ rateLimitsByDomain:
         GenericKey:
           descriptor_key: first-route
           descriptor_value: first-route
+    - ActionSpecifier:
+        GenericKey:
+          descriptor_key: test-namespace/test-policy-1/rule/1
+          descriptor_value: test-namespace/test-policy-1/rule/1
     - ActionSpecifier:
         HeaderValueMatch:
           descriptor_key: rule-1-match-0
