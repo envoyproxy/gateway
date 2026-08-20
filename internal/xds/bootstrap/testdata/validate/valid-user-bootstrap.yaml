@@ -14,6 +14,7 @@ dynamicResources:
     grpcServices:
     - envoyGrpc:
         clusterName: xds_cluster
+        maxReceiveMessageLength: 8388608
     setNodeOnFirstMessageOnly: true
     transportApiVersion: V3
   ldsConfig:

@@ -1,0 +1,4 @@
+- op: add
+  path: /dynamic_resources/ads_config/grpc_services/0/envoy_grpc/max_receive_message_length
+  value:
+    value: 8388608
