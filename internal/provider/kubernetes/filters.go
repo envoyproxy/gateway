@@ -44,8 +44,12 @@ func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context)
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList, client.UnsafeDisableDeepCopy); err != nil {
-			r.log.Info("no associated backend resources found", "GVK", gvk.String())
-			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
+			// Skip GVKs whose CRD is missing or RBAC is insufficient instead of
+			// aborting the entire reconcile. The watch for this GVK was already
+			// skipped in the controller setup; skipping the list path as well
+			// keeps Gateway processing alive for otherwise valid routes.
+			r.log.Info("skipping backend resource list", "GVK", gvk.String(), "error", err.Error())
+			continue
 		}
 
 		uExtResources := uExtResourceList.Items
