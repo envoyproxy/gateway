@@ -1,0 +1,1 @@
+Fixed active health checks failing against backends that speak HTTP/2 by deriving the health check protocol from the backend protocol, and by pinning the ALPN protocol of health check connections to TLS backends to the derived protocol.

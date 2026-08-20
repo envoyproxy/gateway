@@ -8,6 +8,7 @@ package translator
 import (
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -488,7 +489,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
 		var err error
-		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog)
+		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol
+		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog, args.settings, upstreamHTTP2)
 		if err != nil {
 			return nil, err
 		}
@@ -628,7 +630,9 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 	return lbConfig
 }
 
-func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog) ([]*corev3.HealthCheck, error) {
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog,
+	settings []*ir.DestinationSetting, upstreamHTTP2 bool,
+) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
@@ -659,6 +663,8 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			httpChecker.Receive = append(httpChecker.Receive, receive)
 		}
 		httpChecker.Send = buildHealthCheckPayload(healthcheck.HTTP.RequestBody)
+		httpChecker.CodecClientType = buildHealthCheckCodecClientType(healthcheck.HTTP.Version, upstreamHTTP2)
+		hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType)
 		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
 			HttpHealthCheck: httpChecker,
 		}
@@ -673,6 +679,9 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			TcpHealthCheck: tcpChecker,
 		}
 	case healthcheck.GRPC != nil:
+		// Envoy always uses HTTP/2 to send gRPC health check requests, and exposes no
+		// codec setting for them.
+		hc.TlsOptions = buildHealthCheckTLSOptions(settings, xdstype.CodecClientType_HTTP2)
 		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
 			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
 				ServiceName: ptr.Deref(healthcheck.GRPC.Service, ""),
@@ -703,6 +712,82 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 	}
 
 	return []*corev3.HealthCheck{hc}, nil
+}
+
+// buildHealthCheckCodecClientType returns the codec that Envoy uses to send HTTP health
+// check requests.
+//
+// Envoy has no auto codec: it's fixed when the health checker is created and is never
+// negotiated per request, so Auto is resolved here from the effective upstream protocol
+// of the backend.
+//
+// UseClientProtocol isn't considered here, even though it takes precedence over the
+// backend protocol on the data path: it makes the upstream protocol vary per request, and
+// a health check has no downstream request to mirror. The protocol declared by the backend
+// is the only usable signal. An explicit version is the way out for a backend whose health
+// check endpoint doesn't serve that protocol.
+func buildHealthCheckCodecClientType(version *egv1a1.HTTPHealthCheckVersion, upstreamHTTP2 bool) xdstype.CodecClientType {
+	switch ptr.Deref(version, egv1a1.HTTPHealthCheckVersionAuto) {
+	case egv1a1.HTTPHealthCheckVersionHTTP1:
+		return xdstype.CodecClientType_HTTP1
+	case egv1a1.HTTPHealthCheckVersionHTTP2:
+		return xdstype.CodecClientType_HTTP2
+	default:
+		if upstreamHTTP2 {
+			return xdstype.CodecClientType_HTTP2
+		}
+		return xdstype.CodecClientType_HTTP1
+	}
+}
+
+// buildHealthCheckTLSOptions pins the ALPN protocol offered on health check connections to
+// the one matching the health check codec.
+//
+// Health check connections are created outside of the connection pool, so they don't get
+// the ALPN protocols that the pool derives from the cluster protocol options. Without a
+// pin, the protocol negotiated during the handshake can differ from the codec that Envoy
+// uses to send the health check request, and every health check fails.
+//
+// The ALPN isn't pinned if the backend TLS settings ask for a protocol that the codec
+// can't speak, for example a backend that only accepts the `istio` ALPN protocol.
+// Overriding the ALPN would break the handshake instead of keeping it consistent.
+//
+// TODO: if https://github.com/envoyproxy/envoy/issues/46848 lands, a health check whose
+// version is Auto should offer both `h2` and `http/1.1` to a TLS backend and let the
+// handshake decide, with the resolved codec kept as the fallback for peers that don't
+// negotiate. An explicitly configured version keeps the pin. That has to be gated on the
+// Envoy version shipped with Envoy Gateway: offering both protocols to an Envoy that
+// still discards the negotiated one brings back the codec mismatch the pin avoids.
+func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype.CodecClientType) *corev3.HealthCheck_TlsOptions {
+	var alpn string
+	switch codec {
+	case xdstype.CodecClientType_HTTP1:
+		alpn = string(egv1a1.HTTPProtocolVersion1_1)
+	case xdstype.CodecClientType_HTTP2:
+		alpn = string(egv1a1.HTTPProtocolVersion2)
+	default:
+		return nil
+	}
+
+	var hasTLS bool
+	for _, ds := range settings {
+		if ds == nil || ds.TLS == nil {
+			continue
+		}
+		hasTLS = true
+		// A nil ALPN list means that the backend TLS settings don't configure ALPN, while
+		// an empty list means that ALPN is disabled.
+		if ds.TLS.ALPNProtocols != nil && !slices.Contains(ds.TLS.ALPNProtocols, alpn) {
+			return nil
+		}
+	}
+	// Health check connections to a plaintext backend don't negotiate a protocol, the codec
+	// alone decides what Envoy sends.
+	if !hasTLS {
+		return nil
+	}
+
+	return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{alpn}}
 }
 
 func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {
