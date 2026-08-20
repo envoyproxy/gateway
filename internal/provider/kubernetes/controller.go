@@ -2992,6 +2992,19 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("Watching additional policy resource", "resource", gvk.String())
 	}
 	for _, gvk := range r.extBackendGVKs {
+		// Check if the backend resource CRD exists before registering the watch.
+		// If the CRD is missing (or RBAC is insufficient), skip the watch for this
+		// GVK instead of failing WaitForCacheSync and crashing the controller.
+		// This follows the same pattern used for ServiceImport, Backend, and other
+		// optional CRDs.
+		crdExists, err := checkCRD(gvk.Kind, gvk.GroupVersion().String())
+		if err != nil {
+			return err
+		}
+		if !crdExists {
+			r.log.Info("backend resource CRD not found, skipping watch", "resource", gvk.String())
+			continue
+		}
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
 		if err := c.Watch(source.Kind(mgr.GetCache(), u,
