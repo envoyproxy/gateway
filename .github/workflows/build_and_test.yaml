@@ -165,6 +165,14 @@ jobs:
           ipFamily: ipv4
           profile: default
           gwapiChannel: standard
+        - version: v1.33.12
+          ipFamily: ipv4
+          profile: default
+          gwapiChannel: standard
+          # disable parallel to make sure the test is stable,
+          # this should be able to be run in a private forked repo
+          # with less CPU and memory resources
+          disableParallel: true
         - version: v1.34.8
           ipFamily: ipv4
           profile: default
@@ -220,6 +228,7 @@ jobs:
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
         SKIP_GO_BUILD: "true"
         E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/conformance
+        E2E_DISABLE_PARALLEL: ${{ matrix.target.disableParallel || 'false' }}
       run: make conformance
 
     - name: Upload E2E failure artifacts
