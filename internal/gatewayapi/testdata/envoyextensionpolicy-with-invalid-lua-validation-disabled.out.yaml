@@ -38,6 +38,51 @@ envoyExtensionPolicies:
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway-system
+  spec:
+    logging: {}
+    luaValidation: Disabled
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.luaValidation is deprecated, use spec.lua.validationType instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: test
+      namespace: envoy-gateway-system
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -128,7 +173,24 @@ infraIR:
         spec:
           logging: {}
           luaValidation: Disabled
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            - lastTransitionTime: null
+              message: spec.luaValidation is deprecated, use spec.lua.validationType
+                instead
+              reason: DeprecatedField
+              status: "True"
+              type: Warning
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:

@@ -5209,6 +5209,24 @@ spec:
                         - name
                         x-kubernetes-list-type: map
                     type: object
+                  maxRequestHeaderLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxRequestHeaderLimit provides configuration for the maximum size of the
+                      request headers allowed for incoming connections, mapping to the Envoy
+                      `max_request_headers_kb` HTTP connection manager setting. Requests whose
+                      headers exceed this limit receive a 431 (Request Header Fields Too Large)
+                      response. The value is rounded up to the nearest KiB, must be at least 1Ki,
+                      and cannot exceed 8192Ki (the maximum Envoy supports).
+                      For example, 60Ki, 96Ki, 128Ki etc.
+                      Note that when the suffix is not provided, the value is interpreted as bytes.
+                      Default: 60Ki bytes.
+                    x-kubernetes-int-or-string: true
                   preserveXRequestID:
                     description: |-
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
@@ -10815,10 +10833,84 @@ spec:
                       and the log level is the value. If unspecified, defaults to "default: warn".
                     type: object
                 type: object
+              lua:
+                description: |-
+                  Lua configures how Lua scripts from EnvoyExtensionPolicy resources are
+                  validated in the gateway controller. It selects the validation mode and, for the Strict
+                  mode, defines the filesystem paths and environment variables the scripts are permitted to
+                  access during validation.
+                properties:
+                  strictValidation:
+                    description: |-
+                      StrictValidation configures the security sandbox that the Strict validation mode executes Lua
+                      scripts in, defining the filesystem paths and environment variables the scripts are permitted
+                      to access during validation.
+
+                      It has no effect for the InsecureSyntax or Disabled modes, which do not execute the security
+                      sandbox.
+                    properties:
+                      allowedEnvVars:
+                        description: |-
+                          AllowedEnvVars is the list of environment variable names that Lua scripts are permitted to
+                          access during validation (via os.getenv, os.setenv). Matching is exact and case-sensitive.
+                          When empty, access to all environment variables is denied. Blank or whitespace-only entries
+                          are rejected.
+                        items:
+                          maxLength: 256
+                          minLength: 1
+                          type: string
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-validations:
+                        - message: allowedEnvVars entries must not be blank or whitespace-only
+                          rule: self.all(e, e.trim() != '')
+                      allowedPaths:
+                        description: |-
+                          AllowedPaths is the list of filesystem path prefixes that Lua scripts are permitted to
+                          access during validation (via io.open, io.input, io.output, io.lines, os.remove, os.rename).
+                          A path is allowed when it equals an entry or is contained within an entry's subtree
+                          (e.g. "/tmp" allows "/tmp/file.txt"). Paths are normalized (separators collapsed, made
+                          absolute) before matching, and any "." or ".." traversal segment is always rejected.
+                          When empty, all filesystem access is denied. Blank or whitespace-only entries are rejected,
+                          as they would otherwise match every path and disable the sandbox. The filesystem root ("/")
+                          is likewise rejected, as it would allow access to the entire filesystem and defeat the sandbox.
+                          Note that a built-in set of sensitive paths is always denied, even if they are added to the
+                          allowed paths here: /etc, /proc, /sys, /certs, /var/run/secrets, and /run/secrets.
+                        items:
+                          maxLength: 4096
+                          minLength: 1
+                          type: string
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-validations:
+                        - message: allowedPaths entries must not be blank or whitespace-only
+                          rule: self.all(p, p.trim() != '')
+                        - message: allowedPaths entries must not be the filesystem
+                            root
+                          rule: self.all(p, !p.matches('^/+$'))
+                    type: object
+                  validationType:
+                    default: Strict
+                    description: |-
+                      ValidationType determines the strictness of the Lua script validation.
+                      Default: Strict
+                    enum:
+                    - Strict
+                    - InsecureSyntax
+                    - Disabled
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: strictValidation can only be set when validationType is
+                    Strict
+                  rule: '!has(self.strictValidation) || !has(self.validationType)
+                    || self.validationType == ''Strict'''
               luaValidation:
                 description: |-
                   LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
                   Default: Strict
+
+                  Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release.
                 enum:
                 - Strict
                 - InsecureSyntax
@@ -21403,6 +21495,12 @@ spec:
                       If unspecified, defaults to 60 seconds.
                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
+                  healthCheckFailureDelay:
+                    description: |-
+                      HealthCheckFailureDelay defines the delay before failing health checks during the graceful drain process.
+                      If unspecified, defaults to 0 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   minDrainDuration:
                     description: |-
                       MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
@@ -28807,6 +28905,8 @@ spec:
                 x-kubernetes-list-type: map
             type: object
             x-kubernetes-validations:
+            - message: only one of luaValidation or lua may be set
+              rule: '!has(self.luaValidation) || !has(self.lua)'
             - message: mergeGateways and mergeBackends cannot both be enabled
               rule: '!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends))'
           status:
@@ -35589,7 +35689,7 @@ spec:
                       If not set, the cookies will default to the host of the request, not including the subdomains.
                       If set, the cookies will be set on the specified domain and all subdomains.
                       This means that requests to any subdomain will not require reauthentication after users log in to the parent domain.
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                     type: string
                   cookieNames:
                     description: |-

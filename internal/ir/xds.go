@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -978,6 +979,10 @@ type HeaderSettings struct {
 
 	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
 	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
+
+	// MaxRequestHeadersKB defines the maximum request headers size in KiB allowed for incoming connections.
+	// Maps to the Envoy `max_request_headers_kb` HTTP connection manager setting.
+	MaxRequestHeadersKB *uint32 `json:"maxRequestHeadersKB,omitempty" yaml:"maxRequestHeadersKB,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -1279,6 +1284,19 @@ type HTTPUpgradeConfig struct {
 // +k8s:deepcopy-gen=true
 type ConnectConfig struct {
 	Terminate bool `json:"terminate" yaml:"terminate"`
+}
+
+// HasConnectUpgrade returns true if the HTTP CONNECT upgrade is enabled.
+func (b *TrafficFeatures) HasConnectUpgrade() bool {
+	if b == nil {
+		return false
+	}
+	for _, protocol := range b.HTTPUpgrade {
+		if strings.EqualFold(protocol.Type, "CONNECT") {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *TrafficFeatures) Validate() error {

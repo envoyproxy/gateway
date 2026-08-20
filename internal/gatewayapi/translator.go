@@ -384,6 +384,12 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Process BackendTrafficPolicies
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
 
+	// Check for overlapping route matches across all listeners. This must run
+	// after BackendTrafficPolicies are applied because a CONNECT upgrade
+	// replaces a route's path matcher with Envoy's CONNECT matcher, which
+	// changes which routes can overlap.
+	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
+
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, acceptedGateways, routes, resources, xdsIR)
@@ -489,6 +495,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+			status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
 		}
 	}
 
@@ -564,6 +571,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			if gCtx.envoyProxyFromGateway {
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
 			}
 		}
 
@@ -592,6 +600,15 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 	}
 
 	return nil
+}
+
+func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if ep.Spec.LuaValidation != nil {
+		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
+	}
+
+	return deprecatedFields
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.

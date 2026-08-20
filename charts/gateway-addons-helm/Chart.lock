@@ -10,15 +10,15 @@ dependencies:
   version: 0.56.0
 - name: alloy
   repository: https://grafana.github.io/helm-charts
-  version: 1.11.0
+  version: 1.11.1
 - name: loki
   repository: https://grafana.github.io/helm-charts
-  version: 7.2.0
+  version: 7.3.0
 - name: tempo
   repository: https://grafana.github.io/helm-charts
   version: 1.3.1
 - name: opentelemetry-collector
   repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-  version: 0.166.0
-digest: sha256:6abf7ce0a96aee5751d45cd3093bb67947a6a6124bbbf3c1572b986ae769be69
-generated: "2026-08-05T04:13:42.356458624Z"
+  version: 0.170.0
+digest: sha256:816a949625ced598add74a4359529aec6bbfddf017c76b09383fd61bec3d9605
+generated: "2026-08-19T04:16:35.248808537Z"
