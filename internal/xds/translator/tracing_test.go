@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -34,7 +35,7 @@ func TestBuildHCMTracingSampling(t *testing.T) {
 					Name: "tracing",
 				},
 				Provider: egv1a1.TracingProvider{
-					Type: egv1a1.TracingProviderTypeOpenTelemetry,
+					Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 				},
 			},
 			expectedRandomSampling:  10.0,
@@ -50,7 +51,7 @@ func TestBuildHCMTracingSampling(t *testing.T) {
 					Name: "tracing",
 				},
 				Provider: egv1a1.TracingProvider{
-					Type: egv1a1.TracingProviderTypeOpenTelemetry,
+					Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 				},
 			},
 			expectedRandomSampling:  10.0,

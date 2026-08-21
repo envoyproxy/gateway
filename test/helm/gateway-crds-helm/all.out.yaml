@@ -53015,9 +53015,11 @@ spec:
                                     : true'
                             type: object
                           port:
-                            default: 4317
                             description: |-
                               Port defines the port the provider service is exposed on.
+
+                              Defaults to 4317. The default is applied during translation rather than by
+                              admission, for the same reason as Type.
 
                               Deprecated: Use BackendRefs instead.
                             format: int32
@@ -53036,8 +53038,13 @@ spec:
                             - message: serviceName cannot be empty if provided
                               rule: self != ""
                           type:
-                            default: OpenTelemetry
-                            description: Type defines the tracing provider type.
+                            description: |-
+                              Type defines the tracing provider type.
+
+                              Defaults to OpenTelemetry. The default is applied during translation rather
+                              than by admission, so that a Gateway-level EnvoyProxy overriding only part of
+                              the provider does not replace the type inherited from the GatewayClass level
+                              (see EnvoyProxySpec.MergeType).
                             enum:
                             - OpenTelemetry
                             - Zipkin
@@ -53059,8 +53066,6 @@ spec:
                                   id will be used.
                                 type: boolean
                             type: object
-                        required:
-                        - type
                         type: object
                         x-kubernetes-validations:
                         - message: BackendRefs must be used, backendRef is not supported.
@@ -53074,8 +53079,8 @@ spec:
                             f.group == "" || f.group == ''gateway.envoyproxy.io''))
                             : true'
                         - message: openTelemetry can only be used with type OpenTelemetry
-                          rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
-                            : true'
+                          rule: 'has(self.openTelemetry) ? (!has(self.type) || self.type
+                            == ''OpenTelemetry'') : true'
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be

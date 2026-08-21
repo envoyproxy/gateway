@@ -950,7 +950,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -986,7 +986,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1026,7 +1026,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1067,7 +1067,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1104,7 +1104,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type:        egv1a1.TracingProviderTypeOpenTelemetry,
+								Type:        ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								ServiceName: new("only-name-overridden"),
 							},
 						},
@@ -1186,6 +1186,83 @@ func TestProcessTracingServiceName(t *testing.T) {
 
 			assert.NotNil(t, result)
 			assert.Equal(t, tc.expectedServiceName, result.ServiceName)
+		})
+	}
+}
+
+// TestProcessTracingProviderDefaults guards the defaults that used to be applied
+// by admission. Applying them there made a partial Gateway-level override
+// indistinguishable from an explicit one, so an inherited type or port was
+// silently replaced by the defaulted value during the EnvoyProxy merge.
+func TestProcessTracingProviderDefaults(t *testing.T) {
+	cases := []struct {
+		name         string
+		provider     egv1a1.TracingProvider
+		expectedType egv1a1.TracingProviderType
+		expectedPort uint32
+	}{
+		{
+			name: "unset type and port fall back to the documented defaults",
+			provider: egv1a1.TracingProvider{
+				Host: ptr.To("otel-collector.monitoring.svc.cluster.local"),
+			},
+			expectedType: egv1a1.TracingProviderTypeOpenTelemetry,
+			expectedPort: 4317,
+		},
+		{
+			name: "type and port inherited from the GatewayClass level are kept",
+			provider: egv1a1.TracingProvider{
+				Host: ptr.To("datadog-agent.monitoring.svc.cluster.local"),
+				Type: ptr.To(egv1a1.TracingProviderTypeDatadog),
+				Port: ptr.To(int32(8126)),
+			},
+			expectedType: egv1a1.TracingProviderTypeDatadog,
+			expectedPort: 8126,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			translator := &Translator{}
+			envoyProxy := &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-proxy",
+					Namespace: "test-namespace",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: tc.provider,
+						},
+					},
+				},
+			}
+
+			result, err := translator.processTracing(&GatewayContext{
+				Gateway: &gwapiv1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "test-namespace",
+					},
+				},
+			}, envoyProxy, false, &resource.Resources{})
+			require.NoError(t, err)
+			require.NotNil(t, result)
+
+			require.NotNil(t, result.Provider.Type)
+			assert.Equal(t, tc.expectedType, *result.Provider.Type)
+			require.NotNil(t, result.Provider.Port)
+			assert.Equal(t, tc.expectedPort, uint32(*result.Provider.Port))
+
+			// The host/port fallback destination has to agree with the provider port.
+			require.Len(t, result.Destination.Settings, 1)
+			require.Len(t, result.Destination.Settings[0].Endpoints, 1)
+			assert.Equal(t, tc.expectedPort, result.Destination.Settings[0].Endpoints[0].Port)
+
+			// Defaulting works on a copy, so the EnvoyProxy resource keeps whatever
+			// the user actually set.
+			assert.Equal(t, tc.provider.Type, envoyProxy.Spec.Telemetry.Tracing.Provider.Type)
+			assert.Equal(t, tc.provider.Port, envoyProxy.Spec.Telemetry.Tracing.Provider.Port)
 		})
 	}
 }
