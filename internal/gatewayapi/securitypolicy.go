@@ -2202,6 +2202,14 @@ func (t *Translator) buildOIDC(
 		}
 	}
 
+	if oidc.CodeVerifierTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.CodeVerifierTTL)); err == nil {
+			irOIDC.CodeVerifierTTL = ir.MetaV1DurationPtr(d)
+		} else {
+			return nil, fmt.Errorf("invalid codeVerifierTTL: %w", err)
+		}
+	}
+
 	return irOIDC, nil
 }
 
