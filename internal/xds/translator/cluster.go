@@ -283,6 +283,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	forceHTTP1UpstreamProtocol := false
 	hasLiteralSNI := false
 	hasAutoSNIFromEndpointHostname := false
+	hasBackendTLS := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
 			ds.Protocol == ir.HTTP2 {
@@ -299,6 +300,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		// auto HTTP config is required if all the destinations use HTTPS-based protocol
 		requiresAutoHTTPConfig = requiresAutoHTTPConfig && (ds.TLS != nil)
 		if ds.TLS != nil {
+			hasBackendTLS = true
 			// it's safe to set autoSNI on cluster level only if all endpoints do not set literal SNIs.
 			// Otherwise, autoSNI will override transport-socket level SNI.
 			// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#connect-to-an-endpoint-with-sni
@@ -490,7 +492,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
 		var err error
 		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol
-		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog, args.settings, upstreamHTTP2)
+		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog,
+			args.settings, upstreamHTTP2, hasBackendTLS)
 		if err != nil {
 			return nil, err
 		}
@@ -631,7 +634,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 }
 
 func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog,
-	settings []*ir.DestinationSetting, upstreamHTTP2 bool,
+	settings []*ir.DestinationSetting, upstreamHTTP2, hasBackendTLS bool,
 ) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
@@ -664,7 +667,9 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 		}
 		httpChecker.Send = buildHealthCheckPayload(healthcheck.HTTP.RequestBody)
 		httpChecker.CodecClientType = buildHealthCheckCodecClientType(healthcheck.HTTP.Version, upstreamHTTP2)
-		hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType)
+		if hasBackendTLS {
+			hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType)
+		}
 		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
 			HttpHealthCheck: httpChecker,
 		}
@@ -681,7 +686,9 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 	case healthcheck.GRPC != nil:
 		// Envoy always uses HTTP/2 to send gRPC health check requests, and exposes no
 		// codec setting for them.
-		hc.TlsOptions = buildHealthCheckTLSOptions(settings, xdstype.CodecClientType_HTTP2)
+		if hasBackendTLS {
+			hc.TlsOptions = buildHealthCheckTLSOptions(settings, xdstype.CodecClientType_HTTP2)
+		}
 		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
 			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
 				ServiceName: ptr.Deref(healthcheck.GRPC.Service, ""),
@@ -741,16 +748,14 @@ func buildHealthCheckCodecClientType(version *egv1a1.HTTPHealthCheckVersion, ups
 }
 
 // buildHealthCheckTLSOptions pins the ALPN protocol offered on health check connections to
-// the one matching the health check codec.
+// the one matching the health check codec. It's only meaningful for a backend that uses
+// TLS: a plaintext health check connection negotiates nothing, and the codec alone decides
+// what Envoy sends.
 //
 // Health check connections are created outside of the connection pool, so they don't get
 // the ALPN protocols that the pool derives from the cluster protocol options. Without a
 // pin, the protocol negotiated during the handshake can differ from the codec that Envoy
 // uses to send the health check request, and every health check fails.
-//
-// The ALPN isn't pinned if the backend TLS settings ask for a protocol that the codec
-// can't speak, for example a backend that only accepts the `istio` ALPN protocol.
-// Overriding the ALPN would break the handshake instead of keeping it consistent.
 //
 // TODO: if https://github.com/envoyproxy/envoy/issues/46848 lands, a health check whose
 // version is Auto should offer both `h2` and `http/1.1` to a TLS backend and let the
@@ -769,25 +774,32 @@ func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype
 		return nil
 	}
 
-	var hasTLS bool
-	for _, ds := range settings {
-		if ds == nil || ds.TLS == nil {
-			continue
-		}
-		hasTLS = true
-		// A nil ALPN list means that the backend TLS settings don't configure ALPN, while
-		// an empty list means that ALPN is disabled.
-		if ds.TLS.ALPNProtocols != nil && !slices.Contains(ds.TLS.ALPNProtocols, alpn) {
-			return nil
-		}
-	}
-	// Health check connections to a plaintext backend don't negotiate a protocol, the codec
-	// alone decides what Envoy sends.
-	if !hasTLS {
+	if !backendTLSCanNegotiateALPN(settings, alpn) {
 		return nil
 	}
 
 	return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{alpn}}
+}
+
+// backendTLSCanNegotiateALPN reports whether the backend TLS settings can negotiate the
+// given ALPN protocol on every destination that uses TLS.
+//
+// A backend that asks for a protocol the health check codec can't speak, for example one
+// that only accepts the `istio` ALPN protocol, can't have its ALPN pinned: overriding it
+// would break the handshake instead of keeping it consistent with the codec.
+func backendTLSCanNegotiateALPN(settings []*ir.DestinationSetting, alpn string) bool {
+	for _, ds := range settings {
+		if ds == nil || ds.TLS == nil {
+			continue
+		}
+		// A nil ALPN list means that the backend TLS settings don't configure ALPN, while
+		// an empty list means that ALPN is disabled.
+		if ds.TLS.ALPNProtocols != nil && !slices.Contains(ds.TLS.ALPNProtocols, alpn) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {
