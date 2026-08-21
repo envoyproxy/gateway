@@ -213,9 +213,27 @@ func httpService(http *ir.HTTPExtAuthService, timeout *durationpb.Duration) *ext
 		Timeout: timeout,
 	}
 
-	headersToBackend := make([]*matcherv3.StringMatcher, 0, len(http.HeadersToBackend))
-	for _, header := range http.HeadersToBackend {
-		headersToBackend = append(headersToBackend, &matcherv3.StringMatcher{
+	allowedUpstreamHeaders := buildExtAuthHeaderMatcher(http.HeadersToBackend)
+	allowedClientHeadersOnSuccess := buildExtAuthHeaderMatcher(http.HeadersToClientOnSuccess)
+
+	if allowedUpstreamHeaders != nil || allowedClientHeadersOnSuccess != nil {
+		service.AuthorizationResponse = &extauthv3.AuthorizationResponse{
+			AllowedUpstreamHeaders:        allowedUpstreamHeaders,
+			AllowedClientHeadersOnSuccess: allowedClientHeadersOnSuccess,
+		}
+	}
+
+	return service
+}
+
+func buildExtAuthHeaderMatcher(headers []string) *matcherv3.ListStringMatcher {
+	if len(headers) == 0 {
+		return nil
+	}
+
+	patterns := make([]*matcherv3.StringMatcher, 0, len(headers))
+	for _, header := range headers {
+		patterns = append(patterns, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{
 				Exact: header,
 			},
@@ -223,15 +241,9 @@ func httpService(http *ir.HTTPExtAuthService, timeout *durationpb.Duration) *ext
 		})
 	}
 
-	if len(headersToBackend) > 0 {
-		service.AuthorizationResponse = &extauthv3.AuthorizationResponse{
-			AllowedUpstreamHeaders: &matcherv3.ListStringMatcher{
-				Patterns: headersToBackend,
-			},
-		}
+	return &matcherv3.ListStringMatcher{
+		Patterns: patterns,
 	}
-
-	return service
 }
 
 func grpcService(grpc *ir.GRPCExtAuthService) *corev3.GrpcService_EnvoyGrpc {
