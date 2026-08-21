@@ -3218,3 +3218,67 @@ func TestBackendPolicyKeyFromMetadata(t *testing.T) {
 	require.Equal(t, want, backendPolicyKeyFromMetadata(md))
 	require.Equal(t, backendPolicyKey{}, backendPolicyKeyFromMetadata(nil))
 }
+
+func TestGatewayReferencesBackend(t *testing.T) {
+	key := backendPolicyKey{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	otherMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-2"}
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+
+	tests := []struct {
+		name string
+		x    *ir.Xds
+		want bool
+	}{
+		{name: "empty", x: &ir.Xds{}, want: false},
+		{
+			name: "matches BackendClusters",
+			x:    &ir.Xds{BackendClusters: []*ir.BackendCluster{{Metadata: otherMD}, {Metadata: matchMD}}},
+			want: true,
+		},
+		{
+			name: "matches HTTP destination setting",
+			x: &ir.Xds{HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{
+				{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: otherMD}, {Metadata: matchMD}}}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "matches TCP destination setting",
+			x: &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{
+				{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: matchMD}}}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "matches UDP destination setting",
+			x: &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{
+				Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: matchMD}}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "no match anywhere",
+			x: &ir.Xds{
+				BackendClusters: []*ir.BackendCluster{{Metadata: otherMD}},
+				HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{
+					{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: otherMD}}}},
+				}}},
+			},
+			want: false,
+		},
+		{
+			name: "nil destinations and routes are skipped, not matched",
+			x: &ir.Xds{
+				HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{{Destination: nil}}}},
+				TCP:  []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: nil}}}},
+				UDP:  []*ir.UDPListener{{Route: nil}, {Route: &ir.UDPRoute{Destination: nil}}},
+			},
+			want: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, gatewayReferencesBackend(tc.x, key))
+		})
+	}
+}
