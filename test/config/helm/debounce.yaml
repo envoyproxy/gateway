@@ -1,0 +1,12 @@
+# Runs the suite with reconcile debouncing enabled, to confirm that holding a
+# burst of resource changes before reconciling does not change the outcome of
+# any conformance or e2e case.
+#
+# after and max are the shipped defaults, set explicitly so the matrix documents
+# the configuration under test.
+config:
+  envoyGateway:
+    debounce:
+      enable: true
+      after: 100ms
+      max: 10s

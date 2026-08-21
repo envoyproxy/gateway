@@ -185,6 +185,16 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
 	}
 
+	debounce := cfg.EnvoyGateway.Debounce
+	var debounceAfter, debounceMax time.Duration
+	if debounce.Enabled() {
+		var err error
+		if debounceAfter, debounceMax, err = debounce.ResolveDurations(); err != nil {
+			return err
+		}
+		r.log.Info("debouncing reconcile requests", "after", debounceAfter, "max", debounceMax)
+	}
+
 	// controller-runtime doesn't allow run controller with same name for more than once
 	// see https://github.com/kubernetes-sigs/controller-runtime/blob/2b941650bce159006c88bd3ca0d132c7bc40e947/pkg/controller/name.go#L29
 	name := fmt.Sprintf("gatewayapi-%d", time.Now().Unix())
@@ -192,10 +202,14 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		Reconciler:         r,
 		SkipNameValidation: skipNameValidation(),
 		NewQueue: func(controllerName string, rateLimiter workqueue.TypedRateLimiter[reconcile.Request]) workqueue.TypedRateLimitingInterface[reconcile.Request] {
-			return workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[reconcile.Request]{
+			q := workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[reconcile.Request]{
 				Name:            controllerName,
 				MetricsProvider: workqueuemetrics.WorkqueueMetricsProvider{},
 			})
+			if !debounce.Enabled() {
+				return q
+			}
+			return newDebouncingQueue(q, debounceAfter, debounceMax)
 		},
 	})
 	if err != nil {

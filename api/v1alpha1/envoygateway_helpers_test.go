@@ -9,6 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestIsRunningOnKubernetes(t *testing.T) {
@@ -429,4 +432,18 @@ func TestGetKubernetesInfrastructureConfiguration(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func TestDebounceDefaultsToDisabled(t *testing.T) {
+	eg := &EnvoyGateway{}
+	eg.SetEnvoyGatewayDefaults()
+
+	require.NotNil(t, eg.Debounce)
+	require.False(t, ptr.Deref(eg.Debounce.Enable, true))
+	require.Equal(t, gwapiv1.Duration("100ms"), *eg.Debounce.After)
+	require.Equal(t, gwapiv1.Duration("10s"), *eg.Debounce.Max)
+
+	// The advertised defaults must match the constants the runner falls back to.
+	require.Equal(t, DefaultDebounceAfter.String(), string(*eg.Debounce.After))
+	require.Equal(t, DefaultDebounceMax.String(), string(*eg.Debounce.Max))
 }
