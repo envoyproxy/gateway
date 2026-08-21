@@ -39,6 +39,7 @@
               clientId: client1.apps.googleusercontent.com
               cookieNames:
                 bearerToken: AccessToken-b0a1b740
+                codeVerifier: OauthCodeVerifier-b0a1b740
                 idToken: IdToken-b0a1b740
                 oauthExpires: OauthExpires-b0a1b740
                 oauthHmac: OauthHMAC-b0a1b740

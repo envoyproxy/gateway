@@ -2393,3 +2393,152 @@ func TestSecurityPolicyAPIKeyAuthExtractFrom(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityPolicyOIDCCookieNames(t *testing.T) {
+	ctx := context.Background()
+	baseSP := egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sp",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: egv1a1.SecurityPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group("gateway.networking.k8s.io"),
+						Kind:  gwapiv1.Kind("Gateway"),
+						Name:  gwapiv1.ObjectName("eg"),
+					},
+				},
+			},
+			OIDC: &egv1a1.OIDC{
+				Provider: egv1a1.OIDCProvider{
+					Issuer:                "https://accounts.google.com",
+					AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+					TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+				},
+				ClientID:     new("client-id"),
+				ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+			},
+		},
+	}
+
+	cases := []struct {
+		desc        string
+		cookieNames *egv1a1.OIDCCookieNames
+		wantErrors  []string
+	}{
+		{
+			desc: "all cookie names are valid",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				AccessToken:  new("access-token"),
+				OAuthExpires: new("oauth-expires"),
+				OAuthHMAC:    new("oauth-hmac"),
+				IDToken:      new("id-token"),
+				RefreshToken: new("refresh-token"),
+				OAuthNonce:   new("oauth-nonce"),
+				CodeVerifier: new("code-verifier"),
+			},
+		},
+		{
+			desc:        "empty accessToken",
+			cookieNames: &egv1a1.OIDCCookieNames{AccessToken: new("")},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.accessToken",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc:        "empty oauthExpires",
+			cookieNames: &egv1a1.OIDCCookieNames{OAuthExpires: new("")},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.oauthExpires",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc:        "empty oauthHmac",
+			cookieNames: &egv1a1.OIDCCookieNames{OAuthHMAC: new("")},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.oauthHmac",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc:        "empty idToken",
+			cookieNames: &egv1a1.OIDCCookieNames{IDToken: new("")},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.idToken",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc:        "empty refreshToken",
+			cookieNames: &egv1a1.OIDCCookieNames{RefreshToken: new("")},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.refreshToken",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc:        "empty oauthNonce",
+			cookieNames: &egv1a1.OIDCCookieNames{OAuthNonce: new("")},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.oauthNonce",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc:        "empty codeVerifier",
+			cookieNames: &egv1a1.OIDCCookieNames{CodeVerifier: new("")},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.codeVerifier",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc: "duplicate cookie names",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				OAuthHMAC:    new("oauth-cookie"),
+				OAuthExpires: new("oauth-cookie"),
+			},
+			wantErrors: []string{
+				"spec.oidc.cookieNames",
+				"cookie names must be unique",
+			},
+		},
+		{
+			desc:        "accessToken longer than 256 chars",
+			cookieNames: &egv1a1.OIDCCookieNames{AccessToken: new(strings.Repeat("a", 257))},
+			// The exact wording after "Too long" varies across apiserver versions,
+			// so only assert on the stable prefix.
+			wantErrors: []string{
+				"spec.oidc.cookieNames.accessToken",
+				"Too long",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sp := baseSP.DeepCopy()
+			sp.Name = fmt.Sprintf("sp-oidc-cookie-names-%v", time.Now().UnixNano())
+			sp.Spec.OIDC.CookieNames = tc.cookieNames
+
+			err := c.Create(ctx, sp)
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}

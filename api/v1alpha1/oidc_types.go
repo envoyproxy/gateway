@@ -47,7 +47,7 @@ type OIDC struct {
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1.SecretObjectReference `json:"clientSecret"`
 
-	// The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+	// The optional cookie name overrides to be used for the Envoy OAuth2 cookies in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, uses a randomly generated suffix
 	// +optional
@@ -236,17 +236,55 @@ type OIDCDenyRedirectHeader struct {
 }
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+// Each cookie holds a different value, so the configured names must be distinct,
+// otherwise the cookies would overwrite each other and break the OIDC flow.
+//
+// +kubebuilder:validation:XValidation:rule="[(has(self.accessToken) ? [self.accessToken] : []) + (has(self.oauthExpires) ? [self.oauthExpires] : []) + (has(self.oauthHmac) ? [self.oauthHmac] : []) + (has(self.idToken) ? [self.idToken] : []) + (has(self.refreshToken) ? [self.refreshToken] : []) + (has(self.oauthNonce) ? [self.oauthNonce] : []) + (has(self.codeVerifier) ? [self.codeVerifier] : [])].all(names, names.all(n, names.filter(m, m == n).size() == 1))",message="cookie names must be unique"
 type OIDCCookieNames struct {
 	// The name of the cookie used to store the AccessToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, defaults to "AccessToken-(randomly generated uid)"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	AccessToken *string `json:"accessToken,omitempty"`
+	// The name of the cookie used to store the OAuth expires value.
+	// If not specified, defaults to "OauthExpires-(randomly generated uid)"
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	OAuthExpires *string `json:"oauthExpires,omitempty"`
+	// The name of the cookie used to store the OAuth HMAC value.
+	// If not specified, defaults to "OauthHMAC-(randomly generated uid)"
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	OAuthHMAC *string `json:"oauthHmac,omitempty"`
 	// The name of the cookie used to store the IdToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, defaults to "IdToken-(randomly generated uid)"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	IDToken *string `json:"idToken,omitempty"`
+	// The name of the cookie used to store the RefreshToken.
+	// If not specified, defaults to "RefreshToken-(randomly generated uid)"
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	RefreshToken *string `json:"refreshToken,omitempty"`
+	// The name of the cookie used to store the OAuth nonce value.
+	// If not specified, defaults to "OauthNonce-(randomly generated uid)"
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	OAuthNonce *string `json:"oauthNonce,omitempty"`
+	// The name of the cookie used to store the PKCE code verifier.
+	// If not specified, defaults to "OauthCodeVerifier-(randomly generated uid)"
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	CodeVerifier *string `json:"codeVerifier,omitempty"`
 }
 
 // OIDCTokenForwarding defines how an OIDC token is forwarded upstream.
