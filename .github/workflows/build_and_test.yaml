@@ -219,6 +219,8 @@ jobs:
         IP_FAMILY: ${{ matrix.target.ipFamily }}
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
         E2E_GATEWAY_API_CHANNEL: ${{ matrix.target.gwapiChannel }}
+        # Increase the timeout to 1h to avoid timeout in CI, especially for non parallel tests.
+        E2E_TIMEOUT: 1h
         # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
         # which means to dump the current state when there's a case failed.
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
