@@ -169,7 +169,15 @@ rawget = nil
 rawset = nil
 getmetatable = nil
 setmetatable = nil
--- Block access to global table to prevent _G["_unsafe_*"] bypasses
+-- getfenv/setfenv read and rebind the global environment table, so they reopen
+-- _G access even after it is nil'd below (getfenv(0) returns it regardless).
+getfenv = nil
+setfenv = nil
+-- Legacy 5.1 primitives usable to build sandbox escapes.
+newproxy = nil
+module = nil
+-- Block direct references to the global table (e.g. _G["os"]). This relies on
+-- getfenv/setfenv above also being disabled to be effective.
 _G = nil
 
 -- ============================================================================
