@@ -1,0 +1,138 @@
+- accessLog:
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.http_grpc
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig
+      commonConfig:
+        bufferFlushInterval: 5s
+        bufferSizeBytes: 4194304
+        grpcService:
+          envoyGrpc:
+            clusterName: accesslog/monitoring/envoy-als/port/9000
+        logName: als-http
+        transportApiVersion: V3
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.tcp_grpc
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.TcpGrpcAccessLogConfig
+      commonConfig:
+        bufferSizeBytes: 1048576
+        grpcService:
+          envoyGrpc:
+            clusterName: accesslog/monitoring/envoy-als-tcp/port/9000
+        logName: als-tcp
+        transportApiVersion: V3
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.open_telemetry
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
+      attributes:
+        values:
+        - key: k8s.namespace.name
+          value:
+            stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
+        - key: k8s.pod.name
+          value:
+            stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+        - key: response_code
+          value:
+            stringValue: '%RESPONSE_CODE%'
+      commonConfig:
+        bufferFlushInterval: 10s
+        grpcService:
+          envoyGrpc:
+            authority: otel-collector.default.svc.cluster.local
+            clusterName: accesslog-otel-0
+        logName: otel_envoy_accesslog
+        transportApiVersion: V3
+      resourceAttributes: {}
+  address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        accessLog:
+        - name: envoy.access_loggers.http_grpc
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig
+            commonConfig:
+              bufferFlushInterval: 5s
+              bufferSizeBytes: 4194304
+              grpcService:
+                envoyGrpc:
+                  clusterName: accesslog/monitoring/envoy-als/port/9000
+              logName: als-http
+              transportApiVersion: V3
+        - name: envoy.access_loggers.tcp_grpc
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.TcpGrpcAccessLogConfig
+            commonConfig:
+              bufferSizeBytes: 1048576
+              grpcService:
+                envoyGrpc:
+                  clusterName: accesslog/monitoring/envoy-als-tcp/port/9000
+              logName: als-tcp
+              transportApiVersion: V3
+        - name: envoy.access_loggers.open_telemetry
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
+            attributes:
+              values:
+              - key: k8s.namespace.name
+                value:
+                  stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
+              - key: k8s.pod.name
+                value:
+                  stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+              - key: response_code
+                value:
+                  stringValue: '%RESPONSE_CODE%'
+            commonConfig:
+              bufferFlushInterval: 10s
+              grpcService:
+                envoyGrpc:
+                  authority: otel-collector.default.svc.cluster.local
+                  clusterName: accesslog-otel-0
+              logName: otel_envoy_accesslog
+              transportApiVersion: V3
+            resourceAttributes: {}
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            initialFetchTimeout: 0s
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768
