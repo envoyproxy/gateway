@@ -148,7 +148,7 @@ func NewInMemoryManager(cfg *egv1a1.ExtensionManager, server extension.EnvoyGate
 		inMemoryManagerOpts = append(inMemoryManagerOpts, opts...)
 	}
 
-	conn, err := grpc.DialContext(context.Background(), "", inMemoryManagerOpts...)
+	conn, err := grpc.NewClient("passthrough:///", inMemoryManagerOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -231,7 +231,7 @@ func (m *Manager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (ext
 			return nil, err
 		}
 
-		conn, err := grpc.Dial(serverAddr, opts...)
+		conn, err := grpc.NewClient(serverAddr, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -280,7 +280,7 @@ func (m *Manager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (ex
 			return nil, err
 		}
 
-		conn, err := grpc.Dial(serverAddr, opts...)
+		conn, err := grpc.NewClient(serverAddr, opts...)
 		if err != nil {
 			return nil, err
 		}

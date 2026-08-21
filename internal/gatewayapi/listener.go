@@ -1003,8 +1003,8 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					// fallback to host and port
 					var host string
 					var port uint32
-					if sink.OpenTelemetry.Host != nil {
-						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
+					if sink.OpenTelemetry.Host != nil { //nolint:staticcheck
+						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port) //nolint:staticcheck
 					}
 					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
 					al.Authority = host
@@ -1057,8 +1057,8 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	if len(ds) == 0 {
 		var host string
 		var port uint32
-		if tracing.Provider.Host != nil {
-			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
+		if tracing.Provider.Host != nil { //nolint:staticcheck
+			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port) //nolint:staticcheck
 		}
 		ds = destinationSettingFromHostAndPort(settingName, host, port)
 		authority = host
@@ -1081,7 +1081,7 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		SamplingRate:        proxySamplingRate(tracing.SamplingRate, tracing.SamplingFraction),
 		ClientSamplingRate:  proxySamplingFractionPtr(tracing.ClientSamplingFraction),
 		OverallSamplingRate: proxySamplingFractionPtr(tracing.OverallSamplingFraction),
-		CustomTags:          ir.CustomTagMapToSlice(tracing.CustomTags),
+		CustomTags:          ir.CustomTagMapToSlice(tracing.CustomTags), //nolint:staticcheck
 		Tags:                ir.MapToSlice(tracing.Tags),
 		ResourceAttributes:  ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
 		Destination: ir.RouteDestination{
@@ -1253,9 +1253,9 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		authority := getAuthorityFromDestination(ds)
 
 		// Fallback to deprecated host/port
-		if len(ds) == 0 && sink.OpenTelemetry.Host != nil {
-			ds = destinationSettingFromHostAndPort(settingName, *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port))
-			authority = *sink.OpenTelemetry.Host
+		if len(ds) == 0 && sink.OpenTelemetry.Host != nil { //nolint:staticcheck
+			ds = destinationSettingFromHostAndPort(settingName, *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)) //nolint:staticcheck
+			authority = *sink.OpenTelemetry.Host                                                                           //nolint:staticcheck
 		}
 
 		if len(ds) > 0 && len(ds[0].Endpoints) > 0 {

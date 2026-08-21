@@ -9,11 +9,9 @@
 package proto
 
 import (
-	"bytes"
 	"errors"
 
-	"github.com/golang/protobuf/jsonpb"
-	protov1 "github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"sigs.k8s.io/yaml"
@@ -22,11 +20,12 @@ import (
 )
 
 var (
-	// Setting the OrigName flag to true will preserve the expected snake case field names in the JSON output.
-	// Otherwise, camel case is produced, and it causes issues with the func-e library used to unmarshal the
-	// bootstrap configuration.
-	marshaler   = &jsonpb.Marshaler{OrigName: true}
-	unmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
+	marshaler = protojson.MarshalOptions{
+		UseProtoNames: true,
+	}
+	unmarshaler = protojson.UnmarshalOptions{
+		DiscardUnknown: true,
+	}
 )
 
 func FromYAML(content []byte, pb proto.Message) error {
@@ -38,15 +37,15 @@ func FromYAML(content []byte, pb proto.Message) error {
 }
 
 func ToYAML(pb proto.Message) ([]byte, error) {
-	json, err := marshaler.MarshalToString(protov1.MessageV1(pb))
+	j, err := marshaler.Marshal(pb)
 	if err != nil {
 		return nil, err
 	}
-	return yaml.JSONToYAML([]byte(json))
+	return yaml.JSONToYAML(j)
 }
 
 func FromJSON(content []byte, out proto.Message) error {
-	return unmarshaler.Unmarshal(bytes.NewReader(content), protov1.MessageV1(out))
+	return unmarshaler.Unmarshal(content, out)
 }
 
 func ToAnyWithValidation(msg proto.Message) (*anypb.Any, error) {

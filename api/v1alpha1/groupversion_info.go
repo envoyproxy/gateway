@@ -25,7 +25,7 @@ var (
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 
 	// localSchemeBuilder is used for controller-runtime compatibility
-	localSchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	localSchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion} //nolint:staticcheck
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
