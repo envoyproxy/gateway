@@ -38,7 +38,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 }
 
 // getExtensionBackendResources returns all custom backend resources managed by extensions
-func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) ([]unstructured.Unstructured, error) {
+func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) []unstructured.Unstructured {
 	var resourceItems []unstructured.Unstructured
 	for _, gvk := range r.extBackendGVKs {
 		uExtResourceList := &unstructured.UnstructuredList{}
@@ -57,7 +57,7 @@ func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context)
 		resourceItems = append(resourceItems, uExtResources...)
 	}
 
-	return resourceItems, nil
+	return resourceItems
 }
 
 func (r *gatewayAPIReconciler) getHTTPRouteFilter(ctx context.Context, name, namespace string) (*egv1a1.HTTPRouteFilter, error) {
