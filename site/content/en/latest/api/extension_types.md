@@ -3929,6 +3929,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  |  | Patch defines how to perform the patch operation to deployment |
 | `replicas` | _integer_ |  false  |  | Replicas is the number of desired pods. Defaults to 1. |
+| `replicasManagedByExternalAutoscaler` | _boolean_ |  false  |  | ReplicasManagedByExternalAutoscaler, when set to true, tells Envoy Gateway not to<br />render the replicas field on the generated Deployment, so an external autoscaler<br />(an external HorizontalPodAutoscaler, a KEDA ScaledObject, etc.) can own the replica<br />count without Envoy Gateway reverting it on the next reconcile. The Replicas field is<br />ignored when this is true. This has no additional effect when the built-in EnvoyHpa is<br />configured, which already omits the replicas field. |
 | `strategy` | _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#deploymentstrategy-v1-apps)_ |  false  |  | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  |  | Pod defines the desired specification of pod. |
 | `container` | _[KubernetesContainerSpec](#kubernetescontainerspec)_ |  false  |  | Container defines the desired specification of main container. |

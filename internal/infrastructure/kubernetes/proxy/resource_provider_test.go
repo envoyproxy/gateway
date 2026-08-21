@@ -691,6 +691,18 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
+			// The replicas field must not be rendered when it is managed by an external
+			// autoscaler (external HPA, KEDA, etc.), even though no built-in EnvoyHpa is set,
+			// so that Envoy Gateway doesn't own spec.replicas and revert the external count.
+			caseName: "with-external-autoscaler",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas:                            new(int32(2)),
+				ReplicasManagedByExternalAutoscaler: new(true),
+				Strategy:                            egv1a1.DefaultKubernetesDeploymentStrategy(),
+			},
+		},
+		{
 			caseName:             "gateway-namespace-mode",
 			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			deploy:               nil,
