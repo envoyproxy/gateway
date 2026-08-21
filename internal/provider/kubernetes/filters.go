@@ -10,6 +10,8 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,19 +39,25 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 	return resourceItems, nil
 }
 
-// getExtensionBackendResources returns all custom backend resources managed by extensions
-func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) []unstructured.Unstructured {
+// getExtensionBackendResources returns all custom backend resources managed by extensions.
+// Only GVKs whose CRD is missing (NotFound / NoMatch) are skipped, so the reconcile keeps
+// processing routes that don't depend on the missing custom backend. Transient errors
+// (timeouts, cancelation, server failures) are returned so the reconcile is retried and
+// stale configuration is not published.
+func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) ([]unstructured.Unstructured, error) {
 	var resourceItems []unstructured.Unstructured
 	for _, gvk := range r.extBackendGVKs {
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList, client.UnsafeDisableDeepCopy); err != nil {
-			// Skip GVKs whose CRD is missing or RBAC is insufficient instead of
-			// aborting the entire reconcile. The watch for this GVK was already
-			// skipped in the controller setup; skipping the list path as well
-			// keeps Gateway processing alive for otherwise valid routes.
-			r.log.Info("skipping backend resource list", "GVK", gvk.String(), "error", err.Error())
-			continue
+			if kerrors.IsNotFound(err) || apimeta.IsNoMatchError(err) {
+				// The CRD for this GVK is not installed (or the SA lacks RBAC to
+				// list it); the watch was already skipped in the controller setup,
+				// so skip the list path too and keep Gateway processing alive.
+				r.log.Info("skipping backend resource list", "GVK", gvk.String(), "error", err.Error())
+				continue
+			}
+			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 
 		uExtResources := uExtResourceList.Items
@@ -57,7 +65,7 @@ func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context)
 		resourceItems = append(resourceItems, uExtResources...)
 	}
 
-	return resourceItems
+	return resourceItems, nil
 }
 
 func (r *gatewayAPIReconciler) getHTTPRouteFilter(ctx context.Context, name, namespace string) (*egv1a1.HTTPRouteFilter, error) {
