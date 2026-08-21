@@ -517,16 +517,63 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	return res
 }
 
+// gatewayReferencesBackend reports whether any BackendCluster or inline DestinationSetting in x
+// identifies the same backend as key, across merged clusters and every route kind.
+func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
+	for _, bc := range x.BackendClusters {
+		if backendPolicyKeyFromMetadata(bc.Metadata) == key {
+			return true
+		}
+	}
+	for _, http := range x.HTTP {
+		for _, route := range http.Routes {
+			if route.Destination == nil {
+				continue
+			}
+			for _, ds := range route.Destination.Settings {
+				if backendPolicyKeyFromMetadata(ds.Metadata) == key {
+					return true
+				}
+			}
+		}
+	}
+	for _, tcpListener := range x.TCP {
+		for _, tcpRoute := range tcpListener.Routes {
+			if tcpRoute.Destination == nil {
+				continue
+			}
+			for _, ds := range tcpRoute.Destination.Settings {
+				if backendPolicyKeyFromMetadata(ds.Metadata) == key {
+					return true
+				}
+			}
+		}
+	}
+	for _, udpListener := range x.UDP {
+		if udpListener.Route == nil || udpListener.Route.Destination == nil {
+			continue
+		}
+		for _, ds := range udpListener.Route.Destination.Settings {
+			if backendPolicyKeyFromMetadata(ds.Metadata) == key {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // processBackendTrafficPolicyForBackend resolves policy's target (already confirmed to be a
 // Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for conflict
 // detection, then applies it wherever the backend actually resolves: into the Traffic of every
 // matching, already-registered BackendCluster, or, for a backend that isn't merged, directly onto
 // the matching inline DestinationSetting(s) for HTTPRoute/GRPCRoute/TCPRoute/UDPRoute. A
 // TCPRoute/UDPRoute/TLSRoute rule with more than one backendRef sharing a single Envoy cluster
-// can't isolate the policy to just its target and gets a Warning instead. A backend that never
-// resolves anywhere (mergeBackends disabled for its gateway aside - see the earlier explicit
-// Disabled check - per-listener ClusterSettings divergence, dynamic resolver, simply unreferenced,
-// etc.) gets no settings and no error.
+// can't isolate the policy to just its target and gets a Warning instead. A gateway with
+// mergeBackends disabled only gets a Disabled ancestor if it actually references the backend -
+// otherwise it's skipped entirely, rather than reporting Disabled on every unrelated gateway that
+// merely happens to have mergeBackends off. A backend that's referenced but never resolves for
+// some other reason (per-listener ClusterSettings divergence, dynamic resolver, etc.) gets no
+// settings and no error.
 func (t *Translator) processBackendTrafficPolicyForBackend(
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
@@ -561,8 +608,10 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 		}
 		gwNN := utils.NamespacedName(gw)
 
-		// mergeBackends off here: backend targeting can never take effect on this gateway.
 		if !t.isMergeBackendsEnabledForGateway(gw) {
+			if !gatewayReferencesBackend(x, key) {
+				continue
+			}
 			ref := getAncestorRefForPolicy(gwNN, nil)
 			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
 				&status.PolicyResolveError{
