@@ -12,6 +12,8 @@ data:
       kubernetes:
         deploy:
           type: GatewayNamespace
+        rateLimitDeployment:
+          replicas: 2
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:

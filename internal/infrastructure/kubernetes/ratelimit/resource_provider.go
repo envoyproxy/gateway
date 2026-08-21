@@ -141,6 +141,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 	}
 	serviceSpec := resource.ExpectedServiceSpec(kubernetesServiceSpec)
+	serviceSpec.ClusterIP = corev1.ClusterIPNone
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
 
