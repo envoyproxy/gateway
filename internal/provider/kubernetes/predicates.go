@@ -33,6 +33,11 @@ import (
 const (
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	envoyTLSSecretName = "envoy"
+	// rateLimitServiceName is the name of the in-cluster Service fronting the
+	// envoy-ratelimit deployment. It is not referenced by any Gateway API
+	// backendRef, so it needs its own reconcile-trigger checks below, mirroring
+	// the OIDC HMAC and Envoy TLS Secrets.
+	rateLimitServiceName = "envoy-ratelimit"
 )
 
 // hasMatchingController returns true if the provided object is a GatewayClass
@@ -473,6 +478,22 @@ func (r *gatewayAPIReconciler) isEnvoyTLSSecret(nsName *types.NamespacedName) bo
 	return *nsName == envoyTLSSecret
 }
 
+// isRateLimitService returns true if nsName is the in-cluster envoy-ratelimit
+// Service, and global rate limiting is configured. The gatewayapi translator
+// discovers this Service's endpoints to build an EDS-based ratelimit_cluster,
+// so changes to it (or its EndpointSlices, see validateEndpointSliceForReconcile)
+// must trigger reconciliation even though nothing references it as a backendRef.
+func (r *gatewayAPIReconciler) isRateLimitService(nsName *types.NamespacedName) bool {
+	if r.envoyGateway == nil || r.envoyGateway.RateLimit == nil {
+		return false
+	}
+	rateLimitService := types.NamespacedName{
+		Namespace: r.namespace,
+		Name:      rateLimitServiceName,
+	}
+	return *nsName == rateLimitService
+}
+
 // validateServiceForReconcile tries finding the owning Gateway of the Service
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
@@ -503,6 +524,10 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	nsName := utils.NamespacedName(svc)
+	if r.isRateLimitService(&nsName) {
+		return true
+	}
+
 	if r.isRouteReferencingBackend(&nsName) {
 		return true
 	}
@@ -683,6 +708,10 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 
 	if isMCS {
 		nsName.Name = multiClusterSvcName
+	}
+
+	if r.isRateLimitService(&nsName) {
+		return true
 	}
 
 	if r.isRouteReferencingBackend(&nsName) {
