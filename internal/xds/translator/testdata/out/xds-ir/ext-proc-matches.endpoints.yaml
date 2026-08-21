@@ -1,0 +1,34 @@
+- clusterName: httproute/default/route-target/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/route-target/rule/0/backend/0
+- clusterName: httproute/default/gateway-target/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/gateway-target/rule/0/backend/0
+- clusterName: envoyextensionpolicy/default/route-matches/0/route-extproc
+  endpoints:
+  - loadBalancingWeight: 1
+    locality:
+      region: envoyextensionpolicy/default/route-matches/0/route-extproc/backend/0
+- clusterName: envoyextensionpolicy/default/gateway-matches/0/gateway-extproc
+  endpoints:
+  - loadBalancingWeight: 1
+    locality:
+      region: envoyextensionpolicy/default/gateway-matches/0/gateway-extproc/backend/0
