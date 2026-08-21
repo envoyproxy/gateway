@@ -661,5 +661,75 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+### Configure Maximum Request Header Size
+
+This feature allows you to configure the maximum size of the request headers allowed for incoming connections, mapping to the Envoy [`max_request_headers_kb`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-max-request-headers-kb) HTTP connection manager setting.
+Requests whose headers exceed this limit receive a `431` (Request Header Fields Too Large) response.
+
+The value is configured using the `resource.Quantity` format and is rounded up to the nearest KiB. It must be at least `1Ki` and cannot exceed `8192Ki` (the maximum Envoy supports). When no suffix is provided, the value is interpreted as bytes. If unset, Envoy Gateway defaults to `60Ki`.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-max-request-header-limit
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  headers:
+    maxRequestHeaderLimit: 96Ki
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-max-request-header-limit
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  headers:
+    maxRequestHeaderLimit: 96Ki
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Curl the example app through Envoy proxy with a request whose headers exceed the configured limit:
+
+```shell
+curl -v http://$GATEWAY_HOST/get \
+  -H "Host: www.example.com" \
+  -H "X-Big-Header: $(head -c 100000 </dev/zero | tr '\0' 'a')"
+```
+
+You should expect a `431` response status once the combined request header size exceeds `96Ki`:
+
+```shell
+< HTTP/1.1 431 Request Header Fields Too Large
+< content-length: 24
+< content-type: text/plain
+<
+Request Header Fields Too Large
+```
+
+{{% alert title="Note" color="primary" %}}
+Only one `ClientTrafficPolicy` can set `maxRequestHeaderLimit` per Envoy listener. When multiple plaintext (HTTP, non-TLS) listeners on the same Gateway share the same port, only a Gateway-scoped (not listener/`sectionName`-scoped) `ClientTrafficPolicy` may set this field, since Envoy Gateway collapses same-port plaintext listeners into a single Envoy listener.
+{{% /alert %}}
+
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
