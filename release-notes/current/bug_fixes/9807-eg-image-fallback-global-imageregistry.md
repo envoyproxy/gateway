@@ -1,0 +1,1 @@
+Fixed the `gateway-helm` chart ignoring `global.imageRegistry` when it resolves the Envoy Gateway control plane image from its built-in fallback, that is when neither `global.images.envoyGateway.image` nor `deployment.envoyGateway.image.repository` is set.
