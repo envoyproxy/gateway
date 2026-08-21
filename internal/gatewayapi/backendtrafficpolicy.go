@@ -564,7 +564,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			matchedGWs[gwNN] = gwPolicy
 		}
 
-		blockedRoutes := make(map[string]bool) // dedupe within this gateway
+		unsupportedRoutes := make(map[string]bool) // dedupe within this gateway
 
 		for _, http := range x.HTTP {
 			for _, route := range http.Routes {
@@ -593,9 +593,9 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					}
 
 					backendTraffic := tf.ClusterFeatures()
-					resolved := route.Traffic.ClusterFeatures().DeepCopy()
-					if resolved == nil {
-						resolved = &ir.ClusterTrafficFeatures{}
+					resolved := &ir.ClusterTrafficFeatures{}
+					if cf := route.Traffic.ClusterFeatures(); cf != nil {
+						*resolved = *cf
 					}
 					overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
 					overrideIfSet(&resolved.ProxyProtocol, backendTraffic.ProxyProtocol)
@@ -627,7 +627,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					}
 					if len(rd.Settings) > 1 {
 						if rd.Metadata != nil {
-							blockedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
+							unsupportedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
 						}
 						continue
 					}
@@ -689,7 +689,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 				}
 				if len(rd.Settings) > 1 {
 					if rd.Metadata != nil {
-						blockedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
+						unsupportedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
 					}
 					continue
 				}
@@ -731,9 +731,9 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 		}
 
 		// One combined Warning per gateway, never per occurrence.
-		if len(blockedRoutes) > 0 {
-			names := make([]string, 0, len(blockedRoutes))
-			for name := range blockedRoutes {
+		if len(unsupportedRoutes) > 0 {
+			names := make([]string, 0, len(unsupportedRoutes))
+			for name := range unsupportedRoutes {
 				names = append(names, name)
 			}
 			sort.Strings(names)
