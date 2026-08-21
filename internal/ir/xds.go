@@ -1042,8 +1042,8 @@ type HTTPRoute struct {
 	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
 	// IsHTTP2 is set if the route is configured to serve HTTP2 traffic
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
-	// RouteOrder is copied from the route-priority annotation. Higher values are
-	// matched first. Set only when EnableRoutePriority is enabled. Defaults to 0.
+	// RouteOrder is the explicit match priority. Higher values are matched first.
+	// It is 0 when route priority is disabled, absent, invalid, or explicitly zero.
 	RouteOrder uint32 `json:"routeOrder,omitempty" yaml:"routeOrder,omitempty"`
 	// PathMatch defines the match conditions on the path.
 	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`

@@ -244,14 +244,13 @@ func TestSortXdsIRMapRouteOrder(t *testing.T) {
 			expectedOrder: []string{"high", "mid", "low"},
 		},
 		{
-			name:               "equal route order keeps insertion order when preserveRouteOrder is set",
+			name:               "equal route order keeps insertion order over specificity when preserveRouteOrder is set",
 			preserveRouteOrder: true,
 			routes: []*ir.HTTPRoute{
-				{Name: "first", RouteOrder: 5},
-				{Name: "second", RouteOrder: 5},
-				{Name: "third", RouteOrder: 5},
+				{Name: "first", RouteOrder: 5, PathMatch: &ir.StringMatch{Prefix: new("/")}},
+				{Name: "second", RouteOrder: 5, PathMatch: &ir.StringMatch{Prefix: new("/api")}},
 			},
-			expectedOrder: []string{"first", "second", "third"},
+			expectedOrder: []string{"first", "second"},
 		},
 		{
 			name:               "no route order preserves insertion order when preserveRouteOrder is set",

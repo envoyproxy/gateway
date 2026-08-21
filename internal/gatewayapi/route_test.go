@@ -1056,7 +1056,7 @@ func TestRoutePriority(t *testing.T) {
 	}
 }
 
-func TestRouteOrder(t *testing.T) {
+func TestRouteOrderForParent(t *testing.T) {
 	tr := &Translator{Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo)}
 	ann := map[string]string{egv1a1.RoutePriorityAnnotation: "7"}
 	enabled := routeParentWithEnvoyProxy(&egv1a1.EnvoyProxy{
@@ -1065,6 +1065,7 @@ func TestRouteOrder(t *testing.T) {
 	disabled := routeParentWithEnvoyProxy(&egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{EnableRoutePriority: new(false)},
 	})
+	unset := routeParentWithEnvoyProxy(&egv1a1.EnvoyProxy{})
 
 	tests := []struct {
 		name    string
@@ -1073,7 +1074,8 @@ func TestRouteOrder(t *testing.T) {
 		wantNil bool
 		want    uint32
 	}{
-		{name: "unset envoyproxy", parent: routeParentWithEnvoyProxy(nil), route: httpRouteWithPriority(ann), wantNil: true},
+		{name: "no envoyproxy", parent: routeParentWithEnvoyProxy(nil), route: httpRouteWithPriority(ann), wantNil: true},
+		{name: "field unset", parent: unset, route: httpRouteWithPriority(ann), wantNil: true},
 		{name: "disabled", parent: disabled, route: httpRouteWithPriority(ann), wantNil: true},
 		{name: "disabled GRPCRoute", parent: disabled, route: grpcRouteWithPriority(ann), wantNil: true},
 		{name: "enabled HTTPRoute", parent: enabled, route: httpRouteWithPriority(ann), want: 7},
@@ -1089,7 +1091,7 @@ func TestRouteOrder(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := tr.routeOrder(tc.route, tc.parent)
+			got := tr.routeOrderForParent(tc.route, tc.parent)
 			if tc.wantNil {
 				require.Nil(t, got)
 				return

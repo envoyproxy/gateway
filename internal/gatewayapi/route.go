@@ -253,7 +253,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		errorCollector     = &status.TypedErrorCollector{}
 	)
 	pattern := getStatPattern(httpRoute, parentRef, t.GatewayControllerName)
-	routeOrder := t.routeOrder(httpRoute, parentRef)
 
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	unacceptedRules := sets.NewInt()
@@ -290,11 +289,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			).WithType(gwapiv1.RouteConditionAccepted))
 			unacceptedRules.Insert(ruleIdx)
 			continue
-		}
-		if routeOrder != nil {
-			for _, r := range ruleRoutes {
-				r.RouteOrder = *routeOrder
-			}
 		}
 
 		var (
@@ -1362,7 +1356,7 @@ func (t *Translator) processHTTPRouteRule(
 	return ruleRoutes, nil
 }
 
-func (t *Translator) routeOrder(route RouteContext, parentRef *RouteParentContext) *uint32 {
+func (t *Translator) routeOrderForParent(route RouteContext, parentRef *RouteParentContext) *uint32 {
 	var envoyProxy *egv1a1.EnvoyProxy
 	if gw := parentRef.GetGateway(); gw != nil {
 		envoyProxy = gw.envoyProxy
@@ -1539,7 +1533,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		errorCollector     = &status.TypedErrorCollector{}
 	)
 	pattern := getStatPattern(grpcRoute, parentRef, t.GatewayControllerName)
-	routeOrder := t.routeOrder(grpcRoute, parentRef)
 
 	// compute matches, filters, backends
 	unacceptedRules := sets.NewInt()
@@ -1576,11 +1569,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				status.ConvertToAcceptedReason(err.Reason()),
 			).WithType(gwapiv1.RouteConditionAccepted))
 			continue
-		}
-		if routeOrder != nil {
-			for _, r := range ruleRoutes {
-				r.RouteOrder = *routeOrder
-			}
 		}
 
 		var (
@@ -1927,6 +1915,7 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routesWithBackends []*httpRouteWithBackendDestinations, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) bool {
 	// need to check hostname intersection if there are listeners
 	hasHostnameIntersection := len(parentRef.listeners) == 0
+	routeOrder := t.routeOrderForParent(route, parentRef)
 
 	for _, listener := range parentRef.listeners {
 		hosts := computeHosts(GetHostnames(route), listener)
@@ -1950,6 +1939,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				// with different ports, as the redirect port needs to be derived
 				// independently for each listener.
 				routeRoute := routeWithBackends.route.DeepCopy()
+				if routeOrder != nil {
+					routeRoute.RouteOrder = *routeOrder
+				}
 				// If the redirect port is not set, the final redirect port must be derived.
 				if routeRoute.Redirect != nil && routeRoute.Redirect.Port == nil {
 					redirectPort := uint32(listener.Port)
