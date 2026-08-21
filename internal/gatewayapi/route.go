@@ -253,6 +253,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		errorCollector     = &status.TypedErrorCollector{}
 	)
 	pattern := getStatPattern(httpRoute, parentRef, t.GatewayControllerName)
+	routeOrder := t.routeOrder(httpRoute, parentRef)
 
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	unacceptedRules := sets.NewInt()
@@ -289,6 +290,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			).WithType(gwapiv1.RouteConditionAccepted))
 			unacceptedRules.Insert(ruleIdx)
 			continue
+		}
+		if routeOrder != nil {
+			for _, r := range ruleRoutes {
+				r.RouteOrder = *routeOrder
+			}
 		}
 
 		var (
@@ -1353,32 +1359,34 @@ func (t *Translator) processHTTPRouteRule(
 		}
 	}
 
-	if priority := t.routePriority(httpRoute); priority != nil {
-		for _, r := range ruleRoutes {
-			r.RouteOrder = *priority
-		}
-	}
-
 	return ruleRoutes, nil
 }
 
-// routePriority parses RoutePriorityAnnotation, returning nil when absent. A
-// malformed value is ignored with a warning rather than failing the route, so a
-// typo can never drop a route.
-func (t *Translator) routePriority(httpRoute *HTTPRouteContext) *uint32 {
-	val, ok := httpRoute.Annotations[egv1a1.RoutePriorityAnnotation]
+func (t *Translator) routeOrder(route RouteContext, parentRef *RouteParentContext) *uint32 {
+	var envoyProxy *egv1a1.EnvoyProxy
+	if gw := parentRef.GetGateway(); gw != nil {
+		envoyProxy = gw.envoyProxy
+	}
+	if !getEnableRoutePriority(envoyProxy) {
+		return nil
+	}
+	return t.routePriority(route)
+}
+
+func (t *Translator) routePriority(route RouteContext) *uint32 {
+	val, ok := route.GetAnnotations()[egv1a1.RoutePriorityAnnotation]
 	if !ok {
 		return nil
 	}
 	parsed, err := strconv.ParseUint(strings.TrimSpace(val), 10, 32)
 	if err != nil {
-		t.Logger.Info("ignoring invalid route priority annotation, expected a non-negative 32-bit integer",
-			"httproute", httpRoute.Name, "namespace", httpRoute.Namespace,
-			egv1a1.RoutePriorityAnnotation, val)
+		t.Logger.Info("ignoring invalid route-priority annotation, expected an integer from 0 to 4294967295",
+			"route", utils.NamespacedName(route),
+			"kind", route.GetRouteType(),
+			"value", val)
 		return nil
 	}
-	priority := uint32(parsed)
-	return &priority
+	return new(uint32(parsed))
 }
 
 func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
@@ -1531,6 +1539,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		errorCollector     = &status.TypedErrorCollector{}
 	)
 	pattern := getStatPattern(grpcRoute, parentRef, t.GatewayControllerName)
+	routeOrder := t.routeOrder(grpcRoute, parentRef)
 
 	// compute matches, filters, backends
 	unacceptedRules := sets.NewInt()
@@ -1567,6 +1576,11 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				status.ConvertToAcceptedReason(err.Reason()),
 			).WithType(gwapiv1.RouteConditionAccepted))
 			continue
+		}
+		if routeOrder != nil {
+			for _, r := range ruleRoutes {
+				r.RouteOrder = *routeOrder
+			}
 		}
 
 		var (

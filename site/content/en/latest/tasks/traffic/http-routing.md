@@ -119,6 +119,80 @@ curl -vvv --header "Host: bar.example.com" --header "env: canary" "http://${GATE
 A `200` status code should be returned and the body should include `"pod": "bar-canary-backend-*"` indicating the
 traffic was routed to the foo backend service.
 
+## Explicit Route Priority
+
+Users can set an explicit match priority across HTTPRoutes and GRPCRoutes with the
+`gateway.envoyproxy.io/route-priority` annotation. The routes must attach to the same HTTP or HTTPS
+listener. Use this when you migrate from a load balancer that used declared order, such as AWS ALB
+`group.order`.
+
+The annotation is ignored unless the Gateway owner sets `spec.enableRoutePriority: true` on the
+[EnvoyProxy](../../../api/extension_types#envoyproxy) referenced by the Gateway or GatewayClass.
+This field is off by default so that a Route in another namespace cannot override a more specific
+route.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+spec:
+  enableRoutePriority: true
+```
+
+The annotation value must be an integer from `0` to `4294967295`. A higher value takes precedence.
+HTTPRoutes and GRPCRoutes without the annotation default to `0`. An invalid value is ignored and
+the Route is still accepted.
+
+HTTPRoute and GRPCRoute matches share the same Envoy listener route table and priority order. The
+priority applies to every match that the annotated Route produces. Each parent Gateway that
+enables route priority uses the annotation value on its attached listeners.
+
+When `preserveRouteOrder` is false, existing match precedence breaks ties between routes with the
+same priority. For routes of the same kind, this follows Gateway API precedence. When
+`preserveRouteOrder` is true, routes in the same priority group keep their existing order. This
+also preserves the rule order within an HTTPRoute.
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: catch-all
+  annotations:
+    gateway.envoyproxy.io/route-priority: "100"
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: example-svc
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: specific
+  annotations:
+    gateway.envoyproxy.io/route-priority: "1"
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: api-svc
+          port: 8080
+```
+
+A request to `/api` is matched by the catch-all HTTPRoute because that route has priority `100`.
+
 ## JWT Claims Based Routing
 
 Users can route to a specific backend by matching on JWT claims.

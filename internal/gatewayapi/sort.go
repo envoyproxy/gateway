@@ -17,7 +17,7 @@ type XdsIRRoutes []*ir.HTTPRoute
 func (x XdsIRRoutes) Len() int      { return len(x) }
 func (x XdsIRRoutes) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 func (x XdsIRRoutes) Less(i, j int) bool {
-	// 0. Explicit route order wins; ties fall through to specificity.
+	// Sort based on RouteOrder. Higher values take precedence.
 	if x[i].RouteOrder != x[j].RouteOrder {
 		return x[i].RouteOrder < x[j].RouteOrder
 	}
@@ -128,22 +128,18 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	return qExtNumberI < qExtNumberJ
 }
 
-// sortXdsIR sorts the xdsIR based on the match precedence
-// defined in the Gateway API spec.
+// sortXdsIRMap sorts listener routes by RouteOrder (higher first).
+// When PreserveRouteOrder is disabled, match precedence breaks ties.
 // https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
 func sortXdsIRMap(xdsIR resource.XdsIRMap) {
 	for _, irItem := range xdsIR {
 		for _, http := range irItem.HTTP {
 			if http.PreserveRouteOrder {
-				// Specificity sort is opted out: order by explicit route order
-				// (higher first) only, keeping insertion order on ties. No-op
-				// when no route order is set.
 				sort.SliceStable(http.Routes, func(i, j int) bool {
 					return http.Routes[i].RouteOrder > http.Routes[j].RouteOrder
 				})
 				continue
 			}
-			// Descending: explicit route order first (via Less), then specificity.
 			sort.Stable(sort.Reverse(XdsIRRoutes(http.Routes)))
 		}
 	}

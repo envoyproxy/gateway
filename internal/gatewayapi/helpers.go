@@ -1531,6 +1531,14 @@ func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
 	return false
 }
 
+// getEnableRoutePriority returns true if route-priority is enabled on EnvoyProxy
+func getEnableRoutePriority(envoyProxy *egv1a1.EnvoyProxy) bool {
+	if envoyProxy != nil && envoyProxy.Spec.EnableRoutePriority != nil && *envoyProxy.Spec.EnableRoutePriority {
+		return true
+	}
+	return false
+}
+
 // getRequestIDExtensionAction returns the RequestIDExtensionAction configuration from EnvoyProxy
 func getRequestIDExtensionAction(envoyProxy *egv1a1.EnvoyProxy) *ir.RequestIDExtensionAction {
 	if envoyProxy == nil || envoyProxy.Spec.Telemetry == nil || envoyProxy.Spec.Telemetry.RequestID == nil {

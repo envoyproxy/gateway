@@ -224,7 +224,17 @@ func TestSortXdsIRMapRouteOrder(t *testing.T) {
 		expectedOrder      []string
 	}{
 		{
-			name:               "route order ranks routes when preserveRouteOrder is set",
+			name:               "higher route order is matched first under default sort",
+			preserveRouteOrder: false,
+			routes: []*ir.HTTPRoute{
+				{Name: "low", RouteOrder: 1, PathMatch: &ir.StringMatch{Prefix: new("/api")}},
+				{Name: "high", RouteOrder: 10, PathMatch: &ir.StringMatch{Prefix: new("/")}},
+				{Name: "mid", RouteOrder: 5, PathMatch: &ir.StringMatch{Prefix: new("/a")}},
+			},
+			expectedOrder: []string{"high", "mid", "low"},
+		},
+		{
+			name:               "higher route order is matched first when preserveRouteOrder is set",
 			preserveRouteOrder: true,
 			routes: []*ir.HTTPRoute{
 				{Name: "low", RouteOrder: 1},
@@ -261,6 +271,25 @@ func TestSortXdsIRMapRouteOrder(t *testing.T) {
 				{Name: "unspecific", PathMatch: &ir.StringMatch{Prefix: new("/")}, RouteOrder: 100},
 			},
 			expectedOrder: []string{"unspecific", "specific"},
+		},
+		{
+			name:               "GRPCRoute order precedes lower HTTPRoute order under default sort",
+			preserveRouteOrder: false,
+			routes: []*ir.HTTPRoute{
+				{
+					Name:       "grpc",
+					RouteOrder: 10,
+					PathMatch:  &ir.StringMatch{Exact: new("/service/method")},
+					Metadata:   &ir.ResourceMetadata{Kind: resource.KindGRPCRoute},
+				},
+				{
+					Name:       "http",
+					RouteOrder: 1,
+					PathMatch:  &ir.StringMatch{Prefix: new("/")},
+					Metadata:   &ir.ResourceMetadata{Kind: resource.KindHTTPRoute},
+				},
+			},
+			expectedOrder: []string{"grpc", "http"},
 		},
 		{
 			name:               "specificity breaks ties within equal route order under default sort",

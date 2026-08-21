@@ -427,6 +427,13 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              enableRoutePriority:
+                description: |-
+                  EnableRoutePriority determines whether the gateway.envoyproxy.io/route-priority
+                  annotation is used to order HTTPRoute and GRPCRoute matches. Higher values
+                  take precedence. When unset or false, the annotation is ignored.
+                  Default: False
+                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
