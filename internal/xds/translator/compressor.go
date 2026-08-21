@@ -110,11 +110,16 @@ func buildCompressorFilter(compression *ir.Compression) (*hcmv3.HttpFilter, erro
 		compressorProto.ChooseFirst = true
 	}
 
-	if compression.MinContentLength != nil {
+	if compression.MinContentLength != nil || len(compression.ContentTypes) > 0 {
+		commonConfig := &compressorv3.Compressor_CommonDirectionConfig{}
+		if compression.MinContentLength != nil {
+			commonConfig.MinContentLength = wrapperspb.UInt32(*compression.MinContentLength)
+		}
+		if len(compression.ContentTypes) > 0 {
+			commonConfig.ContentType = append([]string{}, compression.ContentTypes...)
+		}
 		compressorProto.ResponseDirectionConfig = &compressorv3.Compressor_ResponseDirectionConfig{
-			CommonConfig: &compressorv3.Compressor_CommonDirectionConfig{
-				MinContentLength: wrapperspb.UInt32(*compression.MinContentLength),
-			},
+			CommonConfig: commonConfig,
 		}
 	}
 
