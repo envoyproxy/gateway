@@ -48,13 +48,11 @@
                 name: oauth2/hmac_secret/securitypolicy/envoy-gateway/policy-for-gateway
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/envoy-gateway/policy-for-gateway
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             defaultExpiresIn: 1800s
             defaultRefreshTokenExpiresIn: 86400s
