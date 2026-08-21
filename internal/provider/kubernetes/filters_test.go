@@ -213,14 +213,12 @@ func TestGetExtensionBackendResources(t *testing.T) {
 		extBackendGVKs []schema.GroupVersionKind
 		objects        []client.Object
 		expectedCount  int
-		expectedError  bool
 	}{
 		{
 			name:           "no extension backend GVKs configured",
 			extBackendGVKs: []schema.GroupVersionKind{},
 			objects:        []client.Object{s3Backend, lambdaBackend},
 			expectedCount:  0,
-			expectedError:  false,
 		},
 		{
 			name: "single extension backend GVK with matching resources",
@@ -229,7 +227,6 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			},
 			objects:       []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
 			expectedCount: 1,
-			expectedError: false,
 		},
 		{
 			name: "multiple extension backend GVKs with matching resources",
@@ -239,7 +236,6 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			},
 			objects:       []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
 			expectedCount: 2,
-			expectedError: false,
 		},
 	}
 
@@ -261,15 +257,10 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			}
 
 			// Call the function under test
-			result, err := r.getExtensionBackendResources(t.Context())
+			result := r.getExtensionBackendResources(t.Context())
 
 			// Verify results
-			if tc.expectedError {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				require.Len(t, result, tc.expectedCount)
-			}
+			require.Len(t, result, tc.expectedCount)
 		})
 	}
 }

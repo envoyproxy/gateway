@@ -259,10 +259,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	}
 
 	// Collect custom backend resources managed by extensions
-	extensionBackendResources, err := r.getExtensionBackendResources(ctx)
-	if err != nil {
-		return err
-	}
+	extensionBackendResources := r.getExtensionBackendResources(ctx)
 	for i := range extensionBackendResources {
 		backend := extensionBackendResources[i]
 		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&backend)] = backend
