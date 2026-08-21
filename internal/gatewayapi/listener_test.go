@@ -1199,9 +1199,10 @@ func TestProcessAccessLog(t *testing.T) {
 				},
 			},
 			expected: &ir.AccessLog{
-				JSON: []*ir.JSONAccessLog{
+				Text: []*ir.TextAccessLog{
 					{
-						Path: "/dev/stdout",
+						Format: new("[%START_TIME%]"),
+						Path:   "/dev/stdout",
 					},
 				},
 			},
