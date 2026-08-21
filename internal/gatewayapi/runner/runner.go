@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
@@ -23,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -159,6 +161,15 @@ func (r *Runner) Name() string {
 // Start starts the gateway-api translator runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+
+	debounce, err := r.debounceOptions()
+	if err != nil {
+		return err
+	}
+	if debounce != nil {
+		r.Logger.Info("debouncing resource updates", "after", debounce.After, "max", debounce.Max)
+	}
+
 	r.done.Go(func() {
 		r.startWasmCache(ctx)
 	})
@@ -166,7 +177,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
 	r.done.Go(func() {
-		r.subscribeAndTranslate(c)
+		r.subscribeAndTranslate(c, debounce)
 	})
 	r.Logger.Info("started")
 	return nil
@@ -203,8 +214,50 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	r.wasmCache.Start(ctx)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
-	message.HandleSubscription(
+// debounceOptions returns the debounce settings to apply to the resource
+// subscription, or nil when debouncing is disabled.
+func (r *Runner) debounceOptions() (*message.DebounceOptions, error) {
+	if r.EnvoyGateway == nil || r.EnvoyGateway.Debounce == nil ||
+		!ptr.Deref(r.EnvoyGateway.Debounce.Enable, false) {
+		return nil, nil
+	}
+
+	cfg := r.EnvoyGateway.Debounce
+	opts := &message.DebounceOptions{
+		After: egv1a1.DefaultDebounceAfter,
+		Max:   egv1a1.DefaultDebounceMax,
+	}
+
+	if cfg.After != nil {
+		d, err := time.ParseDuration(string(*cfg.After))
+		if err != nil {
+			return nil, fmt.Errorf("invalid debounce.after: %w", err)
+		}
+		if d <= 0 {
+			return nil, fmt.Errorf("debounce.after must be greater than zero")
+		}
+		opts.After = d
+	}
+
+	if cfg.Max != nil {
+		d, err := time.ParseDuration(string(*cfg.Max))
+		if err != nil {
+			return nil, fmt.Errorf("invalid debounce.max: %w", err)
+		}
+		if d <= 0 {
+			return nil, fmt.Errorf("debounce.max must be greater than zero")
+		}
+		opts.Max = d
+	}
+
+	return opts, nil
+}
+
+func (r *Runner) subscribeAndTranslate(
+	sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext],
+	debounce *message.DebounceOptions,
+) {
+	message.HandleSubscriptionWithDebounce(
 		r.Logger,
 		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
 		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
@@ -605,6 +658,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// Delete keys using mark and sweep
 			r.deleteKeys(keysToDelete)
 		},
+		debounce,
 	)
 	r.Logger.Info("shutting down")
 }

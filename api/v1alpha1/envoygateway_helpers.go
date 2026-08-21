@@ -8,6 +8,7 @@ package v1alpha1
 import (
 	"net"
 	"strconv"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -86,6 +87,9 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	}
 	if e.XDSServer == nil {
 		e.XDSServer = DefaultXDSServer()
+	}
+	if e.Debounce == nil {
+		e.Debounce = DefaultDebounce()
 	}
 }
 
@@ -237,6 +241,26 @@ func DefaultGateway() *Gateway {
 // DefaultXDSServer returns a new XDSServer with default configuration parameters.
 func DefaultXDSServer() *XDSServer {
 	return &XDSServer{}
+}
+
+const (
+	// DefaultDebounceAfter is the default quiet period before a pending batch of
+	// resource changes is flushed.
+	DefaultDebounceAfter = 100 * time.Millisecond
+
+	// DefaultDebounceMax is the default upper bound on how long a resource change
+	// may be held before a flush is forced.
+	DefaultDebounceMax = 10 * time.Second
+)
+
+// DefaultDebounce returns a new Debounce with default configuration parameters.
+// Debouncing is disabled by default.
+func DefaultDebounce() *Debounce {
+	return &Debounce{
+		Enable: new(false),
+		After:  new(gwapiv1.Duration(DefaultDebounceAfter.String())),
+		Max:    new(gwapiv1.Duration(DefaultDebounceMax.String())),
+	}
 }
 
 // DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.
