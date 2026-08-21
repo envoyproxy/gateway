@@ -147,6 +147,11 @@ func (in *ActiveHealthCheck) DeepCopyInto(out *ActiveHealthCheck) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.ReuseConnection != nil {
+		in, out := &in.ReuseConnection, &out.ReuseConnection
+		*out = new(bool)
+		**out = **in
+	}
 	if in.HTTP != nil {
 		in, out := &in.HTTP, &out.HTTP
 		*out = new(HTTPActiveHealthChecker)

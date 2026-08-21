@@ -341,6 +341,7 @@ backendTrafficPolicies:
           method: GET
           path: /healthz
         interval: 3s
+        reuseConnection: false
         timeout: 500ms
         type: HTTP
         unhealthyThreshold: 3
@@ -898,6 +899,7 @@ xdsIR:
                 method: GET
                 path: /healthz
               interval: 3s
+              reuseConnection: false
               timeout: 500ms
               unhealthyThreshold: 3
             passive:

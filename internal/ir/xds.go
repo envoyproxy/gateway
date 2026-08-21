@@ -3510,6 +3510,8 @@ type ActiveHealthCheck struct {
 	UnhealthyThreshold *uint32 `json:"unhealthyThreshold"`
 	// HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy.
 	HealthyThreshold *uint32 `json:"healthyThreshold"`
+	// ReuseConnection determines whether the health check connection is reused across probes.
+	ReuseConnection *bool `json:"reuseConnection,omitempty" yaml:"reuseConnection,omitempty"`
 	// HTTP defines the configuration of http health checker.
 	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP defines the configuration of tcp health checker.
