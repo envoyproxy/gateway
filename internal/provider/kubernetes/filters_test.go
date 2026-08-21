@@ -16,8 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -211,12 +211,12 @@ func TestGetExtensionBackendResources(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name              string
-		extBackendGVKs    []schema.GroupVersionKind
-		objects           []client.Object
-		listInterceptor   func(ctx context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error
-		expectedCount     int
-		expectedError     bool
+		name            string
+		extBackendGVKs  []schema.GroupVersionKind
+		objects         []client.Object
+		listInterceptor func(ctx context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error
+		expectedCount   int
+		expectedError   bool
 	}{
 		{
 			name:           "no extension backend GVKs configured",

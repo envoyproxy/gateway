@@ -10,8 +10,8 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +42,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 // getExtensionBackendResources returns all custom backend resources managed by extensions.
 // Only GVKs whose CRD is missing (NotFound / NoMatch) are skipped, so the reconcile keeps
 // processing routes that don't depend on the missing custom backend. Transient errors
-// (timeouts, cancelation, server failures) are returned so the reconcile is retried and
+// (timeouts, canceled contexts, server failures) are returned so the reconcile is retried and
 // stale configuration is not published.
 func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) ([]unstructured.Unstructured, error) {
 	var resourceItems []unstructured.Unstructured
