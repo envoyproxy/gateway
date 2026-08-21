@@ -44,4 +44,12 @@ type DNS struct {
 	// If set, this configuration overrides other defaults.
 	// +optional
 	LookupFamily *DNSLookupFamily `json:"lookupFamily,omitempty"`
+	// MaxHosts is the maximum number of hosts that the DNS cache will hold.
+	// When the cache is full, new hosts will not be added and their DNS
+	// resolution will fail until existing entries are evicted.
+	// Defaults to 1024.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	MaxHosts *uint32 `json:"maxHosts,omitempty"`
 }

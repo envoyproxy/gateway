@@ -99,6 +99,7 @@ backendTrafficPolicies:
     dns:
       dnsRefreshRate: "1s"
       respectDnsTtl: true
+      maxHosts: 512
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
