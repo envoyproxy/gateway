@@ -269,6 +269,7 @@ xdsIR:
           timeout:
             tcp:
               connectTimeout: 15s
+        port: 4317
         type: OpenTelemetry
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway
