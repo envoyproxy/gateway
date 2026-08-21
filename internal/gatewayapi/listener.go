@@ -1036,14 +1036,27 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 	tracing := envoyproxy.Spec.Telemetry.Tracing
 
+	// Type and Port are defaulted here rather than by admission so that a
+	// Gateway-level EnvoyProxy overriding only part of the provider does not
+	// replace the values inherited from the GatewayClass level: a defaulted field
+	// is indistinguishable from an explicit one once the merge patch is built.
+	// The copy keeps the EnvoyProxy resource itself untouched.
+	provider := tracing.Provider
+	if provider.Type == nil {
+		provider.Type = ptr.To(egv1a1.DefaultTracingProviderType)
+	}
+	if provider.Port == nil {
+		provider.Port = ptr.To(egv1a1.DefaultTracingProviderPort)
+	}
+
 	// TODO: rename this, so that we can share backend with accesslog?
 	destName := "tracing"
 	settingName := irDestinationSettingName(destName, -1)
-	ds, traffic, err := t.processBackendRefsForTelemetry(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
+	ds, traffic, err := t.processBackendRefsForTelemetry(settingName, provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
 	if err != nil {
 		return nil, err
 	}
-	if tracing.Provider.Type == egv1a1.TracingProviderTypeOpenTelemetry {
+	if *provider.Type == egv1a1.TracingProviderTypeOpenTelemetry {
 		// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
 		for _, d := range ds {
 			d.Protocol = ir.GRPC
@@ -1055,11 +1068,18 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	// fallback to host and port
 	// TODO: remove support for Host/Port in v1.2
 	if len(ds) == 0 {
-		var host string
-		var port uint32
-		if tracing.Provider.Host != nil {
-			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
+		// Checked here instead of by a CRD CEL rule so that a partial provider
+		// (e.g. only serviceName) can be completed by the GatewayClass-level and
+		// Gateway-level EnvoyProxy merge before the check runs. An incomplete
+		// provider only turns tracing off, it does not stop the Gateway from
+		// being provisioned.
+		if provider.Host == nil {
+			t.Logger.Info("Disabling tracing because the merged tracing provider sets neither host nor backendRefs",
+				"gateway", utils.NamespacedName(gwCtx.Gateway).String(),
+				"envoyProxy", utils.NamespacedName(envoyproxy).String())
+			return nil, nil
 		}
+		host, port := *provider.Host, uint32(*provider.Port)
 		ds = destinationSettingFromHostAndPort(settingName, host, port)
 		authority = host
 	}
@@ -1071,8 +1091,8 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	// Use configured service name if provided
-	if tracing.Provider.ServiceName != nil {
-		serviceName = *tracing.Provider.ServiceName
+	if provider.ServiceName != nil {
+		serviceName = *provider.ServiceName
 	}
 
 	return &ir.Tracing{
@@ -1083,15 +1103,15 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		OverallSamplingRate: proxySamplingFractionPtr(tracing.OverallSamplingFraction),
 		CustomTags:          ir.CustomTagMapToSlice(tracing.CustomTags),
 		Tags:                ir.MapToSlice(tracing.Tags),
-		ResourceAttributes:  ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
+		ResourceAttributes:  ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&provider)),
 		Destination: ir.RouteDestination{
 			Name:     destName,
 			Settings: ds,
 			Metadata: buildResourceMetadata(envoyproxy, nil),
 		},
-		Provider: tracing.Provider,
+		Provider: provider,
 		Traffic:  traffic,
-		Headers:  getOpenTelemetryTracingHeaders(&tracing.Provider),
+		Headers:  getOpenTelemetryTracingHeaders(&provider),
 		SpanName: tracing.SpanName,
 	}, nil
 }

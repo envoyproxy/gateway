@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -1353,7 +1354,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				},
 				Tracing: &egv1a1.ProxyTracing{
 					Provider: egv1a1.TracingProvider{
-						Type: egv1a1.TracingProviderTypeOpenTelemetry,
+						Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 						BackendCluster: egv1a1.BackendCluster{
 							BackendRefs: []egv1a1.BackendRef{
 								{

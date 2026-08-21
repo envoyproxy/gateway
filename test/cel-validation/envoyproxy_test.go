@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1243,7 +1244,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1268,7 +1269,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1292,7 +1293,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1311,19 +1312,22 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 		},
 		{
-			desc: "tracing-empty-backend",
+			// A partial provider must be accepted at admission so it can be
+			// completed by the GatewayClass/Gateway EnvoyProxy merge; completeness
+			// is validated during translation instead.
+			desc: "tracing-partial-provider-for-merge",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type:        ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
+								ServiceName: new("my-override"),
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"host or backendRefs needs to be set"},
 		},
 		{
 			desc: "valid-tracing-service-name",
@@ -1332,7 +1336,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1358,7 +1362,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1679,7 +1683,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										},
 									},
 								},
-								Type:   egv1a1.TracingProviderTypeZipkin,
+								Type:   ptr.To(egv1a1.TracingProviderTypeZipkin),
 								Zipkin: &egv1a1.ZipkinTracingProvider{},
 							},
 						},
@@ -1697,7 +1701,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1725,7 +1729,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1756,7 +1760,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1787,7 +1791,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1821,7 +1825,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1855,7 +1859,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1889,7 +1893,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1923,7 +1927,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{

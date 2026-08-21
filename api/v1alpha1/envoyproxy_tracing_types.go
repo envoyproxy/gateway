@@ -34,19 +34,39 @@ const (
 	TracingProviderTypeDatadog       TracingProviderType = "Datadog"
 )
 
+const (
+	// DefaultTracingProviderType is the provider type applied during translation
+	// when TracingProvider.Type is unset.
+	DefaultTracingProviderType = TracingProviderTypeOpenTelemetry
+	// DefaultTracingProviderPort is the provider port applied during translation
+	// when TracingProvider.Port is unset.
+	DefaultTracingProviderPort int32 = 4317
+)
+
 // TracingProvider defines the tracing provider configuration.
 //
-// +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
+// A provider is only required to set host or backendRefs after the
+// GatewayClass-level and Gateway-level EnvoyProxy configs are merged
+// (see EnvoyProxySpec.MergeType), so completeness is checked during
+// translation instead of by a CEL rule here. A provider that is still
+// incomplete after the merge turns tracing off for that Gateway.
+//
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
-// +kubebuilder:validation:XValidation:message="openTelemetry can only be used with type OpenTelemetry",rule="has(self.openTelemetry) ? self.type == 'OpenTelemetry' : true"
+// +kubebuilder:validation:XValidation:message="openTelemetry can only be used with type OpenTelemetry",rule="has(self.openTelemetry) ? (!has(self.type) || self.type == 'OpenTelemetry') : true"
 type TracingProvider struct {
 	BackendCluster `json:",inline"`
 	// Type defines the tracing provider type.
+	//
+	// Defaults to OpenTelemetry. The default is applied during translation rather
+	// than by admission, so that a Gateway-level EnvoyProxy overriding only part of
+	// the provider does not replace the type inherited from the GatewayClass level
+	// (see EnvoyProxySpec.MergeType).
+	//
 	// +kubebuilder:validation:Enum=OpenTelemetry;Zipkin;Datadog
-	// +kubebuilder:default=OpenTelemetry
-	Type TracingProviderType `json:"type"`
+	// +optional
+	Type *TracingProviderType `json:"type,omitempty"`
 	// Host define the provider service hostname.
 	//
 	// Deprecated: Use BackendRefs instead.
@@ -55,12 +75,14 @@ type TracingProvider struct {
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the provider service is exposed on.
 	//
+	// Defaults to 4317. The default is applied during translation rather than by
+	// admission, for the same reason as Type.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=4317
-	Port int32 `json:"port,omitempty"`
+	Port *int32 `json:"port,omitempty"`
 	// ServiceName defines the service name to use in tracing configuration.
 	// If not set, Envoy Gateway will use a default service name set as
 	// "name.namespace" (e.g., "my-gateway.default").
