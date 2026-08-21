@@ -1208,6 +1208,39 @@ func TestProcessAccessLog(t *testing.T) {
 			},
 		},
 		{
+			name: "nil format type with text and json keeps json for file sink",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Text: new("[%START_TIME%]"),
+										JSON: map[string]string{"start_time": "%START_TIME%"},
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.AccessLog{
+				JSON: []*ir.JSONAccessLog{
+					{
+						JSON: []ir.MapEntry{{Key: "start_time", Value: "%START_TIME%"}},
+						Path: "/dev/stdout",
+					},
+				},
+			},
+		},
+		{
 			name: "nil format type with json only uses json for file sink",
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{

@@ -868,13 +868,15 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 		// one of text or json is set. The File and ALS sinks can render just one of the two,
 		// so resolve the effective type once here instead of defaulting to JSON at each sink
 		// and silently dropping a text format that was accepted by the API server.
+		// An unset type with both text and json set stays JSON, which is what those sinks
+		// have always picked for that input; only the text-only case changes.
 		// OpenTelemetry is deliberately excluded below: it can carry text and attributes at
 		// the same time and handles the unset type itself.
 		formatType := egv1a1.ProxyAccessLogFormatTypeJSON
 		switch {
 		case format.Type != nil:
 			formatType = *format.Type
-		case format.Text != nil:
+		case format.Text != nil && format.JSON == nil:
 			formatType = egv1a1.ProxyAccessLogFormatTypeText
 		}
 
