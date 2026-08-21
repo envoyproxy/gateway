@@ -167,8 +167,9 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 
 func Test_mergeRouteParentStatus(t *testing.T) {
 	type args struct {
-		old []gwapiv1.RouteParentStatus
-		new []gwapiv1.RouteParentStatus
+		specParentRefs []gwapiv1.ParentReference
+		old            []gwapiv1.RouteParentStatus
+		new            []gwapiv1.RouteParentStatus
 	}
 	tests := []struct {
 		name string
@@ -178,6 +179,15 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		{
 			name: "old contains one parentRef of ours and one of another controller's, status of ours changed in new.",
 			args: args{
+				specParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:        "gateway1",
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
+					},
+					{Name: "gateway2"},
+				},
 				old: []gwapiv1.RouteParentStatus{
 					{
 						ControllerName: "istio.io/gateway-controller",
@@ -285,6 +295,16 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		{
 			name: "old contains one parentRef of ours and one of another controller's, status of ours changed in new with an additional parentRef of ours",
 			args: args{
+				specParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:        "gateway1",
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
+					},
+					{Name: "gateway2"},
+					{Name: "gateway3"},
+				},
 				old: []gwapiv1.RouteParentStatus{
 					{
 						ControllerName: "istio.io/gateway-controller",
@@ -428,6 +448,16 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		{
 			name: "old contains one parentRef of ours and one of another controller's, ours gets dropped in new and a different parentRef of ours is added",
 			args: args{
+				// gateway2 is no longer in spec.ParentRefs - it was replaced by gateway3.
+				specParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:        "gateway1",
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
+					},
+					{Name: "gateway3"},
+				},
 				old: []gwapiv1.RouteParentStatus{
 					{
 						ControllerName: "istio.io/gateway-controller",
@@ -512,24 +542,7 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						},
 					},
 				},
-				{
-					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
-					ParentRef: gwapiv1.ParentReference{
-						Name: "gateway2",
-					},
-					Conditions: []metav1.Condition{
-						{
-							Type:   string(gwapiv1.RouteConditionAccepted),
-							Status: metav1.ConditionTrue,
-							Reason: "Accepted",
-						},
-						{
-							Type:   string(gwapiv1.RouteConditionResolvedRefs),
-							Status: metav1.ConditionTrue,
-							Reason: "ResolvedRefs",
-						},
-					},
-				},
+				// gateway2 was removed from spec.ParentRefs, so its stale status entry is dropped.
 				{
 					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 					ParentRef: gwapiv1.ParentReference{
@@ -560,6 +573,15 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		{
 			name: "old contains one parentRef of ours and one of another controller's, ours gets dropped in new.",
 			args: args{
+				specParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:        "gateway1",
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
+					},
+					{Name: "gateway2"},
+				},
 				old: []gwapiv1.RouteParentStatus{
 					{
 						ControllerName: "istio.io/gateway-controller",
@@ -649,6 +671,7 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		{
 			name: "old contains one parentRef of ours, status of ours changed in new.",
 			args: args{
+				specParentRefs: []gwapiv1.ParentReference{{Name: "gateway2"}},
 				old: []gwapiv1.RouteParentStatus{
 					{
 						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
@@ -714,6 +737,7 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		{
 			name: "old contains one parentRef of ours, status of ours changed in new with an additional parentRef of ours",
 			args: args{
+				specParentRefs: []gwapiv1.ParentReference{{Name: "gateway2"}, {Name: "gateway3"}},
 				old: []gwapiv1.RouteParentStatus{
 					{
 						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
@@ -813,8 +837,12 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 			},
 		},
 		{
+			// Regression test for https://github.com/envoyproxy/gateway/issues/5656: a route
+			// switching its parentRef from gateway2 to gateway3 must not retain a stale
+			// status.parents entry for gateway2.
 			name: "old contains one parentRef of ours, ours gets dropped in new and a different parentRef of ours is added",
 			args: args{
+				specParentRefs: []gwapiv1.ParentReference{{Name: "gateway3"}},
 				old: []gwapiv1.RouteParentStatus{
 					{
 						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
@@ -856,25 +884,8 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					},
 				},
 			},
+			// gateway2 is no longer in spec.ParentRefs, so its stale status entry must be dropped.
 			want: []gwapiv1.RouteParentStatus{
-				{
-					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
-					ParentRef: gwapiv1.ParentReference{
-						Name: "gateway2",
-					},
-					Conditions: []metav1.Condition{
-						{
-							Type:   string(gwapiv1.RouteConditionAccepted),
-							Status: metav1.ConditionTrue,
-							Reason: "Accepted",
-						},
-						{
-							Type:   string(gwapiv1.RouteConditionResolvedRefs),
-							Status: metav1.ConditionTrue,
-							Reason: "ResolvedRefs",
-						},
-					},
-				},
 				{
 					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 					ParentRef: gwapiv1.ParentReference{
@@ -900,6 +911,8 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		{
 			name: "old contains one parentRef of ours, and it's not in new - should be preserved.",
 			args: args{
+				// gateway2 is still in spec.ParentRefs - it just wasn't part of this reconcile batch.
+				specParentRefs: []gwapiv1.ParentReference{{Name: "gateway2"}},
 				old: []gwapiv1.RouteParentStatus{
 					{
 						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
@@ -947,6 +960,7 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		{
 			name: "multiple parents from same controller - update one, preserve others",
 			args: args{
+				specParentRefs: []gwapiv1.ParentReference{{Name: "gateway1"}, {Name: "gateway2"}},
 				old: []gwapiv1.RouteParentStatus{
 					{
 						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
@@ -1033,7 +1047,7 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mergeRouteParentStatus("default", tt.args.old, tt.args.new); !reflect.DeepEqual(got, tt.want) {
+			if got := mergeRouteParentStatus("default", tt.args.specParentRefs, tt.args.old, tt.args.new); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mergeRouteParentStatus() = %v, want %v", got, tt.want)
 			}
 		})
