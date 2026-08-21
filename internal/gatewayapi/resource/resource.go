@@ -10,6 +10,7 @@ import (
 	"maps"
 	"reflect"
 	"sort"
+	"time"
 
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -153,6 +154,28 @@ type ControllerResources []*Resources
 type ControllerResourcesContext struct {
 	Resources *ControllerResources
 	Context   context.Context
+	// StoredAt is when this value was Store()'d into the watchable map. Subscribers use it
+	// to record how long the value sat buffered in the map's internal queue before being
+	// dequeued; see message.RecordQueueWait.
+	StoredAt time.Time
+}
+
+// ParentContext returns the trace context stashed on c, or fallback if c is nil or has none
+// (e.g. before any Reconcile has stored a context yet).
+func (c *ControllerResourcesContext) ParentContext(fallback context.Context) context.Context {
+	if c != nil && c.Context != nil {
+		return c.Context
+	}
+	return fallback
+}
+
+// StoredAtTime returns the time c was stored in the watchable map, or the zero Time if c
+// is nil (e.g. before any Reconcile has stored a value yet).
+func (c *ControllerResourcesContext) StoredAtTime() time.Time {
+	if c == nil {
+		return time.Time{}
+	}
+	return c.StoredAt
 }
 
 // DeepCopy creates a new ControllerResourcesContext.
@@ -168,6 +191,7 @@ func (c *ControllerResourcesContext) DeepCopy() *ControllerResourcesContext {
 	return &ControllerResourcesContext{
 		Resources: resourcesCopy,
 		Context:   c.Context,
+		StoredAt:  c.StoredAt,
 	}
 }
 

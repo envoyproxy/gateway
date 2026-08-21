@@ -147,10 +147,8 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
-			parentCtx := ctx
-			if update.Value != nil && update.Value.Context != nil {
-				parentCtx = update.Value.Context
-			}
+			parentCtx := update.Value.ParentContext(ctx)
+			parentCtx = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 
 			traceCtx, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription")
 			defer span.End()
