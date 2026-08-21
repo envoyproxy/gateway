@@ -1,0 +1,69 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            initialFetchTimeout: 0s
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: first-listener
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - bar.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tcp-route-dest
+        statPrefix: tls-passthrough-10080
+    name: third-route
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  listenerFiltersTimeout: 5s
+  maxConnectionsToAcceptPerSocketEvent: 64
+  name: first-listener
+  perConnectionBufferLimitBytes: 1048576
+  socketOptions:
+  - description: socket option to enable tcp keep alive
+    intValue: "1"
+    level: "1"
+    name: "9"
+  - description: socket option for keep alive probes
+    intValue: "7"
+    level: "6"
+    name: "6"
+  - description: socket option for keep alive idle time
+    intValue: "50"
+    level: "6"
+    name: "4"
+  - description: socket option for keep alive interval
+    intValue: "200"
+    level: "6"
+    name: "5"
