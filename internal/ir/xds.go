@@ -2950,6 +2950,10 @@ type RateLimitRule struct {
 	// but the result is always success regardless of whether the limit was exceeded.
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
+	// DetailedMetric determines whether the rate limit service emits detailed metrics
+	// (including the resolved descriptor value) for this rule.
+	// +optional
+	DetailedMetric *bool `json:"detailedMetric,omitempty" yaml:"detailedMetric,omitempty"`
 	// XRateLimitOption controls whether X-RateLimit response headers are emitted for this rule.
 	// When nil, the rule inherits the listener-level setting from DisableRateLimitHeaders.
 	// +optional
