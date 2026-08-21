@@ -10,6 +10,8 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,14 +39,24 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 	return resourceItems, nil
 }
 
-// getExtensionBackendResources returns all custom backend resources managed by extensions
+// getExtensionBackendResources returns all custom backend resources managed by extensions.
+// Only GVKs whose CRD is missing (NotFound / NoMatch) are skipped, so the reconcile keeps
+// processing routes that don't depend on the missing custom backend. Transient errors
+// (timeouts, canceled contexts, server failures) are returned so the reconcile is retried and
+// stale configuration is not published.
 func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) ([]unstructured.Unstructured, error) {
 	var resourceItems []unstructured.Unstructured
 	for _, gvk := range r.extBackendGVKs {
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList, client.UnsafeDisableDeepCopy); err != nil {
-			r.log.Info("no associated backend resources found", "GVK", gvk.String())
+			if kerrors.IsNotFound(err) || apimeta.IsNoMatchError(err) {
+				// The CRD for this GVK is not installed (or the SA lacks RBAC to
+				// list it); the watch was already skipped in the controller setup,
+				// so skip the list path too and keep Gateway processing alive.
+				r.log.Info("skipping backend resource list", "GVK", gvk.String(), "error", err.Error())
+				continue
+			}
 			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 

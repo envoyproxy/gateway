@@ -6,6 +6,7 @@
 package kubernetes
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -209,18 +211,18 @@ func TestGetExtensionBackendResources(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name           string
-		extBackendGVKs []schema.GroupVersionKind
-		objects        []client.Object
-		expectedCount  int
-		expectedError  bool
+		name            string
+		extBackendGVKs  []schema.GroupVersionKind
+		objects         []client.Object
+		listInterceptor func(ctx context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error
+		expectedCount   int
+		expectedError   bool
 	}{
 		{
 			name:           "no extension backend GVKs configured",
 			extBackendGVKs: []schema.GroupVersionKind{},
 			objects:        []client.Object{s3Backend, lambdaBackend},
 			expectedCount:  0,
-			expectedError:  false,
 		},
 		{
 			name: "single extension backend GVK with matching resources",
@@ -229,7 +231,6 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			},
 			objects:       []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
 			expectedCount: 1,
-			expectedError: false,
 		},
 		{
 			name: "multiple extension backend GVKs with matching resources",
@@ -239,7 +240,17 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			},
 			objects:       []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
 			expectedCount: 2,
-			expectedError: false,
+		},
+		{
+			name: "transient list error is returned instead of being suppressed",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+			},
+			objects: []client.Object{s3Backend, defaultNamespace, testNamespace},
+			listInterceptor: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+				return context.DeadlineExceeded
+			},
+			expectedError: true,
 		},
 	}
 
@@ -248,10 +259,17 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			// Create fake client with test objects
 			scheme := newTestScheme(tc.extBackendGVKs...)
 
-			fakeClient := fakeclient.NewClientBuilder().
+			builder := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
-				WithObjects(tc.objects...).
-				Build()
+				WithObjects(tc.objects...)
+
+			if tc.listInterceptor != nil {
+				builder = builder.WithInterceptorFuncs(interceptor.Funcs{
+					List: tc.listInterceptor,
+				})
+			}
+
+			fakeClient := builder.Build()
 
 			// Create reconciler with test configuration
 			r := &gatewayAPIReconciler{
