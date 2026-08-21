@@ -80,6 +80,36 @@ func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.Names
 	return routingType
 }
 
+// BTPEndpointHostnameIndex holds EndpointHostname values from BackendTrafficPolicies, keyed by
+// attachment scope. This avoids an O(BTPs) lookup for every iteration of processDestination.
+type BTPEndpointHostnameIndex struct {
+	*policyIndex[*egv1a1.BackendEndpointHostname]
+}
+
+// newBTPEndpointHostnameIndex allocates a BTPEndpointHostnameIndex.
+func newBTPEndpointHostnameIndex() *BTPEndpointHostnameIndex {
+	return &BTPEndpointHostnameIndex{policyIndex: newPolicyIndex[*egv1a1.BackendEndpointHostname]()}
+}
+
+// LookupBTPEndpointHostname resolves the EndpointHostname for a specific route rule and
+// gateway/listener/listenerSet combination by checking the index in priority order: routeRule >
+// route > listener/listenerSet > gateway, honoring MergeType. Returns nil if no matching BTP
+// EndpointHostname is found, or if the index is nil.
+func (idx *BTPEndpointHostnameIndex) LookupBTPEndpointHostname(
+	routeKind gwapiv1.Kind,
+	routeNN types.NamespacedName,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	listenerSetNN *types.NamespacedName,
+	routeRuleName *gwapiv1.SectionName,
+) *egv1a1.BackendEndpointHostname {
+	if idx == nil {
+		return nil
+	}
+	endpointHostname, _ := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
+	return endpointHostname
+}
+
 // btpSpecHasClusterScopedFields reports whether spec sets any backend-cluster-scoped (CDS) field —
 // either directly inside its embedded ClusterSettings, or via a sibling field on the spec that also
 // affects the generated Cluster resource.
@@ -97,7 +127,10 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.HTTP2 != nil ||
 		spec.DNS != nil ||
 		spec.AdmissionControl != nil ||
-		spec.UseClientProtocol != nil
+		spec.UseClientProtocol != nil ||
+		// EndpointHostname rewrites the hostname on the cluster's own endpoints, so two rules
+		// resolving it differently can't share one merged cluster.
+		spec.EndpointHostname != nil
 }
 
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
@@ -157,12 +190,13 @@ func (idx *BTPLoadBalancerIndex) IsConsistentHash(gatewayNN types.NamespacedName
 	return isConsistentHash
 }
 
-// BTPIndexes groups the three pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
+// BTPIndexes groups the pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
 // together in one pass over btps.
 type BTPIndexes struct {
-	RoutingType     *BTPRoutingTypeIndex
-	ClusterSettings *BTPClusterSettingsIndex
-	LoadBalancer    *BTPLoadBalancerIndex
+	RoutingType      *BTPRoutingTypeIndex
+	EndpointHostname *BTPEndpointHostnameIndex
+	ClusterSettings  *BTPClusterSettingsIndex
+	LoadBalancer     *BTPLoadBalancerIndex
 }
 
 // BuildBTPIndexes builds BTPIndexes, resolving each BackendTrafficPolicy's targets at most once.
@@ -176,6 +210,7 @@ func BuildBTPIndexes(
 	mergeBackendsEnabled bool,
 ) *BTPIndexes {
 	routingTypeIdx := newBTPRoutingTypeIndex()
+	endpointHostnameIdx := newBTPEndpointHostnameIndex()
 	clusterSettingsIdx := newBTPClusterSettingsIndex()
 	loadBalancerIdx := newBTPLoadBalancerIndex()
 
@@ -190,13 +225,15 @@ func BuildBTPIndexes(
 
 	for _, btp := range btps {
 		hasRoutingType := btp.Spec.RoutingType != nil
+		hasEndpointHostname := btp.Spec.EndpointHostname != nil
 		hasClusterScoped := btpSpecHasClusterScopedFields(&btp.Spec)
 		hasLoadBalancer := btp.Spec.LoadBalancer != nil
 
-		// Unlike ClusterSettings/LoadBalancer, RoutingType can never be skipped here: every
-		// accepted BTP must claim its target's first-write-wins slot, even one that sets nothing
-		// at all, so a younger conflicting policy can't silently win, and so a route/rule-level
-		// policy with MergeType unset can still pin its scope to nil instead of inheriting.
+		// Unlike ClusterSettings/LoadBalancer, RoutingType and EndpointHostname can never be
+		// skipped here: every accepted BTP must claim its target's first-write-wins slot, even one
+		// that sets nothing at all, so a younger conflicting policy can't silently win, and so a
+		// route/rule-level policy with MergeType unset can still pin its scope to nil instead of
+		// inheriting.
 		refs := resolvePolicyTargets(
 			btp.Spec.PolicyTargetReferences,
 			allTargets,
@@ -224,6 +261,21 @@ func BuildBTPIndexes(
 				routingTypeIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, btp.Spec.RoutingType, btp.Spec.MergeType)
 			default:
 				routingTypeIdx.setRouteLevel(nn, kind, btp.Spec.RoutingType, btp.Spec.MergeType)
+			}
+
+			switch {
+			case kind == resource.KindGateway && ref.SectionName != nil:
+				endpointHostnameIdx.setGatewayListenerLevel(nn, *ref.SectionName, btp.Spec.EndpointHostname, hasEndpointHostname)
+			case kind == resource.KindGateway:
+				endpointHostnameIdx.setGatewayLevel(nn, btp.Spec.EndpointHostname)
+			case kind == resource.KindListenerSet && ref.SectionName != nil:
+				endpointHostnameIdx.setListenerSetListenerLevel(nn, *ref.SectionName, btp.Spec.EndpointHostname, hasEndpointHostname)
+			case kind == resource.KindListenerSet:
+				endpointHostnameIdx.setListenerSetLevel(nn, btp.Spec.EndpointHostname, hasEndpointHostname)
+			case ref.SectionName != nil:
+				endpointHostnameIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, btp.Spec.EndpointHostname, btp.Spec.MergeType)
+			default:
+				endpointHostnameIdx.setRouteLevel(nn, kind, btp.Spec.EndpointHostname, btp.Spec.MergeType)
 			}
 
 			// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
@@ -259,9 +311,10 @@ func BuildBTPIndexes(
 	}
 
 	return &BTPIndexes{
-		RoutingType:     routingTypeIdx,
-		ClusterSettings: clusterSettingsIdx,
-		LoadBalancer:    loadBalancerIdx,
+		RoutingType:      routingTypeIdx,
+		EndpointHostname: endpointHostnameIdx,
+		ClusterSettings:  clusterSettingsIdx,
+		LoadBalancer:     loadBalancerIdx,
 	}
 }
 

@@ -218,3 +218,16 @@ httpFilters:
         pathRegex:
           pattern: "^/node/([0-9]+)/api.*"
           substitution: "backend-\\1.service.namespace.svc.cluster.local"
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: endpoint-hostname
+    namespace: default
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    endpointHostname:
+      type: KubernetesService
