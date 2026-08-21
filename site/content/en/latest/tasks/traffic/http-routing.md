@@ -123,8 +123,8 @@ traffic was routed to the foo backend service.
 
 Users can set an explicit match priority across HTTPRoutes and GRPCRoutes with the
 `gateway.envoyproxy.io/route-priority` annotation. The routes must attach to the same HTTP or HTTPS
-listener. Use this when you migrate from a load balancer that used declared order, such as AWS ALB
-`group.order`.
+listener. Use this annotation when routes must follow explicit priority ordering instead of default
+match precedence.
 
 The annotation is ignored unless the Gateway owner sets `spec.enableRoutePriority: true` on the
 [EnvoyProxy](../../../api/extension_types#envoyproxy) referenced by the Gateway or GatewayClass.
