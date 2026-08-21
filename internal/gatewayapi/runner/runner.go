@@ -344,7 +344,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					// stage span and the input sizes recorded on it. The closure keeps that
 					// defer scoped to this iteration instead of the whole update.
 					result, err := func() (*gatewayapi.TranslateResult, error) {
-						translateToIRCtx, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
+						translateToIRCtx, translateToIRSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
 						defer translateToIRSpan.End()
 						return t.Translate(translateToIRCtx, resources)
 					}()
