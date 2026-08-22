@@ -185,6 +185,9 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			&corev1.Node{}: {
 				UnsafeDisableDeepCopy: new(true),
 			},
+			&corev1.Namespace{}: {
+				UnsafeDisableDeepCopy: new(true),
+			},
 			&gwapiv1b1.ReferenceGrant{}: {
 				UnsafeDisableDeepCopy: new(true),
 			},

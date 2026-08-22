@@ -2646,6 +2646,73 @@ func TestIsTransientError(t *testing.T) {
 	}
 }
 
+// TestProcessListenerSetsDoesNotTrackRouteslessSelectorMatchedNamespace verifies that
+// processListenerSets does NOT track a namespace in allAssociatedNamespaces merely because its
+// labels satisfy a listener's allowedRoutes.namespaces.selector. Only namespaces containing an
+// indexed candidate Route (or another tracked resource) need tracking: the route processors
+// already add those namespaces regardless of selector matching, and re-fetch them fresh on every
+// reconcile, so a namespace with nothing in it has no effect on translation either way. Broadly
+// materializing every selector match would force a cluster-wide Namespace list per listener on
+// every reconcile and needlessly expand the translated snapshot.
+func TestProcessListenerSetsDoesNotTrackRouteslessSelectorMatchedNamespace(t *testing.T) {
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+	scheme := envoygateway.GetScheme()
+
+	fromSelector := gwapiv1.NamespacesFromSelector
+	xls := &gwapiv1.ListenerSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-xls",
+			Namespace: "default",
+		},
+		Spec: gwapiv1.ListenerSetSpec{
+			ParentRef: gwapiv1.ParentGatewayReference{
+				Name:      gwapiv1.ObjectName("test-gateway"),
+				Namespace: new(gwapiv1.Namespace("default")),
+			},
+			Listeners: []gwapiv1.ListenerEntry{
+				{
+					Name:     gwapiv1.SectionName("http"),
+					Protocol: gwapiv1.ProtocolType("HTTP"),
+					Port:     gwapiv1.PortNumber(8080),
+					AllowedRoutes: &gwapiv1.AllowedRoutes{
+						Namespaces: &gwapiv1.RouteNamespaces{
+							From:     &fromSelector,
+							Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	// This namespace has no route, secret, or any other resource in it. Its labels match the
+	// ListenerSet listener's allowedRoutes selector, but that alone must not cause it to be tracked.
+	matchingEmptyNS := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "matching-empty",
+			Labels: map[string]string{"env": "prod"},
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(xls, matchingEmptyNS).
+		WithIndex(&gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc).
+		Build()
+
+	r := &gatewayAPIReconciler{
+		client: fakeClient,
+		log:    logger,
+	}
+
+	resourceTree := resource.NewResources()
+	resourceMap := newResourceMapping()
+	err := r.processListenerSets(context.Background(), "default/test-gateway", resourceMap, resourceTree)
+	require.NoError(t, err)
+
+	require.False(t, resourceMap.allAssociatedNamespaces.Has("matching-empty"),
+		"a namespace matched only by allowedRoutes.namespaces.selector, with no candidate route or other resource, must not be tracked")
+}
+
 func TestProcessCTPCrlRefs(t *testing.T) {
 	ns := "default"
 	crlSecret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "crl-secret"})
