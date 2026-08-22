@@ -132,3 +132,69 @@ http:
           distinct: false
           name: ""
           prefix: /bar
+  # Gateway policy with ExtProc attached at the listener. The route with no EnvoyExtensions of its
+  # own inherits the listener's filter; the route with its own ExtProc uses only its own - no
+  # merge with the listener's.
+  - address: 0.0.0.0
+    hostnames:
+      - '*'
+    name: envoy-gateway/gateway-1/http-2
+    envoyExtensions:
+      extProcs:
+        - name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
+          authority: grpc-backend-listener.default:9000
+          destination:
+            name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend-listener
+            settings:
+              - protocol: GRPC
+                weight: 1
+                name: envoyextensionpolicy/default/policy-for-gateway/0/grpc-backend-listener/backend/0
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10081
+    routes:
+      - destination:
+          name: httproute/default/httproute-4/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-4/rule/0/backend/0
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        name: httproute/default/httproute-4/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /inherits-listener
+      - destination:
+          name: httproute/default/httproute-5/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-5/rule/0/backend/0
+        envoyExtensions:
+          extProcs:
+            - name: envoyextensionpolicy/default/policy-for-route/extproc/0
+              authority: grpc-backend-route.default:9001
+              destination:
+                name: envoyextensionpolicy/default/policy-for-route/0/grpc-backend-route
+                settings:
+                  - protocol: GRPC
+                    weight: 1
+                    name: envoyextensionpolicy/default/policy-for-route/0/grpc-backend-route/backend/0
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        name: httproute/default/httproute-5/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-overrides

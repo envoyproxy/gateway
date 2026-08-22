@@ -409,6 +409,8 @@ type HTTPListener struct {
 	MatchBackendScheme bool `json:"matchBackendScheme,omitempty" yaml:"matchBackendScheme,omitempty"`
 	// RequestID defines configuration for the UUID request ID extension.
 	RequestID *RequestIDExtensionAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
+	// EnvoyExtension holds the features associated with EnvoyExtensionPolicy
+	EnvoyExtensions *EnvoyExtensionFeatures `json:"envoyExtensions,omitempty" yaml:"envoyExtensions,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -4082,12 +4084,12 @@ type ExtProc struct {
 type Lua struct {
 	// Name is a unique name for the LUa configuration.
 	// The xds translator only generates one Lua filter for each unique name
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// Code is the Lua source code
-	Code *string
+	Code *string `json:"code,omitempty" yaml:"code,omitempty"`
 	// FilterContext is the filter context configuration for the Lua script.
 	// This is a JSON object passed to the Lua script via request_handle:filterContext().
-	FilterContext *apiextensionsv1.JSON
+	FilterContext *apiextensionsv1.JSON `json:"filterContext,omitempty" yaml:"filterContext,omitempty"`
 }
 
 // Wasm holds the information associated with the Wasm extensions.

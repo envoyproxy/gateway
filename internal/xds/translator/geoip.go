@@ -299,3 +299,7 @@ func (*geoip) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListener) error 
 func (*geoip) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
 	return nil
 }
+
+func (*geoip) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}

@@ -331,6 +331,13 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
+      envoyExtensions:
+        luas:
+        - code: |
+            function envoy_on_request(request_handle)
+              request_handle:logInfo("listenerset-section")
+            end
+          name: envoyextensionpolicy/envoy-gateway/target-listenerset-section/lua/0
       externalPort: 8081
       hostnames:
       - '*'

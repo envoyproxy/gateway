@@ -483,3 +483,7 @@ func buildQueryParamMatchLocalRateLimitActions(
 		*descriptorEntries = append(*descriptorEntries, entry)
 	}
 }
+
+func (*localRateLimit) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
+}

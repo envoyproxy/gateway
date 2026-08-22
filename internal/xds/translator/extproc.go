@@ -33,7 +33,8 @@ var _ httpFilter = &extProc{}
 
 // patchHCM builds and appends the ext_proc Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
-// Note: this method creates an ext_proc filter for each route that contains an ExtAuthz config.
+// Note: this method creates an ext_proc filter for each route that contains an ExtAuthz config,
+// plus one for each ExtProc a Gateway/Listener-scoped policy attached directly to the listener.
 // The filter is disabled by default. It is enabled on the route level.
 func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
@@ -46,13 +47,9 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 		return errors.New("ir listener is nil")
 	}
 
-	for _, route := range irListener.Routes {
-		if !routeContainsExtProc(route) {
-			continue
-		}
-
-		for i := range route.EnvoyExtensions.ExtProcs {
-			ep := &route.EnvoyExtensions.ExtProcs[i]
+	addExtProcFilters := func(extProcs []ir.ExtProc) {
+		for i := range extProcs {
+			ep := &extProcs[i]
 			if hcmContainsFilter(mgr, extProcFilterName(ep)) {
 				continue
 			}
@@ -65,6 +62,16 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 
 			mgr.HttpFilters = append(mgr.HttpFilters, filter)
 		}
+	}
+
+	if irListener.EnvoyExtensions != nil {
+		addExtProcFilters(irListener.EnvoyExtensions.ExtProcs)
+	}
+	for _, route := range irListener.Routes {
+		if !routeContainsExtProc(route) {
+			continue
+		}
+		addExtProcFilters(route.EnvoyExtensions.ExtProcs)
 	}
 
 	return errs
@@ -203,21 +210,48 @@ func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
 	return errs
 }
 
+// patchExtProcListenerResources patches the cluster resources for ExtProc configs a
+// Gateway/Listener-scoped policy attached directly to irListener, as opposed to a specific route.
+// Called directly from the translator alongside patchResources, the same way rate limiting is
+// handled outside the generic per-filter loop, since patchResources has no listener context.
+func patchExtProcListenerResources(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener) error {
+	if tCtx == nil || tCtx.XdsResources == nil {
+		return errors.New("xds resource table is nil")
+	}
+	if irListener == nil || irListener.EnvoyExtensions == nil {
+		return nil
+	}
+
+	var errs error
+	for i := range irListener.EnvoyExtensions.ExtProcs {
+		ep := irListener.EnvoyExtensions.ExtProcs[i]
+		if err := createExtServiceXDSCluster(
+			&ep.Destination, ep.Traffic, tCtx); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
+}
+
 // patchRoute patches the provided route with the extProc config if applicable.
-// Note: this method enables the corresponding extProc filter for the provided route.
-func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+// Note: this method enables the corresponding extProc filter for the provided route. Routes with
+// no ExtProc of their own inherit whatever a Gateway/Listener-scoped policy attached to irListener.
+func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.EnvoyExtensions == nil {
+
+	extensions := effectiveEnvoyExtensions(irRoute, irListener)
+	if extensions == nil {
 		return nil
 	}
 
-	for i := range irRoute.EnvoyExtensions.ExtProcs {
-		ep := &irRoute.EnvoyExtensions.ExtProcs[i]
+	for i := range extensions.ExtProcs {
+		ep := &extensions.ExtProcs[i]
 		filterName := extProcFilterName(ep)
 		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
 			Config: &anypb.Any{},
@@ -275,4 +309,8 @@ func translateExtProcBodyProcessingMode(mode *ir.ExtProcBodyProcessingMode) extp
 		return r
 	}
 	return extprocv3.ProcessingMode_NONE
+}
+
+func (*extProc) patchVirtualHost(_ *routev3.VirtualHost, _ *ir.HTTPListener) error {
+	return nil
 }
