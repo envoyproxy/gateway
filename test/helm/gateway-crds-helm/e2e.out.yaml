@@ -21259,7 +21259,7 @@ spec:
                             type: string
                             x-kubernetes-validations:
                             - message: loadBalancerIP must be a valid IPv4 address
-                              rule: self.matches(r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
+                              rule: isIP(self) && ip(self).family() == 4
                           loadBalancerSourceRanges:
                             description: |-
                               LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as
@@ -21269,6 +21269,7 @@ spec:
                               is changed to any other type.
                             items:
                               type: string
+                            maxItems: 16
                             type: array
                           name:
                             description: |-
@@ -21318,6 +21319,10 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                        - message: loadBalancerSourceRanges must contain valid CIDR
+                            values
+                          rule: '!has(self.loadBalancerSourceRanges) || self.loadBalancerSourceRanges.all(r,
+                            isCIDR(r))'
                       envoyServiceAccount:
                         description: EnvoyServiceAccount defines the desired state
                           of the Envoy service account resource.
