@@ -1,0 +1,75 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+  spec:
+    runtime:
+      circuit_breakers.ai-gateway-extproc-uds.default.max_requests: 16384
+      envoy.reloadable_features.some_feature: false
+      some.string.key: "a string"
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: envoy-gateway
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: envoy-gateway
+      name: service-1
+    spec:
+      selector:
+        app: service-1
+      ports:
+        - name: http
+          protocol: TCP
+          port: 8080
+endpointslices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: envoy-gateway
+      name: service-1
+      labels:
+        kubernetes.io/service-name: service-1
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - 7.7.7.7
+        conditions:
+          ready: true

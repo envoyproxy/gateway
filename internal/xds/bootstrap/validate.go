@@ -13,6 +13,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
@@ -86,5 +87,23 @@ func Validate(boostrapConfig *egv1a1.ProxyBootstrap) error {
 		return fmt.Errorf("xds_cluster's loadAssigntment cannot be modified")
 	}
 
+	// Envoy fails to start on a bootstrap with two runtime layers sharing a name. Merging a
+	// layer that collides with one Envoy Gateway already renders would otherwise only show
+	// up as a proxy crashloop, so reject it here instead.
+	if err := validateRuntimeLayerNames(userBootstrap); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateRuntimeLayerNames(userBootstrap *bootstrapv3.Bootstrap) error {
+	seen := sets.New[string]()
+	for _, layer := range userBootstrap.GetLayeredRuntime().GetLayers() {
+		if seen.Has(layer.GetName()) {
+			return fmt.Errorf("duplicate layered_runtime layer name %q", layer.GetName())
+		}
+		seen.Insert(layer.GetName())
+	}
 	return nil
 }

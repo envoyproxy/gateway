@@ -3362,6 +3362,13 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		*out = new(ProxyBootstrap)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Runtime != nil {
+		in, out := &in.Runtime, &out.Runtime
+		*out = make(map[string]apiextensionsv1.JSON, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
+		}
+	}
 	if in.Concurrency != nil {
 		in, out := &in.Concurrency, &out.Concurrency
 		*out = new(int32)
