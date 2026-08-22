@@ -3532,8 +3532,8 @@ spec:
             - message: invalid targetRef group/kind combination
               rule: 'has(self.targetRef) ? (self.targetRef.group == ''gateway.networking.k8s.io''
                 && self.targetRef.kind in [''Gateway'', ''ListenerSet'', ''HTTPRoute'',
-                ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'']) || (self.targetRef.group
-                == '''' && self.targetRef.kind == ''Service'') || (self.targetRef.group
+                ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'']) || (self.targetRef.group.size()
+                == 0 && self.targetRef.kind == ''Service'') || (self.targetRef.group
                 == ''multicluster.x-k8s.io'' && self.targetRef.kind == ''ServiceImport'')
                 || (self.targetRef.group == ''gateway.envoyproxy.io'' && self.targetRef.kind
                 == ''Backend'') : true'
@@ -3541,9 +3541,10 @@ spec:
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, (ref.group ==
                 ''gateway.networking.k8s.io'' && ref.kind in [''Gateway'', ''ListenerSet'',
                 ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
-                || (ref.group == '''' && ref.kind == ''Service'') || (ref.group ==
-                ''multicluster.x-k8s.io'' && ref.kind == ''ServiceImport'') || (ref.group
-                == ''gateway.envoyproxy.io'' && ref.kind == ''Backend'')) : true'
+                || (ref.group.size() == 0 && ref.kind == ''Service'') || (ref.group
+                == ''multicluster.x-k8s.io'' && ref.kind == ''ServiceImport'') ||
+                (ref.group == ''gateway.envoyproxy.io'' && ref.kind == ''Backend''))
+                : true'
             - message: mergeType can only be used with xRoute or backend targets
               rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
                 in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'',

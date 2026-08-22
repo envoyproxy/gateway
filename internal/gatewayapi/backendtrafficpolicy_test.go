@@ -3283,9 +3283,9 @@ func TestGatewayReferencesBackend(t *testing.T) {
 	}
 }
 
-func newBackendTargetPolicy(name string) *egv1a1.BackendTrafficPolicy {
+func newBackendTargetPolicy() *egv1a1.BackendTrafficPolicy {
 	return &egv1a1.BackendTrafficPolicy{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: name},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
 		Spec: egv1a1.BackendTrafficPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
@@ -3324,31 +3324,31 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 	}{
 		{
 			name:   "gateway with no xdsIR entry is skipped",
-			policy: newBackendTargetPolicy("btp-1"),
+			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},
 		{
 			name:   "HTTP destination nil is skipped, not matched",
 			x:      &ir.Xds{HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{{Destination: nil}}}}},
-			policy: newBackendTargetPolicy("btp-1"),
+			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},
 		{
 			name:   "TCP destination nil is skipped, not matched",
 			x:      &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: nil}}}}},
-			policy: newBackendTargetPolicy("btp-1"),
+			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},
 		{
 			name:   "UDP listener with no route is skipped, not matched",
 			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: nil}}},
-			policy: newBackendTargetPolicy("btp-1"),
+			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},
 		{
 			name:   "UDP destination nil is skipped, not matched",
 			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{Destination: nil}}}},
-			policy: newBackendTargetPolicy("btp-1"),
+			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},
 		{
@@ -3356,13 +3356,13 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 			// recorded, so this occurrence is silently skipped rather than warned about.
 			name:   "TCP multi-setting match with nil route Metadata is silently skipped",
 			x:      &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: &ir.RouteDestination{Settings: multiSettings}}}}}},
-			policy: newBackendTargetPolicy("btp-1"),
+			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},
 		{
 			name:   "UDP multi-setting match with nil route Metadata is silently skipped",
 			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{Destination: &ir.RouteDestination{Settings: multiSettings}}}}},
-			policy: newBackendTargetPolicy("btp-1"),
+			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},
 		{
