@@ -1715,6 +1715,21 @@ func TestResolveMergeBackendsConfig(t *testing.T) {
 	}
 }
 
+func TestOverrideIfSet(t *testing.T) {
+	route := new(uint32)
+	*route = 50
+	backend := new(uint32)
+	*backend = 100
+
+	target := route
+	overrideIfSet(&target, backend)
+	require.Equal(t, uint32(100), *target)
+
+	target = route
+	overrideIfSet(&target, nil)
+	require.Equal(t, uint32(50), *target, "nil value must not override an existing target")
+}
+
 // structFieldNames returns t's field names, flattening one level of anonymous/embedded struct
 // fields via Go's own field promotion, skipping any name in skip.
 func structFieldNames(t reflect.Type, skip map[string]bool) []string {
