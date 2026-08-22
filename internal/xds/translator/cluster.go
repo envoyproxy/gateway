@@ -37,6 +37,7 @@ import (
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -1659,13 +1660,32 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 	overrideHostSources := make([]*override_hostv3.OverrideHost_OverrideHostSource, 0, len(loadBalancer.EndpointOverride.ExtractFrom))
 
 	for _, source := range loadBalancer.EndpointOverride.ExtractFrom {
-		overrideSource := &override_hostv3.OverrideHost_OverrideHostSource{}
-
-		if source.Header != nil {
-			overrideSource.Header = *source.Header
+		// Envoy NACKs the whole cluster if a source sets both fields or neither, so drop
+		// unusable sources rather than emitting them.
+		switch {
+		case source.Header != nil && *source.Header != "":
+			overrideHostSources = append(overrideHostSources, &override_hostv3.OverrideHost_OverrideHostSource{
+				Header: *source.Header,
+			})
+		case source.Metadata != nil && source.Metadata.Namespace != "" && len(source.Metadata.Path) > 0:
+			path := make([]*metadatav3.MetadataKey_PathSegment, 0, len(source.Metadata.Path))
+			for _, segment := range source.Metadata.Path {
+				path = append(path, &metadatav3.MetadataKey_PathSegment{
+					Segment: &metadatav3.MetadataKey_PathSegment_Key{Key: segment},
+				})
+			}
+			overrideHostSources = append(overrideHostSources, &override_hostv3.OverrideHost_OverrideHostSource{
+				Metadata: &metadatav3.MetadataKey{
+					// MetadataKey.Key holds the namespace, not the lookup key.
+					Key:  source.Metadata.Namespace,
+					Path: path,
+				},
+			})
 		}
+	}
 
-		overrideHostSources = append(overrideHostSources, overrideSource)
+	if len(overrideHostSources) == 0 {
+		return nil, fmt.Errorf("endpointOverride must specify at least one valid extractFrom source")
 	}
 
 	// Determine fallback policy based on the configured load balancer type
@@ -1704,7 +1724,7 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 		FallbackPolicy:      fallbackPolicy,
 	}
 
-	typedOverrideHostPolicy, err := anypb.New(overrideHostPolicy)
+	typedOverrideHostPolicy, err := proto.ToAnyWithValidation(overrideHostPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal override host policy: %w", err)
 	}

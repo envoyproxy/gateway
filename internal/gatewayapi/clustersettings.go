@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net/http"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -504,11 +505,24 @@ func buildEndpointOverride(policy egv1a1.EndpointOverride) *ir.EndpointOverride 
 	for _, source := range policy.ExtractFrom {
 		irSource := ir.EndpointOverrideExtractFrom{}
 
-		if source.Header != nil {
+		// CEL rejects sources that set both fields or neither; skip anything that slips through.
+		switch {
+		case source.Header != nil && *source.Header != "":
 			irSource.Header = source.Header
+		case source.Metadata != nil && source.Metadata.Namespace != "" && len(source.Metadata.Path) > 0:
+			irSource.Metadata = &ir.EndpointOverrideMetadata{
+				Namespace: source.Metadata.Namespace,
+				Path:      slices.Clone(source.Metadata.Path),
+			}
+		default:
+			continue
 		}
 
 		endpointOverride.ExtractFrom = append(endpointOverride.ExtractFrom, irSource)
+	}
+
+	if len(endpointOverride.ExtractFrom) == 0 {
+		return nil
 	}
 
 	return endpointOverride

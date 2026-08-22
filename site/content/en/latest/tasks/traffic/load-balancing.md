@@ -919,9 +919,19 @@ curl -v --header "Host: www.example.com" http://${GATEWAY_HOST}/cookie
 
 This example will create a Load Balancer with Endpoint Override functionality via [BackendTrafficPolicy][].
 
-The Endpoint Override feature allows endpoint selection based on headers. It can derive the target endpoint from HTTP request headers.
+The Endpoint Override feature allows endpoint selection based on request headers or per-request dynamic metadata. Each `extractFrom` entry must specify exactly one of `header` or `metadata`.
 
 When the specified override endpoint is not available or invalid, the load balancer will fall back to the configured load balancing policy.
+
+Sources are consulted in the order they are listed. The first address is used for the initial request; any remaining addresses are used for retries. An address that is not part of the backend's endpoints is skipped.
+
+{{% alert title="Choosing a source" color="warning" %}}
+A request header is supplied by the client, and Envoy Gateway does not sanitize it. This means any client that can reach the route can select any endpoint behind it, bypassing load balancing, session persistence and traffic splitting. The header is also forwarded to the backend unchanged, exposing the selected endpoint address.
+
+Removing the header with an HTTPRoute `RequestHeaderModifier` does not help: the header is removed before the load balancer runs, which disables endpoint override entirely rather than protecting it.
+
+Use `header` only when the client is trusted. When the endpoint is chosen inside the proxy — by an external processor, Lua or Wasm — prefer `metadata`, which cannot be set by a client and is never sent to the backend.
+{{% /alert %}}
 
 ### Header-based Endpoint Override
 
@@ -1043,6 +1053,118 @@ done
 
 You should see requests distributed across different pods using the round robin fallback policy.
 
+### Metadata-based Endpoint Override
+
+Instead of a header, the endpoint can be read from per-request dynamic metadata. This is the recommended form when the endpoint is selected inside the proxy, for example by an [external processor][] acting as an endpoint picker, because the value cannot be set by a downstream client and is never forwarded to the backend.
+
+The metadata is written by a filter that runs before the router. The example below uses a Lua filter to keep it self-contained; a real endpoint picker would typically be an external processor with `metadata.writableNamespaces` set to the same namespace.
+
+{{% alert title="The value must be a string" color="warning" %}}
+The referenced metadata value must be a **string** holding `IP:Port`, or several addresses separated by commas: `IP:Port,IP:Port`. A list, a number or a nested object is ignored, and the request silently falls back to the configured load balancing policy. IPv6 addresses are enclosed in square brackets, for example `[2600:4040:5204::1574:24ae]:80`.
+{{% /alert %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: endpoint-override-metadata-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /endpoint-override-metadata
+      backendRefs:
+        - name: backend
+          port: 3000
+---
+# Writes the endpoint into the envoy.lb dynamic metadata namespace before the router runs.
+# Replace the address below with an endpoint of the backend Service.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: endpoint-picker
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: endpoint-override-metadata-route
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(request_handle)
+          local endpoint = request_handle:headers():get("x-picked-endpoint")
+          if endpoint ~= nil then
+            request_handle:streamInfo():dynamicMetadata():set(
+              "envoy.lb", "x-gateway-destination-endpoint", endpoint)
+          end
+        end
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: endpoint-override-metadata-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: endpoint-override-metadata-route
+  loadBalancer:
+    type: RoundRobin
+    endpointOverride:
+      extractFrom:
+        - metadata:
+            namespace: envoy.lb
+            path:
+              - x-gateway-destination-endpoint
+EOF
+```
+
+Get the IP of one of the backend pods:
+
+```shell
+export BACKEND_POD_IP=$(kubectl get pods -l app=backend -o jsonpath='{.items[0].status.podIP}')
+```
+
+Send several requests. The Lua filter copies the address into dynamic metadata, and every request is routed to that endpoint:
+
+```shell
+for i in {1..5}; do
+  curl -s -H "Host: www.example.com" -H "x-picked-endpoint: $BACKEND_POD_IP:3000" \
+    http://${GATEWAY_HOST}/endpoint-override-metadata | jq -r '.pod'
+done
+```
+
+Now use an address that is not part of the backend. The override is skipped and the round robin fallback policy is used, so responses come from different pods:
+
+```shell
+for i in {1..5}; do
+  curl -s -H "Host: www.example.com" -H "x-picked-endpoint: 192.168.1.100:3000" \
+    http://${GATEWAY_HOST}/endpoint-override-metadata | jq -r '.pod'
+done
+```
+
+To address a value nested inside the metadata, list each segment of the lookup path in order. For the metadata `{"com.example.picker": {"result": {"endpoint": "10.0.0.5:8080"}}}`:
+
+```yaml
+    endpointOverride:
+      extractFrom:
+        - metadata:
+            namespace: com.example.picker
+            path:
+              - result
+              - endpoint
+```
+
+[external processor]: ../../extensibility/ext-proc
 [Envoy load balancing]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/overview
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/

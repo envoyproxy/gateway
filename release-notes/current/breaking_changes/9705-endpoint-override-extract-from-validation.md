@@ -1,0 +1,1 @@
+`BackendTrafficPolicy.spec.loadBalancer.endpointOverride.extractFrom` entries now require exactly one of `header` or `metadata` to be set, and `header` must be non-empty. Previously an entry that set neither, or set an empty `header`, was accepted by validation but caused Envoy to reject the entire cluster, so no working configuration is affected.

@@ -409,12 +409,48 @@ type EndpointOverride struct {
 }
 
 // EndpointOverrideExtractFrom defines a source to extract endpoint override information from.
+// Exactly one of header or metadata must be specified.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.header) != has(self.metadata)",message="exactly one of header or metadata must be specified"
 type EndpointOverrideExtractFrom struct {
 	// Header defines the header to get the override endpoint addresses.
 	// The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
 	// For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
 	// The IPv6 address is enclosed in square brackets.
 	//
+	// The header is not sanitized and is forwarded to the backend, so a client can use it to bypass
+	// load balancing. Prefer metadata when the endpoint is selected in-proxy.
+	//
+	// +kubebuilder:validation:MinLength=1
 	// +optional
 	Header *string `json:"header,omitempty"`
+
+	// Metadata defines the per-request dynamic metadata to get the override endpoint addresses from,
+	// written by a filter that runs before the router such as ext_proc, Lua or Wasm.
+	//
+	// The value must be a string in the same format as Header. Any other type, such as a list or a
+	// number, is ignored and the configured load balancing policy is used instead.
+	//
+	// +optional
+	Metadata *EndpointOverrideMetadata `json:"metadata,omitempty"`
+}
+
+// EndpointOverrideMetadata specifies the per-request dynamic metadata to retrieve the override
+// endpoint addresses from.
+type EndpointOverrideMetadata struct {
+	// Namespace is the namespace of the dynamic metadata, for example `envoy.lb`.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Namespace string `json:"namespace"`
+
+	// Path is the lookup path within the namespaced filter metadata. A single entry addresses a
+	// top-level key, multiple entries traverse nested structs.
+	// For example `["x-gateway-destination-endpoint"]`.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:validation:items:MinLength=1
+	Path []string `json:"path"`
 }

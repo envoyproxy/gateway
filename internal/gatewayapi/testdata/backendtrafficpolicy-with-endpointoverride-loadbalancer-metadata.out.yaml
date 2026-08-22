@@ -2,23 +2,17 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-header-override
+    name: policy-for-metadata-override
     namespace: default
   spec:
     loadBalancer:
       endpointOverride:
         extractFrom:
-        - header: x-fallback-host
         - metadata:
             namespace: envoy.lb
             path:
             - x-gateway-destination-endpoint
-        - metadata:
-            namespace: com.example.picker
-            path:
-            - result
-            - endpoint
-      type: RoundRobin
+      type: LeastRequest
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -102,7 +96,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /header-override
+          value: /metadata-override
   status:
     parents:
     - conditions:
@@ -209,28 +203,22 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: policy-for-header-override
+            name: policy-for-metadata-override
             namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /header-override
+          prefix: /metadata-override
         traffic:
           loadBalancer:
             endpointOverride:
               extractFrom:
-              - header: x-fallback-host
               - metadata:
                   namespace: envoy.lb
                   path:
                   - x-gateway-destination-endpoint
-              - metadata:
-                  namespace: com.example.picker
-                  path:
-                  - result
-                  - endpoint
-            roundRobin: {}
+            leastRequest: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

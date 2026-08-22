@@ -187,6 +187,44 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "thirteen-route-dest/backend/0"
+  - name: "fifteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        roundRobin: {}
+        endpointOverride:
+          extractFrom:
+          - metadata:
+              namespace: envoy.lb
+              path:
+              - x-gateway-destination-endpoint
+    destination:
+      name: "fifteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fifteenth-route-dest/backend/0"
+  - name: "sixteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        leastRequest: {}
+        endpointOverride:
+          extractFrom:
+          - header: "x-custom-host"
+          - metadata:
+              namespace: com.example.picker
+              path:
+              - result
+              - endpoint
+    destination:
+      name: "sixteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "sixteenth-route-dest/backend/0"
   - name: "fourteenth-route"
     hostname: "*"
     traffic:
