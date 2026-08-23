@@ -91,11 +91,12 @@ func TestProvider(t *testing.T) {
 	})
 
 	testcases := map[string]func(context.Context, *testing.T, *Provider, *message.ProviderResources){
-		"gatewayclass controller name":         testGatewayClassController,
-		"gatewayclass accepted status":         testGatewayClassAcceptedStatus,
-		"gatewayclass with parameters ref":     testGatewayClassWithParamRef,
-		"gateway scheduled status":             testGatewayScheduledStatus,
-		"httproute":                            testHTTPRoute,
+		"gatewayclass controller name":              testGatewayClassController,
+		"gatewayclass accepted status":              testGatewayClassAcceptedStatus,
+		"gatewayclass with parameters ref":          testGatewayClassWithParamRef,
+		"gateway scheduled status":                  testGatewayScheduledStatus,
+		"httproute":                                 testHTTPRoute,
+		"httproute namespace selector label update": testHTTPRouteNamespaceSelectorLabelUpdate,
 		"tlsroute":                             testTLSRoute,
 		"stale service cleanup route deletion": testServiceCleanupForMultipleRoutes,
 	}
@@ -923,6 +924,128 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			}, defaultWait, defaultTick)
 		})
 	}
+}
+
+// testHTTPRouteNamespaceSelectorLabelUpdate is a regression test for the case where a Gateway
+// listener restricts route attachment with allowedRoutes.namespaces.from: Selector. Labeling a
+// namespace to match the selector after an HTTPRoute in it has already been reconciled must be
+// picked up without any other change, since nothing else triggers a reconcile in that scenario.
+func testHTTPRouteNamespaceSelectorLabelUpdate(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+	cli := provider.manager.GetClient()
+
+	gc := test.GetGatewayClass("httproute-ns-selector-test", egv1a1.GatewayControllerName, nil)
+	require.NoError(t, cli.Create(ctx, gc))
+
+	requireGatewayClassAccepted(t, cli, gc)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	gwNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "httproute-ns-selector-test-gw"}}
+	require.NoError(t, cli.Create(ctx, gwNs))
+
+	routeNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "httproute-ns-selector-test-route"}}
+	require.NoError(t, cli.Create(ctx, routeNs))
+
+	gw := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-ns-selector-test",
+			Namespace: gwNs.Name,
+		},
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
+				{
+					Name:     "test",
+					Port:     int32(8080),
+					Protocol: gwapiv1.HTTPProtocolType,
+					AllowedRoutes: &gwapiv1.AllowedRoutes{
+						Namespaces: &gwapiv1.RouteNamespaces{
+							From: new(gwapiv1.NamespacesFromSelector),
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"access": "granted"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gw))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+
+	route := &gwapiv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-ns-selector-test",
+			Namespace: routeNs.Name,
+		},
+		Spec: gwapiv1.HTTPRouteSpec{
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{
+					{
+						Name:      gwapiv1.ObjectName(gw.Name),
+						Namespace: new(gwapiv1.Namespace(gwNs.Name)),
+					},
+				},
+			},
+			Rules: []gwapiv1.HTTPRouteRule{
+				{
+					BackendRefs: []gwapiv1.HTTPBackendRef{
+						{
+							BackendRef: gwapiv1.BackendRef{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
+									Name: "test",
+									Port: new(gwapiv1.PortNumber(80)),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, route))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, route))
+	}()
+
+	// Wait for the initial reconcile to observe the route namespace before it is labeled.
+	require.Eventually(t, func() bool {
+		res, ok := getGatewayClassFromResources(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		for _, n := range res.Namespaces {
+			if n.Name == routeNs.Name {
+				return true
+			}
+		}
+		return false
+	}, defaultWait, defaultTick)
+
+	// Label the namespace to match the listener's selector. Nothing else changes, so this must
+	// be picked up solely via a watch on Namespace label changes.
+	require.NoError(t, cli.Get(ctx, utils.NamespacedName(routeNs), routeNs))
+	routeNs.Labels = map[string]string{"access": "granted"}
+	require.NoError(t, cli.Update(ctx, routeNs))
+
+	require.Eventually(t, func() bool {
+		res, ok := getGatewayClassFromResources(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		for _, n := range res.Namespaces {
+			if n.Name == routeNs.Name {
+				return n.Labels["access"] == "granted"
+			}
+		}
+		return false
+	}, defaultWait, defaultTick, "namespace label change was not reconciled without another triggering event")
 }
 
 func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {

@@ -34,6 +34,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -2650,6 +2651,28 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.enqueueClass(ctx, cm)
 			}),
 			configMapPredicates...)); err != nil {
+		return err
+	}
+
+	// Watch Namespace label changes and process affected Gateways/Routes, since
+	// allowedRoutes.namespaces.selector match results depend on namespace labels.
+	// Create/Delete/Generic events are ignored: anything referencing a namespace
+	// is already reconciled through its own watch (e.g. Gateway, HTTPRoute), so
+	// only a label change on an existing Namespace needs to retrigger reconciliation.
+	nsPredicates := []predicate.TypedPredicate[*corev1.Namespace]{
+		predicate.TypedLabelChangedPredicate[*corev1.Namespace]{},
+		predicate.TypedFuncs[*corev1.Namespace]{
+			CreateFunc:  func(event.TypedCreateEvent[*corev1.Namespace]) bool { return false },
+			DeleteFunc:  func(event.TypedDeleteEvent[*corev1.Namespace]) bool { return false },
+			GenericFunc: func(event.TypedGenericEvent[*corev1.Namespace]) bool { return false },
+		},
+	}
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &corev1.Namespace{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, ns *corev1.Namespace) []reconcile.Request {
+				return r.enqueueClass(ctx, ns)
+			}),
+			nsPredicates...)); err != nil {
 		return err
 	}
 
