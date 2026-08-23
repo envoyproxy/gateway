@@ -692,9 +692,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 // mergeRouteParentStatus merges the old and new RouteParentStatus.
 // This is needed because the RouteParentStatus doesn't support strategic merge patch yet.
-// specParentRefs is the route's current spec.ParentRefs, used to tell an old parent status
-// that simply wasn't part of this reconciliation batch (keep it) apart from one whose
-// parentRef has been removed from the route entirely (drop it, it's stale).
+// specParentRefs is the route's current spec.ParentRefs, used to tell an old or new parent
+// status that simply wasn't part of this reconciliation batch (keep it) apart from one whose
+// parentRef has been removed from the route entirely (drop it, it's stale). The latter also
+// covers new status computed for a parentRef that was removed from spec before this merge ran.
 func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus, specParentRefs []gwapiv1.ParentReference) []gwapiv1.RouteParentStatus {
 	// Allocating with worst-case capacity to avoid reallocation.
 	merged := make([]gwapiv1.RouteParentStatus, 0, len(old)+len(new))
@@ -727,7 +728,10 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus, spe
 		}
 	}
 
-	// Range over new status parentRefs and make sure every parentRef exists in the final status. If not, append it.
+	// Range over new status parentRefs and make sure every parentRef exists in the final status. If not, append it,
+	// unless the parentRef is no longer present in the route's spec.ParentRefs. This can happen when the computed
+	// status was produced before a concurrent spec update removed the parentRef; without this check that stale
+	// entry would leak back into the merged status.
 	for _, newP := range new {
 		found := false
 		for _, mergedP := range merged {
@@ -737,8 +741,15 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus, spe
 			}
 		}
 
-		if !found {
-			merged = append(merged, newP)
+		if found {
+			continue
+		}
+
+		for _, specRef := range specParentRefs {
+			if gatewayapi.IsParentRefEqual(newP.ParentRef, specRef, ns) {
+				merged = append(merged, newP)
+				break
+			}
 		}
 	}
 	return merged
