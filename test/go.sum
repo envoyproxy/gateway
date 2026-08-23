@@ -617,10 +617,10 @@ github.com/yuin/gopher-lua v1.1.2 h1:yF/FjE3hD65tBbt0VXLE13HWS9h34fdzJmrWRXwobGA
 github.com/yuin/gopher-lua v1.1.2/go.mod h1:7aRmXIWl37SqRf0koeyylBEzJ+aPt8A+mmkQ4f1ntR8=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
-github.com/zirain-dev/gateway-api v0.0.0-20260819115934-3b81ba94176b h1:SpsxP/0k5DdC+Z7dex+YbV0vy3nz2g+asbAwzkXSVLE=
-github.com/zirain-dev/gateway-api v0.0.0-20260819115934-3b81ba94176b/go.mod h1:FVfx3t389ybeXOqvDghLbdvJdSCfI/PReqCUI3lu3mY=
-github.com/zirain-dev/gateway-api/conformance v0.0.0-20260819115934-3b81ba94176b h1:7mGdb3Vquw735Jede6SZYbadNfcEZ4+W2dBBxylXlsA=
-github.com/zirain-dev/gateway-api/conformance v0.0.0-20260819115934-3b81ba94176b/go.mod h1:JD6CHFrpzVyvgivIzhu0My27sOk3I3IphxJe4CIjGb4=
+github.com/zirain-dev/gateway-api v0.0.0-20260823053719-97d593c18006 h1:IlEZKevxkIfpT7O7pYrvQUEynQvvvvVCA1ed1OqDqg4=
+github.com/zirain-dev/gateway-api v0.0.0-20260823053719-97d593c18006/go.mod h1:FVfx3t389ybeXOqvDghLbdvJdSCfI/PReqCUI3lu3mY=
+github.com/zirain-dev/gateway-api/conformance v0.0.0-20260823053719-97d593c18006 h1:dbwYhUcx2NKeZ0xDUztD9Lmo8mgVCRaaISuQp+sLSSE=
+github.com/zirain-dev/gateway-api/conformance v0.0.0-20260823053719-97d593c18006/go.mod h1:JD6CHFrpzVyvgivIzhu0My27sOk3I3IphxJe4CIjGb4=
 go.etcd.io/bbolt v1.4.3 h1:dEadXpI6G79deX5prL3QRNP6JB8UxVkqo4UPnHaNXJo=
 go.etcd.io/bbolt v1.4.3/go.mod h1:tKQlpPaYCVFctUIgFKFnAlvbmB3tpy1vkTnDWohtc0E=
 go.etcd.io/etcd/api/v3 v3.6.8 h1:gqb1VN92TAI6G2FiBvWcqKtHiIjr4SU2GdXxTwyexbM=
