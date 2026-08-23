@@ -10,20 +10,15 @@
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
         http2ProtocolOptions:
-          connectionKeepalive:
-            connectionIdleInterval: 30s
-            interval: 60s
-            intervalJitter:
-              value: 20
-            timeout: 10s
-          initialConnectionWindowSize: 33554432
+          initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
-          maxConcurrentStreams: 200
+          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
+        maxRequestHeadersKb: 96
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
