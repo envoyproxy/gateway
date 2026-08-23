@@ -671,6 +671,37 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		},
 
 		{
+			// Regression test: new was computed while gateway2 was still in spec.ParentRefs, but by the time
+			// the merge runs the parentRef has already been removed from spec. The stale entry in new must be
+			// dropped rather than leaking into the merged status.
+			name: "new contains a parentRef of ours that has since been removed from the route's spec - should be dropped.",
+			args: args{
+				old: []gwapiv1.RouteParentStatus{},
+				new: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef: gwapiv1.ParentReference{
+							Name: "gateway2",
+						},
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(gwapiv1.RouteConditionAccepted),
+								Status: metav1.ConditionTrue,
+								Reason: "Accepted",
+							},
+							{
+								Type:   string(gwapiv1.RouteConditionResolvedRefs),
+								Status: metav1.ConditionTrue,
+								Reason: "ResolvedRefs",
+							},
+						},
+					},
+				},
+				specParentRefs: []gwapiv1.ParentReference{},
+			},
+			want: []gwapiv1.RouteParentStatus{},
+		},
+		{
 			name: "old contains one parentRef of ours, status of ours changed in new.",
 			args: args{
 				old: []gwapiv1.RouteParentStatus{
