@@ -419,6 +419,95 @@ func TestProcessBackendRefsEndpointSliceIndexDisabled(t *testing.T) {
 	require.Equal(t, matchingEndpointSlice.Name, gwcResource.EndpointSlices[0].Name)
 }
 
+func TestProcessRateLimitService(t *testing.T) {
+	const ns = "envoy-gateway-system"
+	rateLimitService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rateLimitServiceName,
+			Namespace: ns,
+		},
+	}
+	matchingEndpointSlice := test.GetEndpointSlice(
+		types.NamespacedName{Namespace: ns, Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false)
+	otherEndpointSlice := test.GetEndpointSlice(
+		types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
+
+	testCases := []struct {
+		name           string
+		envoyGateway   *egv1a1.EnvoyGateway
+		objects        []client.Object
+		expectNotFound bool
+		expectSvc      bool
+		expectEPS      bool
+	}{
+		{
+			name:         "global rate limit disabled",
+			envoyGateway: &egv1a1.EnvoyGateway{},
+			objects:      []client.Object{rateLimitService, matchingEndpointSlice, otherEndpointSlice},
+			expectSvc:    false,
+			expectEPS:    false,
+		},
+		{
+			// Mirrors processEnvoyTLSSecret: a Get error (including NotFound) is
+			// returned to the caller, which logs it and continues rather than
+			// failing the reconcile - this Service may not exist yet at startup.
+			name:           "global rate limit enabled but service not found",
+			envoyGateway:   &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			objects:        nil,
+			expectNotFound: true,
+			expectSvc:      false,
+			expectEPS:      false,
+		},
+		{
+			name:         "global rate limit enabled and service discovered",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			objects:      []client.Object{rateLimitService, matchingEndpointSlice, otherEndpointSlice},
+			expectSvc:    true,
+			expectEPS:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(tc.objects...).
+				WithIndex(&discoveryv1.EndpointSlice{}, serviceEndpointSliceIndex, serviceEndpointSliceIndexFunc).
+				Build()
+
+			r := &gatewayAPIReconciler{
+				log:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				client:       fakeClient,
+				namespace:    ns,
+				envoyGateway: tc.envoyGateway,
+			}
+
+			gwcResource := resource.NewResources()
+			err := r.processRateLimitService(t.Context(), gwcResource, newResourceMapping())
+			if tc.expectNotFound {
+				require.Error(t, err)
+				require.True(t, kerrors.IsNotFound(err))
+			} else {
+				require.NoError(t, err)
+			}
+
+			if tc.expectSvc {
+				require.Len(t, gwcResource.Services, 1)
+				require.Equal(t, rateLimitServiceName, gwcResource.Services[0].Name)
+			} else {
+				require.Empty(t, gwcResource.Services)
+			}
+
+			if tc.expectEPS {
+				require.Len(t, gwcResource.EndpointSlices, 1)
+				require.Equal(t, matchingEndpointSlice.Name, gwcResource.EndpointSlices[0].Name)
+			} else {
+				require.Empty(t, gwcResource.EndpointSlices)
+			}
+		})
+	}
+}
+
 func TestRemoveGatewayClassFinalizer(t *testing.T) {
 	testCases := []struct {
 		name   string

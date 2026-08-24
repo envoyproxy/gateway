@@ -51,6 +51,9 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 			if xdsIR.GlobalResources == nil {
 				xdsIR.GlobalResources = &ir.GlobalResources{}
 			}
+			if containsGlobalRateLimit(xdsIR.HTTP) {
+				xdsIR.GlobalResources.RateLimitServiceCluster = t.processRateLimitServiceCluster(resources)
+			}
 			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
 				Name:        irGlobalConfigName(envoyTLSSecret),
 				Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
@@ -60,6 +63,47 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 	}
 
 	return nil
+}
+
+func (t *Translator) processRateLimitServiceCluster(resources *resource.Resources) *ir.RouteDestination {
+	const rateLimitServiceName = "envoy-ratelimit"
+
+	var service *corev1.Service
+	for _, candidate := range resources.Services {
+		if candidate.Namespace == t.ControllerNamespace && candidate.Name == rateLimitServiceName {
+			service = candidate
+			break
+		}
+	}
+	if service == nil {
+		return nil
+	}
+
+	var servicePort *corev1.ServicePort
+	for i := range service.Spec.Ports {
+		if service.Spec.Ports[i].Name == "http" {
+			servicePort = &service.Spec.Ports[i]
+			break
+		}
+	}
+	if servicePort == nil {
+		return nil
+	}
+
+	endpointSlices := resources.GetEndpointSlicesForBackend(
+		t.ControllerNamespace, rateLimitServiceName, resource.KindService)
+	endpoints, addressType := getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+	setting := &ir.DestinationSetting{
+		Name:        "ratelimit_cluster/backend/-1",
+		Protocol:    ir.GRPC,
+		Endpoints:   endpoints,
+		AddressType: addressType,
+		Metadata:    nil,
+	}
+	return &ir.RouteDestination{
+		Name:     "ratelimit_cluster",
+		Settings: []*ir.DestinationSetting{setting},
+	}
 }
 
 // processServiceClusterForGateway returns the matching IR key for a gateway and builds a RouteDestination to represent the ProxyServiceCluster
