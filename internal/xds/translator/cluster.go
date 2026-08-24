@@ -462,10 +462,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		if args.loadBalancer.ConsistentHash.TableSize != nil {
 			consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
 		}
-		// Enable locality weighted load balancing for Maglev when weighted zones are configured
-		if len(args.loadBalancer.WeightedZones) > 0 {
-			consistentHash.LocalityWeightedLbConfig = &commonv3.LocalityLbConfig_LocalityWeightedLbConfig{}
-		}
+		// Enable locality weighted load balancing so that backendRef weights, which are
+		// expressed as locality weights, are honored by the Maglev table, matching the
+		// behavior of the other load balancing policies.
+		consistentHash.LocalityWeightedLbConfig = &commonv3.LocalityLbConfig_LocalityWeightedLbConfig{}
 		typedConsistentHash, err := proto.ToAnyWithValidation(consistentHash)
 		if err != nil {
 			return nil, err
