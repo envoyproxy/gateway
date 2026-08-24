@@ -4033,6 +4033,15 @@ type ExtProc struct {
 	// Authority is the hostname:port of the HTTP External Processing service.
 	Authority string `json:"authority" yaml:"authority"`
 
+	// Matches defines the request headers that gate this extension. Multiple
+	// matches are ORed; headers within a match are ANDed.
+	Matches []ExtProcMatch `json:"matches,omitempty" yaml:"matches,omitempty"`
+
+	// MatchListenerScoped indicates that a matching ExtProc was attached to a
+	// Gateway. The filter must be active at the listener rather than enabled
+	// through route-level configuration.
+	MatchListenerScoped bool `json:"matchListenerScoped,omitempty" yaml:"matchListenerScoped,omitempty"`
+
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	MessageTimeout *metav1.Duration `json:"messageTimeout,omitempty" yaml:"messageTimeout,omitempty"`
 
@@ -4077,6 +4086,20 @@ type ExtProc struct {
 	// or cannot be reached. Defaults to 500 Internal Server Error.
 	// +optional
 	StatusOnError *int32 `json:"statusOnError,omitempty" yaml:"statusOnError,omitempty"`
+}
+
+// ExtProcMatch is one OR branch of ExtProc request matching.
+// +k8s:deepcopy-gen=true
+type ExtProcMatch struct {
+	Headers []ExtProcHeaderMatch `json:"headers,omitempty" yaml:"headers,omitempty"`
+}
+
+// ExtProcHeaderMatch is an exact request-header matcher for ExtProc.
+// +k8s:deepcopy-gen=true
+type ExtProcHeaderMatch struct {
+	Name   string `json:"name" yaml:"name"`
+	Value  string `json:"value" yaml:"value"`
+	Invert bool   `json:"invert,omitempty" yaml:"invert,omitempty"`
 }
 
 // Lua holds the information associated with Lua extensions

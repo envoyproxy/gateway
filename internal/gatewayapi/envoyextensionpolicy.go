@@ -1102,7 +1102,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		}
 
 		var extProcs []ir.ExtProc
-		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, owners, resources, gtwCtx); extProcError != nil {
+		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, owners, resources, gtwCtx, false); extProcError != nil {
 			extProcError = perr.WithMessage(extProcError, "ExtProc")
 			errs = errors.Join(errs, extProcError)
 		}
@@ -1192,6 +1192,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		xdsIR,
 		resources,
 		gatewayPolicyTargetListeners(gateway, target),
+		true,
 	)
 }
 
@@ -1209,6 +1210,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListenerSet(
 		xdsIR,
 		resources,
 		listenerSetPolicyTargetListeners(gateway, listenerSet, target),
+		true,
 	)
 }
 
@@ -1218,6 +1220,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
 	targetListeners []*ListenerContext,
+	matchListenerScoped bool,
 ) error {
 	var (
 		extProcs                                              []ir.ExtProc
@@ -1230,7 +1233,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 	)
 
 	noOwners := &envoyExtensionPolicyOwners{}
-	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, noOwners, resources, gateway); extProcError != nil {
+	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, noOwners, resources, gateway, matchListenerScoped); extProcError != nil {
 		extProcError = perr.WithMessage(extProcError, "ExtProc")
 		errs = errors.Join(errs, extProcError)
 	}
@@ -1397,6 +1400,7 @@ func (t *Translator) buildExtProcs(
 	owners *envoyExtensionPolicyOwners,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
+	matchListenerScoped bool,
 ) ([]ir.ExtProc, error, bool) {
 	var (
 		failOpen bool
@@ -1413,7 +1417,7 @@ func (t *Translator) buildExtProcs(
 	ownerPolicy := policyOwnerOr(owners.extProc, policy)
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(ownerPolicy, idx)
-		extProcIR, err := t.buildExtProc(name, ownerPolicy, &ep, idx, resources, gtwCtx)
+		extProcIR, err := t.buildExtProc(name, ownerPolicy, &ep, idx, resources, gtwCtx, matchListenerScoped)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -1438,6 +1442,7 @@ func (t *Translator) buildExtProc(
 	extProcIdx int,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
+	matchListenerScoped bool,
 ) (*ir.ExtProc, error) {
 	var (
 		rd        *ir.RouteDestination
@@ -1472,6 +1477,24 @@ func (t *Translator) buildExtProc(
 		Destination: *rd,
 		Traffic:     traffic,
 		Authority:   authority,
+	}
+
+	if len(extProc.Matches) > 0 {
+		extProcIR.MatchListenerScoped = matchListenerScoped
+		extProcIR.Matches = make([]ir.ExtProcMatch, 0, len(extProc.Matches))
+		for _, match := range extProc.Matches {
+			matchIR := ir.ExtProcMatch{
+				Headers: make([]ir.ExtProcHeaderMatch, 0, len(match.Headers)),
+			}
+			for _, header := range match.Headers {
+				matchIR.Headers = append(matchIR.Headers, ir.ExtProcHeaderMatch{
+					Name:   strings.ToLower(header.Name),
+					Value:  ptr.Deref(header.Value, ""),
+					Invert: ptr.Deref(header.Invert, false),
+				})
+			}
+			extProcIR.Matches = append(extProcIR.Matches, matchIR)
+		}
 	}
 
 	if extProc.MessageTimeout != nil {

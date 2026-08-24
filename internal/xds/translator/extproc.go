@@ -10,16 +10,22 @@ import (
 	"fmt"
 	"slices"
 
+	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
+	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	matchingv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/matching/v3"
+	actionv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/common/matcher/action/v3"
 	extprocv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_proc/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -72,13 +78,23 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 
 // buildHCMExtProcFilter returns an ext_proc HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtProcFilter(extProc *ir.ExtProc) (*hcmv3.HttpFilter, error) {
-	extAuthProto, err := extProcConfig(extProc)
+	extProcProto, err := extProcConfig(extProc)
 	if err != nil {
 		return nil, err
 	}
-	extAuthAny, err := anypb.New(extAuthProto)
+	extProcAny, err := anypb.New(extProcProto)
 	if err != nil {
 		return nil, err
+	}
+
+	// For matches-based ext_proc, keep the wrapper at HCM so route-level
+	// ExtensionWithMatcherPerRoute matcher overrides are honored, but keep
+	// matcher content only at route scope to avoid duplication.
+	if len(extProc.Matches) > 0 {
+		extProcAny, err = buildExtProcWrapper(extProc, extProcAny, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// All extproc filters for all Routes are aggregated on HCM and disabled by default
@@ -87,9 +103,108 @@ func buildHCMExtProcFilter(extProc *ir.ExtProc) (*hcmv3.HttpFilter, error) {
 		Name:     extProcFilterName(extProc),
 		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: extAuthAny,
+			TypedConfig: extProcAny,
 		},
 	}, nil
+}
+
+func buildExtProcWrapper(extProc *ir.ExtProc, extProcAny *anypb.Any, matcher *matcherv3.Matcher) (*anypb.Any, error) {
+	return anypb.New(&matchingv3.ExtensionWithMatcher{
+		ExtensionConfig: &corev3.TypedExtensionConfig{
+			Name:        extProcFilterName(extProc),
+			TypedConfig: extProcAny,
+		},
+		XdsMatcher: matcher,
+	})
+}
+
+func buildExtProcMatcher(matches []ir.ExtProcMatch) (*matcherv3.Matcher, error) {
+	if len(matches) == 0 {
+		return nil, errors.New("extproc matches cannot be empty")
+	}
+	matchPredicate, err := buildExtProcMatchesPredicate(matches)
+	if err != nil {
+		return nil, err
+	}
+	skipAction, err := anypb.New(&actionv3.SkipFilter{})
+	if err != nil {
+		return nil, err
+	}
+	return &matcherv3.Matcher{
+		MatcherType: &matcherv3.Matcher_MatcherList_{
+			MatcherList: &matcherv3.Matcher_MatcherList{
+				Matchers: []*matcherv3.Matcher_MatcherList_FieldMatcher{
+					{
+						Predicate: wrapPredicateWithNot(matchPredicate, true),
+						OnMatch: &matcherv3.Matcher_OnMatch{
+							OnMatch: &matcherv3.Matcher_OnMatch_Action{
+								Action: &cncfv3.TypedExtensionConfig{
+									Name:        "skip-ext-proc",
+									TypedConfig: skipAction,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+// buildExtProcMatchesPredicate converts ExtProc matches into an xDS predicate.
+// Multiple match entries are ORed, while all headers in each entry are ANDed.
+func buildExtProcMatchesPredicate(matches []ir.ExtProcMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	matchPredicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(matches))
+	for _, match := range matches {
+		if len(match.Headers) == 0 {
+			return nil, errors.New("extproc match must contain at least one header")
+		}
+
+		headerPredicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(match.Headers))
+		for _, header := range match.Headers {
+			headerPredicate, err := buildExtProcHeaderMatchPredicate(header)
+			if err != nil {
+				return nil, err
+			}
+			headerPredicates = append(headerPredicates, headerPredicate)
+		}
+
+		if len(headerPredicates) == 1 {
+			matchPredicates = append(matchPredicates, headerPredicates[0])
+			continue
+		}
+		matchPredicates = append(matchPredicates, &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+				AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+					Predicate: headerPredicates,
+				},
+			},
+		})
+	}
+
+	if len(matchPredicates) == 1 {
+		return matchPredicates[0], nil
+	}
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+			OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+				Predicate: matchPredicates,
+			},
+		},
+	}, nil
+}
+
+func buildExtProcHeaderMatchPredicate(header ir.ExtProcHeaderMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	headerInput, err := proto.ToAnyWithValidation(&envoymatcherv3.HttpRequestHeaderMatchInput{
+		HeaderName: header.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return wrapPredicateWithNot(buildHTTPHeaderSinglePredicate(headerInput, &matcherv3.StringMatcher{
+		MatchPattern: &matcherv3.StringMatcher_Exact{Exact: header.Value},
+	}), header.Invert), nil
 }
 
 func extProcFilterName(extProc *ir.ExtProc) string {
@@ -218,7 +333,23 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 
 	for i := range irRoute.EnvoyExtensions.ExtProcs {
 		ep := &irRoute.EnvoyExtensions.ExtProcs[i]
+
 		filterName := extProcFilterName(ep)
+
+		// For matches-based ext_proc, route-level matcher controls effective gating.
+		if len(ep.Matches) > 0 {
+			routeCfg, err := buildRouteExtProcMatchOverride(ep)
+			if err != nil {
+				return err
+			}
+			if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
+				Config: routeCfg,
+			}); err != nil {
+				return err
+			}
+			continue
+		}
+
 		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
 			Config: &anypb.Any{},
 		}); err != nil {
@@ -226,6 +357,16 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 		}
 	}
 	return nil
+}
+
+func buildRouteExtProcMatchOverride(extProc *ir.ExtProc) (*anypb.Any, error) {
+	matcher, err := buildExtProcMatcher(extProc.Matches)
+	if err != nil {
+		return nil, err
+	}
+	return anypb.New(&matchingv3.ExtensionWithMatcherPerRoute{
+		XdsMatcher: matcher,
+	})
 }
 
 func buildProcessingMode(extProc *ir.ExtProc) *extprocv3.ProcessingMode {
