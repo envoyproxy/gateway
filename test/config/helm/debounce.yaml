@@ -2,11 +2,12 @@
 # burst of resource changes before reconciling does not change the outcome of
 # any conformance or e2e case.
 #
-# after and max are the shipped defaults, set explicitly so the matrix documents
-# the configuration under test.
+# after is deliberately set well above the 100ms default so that batching
+# actually happens during the suites, and so the cases are shown to tolerate the
+# added propagation and status delay. max is the shipped default.
 config:
   envoyGateway:
     debounce:
       enable: true
-      after: 100ms
+      after: 1s
       max: 10s

@@ -89,9 +89,6 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.XDSServer == nil {
 		e.XDSServer = DefaultXDSServer()
 	}
-	if e.Debounce == nil {
-		e.Debounce = DefaultDebounce()
-	}
 }
 
 // GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
@@ -254,19 +251,10 @@ const (
 	DefaultDebounceMax = 10 * time.Second
 )
 
-// DefaultDebounce returns a new Debounce with default configuration parameters.
-// Debouncing is disabled by default.
-func DefaultDebounce() *Debounce {
-	return &Debounce{
-		Enable: new(false),
-		After:  new(gwapiv1.Duration(DefaultDebounceAfter.String())),
-		Max:    new(gwapiv1.Duration(DefaultDebounceMax.String())),
-	}
-}
-
-// Enabled reports whether debouncing of resource changes is turned on.
+// Enabled reports whether debouncing of resource changes is turned on. Debouncing
+// is opt in, so defining the config is what turns it on.
 func (d *Debounce) Enabled() bool {
-	return d != nil && ptr.Deref(d.Enable, false)
+	return d != nil
 }
 
 // ResolveDurations returns the quiet period and the maximum hold time, substituting

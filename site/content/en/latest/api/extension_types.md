@@ -1482,6 +1482,9 @@ Debouncing merges changes that arrive close together into a single reconcile, so
 cost of a burst approaches that of a single change. The tradeoff is that propagation
 of a change, and of the status derived from it, may be delayed by up to Max.
 
+Debouncing is opt in: it is on whenever this field is set, and off when it is
+left unset.
+
 This applies to the Kubernetes provider only. It has no effect when the resource
 provider is File, whose reconcile loop is driven directly by file change events.
 
@@ -1491,7 +1494,6 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `enable` | _boolean_ |  false  | false | Enable turns on debouncing of resource changes. |
 | `after` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 100ms | After is the quiet period. A pending batch of changes is flushed once no new<br />change has arrived for this duration, so isolated changes still propagate<br />promptly.<br />If unspecified, defaults to 100ms. |
 | `max` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 10s | Max bounds how long a change may be held before a flush is forced. Under<br />sustained churn the quiet period never elapses, so this caps how far behind<br />the proxies' configuration can fall.<br />Must be greater than or equal to After. If unspecified, defaults to 10s. |
 

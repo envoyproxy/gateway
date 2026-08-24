@@ -10,8 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestIsRunningOnKubernetes(t *testing.T) {
@@ -438,12 +436,15 @@ func TestDebounceDefaultsToDisabled(t *testing.T) {
 	eg := &EnvoyGateway{}
 	eg.SetEnvoyGatewayDefaults()
 
-	require.NotNil(t, eg.Debounce)
-	require.False(t, ptr.Deref(eg.Debounce.Enable, true))
-	require.Equal(t, gwapiv1.Duration("100ms"), *eg.Debounce.After)
-	require.Equal(t, gwapiv1.Duration("10s"), *eg.Debounce.Max)
+	// Debouncing is opt in, so defaulting must not define the config, and defining
+	// it is what turns debouncing on.
+	require.Nil(t, eg.Debounce)
+	require.False(t, eg.Debounce.Enabled())
+	require.True(t, (&Debounce{}).Enabled())
 
-	// The advertised defaults must match the constants the runner falls back to.
-	require.Equal(t, DefaultDebounceAfter.String(), string(*eg.Debounce.After))
-	require.Equal(t, DefaultDebounceMax.String(), string(*eg.Debounce.Max))
+	// A config that sets no durations falls back to the advertised defaults.
+	after, maxHold, err := (&Debounce{}).ResolveDurations()
+	require.NoError(t, err)
+	require.Equal(t, DefaultDebounceAfter, after)
+	require.Equal(t, DefaultDebounceMax, maxHold)
 }

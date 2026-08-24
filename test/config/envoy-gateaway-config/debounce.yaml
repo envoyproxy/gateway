@@ -8,8 +8,7 @@ data:
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
     debounce:
-      enable: true
-      after: 100ms
+      after: 1s
       max: 10s
     provider:
       type: Kubernetes

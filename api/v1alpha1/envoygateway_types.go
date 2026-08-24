@@ -267,15 +267,12 @@ type XDSServer struct {
 // cost of a burst approaches that of a single change. The tradeoff is that propagation
 // of a change, and of the status derived from it, may be delayed by up to Max.
 //
+// Debouncing is opt in: it is on whenever this field is set, and off when it is
+// left unset.
+//
 // This applies to the Kubernetes provider only. It has no effect when the resource
 // provider is File, whose reconcile loop is driven directly by file change events.
 type Debounce struct {
-	// Enable turns on debouncing of resource changes.
-	//
-	// +optional
-	// +kubebuilder:default=false
-	Enable *bool `json:"enable,omitempty"`
-
 	// After is the quiet period. A pending batch of changes is flushed once no new
 	// change has arrived for this duration, so isolated changes still propagate
 	// promptly.
