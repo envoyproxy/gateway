@@ -11,6 +11,7 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -113,11 +114,12 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 			}
 
 			parentCtx := update.Value.ParentContext(ctx)
+			var startOpts []trace.SpanStartOption
 			if !update.Delete && !update.Initial {
-				parentCtx = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 			}
 
-			traceCtx, span := tracer.Start(parentCtx, "InfrastructureRunner.updateProxyInfraFromSubscription")
+			traceCtx, span := tracer.Start(parentCtx, "InfrastructureRunner.updateProxyInfraFromSubscription", startOpts...)
 			defer span.End()
 			traceLogger := r.Logger.WithTrace(traceCtx)
 

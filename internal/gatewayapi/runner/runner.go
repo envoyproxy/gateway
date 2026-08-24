@@ -212,11 +212,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
 			parentCtx := update.Value.ParentContext(context.Background())
+			var startOpts []trace.SpanStartOption
 			if !update.Delete && !update.Initial {
-				parentCtx = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 			}
 
-			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
+			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate", startOpts...)
 			defer span.End()
 			traceLogger := r.Logger.WithTrace(traceCtx)
 			traceLogger.Info("received an update", "key", update.Key)

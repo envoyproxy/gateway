@@ -42,15 +42,26 @@ func TestRecordQueueWaitKeepsProcessingAsSibling(t *testing.T) {
 	tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder)).Tracer("test")
 	ctx, parent := tracer.Start(t.Context(), "parent")
 
-	processingCtx := message.RecordQueueWait(ctx, tracer, "runner", time.Now().Add(-time.Second))
-	_, processing := tracer.Start(processingCtx, "processing")
+	processingCtx, startOpts := message.RecordQueueWait(ctx, tracer, "runner", time.Now().Add(-time.Second))
+	_, processing := tracer.Start(processingCtx, "processing", startOpts...)
 	processing.End()
 	parent.End()
 
 	spans := recorder.Ended()
 	require.Len(t, spans, 3)
-	require.Equal(t, parent.SpanContext().SpanID(), spans[0].Parent().SpanID())
-	require.Equal(t, parent.SpanContext().SpanID(), spans[1].Parent().SpanID())
+	byName := map[string]sdktrace.ReadOnlySpan{}
+	for _, span := range spans {
+		byName[span.Name()] = span
+	}
+
+	waitSpan := byName["WatchableQueue.Wait"]
+	processingSpan := byName["processing"]
+	require.NotNil(t, waitSpan)
+	require.NotNil(t, processingSpan)
+	require.Equal(t, parent.SpanContext().SpanID(), waitSpan.Parent().SpanID())
+	require.Equal(t, parent.SpanContext().SpanID(), processingSpan.Parent().SpanID())
+	require.Len(t, processingSpan.Links(), 1)
+	require.Equal(t, waitSpan.SpanContext(), processingSpan.Links()[0].SpanContext)
 }
 
 func TestPanicInSubscriptionHandler(t *testing.T) {

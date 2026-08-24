@@ -26,6 +26,7 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -276,11 +277,12 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
 			parentCtx := update.Value.ParentContext(context.Background())
+			var startOpts []trace.SpanStartOption
 			if !update.Delete && !update.Initial {
-				parentCtx = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 			}
 
-			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
+			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate", startOpts...)
 			defer span.End()
 			traceLogger := r.Logger.WithTrace(traceCtx)
 			traceLogger.Info("received an update")
