@@ -148,9 +148,9 @@ func udpDNSQueryBackend(addr, domain string) (string, error) {
 // WaitForEnvoyClusterHosts waits for the Envoy proxy of the given gateway to
 // know at least the given number of hosts for the cluster whose name contains
 // clusterName.
-func WaitForEnvoyClusterHosts(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, clusterName string, atLeast int) {
+func WaitForEnvoyClusterHosts(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, clusterName string, least int) {
 	t.Helper()
-	tlog.Logf(t, "waiting for the Envoy proxy of %s to know at least %d hosts of the cluster %q...", gwNN, atLeast, clusterName)
+	tlog.Logf(t, "waiting for the Envoy proxy of %s to know at least %d hosts of the cluster %q...", gwNN, least, clusterName)
 
 	if err := wait.PollUntilContextTimeout(t.Context(), 2*time.Second, defaultServiceStartupTimeout, true,
 		func(_ context.Context) (bool, error) {
@@ -160,10 +160,10 @@ func WaitForEnvoyClusterHosts(t *testing.T, suite *suite.ConformanceTestSuite, g
 				return false, nil
 			}
 
-			tlog.Logf(t, "the Envoy proxy of %s knows the hosts %v of the cluster %q, want at least %d", gwNN, hosts, clusterName, atLeast)
-			return len(hosts) >= atLeast, nil
+			tlog.Logf(t, "the Envoy proxy of %s knows the hosts %v of the cluster %q, want at least %d", gwNN, hosts, clusterName, least)
+			return len(hosts) >= least, nil
 		}); err != nil {
-		t.Fatalf("the Envoy proxy of %s never knew %d hosts of the cluster %q: %v", gwNN, atLeast, clusterName, err)
+		t.Fatalf("the Envoy proxy of %s never knew %d hosts of the cluster %q: %v", gwNN, least, clusterName, err)
 	}
 }
 
