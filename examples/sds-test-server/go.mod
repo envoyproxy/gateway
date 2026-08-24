@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway-sds-test-server
 
-go 1.26.6
+go 1.27.0
 
 require (
 	github.com/envoyproxy/go-control-plane v0.14.1-0.20260409050421-3f47accd6e14
