@@ -34,21 +34,29 @@ import (
 // Phase spans stay flat: Start does not hand back the phase's context, so a span
 // started inside a phase parents to the enclosing span, not to the phase.
 type Tracker struct {
-	ctx      context.Context
-	tracer   trace.Tracer
-	inFlight trace.Span
+	ctx       context.Context
+	tracer    trace.Tracer
+	inFlight  trace.Span
+	recording bool
 }
 
 // NewTracker returns a tracker that starts its phase spans as children of the span
 // in ctx.
 func NewTracker(ctx context.Context, tracer trace.Tracer) *Tracker {
-	return &Tracker{ctx: ctx, tracer: tracer}
+	return &Tracker{
+		ctx:       ctx,
+		tracer:    tracer,
+		recording: trace.SpanFromContext(ctx).IsRecording(),
+	}
 }
 
 // Start begins a phase span. The attrs are meant to record the size of the input the
 // phase is about to process: without them a slow run cannot be told apart from a run
 // over a bigger input.
 func (p *Tracker) Start(name string, attrs ...attribute.KeyValue) {
+	if !p.recording {
+		return
+	}
 	_, p.inFlight = p.tracer.Start(p.ctx, name, trace.WithAttributes(attrs...))
 }
 

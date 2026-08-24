@@ -19,7 +19,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
-type Update[K comparable, V any] watchable.Update[K, V]
+type Update[K comparable, V any] struct {
+	Key    K
+	Value  V
+	Delete bool
+	// Initial identifies an entry replayed from the map state when this subscriber
+	// started. Its StoredAt describes resource age, not queue time for this subscriber.
+	Initial bool
+}
 
 // RecordQueueWait records, as a short-lived "WatchableQueue.Wait" span, how long a value sat
 // buffered in a watchable map's internal queue between being Store()'d (storedAt) and being
@@ -27,12 +34,8 @@ type Update[K comparable, V any] watchable.Update[K, V]
 // real gap in the trace waterfall between the producer's span and the subscriber's own
 // processing span, rather than being folded into either one's duration.
 //
-// The returned context carries the (already-ended) wait span as its current span, so the
-// caller's next tracer.Start(...) - the actual processing span - becomes ITS CHILD rather than
-// a sibling under the same parent. That makes "waited, then processed" an unambiguous chain in
-// the trace UI instead of two spans a reader has to infer are related - which matters once a
-// parent has several children in flight at once, e.g. multiple XdsIR keys produced by one
-// translation cycle, each independently waited on by multiple subscribers.
+// The wait span and the caller's processing span are siblings, because a completed
+// span must never become the parent of later work.
 //
 // storedAt is the zero Time for values that were already present in the map when the
 // subscriber first subscribed (e.g. at process startup) rather than having transited the
@@ -45,13 +48,13 @@ func RecordQueueWait(ctx context.Context, tracer trace.Tracer, runnerName string
 		return ctx
 	}
 	now := time.Now()
-	waitCtx, span := tracer.Start(ctx, "WatchableQueue.Wait", trace.WithTimestamp(storedAt))
+	_, span := tracer.Start(ctx, "WatchableQueue.Wait", trace.WithTimestamp(storedAt))
 	span.SetAttributes(
 		attribute.String("runner.name", runnerName),
 		attribute.String("queue.wait", now.Sub(storedAt).String()),
 	)
 	span.End(trace.WithTimestamp(now))
-	return waitCtx
+	return ctx
 }
 
 type Metadata struct {
@@ -135,9 +138,11 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 
 	if snapshot, ok := <-subscription; ok {
 		for k, v := range snapshot.State {
+			// Mark initial state so consumers do not report its age as queue latency.
 			handleWithCrashRecovery(l, handle, Update[K, V]{
-				Key:   k,
-				Value: v,
+				Key:     k,
+				Value:   v,
+				Initial: true,
 			}, meta, errChans)
 		}
 	}
@@ -145,7 +150,11 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
 
 		for _, update := range coalesceUpdates(l, snapshot.Updates) {
-			handleWithCrashRecovery(l, handle, Update[K, V](update), meta, errChans)
+			handleWithCrashRecovery(l, handle, Update[K, V]{
+				Key:    update.Key,
+				Value:  update.Value,
+				Delete: update.Delete,
+			}, meta, errChans)
 		}
 	}
 }

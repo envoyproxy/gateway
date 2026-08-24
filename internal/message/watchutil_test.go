@@ -12,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/telepresenceio/watchable"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -33,6 +35,22 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 		func(_ message.Update[string, any], _ chan error) { calls++ },
 	)
 	require.Equal(t, 0, calls)
+}
+
+func TestRecordQueueWaitKeepsProcessingAsSibling(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder)).Tracer("test")
+	ctx, parent := tracer.Start(t.Context(), "parent")
+
+	processingCtx := message.RecordQueueWait(ctx, tracer, "runner", time.Now().Add(-time.Second))
+	_, processing := tracer.Start(processingCtx, "processing")
+	processing.End()
+	parent.End()
+
+	spans := recorder.Ended()
+	require.Len(t, spans, 3)
+	require.Equal(t, parent.SpanContext().SpanID(), spans[0].Parent().SpanID())
+	require.Equal(t, parent.SpanContext().SpanID(), spans[1].Parent().SpanID())
 }
 
 func TestPanicInSubscriptionHandler(t *testing.T) {
@@ -96,6 +114,25 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 	)
 	require.LessOrEqual(t, storeCalls, 2) // updates can be coalesced
 	require.Equal(t, 1, deleteCalls)
+}
+
+func TestHandleSubscriptionMarksInitialState(t *testing.T) {
+	var m watchable.Map[string, *resource.ControllerResourcesContext]
+	m.Store("replayed", &resource.ControllerResourcesContext{StoredAt: time.Now()})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		message.Metadata{Runner: "demo", Message: "demo"},
+		m.Subscribe(ctx),
+		func(update message.Update[string, *resource.ControllerResourcesContext], _ chan error) {
+			require.Equal(t, "replayed", update.Key)
+			require.True(t, update.Initial)
+			require.False(t, update.Value.StoredAtTime().IsZero())
+			cancel()
+		},
+	)
 }
 
 func TestControllerResourceUpdate(t *testing.T) {

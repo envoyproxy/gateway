@@ -608,7 +608,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	//    which impacts translation output
 	gwcResources.Sort()
 
-	// Store the Gateway Resources for the GatewayClass with trace context.
+	// Store the Gateway Resources for the GatewayClass with trace context. Consumers
+	// propagate only its SpanContext, so their spans may outlive this reconciliation.
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.

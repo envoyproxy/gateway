@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel/trace"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -148,12 +149,17 @@ type XdsIRWithContext struct {
 	StoredAt time.Time
 }
 
-// ParentContext returns the trace context stashed on x, or fallback if x is nil or has none.
+// ParentContext adds the trace context stashed on x to fallback without replacing
+// fallback's cancellation and values.
 func (x *XdsIRWithContext) ParentContext(fallback context.Context) context.Context {
-	if x != nil && x.Context != nil {
-		return x.Context
+	if x == nil || x.Context == nil {
+		return fallback
 	}
-	return fallback
+	spanContext := trace.SpanContextFromContext(x.Context)
+	if !spanContext.IsValid() {
+		return fallback
+	}
+	return trace.ContextWithSpanContext(fallback, spanContext)
 }
 
 // StoredAtTime returns the time x was stored in the watchable map, or the zero Time if x is nil.
@@ -214,12 +220,17 @@ type InfraIRWithContext struct {
 	StoredAt time.Time
 }
 
-// ParentContext returns the trace context stashed on x, or fallback if x is nil or has none.
+// ParentContext adds the trace context stashed on x to fallback without replacing
+// fallback's cancellation and values.
 func (x *InfraIRWithContext) ParentContext(fallback context.Context) context.Context {
-	if x != nil && x.Context != nil {
-		return x.Context
+	if x == nil || x.Context == nil {
+		return fallback
 	}
-	return fallback
+	spanContext := trace.SpanContextFromContext(x.Context)
+	if !spanContext.IsValid() {
+		return fallback
+	}
+	return trace.ContextWithSpanContext(fallback, spanContext)
 }
 
 // StoredAtTime returns the time x was stored in the watchable map, or the zero Time if x is nil.

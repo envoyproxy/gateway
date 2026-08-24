@@ -308,7 +308,9 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 
 	// Record what this translation is about to chew through on the enclosing span, so
 	// that a slow translation can be told apart from a translation of a bigger input.
-	trace.SpanFromContext(ctx).SetAttributes(inputSizeAttrs(resources)...)
+	if span := trace.SpanFromContext(ctx); span.IsRecording() {
+		span.SetAttributes(inputSizeAttrs(resources)...)
+	}
 
 	// Each phase ends its own span; the deferred call closes and marks the phase that
 	// was in flight when a phase panics, so the failing phase stays in the trace.

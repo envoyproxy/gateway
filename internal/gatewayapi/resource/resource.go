@@ -12,6 +12,7 @@ import (
 	"sort"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -160,13 +161,17 @@ type ControllerResourcesContext struct {
 	StoredAt time.Time
 }
 
-// ParentContext returns the trace context stashed on c, or fallback if c is nil or has none
-// (e.g. before any Reconcile has stored a context yet).
+// ParentContext adds the trace context stashed on c to fallback without replacing
+// fallback's cancellation and values.
 func (c *ControllerResourcesContext) ParentContext(fallback context.Context) context.Context {
-	if c != nil && c.Context != nil {
-		return c.Context
+	if c == nil || c.Context == nil {
+		return fallback
 	}
-	return fallback
+	spanContext := trace.SpanContextFromContext(c.Context)
+	if !spanContext.IsValid() {
+		return fallback
+	}
+	return trace.ContextWithSpanContext(fallback, spanContext)
 }
 
 // StoredAtTime returns the time c was stored in the watchable map, or the zero Time if c

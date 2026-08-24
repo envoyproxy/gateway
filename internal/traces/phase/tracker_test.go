@@ -46,11 +46,12 @@ func TestTracker(t *testing.T) {
 	t.Run("ends the in-flight phase when one panics", func(t *testing.T) {
 		sr := tracetest.NewSpanRecorder()
 		tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)).Tracer("test")
+		ctx, parent := tracer.Start(t.Context(), "stage")
 
 		// A panicking phase is the one an operator most needs to see, and an unended
 		// span is never exported, so the deferred EndInFlight has to close it.
 		require.Panics(t, func() {
-			phases := NewTracker(t.Context(), tracer)
+			phases := NewTracker(ctx, tracer)
 			defer phases.EndInFlight()
 
 			phases.Start("completed")
@@ -58,9 +59,10 @@ func TestTracker(t *testing.T) {
 			phases.Start("panicked")
 			panic("boom")
 		})
+		parent.End()
 
 		spans := sr.Ended()
-		require.Len(t, spans, 2)
+		require.Len(t, spans, 3)
 		require.Equal(t, "completed", spans[0].Name())
 		require.Equal(t, codes.Unset, spans[0].Status().Code)
 		require.Equal(t, "panicked", spans[1].Name())
@@ -76,5 +78,19 @@ func TestTracker(t *testing.T) {
 		phases.End()
 		phases.EndInFlight()
 		require.Empty(t, sr.Ended())
+	})
+
+	t.Run("records phases with zero-valued attributes", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)).Tracer("test")
+
+		ctx, parent := tracer.Start(t.Context(), "stage")
+		phases := NewTracker(ctx, tracer)
+		phases.Start("runs-without-routes", attribute.Int("routes.count", 0))
+		phases.End()
+		parent.End()
+
+		require.Len(t, sr.Ended(), 2)
+		require.Equal(t, "runs-without-routes", sr.Ended()[0].Name())
 	})
 }

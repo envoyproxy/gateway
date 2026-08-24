@@ -161,16 +161,19 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	// Record what this translation is about to chew through on the enclosing span, so
 	// that a slow build can be told apart from a build of a bigger input. This covers
 	// the whole input, including the phases below that are too cheap to get a span.
-	irHTTPRoutes := countIRHTTPRoutes(xdsIR.HTTP)
-	trace.SpanFromContext(ctx).SetAttributes(
-		attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
-		attribute.Int("ir-http-routes.count", irHTTPRoutes),
-		attribute.Int("tcp-listeners.count", len(xdsIR.TCP)),
-		attribute.Int("udp-listeners.count", len(xdsIR.UDP)),
-		attribute.Int("backend-clusters.count", len(xdsIR.BackendClusters)),
-		attribute.Int("envoy-patch-policies.count", len(xdsIR.EnvoyPatchPolicies)),
-		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
-	)
+	irHTTPRoutes := 0
+	if span := trace.SpanFromContext(ctx); span.IsRecording() {
+		irHTTPRoutes = countIRHTTPRoutes(xdsIR.HTTP)
+		span.SetAttributes(
+			attribute.Int("http-listeners.count", len(xdsIR.HTTP)),
+			attribute.Int("ir-http-routes.count", irHTTPRoutes),
+			attribute.Int("tcp-listeners.count", len(xdsIR.TCP)),
+			attribute.Int("udp-listeners.count", len(xdsIR.UDP)),
+			attribute.Int("backend-clusters.count", len(xdsIR.BackendClusters)),
+			attribute.Int("envoy-patch-policies.count", len(xdsIR.EnvoyPatchPolicies)),
+			attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
+		)
+	}
 
 	// Each phase ends its own span; the deferred call closes and marks the phase that
 	// was in flight when a phase panics, so the failing phase stays in the trace.

@@ -91,13 +91,15 @@ func TestTranslatePhaseSpans(t *testing.T) {
 // status wording is owned by internal/traces.
 func TestTranslatePhaseSpanEndedOnPanic(t *testing.T) {
 	sr := recordSpans(t)
+	traceCtx, stage := tracer.Start(t.Context(), "TranslateToIR")
 
 	// A nil HTTPRoute panics inside ProcessHTTPRoutes.
 	require.Panics(t, func() {
-		_, _ = newTracingTestTranslator().Translate(t.Context(), &resource.Resources{
+		_, _ = newTracingTestTranslator().Translate(traceCtx, &resource.Resources{
 			HTTPRoutes: []*gwapiv1.HTTPRoute{nil},
 		})
 	})
+	stage.End()
 
 	var found bool
 	for _, s := range sr.Ended() {

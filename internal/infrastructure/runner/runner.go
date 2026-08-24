@@ -113,7 +113,9 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 			}
 
 			parentCtx := update.Value.ParentContext(ctx)
-			parentCtx = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
+			if !update.Delete && !update.Initial {
+				parentCtx = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
+			}
 
 			traceCtx, span := tracer.Start(parentCtx, "InfrastructureRunner.updateProxyInfraFromSubscription")
 			defer span.End()
