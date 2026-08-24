@@ -1,1 +1,1 @@
-Added CRD validation (`minimum: 100`, `maximum: 599`) to `BackendTrafficPolicy`'s `responseOverride[].response.statusCode` field, rejecting out-of-range values such as `-1` at admission time instead of letting them reach the generated Envoy config.
+Added CRD validation (`minimum: 200`, `maximum: 599`) to `BackendTrafficPolicy`'s `responseOverride[].response.statusCode` field, rejecting out-of-range values such as `-1` at admission time instead of letting them reach the generated Envoy config.
