@@ -53,13 +53,11 @@
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-http-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/default/policy-for-http-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             preserveAuthorizationHeader: true
             redirectPathMatcher:
