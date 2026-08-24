@@ -213,6 +213,7 @@ func TestGetExtensionBackendResources(t *testing.T) {
 	testCases := []struct {
 		name            string
 		extBackendGVKs  []schema.GroupVersionKind
+		crdExists       map[schema.GroupVersionKind]bool
 		objects         []client.Object
 		listInterceptor func(ctx context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error
 		expectedCount   int
@@ -229,6 +230,9 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			extBackendGVKs: []schema.GroupVersionKind{
 				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
 			},
+			crdExists: map[schema.GroupVersionKind]bool{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"}: true,
+			},
 			objects:       []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
 			expectedCount: 1,
 		},
@@ -238,13 +242,33 @@ func TestGetExtensionBackendResources(t *testing.T) {
 				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
 				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
 			},
+			crdExists: map[schema.GroupVersionKind]bool{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"}:     true,
+				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"}: true,
+			},
 			objects:       []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
 			expectedCount: 2,
+		},
+		{
+			name: "CRD absent for one GVK is skipped",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
+			},
+			crdExists: map[schema.GroupVersionKind]bool{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"}: true,
+				// LambdaBackend not in map -> CRD absent -> skipped
+			},
+			objects:       []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
+			expectedCount: 1,
 		},
 		{
 			name: "transient list error is returned instead of being suppressed",
 			extBackendGVKs: []schema.GroupVersionKind{
 				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+			},
+			crdExists: map[schema.GroupVersionKind]bool{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"}: true,
 			},
 			objects: []client.Object{s3Backend, defaultNamespace, testNamespace},
 			listInterceptor: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
@@ -273,9 +297,10 @@ func TestGetExtensionBackendResources(t *testing.T) {
 
 			// Create reconciler with test configuration
 			r := &gatewayAPIReconciler{
-				extBackendGVKs: tc.extBackendGVKs,
-				log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
-				client:         fakeClient,
+				extBackendGVKs:      tc.extBackendGVKs,
+				extBackendCRDExists: tc.crdExists,
+				log:                 logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				client:              fakeClient,
 			}
 
 			// Call the function under test

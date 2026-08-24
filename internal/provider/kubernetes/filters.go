@@ -10,8 +10,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,23 +38,19 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 }
 
 // getExtensionBackendResources returns all custom backend resources managed by extensions.
-// Only GVKs whose CRD is missing (NotFound / NoMatch) are skipped, so the reconcile keeps
-// processing routes that don't depend on the missing custom backend. Transient errors
-// (timeouts, canceled contexts, server failures) are returned so the reconcile is retried and
-// stale configuration is not published.
+// GVKs whose CRD was determined absent at controller startup are skipped (the watch
+// and this list path), so the reconcile keeps processing routes that don't depend on
+// the missing custom backend. All other errors from List are returned so the reconcile
+// is retried and stale configuration is not published.
 func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) ([]unstructured.Unstructured, error) {
 	var resourceItems []unstructured.Unstructured
 	for _, gvk := range r.extBackendGVKs {
+		if !r.extBackendCRDExists[gvk] {
+			continue
+		}
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList, client.UnsafeDisableDeepCopy); err != nil {
-			if kerrors.IsNotFound(err) || apimeta.IsNoMatchError(err) {
-				// The CRD for this GVK is not installed (or the SA lacks RBAC to
-				// list it); the watch was already skipped in the controller setup,
-				// so skip the list path too and keep Gateway processing alive.
-				r.log.Info("skipping backend resource list", "GVK", gvk.String(), "error", err.Error())
-				continue
-			}
 			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 

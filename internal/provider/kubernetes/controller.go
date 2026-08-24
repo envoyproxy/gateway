@@ -94,6 +94,7 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+	extBackendCRDExists    map[schema.GroupVersionKind]bool
 
 	clusterTrustBundleExits bool
 
@@ -175,6 +176,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		mergeGateways:        sets.New[string](),
 		extServerPolicies:    extServerPoliciesGVKs,
 		extBackendGVKs:       extBackendGVKs,
+		extBackendCRDExists:  make(map[schema.GroupVersionKind]bool),
 		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
 	}
 
@@ -3005,6 +3007,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			r.log.Info("backend resource CRD not found, skipping watch", "resource", gvk.String())
 			continue
 		}
+		r.extBackendCRDExists[gvk] = true
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
 		if err := c.Watch(source.Kind(mgr.GetCache(), u,
