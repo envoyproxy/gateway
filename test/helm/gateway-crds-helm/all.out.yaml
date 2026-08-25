@@ -53967,14 +53967,17 @@ spec:
                                 You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
 
-                                For TCPRoute targets (raw TCP connections), HTTP headers such as
+                                For TCPRoute and UDPRoute targets (raw L4 traffic), HTTP headers such as
                                 X-Forwarded-For are not available. The client IP is obtained from the
-                                TCP connection's peer address. If intermediaries (load balancers, NAT)
-                                terminate or proxy TCP, the original client IP will only be available
-                                if the intermediary preserves the source address (for example by
-                                enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is
+                                TCP connection's peer address, or from the source address of the UDP
+                                datagram. If intermediaries (load balancers, NAT) terminate or proxy the
+                                traffic, the original client IP will only be available if the
+                                intermediary preserves the source address (for example by enabling the
+                                PROXY protocol or avoiding SNAT). Note that the PROXY protocol is not
+                                available on the UDP path, so a UDPRoute target relies entirely on the
+                                datagram source address being preserved. Ensure your L4 proxy is
                                 configured to preserve the source IP to enable correct client-IP
-                                matching for TCPRoute targets.
+                                matching for TCPRoute and UDPRoute targets.
                               items:
                                 description: |-
                                   CIDR defines a CIDR Address range.
@@ -53987,7 +53990,7 @@ spec:
                               description: |-
                                 ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
                                 This field is supported for HTTPRoute and GRPCRoute authorization.
-                                It is not supported for TCPRoute targets.
+                                It is not supported for TCPRoute or UDPRoute targets.
 
                                 If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 
@@ -61666,21 +61669,23 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute
+            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'',
-                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''] : true'
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''] : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
+                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''])
+                : true '
             - message: mergeType can only be used with xRoute targets
               rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
-                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) && (!has(self.targetRefs)
-                || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'', ''GRPCRoute'',
-                ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
-                sel.kind in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''])))'
+                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute'']) &&
+                (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'',
+                ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''])) && (!has(self.targetSelectors)
+                || self.targetSelectors.all(sel, sel.kind in [''HTTPRoute'', ''GRPCRoute'',
+                ''TCPRoute'', ''UDPRoute''])))'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
