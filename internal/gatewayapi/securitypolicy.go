@@ -512,9 +512,13 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// then run it once to keep the flow linear and easier to read.
 	validator := validateSecurityPolicy
 	errMsg := "invalid SecurityPolicy"
-	if currTarget.Kind == resource.KindTCPRoute {
-		validator = validateSecurityPolicyForTCP
+	switch currTarget.Kind {
+	case resource.KindTCPRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "TCP") }
 		errMsg = "invalid SecurityPolicy for TCP route"
+	case resource.KindUDPRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "UDP") }
+		errMsg = "invalid SecurityPolicy for UDP route"
 	}
 	if err := validator(policy); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
@@ -968,16 +972,18 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
+// validateSecurityPolicyForL4 ensures SecurityPolicy usage on an L4 protocol
+// (TCP or UDP) is compatible. proto names the protocol in the returned errors.
 //
-// TCP supports Authorization with ClientCIDRs ONLY.
+// L4 supports Authorization with ClientCIDRs ONLY, because there is no HTTP
+// request to inspect:
 // - Principals.JWT      => invalid (HTTP-only)
 // - Principals.Headers  => invalid (HTTP-only)
-// - Empty/no Authorization is allowed and results in no-op on TCP.
+// - Empty/no Authorization is allowed and results in no-op on L4.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
-func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
+func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
 	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
-		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
+		return fmt.Errorf("only authorization is supported for %s (routes/listeners)", proto)
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
 		return nil
@@ -985,19 +991,19 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	for i := range p.Spec.Authorization.Rules {
 		rule := &p.Spec.Authorization.Rules[i]
 		if rule.CEL != nil {
-			return fmt.Errorf("rule %d: CEL not supported for TCP", i)
+			return fmt.Errorf("rule %d: CEL not supported for %s", i, proto)
 		}
 		if rule.Principal == nil {
 			continue
 		}
 		if rule.Principal.JWT != nil {
-			return fmt.Errorf("rule %d: JWT not supported for TCP", i)
+			return fmt.Errorf("rule %d: JWT not supported for %s", i, proto)
 		}
 		if len(rule.Principal.Headers) > 0 {
-			return fmt.Errorf("rule %d: headers not supported for TCP", i)
+			return fmt.Errorf("rule %d: headers not supported for %s", i, proto)
 		}
 		if len(rule.Principal.ClientIPGeoLocations) > 0 {
-			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP", i)
+			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for %s", i, proto)
 		}
 		if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
 			return fmt.Errorf("rule %d: %w", i, err)
@@ -1006,7 +1012,7 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateCIDRs validates CIDR strings for TCP authorization rules.
+// validateCIDRs validates CIDR strings for L4 authorization rules.
 func validateCIDRs(cidrs []egv1a1.CIDR) error {
 	for _, c := range cidrs {
 		if _, _, err := net.ParseCIDR(string(c)); err != nil {
@@ -1385,6 +1391,9 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					continue
 				}
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+				if tl == nil {
+					continue
+				}
 				for _, r := range tl.Routes {
 					// If target.SectionName is specified it must match the route-rule section name
 					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
@@ -1401,6 +1410,34 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						authCopy := *authorization
 						r.Authorization = &authCopy
 					}
+				}
+			}
+		case resource.KindUDPRoute:
+			for _, listener := range parentRefCtx.listeners {
+				// If targetListener is set, only apply to that exact listener.
+				if targetListener != nil && targetListenerName != irListenerName(listener) {
+					continue
+				}
+				ul := xdsIR[irKey].GetUDPListener(irListenerName(listener))
+				// A UDP listener holds at most one route: when several UDPRoutes name the
+				// same listener only the oldest one is attached, so a policy targeting any
+				// of the others has nothing to apply to.
+				if ul == nil || ul.Route == nil {
+					continue
+				}
+				r := ul.Route
+				// As with TCP, the route-rule section name lives on the destination metadata.
+				if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+					continue
+				}
+
+				if r.Authorization != nil {
+					continue
+				}
+				// Only authorization for UDP
+				if authorization != nil {
+					authCopy := *authorization
+					r.Authorization = &authCopy
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
@@ -1695,15 +1732,15 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		)
 	}
 
-	// Pre-create a TCP-only authorization object to avoid re-allocation
-	var tcpAuthorization *ir.Authorization
+	// Pre-create an L4-only authorization object to avoid re-allocation
+	var l4Authorization *ir.Authorization
 	if authorization != nil {
 		authCopy := *authorization
-		tcpAuthorization = &authCopy
+		l4Authorization = &authCopy
 	}
 
 	// Apply to TCP listeners (Authorization only).
-	if tcpAuthorization != nil {
+	if l4Authorization != nil {
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {
 				continue
@@ -1718,8 +1755,27 @@ func (t *Translator) translateSecurityPolicyForListeners(
 				if r.Authorization != nil {
 					continue
 				}
-				r.Authorization = tcpAuthorization
+				r.Authorization = l4Authorization
 			}
+		}
+	}
+
+	// Apply to UDP listeners (Authorization only).
+	if l4Authorization != nil {
+		for _, ul := range x.UDP {
+			// A UDP listener holds at most one route.
+			if ul == nil || ul.Route == nil {
+				continue
+			}
+			if !listenerNames.Has(ul.Name) {
+				continue
+			}
+			// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
+			// targeting a lesser specific scope(Gateway).
+			if ul.Route.Authorization != nil {
+				continue
+			}
+			ul.Route.Authorization = l4Authorization
 		}
 	}
 
