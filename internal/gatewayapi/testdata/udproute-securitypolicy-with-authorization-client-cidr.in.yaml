@@ -1,0 +1,259 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-udp
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: foo
+      protocol: UDP
+      port: 8088
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: bar
+      protocol: UDP
+      port: 8089
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: baz
+      protocol: UDP
+      port: 8090
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-mixed
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: foo
+      protocol: UDP
+      port: 8443
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: hr-app-mixed
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-mixed
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /
+      backendRefs:
+      - name: service-1
+        port: 8080
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: udpr-app-foo
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-udp
+      sectionName: foo
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: udpr-app-bar
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-udp
+      sectionName: bar
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: udpr-app-baz
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-udp
+      sectionName: baz
+    rules:
+    - name: rule-baz
+      backendRefs:
+      - name: service-1
+        port: 8163
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: udpr-app-mixed
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-mixed
+      sectionName: foo
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: sp-gw-udp-whole
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-udp
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-gateway
+        principal:
+          clientCIDRs:
+          - 10.10.0.0/24
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: sp-gw-udp-section-foo   # This policy should attach sectionName foo
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-udp
+      sectionName: foo
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-section-foo
+        principal:
+          clientCIDRs:
+          - 10.10.1.0/24
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-udpr-app-bar   # This policy should attach udproute bar
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udpr-app-bar
+    authorization:
+      defaultAction: Allow
+      rules:
+      - action: Deny
+        name: deny-route-bar
+        principal:
+          clientCIDRs:
+          - 10.10.2.0/24
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-udpr-app-conflict  # This policy should NOT attach udproute bar due to conflict with above policy
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udpr-app-bar
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-route-conflict
+        principal:
+          clientCIDRs:
+          - 10.10.3.0/24
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-udpr-app-baz-section   # This policy should attach udproute baz via its rule name
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udpr-app-baz
+      sectionName: rule-baz
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-route-baz
+        principal:
+          clientCIDRs:
+          - 10.10.6.0/24
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: sp-udpr-app-invalid-section   # This policy should NOT attach due to invalid section
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-udp
+      sectionName: bogus
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-invalid-section
+        principal:
+          clientCIDRs:
+          - 10.10.4.0/24
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: sp-mixed-gateway   # This policy should attach to gateway-mixed, applying to all listeners, but only whats supported
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-mixed
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 10.10.5.0/24
+    cors:
+      allowOrigins:
+      - https://example.com
+      allowMethods:
+      - GET
+      - POST

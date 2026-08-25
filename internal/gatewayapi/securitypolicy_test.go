@@ -1056,7 +1056,7 @@ func SetRouteParentContext(route RouteContext, parentRef gwapiv1.ParentReference
 	route.SetRouteParentContext(parentRef, ctx)
 }
 
-// --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
+// --- L4 branch: validateSecurityPolicyForL4(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
 	trContext := &TranslatorContext{}
@@ -1208,7 +1208,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	require.True(t, hasParentFalseCondition(policy))
 }
 
-func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
+func Test_validateSecurityPolicyForL4_Table(t *testing.T) {
 	tests := []struct {
 		name    string
 		spec    egv1a1.SecurityPolicySpec
@@ -1375,17 +1375,36 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			p := &egv1a1.SecurityPolicy{Spec: tc.spec}
-			err := validateSecurityPolicyForTCP(p)
-			if tc.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
+	// TCP and UDP share the same rules, so every case must hold for both.
+	for _, proto := range []string{"TCP", "UDP"} {
+		for _, tc := range tests {
+			t.Run(proto+"/"+tc.name, func(t *testing.T) {
+				p := &egv1a1.SecurityPolicy{Spec: tc.spec}
+				err := validateSecurityPolicyForL4(p, proto)
+				if tc.wantErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
 	}
+
+	// Rejections that are about the protocol rather than the input name it, so the
+	// status condition tells the user which listener protocol refused the field.
+	t.Run("protocol named in protocol-specific errors", func(t *testing.T) {
+		p := &egv1a1.SecurityPolicy{Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{{
+					Action:    egv1a1.AuthorizationActionAllow,
+					Principal: &egv1a1.Principal{Headers: []egv1a1.AuthorizationHeaderMatch{{Name: "x-user", Values: []string{"foo"}}}},
+				}},
+			},
+		}}
+
+		require.ErrorContains(t, validateSecurityPolicyForL4(p, "TCP"), "headers not supported for TCP")
+		require.ErrorContains(t, validateSecurityPolicyForL4(p, "UDP"), "headers not supported for UDP")
+	})
 }
 
 func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
