@@ -2572,6 +2572,52 @@ func TestSecurityPolicyOIDCCookieNames(t *testing.T) {
 				"Too long",
 			},
 		},
+		{
+			desc:        "suffix only",
+			cookieNames: &egv1a1.OIDCCookieNames{Suffix: new("checkout")},
+		},
+		{
+			desc: "suffix with a per-cookie override",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				Suffix:  new("checkout"),
+				IDToken: new("myapp_id_token"),
+			},
+		},
+		{
+			desc:        "empty suffix",
+			cookieNames: &egv1a1.OIDCCookieNames{Suffix: new("")},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.suffix",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc:        "suffix longer than 238 chars",
+			cookieNames: &egv1a1.OIDCCookieNames{Suffix: new(strings.Repeat("a", 239))},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.suffix",
+				"Too long",
+			},
+		},
+		{
+			desc:        "suffix is not a valid cookie name token",
+			cookieNames: &egv1a1.OIDCCookieNames{Suffix: new("check out")},
+			wantErrors: []string{
+				"spec.oidc.cookieNames.suffix",
+				"should match",
+			},
+		},
+		{
+			desc: "override collides with a name derived from the suffix",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				Suffix:      new("checkout"),
+				AccessToken: new("IdToken-checkout"),
+			},
+			wantErrors: []string{
+				"spec.oidc.cookieNames",
+				"cookie names must be unique",
+			},
+		},
 	}
 
 	for _, tc := range cases {

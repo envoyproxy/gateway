@@ -1,1 +1,1 @@
-Added support for customizing all Envoy OAuth2 cookie names through SecurityPolicy OIDC cookieNames.
+Added support for customizing all Envoy OAuth2 cookie names through SecurityPolicy OIDC cookieNames, and a cookieNames.suffix field that pins the suffix Envoy Gateway appends to every OAuth2 cookie name.
