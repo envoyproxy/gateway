@@ -292,232 +292,233 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 			rtcTraceCtx, rtcSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle")
 			defer rtcSpan.End()
-			for _, resources := range *val {
-				func() {
-					// The GatewayClass name is deliberately kept out of the span name and passed as
-					// an attribute instead: span names are what most trace backends group/aggregate
-					// by (latency percentiles, error rates, etc.), and this loop runs once per
-					// GatewayClass in the cluster. Baking the name into the span name would fragment
-					// those aggregates into one bucket per class - unbounded and growing over the
-					// cluster's lifetime - for no benefit, since the attribute already makes the span
-					// filterable/searchable by GatewayClass in any trace UI.
-					translateGCCtx, translateGCSpan := tracer.Start(rtcTraceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateGatewayClass",
-						trace.WithAttributes(attribute.String("gatewayclass.name", resources.GatewayClass.Name)),
-					)
-					defer translateGCSpan.End()
-					// Translate and publish IRs.
-					t := &gatewayapi.Translator{
-						GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
-						GatewayClassName:                gwapiv1.ObjectName(resources.GatewayClass.Name),
-						GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
-						EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-						BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-						SDSSecretRefEnabled:             r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableSDSSecretRef,
-						ControllerNamespace:             r.ControllerNamespace,
-						GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
-						MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
-						MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
-						PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
-						WasmCache:                       r.wasmCache,
-						RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
-						InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
-						Logger:                          traceLogger,
-						LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
-					}
+			translateGatewayClass := func(resources *resource.Resources) {
+				// The GatewayClass name is deliberately kept out of the span name and passed as
+				// an attribute instead: span names are what most trace backends group/aggregate
+				// by (latency percentiles, error rates, etc.), and this loop runs once per
+				// GatewayClass in the cluster. Baking the name into the span name would fragment
+				// those aggregates into one bucket per class - unbounded and growing over the
+				// cluster's lifetime - for no benefit, since the attribute already makes the span
+				// filterable/searchable by GatewayClass in any trace UI.
+				translateGCCtx, translateGCSpan := tracer.Start(rtcTraceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateGatewayClass",
+					trace.WithAttributes(attribute.String("gatewayclass.name", resources.GatewayClass.Name)),
+				)
+				defer translateGCSpan.End()
+				// Translate and publish IRs.
+				t := &gatewayapi.Translator{
+					GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:                gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					SDSSecretRefEnabled:             r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableSDSSecretRef,
+					ControllerNamespace:             r.ControllerNamespace,
+					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
+					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
+					MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
+					PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
+					WasmCache:                       r.wasmCache,
+					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
+					Logger:                          traceLogger,
+					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
+				}
 
-					// If extensions are loaded, pass their supported groups/kinds to the translator
-					if extensions := r.EnvoyGateway.GetExtensionManagers(); len(extensions) > 0 {
-						var extGKs []schema.GroupKind
-						for _, em := range extensions {
-							for _, gvk := range em.Resources {
-								extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
-							}
-							// Include backend resources in extension group kinds for custom backend support
-							for _, gvk := range em.BackendResources {
-								extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
-							}
+				// If extensions are loaded, pass their supported groups/kinds to the translator
+				if extensions := r.EnvoyGateway.GetExtensionManagers(); len(extensions) > 0 {
+					var extGKs []schema.GroupKind
+					for _, em := range extensions {
+						for _, gvk := range em.Resources {
+							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 						}
-						t.ExtensionGroupKinds = extGKs
-						traceLogger.Info("extension resources", "GVKs count", len(extGKs))
-					}
-					// Translate to IR.
-					// The span is ended by a deferred call inside the closure: the translator
-					// panics on some inputs and HandleSubscription recovers from it, and an
-					// unended span is never exported, so a plain End() here would drop the
-					// stage span and the input sizes recorded on it. The closure keeps that
-					// defer scoped to this iteration instead of the whole update.
-					result, err := func() (*gatewayapi.TranslateResult, error) {
-						translateToIRCtx, translateToIRSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
-						defer translateToIRSpan.End()
-						return t.Translate(translateToIRCtx, resources)
-					}()
-					if err != nil {
-						// Currently all errors that Translate returns should just be logged
-						traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
-						// Notify the main control loop about translation errors. This may be a critical error in standalone mode, so
-						// notify the control loop in case this needs to be handled.
-						r.RunnerErrors.Store(r.Name(), message.NewWatchableError(err))
-					}
-
-					// Publish the IRs.
-					// Also validate the ir before sending it.
-					for key, val := range result.InfraIR {
-						logV := traceLogger.V(1).WithValues(string(message.InfraIRMessageName), key)
-						if logV.Enabled() {
-							logV.Info(val.JSONString())
-						}
-						if err := val.Validate(); err != nil {
-							traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
-							errChan <- err
-						} else {
-							r.InfraIR.Store(key, &message.InfraIRWithContext{
-								Infra:    val,
-								Context:  translateGCCtx,
-								StoredAt: time.Now(),
-							})
-							infraIRCount++
-							// Track IR key for mark and sweep
-							r.keyCache.IR[key] = true
-							delete(keysToDelete.IR, key)
+						// Include backend resources in extension group kinds for custom backend support
+						for _, gvk := range em.BackendResources {
+							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 						}
 					}
-
-					for key, val := range result.XdsIR {
-						logV := traceLogger.V(1).WithValues(string(message.XDSIRMessageName), key)
-						if logV.Enabled() {
-							logV.Info(val.JSONString())
-						}
-						if err := val.Validate(); err != nil {
-							traceLogger.Error(err, "unable to validate xds ir, skipped sending it")
-							errChan <- err
-						} else {
-							m := message.XdsIRWithContext{
-								XdsIR:    val,
-								Context:  translateGCCtx,
-								StoredAt: time.Now(),
-							}
-							r.XdsIR.Store(key, &m)
-							xdsIRCount++
-						}
-					}
-
-					// Update Status
-					_, statusUpdateSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
-					defer statusUpdateSpan.End()
-					if result.GatewayClass != nil {
-						key := utils.NamespacedName(result.GatewayClass)
-						r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
-					}
-
-					// Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
-					for _, gateway := range result.Gateways {
-						key := utils.NamespacedName(gateway)
-						r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
-						gatewayStatusCount++
-						delete(keysToDelete.GatewayStatus, key)
-						r.keyCache.GatewayStatus[key] = true
-					}
-					for _, listenerSet := range result.ListenerSets {
-						key := utils.NamespacedName(listenerSet)
-						r.ProviderResources.ListenerSetStatuses.Store(key, &listenerSet.Status)
-						listenerSetStatusCount++
-						delete(keysToDelete.ListenerSetStatus, key)
-						r.keyCache.ListenerSetStatus[key] = true
-					}
-
-					// Backend statuses have no parents, so they are not aggregated.
-					for _, backend := range result.Backends {
-						key := utils.NamespacedName(backend)
-						if len(backend.Status.Conditions) > 0 {
-							r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
-							backendStatusCount++
-						}
-						delete(keysToDelete.BackendStatus, key)
-						r.keyCache.BackendStatus[key] = true
-					}
-
-					// Resources which can belong to multiple GatewayClasses get their statuses aggregated,
-					// then stored once after iterating over all GatewayClasses.
-					for _, httpRoute := range result.HTTPRoutes {
-						if len(httpRoute.Status.Parents) != 0 {
-							key := utils.NamespacedName(httpRoute)
-							aggregatedStatuses.HTTPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.HTTPRoutes[key], &httpRoute.Status.RouteStatus, httpRoute.Generation)
-						}
-					}
-					for _, grpcRoute := range result.GRPCRoutes {
-						if len(grpcRoute.Status.Parents) != 0 {
-							key := utils.NamespacedName(grpcRoute)
-							aggregatedStatuses.GRPCRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.GRPCRoutes[key], &grpcRoute.Status.RouteStatus, grpcRoute.Generation)
-						}
-					}
-					for _, tlsRoute := range result.TLSRoutes {
-						if len(tlsRoute.Status.Parents) != 0 {
-							key := utils.NamespacedName(tlsRoute)
-							aggregatedStatuses.TLSRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TLSRoutes[key], &tlsRoute.Status.RouteStatus, tlsRoute.Generation)
-						}
-					}
-					for _, tcpRoute := range result.TCPRoutes {
-						if len(tcpRoute.Status.Parents) != 0 {
-							key := utils.NamespacedName(tcpRoute)
-							aggregatedStatuses.TCPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TCPRoutes[key], &tcpRoute.Status.RouteStatus, tcpRoute.Generation)
-						}
-					}
-					for _, udpRoute := range result.UDPRoutes {
-						if len(udpRoute.Status.Parents) != 0 {
-							key := utils.NamespacedName(udpRoute)
-							aggregatedStatuses.UDPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.UDPRoutes[key], &udpRoute.Status.RouteStatus, udpRoute.Generation)
-						}
-					}
-					for _, backendTLSPolicy := range result.BackendTLSPolicies {
-						if len(backendTLSPolicy.Status.Ancestors) != 0 {
-							key := utils.NamespacedName(backendTLSPolicy)
-							aggregatedStatuses.BackendTLSPolicies[key] = mergePolicyStatus(aggregatedStatuses.BackendTLSPolicies[key], &backendTLSPolicy.Status, backendTLSPolicy.Generation)
-						}
-					}
-					for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
-						if len(clientTrafficPolicy.Status.Ancestors) != 0 {
-							key := utils.NamespacedName(clientTrafficPolicy)
-							aggregatedStatuses.ClientTrafficPolicies[key] = mergePolicyStatus(aggregatedStatuses.ClientTrafficPolicies[key], &clientTrafficPolicy.Status, clientTrafficPolicy.Generation)
-						}
-					}
-					for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
-						if len(backendTrafficPolicy.Status.Ancestors) != 0 {
-							key := utils.NamespacedName(backendTrafficPolicy)
-							aggregatedStatuses.BackendTrafficPolicies[key] = mergePolicyStatus(aggregatedStatuses.BackendTrafficPolicies[key], &backendTrafficPolicy.Status, backendTrafficPolicy.Generation)
-						}
-					}
-					for _, securityPolicy := range result.SecurityPolicies {
-						if len(securityPolicy.Status.Ancestors) != 0 {
-							key := utils.NamespacedName(securityPolicy)
-							aggregatedStatuses.SecurityPolicies[key] = mergePolicyStatus(aggregatedStatuses.SecurityPolicies[key], &securityPolicy.Status, securityPolicy.Generation)
-						}
-					}
-					for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
-						if len(envoyExtensionPolicy.Status.Ancestors) != 0 {
-							key := utils.NamespacedName(envoyExtensionPolicy)
-							aggregatedStatuses.EnvoyExtensionPolicies[key] = mergePolicyStatus(aggregatedStatuses.EnvoyExtensionPolicies[key], &envoyExtensionPolicy.Status, envoyExtensionPolicy.Generation)
-						}
-					}
-					for _, extServerPolicy := range result.ExtensionServerPolicies {
-						policyStatus := gatewayapi.ExtServerPolicyStatusAsPolicyStatus(&extServerPolicy)
-						if len(policyStatus.Ancestors) != 0 {
-							key := message.NamespacedNameAndGVK{
-								NamespacedName:   utils.NamespacedName(&extServerPolicy),
-								GroupVersionKind: extServerPolicy.GroupVersionKind(),
-							}
-							aggregatedStatuses.ExtensionServerPolicies[key] = mergePolicyStatus(aggregatedStatuses.ExtensionServerPolicies[key], &policyStatus, extServerPolicy.GetGeneration())
-						}
-					}
-					// EnvoyProxy status
-					for _, ep := range result.EnvoyProxiesForGateways {
-						r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
-						aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
-					}
-					if ep := result.EnvoyProxyForGatewayClass; ep != nil {
-						r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
-						aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
-					}
+					t.ExtensionGroupKinds = extGKs
+					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
+				}
+				// Translate to IR.
+				// The span is ended by a deferred call inside the closure: the translator
+				// panics on some inputs and HandleSubscription recovers from it, and an
+				// unended span is never exported, so a plain End() here would drop the
+				// stage span and the input sizes recorded on it. The closure keeps that
+				// defer scoped to this iteration instead of the whole update.
+				result, err := func() (*gatewayapi.TranslateResult, error) {
+					translateToIRCtx, translateToIRSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
+					defer translateToIRSpan.End()
+					return t.Translate(translateToIRCtx, resources)
 				}()
+				if err != nil {
+					// Currently all errors that Translate returns should just be logged
+					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					// Notify the main control loop about translation errors. This may be a critical error in standalone mode, so
+					// notify the control loop in case this needs to be handled.
+					r.RunnerErrors.Store(r.Name(), message.NewWatchableError(err))
+				}
+
+				// Publish the IRs.
+				// Also validate the ir before sending it.
+				for key, val := range result.InfraIR {
+					logV := traceLogger.V(1).WithValues(string(message.InfraIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
+					}
+					if err := val.Validate(); err != nil {
+						traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
+						errChan <- err
+					} else {
+						r.InfraIR.Store(key, &message.InfraIRWithContext{
+							Infra:    val,
+							Context:  translateGCCtx,
+							StoredAt: time.Now(),
+						})
+						infraIRCount++
+						// Track IR key for mark and sweep
+						r.keyCache.IR[key] = true
+						delete(keysToDelete.IR, key)
+					}
+				}
+
+				for key, val := range result.XdsIR {
+					logV := traceLogger.V(1).WithValues(string(message.XDSIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
+					}
+					if err := val.Validate(); err != nil {
+						traceLogger.Error(err, "unable to validate xds ir, skipped sending it")
+						errChan <- err
+					} else {
+						m := message.XdsIRWithContext{
+							XdsIR:    val,
+							Context:  translateGCCtx,
+							StoredAt: time.Now(),
+						}
+						r.XdsIR.Store(key, &m)
+						xdsIRCount++
+					}
+				}
+
+				// Update Status
+				_, statusUpdateSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
+				defer statusUpdateSpan.End()
+				if result.GatewayClass != nil {
+					key := utils.NamespacedName(result.GatewayClass)
+					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
+				}
+
+				// Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
+				for _, gateway := range result.Gateways {
+					key := utils.NamespacedName(gateway)
+					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
+					gatewayStatusCount++
+					delete(keysToDelete.GatewayStatus, key)
+					r.keyCache.GatewayStatus[key] = true
+				}
+				for _, listenerSet := range result.ListenerSets {
+					key := utils.NamespacedName(listenerSet)
+					r.ProviderResources.ListenerSetStatuses.Store(key, &listenerSet.Status)
+					listenerSetStatusCount++
+					delete(keysToDelete.ListenerSetStatus, key)
+					r.keyCache.ListenerSetStatus[key] = true
+				}
+
+				// Backend statuses have no parents, so they are not aggregated.
+				for _, backend := range result.Backends {
+					key := utils.NamespacedName(backend)
+					if len(backend.Status.Conditions) > 0 {
+						r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
+						backendStatusCount++
+					}
+					delete(keysToDelete.BackendStatus, key)
+					r.keyCache.BackendStatus[key] = true
+				}
+
+				// Resources which can belong to multiple GatewayClasses get their statuses aggregated,
+				// then stored once after iterating over all GatewayClasses.
+				for _, httpRoute := range result.HTTPRoutes {
+					if len(httpRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(httpRoute)
+						aggregatedStatuses.HTTPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.HTTPRoutes[key], &httpRoute.Status.RouteStatus, httpRoute.Generation)
+					}
+				}
+				for _, grpcRoute := range result.GRPCRoutes {
+					if len(grpcRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(grpcRoute)
+						aggregatedStatuses.GRPCRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.GRPCRoutes[key], &grpcRoute.Status.RouteStatus, grpcRoute.Generation)
+					}
+				}
+				for _, tlsRoute := range result.TLSRoutes {
+					if len(tlsRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(tlsRoute)
+						aggregatedStatuses.TLSRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TLSRoutes[key], &tlsRoute.Status.RouteStatus, tlsRoute.Generation)
+					}
+				}
+				for _, tcpRoute := range result.TCPRoutes {
+					if len(tcpRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(tcpRoute)
+						aggregatedStatuses.TCPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TCPRoutes[key], &tcpRoute.Status.RouteStatus, tcpRoute.Generation)
+					}
+				}
+				for _, udpRoute := range result.UDPRoutes {
+					if len(udpRoute.Status.Parents) != 0 {
+						key := utils.NamespacedName(udpRoute)
+						aggregatedStatuses.UDPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.UDPRoutes[key], &udpRoute.Status.RouteStatus, udpRoute.Generation)
+					}
+				}
+				for _, backendTLSPolicy := range result.BackendTLSPolicies {
+					if len(backendTLSPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(backendTLSPolicy)
+						aggregatedStatuses.BackendTLSPolicies[key] = mergePolicyStatus(aggregatedStatuses.BackendTLSPolicies[key], &backendTLSPolicy.Status, backendTLSPolicy.Generation)
+					}
+				}
+				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
+					if len(clientTrafficPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(clientTrafficPolicy)
+						aggregatedStatuses.ClientTrafficPolicies[key] = mergePolicyStatus(aggregatedStatuses.ClientTrafficPolicies[key], &clientTrafficPolicy.Status, clientTrafficPolicy.Generation)
+					}
+				}
+				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
+					if len(backendTrafficPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(backendTrafficPolicy)
+						aggregatedStatuses.BackendTrafficPolicies[key] = mergePolicyStatus(aggregatedStatuses.BackendTrafficPolicies[key], &backendTrafficPolicy.Status, backendTrafficPolicy.Generation)
+					}
+				}
+				for _, securityPolicy := range result.SecurityPolicies {
+					if len(securityPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(securityPolicy)
+						aggregatedStatuses.SecurityPolicies[key] = mergePolicyStatus(aggregatedStatuses.SecurityPolicies[key], &securityPolicy.Status, securityPolicy.Generation)
+					}
+				}
+				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
+					if len(envoyExtensionPolicy.Status.Ancestors) != 0 {
+						key := utils.NamespacedName(envoyExtensionPolicy)
+						aggregatedStatuses.EnvoyExtensionPolicies[key] = mergePolicyStatus(aggregatedStatuses.EnvoyExtensionPolicies[key], &envoyExtensionPolicy.Status, envoyExtensionPolicy.Generation)
+					}
+				}
+				for _, extServerPolicy := range result.ExtensionServerPolicies {
+					policyStatus := gatewayapi.ExtServerPolicyStatusAsPolicyStatus(&extServerPolicy)
+					if len(policyStatus.Ancestors) != 0 {
+						key := message.NamespacedNameAndGVK{
+							NamespacedName:   utils.NamespacedName(&extServerPolicy),
+							GroupVersionKind: extServerPolicy.GroupVersionKind(),
+						}
+						aggregatedStatuses.ExtensionServerPolicies[key] = mergePolicyStatus(aggregatedStatuses.ExtensionServerPolicies[key], &policyStatus, extServerPolicy.GetGeneration())
+					}
+				}
+				// EnvoyProxy status
+				for _, ep := range result.EnvoyProxiesForGateways {
+					r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
+					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
+				}
+				if ep := result.EnvoyProxyForGatewayClass; ep != nil {
+					r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
+					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
+				}
+			}
+			for _, resources := range *val {
+				translateGatewayClass(resources)
 			}
 
 			// Store the stauses of all objects atomically with the aggregated status.
