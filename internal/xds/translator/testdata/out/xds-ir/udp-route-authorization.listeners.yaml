@@ -1,0 +1,207 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+      protocol: UDP
+  listenerFilters:
+  - name: envoy.filters.udp_listener.udp_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+      matcher:
+        matcherList:
+          matchers:
+          - onMatch:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+                  cluster: udp-route-allowlist-dest
+            predicate:
+              singlePredicate:
+                customMatch:
+                  name: ip_matcher
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                    cidrRanges:
+                    - addressPrefix: 192.168.100.0
+                      prefixLen: 24
+                    statPrefix: client_ip
+                input:
+                  name: client_ip
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+          - onMatch:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+                  cluster: udp-route-allowlist-dest
+            predicate:
+              singlePredicate:
+                customMatch:
+                  name: ip_matcher
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                    cidrRanges:
+                    - addressPrefix: 10.1.0.0
+                      prefixLen: 16
+                    - addressPrefix: '2001:db8::'
+                      prefixLen: 64
+                    statPrefix: client_ip
+                input:
+                  name: client_ip
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+      statPrefix: service
+  name: udp-listener-allowlist
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10081
+      protocol: UDP
+  listenerFilters:
+  - name: envoy.filters.udp_listener.udp_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+      matcher:
+        matcherList:
+          matchers:
+          - onMatch:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+                  cluster: udp-route-denylist-dest
+            predicate:
+              notMatcher:
+                orMatcher:
+                  predicate:
+                  - singlePredicate:
+                      customMatch:
+                        name: ip_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                          cidrRanges:
+                          - addressPrefix: 10.0.0.0
+                            prefixLen: 24
+                          statPrefix: client_ip
+                      input:
+                        name: client_ip
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+                  - singlePredicate:
+                      customMatch:
+                        name: ip_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                          cidrRanges:
+                          - addressPrefix: 172.16.0.0
+                            prefixLen: 12
+                          statPrefix: client_ip
+                      input:
+                        name: client_ip
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+      statPrefix: service
+  name: udp-listener-denylist
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10082
+      protocol: UDP
+  listenerFilters:
+  - name: envoy.filters.udp_listener.udp_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+      matcher:
+        matcherList:
+          matchers:
+          - onMatch:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+                  cluster: udp-route-mixed-dest
+            predicate:
+              andMatcher:
+                predicate:
+                - singlePredicate:
+                    customMatch:
+                      name: ip_matcher
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                        cidrRanges:
+                        - addressPrefix: 10.1.0.0
+                          prefixLen: 16
+                        statPrefix: client_ip
+                    input:
+                      name: client_ip
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+                - notMatcher:
+                    singlePredicate:
+                      customMatch:
+                        name: ip_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                          cidrRanges:
+                          - addressPrefix: 10.0.0.0
+                            prefixLen: 8
+                          statPrefix: client_ip
+                      input:
+                        name: client_ip
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+          - onMatch:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+                  cluster: udp-route-mixed-dest
+            predicate:
+              notMatcher:
+                singlePredicate:
+                  customMatch:
+                    name: ip_matcher
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                      cidrRanges:
+                      - addressPrefix: 10.0.0.0
+                        prefixLen: 8
+                      statPrefix: client_ip
+                  input:
+                    name: client_ip
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+      statPrefix: service
+  name: udp-listener-mixed
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10083
+      protocol: UDP
+  listenerFilters:
+  - name: envoy.filters.udp_listener.udp_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+      matcher: {}
+      statPrefix: service
+  name: udp-listener-deny-all
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10084
+      protocol: UDP
+  listenerFilters:
+  - name: envoy.filters.udp_listener.udp_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+      matcher:
+        onNoMatch:
+          action:
+            name: route
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+              cluster: udp-route-allow-all-dest
+      statPrefix: service
+  name: udp-listener-allow-all

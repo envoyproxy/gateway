@@ -1,0 +1,130 @@
+udp:
+# Allowlist: a Deny default with Allow rules, so only the listed sources are routed
+# and everything else falls through to no match and is dropped.
+- name: "udp-listener-allowlist"
+  address: "::"
+  port: 10080
+  route:
+    name: "udp-route-allowlist"
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-corp
+        principal:
+          clientCIDRs:
+          - cidr: 192.168.100.0/24
+            maskLen: 24
+      - action: Allow
+        name: allow-branch
+        principal:
+          clientCIDRs:
+          - cidr: 10.1.0.0/16
+            maskLen: 16
+          - cidr: 2001:db8::/64
+            isIPv6: true
+            maskLen: 64
+    destination:
+      name: "udp-route-allowlist-dest"
+      settings:
+      - endpoints:
+        - host: "10.2.3.4"
+          port: 50000
+        name: "udp-route-allowlist-dest/backend/0"
+# Denylist: an Allow default with Deny rules, which compiles to a single negated
+# predicate covering every denied source.
+- name: "udp-listener-denylist"
+  address: "::"
+  port: 10081
+  route:
+    name: "udp-route-denylist"
+    authorization:
+      defaultAction: Allow
+      rules:
+      - action: Deny
+        name: deny-office
+        principal:
+          clientCIDRs:
+          - cidr: 10.0.0.0/24
+            maskLen: 24
+      - action: Deny
+        name: deny-lab
+        principal:
+          clientCIDRs:
+          - cidr: 172.16.0.0/12
+            maskLen: 12
+    destination:
+      name: "udp-route-denylist-dest"
+      settings:
+      - endpoints:
+        - host: "10.2.3.5"
+          port: 50000
+        name: "udp-route-denylist-dest/backend/0"
+# Mixed ordering: the Deny rule precedes the Allow rule, so the Allow predicate is
+# narrowed by it, and the Allow default is narrowed by every Deny rule.
+- name: "udp-listener-mixed"
+  address: "::"
+  port: 10082
+  route:
+    name: "udp-route-mixed"
+    authorization:
+      defaultAction: Allow
+      rules:
+      - action: Deny
+        name: deny-office
+        principal:
+          clientCIDRs:
+          - cidr: 10.0.0.0/8
+            maskLen: 8
+      - action: Allow
+        name: allow-branch
+        principal:
+          clientCIDRs:
+          - cidr: 10.1.0.0/16
+            maskLen: 16
+    destination:
+      name: "udp-route-mixed-dest"
+      settings:
+      - endpoints:
+        - host: "10.2.3.6"
+          port: 50000
+        name: "udp-route-mixed-dest/backend/0"
+# Deny all: a Deny default with no Allow rules leaves nothing to match on, so the
+# matcher has neither a matcher list nor an on_no_match and every datagram is dropped.
+- name: "udp-listener-deny-all"
+  address: "::"
+  port: 10083
+  route:
+    name: "udp-route-deny-all"
+    authorization:
+      defaultAction: Deny
+    destination:
+      name: "udp-route-deny-all-dest"
+      settings:
+      - endpoints:
+        - host: "10.2.3.7"
+          port: 50000
+        name: "udp-route-deny-all-dest/backend/0"
+# Allow all: an Allow default with no Deny rules routes everything, so the matcher
+# is identical to a listener without authorization.
+- name: "udp-listener-allow-all"
+  address: "::"
+  port: 10084
+  route:
+    name: "udp-route-allow-all"
+    authorization:
+      defaultAction: Allow
+      rules:
+      - action: Allow
+        name: allow-corp
+        principal:
+          clientCIDRs:
+          - cidr: 192.168.100.0/24
+            maskLen: 24
+    destination:
+      name: "udp-route-allow-all-dest"
+      settings:
+      - endpoints:
+        - host: "10.2.3.8"
+          port: 50000
+        name: "udp-route-allow-all-dest/backend/0"
