@@ -45,7 +45,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) ([]unstructured.Unstructured, error) {
 	var resourceItems []unstructured.Unstructured
 	for _, gvk := range r.extBackendGVKs {
-		if !r.extBackendCRDExists[gvk] {
+		if r.extBackendCRDExists != nil && !r.extBackendCRDExists[gvk] {
 			continue
 		}
 		uExtResourceList := &unstructured.UnstructuredList{}
