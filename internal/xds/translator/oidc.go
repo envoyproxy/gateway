@@ -500,7 +500,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	}
 
 	// Apply traffic features if they exist.
-	applyTraffic(clusterArgs, oidc.Provider.Traffic)
+	applyTraffic(clusterArgs, oidc.Provider.Traffic.ClusterFeatures())
 
 	return addXdsCluster(tCtx, clusterArgs)
 }

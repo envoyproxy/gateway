@@ -1,0 +1,446 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: sds.example.com
+      name: sds-multiple
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - name: sds-cert-default
+        - name: sds-cert-other
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: inline.example.com
+      name: inline-same-port
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - name: envoy-valid
+          namespace: envoy-gateway-system
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: sds-mixed
+      port: 8443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - name: sds-cert-default
+        - name: envoy-valid
+          namespace: envoy-gateway-system
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: sds-tls-terminate
+      port: 9443
+      protocol: TLS
+      tls:
+        certificateRefs:
+        - name: sds-cert-default
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: sds-cross-namespace
+      port: 11443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - name: sds-cert-cross
+          namespace: sds-secrets
+        mode: Terminate
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: HTTP/2 is disabled by default because one or more HTTPS listeners
+          on this port use an SDS-backed certificate whose DNS names cannot be inspected.
+          Configure ALPN explicitly with ClientTrafficPolicy to override this default.
+        reason: SDSCertificateOpaque
+        status: "True"
+        type: OverlappingTLSConfig
+      name: sds-multiple
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: inline-same-port
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: sds-mixed
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: sds-tls-terminate
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: sds-cross-namespace
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - name: envoy-gateway/gateway-1/sds-multiple
+        ports:
+        - containerPort: 10443
+          name: https-443
+          protocol: HTTPS
+          servicePort: 443
+      - name: envoy-gateway/gateway-1/sds-mixed
+        ports:
+        - containerPort: 8443
+          name: https-8443
+          protocol: HTTPS
+          servicePort: 8443
+      - name: envoy-gateway/gateway-1/sds-tls-terminate
+        ports:
+        - containerPort: 9443
+          name: tls-9443
+          protocol: TLS
+          servicePort: 9443
+      - name: envoy-gateway/gateway-1/sds-cross-namespace
+        ports:
+        - containerPort: 11443
+          name: https-11443
+          protocol: HTTPS
+          servicePort: 11443
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: TCPRoute
+  metadata:
+    name: sds-tcproute
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: sds-tls-terminate
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: sds-tls-terminate
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 443
+      hostnames:
+      - sds.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: sds-multiple
+      name: envoy-gateway/gateway-1/sds-multiple
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        alpnProtocols: null
+        certificates:
+        - name: envoy-gateway/sds-cert-default
+          sds:
+            address: /var/run/secrets/workload-spiffe-uds/socket
+            scheme: unix
+            secretName: default
+        - name: envoy-gateway/sds-cert-other
+          sds:
+            address: /var/run/secrets/workload-spiffe-uds/socket
+            scheme: unix
+            secretName: other
+      tlsOverlaps: true
+    - address: 0.0.0.0
+      externalPort: 443
+      hostnames:
+      - inline.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: inline-same-port
+      name: envoy-gateway/gateway-1/inline-same-port
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        alpnProtocols: null
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJnVENDQVNlZ0F3SUJBZ0lVRm1sOExCRzBvL1FLNFErWjdrODI0c0MyaUZ3d0NnWUlLb1pJemowRUF3SXcKRmpFVU1CSUdBMVVFQXd3TFptOXZMbUpoY2k1amIyMHdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVdNUlF3RWdZRFZRUUREQXRtYjI4dVltRnlMbU52YlRCWk1CTUdCeXFHU000OUFnRUdDQ3FHClNNNDlBd0VIQTBJQUJMYVl2cUt1VlZveERvNTJlV3p2WUI1anc3RU1GODZybXlvaTVadWF5emRNdnBnNHpCcjgKUktCak5zK1QxakI4T0t1Y1MvN1JVRHgwcHorOTc2ek0zaU9qVXpCUk1CMEdBMVVkRGdRV0JCVE82K2NnMFIwZAp3dHJ6SlFQRzZnNzZoQkJVelRBZkJnTlZIU01FR0RBV2dCVE82K2NnMFIwZHd0cnpKUVBHNmc3NmhCQlV6VEFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUFvR0NDcUdTTTQ5QkFNQ0EwZ0FNRVVDSVFDMlhwUFFnUXpXYWUzYjVwWnQKR2N1TWZESjBjME9QS2NuZWdrWFoyQzRCM2dJZ1Uvc1Jrd0lwTFFOUlYrRWFZdzRQNVQ1Z1BFNlkrVnBtQzk4aApvVmpaL3pRPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          name: envoy-gateway-system/envoy-valid
+          privateKey: '[redacted]'
+    - address: 0.0.0.0
+      externalPort: 8443
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: sds-mixed
+      name: envoy-gateway/gateway-1/sds-mixed
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8443
+      tls:
+        alpnProtocols: null
+        certificates:
+        - name: envoy-gateway/sds-cert-default
+          sds:
+            address: /var/run/secrets/workload-spiffe-uds/socket
+            scheme: unix
+            secretName: default
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJnVENDQVNlZ0F3SUJBZ0lVRm1sOExCRzBvL1FLNFErWjdrODI0c0MyaUZ3d0NnWUlLb1pJemowRUF3SXcKRmpFVU1CSUdBMVVFQXd3TFptOXZMbUpoY2k1amIyMHdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVdNUlF3RWdZRFZRUUREQXRtYjI4dVltRnlMbU52YlRCWk1CTUdCeXFHU000OUFnRUdDQ3FHClNNNDlBd0VIQTBJQUJMYVl2cUt1VlZveERvNTJlV3p2WUI1anc3RU1GODZybXlvaTVadWF5emRNdnBnNHpCcjgKUktCak5zK1QxakI4T0t1Y1MvN1JVRHgwcHorOTc2ek0zaU9qVXpCUk1CMEdBMVVkRGdRV0JCVE82K2NnMFIwZAp3dHJ6SlFQRzZnNzZoQkJVelRBZkJnTlZIU01FR0RBV2dCVE82K2NnMFIwZHd0cnpKUVBHNmc3NmhCQlV6VEFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUFvR0NDcUdTTTQ5QkFNQ0EwZ0FNRVVDSVFDMlhwUFFnUXpXYWUzYjVwWnQKR2N1TWZESjBjME9QS2NuZWdrWFoyQzRCM2dJZ1Uvc1Jrd0lwTFFOUlYrRWFZdzRQNVQ1Z1BFNlkrVnBtQzk4aApvVmpaL3pRPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          name: envoy-gateway-system/envoy-valid
+          privateKey: '[redacted]'
+    - address: 0.0.0.0
+      externalPort: 11443
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: sds-cross-namespace
+      name: envoy-gateway/gateway-1/sds-cross-namespace
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 11443
+      tls:
+        alpnProtocols: null
+        certificates:
+        - name: sds-secrets/sds-cert-cross
+          sds:
+            address: /var/run/secrets/workload-spiffe-uds/socket
+            scheme: unix
+            secretName: cross
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 9443
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: sds-tls-terminate
+      name: envoy-gateway/gateway-1/sds-tls-terminate
+      port: 9443
+      routes:
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: sds-tcproute
+            namespace: default
+          name: tcproute/default/sds-tcproute/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: tcproute/default/sds-tcproute/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
+        metadata:
+          kind: TCPRoute
+          name: sds-tcproute
+          namespace: default
+        name: tcproute/default/sds-tcproute
+        tls:
+          terminate:
+            alpnProtocols: []
+            certificates:
+            - name: envoy-gateway/sds-cert-default
+              sds:
+                address: /var/run/secrets/workload-spiffe-uds/socket
+                scheme: unix
+                secretName: default
+      tls:
+        alpnProtocols: []
+        certificates:
+        - name: envoy-gateway/sds-cert-default
+          sds:
+            address: /var/run/secrets/workload-spiffe-uds/socket
+            scheme: unix
+            secretName: default

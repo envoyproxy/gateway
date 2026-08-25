@@ -39,126 +39,21 @@ const (
 	ResponseBodyConfigMapKey = "response.body"
 )
 
-// btpRoutingKey identifies a BTP routing type target
-type btpRoutingKey struct {
-	Kind, Namespace, Name, SectionName string
-}
-
-// BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies
-// This avoids an O(BTPs) lookup for every iteration of processDestination.
+// BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies, keyed by attachment
+// scope. This avoids an O(BTPs) lookup for every iteration of processDestination.
 type BTPRoutingTypeIndex struct {
-	routeRuleLevel           map[btpRoutingKey]*egv1a1.RoutingType
-	routeLevel               map[btpRoutingKey]*egv1a1.RoutingType
-	listenerSetListenerLevel map[btpRoutingKey]*egv1a1.RoutingType
-	listenerSetLevel         map[btpRoutingKey]*egv1a1.RoutingType
-	listenerLevel            map[btpRoutingKey]*egv1a1.RoutingType
-	gatewayLevel             map[btpRoutingKey]*egv1a1.RoutingType
+	*policyIndex[*egv1a1.RoutingType]
 }
 
-// BuildBTPRoutingTypeIndex builds a pre-computed index of RoutingType values
-// from BackendTrafficPolicies, organized by priority-level.
-// BTPs are pre-sorted by the provider layer, so first-write-wins respects priority.
-func hasBTPRoutingType(btps []*egv1a1.BackendTrafficPolicy) bool {
-	for _, btp := range btps {
-		if btp.Spec.RoutingType != nil {
-			return true
-		}
-	}
-
-	return false
+// newBTPRoutingTypeIndex allocates a BTPRoutingTypeIndex.
+func newBTPRoutingTypeIndex() *BTPRoutingTypeIndex {
+	return &BTPRoutingTypeIndex{policyIndex: newPolicyIndex[*egv1a1.RoutingType]()}
 }
 
-func BuildBTPRoutingTypeIndex(
-	btps []*egv1a1.BackendTrafficPolicy,
-	routes []client.Object,
-	gateways []*GatewayContext,
-	listenerSets []*gwapiv1.ListenerSet,
-	referenceGrants []*gwapiv1b1.ReferenceGrant,
-	namespaceLookup func(string) *corev1.Namespace,
-) *BTPRoutingTypeIndex {
-	idx := &BTPRoutingTypeIndex{
-		routeRuleLevel:           make(map[btpRoutingKey]*egv1a1.RoutingType),
-		routeLevel:               make(map[btpRoutingKey]*egv1a1.RoutingType),
-		listenerSetListenerLevel: make(map[btpRoutingKey]*egv1a1.RoutingType),
-		listenerSetLevel:         make(map[btpRoutingKey]*egv1a1.RoutingType),
-		listenerLevel:            make(map[btpRoutingKey]*egv1a1.RoutingType),
-		gatewayLevel:             make(map[btpRoutingKey]*egv1a1.RoutingType),
-	}
-
-	// Combine supported targets into a single target slice for target resolution.
-	allTargets := make([]client.Object, 0, len(routes)+len(gateways)+len(listenerSets))
-	allTargets = append(allTargets, routes...)
-	for _, gw := range gateways {
-		allTargets = append(allTargets, gw)
-	}
-	for _, ls := range listenerSets {
-		allTargets = append(allTargets, ls)
-	}
-
-	for _, btp := range btps {
-		if btp.Spec.RoutingType == nil {
-			continue
-		}
-		refs := resolvePolicyTargets(
-			btp.Spec.PolicyTargetReferences,
-			allTargets,
-			referenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindBackendTrafficPolicy,
-			btp.Namespace,
-			namespaceLookup,
-		)
-		for _, ref := range refs {
-			kind := string(ref.Kind)
-			key := btpRoutingKey{
-				Kind:        kind,
-				Namespace:   string(ref.Namespace),
-				Name:        string(ref.Name),
-				SectionName: string(ptr.Deref(ref.SectionName, "")),
-			}
-
-			switch kind {
-			case resource.KindGateway:
-				if ref.SectionName != nil {
-					if _, exists := idx.listenerLevel[key]; !exists {
-						idx.listenerLevel[key] = btp.Spec.RoutingType
-					}
-				} else {
-					if _, exists := idx.gatewayLevel[key]; !exists {
-						idx.gatewayLevel[key] = btp.Spec.RoutingType
-					}
-				}
-			case resource.KindListenerSet:
-				if ref.SectionName != nil {
-					if _, exists := idx.listenerSetListenerLevel[key]; !exists {
-						idx.listenerSetListenerLevel[key] = btp.Spec.RoutingType
-					}
-				} else {
-					if _, exists := idx.listenerSetLevel[key]; !exists {
-						idx.listenerSetLevel[key] = btp.Spec.RoutingType
-					}
-				}
-			default:
-				if ref.SectionName != nil {
-					if _, exists := idx.routeRuleLevel[key]; !exists {
-						idx.routeRuleLevel[key] = btp.Spec.RoutingType
-					}
-				} else {
-					if _, exists := idx.routeLevel[key]; !exists {
-						idx.routeLevel[key] = btp.Spec.RoutingType
-					}
-				}
-			}
-		}
-	}
-
-	return idx
-}
-
-// LookupBTPRoutingType resolves the RoutingType for a specific route rule
-// and gateway/listener combination by checking the index in
-// priority order: routeRule > route > listener > gateway.
-// Returns nil if no matching BTP RoutingType is found, or if the index is nil.
+// LookupBTPRoutingType resolves the RoutingType for a specific route rule and
+// gateway/listener/listenerSet combination by checking the index in priority order: routeRule >
+// route > listener/listenerSet > gateway, honoring MergeType. Returns nil if no matching BTP
+// RoutingType is found, or if the index is nil.
 func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	routeKind gwapiv1.Kind,
 	routeNN types.NamespacedName,
@@ -170,80 +65,204 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	if idx == nil {
 		return nil
 	}
+	routingType, _ := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
+	return routingType
+}
 
-	// 1. Route-rule level (most specific)
-	if routeRuleName != nil {
-		key := btpRoutingKey{
-			Kind:        string(routeKind),
-			Namespace:   routeNN.Namespace,
-			Name:        routeNN.Name,
-			SectionName: string(*routeRuleName),
-		}
-		if rt, ok := idx.routeRuleLevel[key]; ok {
-			return rt
-		}
+// LookupGatewayBTRoutingType resolves the RoutingType pinned directly at gatewayNN, ignoring any
+// listener/listenerSet/route/route-rule level override. Returns nil if no matching BTP RoutingType
+// is found, or if the index is nil.
+func (idx *BTPRoutingTypeIndex) LookupGatewayBTRoutingType(gatewayNN types.NamespacedName) *egv1a1.RoutingType {
+	if idx == nil {
+		return nil
+	}
+	routingType, _ := idx.LookupExact(gatewayScope(gatewayNN))
+	return routingType
+}
+
+// btpSpecHasClusterScopedFields reports whether spec sets any backend-cluster-scoped (CDS) field —
+// either directly inside its embedded ClusterSettings, or via a sibling field on the spec that also
+// affects the generated Cluster resource.
+func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
+	if spec == nil {
+		return false
+	}
+	return spec.LoadBalancer != nil ||
+		spec.ProxyProtocol != nil ||
+		spec.HealthCheck != nil ||
+		spec.CircuitBreaker != nil ||
+		spec.Timeout != nil ||
+		spec.TCPKeepalive != nil ||
+		spec.Connection != nil ||
+		spec.HTTP2 != nil ||
+		spec.DNS != nil ||
+		spec.AdmissionControl != nil ||
+		spec.UseClientProtocol != nil
+}
+
+// BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
+// BackendTrafficPolicy sets a cluster-scoped field, or has MergeType unset.
+type BTPClusterSettingsIndex struct {
+	*policyIndex[bool]
+}
+
+// newBTPClusterSettingsIndex allocates a BTPClusterSettingsIndex.
+func newBTPClusterSettingsIndex() *BTPClusterSettingsIndex {
+	return &BTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
+}
+
+// HasClusterSettingsBelowGateway reports whether a route-rule, route, listener, or ListenerSet-level
+// BackendTrafficPolicy contributes backend-cluster-scoped settings for the given target, or
+// targets it with MergeType unset. A gateway-level setting is never the answer here: it applies
+// uniformly to every route sharing a merged cluster, so it can't cause a divergence -
+// BuildBTPIndexes never writes a gateway-scope entry into this index at all, so Lookup's walk to
+// gatewayScope is a guaranteed miss, not just a value this method happens to ignore.
+func (idx *BTPClusterSettingsIndex) HasClusterSettingsBelowGateway(
+	routeKind gwapiv1.Kind,
+	routeNN types.NamespacedName,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	listenerSetNN *types.NamespacedName,
+	routeRuleName *gwapiv1.SectionName,
+) bool {
+	if idx == nil {
+		return false
+	}
+	hasClusterSettings, replacesParent := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
+	// replacesParent catches what hasClusterSettings alone would miss: a rule's own BTP with
+	// MergeType nil and no cluster-scoped field (false) still resolves to its own empty settings,
+	// not the gateway's - diverging from a sibling rule that has no BTP and does inherit the
+	// gateway's.
+	return hasClusterSettings || replacesParent
+}
+
+// BTPLoadBalancerIndex reports, per gateway, whether a BackendTrafficPolicy attached to it sets
+// LoadBalancer to ConsistentHash.
+type BTPLoadBalancerIndex struct {
+	*policyIndex[bool]
+}
+
+// newBTPLoadBalancerIndex allocates a BTPLoadBalancerIndex.
+func newBTPLoadBalancerIndex() *BTPLoadBalancerIndex {
+	return &BTPLoadBalancerIndex{policyIndex: newPolicyIndex[bool]()}
+}
+
+// IsConsistentHash reports whether gatewayNN has a BackendTrafficPolicy setting LoadBalancer to
+// ConsistentHash.
+func (idx *BTPLoadBalancerIndex) IsConsistentHash(gatewayNN types.NamespacedName) bool {
+	if idx == nil {
+		return false
+	}
+	isConsistentHash, _ := idx.LookupExact(gatewayScope(gatewayNN))
+	return isConsistentHash
+}
+
+// BTPIndexes groups the three pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
+// together in one pass over btps.
+type BTPIndexes struct {
+	RoutingType     *BTPRoutingTypeIndex
+	ClusterSettings *BTPClusterSettingsIndex
+	LoadBalancer    *BTPLoadBalancerIndex
+}
+
+// BuildBTPIndexes builds BTPIndexes, resolving each BackendTrafficPolicy's targets at most once.
+func BuildBTPIndexes(
+	btps []*egv1a1.BackendTrafficPolicy,
+	routes []client.Object,
+	gateways []*GatewayContext,
+	listenerSets []*gwapiv1.ListenerSet,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	namespaceLookup func(string) *corev1.Namespace,
+	mergeBackendsEnabled bool,
+) *BTPIndexes {
+	routingTypeIdx := newBTPRoutingTypeIndex()
+	clusterSettingsIdx := newBTPClusterSettingsIndex()
+	loadBalancerIdx := newBTPLoadBalancerIndex()
+
+	allTargets := make([]client.Object, 0, len(routes)+len(gateways)+len(listenerSets))
+	allTargets = append(allTargets, routes...)
+	for _, gw := range gateways {
+		allTargets = append(allTargets, gw)
+	}
+	for _, ls := range listenerSets {
+		allTargets = append(allTargets, ls)
 	}
 
-	// 2. Route level
-	routeKey := btpRoutingKey{
-		Kind:      string(routeKind),
-		Namespace: routeNN.Namespace,
-		Name:      routeNN.Name,
-	}
-	if rt, ok := idx.routeLevel[routeKey]; ok {
-		return rt
-	}
+	for _, btp := range btps {
+		hasRoutingType := btp.Spec.RoutingType != nil
+		hasClusterScoped := btpSpecHasClusterScopedFields(&btp.Spec)
+		hasLoadBalancer := btp.Spec.LoadBalancer != nil
 
-	// 3. ListenerSet listener level, then ListenerSet level for routes attached through a ListenerSet.
-	if listenerSetNN != nil {
-		if listenerName != nil {
-			listenerSetListenerKey := btpRoutingKey{
-				Kind:        resource.KindListenerSet,
-				Namespace:   listenerSetNN.Namespace,
-				Name:        listenerSetNN.Name,
-				SectionName: string(*listenerName),
+		// Unlike ClusterSettings/LoadBalancer, RoutingType can never be skipped here: every
+		// accepted BTP must claim its target's first-write-wins slot, even one that sets nothing
+		// at all, so a younger conflicting policy can't silently win, and so a route/rule-level
+		// policy with MergeType unset can still pin its scope to nil instead of inheriting.
+		refs := resolvePolicyTargets(
+			btp.Spec.PolicyTargetReferences,
+			allTargets,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
+			btp.Namespace,
+			namespaceLookup,
+		)
+
+		for _, ref := range refs {
+			kind := string(ref.Kind)
+			nn := types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}
+
+			switch {
+			case kind == resource.KindGateway && ref.SectionName != nil:
+				routingTypeIdx.setGatewayListenerLevel(nn, *ref.SectionName, btp.Spec.RoutingType, hasRoutingType)
+			case kind == resource.KindGateway:
+				routingTypeIdx.setGatewayLevel(nn, btp.Spec.RoutingType)
+			case kind == resource.KindListenerSet && ref.SectionName != nil:
+				routingTypeIdx.setListenerSetListenerLevel(nn, *ref.SectionName, btp.Spec.RoutingType, hasRoutingType)
+			case kind == resource.KindListenerSet:
+				routingTypeIdx.setListenerSetLevel(nn, btp.Spec.RoutingType, hasRoutingType)
+			case ref.SectionName != nil:
+				routingTypeIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, btp.Spec.RoutingType, btp.Spec.MergeType)
+			default:
+				routingTypeIdx.setRouteLevel(nn, kind, btp.Spec.RoutingType, btp.Spec.MergeType)
 			}
-			if rt, ok := idx.listenerSetListenerLevel[listenerSetListenerKey]; ok {
-				return rt
+
+			// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
+			// accepted gateway can enable merging; RoutingType (above) applies regardless.
+			if mergeBackendsEnabled {
+				switch {
+				case kind == resource.KindGateway && ref.SectionName != nil:
+					clusterSettingsIdx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+				case kind == resource.KindGateway:
+					// Gateway-level settings apply uniformly to every route sharing a merged
+					// cluster, so they don't disqualify merging - no entry needed.
+				case kind == resource.KindListenerSet && ref.SectionName != nil:
+					clusterSettingsIdx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+				case kind == resource.KindListenerSet:
+					clusterSettingsIdx.setListenerSetLevel(nn, hasClusterScoped, true)
+				case ref.SectionName != nil:
+					clusterSettingsIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, hasClusterScoped, btp.Spec.MergeType)
+				default:
+					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
+				}
+
+				switch {
+				case kind == resource.KindGateway && ref.SectionName == nil:
+					// Every accepted Gateway-wide BTP must claim this slot, even one that leaves
+					// LoadBalancer unset, so a younger conflicting BTP can't silently win it.
+					loadBalancerIdx.setGatewayLevel(nn, hasLoadBalancer && btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType)
+				default:
+					// A listener/listenerSet/route-rule/route-level LoadBalancer setting already disqualifies
+					// its own rule from merging on its own, so it's never looked up here.
+				}
 			}
 		}
-
-		listenerSetKey := btpRoutingKey{
-			Kind:      resource.KindListenerSet,
-			Namespace: listenerSetNN.Namespace,
-			Name:      listenerSetNN.Name,
-		}
-		if rt, ok := idx.listenerSetLevel[listenerSetKey]; ok {
-			return rt
-		}
 	}
 
-	// 4. Gateway listener level. ListenerSet-attached routes intentionally skip
-	// Gateway listener policy lookup because Gateway listeners and ListenerSet
-	// listeners are sibling scopes.
-	if listenerSetNN == nil && listenerName != nil {
-		listenerKey := btpRoutingKey{
-			Kind:        resource.KindGateway,
-			Namespace:   gatewayNN.Namespace,
-			Name:        gatewayNN.Name,
-			SectionName: string(*listenerName),
-		}
-		if rt, ok := idx.listenerLevel[listenerKey]; ok {
-			return rt
-		}
+	return &BTPIndexes{
+		RoutingType:     routingTypeIdx,
+		ClusterSettings: clusterSettingsIdx,
+		LoadBalancer:    loadBalancerIdx,
 	}
-
-	// 5. Gateway level (least specific)
-	gwKey := btpRoutingKey{
-		Kind:      resource.KindGateway,
-		Namespace: gatewayNN.Namespace,
-		Name:      gatewayNN.Name,
-	}
-	if rt, ok := idx.gatewayLevel[gwKey]; ok {
-		return rt
-	}
-
-	return nil
 }
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
@@ -372,47 +391,52 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		}
 	}
 
-	// Process the policies targeting ListenerSet Listeners
-	for i, currPolicy := range backendTrafficPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
-		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
-		for _, currTarget := range targetRefs {
-			if isListenerSetListener(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = backendTrafficPolicies[i]
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
+	// Only run the ListenerSet-specific translation when at least one ListenerSet exists.
+	// When none are present, no policy can successfully attach to a ListenerSet (the target resolves to
+	// nil and processing returns early), so these loops would be pure overhead.
+	if len(resources.ListenerSets) > 0 {
+		// Process the policies targeting ListenerSet Listeners
+		for i, currPolicy := range backendTrafficPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+			targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+			for _, currTarget := range targetRefs {
+				if isListenerSetListener(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = backendTrafficPolicies[i]
+						handledPolicies[policyName] = policy
+						res = append(res, policy)
+					}
+					t.processBackendTrafficPolicyForListenerSet(xdsIR,
+						gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
 				}
-				t.processBackendTrafficPolicyForListenerSet(xdsIR,
-					gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
 			}
 		}
-	}
 
-	// Process the policies targeting ListenerSets
-	for i, currPolicy := range backendTrafficPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := resolvePolicyTargets(
-			currPolicy.Spec.PolicyTargetReferences,
-			resources.ListenerSets,
-			resources.ReferenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindBackendTrafficPolicy,
-			currPolicy.Namespace,
-			t.GetNamespace,
-		)
-		for _, currTarget := range targetRefs {
-			if isListenerSet(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = backendTrafficPolicies[i]
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
+		// Process the policies targeting ListenerSets
+		for i, currPolicy := range backendTrafficPolicies {
+			policyName := utils.NamespacedName(currPolicy)
+			targetRefs := resolvePolicyTargets(
+				currPolicy.Spec.PolicyTargetReferences,
+				resources.ListenerSets,
+				resources.ReferenceGrants,
+				egv1a1.GroupName,
+				egv1a1.KindBackendTrafficPolicy,
+				currPolicy.Namespace,
+				t.GetNamespace,
+			)
+			for _, currTarget := range targetRefs {
+				if isListenerSet(currTarget) {
+					policy, found := handledPolicies[policyName]
+					if !found {
+						policy = backendTrafficPolicies[i]
+						handledPolicies[policyName] = policy
+						res = append(res, policy)
+					}
+					t.processBackendTrafficPolicyForListenerSet(xdsIR,
+						gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
 				}
-				t.processBackendTrafficPolicyForListenerSet(xdsIR,
-					gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
 			}
 		}
 	}
@@ -611,7 +635,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// parentRefCtxs holds parent gateway/listener contexts for using in policy merge logic.
 	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
 	routeNN := utils.NamespacedName(targetedRoute)
-	routeAsChildScope := routeScope(routeNN)
+	routeAsChildScope := routeScope(routeNN, string(targetedRoute.GetRouteType()))
 	for _, p := range parentRefs {
 		parentNamespace := targetedRoute.GetNamespace()
 		if p.Namespace != nil {
@@ -1640,25 +1664,27 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
-		RateLimit:         rl,
-		BandwidthLimit:    bl,
-		LoadBalancer:      lb,
-		ProxyProtocol:     pp,
-		HealthCheck:       hc,
-		CircuitBreaker:    cb,
-		FaultInjection:    fi,
-		AdmissionControl:  ac,
-		TCPKeepalive:      ka,
-		Retry:             rt,
-		BackendConnection: bc,
-		HTTP2:             h2,
-		DNS:               ds,
-		Timeout:           to,
-		ResponseOverride:  ro,
-		RequestBuffer:     rb,
-		Compression:       cp,
-		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
+		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+			LoadBalancer:      lb,
+			ProxyProtocol:     pp,
+			HealthCheck:       hc,
+			AdmissionControl:  ac,
+			CircuitBreaker:    cb,
+			Timeout:           to,
+			TCPKeepalive:      ka,
+			BackendConnection: bc,
+			HTTP2:             h2,
+			DNS:               ds,
+		},
+		RateLimit:        rl,
+		BandwidthLimit:   bl,
+		FaultInjection:   fi,
+		Retry:            rt,
+		ResponseOverride: ro,
+		Compression:      cp,
+		HTTPUpgrade:      httpUpgrade,
+		Telemetry:        buildBackendTelemetry(policy.Spec.Telemetry),
+		RequestBuffer:    rb,
 	}, errs
 }
 
@@ -1704,7 +1730,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
 		gtwCtx,
-		gatewayBackendTrafficPolicyTargetListeners(gtwCtx, target),
+		gatewayPolicyTargetListeners(gtwCtx, target),
+		target.SectionName == nil,
 		xdsIR,
 	)
 }
@@ -1719,52 +1746,17 @@ func (t *Translator) translateBackendTrafficPolicyForListenerSet(
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
 		gtwCtx,
-		listenerSetBackendTrafficPolicyTargetListeners(gtwCtx, listenerSet, target),
+		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
+		false,
 		xdsIR,
 	)
-}
-
-func gatewayBackendTrafficPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if target.SectionName != nil {
-			if listener.isFromListenerSet() || listener.Name != *target.SectionName {
-				continue
-			}
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
-}
-
-func listenerSetBackendTrafficPolicyTargetListeners(
-	gtwCtx *GatewayContext,
-	listenerSet *gwapiv1.ListenerSet,
-	target policyTargetReferenceWithSectionName,
-) []*ListenerContext {
-	listeners := make([]*ListenerContext, 0, len(gtwCtx.listeners))
-	for _, listener := range gtwCtx.listeners {
-		if !listener.isFromListenerSet() {
-			continue
-		}
-		if listener.listenerSet.Namespace != listenerSet.Namespace || listener.listenerSet.Name != listenerSet.Name {
-			continue
-		}
-		if target.SectionName != nil && listener.Name != *target.SectionName {
-			continue
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners
 }
 
 func (t *Translator) translateBackendTrafficPolicyForListeners(
 	policy *egv1a1.BackendTrafficPolicy,
 	gtwCtx *GatewayContext,
 	targetListeners []*ListenerContext,
+	applyToBackendClusters bool,
 	xdsIR resource.XdsIRMap,
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy, nil)
@@ -1867,6 +1859,19 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 			"routes", sets.List(routesWithDirectResponse),
 			"error", errs,
 		)
+	}
+
+	// Gateway-level Traffic is the only level safe to apply uniformly to a merged cluster: a
+	// route/rule-level BackendTrafficPolicy that would conflict is already excluded from merging
+	// via hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here.
+	if applyToBackendClusters && errs == nil {
+		for _, bc := range x.BackendClusters {
+			bc.Traffic = tf.ClusterTrafficFeatures.DeepCopy()
+			// Drop the route-scoped timeout members: they are never read from a cluster, and a
+			// merged cluster must not advertise settings it cannot honor.
+			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
+			bc.UseClientProtocol = policy.Spec.UseClientProtocol
+		}
 	}
 
 	return errs
@@ -2410,13 +2415,13 @@ func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
 }
 
 func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
-	triggerSet := sets.NewString()
+	triggerSet := sets.New[string]()
 	for _, r := range in {
 		triggerSet.Insert(string(r))
 	}
 	irTriggers := make([]ir.TriggerEnum, 0, triggerSet.Len())
 
-	for _, r := range triggerSet.List() {
+	for _, r := range sets.List(triggerSet) {
 		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers
@@ -2472,6 +2477,10 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, 
 					Value: code.Value,
 				})
 			}
+		}
+
+		for _, h := range ro.Match.ResponseHeaders {
+			match.ResponseHeaders = append(match.ResponseHeaders, *irStringMatch(string(h.Name), h.Value))
 		}
 
 		if ro.Redirect != nil {

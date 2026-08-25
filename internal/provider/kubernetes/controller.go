@@ -80,6 +80,7 @@ type gatewayAPIReconciler struct {
 	gatewayNamespaceMode bool
 
 	backendCRDExists       bool
+	btlsCRDExists          bool
 	btpCRDExists           bool
 	ctpCRDExists           bool
 	eepCRDExists           bool
@@ -452,6 +453,15 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			gcLogger.Error(err, "failed to process EnvoyTLSSecret")
 		}
 
+		// add the rate limit Service and its EndpointSlices to the resourceTree
+		if err = r.processRateLimitService(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing rate limit Service")
+				return reconcile.Result{}, err
+			}
+			gcLogger.Error(err, "failed to process rate limit Service")
+		}
+
 		// Add all Gateways, their associated ListenerSets, Routes, and referenced resources to the resourceTree
 		if err = r.processGateways(ctx, managedGC, gwcResource, gwcResourceMapping); err != nil {
 			if isTransientError(err) {
@@ -506,12 +516,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		// Add all BackendTLSPolies to the resourceTree
-		if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing BackendTLSPolicies")
-				return reconcile.Result{}, err
+		if r.btlsCRDExists {
+			if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
+				if isTransientError(err) {
+					gcLogger.Error(err, "transient error processing BackendTLSPolicies")
+					return reconcile.Result{}, err
+				}
+				gcLogger.Error(err, "failed to process BackendTLSPolicies for GatewayClass")
 			}
-			gcLogger.Error(err, "failed to process BackendTLSPolicies for GatewayClass")
 		}
 
 		if r.eepCRDExists {
@@ -1274,6 +1286,56 @@ func (r *gatewayAPIReconciler) processEnvoyTLSSecret(ctx context.Context, resour
 		resourceMap.allAssociatedSecrets.Insert(key)
 		resourceTree.Secrets = append(resourceTree.Secrets, &secret)
 		r.log.Info("processing Envoy TLS Secret", "namespace", r.namespace, "name", envoyTLSSecretName)
+	}
+	return nil
+}
+
+// processRateLimitService adds the in-cluster envoy-ratelimit Service and its
+// EndpointSlices to the resourceTree. Unlike other backends, this Service is
+// never referenced by a Gateway API backendRef, so processBackendRefs never
+// picks it up on its own. The gatewayapi translator uses these resources to
+// build an EDS-based ratelimit_cluster instead of falling back to the
+// DNS-resolved rate limit service address.
+func (r *gatewayAPIReconciler) processRateLimitService(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
+	if r.envoyGateway == nil || r.envoyGateway.RateLimit == nil {
+		// Global rate limiting isn't configured, so the rate limit Service won't exist.
+		return nil
+	}
+
+	var service corev1.Service
+	if err := r.client.Get(ctx,
+		types.NamespacedName{Namespace: r.namespace, Name: rateLimitServiceName},
+		&service,
+	); err != nil {
+		return err
+	}
+
+	svcKey := utils.NamespacedName(&service).String()
+	if !resourceMap.allAssociatedServices.Has(svcKey) {
+		resourceMap.allAssociatedServices.Insert(svcKey)
+		resourceTree.Services = append(resourceTree.Services, &service)
+		r.log.Info("processing rate limit Service", "namespace", r.namespace, "name", rateLimitServiceName)
+	}
+
+	endpointSliceList := new(discoveryv1.EndpointSliceList)
+	opts := []client.ListOption{client.InNamespace(r.namespace)}
+	if r.endpointSliceIndexEnabled() {
+		opts = append(opts, client.MatchingFields{serviceEndpointSliceIndex: rateLimitServiceName})
+	} else {
+		opts = append(opts, client.MatchingLabels{discoveryv1.LabelServiceName: rateLimitServiceName})
+	}
+	if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
+		return err
+	}
+	for i := range endpointSliceList.Items {
+		endpointSlice := &endpointSliceList.Items[i]
+		key := utils.NamespacedName(endpointSlice).String()
+		if !resourceMap.allAssociatedEndpointSlices.Has(key) {
+			resourceMap.allAssociatedEndpointSlices.Insert(key)
+			resourceTree.EndpointSlices = append(resourceTree.EndpointSlices, endpointSlice)
+			r.log.Info("processing EndpointSlice for rate limit Service",
+				"namespace", endpointSlice.Namespace, "name", endpointSlice.Name)
+		}
 	}
 	return nil
 }
@@ -2830,27 +2892,37 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	// Watch BackendTLSPolicy
-	btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
-	}
-	if r.namespaceLabel != nil {
-		btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
-			return r.hasMatchingNamespaceLabels(btp)
-		}))
-	}
-
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
-				return r.enqueueClass(ctx, btp)
-			}),
-			btlsPredicates...)); err != nil {
+	// BackendTLSPolicy is in the standard channel from Gateway API v1.4 onwards,
+	// but a cluster can still be serving an older standard bundle without it.
+	r.btlsCRDExists, err = checkCRD(resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
+	if err != nil {
 		return err
 	}
+	if !r.btlsCRDExists {
+		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
+	} else {
+		// Watch BackendTLSPolicy
+		btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
+		}
+		if r.namespaceLabel != nil {
+			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
+				return r.hasMatchingNamespaceLabels(btp)
+			}))
+		}
 
-	if err := addBtlsIndexers(ctx, mgr); err != nil {
-		return err
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
+					return r.enqueueClass(ctx, btp)
+				}),
+				btlsPredicates...)); err != nil {
+			return err
+		}
+
+		if err := addBtlsIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	r.eepCRDExists, err = checkCRD(resource.KindEnvoyExtensionPolicy, egv1a1.GroupVersion.String())
@@ -3266,8 +3338,9 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 			}
 			_, foundTargetRef := policySpec["targetRef"]
 			_, foundTargetRefs := policySpec["targetRefs"]
-			if !foundTargetRef && !foundTargetRefs {
-				return fmt.Errorf("not a policy object - no targetRef or targetRefs found in %s.%s %s",
+			_, foundTargetSelectors := policySpec["targetSelectors"]
+			if !foundTargetRef && !foundTargetRefs && !foundTargetSelectors {
+				return fmt.Errorf("not a policy object - no targetRef or targetRefs or targetSelectors found in %s.%s %s",
 					policy.GetAPIVersion(), policy.GetKind(), policy.GetName())
 			}
 

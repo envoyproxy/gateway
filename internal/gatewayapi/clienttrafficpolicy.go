@@ -15,11 +15,13 @@ import (
 	"time"
 
 	perr "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -39,6 +41,94 @@ const (
 	scopeEntireGateway     ctpAttachScope = iota
 	scopeEntireListenerSet ctpAttachScope = iota
 )
+
+// ctpSpecHasClusterScopedFields reports whether spec sets a listener-level HTTP1 field.
+func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
+	return spec != nil && spec.HTTP1 != nil
+}
+
+// CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy
+// sets a cluster-affecting field. Gateway-wide settings (no SectionName) aren't tracked, since a
+// merged cluster never spans gateways and so can never see them diverge.
+type CTPClusterSettingsIndex struct {
+	*policyIndex[bool]
+}
+
+// newCTPClusterSettingsIndex allocates a CTPClusterSettingsIndex.
+func newCTPClusterSettingsIndex() *CTPClusterSettingsIndex {
+	return &CTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
+}
+
+// HasClusterSettingsBelowGateway reports whether listener (which belongs to gatewayNN, either
+// directly or via a ListenerSet) has a ClientTrafficPolicy-sourced cluster-scoped setting,
+// checked against its own owner (the Gateway, or the ListenerSet it came from).
+func (idx *CTPClusterSettingsIndex) HasClusterSettingsBelowGateway(gatewayNN types.NamespacedName, listener *ListenerContext) bool {
+	if idx == nil {
+		return false
+	}
+	if listener.isFromListenerSet() {
+		lsNN := types.NamespacedName{Namespace: listener.listenerSet.Namespace, Name: listener.listenerSet.Name}
+		if hasClusterSettings, found := idx.LookupExact(listenerSetScope(lsNN)); found && hasClusterSettings {
+			return true
+		}
+		if hasClusterSettings, found := idx.LookupExact(listenerSetListenerScope(lsNN, listener.Name)); found && hasClusterSettings {
+			return true
+		}
+		return false
+	}
+	if hasClusterSettings, found := idx.LookupExact(gatewayListenerScope(gatewayNN, listener.Name)); found && hasClusterSettings {
+		return true
+	}
+	return false
+}
+
+// BuildCTPClusterSettingsIndex builds a CTPClusterSettingsIndex.
+func BuildCTPClusterSettingsIndex(
+	ctps []*egv1a1.ClientTrafficPolicy,
+	gateways []*GatewayContext,
+	listenerSets []*gwapiv1.ListenerSet,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	namespaceLookup func(string) *corev1.Namespace,
+	mergeBackendsEnabled bool,
+) *CTPClusterSettingsIndex {
+	idx := newCTPClusterSettingsIndex()
+	// Moot when no accepted gateway can enable merging.
+	if !mergeBackendsEnabled {
+		return idx
+	}
+
+	for _, ctp := range ctps {
+		hasClusterScoped := ctpSpecHasClusterScopedFields(&ctp.Spec)
+
+		refs := resolvePolicyTargetsForGatewayAndListenerSet(
+			ctp.Spec.PolicyTargetReferences,
+			gateways,
+			listenerSets,
+			referenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindClientTrafficPolicy,
+			ctp.Namespace,
+			namespaceLookup,
+		)
+
+		for _, ref := range refs {
+			nn := types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}
+			switch {
+			case ref.Kind == resource.KindGateway && ref.SectionName != nil:
+				idx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+			case ref.Kind == resource.KindGateway:
+				// Gateway-wide settings apply uniformly to every route sharing a merged cluster,
+				// so they don't disqualify merging - no entry needed.
+			case ref.Kind == resource.KindListenerSet && ref.SectionName != nil:
+				idx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+			case ref.Kind == resource.KindListenerSet:
+				idx.setListenerSetLevel(nn, hasClusterScoped, true)
+			}
+		}
+	}
+
+	return idx
+}
 
 func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
@@ -854,6 +944,20 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			}
 			irTCPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
 		}
+		if clientTimeout.TCP.TLSHandshakeTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.TCP.TLSHandshakeTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid TCP TLSHandshakeTimeout value %s", *clientTimeout.TCP.TLSHandshakeTimeout)
+			}
+			irTCPTimeout.TLSHandshakeTimeout = ir.MetaV1DurationPtr(d)
+		}
+		if clientTimeout.TCP.ConnectionInspectionTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.TCP.ConnectionInspectionTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid TCP ConnectionInspectionTimeout value %s", *clientTimeout.TCP.ConnectionInspectionTimeout)
+			}
+			irTCPTimeout.ConnectionInspectionTimeout = ir.MetaV1DurationPtr(d)
+		}
 		irClientTimeout.TCP = irTCPTimeout
 	}
 
@@ -882,6 +986,14 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			}
 			irHTTPTimeout.StreamIdleTimeout = ir.MetaV1DurationPtr(d)
 		}
+
+		if clientTimeout.HTTP.RequestHeadersReceivedTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestHeadersReceivedTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid HTTP RequestHeadersReceivedTimeout value %s", *clientTimeout.HTTP.RequestHeadersReceivedTimeout)
+			}
+			irHTTPTimeout.RequestHeadersReceivedTimeout = ir.MetaV1DurationPtr(d)
+		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
 
@@ -896,6 +1008,10 @@ func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSetti
 
 	httpIR.ClientIPDetection = (*ir.ClientIPDetectionSettings)(clientIPDetection)
 }
+
+// maxRequestHeaderLimitKB is the maximum value (in KiB) that Envoy supports for
+// the HTTP connection manager max_request_headers_kb setting.
+const maxRequestHeaderLimitKB = 8192
 
 func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, httpIR *ir.HTTPListener) error {
 	if headerSettings == nil {
@@ -930,6 +1046,25 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	}
 
 	var errs error
+
+	if headerSettings.MaxRequestHeaderLimit != nil {
+		// Envoy's max_request_headers_kb is expressed in KiB, so convert the
+		// byte quantity and round up to the nearest KiB.
+		bytes, ok := headerSettings.MaxRequestHeaderLimit.AsInt64()
+		switch {
+		case !ok || bytes < 1024:
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s must be at least 1Ki", headerSettings.MaxRequestHeaderLimit.String()))
+		// Compare against the byte-equivalent of the max before rounding up, so a
+		// bytes value close to math.MaxInt64 can't overflow the "bytes + 1023"
+		// addition below and slip past the maximum check.
+		case bytes > maxRequestHeaderLimitKB*1024:
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s exceeds the maximum of %dKi", headerSettings.MaxRequestHeaderLimit.String(), maxRequestHeaderLimitKB))
+		default:
+			kb := (bytes + 1023) / 1024
+			httpIR.Headers.MaxRequestHeadersKB = new(uint32)
+			*httpIR.Headers.MaxRequestHeadersKB = uint32(kb)
+		}
+	}
 
 	if headerSettings.EarlyRequestHeaders != nil {
 		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
@@ -1132,7 +1267,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		seenCACerts := make(map[[sha256.Size]byte]struct{})
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, resources, from, CACertKey)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
@@ -1171,7 +1306,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, CRLKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, resources, from, CRLKey)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}
@@ -1204,10 +1339,13 @@ func (t *Translator) buildListenerTLSParameters(
 // validateAndGetDataAtKeyInRef validates the secret object reference and gets the data at the key in the secret or configmap
 func (t *Translator) validateAndGetDataAtKeyInRef(
 	ref gwapiv1.SecretObjectReference,
-	key string,
 	resources *resource.Resources,
 	from crossNamespaceFrom,
+	keys ...string,
 ) ([]byte, error) {
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("unsupported call with no key")
+	}
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
@@ -1216,9 +1354,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		secretCertBytes, ok := getOrFirstFromData(secret.Data, key)
+		secretCertBytes, ok := getFirstMatchOrFirstFromData(secret.Data, keys...)
 		if !ok || len(secretCertBytes) == 0 {
-			return nil, fmt.Errorf("ref secret [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref secret [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
@@ -1227,9 +1365,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		configMapData, ok := getOrFirstFromData(configMap.Data, key)
+		configMapData, ok := getFirstMatchOrFirstFromData(configMap.Data, keys...)
 		if !ok || len(configMapData) == 0 {
-			return nil, fmt.Errorf("ref configmap [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref configmap [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return []byte(configMapData), nil
 	case resource.KindClusterTrustBundle:

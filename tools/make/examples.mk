@@ -1,4 +1,15 @@
-EXAMPLE_APPS := simple-extension-server extension-server envoy-ext-auth grpc-ext-proc preserve-case-backend static-file-server dynamic-module-test backend-utilization remote-infra
+EXAMPLE_APPS := \
+	simple-extension-server \
+	extension-server \
+	envoy-ext-auth \
+	grpc-ext-proc \
+	preserve-case-backend \
+	static-file-server \
+	dynamic-module-test \
+	backend-utilization \
+	sds-test-server \
+	remote-infra
+
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
 
@@ -38,6 +49,15 @@ go.mod.tidy.examples:
 	@for app in $(EXAMPLE_APPS); do \
 		pushd $(ROOT_DIR)/examples/$$app; \
 		go mod tidy -compat=$(GO_VERSION); \
+		popd; \
+	done
+
+.PHONY: go.fix.examples
+go.fix.examples:
+	@$(LOG_TARGET)
+	@for app in $(EXAMPLE_APPS); do \
+		pushd $(ROOT_DIR)/examples/$$app; \
+		go fix ./...; \
 		popd; \
 	done
 

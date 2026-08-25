@@ -121,6 +121,75 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 	}
 }
 
+func TestListNodeAddressesForNodes(t *testing.T) {
+	store := newProviderStore()
+	store.addNode(&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+		Status: corev1.NodeStatus{Addresses: []corev1.NodeAddress{{
+			Address: "1.1.1.1",
+			Type:    corev1.NodeExternalIP,
+		}}},
+	})
+	store.addNode(&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+		Status: corev1.NodeStatus{Addresses: []corev1.NodeAddress{{
+			Address: "2.2.2.2",
+			Type:    corev1.NodeExternalIP,
+		}}},
+	})
+	store.addNode(&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "node3"},
+		Status: corev1.NodeStatus{Addresses: []corev1.NodeAddress{{
+			Address: "3.3.3.3",
+			Type:    corev1.NodeExternalIP,
+		}}},
+	})
+
+	testCases := []struct {
+		name              string
+		nodeNames         []string
+		expectedAddresses status.NodeAddresses
+	}{
+		{
+			name:              "empty node list returns empty addresses",
+			nodeNames:         []string{},
+			expectedAddresses: status.NodeAddresses{},
+		},
+		{
+			name:              "unknown node name is ignored",
+			nodeNames:         []string{"node-unknown"},
+			expectedAddresses: status.NodeAddresses{},
+		},
+		{
+			name:      "single node returns only that node's address",
+			nodeNames: []string{"node1"},
+			expectedAddresses: status.NodeAddresses{
+				IPv4: []string{"1.1.1.1"},
+			},
+		},
+		{
+			name:      "subset of nodes returns only matching addresses",
+			nodeNames: []string{"node1", "node3"},
+			expectedAddresses: status.NodeAddresses{
+				IPv4: []string{"1.1.1.1", "3.3.3.3"},
+			},
+		},
+		{
+			name:      "mix of known and unknown nodes ignores unknown",
+			nodeNames: []string{"node2", "node-missing"},
+			expectedAddresses: status.NodeAddresses{
+				IPv4: []string{"2.2.2.2"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedAddresses, store.listNodeAddressesForNodes(tc.nodeNames))
+		})
+	}
+}
+
 func TestRace(t *testing.T) {
 	s := newProviderStore()
 

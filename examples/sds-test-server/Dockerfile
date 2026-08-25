@@ -1,0 +1,20 @@
+FROM golang:1.26.6@sha256:640a234f4bea3e399c056b7b8f9c667c4939befae8db2f14e9785e16eccd4205 AS builder
+
+ARG GO_LDFLAGS=""
+
+WORKDIR /workspace
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+COPY . ./
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 \
+    GOOS=${TARGETOS} \
+    GOARCH=${TARGETARCH} \
+    go build -o /bin/sds-test-server -ldflags "${GO_LDFLAGS}" .
+
+FROM gcr.io/distroless/static-debian11
+COPY --from=builder /bin/sds-test-server /
+
+ENTRYPOINT ["/sds-test-server"]

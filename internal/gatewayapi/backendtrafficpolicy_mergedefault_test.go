@@ -180,8 +180,8 @@ func TestApplyTrafficFeatureToRoute_MergeGatewayScoping(t *testing.T) {
 			CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/other-gw/tcp"},
 			Routes:              []*ir.TCPRoute{sibling},
 		}}}
-		tr.applyTrafficFeatureToRoute(route, &ir.TrafficFeatures{CircuitBreaker: &ir.CircuitBreaker{}},
-			nil, policy, target, x, "envoy-gateway/gw/tcp")
+		tf := &ir.TrafficFeatures{ClusterTrafficFeatures: ir.ClusterTrafficFeatures{CircuitBreaker: &ir.CircuitBreaker{}}}
+		tr.applyTrafficFeatureToRoute(route, tf, nil, policy, target, x, "envoy-gateway/gw/tcp")
 		assert.Nil(t, sibling.CircuitBreaker, "route on a sibling Gateway's listener must be skipped")
 	})
 
@@ -194,8 +194,8 @@ func TestApplyTrafficFeatureToRoute_MergeGatewayScoping(t *testing.T) {
 			CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/other-gw/udp"},
 			Route:               sibling,
 		}}}
-		tr.applyTrafficFeatureToRoute(route, &ir.TrafficFeatures{LoadBalancer: &ir.LoadBalancer{}},
-			nil, policy, target, x, "envoy-gateway/gw/udp")
+		tf := &ir.TrafficFeatures{ClusterTrafficFeatures: ir.ClusterTrafficFeatures{LoadBalancer: &ir.LoadBalancer{}}}
+		tr.applyTrafficFeatureToRoute(route, tf, nil, policy, target, x, "envoy-gateway/gw/udp")
 		assert.Nil(t, sibling.LoadBalancer, "route on a sibling Gateway's listener must be skipped")
 	})
 }

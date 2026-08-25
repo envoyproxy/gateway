@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"maps"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,6 +62,13 @@ type TranslatorManager interface {
 	FiltersTranslator
 }
 
+// MergeBackendsConfig is the resolved MergeBackends config. A nil *MergeBackendsConfig means
+// disabled; any non-nil value means enabled, mirroring egv1a1.MergeBackendsConfig's own
+// mere-presence-enables convention.
+type MergeBackendsConfig struct {
+	Selector *metav1.LabelSelector
+}
+
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
@@ -87,6 +95,9 @@ type Translator struct {
 	// MergeGateways is true when all Gateway Listeners
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
+
+	// MergeBackends is the resolved MergeBackends config, set via ResolveMergeBackendsConfig.
+	MergeBackends *MergeBackendsConfig
 
 	// PerResourceSystemCASecret restores the old behavior of emitting one SDS secret per
 	// BackendTLSPolicy or Backend resource using WellKnownCACertificates: System, instead of
@@ -284,18 +295,30 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
-	// Build pre-computed BTP RoutingType index for O(1) lookups in processDestination.
-	t.BTPRoutingTypeIndex = nil
-	if hasBTPRoutingType(resources.BackendTrafficPolicies) {
-		t.BTPRoutingTypeIndex = BuildBTPRoutingTypeIndex(
-			resources.BackendTrafficPolicies,
-			routesToObjects(resources),
-			acceptedGateways,
-			resources.ListenerSets,
-			resources.ReferenceGrants,
-			t.GetNamespace,
-		)
-	}
+	// Build pre-computed BTP indexes for O(1) lookups in processDestination.
+	btpIndexes := BuildBTPIndexes(
+		resources.BackendTrafficPolicies,
+		routesToObjects(resources),
+		acceptedGateways,
+		resources.ListenerSets,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
+	t.BTPRoutingTypeIndex = btpIndexes.RoutingType
+	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
+	t.BTPLoadBalancerIndex = btpIndexes.LoadBalancer
+
+	// Pre-compute which gateways/listeners have a ClientTrafficPolicy-sourced
+	// cluster-affecting override, for O(1) lookup during route processing.
+	t.CTPClusterSettingsIndex = BuildCTPClusterSettingsIndex(
+		resources.ClientTrafficPolicies,
+		acceptedGateways,
+		resources.ListenerSets,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
 
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
@@ -361,6 +384,12 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Process BackendTrafficPolicies
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
 
+	// Check for overlapping route matches across all listeners. This must run
+	// after BackendTrafficPolicies are applied because a CONNECT upgrade
+	// replaces a route's path matcher with Envoy's CONNECT matcher, which
+	// changes which routes can overlap.
+	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
+
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, acceptedGateways, routes, resources, xdsIR)
@@ -370,7 +399,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
 	extServerPolicies, err := t.ProcessExtensionServerPolicies(
-		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
+		resources.ExtensionServerPolicies, acceptedGateways, routes, resources, xdsIR)
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -466,6 +495,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+			status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
 		}
 	}
 
@@ -495,6 +525,13 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				spec, _ := json.Marshal(gCtx.envoyProxy.Spec)
 				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...)...)
 			}
+		}
+
+		if IsMergeGatewaysEnabled(resources) && t.isMergeBackendsEnabledForGateway(gCtx) {
+			failedGateways = append(failedGateways, gCtx)
+			status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+				"mergeGateways and mergeBackends cannot both be enabled")
+			continue
 		}
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
@@ -534,6 +571,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			if gCtx.envoyProxyFromGateway {
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
 			}
 		}
 
@@ -562,6 +600,15 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 	}
 
 	return nil
+}
+
+func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if ep.Spec.LuaValidation != nil {
+		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
+	}
+
+	return deprecatedFields
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.

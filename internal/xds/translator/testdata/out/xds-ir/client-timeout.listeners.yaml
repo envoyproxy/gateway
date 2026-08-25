@@ -27,6 +27,7 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
+        requestHeadersTimeout: 15s
         requestTimeout: 5s
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
