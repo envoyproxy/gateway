@@ -96,7 +96,6 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 		t.Fatalf("condition cannot be nil")
 	}
 	tlog.Logf(t, "waiting for %s/[%s] to be %v...", namespace, selectors, phase)
-
 	require.Eventually(t, func() bool {
 		pods := &corev1.PodList{}
 
@@ -108,7 +107,6 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 		if err != nil || len(pods.Items) == 0 {
 			return false
 		}
-
 	checkPods:
 		for i := range pods.Items {
 			p := &pods.Items[i]
