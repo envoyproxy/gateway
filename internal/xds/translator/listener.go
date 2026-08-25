@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
-	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -1183,6 +1182,21 @@ func buildXdsUDPListener(
 		return nil, err
 	}
 
+	var authorization *ir.Authorization
+	if udpListener.Route != nil {
+		authorization = udpListener.Route.Authorization
+	}
+	routeMatcher, err := buildUDPProxyMatcher(
+		&xdscore.TypedExtensionConfig{
+			Name:        "route",
+			TypedConfig: routeAny,
+		},
+		authorization,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
 	if error != nil {
 		return nil, error
@@ -1197,16 +1211,7 @@ func buildXdsUDPListener(
 		AccessLog:    al,
 		HashPolicies: udpProxyHashPolicies,
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
-			Matcher: &matcher.Matcher{
-				OnNoMatch: &matcher.Matcher_OnMatch{
-					OnMatch: &matcher.Matcher_OnMatch_Action{
-						Action: &xdscore.TypedExtensionConfig{
-							Name:        "route",
-							TypedConfig: routeAny,
-						},
-					},
-				},
-			},
+			Matcher: routeMatcher,
 		},
 	}
 	udpProxyAny, err := proto.ToAnyWithValidation(udpProxy)
