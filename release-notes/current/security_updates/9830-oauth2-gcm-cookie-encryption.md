@@ -1,0 +1,1 @@
+Enabled AES-256-GCM encryption for OAuth2/OIDC session cookies and disabled the legacy AES-256-CBC decryption path in the Envoy proxy bootstrap, addressing the padding oracle in CVE-2026-47775. Existing OIDC sessions were encrypted with AES-256-CBC and are no longer accepted, so users with an active session are redirected to re-authenticate once after upgrading.
