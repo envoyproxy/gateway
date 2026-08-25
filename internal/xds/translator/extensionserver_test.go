@@ -276,10 +276,11 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 		}, nil
 	case "envoy-gateway/gateway-1/http1":
 		if len(req.PostListenerContext.ExtensionResources) != 1 {
-			return &pb.PostHTTPListenerModifyResponse{
-					Listener: req.Listener,
-				}, fmt.Errorf("received %d extension policies when expecting 1: %s",
-					len(req.PostListenerContext.ExtensionResources), req.Listener.Name)
+			res := &pb.PostHTTPListenerModifyResponse{
+				Listener: req.Listener,
+			}
+			return res, fmt.Errorf("received %d extension policies when expecting 1: %s",
+				len(req.PostListenerContext.ExtensionResources), req.Listener.Name)
 		}
 		modifiedListener := proto.Clone(req.Listener).(*listenerV3.Listener)
 		modifiedListener.StatPrefix = req.Listener.Name
