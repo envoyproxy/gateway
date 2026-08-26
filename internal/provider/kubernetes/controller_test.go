@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -506,6 +508,60 @@ func TestProcessRateLimitService(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProcessGatewaysListsExtensionResourcesOnce(t *testing.T) {
+	const ns = "default"
+	extFilterGVK := schema.GroupVersionKind{Group: "gateway.example.io", Version: "v1alpha1", Kind: "CustomFilter"}
+	extBackendGVK := schema.GroupVersionKind{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"}
+
+	gc := test.GetGatewayClass("test", egv1a1.GatewayControllerName, nil)
+	gw1 := test.GetGateway(types.NamespacedName{Namespace: ns, Name: "gw-1"}, gc.Name, 80)
+	gw2 := test.GetGateway(types.NamespacedName{Namespace: ns, Name: "gw-2"}, gc.Name, 80)
+
+	newExtResource := func(gvk schema.GroupVersionKind, name string) *unstructured.Unstructured {
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		u.SetName(name)
+		u.SetNamespace(ns)
+		return u
+	}
+
+	сalls := map[string]int{}
+	countingLists := interceptor.Funcs{
+		List: func(ctx context.Context, cli client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+			if uList, ok := list.(*unstructured.UnstructuredList); ok {
+				сalls[strings.TrimSuffix(uList.GroupVersionKind().Kind, "List")]++
+			}
+			return cli.List(ctx, list, opts...)
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(newTestScheme(extFilterGVK, extBackendGVK)).
+		WithObjects(gc, gw1, gw2,
+			newExtResource(extFilterGVK, "custom-filter"),
+			newExtResource(extBackendGVK, "s3-backend")).
+		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
+		WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
+		WithInterceptorFuncs(countingLists).
+		Build()
+
+	r := &gatewayAPIReconciler{
+		log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client:         fakeClient,
+		extGVKs:        []schema.GroupVersionKind{extFilterGVK},
+		extBackendGVKs: []schema.GroupVersionKind{extBackendGVK},
+	}
+
+	resourceTree := resource.NewResources()
+	resourceMap := newResourceMapping()
+	require.NoError(t, r.processGateways(t.Context(), gc, resourceTree, resourceMap))
+
+	require.Len(t, resourceTree.Gateways, 2)
+	require.Equal(t, 1, сalls[extFilterGVK.Kind])  // called only once
+	require.Equal(t, 1, сalls[extBackendGVK.Kind]) // called only once
+	require.Len(t, resourceMap.extensionRefFilters, 2)
 }
 
 func TestRemoveGatewayClassFinalizer(t *testing.T) {
