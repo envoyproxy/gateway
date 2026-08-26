@@ -1,0 +1,34 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  # ConsistentHash combined with a PreferLocal (topology-aware/zone-aware) backend,
+  # e.g. via a Service's trafficDistribution: PreferSameZone. This must not blackhole
+  # zonal localities now that locality weighted load balancing is always enabled for
+  # the Maglev policy: each zone still needs a non-zero LoadBalancingWeight.
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          headers:
+          - name: x-user-id
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "first-route-dest/backend/0"
+        weight: 30
+        preferLocal:
+          force:
+            minEndpointsInZoneThreshold: 1
+          minEndpointsThreshold: 1

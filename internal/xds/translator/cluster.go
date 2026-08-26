@@ -944,8 +944,13 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, 
 				Zone: zone,
 			},
 			LbEndpoints: endPts,
-			Priority:    ptr.Deref(ds.Priority, 0),
-			Metadata:    buildXdsMetadata(ds.Metadata),
+			// Give every zone an equal, non-zero weight so that this locality
+			// remains selectable when a locality-weighted LB policy (e.g. Maglev
+			// with LocalityWeightedLbConfig) is in use. This field is ignored by
+			// policies that don't opt into locality-weighted load balancing.
+			LoadBalancingWeight: wrapperspb.UInt32(1),
+			Priority:            ptr.Deref(ds.Priority, 0),
+			Metadata:            buildXdsMetadata(ds.Metadata),
 		}
 		localities = append(localities, locality)
 	}
