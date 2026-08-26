@@ -36,6 +36,8 @@ xds:
         layers:
         - name: global_config
           staticLayer:
+            envoy.reloadable_features.oauth2_legacy_cbc_decrypt_compat: false
+            envoy.reloadable_features.oauth2_use_gcm_encryption: true
             envoy.restart_features.use_eds_cache_for_ads: true
             re2.max_program_size.error_level: 4294967295
             re2.max_program_size.warn_level: 1000

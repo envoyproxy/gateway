@@ -77,7 +77,6 @@ func TestTranslatePhaseSpans(t *testing.T) {
 		"Translator.Translate",
 		"XdsTranslator.processHTTPListenerXdsTranslation",
 		"XdsTranslator.notifyExtensionServerAboutListeners",
-		"XdsTranslator.processMergedBackendClusters",
 		"XdsTranslator.processJSONPatches",
 		"XdsTranslator.processExtensionPostTranslationHook",
 		"XdsTranslator.validateAllXdsResources",

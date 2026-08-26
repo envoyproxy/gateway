@@ -78,7 +78,6 @@ func TestTranslatePhaseSpans(t *testing.T) {
 		"GatewayApiTranslator.ProcessGRPCRoutes",
 		"GatewayApiTranslator.ProcessClientTrafficPolicies",
 		"GatewayApiTranslator.ProcessBackendTrafficPolicies",
-		"GatewayApiTranslator.checkRouteOverlaps",
 		"GatewayApiTranslator.ProcessSecurityPolicies",
 		"GatewayApiTranslator.ProcessEnvoyExtensionPolicies",
 		"TranslateToIR",
