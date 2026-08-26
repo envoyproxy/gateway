@@ -489,6 +489,100 @@ func TestBuildClusterWithEndpointOverrideBackendUtilizationWeightedZones(t *test
 	require.Equal(t, 10*time.Second, cswrr.BlackoutPeriod.AsDuration())
 }
 
+func TestBuildClusterWithEndpointOverrideMetadata(t *testing.T) {
+	args := &xdsClusterArgs{
+		name:         "test-cluster-eo-metadata",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{
+			RoundRobin: &ir.RoundRobin{},
+			EndpointOverride: &ir.EndpointOverride{
+				ExtractFrom: []ir.EndpointOverrideExtractFrom{
+					{Header: new("x-custom-host")},
+					{Metadata: &ir.EndpointOverrideMetadata{
+						Namespace: "envoy.lb",
+						Path:      []string{"x-gateway-destination-endpoint"},
+					}},
+					{Metadata: &ir.EndpointOverrideMetadata{
+						Namespace: "com.example.picker",
+						Path:      []string{"result", "endpoint"},
+					}},
+				},
+			},
+		},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	policy := result.cluster.LoadBalancingPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.override_host", policy.TypedExtensionConfig.Name)
+
+	overrideHost := &override_hostv3.OverrideHost{}
+	require.NoError(t, policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(overrideHost))
+	require.Len(t, overrideHost.OverrideHostSources, 3)
+
+	// Sources are consulted in order, so the order must survive translation.
+	require.Equal(t, "x-custom-host", overrideHost.OverrideHostSources[0].Header)
+	require.Nil(t, overrideHost.OverrideHostSources[0].Metadata)
+
+	// MetadataKey.Key holds the namespace; the lookup key is the first path segment.
+	single := overrideHost.OverrideHostSources[1]
+	require.Empty(t, single.Header)
+	require.Equal(t, "envoy.lb", single.Metadata.Key)
+	require.Len(t, single.Metadata.Path, 1)
+	require.Equal(t, "x-gateway-destination-endpoint", single.Metadata.Path[0].GetKey())
+
+	nested := overrideHost.OverrideHostSources[2]
+	require.Equal(t, "com.example.picker", nested.Metadata.Key)
+	require.Len(t, nested.Metadata.Path, 2)
+	require.Equal(t, "result", nested.Metadata.Path[0].GetKey())
+	require.Equal(t, "endpoint", nested.Metadata.Path[1].GetKey())
+}
+
+// Envoy rejects a cluster containing an empty OverrideHostSource, so translation must fail first.
+func TestBuildClusterWithEndpointOverrideEmptySource(t *testing.T) {
+	tests := []struct {
+		name   string
+		source ir.EndpointOverrideExtractFrom
+	}{
+		{name: "neither set", source: ir.EndpointOverrideExtractFrom{}},
+		{name: "empty header", source: ir.EndpointOverrideExtractFrom{Header: new("")}},
+		{
+			name:   "metadata without namespace",
+			source: ir.EndpointOverrideExtractFrom{Metadata: &ir.EndpointOverrideMetadata{Path: []string{"k"}}},
+		},
+		{
+			name:   "metadata without path",
+			source: ir.EndpointOverrideExtractFrom{Metadata: &ir.EndpointOverrideMetadata{Namespace: "envoy.lb"}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			args := &xdsClusterArgs{
+				name:         "test-cluster-eo-empty",
+				endpointType: EndpointTypeStatic,
+				settings: []*ir.DestinationSetting{{
+					Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+				}},
+				loadBalancer: &ir.LoadBalancer{
+					RoundRobin:       &ir.RoundRobin{},
+					EndpointOverride: &ir.EndpointOverride{ExtractFrom: []ir.EndpointOverrideExtractFrom{tc.source}},
+				},
+			}
+
+			result, err := buildXdsCluster(args)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "at least one valid extractFrom source")
+			require.Nil(t, result)
+		})
+	}
+}
+
 func TestGetHealthCheckOverridesHostname(t *testing.T) {
 	tests := []struct {
 		name        string

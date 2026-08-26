@@ -113,6 +113,20 @@
         - upgradeType: websocket
     - match:
         prefix: /
+      name: fifteenth-route
+      route:
+        cluster: fifteenth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: sixteenth-route
+      route:
+        cluster: sixteenth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
       name: fourteenth-route
       route:
         cluster: fourteenth-route-dest
