@@ -1,0 +1,5 @@
+metrics:
+  tls:
+    enable: true
+    secretRef:
+      name: envoy-gateway-metrics-cert

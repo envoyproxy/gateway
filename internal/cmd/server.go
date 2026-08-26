@@ -40,6 +40,12 @@ type Runner interface {
 // cfgPath is the path to the EnvoyGateway configuration file.
 var cfgPath string
 
+var (
+	metricsTLSEnabled  bool
+	metricsTLSCertFile string
+	metricsTLSKeyFile  string
+)
+
 // GetServerCommand returns the server cobra command to be executed.
 // This command receives an async error handler to let the main process decide how to
 // handle critical errors that may happen in the runners that may prevent Envoy Gateway from
@@ -66,6 +72,11 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 			)
 
 			hook := func(c context.Context, cfg *config.Server) error {
+				cfg.MetricsTLS = config.MetricsTLSConfig{
+					Enabled:  metricsTLSEnabled,
+					CertFile: metricsTLSCertFile,
+					KeyFile:  metricsTLSKeyFile,
+				}
 				cfg.Logger.Info("Start runners")
 				if err := startRunners(c, cfg, runnerErrors); err != nil {
 					return err
@@ -78,6 +89,12 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
 		"The path to the configuration file.")
+	cmd.PersistentFlags().BoolVar(&metricsTLSEnabled, "metrics-tls-enable", false,
+		"Enable TLS for the control-plane Prometheus metrics endpoint.")
+	cmd.PersistentFlags().StringVar(&metricsTLSCertFile, "metrics-tls-cert-file", "",
+		"The path to the TLS certificate for the control-plane Prometheus metrics endpoint.")
+	cmd.PersistentFlags().StringVar(&metricsTLSKeyFile, "metrics-tls-key-file", "",
+		"The path to the TLS private key for the control-plane Prometheus metrics endpoint.")
 	return cmd
 }
 

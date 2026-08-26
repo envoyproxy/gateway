@@ -175,6 +175,8 @@ helm uninstall eg -n envoy-gateway-system
 | hpa.metrics | list | `[]` |  |
 | hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
+| metrics.tls.enable | bool | `false` |  |
+| metrics.tls.secretRef.name | string | `""` |  |
 | namespaceOverride | string | `""` | Override the namespace for resources deployed by the chart. Defaults to the release namespace. |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
