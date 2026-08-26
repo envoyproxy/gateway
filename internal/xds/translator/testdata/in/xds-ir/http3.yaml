@@ -85,7 +85,7 @@ http:
     hostnames:
       - bar.example.com
     http3:
-      advertisedPort: 8443
+      advertisedPort: 9443
     metadata:
       kind: Gateway
       name: gateway-1
