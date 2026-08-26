@@ -396,6 +396,49 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid HTTP/3 advertised port",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					HTTP3: &egv1a1.HTTP3Settings{
+						AdvertisedPort: new(gwapiv1.PortNumber(8443)),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid HTTP/3 advertised port",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					HTTP3: &egv1a1.HTTP3Settings{
+						AdvertisedPort: new(gwapiv1.PortNumber(65536)),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.http3.advertisedPort: Invalid value:",
+				"advertisedPort must be between 1 and 65535",
+			},
+		},
+		{
 			desc: "http3 enabled and ALPN protocols not set with other TLS parameters set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{

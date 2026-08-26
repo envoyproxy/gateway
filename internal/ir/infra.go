@@ -104,7 +104,11 @@ type ProxyListener struct {
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
-type HTTP3Settings struct{}
+// +k8s:deepcopy-gen=true
+type HTTP3Settings struct {
+	// AdvertisedPort specifies the port advertised to clients in the HTTP/3 alt-svc response header.
+	AdvertisedPort *uint32 `json:"advertisedPort,omitempty" yaml:"advertisedPort,omitempty"`
+}
 
 // ListenerPort defines a network port of a listener.
 // +k8s:deepcopy-gen=true

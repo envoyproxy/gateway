@@ -3076,6 +3076,9 @@ HTTP3Settings provides HTTP/3 configuration on the listener.
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `advertisedPort` | _[PortNumber](#portnumber)_ |  false  |  | AdvertisedPort specifies the port advertised to clients in the HTTP/3<br />`alt-svc` response header. It does not change the listener or Service port.<br />If unset, the Gateway listener port is advertised. |
 
 
 #### HTTPActiveHealthChecker

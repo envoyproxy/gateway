@@ -644,7 +644,11 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 
 		if http3Settings != nil {
-			http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.ExternalPort))
+			advertisedPort := httpListener.ExternalPort
+			if http3Settings.AdvertisedPort != nil {
+				advertisedPort = *http3Settings.AdvertisedPort
+			}
+			http3AltSvcHeader := buildHTTP3AltSvcHeader(advertisedPort)
 			if xdsRoute.ResponseHeadersToAdd == nil {
 				xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 			}
@@ -821,7 +825,7 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 	return nil, errors.New("http connection manager not found")
 }
 
-func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
+func buildHTTP3AltSvcHeader(port uint32) *corev3.HeaderValueOption {
 	return &corev3.HeaderValueOption{
 		Append: &wrapperspb.BoolValue{Value: true},
 		Header: &corev3.HeaderValue{
