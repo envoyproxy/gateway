@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -81,6 +82,52 @@ func isNamespaceSelectorBypassInfrastructureResource(obj any) bool {
 	default:
 		return false
 	}
+}
+
+func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesListener(ctx context.Context) bool {
+	gtwList := &gwapiv1.GatewayList{}
+	if err := r.client.List(ctx, gtwList, &client.ListOptions{}); err != nil {
+		// If we can't list Gateways, we can't determine if
+		// any of them have SelectorAllowedRoutes set to true, so we return true.
+		return true
+	}
+
+	for i := range gtwList.Items {
+		gtw := &gtwList.Items[i]
+		for _, l := range gtw.Spec.Listeners {
+			if hasNamespacesFromSelector(l.AllowedRoutes) {
+				return true
+			}
+		}
+	}
+
+	if !r.listenerSetCRDExists {
+		return false
+	}
+
+	listenerSetList := &gwapiv1.ListenerSetList{}
+	if err := r.client.List(ctx, listenerSetList, &client.ListOptions{}); err != nil {
+		// If we can't list ListenerSet, we can't determine if
+		// any of them have SelectorAllowedRoutes set to true, so we return true.
+		return true
+	}
+	for i := range listenerSetList.Items {
+		ls := &listenerSetList.Items[i]
+		for _, l := range ls.Spec.Listeners {
+			if hasNamespacesFromSelector(l.AllowedRoutes) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func hasNamespacesFromSelector(ar *gwapiv1.AllowedRoutes) bool {
+	if ar == nil || ar.Namespaces == nil {
+		return false
+	}
+	return ptr.Deref(ar.Namespaces.From, gwapiv1.NamespacesFromSame) == gwapiv1.NamespacesFromSelector
 }
 
 type NamespaceGetter interface {

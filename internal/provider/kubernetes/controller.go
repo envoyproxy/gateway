@@ -2335,6 +2335,33 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &corev1.Namespace{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, ns *corev1.Namespace) []reconcile.Request {
+				// Gateway listener restricts route attachment with allowedRoutes.namespaces.from: Selector
+				// changing a namespace's labels after an HTTPRoute in it has been evaluated should trigger re-evaluation.
+				// It's hard to determine which Gateway/GatewayClass(es) are affected by a namespace label change,
+				// so we enqueue all GatewayClasses for reconciliation.
+				// Any namespace holding a candidate Route is already tracked in allAssociatedNamespaces by
+				// the route processors (processHTTPRoutes et al.) regardless of whether it currently
+				// satisfies any listener's selector, and is re-fetched fresh on every reconcile (see the
+				// allAssociatedNamespaces loop that builds gwcResource.Namespaces). So a label change on a
+				// namespace that actually contains a candidate route always shows up as a genuine diff in
+				// Resources.Namespaces and triggers a retranslation; a label change on any other namespace
+				// touches nothing tracked and correctly no-ops via the normal reflect.DeepEqual dedup.
+				if !r.hasSelectorAllowedRoutesListener(ctx) {
+					return nil
+				}
+				return r.enqueueClass(ctx, ns)
+			}),
+			predicate.NewTypedPredicateFuncs(func(_ *corev1.Namespace) bool {
+				// TODO: respect the namespaceLabel filter here, but we need to be careful
+				// about the case where the label is removed from a namespace, which should trigger a reconciliation.
+				return true
+			}))); err != nil {
+		return fmt.Errorf("failed to watch Namespace: %w", err)
+	}
+
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	httprPredicates := commonPredicates[*gwapiv1.HTTPRoute]()
 	if r.namespaceLabel != nil {
