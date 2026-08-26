@@ -1826,6 +1826,16 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		r.processServiceClusterForGatewayClass(ctx, resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
 	}
 
+	if len(gatewayList.Items) == 0 {
+		return nil
+	}
+
+	// The extension ref filters and backend resources are cluster-wide,
+	// so they are collected once per GatewayClass instead of once per Gateway.
+	if err := r.populateExtensionResources(ctx, resourceMap); err != nil {
+		return err
+	}
+
 	for i := range gatewayList.Items {
 		gtw := &gatewayList.Items[i]
 
