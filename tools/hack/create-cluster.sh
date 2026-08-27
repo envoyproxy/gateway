@@ -12,6 +12,10 @@ IP_FAMILY=${IP_FAMILY:-"ipv4"}
 CUSTOM_CNI=${CUSTOM_CNI:-"false"}
 ENABLE_CLUSTER_TRUST_BUNDLE=${ENABLE_CLUSTER_TRUST_BUNDLE:-"false"}
 
+if [[ -n "${KUBECONFIG:-}" ]]; then
+  mkdir -p "$(dirname "${KUBECONFIG%%:*}")"
+fi
+
 if [ "$CUSTOM_CNI" = "true" ]; then
   CNI_CONFIG="disableDefaultCNI: true"
 else
@@ -49,8 +53,9 @@ done
 fi
 
 ## Check if kind cluster already exists.
-if ${KIND} get clusters | grep -q "${CLUSTER_NAME}"; then
+if ${KIND} get clusters | grep -Fxq "${CLUSTER_NAME}"; then
   echo "Cluster ${CLUSTER_NAME} already exists."
+  ${KIND} export kubeconfig --name "${CLUSTER_NAME}"
 else
   echo "Creating kind cluster ${CLUSTER_NAME} with the following configuration:"
   echo "${KIND_CFG}"
@@ -66,6 +71,13 @@ ${KIND_CFG}
 EOF
 fi
 fi
+
+CURRENT_CONTEXT="$(kubectl config current-context)"
+if [[ "${CURRENT_CONTEXT}" != "kind-${CLUSTER_NAME}" ]]; then
+  echo "Expected kubectl context kind-${CLUSTER_NAME}, got ${CURRENT_CONTEXT}; refusing to configure another cluster." >&2
+  exit 1
+fi
+
 if [ "$CUSTOM_CNI" = "true" ]; then
 ## Install Calico
 # Determine the operating system
