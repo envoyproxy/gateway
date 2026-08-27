@@ -195,4 +195,4 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
 [TCPRoute]: https://gateway-api.sigs.k8s.io/guides/tcp/
-[UDPRoute]: https://gateway-api.sigs.k8s.io/api-types/udproute/
+[UDPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/udproute/
