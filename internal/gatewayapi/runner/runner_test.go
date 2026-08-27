@@ -11,17 +11,23 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	pb "github.com/envoyproxy/gateway/proto/extension"
@@ -409,7 +415,7 @@ func TestMergeRouteStatus(t *testing.T) {
 			generation: 2,
 		}
 
-		got := mergeAggregatedRouteStatus(existing, nil, 10)
+		got := mergeAggregatedRouteStatus(existing, nil, 10, 0)
 		require.Equal(t, existing, got)
 	})
 
@@ -423,7 +429,7 @@ func TestMergeRouteStatus(t *testing.T) {
 			},
 		}
 
-		got := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, incoming, 7)
+		got := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, incoming, 7, 0)
 		require.Same(t, incoming, got.status)
 		require.Equal(t, int64(7), got.generation)
 	})
@@ -446,15 +452,15 @@ func TestMergeRouteStatus(t *testing.T) {
 			},
 		}
 
-		entry := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, first, 3)
-		entry = mergeAggregatedRouteStatus(entry, second, 9)
+		entry := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, first, 3, 0)
+		entry = mergeAggregatedRouteStatus(entry, second, 9, 0)
 
 		require.Len(t, entry.status.Parents, 2)
 		require.Equal(t, gwapiv1.ObjectName("gw-a"), entry.status.Parents[0].ParentRef.Name)
 		require.Equal(t, gwapiv1.ObjectName("gw-b"), entry.status.Parents[1].ParentRef.Name)
 		require.Equal(t, int64(9), entry.generation)
 
-		entry = mergeAggregatedRouteStatus(entry, &gwapiv1.RouteStatus{}, 4)
+		entry = mergeAggregatedRouteStatus(entry, &gwapiv1.RouteStatus{}, 4, 0)
 		require.Equal(t, int64(9), entry.generation)
 	})
 }

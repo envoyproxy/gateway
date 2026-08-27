@@ -77,11 +77,12 @@ type aggregatedPolicyStatus struct {
 }
 
 type aggregatedRouteStatus struct {
-	status     *gwapiv1.RouteStatus
-	generation int64
+	status            *gwapiv1.RouteStatus
+	generation        int64
+	gatewayGeneration int64
 }
 
-func mergeAggregatedRouteStatus(aggregated aggregatedRouteStatus, incoming *gwapiv1.RouteStatus, generation int64) aggregatedRouteStatus {
+func mergeAggregatedRouteStatus(aggregated aggregatedRouteStatus, incoming *gwapiv1.RouteStatus, generation, gatewayGeneration int64) aggregatedRouteStatus {
 	if incoming == nil {
 		return aggregated
 	}
@@ -89,6 +90,7 @@ func mergeAggregatedRouteStatus(aggregated aggregatedRouteStatus, incoming *gwap
 	if aggregated.status == nil {
 		aggregated.status = incoming
 		aggregated.generation = generation
+		aggregated.gatewayGeneration = gatewayGeneration
 		return aggregated
 	}
 
@@ -96,8 +98,23 @@ func mergeAggregatedRouteStatus(aggregated aggregatedRouteStatus, incoming *gwap
 	if generation > aggregated.generation {
 		aggregated.generation = generation
 	}
+	if gatewayGeneration > aggregated.gatewayGeneration {
+		aggregated.gatewayGeneration = gatewayGeneration
+	}
 
 	return aggregated
+}
+
+func stampGatewayGeneration(rs *gwapiv1.RouteStatus, gatewayGeneration int64) {
+	if gatewayGeneration <= 0 || rs == nil {
+		return
+	}
+	suffix := fmt.Sprintf(" (gateway generation: %d)", gatewayGeneration)
+	for i := range rs.Parents {
+		for j := range rs.Parents[i].Conditions {
+			rs.Parents[i].Conditions[j].Message += suffix
+		}
+	}
 }
 
 func mergePolicyStatus(aggregated aggregatedPolicyStatus, incoming *gwapiv1.PolicyStatus, generation int64) aggregatedPolicyStatus {
@@ -406,36 +423,68 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					r.keyCache.BackendStatus[key] = true
 				}
 
+				// Build a namespace/name/generation index for all gateways in this
+				// result so we can propagate gateway generation into route statuses.
+				gatewayGenerations := make(map[types.NamespacedName]int64, len(result.Gateways))
+				for _, gw := range result.Gateways {
+					key := utils.NamespacedName(gw)
+					if gw.Generation > gatewayGenerations[key] {
+						gatewayGenerations[key] = gw.Generation
+					}
+				}
+				
+				// maxGatewayGen returns the highest gateway generation referenced by a
+				// route's parent refs, used to stamp condition messages.
+				maxGatewayGen := func(parents []gwapiv1.RouteParentStatus) int64 {
+					var max int64
+					for _, p := range parents {
+						var ns string
+						if p.ParentRef.Namespace != nil {
+							ns = string(*p.ParentRef.Namespace)
+						}
+						name := types.NamespacedName{Namespace: ns, Name: string(p.ParentRef.Name)}
+						if g := gatewayGenerations[name]; g > max {
+							max = g
+						}
+					}
+					return max
+				}
+
 				// Resources which can belong to multiple GatewayClasses get their statuses aggregated,
 				// then stored once after iterating over all GatewayClasses.
 				for _, httpRoute := range result.HTTPRoutes {
 					if len(httpRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(httpRoute)
-						aggregatedStatuses.HTTPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.HTTPRoutes[key], &httpRoute.Status.RouteStatus, httpRoute.Generation)
+						gwGen := maxGatewayGen(httpRoute.Status.Parents)
+						aggregatedStatuses.HTTPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.HTTPRoutes[key], &httpRoute.Status.RouteStatus, httpRoute.Generation, gwGen)
 					}
 				}
 				for _, grpcRoute := range result.GRPCRoutes {
 					if len(grpcRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(grpcRoute)
-						aggregatedStatuses.GRPCRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.GRPCRoutes[key], &grpcRoute.Status.RouteStatus, grpcRoute.Generation)
+						gwGen := maxGatewayGen(grpcRoute.Status.Parents)
+						aggregatedStatuses.GRPCRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.GRPCRoutes[key], &grpcRoute.Status.RouteStatus, grpcRoute.Generation, gwGen)
 					}
 				}
 				for _, tlsRoute := range result.TLSRoutes {
 					if len(tlsRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(tlsRoute)
-						aggregatedStatuses.TLSRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TLSRoutes[key], &tlsRoute.Status.RouteStatus, tlsRoute.Generation)
+						gwGen := maxGatewayGen(tlsRoute.Status.Parents)
+						aggregatedStatuses.TLSRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TLSRoutes[key], &tlsRoute.Status.RouteStatus, tlsRoute.Generation, gwGen)
 					}
 				}
 				for _, tcpRoute := range result.TCPRoutes {
 					if len(tcpRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(tcpRoute)
-						aggregatedStatuses.TCPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TCPRoutes[key], &tcpRoute.Status.RouteStatus, tcpRoute.Generation)
+						gwGen := maxGatewayGen(tcpRoute.Status.Parents)
+						aggregatedStatuses.TCPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TCPRoutes[key], &tcpRoute.Status.RouteStatus, tcpRoute.Generation, gwGen)
 					}
 				}
 				for _, udpRoute := range result.UDPRoutes {
 					if len(udpRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(udpRoute)
-						aggregatedStatuses.UDPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.UDPRoutes[key], &udpRoute.Status.RouteStatus, udpRoute.Generation)
+						gwGen := maxGatewayGen(udpRoute.Status.Parents)
+						aggregatedStatuses.UDPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.UDPRoutes[key], &udpRoute.Status.RouteStatus, udpRoute.Generation, gwGen)
 					}
 				}
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
@@ -493,6 +542,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// Store the stauses of all objects atomically with the aggregated status.
 			for key, entry := range aggregatedStatuses.HTTPRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
+				stampGatewayGeneration(entry.status, entry.gatewayGeneration)
 				s := gwapiv1.HTTPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.HTTPRouteStatuses.Store(key, &s)
 				httpRouteStatusCount++
@@ -501,6 +551,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 			for key, entry := range aggregatedStatuses.GRPCRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
+				stampGatewayGeneration(entry.status, entry.gatewayGeneration)
 				s := gwapiv1.GRPCRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.GRPCRouteStatuses.Store(key, &s)
 				grpcRouteStatusCount++
@@ -509,6 +560,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 			for key, entry := range aggregatedStatuses.TLSRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
+				stampGatewayGeneration(entry.status, entry.gatewayGeneration)
 				s := gwapiv1.TLSRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.TLSRouteStatuses.Store(key, &s)
 				tlsRouteStatusCount++
@@ -517,6 +569,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 			for key, entry := range aggregatedStatuses.TCPRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
+				stampGatewayGeneration(entry.status, entry.gatewayGeneration)
 				s := gwapiv1.TCPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.TCPRouteStatuses.Store(key, &s)
 				tcpRouteStatusCount++
@@ -525,6 +578,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 			for key, entry := range aggregatedStatuses.UDPRoutes {
 				status.TruncateRouteParents(entry.status, entry.generation)
+				stampGatewayGeneration(entry.status, entry.gatewayGeneration)
 				s := gwapiv1.UDPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.UDPRouteStatuses.Store(key, &s)
 				udpRouteStatusCount++
