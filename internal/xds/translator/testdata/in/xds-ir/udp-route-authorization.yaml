@@ -60,8 +60,10 @@ udp:
         - host: "10.2.3.5"
           port: 50000
         name: "udp-route-denylist-dest/backend/0"
-# Mixed ordering: the Deny rule precedes the Allow rule, so the Allow predicate is
-# narrowed by it, and the Allow default is narrowed by every Deny rule.
+# Mixed ordering, covering both directions in one policy. Rules are
+# first-match-wins, so with an Allow default this must route 10.1.x (the first
+# Allow beats the later Deny), drop the rest of 10.x, route 11.x (matched by the
+# third rule, which the Deny only partly covers), and route everything else.
 - name: "udp-listener-mixed"
   address: "::"
   port: 10082
@@ -70,18 +72,27 @@ udp:
     authorization:
       defaultAction: Allow
       rules:
-      - action: Deny
-        name: deny-office
-        principal:
-          clientCIDRs:
-          - cidr: 10.0.0.0/8
-            maskLen: 8
+      # Precedes the Deny below, so it needs no exclusion and stays reachable.
       - action: Allow
         name: allow-branch
         principal:
           clientCIDRs:
           - cidr: 10.1.0.0/16
             maskLen: 16
+      - action: Deny
+        name: deny-office
+        principal:
+          clientCIDRs:
+          - cidr: 10.0.0.0/8
+            maskLen: 8
+      # Follows the Deny and only partly overlaps it, so the emitted predicate is
+      # the Allow range minus the denied one — 11.0.0.0/8 in effect.
+      - action: Allow
+        name: allow-partner
+        principal:
+          clientCIDRs:
+          - cidr: 10.0.0.0/7
+            maskLen: 7
     destination:
       name: "udp-route-mixed-dest"
       settings:
