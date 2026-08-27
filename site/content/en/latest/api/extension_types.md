@@ -3242,7 +3242,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `url` | _string_ |  true  |  | URL is the URL containing the Wasm code. |
 | `sha256` | _string_ |  false  |  | SHA256 checksum that will be used to verify the Wasm code.<br />If not specified, Envoy Gateway will not verify the downloaded Wasm code.<br />kubebuilder:validation:Pattern=`^[a-f0-9]\{64\}$` |
-| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source. |
+| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source.<br />If unset, system trust store is used for HTTPS url. |
 
 
 #### Header

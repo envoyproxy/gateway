@@ -7,8 +7,8 @@ package gatewayapi
 
 import (
 	"bytes"
-	//nolint:gosec // SHA1 is required to validate htpasswd {SHA} format.
-	"crypto/sha1"
+	"context"
+	"crypto/sha1" //nolint:gosec // SHA1 is required to validate htpasswd {SHA} format
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -50,6 +50,7 @@ const (
 	defaultRefreshToken          = true
 	defaultPassThroughAuthHeader = false
 	defaultOIDCHTTPTimeout       = 5 * time.Second
+	defaultOIDCMaxRedirects      = 3
 
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
@@ -57,6 +58,8 @@ const (
 	// JWKSConfigMapKey is the key used in ConfigMaps to store JWKS data
 	JWKSConfigMapKey = "jwks"
 )
+
+var newOIDCDiscoveryHTTPClient = newGuardedOIDCDiscoveryHTTPClient
 
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
@@ -984,6 +987,9 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					continue
 				}
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+				if tl == nil {
+					continue
+				}
 				for _, r := range tl.Routes {
 					// If target.SectionName is specified it must match the route-rule section name
 					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
@@ -1747,6 +1753,10 @@ func (t *Translator) buildOIDCProvider(
 		return nil, err
 	}
 
+	if _, err = validateOIDCIssuerURL(provider.Issuer); err != nil {
+		return nil, err
+	}
+
 	if u.Scheme == "https" {
 		protocol = ir.HTTPS
 	} else {
@@ -1907,7 +1917,37 @@ func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.
 	return config, nil
 }
 
-func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
+func validateOIDCIssuerURL(raw string) (*url.URL, error) {
+	issuer, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid issuer URL: %w", err)
+	}
+
+	switch {
+	case issuer.Scheme != "https":
+		return nil, fmt.Errorf("issuer URL must use https scheme")
+	case issuer.Hostname() == "":
+		return nil, fmt.Errorf("issuer URL must include a host")
+	case issuer.User != nil:
+		return nil, fmt.Errorf("issuer URL must not include userinfo")
+	case issuer.RawQuery != "" || strings.Contains(raw, "?"):
+		return nil, fmt.Errorf("issuer URL must not include a query")
+	case issuer.Fragment != "" || strings.Contains(raw, "#"):
+		return nil, fmt.Errorf("issuer URL must not include a fragment")
+	}
+
+	return issuer, nil
+}
+
+func buildOIDCDiscoveryURL(issuer *url.URL) string {
+	discoveryURL := *issuer
+	discoveryURL.RawQuery = ""
+	discoveryURL.Fragment = ""
+	discoveryURL.Path = strings.TrimRight(discoveryURL.Path, "/") + "/.well-known/openid-configuration"
+	return discoveryURL.String()
+}
+
+func newGuardedOIDCDiscoveryHTTPClient(providerTLS *ir.TLSUpstreamConfig) (*http.Client, error) {
 	var (
 		tlsConfig *tls.Config
 		err       error
@@ -1919,17 +1959,96 @@ func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamCo
 		}
 	}
 
-	client := &http.Client{Timeout: defaultOIDCHTTPTimeout}
-	if tlsConfig != nil {
-		client.Transport = &http.Transport{
-			TLSClientConfig: tlsConfig,
+	transport := &http.Transport{
+		DialContext: (&oidcDiscoveryDialer{
+			dialer: &net.Dialer{Timeout: defaultOIDCHTTPTimeout},
+		}).DialContext,
+		TLSClientConfig: tlsConfig,
+	}
+
+	return &http.Client{
+		Timeout:   defaultOIDCHTTPTimeout,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= defaultOIDCMaxRedirects {
+				return fmt.Errorf("stopped after %d redirects", defaultOIDCMaxRedirects)
+			}
+			if _, err := validateOIDCIssuerURL(req.URL.String()); err != nil {
+				return err
+			}
+			_, err := validateOIDCDiscoveryHost(req.Context(), req.URL.Hostname())
+			return err
+		},
+	}, nil
+}
+
+type oidcDiscoveryDialer struct {
+	dialer *net.Dialer
+}
+
+func (d *oidcDiscoveryDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+
+	addrs, err := validateOIDCDiscoveryHost(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, fmt.Errorf("issuer host %q did not resolve to any addresses", host)
+	}
+
+	return d.dialer.DialContext(ctx, network, net.JoinHostPort(addrs[0].String(), port))
+}
+
+func validateOIDCDiscoveryHost(ctx context.Context, host string) ([]netip.Addr, error) {
+	if addr, err := netip.ParseAddr(host); err == nil {
+		if isBlockedOIDCDiscoveryAddr(addr) {
+			return nil, fmt.Errorf("issuer host resolves to blocked address %s", addr)
+		}
+		return []netip.Addr{addr}, nil
+	}
+
+	addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+	if err != nil {
+		return nil, err
+	}
+	for _, addr := range addrs {
+		if isBlockedOIDCDiscoveryAddr(addr) {
+			return nil, fmt.Errorf("issuer host %q resolves to blocked address %s", host, addr)
 		}
 	}
+	return addrs, nil
+}
+
+func isBlockedOIDCDiscoveryAddr(addr netip.Addr) bool {
+	addr = addr.Unmap()
+
+	return !addr.IsValid() ||
+		addr.IsUnspecified() ||
+		addr.IsLoopback() ||
+		addr.IsLinkLocalUnicast() ||
+		addr.IsMulticast()
+}
+
+func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
+	issuer, err := validateOIDCIssuerURL(issuerURL)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := newOIDCDiscoveryHTTPClient(providerTLS)
+	if err != nil {
+		return nil, err
+	}
+	discoveryURL := buildOIDCDiscoveryURL(issuer)
 
 	// Parse the OpenID configuration response
 	var config OpenIDConfig
 	if err = backoff.Retry(func() error {
-		resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
+		resp, err := client.Get(discoveryURL)
 		// Retry on transport errors
 		if err != nil {
 			return err

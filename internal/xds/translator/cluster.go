@@ -1175,10 +1175,10 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 		// if there are backend filters.
 		if args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil {
 			filter, err := buildHCMCredentialInjectorFilter(args.settings[0].Filters.CredentialInjection)
-			filter.Disabled = false
 			if err != nil {
 				return nil, nil, err
 			}
+			filter.Disabled = false
 			secret := buildCredentialSecret(args.settings[0].Filters.CredentialInjection)
 			filters = append(filters, filter)
 			secrets = append(secrets, secret)
