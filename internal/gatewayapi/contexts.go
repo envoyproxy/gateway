@@ -157,6 +157,10 @@ type ListenerContext struct {
 	// slot from a valid same-hostname listener that uses the winner protocol.
 	protocolConflicted bool
 
+	// hostnameConflictLoser is set when another listener wins hostname conflict
+	// precedence. Losing listeners must not suppress routes on the winner.
+	hostnameConflictLoser bool
+
 	tls ListenerTLSConfig
 
 	httpIR *ir.HTTPListener
