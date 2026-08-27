@@ -1,0 +1,134 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: udp-authorization-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  # All three listeners share one Gateway on purpose. A config Envoy rejects
+  # would take down the whole proxy, so the allowed listener answering is what
+  # proves the deny listeners are dropping rather than simply missing.
+  listeners:
+  - name: allowed
+    protocol: UDP
+    port: 5310
+    allowedRoutes:
+      kinds:
+      - kind: UDPRoute
+  - name: denied
+    protocol: UDP
+    port: 5311
+    allowedRoutes:
+      kinds:
+      - kind: UDPRoute
+  - name: deny-all
+    protocol: UDP
+    port: 5312
+    allowedRoutes:
+      kinds:
+      - kind: UDPRoute
+---
+# Every route points at the coredns backend the conformance base manifest
+# installs, so an unanswered query can only come from authorization and never
+# from an unresolvable upstream.
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: udp-authz-allowed
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: udp-authorization-gateway
+    sectionName: allowed
+  rules:
+  - backendRefs:
+    - name: coredns
+      port: 53
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: udp-authz-denied
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: udp-authorization-gateway
+    sectionName: denied
+  rules:
+  - backendRefs:
+    - name: coredns
+      port: 53
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: udp-authz-deny-all
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: udp-authorization-gateway
+    sectionName: deny-all
+  rules:
+  - backendRefs:
+    - name: coredns
+      port: 53
+---
+# Allows every source, whatever address family the client turns out to have
+# after the cluster's NAT. This is the positive control.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: udp-authz-allowed-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: UDPRoute
+    name: udp-authz-allowed
+  authorization:
+    defaultAction: Deny
+    rules:
+    - action: Allow
+      name: allow-any-source
+      principal:
+        clientCIDRs:
+        - 0.0.0.0/0
+        - ::/0
+---
+# Allows only a private range the test client can never be in, so the datagram
+# falls through to the Deny default and is dropped.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: udp-authz-denied-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: UDPRoute
+    name: udp-authz-denied
+  authorization:
+    defaultAction: Deny
+    rules:
+    - action: Allow
+      name: allow-unreachable-range
+      principal:
+        clientCIDRs:
+        - 192.168.254.0/24
+---
+# A Deny default with no rules, which compiles to an empty udp_proxy matcher.
+# Targets the Gateway listener rather than the route, so the Gateway-attached
+# path is covered too.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: udp-authz-deny-all-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: udp-authorization-gateway
+    sectionName: deny-all
+  authorization:
+    defaultAction: Deny
