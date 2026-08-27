@@ -1,0 +1,54 @@
+# Regression test for a nil pointer dereference in translateSecurityPolicyForRoute
+# (securitypolicy.go): tcp-2 shares a port with tcp-1, so it gets marked Conflicted/
+# Programmed=False and never gets a corresponding xDS IR TCPListener built for it,
+# while still remaining a candidate parentRef listener for the TCPRoute below.
+# Attaching a SecurityPolicy to that TCPRoute used to panic when the translator
+# looked up the (nil) IR listener for tcp-2 without a nil check.
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-tcp
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: tcp-1
+      protocol: TCP
+      port: 8088
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: tcp-2
+      protocol: TCP
+      port: 8088
+      allowedRoutes:
+        namespaces:
+          from: All
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcpr-app
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-tcp
+      # No sectionName: intentionally matches both listeners so parentRefCtx.listeners
+      # includes tcp-2, which will be Conflicted/non-ready and have no xDS IR entry.
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-tcpr-conflicting-listeners
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcpr-app

@@ -1853,6 +1853,34 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{"Retry timeout is not supported", "HTTPStatusCodes is not supported"},
 		},
 		{
+			desc: "oidc-issuer-http-scheme",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = securityPolicySpecWithOIDCIssuer("http://keycloak.gateway-conformance-infra/realms/master")
+			},
+			wantErrors: []string{"should match '^https://"},
+		},
+		{
+			desc: "oidc-issuer-with-query",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = securityPolicySpecWithOIDCIssuer("https://keycloak.gateway-conformance-infra/realms/master?foo=bar")
+			},
+			wantErrors: []string{"should match '^https://"},
+		},
+		{
+			desc: "oidc-issuer-with-fragment",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = securityPolicySpecWithOIDCIssuer("https://keycloak.gateway-conformance-infra/realms/master#foo")
+			},
+			wantErrors: []string{"should match '^https://"},
+		},
+		{
+			desc: "oidc-issuer-with-userinfo",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = securityPolicySpecWithOIDCIssuer("https://user@keycloak.gateway-conformance-infra/realms/master")
+			},
+			wantErrors: []string{"should match '^https://"},
+		},
+		{
 			desc: "oidc-without-clientid",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -2391,5 +2419,32 @@ func TestSecurityPolicyAPIKeyAuthExtractFrom(t *testing.T) {
 				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
 			}
 		})
+	}
+}
+
+func securityPolicySpecWithOIDCIssuer(issuer string) egv1a1.SecurityPolicySpec {
+	return egv1a1.SecurityPolicySpec{
+		PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+			TargetSelectors: []egv1a1.TargetSelector{
+				{
+					Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+					Kind:  "HTTPRoute",
+					MatchLabels: map[string]string{
+						"eg/namespace": "reference-apps",
+					},
+				},
+			},
+		},
+		OIDC: &egv1a1.OIDC{
+			Provider: egv1a1.OIDCProvider{
+				Issuer:                issuer,
+				AuthorizationEndpoint: new("https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"),
+				TokenEndpoint:         new("https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"),
+			},
+			ClientID: new("client-id"),
+			ClientSecret: gwapiv1b1.SecretObjectReference{
+				Name: "secret",
+			},
+		},
 	}
 }
