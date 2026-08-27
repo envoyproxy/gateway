@@ -22,6 +22,18 @@ In this example, the default action is set to `Deny`, which means that only requ
 action are allowed, and all other requests are denied. You can also change the default action to `Allow` to allow all requests
 except those from the specified IP addresses with `Deny` action.
 
+{{% alert title="Note" color="primary" %}}
+
+This example targets an `HTTPRoute`, but IP allowlists and denylists work the same way at L4: point `targetRefs` at a
+`TCPRoute` or a `UDPRoute` instead, or at a `Gateway` listener serving either protocol.
+
+On an L4 route only `clientCIDRs` authorization applies, because there is no HTTP request to inspect. JWT, header and
+geolocation principals, CEL expressions and `operation` matches are HTTP-only and a policy using them on a `TCPRoute`
+or `UDPRoute` is rejected. A denied connection is closed and a denied datagram is dropped without a reply, rather than
+receiving an error response.
+
+{{% /alert %}}
+
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
 
@@ -83,6 +95,12 @@ kubectl get securitypolicy/authorization-client-ip -o yaml
 
 It's important to note that the IP address used for allowlist/denylist is the original source IP address of the request.
 You can use a [ClientTrafficPolicy] to configure how Envoy Gateway should determine the original source IP address.
+
+This section applies to `HTTPRoute` and `GRPCRoute`. A `TCPRoute` or `UDPRoute` carries no HTTP headers, so the client
+IP is always taken from the connection peer or the source address of the datagram, and the `X-Forwarded-For` settings
+below have no effect on it. If a load balancer or NAT sits in front of the gateway, the original client IP survives
+only when that intermediary preserves the source address — for example by enabling the PROXY protocol, which is not
+available on the UDP path.
 
 For example, the below ClientTrafficPolicy configures Envoy Gateway to use the `X-Forwarded-For` header to determine the original source IP address.
 The `numTrustedHops` field specifies the number of trusted hops in the `X-Forwarded-For` header. In this example, the `numTrustedHops` is set to `1`,
