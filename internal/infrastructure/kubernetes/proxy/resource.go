@@ -188,6 +188,11 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
 					HTTPGet: &corev1.HTTPGetAction{
+						// Host is set explicitly because the kubelet cannot resolve the
+						// pod IP for the PreStop hook in hostNetwork mode, causing the
+						// hook to fail with "failed to find networking container"
+						// (see https://github.com/kubernetes/kubernetes/issues/134285).
+						Host:   "127.0.0.1",
 						Path:   envoy.ShutdownManagerReadyPath,
 						Port:   intstr.FromInt32(envoy.ShutdownManagerPort),
 						Scheme: corev1.URISchemeHTTP,
