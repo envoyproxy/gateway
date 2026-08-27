@@ -19,7 +19,7 @@ Envoy Gateway collects the following metrics in Watching Components:
 
 | Name                                   | Description                                                  |
 |----------------------------------------|--------------------------------------------------------------|
-| `watchable_depth`                      | Current depth of watchable map.                              |
+| `watchable_depth`                      | Number of updates coalesced into the snapshot being handled. |
 | `watchable_subscribe_duration_seconds` | How long in seconds a subscribed watchable queue is handled. |
 | `watchable_subscribe_total`            | Total number of subscribed watchable queue.                  |
 | `watchable_panics_recovered_total`     | Total recovered panics in the watchable infrastructure.      |

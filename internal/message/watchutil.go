@@ -152,7 +152,11 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 		}
 	}
 	for snapshot := range subscription {
-		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
+		// snapshot.Updates holds the mutations watchable coalesced while the previous
+		// batch was being handled, so its length is the backlog that built up during
+		// that pass. len(subscription) cannot report that: Subscribe returns an
+		// unbuffered channel, so its length is always 0.
+		watchableDepth.With(meta.LabelValues()...).Record(float64(len(snapshot.Updates)))
 
 		for _, update := range coalesceUpdates(l, snapshot.Updates) {
 			handleWithCrashRecovery(l, handle, Update[K, V]{
