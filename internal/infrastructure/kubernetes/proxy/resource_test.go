@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -66,7 +65,8 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 
 func TestResolveProxyImage(t *testing.T) {
 	defaultImage := egv1a1.DefaultEnvoyProxyImage
-	defaultTag := strings.Split(defaultImage, ":")[1]
+	defaultTag, err := getImageTag(defaultImage)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name        string
