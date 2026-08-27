@@ -192,6 +192,74 @@ func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string)
 	return i
 }
 
+func TestHostNetworkFromPatch(t *testing.T) {
+	mergeType := egv1a1.JSONMerge
+
+	cases := []struct {
+		name     string
+		patch    *egv1a1.KubernetesPatchSpec
+		expected bool
+	}{
+		{
+			name:     "nil patch",
+			patch:    nil,
+			expected: false,
+		},
+		{
+			name: "strategic merge sets hostNetwork true",
+			patch: &egv1a1.KubernetesPatchSpec{
+				Value: apiextensionsv1.JSON{
+					Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true}}}}`),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "json merge sets hostNetwork true",
+			patch: &egv1a1.KubernetesPatchSpec{
+				Type: &mergeType,
+				Value: apiextensionsv1.JSON{
+					Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true}}}}`),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "hostNetwork false",
+			patch: &egv1a1.KubernetesPatchSpec{
+				Value: apiextensionsv1.JSON{
+					Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":false}}}}`),
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "patch touches unrelated fields",
+			patch: &egv1a1.KubernetesPatchSpec{
+				Value: apiextensionsv1.JSON{
+					Raw: []byte(`{"spec":{"replicas":3}}`),
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "malformed json fails safe",
+			patch: &egv1a1.KubernetesPatchSpec{
+				Value: apiextensionsv1.JSON{
+					Raw: []byte(`not-json`),
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, hostNetworkFromPatch(tc.patch))
+		})
+	}
+}
+
 func TestDeployment(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
