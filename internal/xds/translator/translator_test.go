@@ -153,7 +153,7 @@ func TestTranslateXds(t *testing.T) {
 				FilterOrder:  x.FilterOrder,
 				RuntimeFlags: cfg.runtimeFlags,
 			}
-			tCtx, err := tr.Translate(x)
+			tCtx, err := tr.Translate(t.Context(), x)
 
 			// Handle EnvoyPatchPolicy statuses first, even if there are errors
 			// because errors are captured in the policy status conditions
@@ -390,7 +390,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr
 
-			tCtx, err := tr.Translate(x)
+			tCtx, err := tr.Translate(t.Context(), x)
 			if len(cfg.errMsg) > 0 {
 				require.EqualError(t, err, cfg.errMsg)
 			} else {
@@ -532,7 +532,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr
 
-			_, err = tr.Translate(x)
+			_, err = tr.Translate(t.Context(), x)
 			require.EqualError(t, err, cfg.errMsg)
 		})
 	}
@@ -565,7 +565,7 @@ func TestTranslateXdsWithCompositeExtensionErrorsWhenFailOpen(t *testing.T) {
 			defer extMgr.CleanupHookConns()
 			tr.ExtensionManager = &extMgr
 
-			_, err = tr.Translate(x)
+			_, err = tr.Translate(t.Context(), x)
 			require.NoError(t, err, "extension error should be swallowed when failOpen=true")
 		})
 	}
@@ -632,7 +632,7 @@ func TestTranslateXdsWithCompositeExtensionErrorsWhenFailClosed(t *testing.T) {
 			defer extMgr.CleanupHookConns()
 			tr.ExtensionManager = &extMgr
 
-			_, err = tr.Translate(x)
+			_, err = tr.Translate(t.Context(), x)
 			require.EqualError(t, err, cfg.errMsg)
 		})
 	}
