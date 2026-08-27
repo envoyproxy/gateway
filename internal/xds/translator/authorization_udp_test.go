@@ -82,6 +82,21 @@ func TestBuildUDPProxyMatcher(t *testing.T) {
 			wantOnNoMatch: false,
 		},
 		{
+			name: "an allow rule before a deny rule keeps its own entry",
+			authorization: &ir.Authorization{
+				DefaultAction: egv1a1.AuthorizationActionAllow,
+				Rules: []*ir.AuthorizationRule{
+					cidrRule(egv1a1.AuthorizationActionAllow, "10.1.0.0/16", 16),
+					cidrRule(egv1a1.AuthorizationActionDeny, "10.0.0.0/8", 8),
+					cidrRule(egv1a1.AuthorizationActionAllow, "10.0.0.0/7", 7),
+				},
+			},
+			// The first allow rule needs no exclusion, the second is narrowed by
+			// the deny between them, and the permissive default adds a catch-all.
+			wantMatchers:  3,
+			wantOnNoMatch: false,
+		},
+		{
 			name: "an allow default with nothing denied is the same as no authorization",
 			authorization: &ir.Authorization{
 				DefaultAction: egv1a1.AuthorizationActionAllow,
