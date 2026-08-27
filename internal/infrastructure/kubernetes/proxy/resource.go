@@ -78,7 +78,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
 	topologyInjectorDisabled bool,
-	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
+	controllerNamespace, dnsDomain string, gatewayNamespaceMode, hostNetwork bool,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {
@@ -130,6 +130,22 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	proxyImage, err := resolveProxyImage(containerSpec)
 	if err != nil {
 		return nil, err
+	}
+
+	preStopHTTPGet := &corev1.HTTPGetAction{
+		Path:   envoy.ShutdownManagerReadyPath,
+		Port:   intstr.FromInt32(envoy.ShutdownManagerPort),
+		Scheme: corev1.URISchemeHTTP,
+	}
+	if hostNetwork {
+		// Host is set explicitly because the kubelet cannot resolve the
+		// pod IP for the PreStop hook in hostNetwork mode, causing the
+		// hook to fail with "failed to find networking container"
+		// (see https://github.com/kubernetes/kubernetes/issues/134285).
+		// This must not be set for non-hostNetwork pods: the kubelet runs
+		// HTTPGet lifecycle hooks from the node's network namespace, so
+		// "127.0.0.1" would target the node itself rather than the pod.
+		preStopHTTPGet.Host = "127.0.0.1"
 	}
 
 	containers := []corev1.Container{
@@ -187,16 +203,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			},
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						// Host is set explicitly because the kubelet cannot resolve the
-						// pod IP for the PreStop hook in hostNetwork mode, causing the
-						// hook to fail with "failed to find networking container"
-						// (see https://github.com/kubernetes/kubernetes/issues/134285).
-						Host:   "127.0.0.1",
-						Path:   envoy.ShutdownManagerReadyPath,
-						Port:   intstr.FromInt32(envoy.ShutdownManagerPort),
-						Scheme: corev1.URISchemeHTTP,
-					},
+					HTTPGet: preStopHTTPGet,
 				},
 			},
 		},
