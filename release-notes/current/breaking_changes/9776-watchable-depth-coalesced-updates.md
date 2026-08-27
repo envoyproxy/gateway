@@ -1,0 +1,1 @@
+Changed `watchable_depth` to report the number of updates coalesced into the snapshot being handled. It previously read the length of the subscription channel, which `watchable.Map.Subscribe` returns unbuffered, so the gauge was always 0; dashboards and alerts that treated a flat zero as "no backlog" will now see real values.
