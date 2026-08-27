@@ -79,26 +79,34 @@ func TestMetricServerTLS(t *testing.T) {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // test-only self-signed certificate
 		},
 	}
-	var resp *http.Response
+	var (
+		statusCode int
+		body       string
+	)
 	require.Eventually(t, func() bool {
 		var err error
-		resp, err = client.Get("https://" + runner.listener.Addr().String() + defaultEndpoint)
+		statusCode, body, err = getMetrics(client, "https://"+runner.listener.Addr().String()+defaultEndpoint)
 		if err != nil {
 			return false
 		}
-		if resp.StatusCode != http.StatusOK {
-			_ = resp.Body.Close()
-			resp = nil
-			return false
-		}
-		return true
+		return statusCode == http.StatusOK
 	}, time.Second, time.Millisecond)
-	require.NotNil(t, resp)
+	require.Equal(t, http.StatusOK, statusCode)
+	require.Equal(t, "metrics", body)
+}
+
+func getMetrics(client *http.Client, url string) (int, string, error) {
+	resp, err := client.Get(url)
+	if err != nil {
+		return 0, "", err
+	}
 	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+
 	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Equal(t, "metrics", string(body))
+	if err != nil {
+		return 0, "", err
+	}
+	return resp.StatusCode, string(body), nil
 }
 
 func TestMetricServerTLSRequiresCertificateFiles(t *testing.T) {

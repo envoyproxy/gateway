@@ -24,7 +24,11 @@ spec:
     {{- include "eg.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.deployment.pod.annotations }}
+      {{- $podAnnotations := deepCopy .Values.deployment.pod.annotations }}
+      {{- if .Values.metrics.tls.enable }}
+      {{- $_ := set $podAnnotations "prometheus.io/scheme" "https" }}
+      {{- end }}
+      {{- with $podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

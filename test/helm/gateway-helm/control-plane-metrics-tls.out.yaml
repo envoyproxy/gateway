@@ -437,6 +437,7 @@ spec:
     metadata:
       annotations:
         prometheus.io/port: "19001"
+        prometheus.io/scheme: https
         prometheus.io/scrape: "true"
       labels:
         control-plane: envoy-gateway
@@ -467,7 +468,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
         image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -774,7 +775,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
         image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: envoy-gateway-certgen
         securityContext:
           allowPrivilegeEscalation: false
