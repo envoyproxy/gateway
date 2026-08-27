@@ -1288,6 +1288,44 @@ func Test_validateSecurityPolicyForL4_Table(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// The L4 matcher only looks at client CIDRs, so accepting an operation
+			// would silently widen the rule to all traffic from those CIDRs.
+			name: "operation with methods is rejected",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action:    egv1a1.AuthorizationActionAllow,
+							Operation: &egv1a1.Operation{Methods: []gwapiv1.HTTPMethod{gwapiv1.HTTPMethodGet}},
+							Principal: &egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "operation with path is rejected",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Operation: &egv1a1.Operation{Path: &egv1a1.PathMatch{
+								Value: "/admin",
+							}},
+							Principal: &egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "jwt principal not supported on tcp",
 			spec: egv1a1.SecurityPolicySpec{
 				Authorization: &egv1a1.Authorization{

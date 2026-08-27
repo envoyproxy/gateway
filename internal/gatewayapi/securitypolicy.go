@@ -979,6 +979,7 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // request to inspect:
 // - Principals.JWT      => invalid (HTTP-only)
 // - Principals.Headers  => invalid (HTTP-only)
+// - Operation           => invalid (HTTP methods/paths)
 // - Empty/no Authorization is allowed and results in no-op on L4.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
@@ -992,6 +993,12 @@ func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
 		rule := &p.Spec.Authorization.Rules[i]
 		if rule.CEL != nil {
 			return fmt.Errorf("rule %d: CEL not supported for %s", i, proto)
+		}
+		// Methods and paths are HTTP concepts. The L4 matcher only looks at the
+		// client CIDRs, so accepting an operation here would silently widen the
+		// rule to every datagram or connection from those CIDRs.
+		if rule.Operation != nil {
+			return fmt.Errorf("rule %d: operation not supported for %s", i, proto)
 		}
 		if rule.Principal == nil {
 			continue
@@ -1395,6 +1402,14 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					continue
 				}
 				for _, r := range tl.Routes {
+					// Only the IR route built from the targeted TCPRoute may be
+					// modified. Several TCPRoutes can name the same listener while
+					// only one of them is attached, so without this check a policy
+					// targeting an unattached route would silently apply to
+					// whichever route is actually serving traffic.
+					if r.Name != irTCPRouteName(route) {
+						continue
+					}
 					// If target.SectionName is specified it must match the route-rule section name
 					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
 					// routes the section name is currently stored on r.Destination.Metadata.SectionName.
@@ -1421,8 +1436,9 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				ul := xdsIR[irKey].GetUDPListener(irListenerName(listener))
 				// A UDP listener holds at most one route: when several UDPRoutes name the
 				// same listener only the oldest one is attached, so a policy targeting any
-				// of the others has nothing to apply to.
-				if ul == nil || ul.Route == nil {
+				// of the others has nothing to apply to. Comparing the names keeps such a
+				// policy from restricting the route that is actually serving traffic.
+				if ul == nil || ul.Route == nil || ul.Route.Name != irUDPRouteName(route) {
 					continue
 				}
 				r := ul.Route
