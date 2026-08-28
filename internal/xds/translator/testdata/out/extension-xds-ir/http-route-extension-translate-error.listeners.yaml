@@ -24,7 +24,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: extension-post-xdstranslate-hook-error
         serverHeaderTransformation: PASS_THROUGH

@@ -89,6 +89,8 @@ spec:
             layers:
             - name: global_config
               static_layer:
+                envoy.reloadable_features.oauth2_legacy_cbc_decrypt_compat: false
+                envoy.reloadable_features.oauth2_use_gcm_encryption: true
                 re2.max_program_size.error_level: 4294967295
                 re2.max_program_size.warn_level: 1000
           dynamic_resources:

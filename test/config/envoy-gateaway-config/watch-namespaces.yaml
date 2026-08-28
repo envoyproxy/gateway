@@ -26,6 +26,7 @@ data:
               - monitoring
               - multireferencegrants-ns
               - sp-cross-ns
+              - namespace-selector-relabel-app
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
