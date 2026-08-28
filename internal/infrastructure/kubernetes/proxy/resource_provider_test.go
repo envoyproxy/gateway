@@ -246,6 +246,11 @@ func TestDeployment(t *testing.T) {
 					},
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: new(true),
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{
+								"NET_ADMIN",
+							},
+						},
 					},
 				},
 			},
