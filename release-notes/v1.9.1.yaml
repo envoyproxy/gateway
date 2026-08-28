@@ -2,7 +2,7 @@ date: August 28, 2026
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Reverted initial time out 0s setting for SDS and RDS.
+  Reverted the `0s` initial timeout for SDS and RDS because it could cause Envoy to wait indefinitely and block subsequent xDS updates. Both now use the default 15-second initial timeout.
   The `watchable_subscribe_duration_seconds` histogram bucket boundaries changed from `{0.001, 0.01, 0.1, 1, 5, 10}` to `{0.005, 0.025, 0.1, 0.25, 0.5, 1, 2, 4, 8, 15, 30, 60, 120}` to improve latency resolution. The metric name and its `_sum`/`_count` series are unchanged, but `_bucket` series with `le="0.001"`, `le="0.01"`, `le="5"`, and `le="10"` are no longer emitted; `le="0.1"` and `le="1"` remain available. Update any dashboard, alert, or recording rule that references the removed boundaries directly. Queries that aggregate dynamically by `le`, such as `histogram_quantile()`, do not require changes.
   HTTP is no longer supported as an OIDC issuer URL scheme.
   OCI Wasm image pulls now require the registry to serve HTTPS. The implicit fallback to plain HTTP has been removed, so a Wasm extension backed by a plain HTTP registry will fail to load unless that registry is explicitly configured as insecure.
