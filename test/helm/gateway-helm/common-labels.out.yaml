@@ -50,7 +50,7 @@ data:
       kubernetes:
         rateLimitDeployment:
           container:
-            image: docker.io/envoyproxy/ratelimit:17b1956c
+            image: docker.io/envoyproxy/ratelimit:8fe6ea42
           patch:
             type: StrategicMerge
             value:
