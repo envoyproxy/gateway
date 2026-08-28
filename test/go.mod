@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway/test
 
-go 1.26.6
+go 1.27.0
 
 replace github.com/envoyproxy/gateway => ../
 

@@ -321,7 +321,7 @@ func deepCopyPtr(src, dest interface{}) error {
 	}
 	srcVal := reflect.ValueOf(src)
 	destVal := reflect.ValueOf(dest)
-	if srcVal.Kind() == reflect.Ptr && destVal.Kind() == reflect.Ptr {
+	if srcVal.Kind() == reflect.Pointer && destVal.Kind() == reflect.Pointer {
 		srcElem := srcVal.Elem()
 		destVal = reflect.New(srcElem.Type())
 		destElem := destVal.Elem()

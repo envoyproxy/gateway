@@ -1835,7 +1835,7 @@ func structWithFieldSet[T any](fieldName string) *T {
 	v := reflect.ValueOf(specPtr).Elem()
 	field := v.FieldByName(fieldName)
 	switch field.Kind() {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		field.Set(reflect.New(field.Type().Elem()))
 	case reflect.Slice:
 		field.Set(reflect.MakeSlice(field.Type(), 1, 1))
