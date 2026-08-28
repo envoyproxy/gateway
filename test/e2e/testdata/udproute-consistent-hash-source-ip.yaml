@@ -132,7 +132,7 @@ spec:
         kinds:
           - kind: UDPRoute
 ---
-apiVersion: gateway.networking.k8s.io/v1
+apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
 metadata:
   name: udp-lb-coredns
