@@ -166,7 +166,7 @@ helm uninstall eg -n envoy-gateway-system
 | global.images.envoyProxy.image | string | `""` | Full image for the managed Envoy Proxy data plane. This updates the generated `envoyProxy` config and does not change the `envoy-gateway` control plane Deployment image. If not specified, the default image built into `envoy-gateway` is used. |
 | global.images.envoyProxy.pullPolicy | string | `""` | Image pull policy for the managed Envoy Proxy data plane. Default behavior: IfNotPresent. |
 | global.images.envoyProxy.pullSecrets | list | `[]` | Pull secrets for the managed Envoy Proxy data plane. |
-| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:17b1956c"` |  |
+| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:8fe6ea42"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | hpa.behavior | object | `{}` |  |
