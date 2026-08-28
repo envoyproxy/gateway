@@ -3058,6 +3058,41 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "response status code 200 valid in response override",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: new(500),
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								StatusCode: new(200),
+								Body: &egv1a1.CustomResponseBody{
+									Type:   new(egv1a1.ResponseValueTypeInline),
+									Inline: new("error"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "default require inline response body in response override",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
