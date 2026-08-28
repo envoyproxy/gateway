@@ -161,11 +161,11 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.33.12
+        - version: v1.34.11
           ipFamily: ipv4
           profile: default
           gwapiChannel: standard
-        - version: v1.33.12
+        - version: v1.34.11
           ipFamily: ipv4
           profile: default
           gwapiChannel: standard
@@ -173,36 +173,36 @@ jobs:
           # this should be able to be run in a private forked repo
           # with less CPU and memory resources
           disableParallel: true
-        - version: v1.34.8
+        - version: v1.35.8
           ipFamily: ipv4
           profile: default
           gwapiChannel: experimental
-        - version: v1.35.5
+        - version: v1.36.4
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
           gwapiChannel: experimental
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
           gwapiChannel: experimental
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: dual  # only run dual test on latest version to save time
           gwapiChannel: experimental
           profile: gateway-namespace-mode
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: ipv4
           profile: xds-name-scheme-v2
           gwapiChannel: experimental
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: ipv4
           profile: watch-namespaces
           gwapiChannel: experimental
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: ipv4
           profile: merge-backends
           gwapiChannel: experimental
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: ipv4
           profile: debounce
           gwapiChannel: experimental
@@ -255,29 +255,29 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.33.12
+        - version: v1.34.11
           ipFamily: ipv4
           profile: default
-        - version: v1.34.8
+        - version: v1.35.8
           ipFamily: ipv4
           profile: default
-        - version: v1.35.5
+        - version: v1.36.4
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: ipv4
           profile: xds-name-scheme-v2
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: ipv4
           profile: watch-namespaces
-        - version: v1.36.1
+        - version: v1.37.0
           ipFamily: ipv4
           profile: debounce
 
