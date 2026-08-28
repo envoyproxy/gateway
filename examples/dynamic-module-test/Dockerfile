@@ -2,7 +2,7 @@
 # Update both together when changing the target Envoy version.
 ARG ENVOY_VERSION=dev
 
-FROM golang:1.26.6@sha256:640a234f4bea3e399c056b7b8f9c667c4939befae8db2f14e9785e16eccd4205 AS builder
+FROM golang:1.27.0@sha256:640a234f4bea3e399c056b7b8f9c667c4939befae8db2f14e9785e16eccd4205 AS builder
 
 WORKDIR /build
 COPY go.mod go.sum ./
