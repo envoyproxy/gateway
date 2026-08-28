@@ -847,7 +847,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 		}
 		if cert.SDS != nil {
 			// Use external SDS server instead of ADS
-			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			clusterName := sdsClusterNameFromURL(cert.SDS.GetURL())
 			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
 		}
 		tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
@@ -890,7 +890,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 		}
 		if cert.SDS != nil {
 			// Use external SDS server instead of ADS
-			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			clusterName := sdsClusterNameFromURL(cert.SDS.GetURL())
 			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
 		}
 		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
@@ -970,7 +970,7 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 
 	if tlsConfig.CACertificate.SDS != nil {
 		// Use external SDS server instead of ADS
-		clusterName := sdsClusterNameFromURL(tlsConfig.CACertificate.SDS.URL)
+		clusterName := sdsClusterNameFromURL(tlsConfig.CACertificate.SDS.GetURL())
 		sdsConfig = sdsSecretConfig(tlsConfig.CACertificate.SDS.SecretName, clusterName)
 	}
 
@@ -1129,9 +1129,15 @@ func buildXdsUDPListener(
 	if error != nil {
 		return nil, error
 	}
+
+	var udpProxyHashPolicies []*udpv3.UdpProxyConfig_HashPolicy
+	if udpListener.Route != nil {
+		udpProxyHashPolicies = buildUDPProxyHashPolicy(udpListener.Route.LoadBalancer)
+	}
 	udpProxy := &udpv3.UdpProxyConfig{
-		StatPrefix: statPrefix,
-		AccessLog:  al,
+		StatPrefix:   statPrefix,
+		AccessLog:    al,
+		HashPolicies: udpProxyHashPolicies,
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
 			Matcher: &matcher.Matcher{
 				OnNoMatch: &matcher.Matcher_OnMatch{
@@ -1218,6 +1224,28 @@ func toNetworkFilter(filterName string, filterProto protobuf.Message) (*listener
 			TypedConfig: filterAny,
 		},
 	}, nil
+}
+
+// buildUDPProxyHashPolicy builds the hash policies for the UDP proxy listener filter.
+// Only source IP based hashing is supported for UDP, since the other consistent hash
+// types (header, cookie, query param) are not applicable to UDP datagrams.
+func buildUDPProxyHashPolicy(lb *ir.LoadBalancer) []*udpv3.UdpProxyConfig_HashPolicy {
+	// Return early
+	if lb == nil || lb.ConsistentHash == nil {
+		return nil
+	}
+
+	if lb.ConsistentHash.SourceIP != nil && *lb.ConsistentHash.SourceIP {
+		hashPolicy := &udpv3.UdpProxyConfig_HashPolicy{
+			PolicySpecifier: &udpv3.UdpProxyConfig_HashPolicy_SourceIp{
+				SourceIp: true,
+			},
+		}
+
+		return []*udpv3.UdpProxyConfig_HashPolicy{hashPolicy}
+	}
+
+	return nil
 }
 
 func buildTCPProxyHashPolicy(lb *ir.LoadBalancer) []*typev3.HashPolicy {

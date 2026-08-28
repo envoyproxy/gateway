@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -34,6 +35,11 @@ import (
 const (
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	envoyTLSSecretName = "envoy"
+	// rateLimitServiceName is the name of the in-cluster Service fronting the
+	// envoy-ratelimit deployment. It is not referenced by any Gateway API
+	// backendRef, so it needs its own reconcile-trigger checks below, mirroring
+	// the OIDC HMAC and Envoy TLS Secrets.
+	rateLimitServiceName = "envoy-ratelimit"
 )
 
 // hasMatchingController returns true if the provided object is a GatewayClass
@@ -81,6 +87,52 @@ func isNamespaceSelectorBypassInfrastructureResource(obj any) bool {
 	default:
 		return false
 	}
+}
+
+func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesListener(ctx context.Context) bool {
+	gtwList := &gwapiv1.GatewayList{}
+	if err := r.client.List(ctx, gtwList, &client.ListOptions{}); err != nil {
+		// If we can't list Gateways, we can't determine if
+		// any of them have SelectorAllowedRoutes set to true, so we return true.
+		return true
+	}
+
+	for i := range gtwList.Items {
+		gtw := &gtwList.Items[i]
+		for _, l := range gtw.Spec.Listeners {
+			if hasNamespacesFromSelector(l.AllowedRoutes) {
+				return true
+			}
+		}
+	}
+
+	if !r.listenerSetCRDExists {
+		return false
+	}
+
+	listenerSetList := &gwapiv1.ListenerSetList{}
+	if err := r.client.List(ctx, listenerSetList, &client.ListOptions{}); err != nil {
+		// If we can't list ListenerSet, we can't determine if
+		// any of them have SelectorAllowedRoutes set to true, so we return true.
+		return true
+	}
+	for i := range listenerSetList.Items {
+		ls := &listenerSetList.Items[i]
+		for _, l := range ls.Spec.Listeners {
+			if hasNamespacesFromSelector(l.AllowedRoutes) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func hasNamespacesFromSelector(ar *gwapiv1.AllowedRoutes) bool {
+	if ar == nil || ar.Namespaces == nil {
+		return false
+	}
+	return ptr.Deref(ar.Namespaces.From, gwapiv1.NamespacesFromSame) == gwapiv1.NamespacesFromSelector
 }
 
 type NamespaceGetter interface {
@@ -162,6 +214,12 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		return true
 	}
 
+	if r.listenerSetCRDExists {
+		if r.isListenerSetReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
 	if r.spCRDExists {
 		if r.isSecurityPolicyReferencingSecret(&nsName) {
 			return true
@@ -194,8 +252,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		}
 	}
 
-	if r.isBackendTLSPolicyReferencingSecret(&nsName) {
-		return true
+	if r.btlsCRDExists {
+		if r.isBackendTLSPolicyReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
 	if r.hrfCRDExists {
@@ -236,8 +296,10 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 		}
 	}
 
-	if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
-		return true
+	if r.btlsCRDExists {
+		if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
+			return true
+		}
 	}
 
 	if r.ctpCRDExists {
@@ -384,11 +446,44 @@ func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.Namespac
 
 	for i := range gwList.Items {
 		gw := &gwList.Items[i]
-		if !r.validateGatewayForReconcile(gw) {
-			return false
+		if r.validateGatewayForReconcile(gw) {
+			return true
 		}
 	}
-	return true
+	return false
+}
+
+func (r *gatewayAPIReconciler) isListenerSetReferencingSecret(nsName *types.NamespacedName) bool {
+	lsList := &gwapiv1.ListenerSetList{}
+	if err := r.client.List(context.Background(), lsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretListenerSetIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ListenerSets")
+		return false
+	}
+
+	if len(lsList.Items) == 0 {
+		return false
+	}
+
+	for i := range lsList.Items {
+		ls := &lsList.Items[i]
+		parent := ls.Spec.ParentRef
+		gw := &gwapiv1.Gateway{}
+		key := types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, ls.Namespace),
+			Name:      string(parent.Name),
+		}
+		if err := r.client.Get(context.Background(), key, gw); err != nil {
+			r.log.Error(err, "failed to get parent Gateway for ListenerSet",
+				"namespace", ls.Namespace, "name", ls.Name)
+			continue
+		}
+		if r.validateGatewayForReconcile(gw) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.NamespacedName) bool {
@@ -431,6 +526,22 @@ func (r *gatewayAPIReconciler) isEnvoyTLSSecret(nsName *types.NamespacedName) bo
 	return *nsName == envoyTLSSecret
 }
 
+// isRateLimitService returns true if nsName is the in-cluster envoy-ratelimit
+// Service, and global rate limiting is configured. The gatewayapi translator
+// discovers this Service's endpoints to build an EDS-based ratelimit_cluster,
+// so changes to it (or its EndpointSlices, see validateEndpointSliceForReconcile)
+// must trigger reconciliation even though nothing references it as a backendRef.
+func (r *gatewayAPIReconciler) isRateLimitService(nsName *types.NamespacedName) bool {
+	if r.envoyGateway == nil || r.envoyGateway.RateLimit == nil {
+		return false
+	}
+	rateLimitService := types.NamespacedName{
+		Namespace: r.namespace,
+		Name:      rateLimitServiceName,
+	}
+	return *nsName == rateLimitService
+}
+
 // validateServiceForReconcile tries finding the owning Gateway of the Service
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
@@ -461,6 +572,10 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	nsName := utils.NamespacedName(svc)
+	if r.isRateLimitService(&nsName) {
+		return true
+	}
+
 	if r.isRouteReferencingBackend(&nsName) {
 		return true
 	}
@@ -563,26 +678,30 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 		return true
 	}
 
-	grpcRouteList := &gwapiv1.GRPCRouteList{}
-	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated GRPCRoutes")
-		return false
-	}
-	if len(grpcRouteList.Items) > 0 {
-		return true
+	if r.grpcRouteCRDExists {
+		grpcRouteList := &gwapiv1.GRPCRouteList{}
+		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated GRPCRoutes")
+			return false
+		}
+		if len(grpcRouteList.Items) > 0 {
+			return true
+		}
 	}
 
-	tlsRouteList := &gwapiv1.TLSRouteList{}
-	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated TLSRoutes")
-		return false
-	}
-	if len(tlsRouteList.Items) > 0 {
-		return true
+	if r.tlsRouteCRDExists {
+		tlsRouteList := &gwapiv1.TLSRouteList{}
+		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated TLSRoutes")
+			return false
+		}
+		if len(tlsRouteList.Items) > 0 {
+			return true
+		}
 	}
 
 	if r.tcpRouteCRDExists {
@@ -637,6 +756,10 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 
 	if isMCS {
 		nsName.Name = multiClusterSvcName
+	}
+
+	if r.isRateLimitService(&nsName) {
+		return true
 	}
 
 	if r.isRouteReferencingBackend(&nsName) {
@@ -873,16 +996,18 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
-	btlsList := &gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated BackendTLSPolicy")
-		return false
-	}
+	if r.btlsCRDExists {
+		btlsList := &gwapiv1.BackendTLSPolicyList{}
+		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated BackendTLSPolicy")
+			return false
+		}
 
-	if len(btlsList.Items) > 0 {
-		return true
+		if len(btlsList.Items) > 0 {
+			return true
+		}
 	}
 
 	if r.btpCRDExists {

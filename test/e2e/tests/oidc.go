@@ -12,6 +12,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"testing"
 	"time"
@@ -236,6 +237,26 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc oidcRouteTestC
 			return true, nil
 		}); err != nil {
 		t.Errorf("failed to parse login form: %v", err)
+	}
+
+	// At this point an authorization flow is in flight but not yet completed, which is
+	// the state an abandoned flow leaves behind. Its nonce and code verifier cookies must
+	// be scoped to the callback path: at "/" they would be replayed on every application
+	// request, and enough of them overflow the request header limit.
+	flowCookie := regexp.MustCompile(`^(OauthNonce|CodeVerifier)-`)
+	var inFlightFlowCookies int
+	for _, cookie := range oidcClient.Cookies() {
+		if flowCookie.MatchString(cookie.Name) {
+			inFlightFlowCookies++
+		}
+	}
+	require.NotZero(t, inFlightFlowCookies, "Expected the in-flight OIDC flow to set nonce and code verifier cookies")
+
+	appPath, err := url.Parse(tc.testURL)
+	require.NoError(t, err)
+	for _, cookie := range oidcClient.CookiesForPath(appPath.Path) {
+		require.False(t, flowCookie.MatchString(cookie.Name),
+			"OIDC flow cookie %q must not be sent to the application path %q", cookie.Name, appPath.Path)
 	}
 
 	// Submit the login form to the IdP.

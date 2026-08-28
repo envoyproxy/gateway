@@ -101,6 +101,18 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	// Hash Policy
 	if router.GetRoute() != nil {
 		router.GetRoute().HashPolicy = buildHashPolicy(httpRoute)
+
+		// When a route splits traffic across multiple weighted backendRefs and uses a
+		// ConsistentHash load balancer, enable use_hash_policy so Envoy selects the weighted
+		// cluster deterministically from the request's hash policy instead of at random.
+		// Without this, the consistent hash only pins endpoint selection within a cluster,
+		// while the choice among the weighted backends stays random per request, so a client
+		// is not pinned to a single backend across the split.
+		if wc := router.GetRoute().GetWeightedClusters(); wc != nil && len(router.GetRoute().GetHashPolicy()) > 0 {
+			wc.RandomValueSpecifier = &routev3.WeightedCluster_UseHashPolicy{
+				UseHashPolicy: wrapperspb.Bool(true),
+			}
+		}
 	}
 
 	// Timeouts

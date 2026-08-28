@@ -25,6 +25,7 @@ data:
               - listenerset-tls-termination-secret
               - monitoring
               - multireferencegrants-ns
+              - namespace-selector-relabel-app
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:

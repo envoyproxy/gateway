@@ -9,6 +9,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -24,7 +25,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
@@ -328,6 +332,37 @@ func TestValidateTLSSecretsData(t *testing.T) {
 	}
 }
 
+func TestValidateTLSSecretsDataWithECParameters(t *testing.T) {
+	const ecParametersPEM = "-----BEGIN EC PARAMETERS-----\nBggqhkjOPQMBBw==\n-----END EC PARAMETERS-----\n"
+
+	t.Run("ec-parameters-before-private-key", func(t *testing.T) {
+		secrets := createTestSecrets(t, []string{"ecdsa-p256-cert.pem"}, []string{"ecdsa-p256.key"})
+		keyData := append([]byte(nil), secrets[0].Data[corev1.TLSPrivateKeyKey]...)
+		secrets[0].Data[corev1.TLSPrivateKeyKey] = append([]byte(ecParametersPEM), keyData...)
+
+		validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
+		require.NoError(t, err)
+		require.Len(t, validSecrets, 1)
+		require.Len(t, certs, 1)
+
+		keyBlock, _ := pem.Decode(keyData)
+		require.NotNil(t, keyBlock)
+		require.Equal(t, pem.EncodeToMemory(keyBlock), validSecrets[0].Data[corev1.TLSPrivateKeyKey])
+	})
+
+	t.Run("ec-parameters-without-private-key", func(t *testing.T) {
+		secrets := createTestSecrets(t, []string{"ecdsa-p256-cert.pem"}, []string{"ecdsa-p256.key"})
+		secrets[0].Data[corev1.TLSPrivateKeyKey] = []byte(ecParametersPEM)
+
+		validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
+		require.Error(t, err)
+		require.Equal(t, "test/secret must contain valid tls.crt and tls.key, EC PARAMETERS key format found in tls.key, supported formats are PKCS1, PKCS8 or EC", err.Error())
+		require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, err.Reason())
+		require.Empty(t, validSecrets)
+		require.Empty(t, certs)
+	})
+}
+
 func TestFilterValidCertificates(t *testing.T) {
 	type testCase struct {
 		Name              string
@@ -555,4 +590,139 @@ func TestParseCertsExpiredLeafChainRejected(t *testing.T) {
 	require.Error(t, listenerErr)
 	require.Equal(t, gwapiv1.ListenerReasonInvalidCertificateRef, listenerErr.Reason())
 	require.Contains(t, listenerErr.Error(), "has expired")
+}
+
+func TestAppendDedupPEMCertsWithSeen(t *testing.T) {
+	rsaCert, err := os.ReadFile(filepath.Join("testdata", "tls", "rsa-cert.pem"))
+	require.NoError(t, err)
+
+	ecdsaCert, err := os.ReadFile(filepath.Join("testdata", "tls", "ecdsa-p256-cert.pem"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name     string
+		dst      []byte
+		src      []byte
+		expected []byte
+	}{
+		{
+			name:     "append distinct cert to empty dst",
+			dst:      []byte{},
+			src:      rsaCert,
+			expected: rsaCert,
+		},
+		{
+			name:     "append distinct cert to non-empty dst",
+			dst:      rsaCert,
+			src:      ecdsaCert,
+			expected: append(append([]byte{}, rsaCert...), ecdsaCert...),
+		},
+		{
+			name:     "duplicate src cert already in dst is skipped",
+			dst:      rsaCert,
+			src:      rsaCert,
+			expected: rsaCert,
+		},
+		{
+			name:     "only new cert appended when src contains one known and one new",
+			dst:      rsaCert,
+			src:      append(append([]byte{}, rsaCert...), ecdsaCert...),
+			expected: append(append([]byte{}, rsaCert...), ecdsaCert...),
+		},
+		{
+			name:     "duplicate within src itself only appended once",
+			dst:      []byte{},
+			src:      append(append([]byte{}, rsaCert...), rsaCert...),
+			expected: rsaCert,
+		},
+		{
+			name:     "empty src leaves dst unchanged",
+			dst:      rsaCert,
+			src:      []byte{},
+			expected: rsaCert,
+		},
+		{
+			name:     "both empty returns empty",
+			dst:      []byte{},
+			src:      []byte{},
+			expected: []byte{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := appendDedupPEMCertsWithSeen(tc.dst, tc.src, make(map[[sha256.Size]byte]struct{}))
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestBuildListenerTLSParametersDedupCACerts(t *testing.T) {
+	caCertPEM, err := os.ReadFile(filepath.Join("testdata", "tls", "rsa-cert.pem"))
+	require.NoError(t, err)
+
+	ns := "envoy-gateway"
+
+	// both secrets contain the identical CA PEM
+	makeCASecret := func(name string) *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+			Data:       map[string][]byte{CACertKey: caCertPEM},
+		}
+	}
+
+	policy := &egv1a1.ClientTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "test-policy"},
+		Spec: egv1a1.ClientTrafficPolicySpec{
+			TLS: &egv1a1.ClientTLSSettings{
+				ClientValidation: &egv1a1.ClientValidationContext{
+					CACertificateRefs: []gwapiv1.SecretObjectReference{
+						{Name: "ca-secret-1", Namespace: new(gwapiv1.Namespace(ns))},
+						{Name: "ca-secret-2", Namespace: new(gwapiv1.Namespace(ns))},
+					},
+				},
+			},
+		},
+	}
+
+	resources := &resource.Resources{
+		Secrets: []*corev1.Secret{
+			makeCASecret("ca-secret-1"),
+			makeCASecret("ca-secret-2"),
+		},
+		ReferenceGrants: nil,
+	}
+
+	translator := &Translator{
+		TranslatorContext: &TranslatorContext{},
+	}
+	translator.SetSecrets(resources.Secrets)
+
+	// seed irTLSConfig with a server cert so buildListenerTLSParameters doesn't
+	// return early
+	irTLSConfig := &ir.TLSConfig{
+		Certificates: []ir.TLSCertificate{
+			{Name: "dummy"},
+		},
+	}
+
+	result, err := translator.buildListenerTLSParameters(policy, irTLSConfig, resources)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, result.CACertificate)
+
+	// PEM blocks must be 1.
+	pemCount := 0
+	rest := result.CACertificate.Certificate
+	for len(rest) > 0 {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		pemCount++
+	}
+	require.Equal(t, 1, pemCount,
+		"expected exactly 1 PEM block after deduplication, got %d — "+
+			"appendDedupPEMCertsWithSeen may not be used in buildListenerTLSParameters", pemCount)
 }

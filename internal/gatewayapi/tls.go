@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -104,7 +105,7 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 
 		keyData := secret.Data[corev1.TLSPrivateKeyKey]
 
-		keyBlock, _ := pem.Decode(keyData)
+		keyBlock := firstSupportedPrivateKeyBlock(keyData)
 		if keyBlock == nil {
 			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s",
 				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey))
@@ -208,6 +209,29 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 		}
 	}
 	return validSecrets, certs, nil
+}
+
+// firstSupportedPrivateKeyBlock returns the first supported private key PEM block,
+// skipping preceding non-key blocks such as OpenSSL's "EC PARAMETERS" block.
+// It returns the first block when no supported key is found so the caller can
+// report the unexpected block type.
+func firstSupportedPrivateKeyBlock(data []byte) *pem.Block {
+	var firstBlock *pem.Block
+	for len(data) > 0 {
+		block, rest := pem.Decode(data)
+		if block == nil {
+			return firstBlock
+		}
+		if firstBlock == nil {
+			firstBlock = block
+		}
+		switch block.Type {
+		case "PRIVATE KEY", "RSA PRIVATE KEY", "EC PRIVATE KEY":
+			return block
+		}
+		data = rest
+	}
+	return firstBlock
 }
 
 // validateCertBlock parses the certificate(s) in a single PEM block and returns
@@ -358,4 +382,37 @@ func validateCipherSuites(ciphers []string) error {
 		}
 	}
 	return nil
+}
+
+func appendDedupPEMCertsWithSeen(dst, src []byte, seen map[[sha256.Size]byte]struct{}) []byte {
+	// seed seen from dst so that certs already present are recognised as duplicates.
+	rest := dst
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+		if block.Type == "CERTIFICATE" {
+			seen[sha256.Sum256(block.Bytes)] = struct{}{}
+		}
+	}
+
+	rest = src
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+		if block.Type == "CERTIFICATE" {
+			hash := sha256.Sum256(block.Bytes)
+			if _, exists := seen[hash]; exists {
+				continue
+			}
+			seen[hash] = struct{}{}
+		}
+		dst = append(dst, pem.EncodeToMemory(block)...)
+	}
+	return dst
 }

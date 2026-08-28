@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"math"
@@ -964,6 +965,7 @@ func (t *Translator) buildListenerTLSParameters(
 			Name: irTLSCACertName(policy.Namespace, policy.Name),
 		}
 
+		seenCACerts := make(map[[sha256.Size]byte]struct{})
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
 			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
 			if err != nil {
@@ -981,7 +983,7 @@ func (t *Translator) buildListenerTLSParameters(
 					)
 				}
 			}
-			irCACert.Certificate = append(irCACert.Certificate, validCaCertBytes...)
+			irCACert.Certificate = appendDedupPEMCertsWithSeen(irCACert.Certificate, validCaCertBytes, seenCACerts)
 		}
 
 		// CA certificates are required for verification modes.

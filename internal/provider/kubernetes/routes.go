@@ -104,6 +104,32 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 	return nil
 }
 
+// populateExtensionResources collects extension ref filters and custom backend resources
+// managed by extensions into resourceMap. These resources are cluster-wide and not scoped to a specific Gateway,
+// so this must be called once per reconcile rather than once per Gateway.
+func (r *gatewayAPIReconciler) populateExtensionResources(ctx context.Context, resourceMap *resourceMappings) error {
+	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range extensionRefFilters {
+		filter := extensionRefFilters[i]
+		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = filter
+	}
+
+	// Collect custom backend resources managed by extensions
+	extensionBackendResources, err := r.getExtensionBackendResources(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range extensionBackendResources {
+		backend := extensionBackendResources[i]
+		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&backend)] = backend
+	}
+
+	return nil
+}
+
 // processGRPCRoutes finds GRPCRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the GRPCRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
@@ -225,25 +251,6 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
-
-	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
-	if err != nil {
-		return err
-	}
-	for i := range extensionRefFilters {
-		filter := extensionRefFilters[i]
-		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = filter
-	}
-
-	// Collect custom backend resources managed by extensions
-	extensionBackendResources, err := r.getExtensionBackendResources(ctx)
-	if err != nil {
-		return err
-	}
-	for i := range extensionBackendResources {
-		backend := extensionBackendResources[i]
-		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&backend)] = backend
-	}
 
 	// Process HTTPRoutes attached to the gateway
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{

@@ -6,10 +6,14 @@
 package gatewayapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -24,6 +28,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/traces/phase"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -49,10 +54,41 @@ const (
 	wellKnownPortShift = 10000
 )
 
+var tracer = otel.Tracer("envoy-gateway/gateway-api/translator")
+
+// inputSizeAttrs reports the size of the resource tree a translation is about to
+// process, so that a slow translation can be attributed to a bigger input instead
+// of being correlated against other signals by hand.
+//
+// These are the counts of the resources as they arrive. Counts derived during the
+// translation, for example the gateways that were accepted or the routes that are
+// relevant to them, use distinct keys so that the two are never conflated.
+func inputSizeAttrs(resources *resource.Resources) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		attribute.Int("gateways.count", len(resources.Gateways)),
+		attribute.Int("listener-sets.count", len(resources.ListenerSets)),
+		attribute.Int("http-routes.count", len(resources.HTTPRoutes)),
+		attribute.Int("grpc-routes.count", len(resources.GRPCRoutes)),
+		attribute.Int("tls-routes.count", len(resources.TLSRoutes)),
+		attribute.Int("tcp-routes.count", len(resources.TCPRoutes)),
+		attribute.Int("udp-routes.count", len(resources.UDPRoutes)),
+		attribute.Int("backends.count", len(resources.Backends)),
+		attribute.Int("services.count", len(resources.Services)),
+		attribute.Int("endpoint-slices.count", len(resources.EndpointSlices)),
+		attribute.Int("client-traffic-policies.count", len(resources.ClientTrafficPolicies)),
+		attribute.Int("backend-traffic-policies.count", len(resources.BackendTrafficPolicies)),
+		attribute.Int("security-policies.count", len(resources.SecurityPolicies)),
+		attribute.Int("backend-tls-policies.count", len(resources.BackendTLSPolicies)),
+		attribute.Int("envoy-extension-policies.count", len(resources.EnvoyExtensionPolicies)),
+		attribute.Int("extension-server-policies.count", len(resources.ExtensionServerPolicies)),
+		attribute.Int("envoy-patch-policies.count", len(resources.EnvoyPatchPolicies)),
+	}
+}
+
 var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
-	Translate(resources *resource.Resources) (*TranslateResult, error)
+	Translate(ctx context.Context, resources *resource.Resources) (*TranslateResult, error)
 	GetRelevantGateways(resources *resource.Resources) (acceptedGateways, failedGateways []*GatewayContext)
 
 	RoutesTranslator
@@ -236,8 +272,22 @@ func newTranslateResult(
 	return translateResult
 }
 
-func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
+// Translate translates the Gateway API resources into the xDS IR and the infra IR.
+// The ctx is only used to record tracing spans for the phases of the translation,
+// it does not cancel an in-flight translation.
+func (t *Translator) Translate(ctx context.Context, resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
+
+	// Record what this translation is about to chew through on the enclosing span, so
+	// that a slow translation can be told apart from a translation of a bigger input.
+	if span := trace.SpanFromContext(ctx); span.IsRecording() {
+		span.SetAttributes(inputSizeAttrs(resources)...)
+	}
+
+	// Each phase ends its own span; the deferred call closes and marks the phase that
+	// was in flight when a phase panics, so the failing phase stays in the trace.
+	phases := phase.NewTracker(ctx, tracer)
+	defer phases.EndInFlight()
 
 	// The input resource tree is shared with the watchable coalesce goroutine, which
 	// walks it with reflect.DeepEqual. The translator mutates resource Status in place
@@ -285,7 +335,12 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessGatewayTLS(acceptedGateways, resources)
 
 	// Process all Listeners for all relevant Gateways.
+	phases.Start("GatewayApiTranslator.ProcessListeners",
+		attribute.Int("accepted-gateways.count", len(acceptedGateways)),
+		attribute.Int("listener-sets.count", len(resources.ListenerSets)),
+	)
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
+	phases.End()
 
 	// Compute ListenerSet status based on listener processing results
 	// This should be done after ProcessListeners because ListenerSet status depends on listener processing results
@@ -301,22 +356,32 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	backends := t.ProcessBackends(resources.Backends, resources.BackendTLSPolicies)
 
 	// Process all relevant HTTPRoutes.
+	phases.Start("GatewayApiTranslator.ProcessHTTPRoutes",
+		attribute.Int("http-routes.count", len(resources.HTTPRoutes)),
+	)
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, acceptedGateways, resources, xdsIR)
+	phases.End()
 
 	// Process all relevant GRPCRoutes.
+	phases.Start("GatewayApiTranslator.ProcessGRPCRoutes",
+		attribute.Int("grpc-routes.count", len(resources.GRPCRoutes)),
+	)
 	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, acceptedGateways, resources, xdsIR)
+	phases.End()
 
-	// Process all relevant TLSRoutes.
+	// Process all relevant TLSRoutes, TCPRoutes and UDPRoutes. These get no phase span:
+	// they are cheap next to the HTTP and GRPC routes on a large cluster.
 	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, acceptedGateways, resources, xdsIR)
-
-	// Process all relevant TCPRoutes.
 	tcpRoutes := t.ProcessTCPRoutes(resources.TCPRoutes, acceptedGateways, resources, xdsIR)
-
-	// Process all relevant UDPRoutes.
 	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process ClientTrafficPolicies
+	phases.Start("GatewayApiTranslator.ProcessClientTrafficPolicies",
+		attribute.Int("client-traffic-policies.count", len(resources.ClientTrafficPolicies)),
+		attribute.Int("accepted-gateways.count", len(acceptedGateways)),
+	)
 	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
+	phases.End()
 
 	routes := make([]RouteContext, len(httpRoutes)+len(grpcRoutes)+len(tlsRoutes)+len(tcpRoutes)+len(udpRoutes))
 	offset := 0
@@ -341,15 +406,30 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process BackendTrafficPolicies
+	phases.Start("GatewayApiTranslator.ProcessBackendTrafficPolicies",
+		attribute.Int("backend-traffic-policies.count", len(resources.BackendTrafficPolicies)),
+		attribute.Int("relevant-routes.count", len(routes)),
+	)
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
+	phases.End()
 
 	// Process SecurityPolicies
+	phases.Start("GatewayApiTranslator.ProcessSecurityPolicies",
+		attribute.Int("security-policies.count", len(resources.SecurityPolicies)),
+		attribute.Int("relevant-routes.count", len(routes)),
+	)
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, acceptedGateways, routes, resources, xdsIR)
+	phases.End()
 
 	// Process EnvoyExtensionPolicies
+	phases.Start("GatewayApiTranslator.ProcessEnvoyExtensionPolicies",
+		attribute.Int("envoy-extension-policies.count", len(resources.EnvoyExtensionPolicies)),
+		attribute.Int("relevant-routes.count", len(routes)),
+	)
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
+	phases.End()
 
 	extServerPolicies, err := t.ProcessExtensionServerPolicies(
 		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)

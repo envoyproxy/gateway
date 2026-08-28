@@ -1997,6 +1997,11 @@ func (in *GlobalResources) DeepCopyInto(out *GlobalResources) {
 		*out = new(TLSCertificate)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RateLimitServiceCluster != nil {
+		in, out := &in.RateLimitServiceCluster, &out.RateLimitServiceCluster
+		*out = new(RouteDestination)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.ProxyServiceCluster != nil {
 		in, out := &in.ProxyServiceCluster, &out.ProxyServiceCluster
 		*out = new(RouteDestination)
