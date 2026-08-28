@@ -29,8 +29,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests, UDPRouteAuthzWithClientIP)
 }
 
-// udpAuthzDomain is answered by the coredns backend the conformance base
-// manifest installs.
+// udpAuthzDomain is answered by the coredns backend this test ships.
 const udpAuthzDomain = "foo.bar.com."
 
 var UDPRouteAuthzWithClientIP = suite.ConformanceTest{
@@ -49,7 +48,7 @@ var UDPRouteAuthzWithClientIP = suite.ConformanceTest{
 
 		// coredns must be answering before any probe, otherwise the positive
 		// control below would fail for a reason unrelated to authorization.
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "udp"}, corev1.PodRunning, &PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "udp-authz"}, corev1.PodRunning, &PodReady)
 
 		for _, policy := range []struct {
 			name     string
