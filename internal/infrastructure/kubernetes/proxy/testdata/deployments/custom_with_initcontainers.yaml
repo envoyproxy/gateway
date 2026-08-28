@@ -233,7 +233,6 @@ spec:
                   value: 0.98
         - --log-level
         - warn
-        - --cpuset-threads
         - --drain-strategy
         - immediate
         - --component-log-level
