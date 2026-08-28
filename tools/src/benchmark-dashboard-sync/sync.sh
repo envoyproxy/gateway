@@ -10,4 +10,5 @@ cd "${TOOLS_DIR}"
 go run ./src/benchmark-dashboard-sync "$@"
 
 cd "${REPO_ROOT}/site/tools/benchmark-dashboard"
+npm install
 npm run build
