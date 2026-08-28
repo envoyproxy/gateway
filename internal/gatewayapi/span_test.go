@@ -72,7 +72,6 @@ func TestTranslatePhaseSpans(t *testing.T) {
 		require.Equal(t, stage.SpanContext().SpanID(), s.Parent().SpanID(), s.Name())
 	}
 	require.ElementsMatch(t, []string{
-		"GatewayApiTranslator.BuildPolicyIndexes",
 		"GatewayApiTranslator.ProcessListeners",
 		"GatewayApiTranslator.ProcessHTTPRoutes",
 		"GatewayApiTranslator.ProcessGRPCRoutes",

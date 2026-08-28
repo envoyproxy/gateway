@@ -1304,11 +1304,9 @@ func (r *gatewayAPIReconciler) processRateLimitService(ctx context.Context, reso
 	}
 
 	endpointSliceList := new(discoveryv1.EndpointSliceList)
-	opts := []client.ListOption{client.InNamespace(r.namespace)}
-	if r.endpointSliceIndexEnabled() {
-		opts = append(opts, client.MatchingFields{serviceEndpointSliceIndex: rateLimitServiceName})
-	} else {
-		opts = append(opts, client.MatchingLabels{discoveryv1.LabelServiceName: rateLimitServiceName})
+	opts := []client.ListOption{
+		client.InNamespace(r.namespace),
+		client.MatchingLabels{discoveryv1.LabelServiceName: rateLimitServiceName},
 	}
 	if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
 		return err
