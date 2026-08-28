@@ -308,8 +308,8 @@ jobs:
         # This is not the limit of Envoy Gateway,
         # but the limit of running e2e tests in github CI.
         E2E_BACKEND_UPGRADE_QPS: "2000"
-        # Cluster trust bundle reach beta in v1.33, so we can enable it for v1.33 and later.
-        ENABLE_CLUSTER_TRUST_BUNDLE: ${{ startsWith(matrix.target.version, 'v1.33') }}
+        # Cluster trust bundle reach GA in v1.37, so we can enable it for v1.37.
+        ENABLE_CLUSTER_TRUST_BUNDLE: ${{ startsWith(matrix.target.version, 'v1.37') }}
         # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
         # which means to dump the current state when there's a case failed.
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
