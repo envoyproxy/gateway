@@ -30,10 +30,19 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 		return sc
 	}
 
-	customSc := &corev1.SecurityContext{
+	// User-supplied fields override the hardened defaults; unset fields retain defaults.
+	// Privilege enforcement is delegated to external policy tools (Kyverno, PSA, etc.).
+	customScInput := &corev1.SecurityContext{
 		Privileged: new(true),
 		RunAsUser:  new(int64(21)),
 		RunAsGroup: new(int64(2100)),
+	}
+	customScExpected := func() *corev1.SecurityContext {
+		sc := defaultSecurityContext()
+		sc.Privileged = new(true)
+		sc.RunAsUser = new(int64(21))
+		sc.RunAsGroup = new(int64(2100))
+		return sc
 	}
 
 	tests := []struct {
@@ -47,11 +56,11 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 			expected: defaultSecurityContext(),
 		},
 		{
-			name: "default",
+			name: "user overrides are merged over defaults",
 			in: &egv1a1.KubernetesContainerSpec{
-				SecurityContext: customSc,
+				SecurityContext: customScInput,
 			},
-			expected: customSc,
+			expected: customScExpected(),
 		},
 	}
 	for _, tc := range tests {

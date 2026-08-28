@@ -188,10 +188,8 @@ type OIDCProvider struct {
 	// Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST
 	// be https, a host component, and optionally, port and path components and
 	// no query or fragment components.
-	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^https://[^/?#@]+(/[^?#]*)?$`
 	Issuer string `json:"issuer"`
-
-	// TODO zhaohuabing validate the issuer
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
