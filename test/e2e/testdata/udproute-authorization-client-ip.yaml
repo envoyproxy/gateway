@@ -1,6 +1,3 @@
-# This test ships its own coredns backend. The `coredns` object that
-# testdata/udproute.yaml creates is deleted when that test cleans up, so
-# depending on it makes this test order-dependent.
 apiVersion: v1
 kind: Service
 metadata:
