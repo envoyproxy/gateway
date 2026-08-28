@@ -86,7 +86,7 @@ spec:
           value: :19001
         - name: PROMETHEUS_MAPPER_YAML
           value: /etc/statsd-exporter/conf.yaml
-        image: docker.io/envoyproxy/ratelimit:1e50889b
+        image: docker.io/envoyproxy/ratelimit:8fe6ea42@sha256:a61547259607d40aff153050c2a87873ca1676d1d9f5f06937d412000dcc2df1
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
