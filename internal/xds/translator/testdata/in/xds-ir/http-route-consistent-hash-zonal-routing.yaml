@@ -6,9 +6,10 @@ http:
   - "*"
   routes:
   # ConsistentHash combined with a PreferLocal (topology-aware/zone-aware) backend,
-  # e.g. via a Service's trafficDistribution: PreferSameZone. This must not blackhole
-  # zonal localities now that locality weighted load balancing is always enabled for
-  # the Maglev policy: each zone still needs a non-zero LoadBalancingWeight.
+  # e.g. via a Service's trafficDistribution: PreferSameZone. A single destination
+  # setting split across zones like this doesn't need locality-weighted lb honored
+  # (there's no explicit per-zone weight to preserve), so the Maglev policy should
+  # leave LocalityWeightedLbConfig unset here and fall back to plain host hashing.
   - name: "first-route"
     hostname: "*"
     traffic:
