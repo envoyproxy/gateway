@@ -393,14 +393,12 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		return nil, err
 	}
 
-	// When an autoscaler owns the replica count, the replicas field is left unset here.
-	// Since the field is omitted from the server-side apply patch, Envoy Gateway doesn't
-	// take ownership of it and won't revert the count on subsequent reconciliations. This
-	// applies both to the built-in EnvoyHpa and to an external autoscaler (external HPA,
-	// KEDA ScaledObject, etc.) opted into via ReplicasManagedByExternalAutoscaler.
+	// When an HPA is configured, the replica count is owned by the HPA, so the replicas
+	// field is left unset here. Since the field is omitted from the server-side apply
+	// patch, Envoy Gateway doesn't take ownership of it and won't revert the replica
+	// count computed by the HPA on subsequent reconciliations.
 	replicas := deploymentConfig.Replicas
-	if provider.GetEnvoyProxyKubeProvider().EnvoyHpa != nil ||
-		ptr.Deref(deploymentConfig.ReplicasManagedByExternalAutoscaler, false) {
+	if provider.GetEnvoyProxyKubeProvider().EnvoyHpa != nil {
 		replicas = nil
 	}
 

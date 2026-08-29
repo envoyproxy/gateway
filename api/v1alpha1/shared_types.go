@@ -105,16 +105,6 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// ReplicasManagedByExternalAutoscaler, when set to true, tells Envoy Gateway not to
-	// render the replicas field on the generated Deployment, so an external autoscaler
-	// (an external HorizontalPodAutoscaler, a KEDA ScaledObject, etc.) can own the replica
-	// count without Envoy Gateway reverting it on the next reconcile. The Replicas field is
-	// ignored when this is true. This has no additional effect when the built-in EnvoyHpa is
-	// configured, which already omits the replicas field.
-	//
-	// +optional
-	ReplicasManagedByExternalAutoscaler *bool `json:"replicasManagedByExternalAutoscaler,omitempty"`
-
 	// The deployment strategy to use to replace existing pods with new ones.
 	// +optional
 	Strategy *appsv1.DeploymentStrategy `json:"strategy,omitempty"`
