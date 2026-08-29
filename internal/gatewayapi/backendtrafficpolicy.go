@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -894,7 +895,8 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
-	if err := t.translateBackendTrafficPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, xdsIR); err != nil {
+	hasApplicableRoute, err := t.translateBackendTrafficPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, xdsIR)
+	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -905,6 +907,13 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// The policy attached to its target, but none of the targeted listeners has a route it can be
+	// applied to, so it never reaches the generated configuration.
+	// Warn instead of silently reporting Accepted only.
+	if err == nil && !hasApplicableRoute {
+		status.SetNoAttachedRoutesWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+	}
 
 	// Determine this policy's own scope so we can look up routes merged into it
 	// and child scopes overriding it.
@@ -990,7 +999,8 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateBackendTrafficPolicyForGateway(policy, targetedGateway, currTarget, xdsIR); err != nil {
+	hasApplicableRoute, err := t.translateBackendTrafficPolicyForGateway(policy, targetedGateway, currTarget, xdsIR)
+	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -1001,6 +1011,13 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// The policy attached to its target, but none of the targeted listeners has a route it can be
+	// applied to, so it never reaches the generated configuration.
+	// Warn instead of silently reporting Accepted only.
+	if err == nil && !hasApplicableRoute {
+		status.SetNoAttachedRoutesWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+	}
 
 	// Check for deprecated fields and set warning if any are found
 	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
@@ -1635,7 +1652,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	gtwCtx *GatewayContext,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
-) error {
+) (bool, error) {
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
 		gtwCtx,
@@ -1651,7 +1668,7 @@ func (t *Translator) translateBackendTrafficPolicyForListenerSet(
 	listenerSet *gwapiv1.ListenerSet,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
-) error {
+) (bool, error) {
 	return t.translateBackendTrafficPolicyForListeners(
 		policy,
 		gtwCtx,
@@ -1661,17 +1678,19 @@ func (t *Translator) translateBackendTrafficPolicyForListenerSet(
 	)
 }
 
+// translateBackendTrafficPolicyForListeners applies the policy to every route of the target
+// listeners. It reports whether any of those listeners has a route the policy can be applied to.
 func (t *Translator) translateBackendTrafficPolicyForListeners(
 	policy *egv1a1.BackendTrafficPolicy,
 	gtwCtx *GatewayContext,
 	targetListeners []*ListenerContext,
 	applyToBackendClusters bool,
 	xdsIR resource.XdsIRMap,
-) error {
+) (bool, error) {
 	tf, errs := t.buildTrafficFeatures(policy, nil)
 	if tf == nil {
 		// should not happen
-		return errs
+		return false, errs
 	}
 
 	routeStatName := ""
@@ -1688,22 +1707,31 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		listenerNames.Insert(irListenerName(listener))
 	}
 
+	// Whether the policy reaches any route of the target listeners. The TCP and UDP branches
+	// below only apply a subset of the traffic features, so rather than restating that subset
+	// here, they collect what setIfNil reports about the fields they do apply. A feature added
+	// to those branches joins this automatically.
+	hasApplicableRoute := false
+
 	for _, tcp := range x.TCP {
 		if !listenerNames.Has(tcp.Name) {
 			continue
 		}
 
 		for _, r := range tcp.Routes {
-			// only set attributes which weren't already set by a more
-			// specific policy
-			setIfNil(&r.LoadBalancer, tf.LoadBalancer)
-			setIfNil(&r.ProxyProtocol, tf.ProxyProtocol)
-			setIfNil(&r.HealthCheck, tf.HealthCheck)
-			setIfNil(&r.CircuitBreaker, tf.CircuitBreaker)
-			setIfNil(&r.TCPKeepalive, tf.TCPKeepalive)
-			setIfNil(&r.Timeout, tf.Timeout)
-			setIfNil(&r.DNS, tf.DNS)
-			setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
+			// only set attributes which weren't already set by a more specific policy.
+			offered := []bool{
+				setIfNil(&r.LoadBalancer, tf.LoadBalancer),
+				setIfNil(&r.ProxyProtocol, tf.ProxyProtocol),
+				setIfNil(&r.HealthCheck, tf.HealthCheck),
+				setIfNil(&r.CircuitBreaker, tf.CircuitBreaker),
+				setIfNil(&r.TCPKeepalive, tf.TCPKeepalive),
+				setIfNil(&r.Timeout, tf.Timeout),
+				setIfNil(&r.DNS, tf.DNS),
+				setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata)),
+			}
+			hasApplicableRoute = hasApplicableRoute || slices.Contains(offered, true)
+
 			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
@@ -1719,16 +1747,22 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 
 		route := udp.Route
 
-		// only set attributes which weren't already set by a more
-		// specific policy
-		setIfNil(&route.LoadBalancer, tf.LoadBalancer)
-		setIfNil(&route.DNS, tf.DNS)
+		// only set attributes which weren't already set by a more specific policy.
+		offered := []bool{
+			setIfNil(&route.LoadBalancer, tf.LoadBalancer),
+			setIfNil(&route.DNS, tf.DNS),
+		}
+		hasApplicableRoute = hasApplicableRoute || slices.Contains(offered, true)
 	}
 
 	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
 		if !listenerNames.Has(http.Name) {
 			continue
+		}
+
+		if len(http.Routes) > 0 {
+			hasApplicableRoute = true
 		}
 
 		// A Policy targeting the most specific scope(xRoute) wins over a policy
@@ -1783,7 +1817,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		}
 	}
 
-	return errs
+	return hasApplicableRoute, errs
 }
 
 func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {

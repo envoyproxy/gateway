@@ -1457,11 +1457,18 @@ func ownerOf[T any](
 	return parent
 }
 
-// Sets *target to value if and only if *target is nil
-func setIfNil[T any](target **T, value *T) {
+// setIfNil sets *target to value unless a more specific policy already claimed it, and reports
+// whether the policy had a value to offer for this field.
+//
+// The report is independent of whether the assignment happens, since losing to a more specific
+// policy is reported separately as an Overridden condition. Callers that only apply the value can
+// ignore it; callers that need to know whether a policy reaches a route at all collect the
+// results of every field they apply.
+func setIfNil[T any](target **T, value *T) bool {
 	if *target == nil {
 		*target = value
 	}
+	return value != nil
 }
 
 // getServicePortProtocol returns the service port protocol. If the protocol is not specified, it defaults to TCP.
