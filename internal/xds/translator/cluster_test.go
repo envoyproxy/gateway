@@ -25,7 +25,6 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -350,9 +349,10 @@ func TestBuildXdsClusterConsistentHashLocalityWeighting(t *testing.T) {
 	singleSetting := []*ir.DestinationSetting{{
 		Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
 	}}
+	weight1, weight2 := uint32(5), uint32(95)
 	multiSetting := []*ir.DestinationSetting{
-		{Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}}, Weight: ptr.To(uint32(5))},
-		{Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.2", Port: 8080}}, Weight: ptr.To(uint32(95))},
+		{Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}}, Weight: &weight1},
+		{Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.2", Port: 8080}}, Weight: &weight2},
 	}
 
 	tests := []struct {
