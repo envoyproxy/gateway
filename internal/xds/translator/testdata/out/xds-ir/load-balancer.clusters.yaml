@@ -85,7 +85,6 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-          localityWeightedLbConfig: {}
   name: fourth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -157,7 +156,6 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-          localityWeightedLbConfig: {}
   name: seventh-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -179,7 +177,6 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-          localityWeightedLbConfig: {}
           tableSize: "524287"
   name: eighth-route-dest
   perConnectionBufferLimitBytes: 32768
@@ -202,7 +199,6 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-          localityWeightedLbConfig: {}
   name: ninth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -224,7 +220,6 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-          localityWeightedLbConfig: {}
   name: tenth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -333,7 +328,6 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-          localityWeightedLbConfig: {}
   name: fourteenth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -355,7 +349,6 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-          localityWeightedLbConfig: {}
   name: fifteenth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS

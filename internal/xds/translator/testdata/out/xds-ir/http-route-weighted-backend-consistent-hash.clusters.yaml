@@ -16,7 +16,6 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-          localityWeightedLbConfig: {}
   name: first-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -38,7 +37,6 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-          localityWeightedLbConfig: {}
   name: first-route-dest/backend/1
   perConnectionBufferLimitBytes: 32768
   type: EDS
