@@ -119,6 +119,13 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
+        message: This policy is not reflected in the generated configuration because
+          none of the listeners it targets has a route that this policy can be applied
+          to.
+        reason: NoAttachedRoutes
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
           routes: [default/tcproute-1]'
         reason: Overridden
