@@ -350,10 +350,13 @@ func TestEnvoyServiceForGatewayIncludesControllerNamespace(t *testing.T) {
 // predicate function.
 func TestValidateConfigMapForReconcile(t *testing.T) {
 	testCases := []struct {
-		name      string
-		configs   []client.Object
-		configMap client.Object
-		expect    bool
+		name string
+		// btlsCRDAbsent simulates a cluster whose Gateway API CRD bundle doesn't
+		// include BackendTLSPolicy, e.g. OpenShift's Ingress-Operator-managed set.
+		btlsCRDAbsent bool
+		configs       []client.Object
+		configMap     client.Object
+		expect        bool
 	}{
 		{
 			name: "references Backend TLS config map",
@@ -482,6 +485,53 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			configMap: test.GetConfigMap(types.NamespacedName{Name: "context-extensions-cm", Namespace: "test"}, nil, nil),
 			expect:    true,
 		},
+		{
+			name: "references BackendTLSPolicy CA config map",
+			configs: []client.Object{
+				&gwapiv1.BackendTLSPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "btls",
+						Namespace: "default",
+					},
+					Spec: gwapiv1.BackendTLSPolicySpec{
+						Validation: gwapiv1.BackendTLSPolicyValidation{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{
+								{
+									Kind: gwapiv1.Kind(resource.KindConfigMap),
+									Name: gwapiv1.ObjectName("btls-ca"),
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Namespace: "default", Name: "btls-ca"}, make(map[string]string), make(map[string]string)),
+			expect:    true,
+		},
+		{
+			name:          "references BackendTLSPolicy CA config map but BackendTLSPolicy CRD is absent",
+			btlsCRDAbsent: true,
+			configs: []client.Object{
+				&gwapiv1.BackendTLSPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "btls",
+						Namespace: "default",
+					},
+					Spec: gwapiv1.BackendTLSPolicySpec{
+						Validation: gwapiv1.BackendTLSPolicyValidation{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{
+								{
+									Kind: gwapiv1.Kind(resource.KindConfigMap),
+									Name: gwapiv1.ObjectName("btls-ca"),
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Namespace: "default", Name: "btls-ca"}, make(map[string]string), make(map[string]string)),
+			expect:    false,
+		},
 	}
 
 	// Create the reconciler.
@@ -503,6 +553,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.btlsCRDExists = !tc.btlsCRDAbsent
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -864,18 +915,232 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
 			expect: true,
 		},
+		{
+			name: "references HTTPRouteFilter credential injection secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.HTTPRouteFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "credential-injection",
+					},
+					Spec: egv1a1.HTTPRouteFilterSpec{
+						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+							Credential: egv1a1.InjectedCredential{
+								ValueRef: gwapiv1.SecretObjectReference{
+									Name: "secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "secret not referenced by any HTTPRouteFilter",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.HTTPRouteFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "credential-injection",
+					},
+					Spec: egv1a1.HTTPRouteFilterSpec{
+						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+							Credential: egv1a1.InjectedCredential{
+								ValueRef: gwapiv1.SecretObjectReference{
+									Name: "secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "unrelated-secret"}),
+			expect: false,
+		},
+		{
+			name: "references ListenerSet TLS certificate",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "parent-gw"}, "test-gc", 8080),
+				func() *gwapiv1.ListenerSet {
+					ls := test.GetListenerSet(
+						types.NamespacedName{Namespace: "default", Name: "tls-ls"},
+						types.NamespacedName{Namespace: "default", Name: "parent-gw"},
+						443,
+					)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					ls.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					ls.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "ls-tls-secret",
+						}},
+					}
+					return ls
+				}(),
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "ls-tls-secret"}),
+			expect: true,
+		},
+		{
+			name: "ListenerSet exists but secret is unrelated",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "parent-gw"}, "test-gc", 8080),
+				func() *gwapiv1.ListenerSet {
+					ls := test.GetListenerSet(
+						types.NamespacedName{Namespace: "default", Name: "tls-ls"},
+						types.NamespacedName{Namespace: "default", Name: "parent-gw"},
+						443,
+					)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					ls.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					ls.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "ls-tls-secret",
+						}},
+					}
+					return ls
+				}(),
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "unrelated-secret"}),
+			expect: false,
+		},
+		{
+			name: "ListenerSet references secret but parent gateway has invalid controller",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", "not.configured/controller", nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "parent-gw"}, "test-gc", 8080),
+				func() *gwapiv1.ListenerSet {
+					ls := test.GetListenerSet(
+						types.NamespacedName{Namespace: "default", Name: "tls-ls"},
+						types.NamespacedName{Namespace: "default", Name: "parent-gw"},
+						443,
+					)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					ls.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					ls.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "ls-tls-secret",
+						}},
+					}
+					return ls
+				}(),
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "ls-tls-secret"}),
+			expect: false,
+		},
+		{
+			// One unmanaged parent must not hide another ListenerSet whose parent is managed.
+			name: "mixed ListenerSet parents: one invalid controller, one managed",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGatewayClass("other-gc", "not.configured/controller", nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "good-gw"}, "test-gc", 8080),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "bad-gw"}, "other-gc", 8080),
+				func() *gwapiv1.ListenerSet {
+					ls := test.GetListenerSet(
+						types.NamespacedName{Namespace: "default", Name: "bad-ls"},
+						types.NamespacedName{Namespace: "default", Name: "bad-gw"},
+						443,
+					)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					ls.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					ls.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "shared-ls-tls",
+						}},
+					}
+					return ls
+				}(),
+				func() *gwapiv1.ListenerSet {
+					ls := test.GetListenerSet(
+						types.NamespacedName{Namespace: "default", Name: "good-ls"},
+						types.NamespacedName{Namespace: "default", Name: "good-gw"},
+						443,
+					)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					ls.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					ls.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "shared-ls-tls",
+						}},
+					}
+					return ls
+				}(),
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "shared-ls-tls"}),
+			expect: true,
+		},
+		{
+			name: "mixed Gateways referencing secret: one invalid controller, one managed",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGatewayClass("other-gc", "not.configured/controller", nil),
+				func() *gwapiv1.Gateway {
+					gw := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "bad-gw"}, "other-gc", 443)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					gw.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					gw.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "shared-gw-tls",
+						}},
+					}
+					return gw
+				}(),
+				func() *gwapiv1.Gateway {
+					gw := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "good-gw"}, "test-gc", 443)
+					secretKind := gwapiv1.Kind(resource.KindSecret)
+					mode := gwapiv1.TLSModeTerminate
+					gw.Spec.Listeners[0].Protocol = gwapiv1.HTTPSProtocolType
+					gw.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gwapiv1.SecretObjectReference{{
+							Kind: &secretKind,
+							Name: "shared-gw-tls",
+						}},
+					}
+					return gw
+				}(),
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "shared-gw-tls"}),
+			expect: true,
+		},
 	}
 
 	// Create the reconciler.
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController:  egv1a1.GatewayControllerName,
-		log:              logger,
-		backendCRDExists: true,
-		spCRDExists:      true,
-		epCRDExists:      true,
-		eepCRDExists:     true,
+		classController:      egv1a1.GatewayControllerName,
+		log:                  logger,
+		backendCRDExists:     true,
+		spCRDExists:          true,
+		epCRDExists:          true,
+		eepCRDExists:         true,
+		hrfCRDExists:         true,
+		listenerSetCRDExists: true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
@@ -890,10 +1155,12 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
+			WithIndex(&gwapiv1.ListenerSet{}, secretListenerSetIndex, secretListenerSetIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
 			WithIndex(&egv1a1.Backend{}, secretBackendIndex, secretBackendIndexFunc).
+			WithIndex(&egv1a1.HTTPRouteFilter{}, secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
@@ -914,6 +1181,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		name          string
 		configs       []client.Object
 		endpointSlice client.Object
+		namespace     string
+		envoyGateway  *egv1a1.EnvoyGateway
 		expect        bool
 	}{
 		{
@@ -1001,6 +1270,29 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "mirror-service", false),
 			expect:        true,
 		},
+		{
+			name:         "rate limit service endpointslice with global rate limit enabled",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			endpointSlice: test.GetEndpointSlice(
+				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+			expect: true,
+		},
+		{
+			name:      "rate limit service endpointslice but global rate limit disabled",
+			namespace: "envoy-gateway-system",
+			endpointSlice: test.GetEndpointSlice(
+				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+			expect: false,
+		},
+		{
+			name:         "endpointslice for an unrelated service named envoy-ratelimit in another namespace",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			endpointSlice: test.GetEndpointSlice(
+				types.NamespacedName{Namespace: "other-namespace", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+			expect: false,
+		},
 	}
 
 	// Create the reconciler.
@@ -1012,6 +1304,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.namespace = tc.namespace
+		r.envoyGateway = tc.envoyGateway
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -1106,10 +1400,17 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 
 	testCases := []struct {
-		name    string
-		configs []client.Object
-		service client.Object
-		expect  bool
+		name string
+		// grpcRouteCRDAbsent and tlsRouteCRDAbsent simulate a cluster whose Gateway API
+		// CRD bundle doesn't include GRPCRoute or TLSRoute, e.g. GKE's managed
+		// gateway-api-crds addon.
+		grpcRouteCRDAbsent bool
+		tlsRouteCRDAbsent  bool
+		configs            []client.Object
+		service            client.Object
+		namespace          string
+		envoyGateway       *egv1a1.EnvoyGateway
+		expect             bool
 	}{
 		{
 			name: "gateway service but deployment or daemonset does not exist",
@@ -1195,6 +1496,17 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  true,
 		},
 		{
+			name:               "grpc route service routes exist but GRPCRoute CRD is absent",
+			grpcRouteCRDAbsent: true,
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				sampleGateway,
+				test.GetGRPCRoute(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
+			expect:  false,
+		},
+		{
 			name: "tls route service routes exist",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
@@ -1204,6 +1516,18 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
+		},
+		{
+			name:              "tls route service routes exist but TLSRoute CRD is absent",
+			tlsRouteCRDAbsent: true,
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				sampleGateway,
+				test.GetTLSRoute(types.NamespacedName{Name: "tlsroute-test"}, "scheduled-status-test",
+					types.NamespacedName{Name: "service"}, 443),
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
+			expect:  false,
 		},
 		{
 			name: "udp route service routes exist",
@@ -1430,6 +1754,26 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			}, nil),
 			expect: false,
 		},
+		{
+			name:         "rate limit service in controller namespace with global rate limit enabled",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			service:      test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceName}, nil, nil),
+			expect:       true,
+		},
+		{
+			name:      "rate limit service in controller namespace but global rate limit disabled",
+			namespace: "envoy-gateway-system",
+			service:   test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceName}, nil, nil),
+			expect:    false,
+		},
+		{
+			name:         "unrelated service named envoy-ratelimit in a different namespace",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			service:      test.GetService(types.NamespacedName{Namespace: "other-namespace", Name: rateLimitServiceName}, nil, nil),
+			expect:       false,
+		},
 	}
 
 	// Create the reconciler.
@@ -1448,6 +1792,10 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.grpcRouteCRDExists = !tc.grpcRouteCRDAbsent
+		r.tlsRouteCRDExists = !tc.tlsRouteCRDAbsent
+		r.namespace = tc.namespace
+		r.envoyGateway = tc.envoyGateway
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -1798,10 +2146,13 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	sampleHTTPRouteFilter := test.GetHTTPRouteFilter(types.NamespacedName{Name: "httproutefilter"})
 
 	testCases := []struct {
-		name            string
-		configs         []client.Object
-		httpRouteFilter client.Object
-		expect          bool
+		name string
+		// grpcRouteCRDAbsent simulates a cluster whose Gateway API CRD bundle doesn't
+		// include GRPCRoute, e.g. GKE's managed gateway-api-crds addon.
+		grpcRouteCRDAbsent bool
+		configs            []client.Object
+		httpRouteFilter    client.Object
+		expect             bool
 	}{
 		{
 			name: "httproutefilter but not referenced by route",
@@ -1838,6 +2189,19 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 			httpRouteFilter: sampleHTTPRouteFilter,
 			expect:          true,
 		},
+		{
+			name:               "httproutefilter referenced by grpcroute but GRPCRoute CRD is absent",
+			grpcRouteCRDAbsent: true,
+			configs: []client.Object{
+				sampleGWC,
+				sampleGateway,
+				sampleService,
+				sampleHTTPRouteFilter,
+				test.GetGRPCRouteWithHTTPRouteFilter(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80, "httproutefilter"),
+			},
+			httpRouteFilter: sampleHTTPRouteFilter,
+			expect:          false,
+		},
 	}
 
 	// Create the reconciler.
@@ -1849,6 +2213,7 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.grpcRouteCRDExists = !tc.grpcRouteCRDAbsent
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -1914,10 +2279,13 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		})
 
 	testCases := []struct {
-		name    string
-		configs []client.Object
-		ctb     *certificatesv1b1.ClusterTrustBundle
-		expect  bool
+		name string
+		// btlsCRDAbsent simulates a cluster whose Gateway API CRD bundle doesn't
+		// include BackendTLSPolicy, e.g. OpenShift's Ingress-Operator-managed set.
+		btlsCRDAbsent bool
+		configs       []client.Object
+		ctb           *certificatesv1b1.ClusterTrustBundle
+		expect        bool
 	}{
 		{
 			name: "referenced by Backend",
@@ -1938,6 +2306,17 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			},
 			ctb:    ctb,
 			expect: true,
+		},
+		{
+			name:          "referenced by BackendTLSPolicy but BackendTLSPolicy CRD is absent",
+			btlsCRDAbsent: true,
+			configs: []client.Object{
+				gc,
+				gtw,
+				btp,
+			},
+			ctb:    ctb,
+			expect: false,
 		},
 		{
 			name: "referenced by ClientTrafficPolicy",
@@ -1967,6 +2346,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		classController:  egv1a1.GatewayControllerName,
 		log:              logger,
 		backendCRDExists: true,
+		btlsCRDExists:    true,
 		ctpCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -1978,6 +2358,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.btlsCRDExists = !tc.btlsCRDAbsent
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).

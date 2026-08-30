@@ -34,23 +34,47 @@ type expectedListenerStatus struct {
 	message      string
 }
 
-func TestProxySamplingRate(t *testing.T) {
+func TestProxySamplingRates(t *testing.T) {
 	cases := []struct {
-		name     string
-		tracing  *egv1a1.ProxyTracing
-		expected float64
+		name            string
+		tracing         *egv1a1.ProxyTracing
+		expectedRandom  float64
+		expectedClient  float64
+		expectedOverall float64
 	}{
 		{
-			name:     "default",
-			tracing:  &egv1a1.ProxyTracing{},
-			expected: 100.0,
+			name:            "default",
+			tracing:         &egv1a1.ProxyTracing{},
+			expectedRandom:  100.0,
+			expectedClient:  100.0,
+			expectedOverall: 100.0,
 		},
 		{
 			name: "rate",
 			tracing: &egv1a1.ProxyTracing{
 				SamplingRate: new(uint32(10)),
 			},
-			expected: 10.0,
+			expectedRandom:  10.0,
+			expectedClient:  100.0,
+			expectedOverall: 100.0,
+		},
+		{
+			name: "client and overall fraction",
+			tracing: &egv1a1.ProxyTracing{
+				Tracing: egv1a1.Tracing{
+					ClientSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: new(int32(4)),
+					},
+					OverallSamplingFraction: &gwapiv1.Fraction{
+						Numerator:   3,
+						Denominator: new(int32(4)),
+					},
+				},
+			},
+			expectedRandom:  100.0,
+			expectedClient:  25.0,
+			expectedOverall: 75.0,
 		},
 		{
 			name: "fraction numerator only",
@@ -61,7 +85,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 100,
+			expectedRandom:  100,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "fraction",
@@ -73,7 +99,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 10,
+			expectedRandom:  10,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "less than zero",
@@ -85,7 +113,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 0,
+			expectedRandom:  0,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "greater than 100",
@@ -97,7 +127,9 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 100,
+			expectedRandom:  100,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 		{
 			name: "less than 1",
@@ -109,16 +141,20 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 0.1,
+			expectedRandom:  0.1,
+			expectedClient:  100,
+			expectedOverall: 100,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := proxySamplingRate(tc.tracing)
-			if actual != tc.expected {
-				t.Errorf("expected %v, got %v", tc.expected, actual)
-			}
+			random := proxySamplingRate(tc.tracing.SamplingRate, tc.tracing.SamplingFraction)
+			client := proxySamplingRate(nil, tc.tracing.ClientSamplingFraction)
+			overall := proxySamplingRate(nil, tc.tracing.OverallSamplingFraction)
+			assert.Equal(t, tc.expectedRandom, random)
+			assert.Equal(t, tc.expectedClient, client)
+			assert.Equal(t, tc.expectedOverall, overall)
 		})
 	}
 }
@@ -441,9 +477,11 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 
 func TestCheckOverlappingCertificates(t *testing.T) {
 	tests := []struct {
-		name           string
-		listeners      []*ListenerContext
-		expectedStatus []expectedListenerStatus
+		name                string
+		listeners           []*ListenerContext
+		invalidListeners    []string
+		expectedStatus      []expectedListenerStatus
+		expectedTLSOverlaps []string
 	}{
 		{
 			name: "No overlapping certificates",
@@ -515,6 +553,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					message:      "The certificate SAN foo.example.com overlaps with the certificate SAN foo.example.com in listener listener-1. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 			},
+			expectedTLSOverlaps: []string{"listener-1", "listener-2"},
 		},
 		{
 			name: "Overlapping certificates with different ports",
@@ -586,6 +625,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					message:      "The certificate SAN foo.example.com overlaps with the certificate SAN *.example.com in listener listener-1. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 			},
+			expectedTLSOverlaps: []string{"listener-1", "listener-2"},
 		},
 		{
 			name: "Overlapping certificates with multiple dns names",
@@ -629,6 +669,143 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					message:      "The certificate SAN *.example.org overlaps with the certificate SAN bar.example.org in listener listener-1. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 			},
+			expectedTLSOverlaps: []string{"listener-1", "listener-2"},
+		},
+		{
+			name: "SDS certificate leaves distinct-hostname peers on HTTP/2",
+			listeners: []*ListenerContext{
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("foo.example.com"))},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
+				},
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-2", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("sds.example.com"))},
+					tls: ListenerTLSConfig{
+						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+					},
+				},
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-3", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("bar.example.com"))},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"bar.example.com"},
+					},
+				},
+			},
+			expectedStatus: []expectedListenerStatus{
+				{
+					listenerName: "listener-2",
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
+					status:       metav1.ConditionTrue,
+					reason:       status.ListenerReasonSDSCertificateOpaque,
+					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
+				},
+			},
+			expectedTLSOverlaps: []string{"listener-2"},
+		},
+		{
+			name: "SDS listener hostname overlaps a peer certificate SAN",
+			listeners: []*ListenerContext{
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("*.example.com"))},
+					tls: ListenerTLSConfig{
+						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+					},
+				},
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-2", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("foo.example.com"))},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
+				},
+			},
+			expectedStatus: []expectedListenerStatus{
+				{
+					listenerName: "listener-1",
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
+					status:       metav1.ConditionTrue,
+					reason:       status.ListenerReasonSDSCertificateOpaque,
+					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
+				},
+				{
+					listenerName: "listener-2",
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
+					status:       metav1.ConditionTrue,
+					reason:       status.ListenerReasonSDSCertificateOpaque,
+					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
+				},
+			},
+			expectedTLSOverlaps: []string{"listener-1", "listener-2"},
+		},
+		{
+			name: "SDS certificate does not affect listeners on a different port",
+			listeners: []*ListenerContext{
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
+					tls: ListenerTLSConfig{
+						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+					},
+				},
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-2", Protocol: gwapiv1.HTTPSProtocolType, Port: 8443},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
+				},
+			},
+		},
+		{
+			name: "SDS certificate ignores an invalid same-port peer",
+			listeners: []*ListenerContext{
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
+					tls: ListenerTLSConfig{
+						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+					},
+				},
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-2", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
+				},
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-3", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"bar.example.com"},
+					},
+				},
+			},
+			invalidListeners: []string{"listener-3"},
+			expectedStatus: []expectedListenerStatus{
+				{
+					listenerName: "listener-1",
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
+					status:       metav1.ConditionTrue,
+					reason:       gwapiv1.ListenerConditionReason("SDSCertificateOpaque"),
+					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
+				},
+				{
+					listenerName: "listener-2",
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
+					status:       metav1.ConditionTrue,
+					reason:       gwapiv1.ListenerConditionReason("SDSCertificateOpaque"),
+					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
+				},
+			},
+			expectedTLSOverlaps: []string{"listener-1", "listener-2"},
+		},
+		{
+			name: "Lone SDS certificate does not require an ALPN downgrade",
+			listeners: []*ListenerContext{
+				{
+					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
+					tls: ListenerTLSConfig{
+						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+					},
+				},
+			},
 		},
 	}
 
@@ -653,6 +830,18 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				gateway.listeners[i].listenerStatusIdx = i
 				gateway.listeners[i].gateway = gateway
 				gateway.listeners[i].httpIR = &ir.HTTPListener{}
+			}
+			for _, invalidListener := range tt.invalidListeners {
+				for _, listener := range gateway.listeners {
+					if string(listener.Name) == invalidListener {
+						listener.SetCondition(
+							gwapiv1.ListenerConditionAccepted,
+							metav1.ConditionFalse,
+							gwapiv1.ListenerReasonInvalid,
+							"Listener is invalid.",
+						)
+					}
+				}
 			}
 
 			// Process overlapping certificates
@@ -693,6 +882,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						found := false
 						for _, expected := range tt.expectedStatus {
 							if string(listener.Name) == expected.listenerName &&
+								condition.Type == string(expected.condition) &&
 								condition.Status == expected.status &&
 								condition.Reason == string(expected.reason) &&
 								condition.Message == expected.message {
@@ -707,9 +897,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				}
 			}
 
-			expectedTLSOverlaps := map[string]bool{}
-			for _, expected := range tt.expectedStatus {
-				expectedTLSOverlaps[expected.listenerName] = true
+			expectedTLSOverlaps := make(map[string]bool, len(tt.expectedTLSOverlaps))
+			for _, listenerName := range tt.expectedTLSOverlaps {
+				expectedTLSOverlaps[listenerName] = true
 			}
 			for _, listener := range gateway.listeners {
 				require.NotNil(t, listener.httpIR)
@@ -1009,8 +1199,42 @@ func TestProcessAccessLog(t *testing.T) {
 				},
 			},
 			expected: &ir.AccessLog{
+				Text: []*ir.TextAccessLog{
+					{
+						Format: new("[%START_TIME%]"),
+						Path:   "/dev/stdout",
+					},
+				},
+			},
+		},
+		{
+			name: "nil format type with text and json keeps json for file sink",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Text: new("[%START_TIME%]"),
+										JSON: map[string]string{"start_time": "%START_TIME%"},
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.AccessLog{
 				JSON: []*ir.JSONAccessLog{
 					{
+						JSON: []ir.MapEntry{{Key: "start_time", Value: "%START_TIME%"}},
 						Path: "/dev/stdout",
 					},
 				},
@@ -1394,10 +1618,10 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		},
 	}
 	backendEndpoints := []*ir.DestinationEndpoint{{Host: "otel.example.com", Port: 443}}
-	backendMetadata := &ir.ResourceMetadata{Name: backendName, Namespace: ns}
+	backendMetadata := &ir.ResourceMetadata{Kind: resource.KindBackend, Name: backendName, Namespace: ns}
 	backendPolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel.example.com"), UseSystemTrustStore: true,
-		CACertificate: &ir.TLSCACertificate{Name: "otel-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
 		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
 	}
 
@@ -1433,10 +1657,10 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		},
 	}
 	serviceEndpoints := []*ir.DestinationEndpoint{{Host: "7.7.7.7", Port: 4317}}
-	serviceMetadata := &ir.ResourceMetadata{Name: serviceName, Namespace: ns, SectionName: "4317"}
+	serviceMetadata := &ir.ResourceMetadata{Kind: resource.KindService, Name: serviceName, Namespace: ns, SectionName: "4317"}
 	servicePolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel-svc.example.com"), UseSystemTrustStore: true,
-		CACertificate: &ir.TLSCACertificate{Name: "otel-svc-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
 		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
 	}
 

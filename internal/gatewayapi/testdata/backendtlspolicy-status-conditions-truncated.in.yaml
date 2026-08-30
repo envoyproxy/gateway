@@ -157,7 +157,7 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/"
+          value: "/route-2"
       backendRefs:
       - name: http-backend-2
         port: 8443

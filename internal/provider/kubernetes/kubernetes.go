@@ -116,6 +116,9 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		},
 	}
 
+	kubernetesConfigParams := svrCfg.EnvoyGateway.Provider.GetKubernetesConfiguration()
+	kubernetesInfrastructureConfigParams := svrCfg.EnvoyGateway.Provider.GetKubernetesInfrastructureConfiguration()
+
 	if metricsOpts != nil {
 		mgrOpts.Metrics = *metricsOpts
 	}
@@ -123,28 +126,28 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	log.SetLogger(mgrOpts.Logger)
 	klog.SetLogger(mgrOpts.Logger)
 
-	restCfg.QPS, restCfg.Burst = svrCfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
+	restCfg.QPS, restCfg.Burst = kubernetesConfigParams.Client.RateLimit.GetQPSAndBurst()
 
-	if !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+	if !ptr.Deref(kubernetesConfigParams.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
-		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration != nil {
-			ld, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration))
+		if kubernetesConfigParams.LeaderElection.LeaseDuration != nil {
+			ld, err := time.ParseDuration(string(*kubernetesConfigParams.LeaderElection.LeaseDuration))
 			if err != nil {
 				return nil, err
 			}
 			mgrOpts.LeaseDuration = new(ld)
 		}
 
-		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod != nil {
-			rp, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod))
+		if kubernetesConfigParams.LeaderElection.RetryPeriod != nil {
+			rp, err := time.ParseDuration(string(*kubernetesConfigParams.LeaderElection.RetryPeriod))
 			if err != nil {
 				return nil, err
 			}
 			mgrOpts.RetryPeriod = new(rp)
 		}
 
-		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline != nil {
-			rd, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline))
+		if kubernetesConfigParams.LeaderElection.RenewDeadline != nil {
+			rd, err := time.ParseDuration(string(*kubernetesConfigParams.LeaderElection.RenewDeadline))
 			if err != nil {
 				return nil, err
 			}
@@ -153,8 +156,8 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		mgrOpts.Controller = config.Controller{NeedLeaderElection: new(false)}
 	}
 
-	if svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod != nil {
-		csp, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod))
+	if kubernetesConfigParams.CacheSyncPeriod != nil {
+		csp, err := time.ParseDuration(string(*kubernetesConfigParams.CacheSyncPeriod))
 		if err != nil {
 			return nil, err
 		}
@@ -180,6 +183,9 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 				UnsafeDisableDeepCopy: new(true),
 			},
 			&corev1.Node{}: {
+				UnsafeDisableDeepCopy: new(true),
+			},
+			&corev1.Namespace{}: {
 				UnsafeDisableDeepCopy: new(true),
 			},
 			&gwapiv1b1.ReferenceGrant{}: {
@@ -275,7 +281,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	// exceptions below.
 	if svrCfg.EnvoyGateway.WatchesNamespaces() {
 		watchedNamespaces := map[string]cache.Config{}
-		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
+		for _, watchNS := range kubernetesConfigParams.Watch.Namespaces {
 			watchedNamespaces[watchNS] = cache.Config{}
 		}
 
@@ -347,7 +353,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			}
 		}
 	}
-	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
+	if kubernetesInfrastructureConfigParams.TopologyInjector == nil || !ptr.Deref(kubernetesInfrastructureConfigParams.TopologyInjector.Disable, false) {
 		mgrOpts.WebhookServer = webhook.NewServer(webhook.Options{
 			CertDir:  webhookTLSCertDir,
 			CertName: webhookTLSCert,
@@ -361,7 +367,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
 
-	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
+	if kubernetesInfrastructureConfigParams.TopologyInjector == nil || !ptr.Deref(kubernetesInfrastructureConfigParams.TopologyInjector.Disable, false) {
 		mgr.GetWebhookServer().Register("/inject-pod-topology", &webhook.Admission{
 			Handler: &ProxyTopologyInjector{
 				Client:    mgr.GetClient(),
@@ -371,7 +377,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			},
 		})
 	}
-	updateHandler := NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
+	updateHandler := NewUpdateHandler(mgr.GetLogger(), mgr.GetClient(), mgr.GetAPIReader())
 	if err := mgr.Add(updateHandler); err != nil {
 		return nil, fmt.Errorf("failed to add status update handler %w", err)
 	}

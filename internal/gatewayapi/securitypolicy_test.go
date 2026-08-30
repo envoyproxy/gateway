@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -91,6 +93,20 @@ func Test_wildcard2regex(t *testing.T) {
 			wildcard: "*",
 			origin:   "http://foo.example.com",
 			want:     1,
+		},
+		{
+			// A scheme containing '+' (valid per RFC 3986, e.g. "git+ssh") must be
+			// matched literally and not treated as a regex quantifier.
+			name:     "scheme with plus and wildcard host matches",
+			wildcard: "git+ssh://*.example.com",
+			origin:   "git+ssh://foo.example.com",
+			want:     1,
+		},
+		{
+			name:     "scheme with plus does not match quantifier expansion",
+			wildcard: "git+ssh://*.example.com",
+			origin:   "gitssh://foo.example.com",
+			want:     0,
 		},
 	}
 
@@ -692,6 +708,57 @@ func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 			}),
 			wantError: false,
 		},
+		{
+			name: "forwardIDToken on a header not used by any JWT provider is ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+				ForwardIDToken:        &egv1a1.OIDCTokenForwarding{Header: "X-Id-Token"},
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "X-Jwt"}},
+						},
+					},
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "forwardIDToken on a custom JWT extractFrom header is rejected",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+				ForwardIDToken:        &egv1a1.OIDCTokenForwarding{Header: "X-Jwt"},
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							// Case-insensitive collision with the forwardIDToken header.
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "x-jwt"}},
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "forwardIDToken on Authorization is rejected when a JWT provider defaults to it",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+				ForwardIDToken:        &egv1a1.OIDCTokenForwarding{Header: "authorization"},
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					// No ExtractFrom -> defaults to the Authorization header.
+					{Name: "test"},
+				},
+			},
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -882,13 +949,158 @@ func TestValidateCIDRs_ErrorOnBadCIDR(t *testing.T) {
 	}
 }
 
+func TestValidateOIDCIssuerURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		issuer  string
+		wantErr string
+	}{
+		{
+			name:   "valid host",
+			issuer: "https://accounts.google.com",
+		},
+		{
+			name:   "valid path",
+			issuer: "https://example.com/issuer",
+		},
+		{
+			name:    "http scheme",
+			issuer:  "http://internal-address/#",
+			wantErr: "issuer URL must use https scheme",
+		},
+		{
+			name:    "fragment",
+			issuer:  "https://example.com/#",
+			wantErr: "issuer URL must not include a fragment",
+		},
+		{
+			name:    "query",
+			issuer:  "https://example.com/?foo=bar",
+			wantErr: "issuer URL must not include a query",
+		},
+		{
+			name:    "missing host",
+			issuer:  "https:///issuer",
+			wantErr: "issuer URL must include a host",
+		},
+		{
+			name:    "userinfo",
+			issuer:  "https://user@example.com",
+			wantErr: "issuer URL must not include userinfo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := validateOIDCIssuerURL(tt.issuer)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestBuildOIDCDiscoveryURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		issuer string
+		want   string
+	}{
+		{
+			name:   "root issuer",
+			issuer: "https://example.com",
+			want:   "https://example.com/.well-known/openid-configuration",
+		},
+		{
+			name:   "path issuer",
+			issuer: "https://example.com/realms/master",
+			want:   "https://example.com/realms/master/.well-known/openid-configuration",
+		},
+		{
+			name:   "trailing slash",
+			issuer: "https://example.com/realms/master/",
+			want:   "https://example.com/realms/master/.well-known/openid-configuration",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			issuer, err := validateOIDCIssuerURL(tt.issuer)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, buildOIDCDiscoveryURL(issuer))
+		})
+	}
+}
+
+func TestValidateOIDCDiscoveryHostBlocksUnsafeAddresses(t *testing.T) {
+	tests := []string{
+		"127.0.0.1",              // IPv4 loopback.
+		"::1",                    // IPv6 loopback.
+		"::ffff:127.0.0.1",       // IPv4-mapped IPv6 loopback.
+		"169.254.169.254",        // IPv4 link-local cloud metadata address.
+		"::ffff:169.254.169.254", // IPv4-mapped IPv6 link-local cloud metadata address.
+		"localhost",              // DNS name that resolves to loopback.
+	}
+
+	for _, host := range tests {
+		t.Run(host, func(t *testing.T) {
+			_, err := validateOIDCDiscoveryHost(context.Background(), host)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestValidateOIDCDiscoveryHostAllowsPrivateAddresses(t *testing.T) {
+	tests := []string{
+		"10.0.0.1",
+		"172.16.0.1",
+		"192.168.0.1",
+		"fc00::1",
+	}
+
+	for _, host := range tests {
+		t.Run(host, func(t *testing.T) {
+			_, err := validateOIDCDiscoveryHost(context.Background(), host)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestOIDCDiscoveryRedirectBlocksUnsafeTargets(t *testing.T) {
+	client, err := newGuardedOIDCDiscoveryHTTPClient(nil)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "https://127.0.0.1/.well-known/openid-configuration", nil)
+	require.ErrorContains(t, client.CheckRedirect(req, nil), "blocked address")
+}
+
+func useInsecureOIDCDiscoveryHTTPClient(t *testing.T) {
+	t.Helper()
+
+	original := newOIDCDiscoveryHTTPClient
+	newOIDCDiscoveryHTTPClient = func(_ *ir.TLSUpstreamConfig) (*http.Client, error) {
+		return &http.Client{
+			Timeout: defaultOIDCHTTPTimeout,
+			Transport: &http.Transport{
+				//nolint:gosec // Tests use httptest.NewTLSServer with a self-signed certificate.
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}, nil
+	}
+	t.Cleanup(func() {
+		newOIDCDiscoveryHTTPClient = original
+	})
+}
+
 func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
 	var (
 		callCount atomic.Int32
 		server    *httptest.Server
 	)
 
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/.well-known/openid-configuration" {
 			http.NotFound(w, r)
 			return
@@ -899,6 +1111,7 @@ func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
 		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, server.URL+"/token", server.URL+"/authorize")
 	}))
 	defer server.Close()
+	useInsecureOIDCDiscoveryHTTPClient(t)
 
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
 	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
@@ -925,7 +1138,7 @@ func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
 		server    *httptest.Server
 	)
 
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/.well-known/openid-configuration" {
 			http.NotFound(w, r)
 			return
@@ -935,6 +1148,7 @@ func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
 		http.NotFound(w, r)
 	}))
 	defer server.Close()
+	useInsecureOIDCDiscoveryHTTPClient(t)
 
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
 	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()

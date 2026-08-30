@@ -200,6 +200,7 @@ func TestDeployment(t *testing.T) {
 		caseName             string
 		infra                *ir.Infra
 		deploy               *egv1a1.KubernetesDeploymentSpec
+		hpa                  *egv1a1.KubernetesHorizontalPodAutoscalerSpec
 		shutdown             *egv1a1.ShutdownConfig
 		shutdownManager      *egv1a1.ShutdownManager
 		proxyLogging         map[egv1a1.ProxyLogComponent]egv1a1.LogLevel
@@ -245,6 +246,11 @@ func TestDeployment(t *testing.T) {
 					},
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: new(true),
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{
+								"NET_ADMIN",
+							},
+						},
 					},
 				},
 			},
@@ -675,6 +681,21 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
+			// The replicas field must not be rendered when an HPA is configured, so that
+			// Envoy Gateway doesn't own spec.replicas and revert the replica count
+			// computed by the HPA.
+			caseName: "with-hpa",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: new(int32(2)),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+			},
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: new(int32(3)),
+				MaxReplicas: new(int32(10)),
+			},
+		},
+		{
 			caseName:             "gateway-namespace-mode",
 			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			deploy:               nil,
@@ -692,6 +713,9 @@ func TestDeployment(t *testing.T) {
 			kube := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
 			if tc.deploy != nil {
 				kube.EnvoyDeployment = tc.deploy
+			}
+			if tc.hpa != nil {
+				kube.EnvoyHpa = tc.hpa
 			}
 
 			replace := egv1a1.BootstrapTypeReplace
@@ -734,8 +758,10 @@ func TestDeployment(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+							Deploy: &egv1a1.KubernetesDeployMode{
+								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+							},
 						},
 					},
 				}
@@ -1171,8 +1197,10 @@ func TestDaemonSet(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+							Deploy: &egv1a1.KubernetesDeployMode{
+								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+							},
 						},
 					},
 				}
@@ -1392,8 +1420,10 @@ func TestService(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+							Deploy: &egv1a1.KubernetesDeployMode{
+								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+							},
 						},
 					},
 				}
@@ -1467,8 +1497,10 @@ func TestConfigMap(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+							Deploy: &egv1a1.KubernetesDeployMode{
+								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+							},
 						},
 					},
 				}
@@ -1540,8 +1572,10 @@ func TestServiceAccount(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+							Deploy: &egv1a1.KubernetesDeployMode{
+								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+							},
 						},
 					},
 				}
@@ -1678,8 +1712,10 @@ func TestPDB(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+							Deploy: &egv1a1.KubernetesDeployMode{
+								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+							},
 						},
 					},
 				}
@@ -1828,8 +1864,10 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+							Deploy: &egv1a1.KubernetesDeployMode{
+								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+							},
 						},
 					},
 				}
@@ -1991,8 +2029,10 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 		Type: egv1a1.ProviderTypeKubernetes,
 		Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-			Deploy: &egv1a1.KubernetesDeployMode{
-				Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+			EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+				Deploy: &egv1a1.KubernetesDeployMode{
+					Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+				},
 			},
 		},
 	}

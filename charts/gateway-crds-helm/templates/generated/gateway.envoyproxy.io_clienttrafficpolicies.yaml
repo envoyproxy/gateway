@@ -499,6 +499,21 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
+                  host:
+                    description: Host enables managing how the Host/Authority header
+                      set by clients can be normalized.
+                    properties:
+                      stripTrailingHostDot:
+                        description: |-
+                          StripTrailingHostDot determines if the trailing dot of the host should be removed
+                          from the Host/Authority header before any processing of the request.
+                          This affects the upstream host header as well. Without this option, incoming requests
+                          with host "example.com." will not match routes with domains set to "example.com".
+                          When the host includes a port (for example "example.com.:443"), only the trailing dot
+                          from the host section is stripped, leaving the port as-is ("example.com:443").
+                          Defaults to false.
+                        type: boolean
+                    type: object
                   lateResponseHeaders:
                     description: LateResponseHeaders defines settings for global response
                       header modification.
@@ -733,6 +748,24 @@ spec:
                         - name
                         x-kubernetes-list-type: map
                     type: object
+                  maxRequestHeaderLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxRequestHeaderLimit provides configuration for the maximum size of the
+                      request headers allowed for incoming connections, mapping to the Envoy
+                      `max_request_headers_kb` HTTP connection manager setting. Requests whose
+                      headers exceed this limit receive a 431 (Request Header Fields Too Large)
+                      response. The value is rounded up to the nearest KiB, must be at least 1Ki,
+                      and cannot exceed 8192Ki (the maximum Envoy supports).
+                      For example, 60Ki, 96Ki, 128Ki etc.
+                      Note that when the suffix is not provided, the value is interpreted as bytes.
+                      Default: 60Ki bytes.
+                    x-kubernetes-int-or-string: true
                   preserveXRequestID:
                     description: |-
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
@@ -1321,6 +1354,14 @@ spec:
                           Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      requestHeadersReceivedTimeout:
+                        description: |-
+                          RequestHeadersReceivedTimeout is the duration envoy waits for the request headers to arrive.
+                          The timer is activated when the first byte of the headers is received,
+                          and is disarmed when the last byte of the headers has been received.
+                          If not specified or set to 0, this timeout is disabled.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       requestReceivedTimeout:
                         description: |-
                           RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
@@ -1337,11 +1378,26 @@ spec:
                   tcp:
                     description: Timeout settings for TCP.
                     properties:
+                      connectionInspectionTimeout:
+                        description: |-
+                          ConnectionInspectionTimeout is the maximum time to wait for initial inspection
+                          (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection on the listener socket.
+                          If exceeded, the connection is dropped.
+                          Default: 15 seconds.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       idleTimeout:
                         description: |-
                           IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
                           bytes sent or received on either the upstream or downstream connection.
                           Default: 1 hour.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      tlsHandshakeTimeout:
+                        description: |-
+                          TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
+                          (e.g. the TLS handshake) after a connection is accepted.
+                          If this expires before the transport reports connection establishment, the connection is summarily closed.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object

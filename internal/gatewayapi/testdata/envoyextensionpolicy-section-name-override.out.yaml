@@ -149,7 +149,8 @@ envoyExtensionPolicies:
         type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these listeners: [listener-1] and these routes: [default/httproute-1]'
+          for these gateway listeners: [envoy-gateway/gateway-1/listener-1] and these
+          routes: [default/httproute-1]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -286,7 +287,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo
+          value: /baz
       name: rule
   status:
     parents:
@@ -536,7 +537,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
+          prefix: /baz
     - address: 0.0.0.0
       externalPort: 8082
       hostnames:
@@ -606,7 +607,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
+          prefix: /baz
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -81,7 +81,8 @@ spec:
             layers:
             - name: global_config
               static_layer:
-                envoy.restart_features.use_eds_cache_for_ads: true
+                envoy.reloadable_features.oauth2_legacy_cbc_decrypt_compat: false
+                envoy.reloadable_features.oauth2_use_gcm_encryption: true
                 re2.max_program_size.error_level: 4294967295
                 re2.max_program_size.warn_level: 1000
           dynamic_resources:
@@ -231,7 +232,6 @@ spec:
                   value: 0.98
         - --log-level
         - warn
-        - --cpuset-threads
         - --drain-strategy
         - immediate
         - --component-log-level
@@ -298,7 +298,16 @@ spec:
             cpu: 200m
             memory: 1Gi
         securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
           privileged: true
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -370,7 +379,16 @@ spec:
             cpu: 10m
             memory: 32Mi
         securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
           privileged: true
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:

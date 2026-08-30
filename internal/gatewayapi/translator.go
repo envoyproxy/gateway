@@ -6,11 +6,16 @@
 package gatewayapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/traces/phase"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -49,16 +55,54 @@ const (
 	wellKnownPortShift = 10000
 )
 
+var tracer = otel.Tracer("envoy-gateway/gateway-api/translator")
+
+// inputSizeAttrs reports the size of the resource tree a translation is about to
+// process, so that a slow translation can be attributed to a bigger input instead
+// of being correlated against other signals by hand.
+//
+// These are the counts of the resources as they arrive. Counts derived during the
+// translation, for example the gateways that were accepted or the routes that are
+// relevant to them, use distinct keys so that the two are never conflated.
+func inputSizeAttrs(resources *resource.Resources) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		attribute.Int("gateways.count", len(resources.Gateways)),
+		attribute.Int("listener-sets.count", len(resources.ListenerSets)),
+		attribute.Int("http-routes.count", len(resources.HTTPRoutes)),
+		attribute.Int("grpc-routes.count", len(resources.GRPCRoutes)),
+		attribute.Int("tls-routes.count", len(resources.TLSRoutes)),
+		attribute.Int("tcp-routes.count", len(resources.TCPRoutes)),
+		attribute.Int("udp-routes.count", len(resources.UDPRoutes)),
+		attribute.Int("backends.count", len(resources.Backends)),
+		attribute.Int("services.count", len(resources.Services)),
+		attribute.Int("endpoint-slices.count", len(resources.EndpointSlices)),
+		attribute.Int("client-traffic-policies.count", len(resources.ClientTrafficPolicies)),
+		attribute.Int("backend-traffic-policies.count", len(resources.BackendTrafficPolicies)),
+		attribute.Int("security-policies.count", len(resources.SecurityPolicies)),
+		attribute.Int("backend-tls-policies.count", len(resources.BackendTLSPolicies)),
+		attribute.Int("envoy-extension-policies.count", len(resources.EnvoyExtensionPolicies)),
+		attribute.Int("extension-server-policies.count", len(resources.ExtensionServerPolicies)),
+		attribute.Int("envoy-patch-policies.count", len(resources.EnvoyPatchPolicies)),
+	}
+}
+
 var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
-	Translate(resources *resource.Resources) (*TranslateResult, error)
+	Translate(ctx context.Context, resources *resource.Resources) (*TranslateResult, error)
 	GetRelevantGateways(resources *resource.Resources) (acceptedGateways, failedGateways []*GatewayContext)
 
 	RoutesTranslator
 	ListenersTranslator
 	AddressesTranslator
 	FiltersTranslator
+}
+
+// MergeBackendsConfig is the resolved MergeBackends config. A nil *MergeBackendsConfig means
+// disabled; any non-nil value means enabled, mirroring egv1a1.MergeBackendsConfig's own
+// mere-presence-enables convention.
+type MergeBackendsConfig struct {
+	Selector *metav1.LabelSelector
 }
 
 // Translator translates Gateway API resources to IRs and computes status
@@ -87,6 +131,14 @@ type Translator struct {
 	// MergeGateways is true when all Gateway Listeners
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
+
+	// MergeBackends is the resolved MergeBackends config, set via ResolveMergeBackendsConfig.
+	MergeBackends *MergeBackendsConfig
+
+	// PerResourceSystemCASecret restores the old behavior of emitting one SDS secret per
+	// BackendTLSPolicy or Backend resource using WellKnownCACertificates: System, instead of
+	// sharing a single system_ca_certificates secret. Disabled by default (shared secret used).
+	PerResourceSystemCASecret bool
 
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
@@ -117,12 +169,10 @@ type Translator struct {
 	WasmCache wasm.Cache
 
 	// RunningOnHost indicates whether Envoy Gateway is running locally on the host machine.
-	//
-	// When running on the local host using the Host infrastructure provider, disable translating the
-	// gateway listener port into a non-privileged port and reuse the specified value.
-	// Also, allow loopback IP addresses in Backend endpoints, as the threat model is different from
-	// the cluster environment and the related security risk is not applicable.
 	RunningOnHost bool
+
+	// InfraRemotelyManaged indicates whether the Envoy fleet is managed in the Remote infrastructure provider.
+	InfraRemotelyManaged bool
 
 	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
 	oidcDiscoveryCache *oidcDiscoveryCache
@@ -250,8 +300,22 @@ func newTranslateResult(
 	return translateResult
 }
 
-func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
+// Translate translates the Gateway API resources into the xDS IR and the infra IR.
+// The ctx is only used to record tracing spans for the phases of the translation,
+// it does not cancel an in-flight translation.
+func (t *Translator) Translate(ctx context.Context, resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
+
+	// Record what this translation is about to chew through on the enclosing span, so
+	// that a slow translation can be told apart from a translation of a bigger input.
+	if span := trace.SpanFromContext(ctx); span.IsRecording() {
+		span.SetAttributes(inputSizeAttrs(resources)...)
+	}
+
+	// Each phase ends its own span; the deferred call closes and marks the phase that
+	// was in flight when a phase panics, so the failing phase stays in the trace.
+	phases := phase.NewTracker(ctx, tracer)
+	defer phases.EndInFlight()
 
 	// The input resource tree is shared with the watchable coalesce goroutine, which
 	// walks it with reflect.DeepEqual. The translator mutates resource Status in place
@@ -281,17 +345,35 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
-	// Build pre-computed BTP RoutingType index for O(1) lookups in processDestination.
-	t.BTPRoutingTypeIndex = nil
-	if hasBTPRoutingType(resources.BackendTrafficPolicies) {
-		t.BTPRoutingTypeIndex = BuildBTPRoutingTypeIndex(
-			resources.BackendTrafficPolicies,
-			routesToObjects(resources),
-			acceptedGateways,
-			resources.ReferenceGrants,
-			t.GetNamespace,
-		)
-	}
+	// Build pre-computed BTP indexes for O(1) lookups in processDestination.
+	phases.Start("GatewayApiTranslator.BuildPolicyIndexes",
+		attribute.Int("backend-traffic-policies.count", len(resources.BackendTrafficPolicies)),
+		attribute.Int("client-traffic-policies.count", len(resources.ClientTrafficPolicies)),
+	)
+	btpIndexes := BuildBTPIndexes(
+		resources.BackendTrafficPolicies,
+		routesToObjects(resources),
+		acceptedGateways,
+		resources.ListenerSets,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
+	t.BTPRoutingTypeIndex = btpIndexes.RoutingType
+	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
+	t.BTPLoadBalancerIndex = btpIndexes.LoadBalancer
+
+	// Pre-compute which gateways/listeners have a ClientTrafficPolicy-sourced
+	// cluster-affecting override, for O(1) lookup during route processing.
+	t.CTPClusterSettingsIndex = BuildCTPClusterSettingsIndex(
+		resources.ClientTrafficPolicies,
+		acceptedGateways,
+		resources.ListenerSets,
+		resources.ReferenceGrants,
+		t.GetNamespace,
+		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+	)
+	phases.End()
 
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
@@ -299,7 +381,12 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessGatewayTLS(acceptedGateways, resources)
 
 	// Process all Listeners for all relevant Gateways.
+	phases.Start("GatewayApiTranslator.ProcessListeners",
+		attribute.Int("accepted-gateways.count", len(acceptedGateways)),
+		attribute.Int("listener-sets.count", len(resources.ListenerSets)),
+	)
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
+	phases.End()
 
 	// Compute ListenerSet status based on listener processing results
 	// This should be done after ProcessListeners because ListenerSet status depends on listener processing results
@@ -315,22 +402,32 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	backends := t.ProcessBackends(resources.Backends, resources.BackendTLSPolicies)
 
 	// Process all relevant HTTPRoutes.
+	phases.Start("GatewayApiTranslator.ProcessHTTPRoutes",
+		attribute.Int("http-routes.count", len(resources.HTTPRoutes)),
+	)
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, acceptedGateways, resources, xdsIR)
+	phases.End()
 
 	// Process all relevant GRPCRoutes.
+	phases.Start("GatewayApiTranslator.ProcessGRPCRoutes",
+		attribute.Int("grpc-routes.count", len(resources.GRPCRoutes)),
+	)
 	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, acceptedGateways, resources, xdsIR)
+	phases.End()
 
-	// Process all relevant TLSRoutes.
+	// Process all relevant TLSRoutes, TCPRoutes and UDPRoutes. These get no phase span:
+	// they are cheap next to the HTTP and GRPC routes on a large cluster.
 	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, acceptedGateways, resources, xdsIR)
-
-	// Process all relevant TCPRoutes.
 	tcpRoutes := t.ProcessTCPRoutes(resources.TCPRoutes, acceptedGateways, resources, xdsIR)
-
-	// Process all relevant UDPRoutes.
 	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process ClientTrafficPolicies
+	phases.Start("GatewayApiTranslator.ProcessClientTrafficPolicies",
+		attribute.Int("client-traffic-policies.count", len(resources.ClientTrafficPolicies)),
+		attribute.Int("accepted-gateways.count", len(acceptedGateways)),
+	)
 	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
+	phases.End()
 
 	routes := make([]RouteContext, len(httpRoutes)+len(grpcRoutes)+len(tlsRoutes)+len(tcpRoutes)+len(udpRoutes))
 	offset := 0
@@ -355,18 +452,46 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process BackendTrafficPolicies
+	phases.Start("GatewayApiTranslator.ProcessBackendTrafficPolicies",
+		attribute.Int("backend-traffic-policies.count", len(resources.BackendTrafficPolicies)),
+		attribute.Int("relevant-routes.count", len(routes)),
+	)
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
+	phases.End()
+
+	// Check for overlapping route matches across all listeners. This must run
+	// after BackendTrafficPolicies are applied because a CONNECT upgrade
+	// replaces a route's path matcher with Envoy's CONNECT matcher, which
+	// changes which routes can overlap.
+	// These count the routes that are relevant to our Gateways, which is what the
+	// phase actually walks, not the routes in the input, hence the distinct keys.
+	phases.Start("GatewayApiTranslator.checkRouteOverlaps",
+		attribute.Int("relevant-http-routes.count", len(httpRoutes)),
+		attribute.Int("relevant-grpc-routes.count", len(grpcRoutes)),
+	)
+	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
+	phases.End()
 
 	// Process SecurityPolicies
+	phases.Start("GatewayApiTranslator.ProcessSecurityPolicies",
+		attribute.Int("security-policies.count", len(resources.SecurityPolicies)),
+		attribute.Int("relevant-routes.count", len(routes)),
+	)
 	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, acceptedGateways, routes, resources, xdsIR)
+	phases.End()
 
 	// Process EnvoyExtensionPolicies
+	phases.Start("GatewayApiTranslator.ProcessEnvoyExtensionPolicies",
+		attribute.Int("envoy-extension-policies.count", len(resources.EnvoyExtensionPolicies)),
+		attribute.Int("relevant-routes.count", len(routes)),
+	)
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
+	phases.End()
 
 	extServerPolicies, err := t.ProcessExtensionServerPolicies(
-		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
+		resources.ExtensionServerPolicies, acceptedGateways, routes, resources, xdsIR)
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -462,6 +587,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+			status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
 		}
 	}
 
@@ -491,6 +617,13 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				spec, _ := json.Marshal(gCtx.envoyProxy.Spec)
 				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...)...)
 			}
+		}
+
+		if IsMergeGatewaysEnabled(resources) && t.isMergeBackendsEnabledForGateway(gCtx) {
+			failedGateways = append(failedGateways, gCtx)
+			status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+				"mergeGateways and mergeBackends cannot both be enabled")
+			continue
 		}
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
@@ -530,6 +663,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			if gCtx.envoyProxyFromGateway {
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
 			}
 		}
 
@@ -558,6 +692,15 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 	}
 
 	return nil
+}
+
+func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if ep.Spec.LuaValidation != nil {
+		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
+	}
+
+	return deprecatedFields
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.

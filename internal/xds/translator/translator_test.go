@@ -120,6 +120,19 @@ func TestTranslateXds(t *testing.T) {
 				Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
 			},
 		},
+		"http-route-with-tls-system-truststore-per-resource-secret": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.PerResourceSystemCASecret},
+			},
+		},
+		"http-route-multiple-system-truststore-per-resource-secret": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.PerResourceSystemCASecret},
+			},
+		},
+		"jsonpatch-system-truststore-enforcement": {
+			requireEnvoyPatchPolicies: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
@@ -152,7 +165,7 @@ func TestTranslateXds(t *testing.T) {
 				FilterOrder:  x.FilterOrder,
 				RuntimeFlags: cfg.runtimeFlags,
 			}
-			tCtx, err := tr.Translate(x)
+			tCtx, err := tr.Translate(t.Context(), x)
 
 			// Handle EnvoyPatchPolicy statuses first, even if there are errors
 			// because errors are captured in the policy status conditions
@@ -386,7 +399,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr
 
-			tCtx, err := tr.Translate(x)
+			tCtx, err := tr.Translate(t.Context(), x)
 			if len(cfg.errMsg) > 0 {
 				require.EqualError(t, err, cfg.errMsg)
 			} else {
@@ -528,7 +541,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr
 
-			_, err = tr.Translate(x)
+			_, err = tr.Translate(t.Context(), x)
 			require.EqualError(t, err, cfg.errMsg)
 		})
 	}
@@ -561,7 +574,7 @@ func TestTranslateXdsWithCompositeExtensionErrorsWhenFailOpen(t *testing.T) {
 			defer extMgr.CleanupHookConns()
 			tr.ExtensionManager = &extMgr
 
-			_, err = tr.Translate(x)
+			_, err = tr.Translate(t.Context(), x)
 			require.NoError(t, err, "extension error should be swallowed when failOpen=true")
 		})
 	}
@@ -628,7 +641,7 @@ func TestTranslateXdsWithCompositeExtensionErrorsWhenFailClosed(t *testing.T) {
 			defer extMgr.CleanupHookConns()
 			tr.ExtensionManager = &extMgr
 
-			_, err = tr.Translate(x)
+			_, err = tr.Translate(t.Context(), x)
 			require.EqualError(t, err, cfg.errMsg)
 		})
 	}

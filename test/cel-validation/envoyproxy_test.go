@@ -2485,6 +2485,160 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
+		{
+			desc: "lua-strict-valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths:   []string{"/tmp"},
+							AllowedEnvVars: []string{"LOG_LEVEL"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "lua-empty-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths: []string{""},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should be at least 1 chars long"},
+		},
+		{
+			desc: "lua-whitespace-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths: []string{"  "},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedPaths entries must not be blank or whitespace-only"},
+		},
+		{
+			desc: "lua-root-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths: []string{"/"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedPaths entries must not be the filesystem root"},
+		},
+		{
+			desc: "lua-multi-slash-root-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths: []string{"//"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedPaths entries must not be the filesystem root"},
+		},
+		{
+			desc: "lua-whitespace-envvar-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedEnvVars: []string{"  "},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedEnvVars entries must not be blank or whitespace-only"},
+		},
+		{
+			desc: "lua-with-explicit-strict-type-allowed",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						ValidationType:   new(egv1a1.LuaValidationStrict),
+						StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "lua-with-unset-type-allowed",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "lua-strict-with-insecure-syntax-type-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						ValidationType:   new(egv1a1.LuaValidationInsecureSyntax),
+						StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
+					},
+				}
+			},
+			wantErrors: []string{"strictValidation can only be set when validationType is Strict"},
+		},
+		{
+			desc: "luaValidation-and-lua-mutually-exclusive",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					LuaValidation: new(egv1a1.LuaValidationStrict),
+					Lua:           &egv1a1.LuaValidationConfig{StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}}},
+				}
+			},
+			wantErrors: []string{"only one of luaValidation or lua may be set"},
+		},
+		{
+			desc: "mergeBackends present (empty) is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeGateways and mergeBackends both set is invalid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeGateways = new(true)
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{"mergeGateways and mergeBackends cannot both be enabled"},
+		},
+		{
+			desc: "mergeGateways enabled with mergeBackends unset is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeGateways = new(true)
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeGateways disabled with mergeBackends set is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeGateways = new(false)
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
+			},
+			wantErrors: []string{},
+		},
 	}
 
 	for _, tc := range cases {
@@ -2614,6 +2768,158 @@ func TestProxyAccessLogFormatNoType(t *testing.T) {
 			} else {
 				require.Error(t, err)
 				require.Contains(t, strings.ToLower(err.Error()), strings.ToLower(tt.expectedError))
+			}
+		})
+	}
+}
+
+func TestProxyHealthCheckLog(t *testing.T) {
+	fileSink := func(path string) egv1a1.ProxyHealthCheckLogSink {
+		return egv1a1.ProxyHealthCheckLogSink{
+			Type: egv1a1.ProxyHealthCheckLogSinkTypeFile,
+			File: &egv1a1.FileEnvoyProxyHealthCheckLog{Path: path},
+		}
+	}
+
+	cases := []struct {
+		desc          string
+		hcLog         *egv1a1.ProxyHealthCheckLog
+		expectedError string
+	}{
+		{
+			desc: "valid - no event types (log everything)",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks: []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+			},
+		},
+		{
+			desc: "valid - Failure and Success",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
+			},
+		},
+		{
+			desc: "valid - FailureSeriesStart and HealthyTransition",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart, egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
+			},
+		},
+		{
+			desc: "valid - Failure and HealthyTransition",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
+			},
+		},
+		{
+			desc:  "valid - no sinks (defaults to /dev/stdout)",
+			hcLog: &egv1a1.ProxyHealthCheckLog{},
+		},
+		{
+			desc: "invalid - two sinks",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks: []egv1a1.ProxyHealthCheckLogSink{
+					fileSink("/dev/stdout"),
+					fileSink("/dev/stderr"),
+				},
+			},
+			expectedError: "Too many: 2: must have at most 1 item",
+		},
+		{
+			desc: "invalid - File type without file field",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks: []egv1a1.ProxyHealthCheckLogSink{
+					{Type: egv1a1.ProxyHealthCheckLogSinkTypeFile},
+				},
+			},
+			expectedError: "If ProxyHealthCheckLogSink type is File, file field needs to be set",
+		},
+		{
+			desc: "invalid - empty path in file sink",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks: []egv1a1.ProxyHealthCheckLogSink{
+					{
+						Type: egv1a1.ProxyHealthCheckLogSinkTypeFile,
+						File: &egv1a1.FileEnvoyProxyHealthCheckLog{Path: ""},
+					},
+				},
+			},
+			expectedError: "path",
+		},
+		{
+			desc: "valid - Failure and FailureSeriesStart together (treated as Failure)",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
+			},
+		},
+		{
+			desc: "valid - Success and HealthyTransition together (treated as Success)",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess, egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
+			},
+		},
+		{
+			desc: "invalid - failure type without success type",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure},
+			},
+			expectedError: "a failure type and a success type must both be specified together",
+		},
+		{
+			desc: "invalid - success type without failure type",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition},
+			},
+			expectedError: "a failure type and a success type must both be specified together",
+		},
+		{
+			desc: "invalid - FailureSeriesStart without a success type",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart},
+			},
+			expectedError: "a failure type and a success type must both be specified together",
+		},
+		{
+			desc: "invalid - explicit empty matches list",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{},
+			},
+			// empty list is treated as "log all events" — same as omitting the field
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			proxy := &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("proxy-%v", time.Now().UnixNano()),
+					Namespace: metav1.NamespaceDefault,
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						HealthCheckLog: tc.hcLog,
+					},
+				},
+			}
+
+			err := c.Create(t.Context(), proxy)
+			t.Cleanup(func() {
+				_ = c.Delete(t.Context(), proxy)
+			})
+
+			if tc.expectedError == "" {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.Contains(t, strings.ToLower(err.Error()), strings.ToLower(tc.expectedError))
 			}
 		})
 	}
