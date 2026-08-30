@@ -238,7 +238,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			metricSinks = opts.ResolvedMetricSinks
 		} else {
 			// Fall back to resolving from ProxyMetrics (legacy path for Service-type backends)
-			addresses := sets.NewString()
+			addresses := sets.New[string]()
 			for _, sink := range proxyMetrics.Sinks {
 				if sink.OpenTelemetry == nil {
 					continue

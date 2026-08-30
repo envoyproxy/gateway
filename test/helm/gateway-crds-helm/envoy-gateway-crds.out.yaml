@@ -1170,6 +1170,73 @@ spec:
                               server and not to a specific service.
                             type: string
                         type: object
+                      healthCheckLog:
+                        description: |-
+                          HealthCheckLog defines health check event logging configuration for this cluster.
+                          When set, HC probe outcomes are logged to the configured sinks.
+                          Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                        properties:
+                          matches:
+                            description: |-
+                              Matches defines which health check probe outcomes produce a log entry.
+                              When omitted or empty, all events are logged.
+
+                              Each value must be unique. Multiple values are ORed. If any failure type is
+                              specified then a success type must also be specified, and vice versa.
+                            items:
+                              description: ProxyHealthCheckLogEventType specifies
+                                which health check probe outcomes produce a log entry.
+                              enum:
+                              - Failure
+                              - FailureSeriesStart
+                              - Success
+                              - HealthyTransition
+                              type: string
+                            maxItems: 4
+                            type: array
+                            x-kubernetes-list-type: set
+                            x-kubernetes-validations:
+                            - message: a failure type and a success type must both
+                                be specified together
+                              rule: self.exists(e, e == 'Failure' || e == 'FailureSeriesStart')
+                                == self.exists(e, e == 'Success' || e == 'HealthyTransition')
+                          sinks:
+                            description: |-
+                              Sinks defines where health check events are written.
+                              When omitted, events are written to /dev/stdout.
+                            items:
+                              description: ProxyHealthCheckLogSink defines a destination
+                                for health check event logs.
+                              properties:
+                                file:
+                                  description: |-
+                                    File defines the file sink configuration.
+                                    Required when type is File.
+                                  properties:
+                                    path:
+                                      description: |-
+                                        Path specifies the file path for health check event output.
+                                        Use /dev/stdout to write to standard output.
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - path
+                                  type: object
+                                type:
+                                  description: Type defines the type of sink.
+                                  enum:
+                                  - File
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                              x-kubernetes-validations:
+                              - message: If ProxyHealthCheckLogSink type is File,
+                                  file field needs to be set.
+                                rule: 'self.type == ''File'' ? has(self.file) : !has(self.file)'
+                            maxItems: 1
+                            type: array
+                        type: object
                       healthyThreshold:
                         default: 1
                         description: HealthyThreshold defines the number of healthy
@@ -1668,8 +1735,12 @@ spec:
                           The backend must implement OpenRcaService for this to take effect.
                         properties:
                           authority:
-                            description: Authority overrides the :authority header
-                              on the OutOfBand gRPC stream.
+                            description: |-
+                              Authority overrides the :authority header on the OutOfBand gRPC stream.
+                              If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                              the cluster name.
+                            maxLength: 259
+                            minLength: 1
                             pattern: ^[^\x00\n\r]*$
                             type: string
                           port:
@@ -1683,9 +1754,12 @@ spec:
                           reportingPeriod:
                             description: |-
                               ReportingPeriod is how often Envoy requests load reports from the server.
-                              If omitted, uses Envoy's default of 10s.
+                              Must be greater than 0. Defaults to 10s.
                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
+                            x-kubernetes-validations:
+                            - message: reportingPeriod must be greater than 0
+                              rule: duration(self) > duration('0s')
                         type: object
                       weightExpirationPeriod:
                         description: If a given endpoint has not reported load metrics
@@ -2131,7 +2205,7 @@ spec:
                                       required:
                                       - name
                                       type: object
-                                    maxItems: 64
+                                    maxItems: 128
                                     type: array
                                   methods:
                                     description: |-
@@ -2420,12 +2494,13 @@ spec:
                                 unit:
                                   description: |-
                                     RateLimitUnit specifies the intervals for setting rate limits.
-                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
+                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Week", "Month" and "Year".
                                   enum:
                                   - Second
                                   - Minute
                                   - Hour
                                   - Day
+                                  - Week
                                   - Month
                                   - Year
                                   type: string
@@ -2542,7 +2617,7 @@ spec:
                                       required:
                                       - name
                                       type: object
-                                    maxItems: 64
+                                    maxItems: 128
                                     type: array
                                   methods:
                                     description: |-
@@ -2831,12 +2906,13 @@ spec:
                                 unit:
                                   description: |-
                                     RateLimitUnit specifies the intervals for setting rate limits.
-                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
+                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Week", "Month" and "Year".
                                   enum:
                                   - Second
                                   - Minute
                                   - Hour
                                   - Day
+                                  - Week
                                   - Month
                                   - Year
                                   type: string
@@ -2930,6 +3006,52 @@ spec:
                     match:
                       description: Match configuration.
                       properties:
+                        responseHeaders:
+                          description: Response headers to match on. The match evaluates
+                            to true if all matches are successful.
+                          items:
+                            description: ResponseOverrideHeaderMatch defines the configuration
+                              for matching a response header.
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the HTTP header.
+                                  The header name is case-insensitive.
+                                  For example, "Foo" and "foo" are considered the same header.
+                                maxLength: 256
+                                minLength: 1
+                                pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                type: string
+                              value:
+                                description: Value within the HTTP header to match
+                                  against.
+                                properties:
+                                  type:
+                                    default: Exact
+                                    description: Type specifies how to match against
+                                      a string.
+                                    enum:
+                                    - Exact
+                                    - Prefix
+                                    - Suffix
+                                    - RegularExpression
+                                    type: string
+                                  value:
+                                    description: Value specifies the string value
+                                      that the match must have.
+                                    maxLength: 1024
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - value
+                                type: object
+                            required:
+                            - name
+                            - value
+                            type: object
+                          maxItems: 16
+                          minItems: 1
+                          type: array
                         statusCodes:
                           description: Status code to match on. The match evaluates
                             to true if any of the matches are successful.
@@ -2985,9 +3107,11 @@ spec:
                           maxItems: 50
                           minItems: 1
                           type: array
-                      required:
-                      - statusCodes
                       type: object
+                      x-kubernetes-validations:
+                      - message: at least one of statusCodes or responseHeaders must
+                          be specified
+                        rule: has(self.statusCodes) || has(self.responseHeaders)
                     redirect:
                       description: Redirect configuration
                       properties:
@@ -5085,6 +5209,24 @@ spec:
                         - name
                         x-kubernetes-list-type: map
                     type: object
+                  maxRequestHeaderLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxRequestHeaderLimit provides configuration for the maximum size of the
+                      request headers allowed for incoming connections, mapping to the Envoy
+                      `max_request_headers_kb` HTTP connection manager setting. Requests whose
+                      headers exceed this limit receive a 431 (Request Header Fields Too Large)
+                      response. The value is rounded up to the nearest KiB, must be at least 1Ki,
+                      and cannot exceed 8192Ki (the maximum Envoy supports).
+                      For example, 60Ki, 96Ki, 128Ki etc.
+                      Note that when the suffix is not provided, the value is interpreted as bytes.
+                      Default: 60Ki bytes.
+                    x-kubernetes-int-or-string: true
                   preserveXRequestID:
                     description: |-
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
@@ -5673,6 +5815,14 @@ spec:
                           Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      requestHeadersReceivedTimeout:
+                        description: |-
+                          RequestHeadersReceivedTimeout is the duration envoy waits for the request headers to arrive.
+                          The timer is activated when the first byte of the headers is received,
+                          and is disarmed when the last byte of the headers has been received.
+                          If not specified or set to 0, this timeout is disabled.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       requestReceivedTimeout:
                         description: |-
                           RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
@@ -5689,11 +5839,26 @@ spec:
                   tcp:
                     description: Timeout settings for TCP.
                     properties:
+                      connectionInspectionTimeout:
+                        description: |-
+                          ConnectionInspectionTimeout is the maximum time to wait for initial inspection
+                          (TLS / SNI and protocol detection, or HTTP protocol parsing) of an incoming connection on the listener socket.
+                          If exceeded, the connection is dropped.
+                          Default: 15 seconds.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       idleTimeout:
                         description: |-
                           IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
                           bytes sent or received on either the upstream or downstream connection.
                           Default: 1 hour.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      tlsHandshakeTimeout:
+                        description: |-
+                          TLSHandshakeTimeout for a TCP connection. The maximum time to complete transport level connection negotiation
+                          (e.g. the TLS handshake) after a connection is accepted.
+                          If this expires before the transport reports connection establishment, the connection is summarily closed.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
@@ -7067,6 +7232,77 @@ spec:
                                         server and not to a specific service.
                                       type: string
                                   type: object
+                                healthCheckLog:
+                                  description: |-
+                                    HealthCheckLog defines health check event logging configuration for this cluster.
+                                    When set, HC probe outcomes are logged to the configured sinks.
+                                    Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                                  properties:
+                                    matches:
+                                      description: |-
+                                        Matches defines which health check probe outcomes produce a log entry.
+                                        When omitted or empty, all events are logged.
+
+                                        Each value must be unique. Multiple values are ORed. If any failure type is
+                                        specified then a success type must also be specified, and vice versa.
+                                      items:
+                                        description: ProxyHealthCheckLogEventType
+                                          specifies which health check probe outcomes
+                                          produce a log entry.
+                                        enum:
+                                        - Failure
+                                        - FailureSeriesStart
+                                        - Success
+                                        - HealthyTransition
+                                        type: string
+                                      maxItems: 4
+                                      type: array
+                                      x-kubernetes-list-type: set
+                                      x-kubernetes-validations:
+                                      - message: a failure type and a success type
+                                          must both be specified together
+                                        rule: self.exists(e, e == 'Failure' || e ==
+                                          'FailureSeriesStart') == self.exists(e,
+                                          e == 'Success' || e == 'HealthyTransition')
+                                    sinks:
+                                      description: |-
+                                        Sinks defines where health check events are written.
+                                        When omitted, events are written to /dev/stdout.
+                                      items:
+                                        description: ProxyHealthCheckLogSink defines
+                                          a destination for health check event logs.
+                                        properties:
+                                          file:
+                                            description: |-
+                                              File defines the file sink configuration.
+                                              Required when type is File.
+                                            properties:
+                                              path:
+                                                description: |-
+                                                  Path specifies the file path for health check event output.
+                                                  Use /dev/stdout to write to standard output.
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - path
+                                            type: object
+                                          type:
+                                            description: Type defines the type of
+                                              sink.
+                                            enum:
+                                            - File
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: If ProxyHealthCheckLogSink type
+                                            is File, file field needs to be set.
+                                          rule: 'self.type == ''File'' ? has(self.file)
+                                            : !has(self.file)'
+                                      maxItems: 1
+                                      type: array
+                                  type: object
                                 healthyThreshold:
                                   default: 1
                                   description: HealthyThreshold defines the number
@@ -7548,8 +7784,12 @@ spec:
                                     The backend must implement OpenRcaService for this to take effect.
                                   properties:
                                     authority:
-                                      description: Authority overrides the :authority
-                                        header on the OutOfBand gRPC stream.
+                                      description: |-
+                                        Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                        If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                        the cluster name.
+                                      maxLength: 259
+                                      minLength: 1
                                       pattern: ^[^\x00\n\r]*$
                                       type: string
                                     port:
@@ -7563,9 +7803,13 @@ spec:
                                     reportingPeriod:
                                       description: |-
                                         ReportingPeriod is how often Envoy requests load reports from the server.
-                                        If omitted, uses Envoy's default of 10s.
+                                        Must be greater than 0. Defaults to 10s.
                                       pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: reportingPeriod must be greater than
+                                          0
+                                        rule: duration(self) > duration('0s')
                                   type: object
                                 weightExpirationPeriod:
                                   description: If a given endpoint has not reported
@@ -8356,6 +8600,19 @@ spec:
                       || (self.type == 'ValueRef' && !has(self.inline) && has(self.valueRef))
                 maxItems: 16
                 type: array
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing EnvoyExtensionPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into the closest parent EnvoyExtensionPolicy in the route's attachment hierarchy (for
+                  example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet
+                  listener).
+                  Currently, this field can only be set when targeting xRoute resources.
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
+                x-kubernetes-validations:
+                - message: Replace is not a valid MergeType for EnvoyExtensionPolicy
+                  rule: self != 'Replace'
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -8629,8 +8886,9 @@ spec:
                                 kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
                               type: string
                             tls:
-                              description: TLS configuration when connecting to the
-                                Wasm code source.
+                              description: |-
+                                TLS configuration when connecting to the Wasm code source.
+                                If unset, system trust store is used for HTTPS url.
                               properties:
                                 caCertificateRef:
                                   description: |-
@@ -8752,8 +9010,9 @@ spec:
                                 kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
                               type: string
                             tls:
-                              description: TLS configuration when connecting to the
-                                Wasm code source.
+                              description: |-
+                                TLS configuration when connecting to the Wasm code source.
+                                If unset, system trust store is used.
                               properties:
                                 caCertificateRef:
                                   description: |-
@@ -8918,6 +9177,13 @@ spec:
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'',
                 ''TLSRoute'']) : true '
+            - message: mergeType can only be used with xRoute targets
+              rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
+                && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in
+                [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'']))
+                && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind
+                in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])))'
           status:
             description: Status defines the current status of EnvoyExtensionPolicy.
             properties:
@@ -10276,6 +10542,7 @@ spec:
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
@@ -10308,6 +10575,7 @@ spec:
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
@@ -10338,6 +10606,7 @@ spec:
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
@@ -10535,10 +10804,84 @@ spec:
                       and the log level is the value. If unspecified, defaults to "default: warn".
                     type: object
                 type: object
+              lua:
+                description: |-
+                  Lua configures how Lua scripts from EnvoyExtensionPolicy resources are
+                  validated in the gateway controller. It selects the validation mode and, for the Strict
+                  mode, defines the filesystem paths and environment variables the scripts are permitted to
+                  access during validation.
+                properties:
+                  strictValidation:
+                    description: |-
+                      StrictValidation configures the security sandbox that the Strict validation mode executes Lua
+                      scripts in, defining the filesystem paths and environment variables the scripts are permitted
+                      to access during validation.
+
+                      It has no effect for the InsecureSyntax or Disabled modes, which do not execute the security
+                      sandbox.
+                    properties:
+                      allowedEnvVars:
+                        description: |-
+                          AllowedEnvVars is the list of environment variable names that Lua scripts are permitted to
+                          access during validation (via os.getenv, os.setenv). Matching is exact and case-sensitive.
+                          When empty, access to all environment variables is denied. Blank or whitespace-only entries
+                          are rejected.
+                        items:
+                          maxLength: 256
+                          minLength: 1
+                          type: string
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-validations:
+                        - message: allowedEnvVars entries must not be blank or whitespace-only
+                          rule: self.all(e, e.trim() != '')
+                      allowedPaths:
+                        description: |-
+                          AllowedPaths is the list of filesystem path prefixes that Lua scripts are permitted to
+                          access during validation (via io.open, io.input, io.output, io.lines, os.remove, os.rename).
+                          A path is allowed when it equals an entry or is contained within an entry's subtree
+                          (e.g. "/tmp" allows "/tmp/file.txt"). Paths are normalized (separators collapsed, made
+                          absolute) before matching, and any "." or ".." traversal segment is always rejected.
+                          When empty, all filesystem access is denied. Blank or whitespace-only entries are rejected,
+                          as they would otherwise match every path and disable the sandbox. The filesystem root ("/")
+                          is likewise rejected, as it would allow access to the entire filesystem and defeat the sandbox.
+                          Note that a built-in set of sensitive paths is always denied, even if they are added to the
+                          allowed paths here: /etc, /proc, /sys, /certs, /var/run/secrets, and /run/secrets.
+                        items:
+                          maxLength: 4096
+                          minLength: 1
+                          type: string
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-validations:
+                        - message: allowedPaths entries must not be blank or whitespace-only
+                          rule: self.all(p, p.trim() != '')
+                        - message: allowedPaths entries must not be the filesystem
+                            root
+                          rule: self.all(p, !p.matches('^/+$'))
+                    type: object
+                  validationType:
+                    default: Strict
+                    description: |-
+                      ValidationType determines the strictness of the Lua script validation.
+                      Default: Strict
+                    enum:
+                    - Strict
+                    - InsecureSyntax
+                    - Disabled
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: strictValidation can only be set when validationType is
+                    Strict
+                  rule: '!has(self.strictValidation) || !has(self.validationType)
+                    || self.validationType == ''Strict'''
               luaValidation:
                 description: |-
                   LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
                   Default: Strict
+
+                  Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release.
                 enum:
                 - Strict
                 - InsecureSyntax
@@ -10553,6 +10896,57 @@ spec:
 
                   Disabled when unset; specifying this field at all (even without further configuration)
                   enables it. Mutually exclusive with MergeGateways.
+                properties:
+                  selector:
+                    description: |-
+                      Selector restricts cluster deduplication to backends whose target Service, ServiceImport,
+                      or Backend resource matches this label selector. When unset, every otherwise-eligible
+                      backend is merged. Use this to opt individual backends into deduplication gradually
+                      instead of enabling it for every backend at once.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
                 type: object
               mergeGateways:
                 description: |-
@@ -21072,6 +21466,12 @@ spec:
                       If unspecified, defaults to 60 seconds.
                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
+                  healthCheckFailureDelay:
+                    description: |-
+                      HealthCheckFailureDelay defines the delay before failing health checks during the graceful drain process.
+                      If unspecified, defaults to 0 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   minDrainDuration:
                     description: |-
                       MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
@@ -21578,6 +21978,83 @@ spec:
                                                           If this is not specified, then the health check request applies to the entire
                                                           server and not to a specific service.
                                                         type: string
+                                                    type: object
+                                                  healthCheckLog:
+                                                    description: |-
+                                                      HealthCheckLog defines health check event logging configuration for this cluster.
+                                                      When set, HC probe outcomes are logged to the configured sinks.
+                                                      Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                                                    properties:
+                                                      matches:
+                                                        description: |-
+                                                          Matches defines which health check probe outcomes produce a log entry.
+                                                          When omitted or empty, all events are logged.
+
+                                                          Each value must be unique. Multiple values are ORed. If any failure type is
+                                                          specified then a success type must also be specified, and vice versa.
+                                                        items:
+                                                          description: ProxyHealthCheckLogEventType
+                                                            specifies which health
+                                                            check probe outcomes produce
+                                                            a log entry.
+                                                          enum:
+                                                          - Failure
+                                                          - FailureSeriesStart
+                                                          - Success
+                                                          - HealthyTransition
+                                                          type: string
+                                                        maxItems: 4
+                                                        type: array
+                                                        x-kubernetes-list-type: set
+                                                        x-kubernetes-validations:
+                                                        - message: a failure type
+                                                            and a success type must
+                                                            both be specified together
+                                                          rule: self.exists(e, e ==
+                                                            'Failure' || e == 'FailureSeriesStart')
+                                                            == self.exists(e, e ==
+                                                            'Success' || e == 'HealthyTransition')
+                                                      sinks:
+                                                        description: |-
+                                                          Sinks defines where health check events are written.
+                                                          When omitted, events are written to /dev/stdout.
+                                                        items:
+                                                          description: ProxyHealthCheckLogSink
+                                                            defines a destination
+                                                            for health check event
+                                                            logs.
+                                                          properties:
+                                                            file:
+                                                              description: |-
+                                                                File defines the file sink configuration.
+                                                                Required when type is File.
+                                                              properties:
+                                                                path:
+                                                                  description: |-
+                                                                    Path specifies the file path for health check event output.
+                                                                    Use /dev/stdout to write to standard output.
+                                                                  minLength: 1
+                                                                  type: string
+                                                              required:
+                                                              - path
+                                                              type: object
+                                                            type:
+                                                              description: Type defines
+                                                                the type of sink.
+                                                              enum:
+                                                              - File
+                                                              type: string
+                                                          required:
+                                                          - type
+                                                          type: object
+                                                          x-kubernetes-validations:
+                                                          - message: If ProxyHealthCheckLogSink
+                                                              type is File, file field
+                                                              needs to be set.
+                                                            rule: 'self.type == ''File''
+                                                              ? has(self.file) : !has(self.file)'
+                                                        maxItems: 1
+                                                        type: array
                                                     type: object
                                                   healthyThreshold:
                                                     default: 1
@@ -22108,9 +22585,12 @@ spec:
                                                       The backend must implement OpenRcaService for this to take effect.
                                                     properties:
                                                       authority:
-                                                        description: Authority overrides
-                                                          the :authority header on
-                                                          the OutOfBand gRPC stream.
+                                                        description: |-
+                                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                                          the cluster name.
+                                                        maxLength: 259
+                                                        minLength: 1
                                                         pattern: ^[^\x00\n\r]*$
                                                         type: string
                                                       port:
@@ -22124,9 +22604,13 @@ spec:
                                                       reportingPeriod:
                                                         description: |-
                                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                                          If omitted, uses Envoy's default of 10s.
+                                                          Must be greater than 0. Defaults to 10s.
                                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
+                                                        x-kubernetes-validations:
+                                                        - message: reportingPeriod
+                                                            must be greater than 0
+                                                          rule: duration(self) > duration('0s')
                                                     type: object
                                                   weightExpirationPeriod:
                                                     description: If a given endpoint
@@ -23189,6 +23673,83 @@ spec:
                                                           server and not to a specific service.
                                                         type: string
                                                     type: object
+                                                  healthCheckLog:
+                                                    description: |-
+                                                      HealthCheckLog defines health check event logging configuration for this cluster.
+                                                      When set, HC probe outcomes are logged to the configured sinks.
+                                                      Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                                                    properties:
+                                                      matches:
+                                                        description: |-
+                                                          Matches defines which health check probe outcomes produce a log entry.
+                                                          When omitted or empty, all events are logged.
+
+                                                          Each value must be unique. Multiple values are ORed. If any failure type is
+                                                          specified then a success type must also be specified, and vice versa.
+                                                        items:
+                                                          description: ProxyHealthCheckLogEventType
+                                                            specifies which health
+                                                            check probe outcomes produce
+                                                            a log entry.
+                                                          enum:
+                                                          - Failure
+                                                          - FailureSeriesStart
+                                                          - Success
+                                                          - HealthyTransition
+                                                          type: string
+                                                        maxItems: 4
+                                                        type: array
+                                                        x-kubernetes-list-type: set
+                                                        x-kubernetes-validations:
+                                                        - message: a failure type
+                                                            and a success type must
+                                                            both be specified together
+                                                          rule: self.exists(e, e ==
+                                                            'Failure' || e == 'FailureSeriesStart')
+                                                            == self.exists(e, e ==
+                                                            'Success' || e == 'HealthyTransition')
+                                                      sinks:
+                                                        description: |-
+                                                          Sinks defines where health check events are written.
+                                                          When omitted, events are written to /dev/stdout.
+                                                        items:
+                                                          description: ProxyHealthCheckLogSink
+                                                            defines a destination
+                                                            for health check event
+                                                            logs.
+                                                          properties:
+                                                            file:
+                                                              description: |-
+                                                                File defines the file sink configuration.
+                                                                Required when type is File.
+                                                              properties:
+                                                                path:
+                                                                  description: |-
+                                                                    Path specifies the file path for health check event output.
+                                                                    Use /dev/stdout to write to standard output.
+                                                                  minLength: 1
+                                                                  type: string
+                                                              required:
+                                                              - path
+                                                              type: object
+                                                            type:
+                                                              description: Type defines
+                                                                the type of sink.
+                                                              enum:
+                                                              - File
+                                                              type: string
+                                                          required:
+                                                          - type
+                                                          type: object
+                                                          x-kubernetes-validations:
+                                                          - message: If ProxyHealthCheckLogSink
+                                                              type is File, file field
+                                                              needs to be set.
+                                                            rule: 'self.type == ''File''
+                                                              ? has(self.file) : !has(self.file)'
+                                                        maxItems: 1
+                                                        type: array
+                                                    type: object
                                                   healthyThreshold:
                                                     default: 1
                                                     description: HealthyThreshold
@@ -23718,9 +24279,12 @@ spec:
                                                       The backend must implement OpenRcaService for this to take effect.
                                                     properties:
                                                       authority:
-                                                        description: Authority overrides
-                                                          the :authority header on
-                                                          the OutOfBand gRPC stream.
+                                                        description: |-
+                                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                                          the cluster name.
+                                                        maxLength: 259
+                                                        minLength: 1
                                                         pattern: ^[^\x00\n\r]*$
                                                         type: string
                                                       port:
@@ -23734,9 +24298,13 @@ spec:
                                                       reportingPeriod:
                                                         description: |-
                                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                                          If omitted, uses Envoy's default of 10s.
+                                                          Must be greater than 0. Defaults to 10s.
                                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
+                                                        x-kubernetes-validations:
+                                                        - message: reportingPeriod
+                                                            must be greater than 0
+                                                          rule: duration(self) > duration('0s')
                                                     type: object
                                                   weightExpirationPeriod:
                                                     description: If a given endpoint
@@ -24448,6 +25016,71 @@ spec:
                         minItems: 1
                         type: array
                     type: object
+                  healthCheckLog:
+                    description: HealthCheckLog defines health check event logging
+                      for xRoute-backed clusters.
+                    properties:
+                      matches:
+                        description: |-
+                          Matches defines which health check probe outcomes produce a log entry.
+                          When omitted or empty, all events are logged.
+
+                          Each value must be unique. Multiple values are ORed. If any failure type is
+                          specified then a success type must also be specified, and vice versa.
+                        items:
+                          description: ProxyHealthCheckLogEventType specifies which
+                            health check probe outcomes produce a log entry.
+                          enum:
+                          - Failure
+                          - FailureSeriesStart
+                          - Success
+                          - HealthyTransition
+                          type: string
+                        maxItems: 4
+                        type: array
+                        x-kubernetes-list-type: set
+                        x-kubernetes-validations:
+                        - message: a failure type and a success type must both be
+                            specified together
+                          rule: self.exists(e, e == 'Failure' || e == 'FailureSeriesStart')
+                            == self.exists(e, e == 'Success' || e == 'HealthyTransition')
+                      sinks:
+                        description: |-
+                          Sinks defines where health check events are written.
+                          When omitted, events are written to /dev/stdout.
+                        items:
+                          description: ProxyHealthCheckLogSink defines a destination
+                            for health check event logs.
+                          properties:
+                            file:
+                              description: |-
+                                File defines the file sink configuration.
+                                Required when type is File.
+                              properties:
+                                path:
+                                  description: |-
+                                    Path specifies the file path for health check event output.
+                                    Use /dev/stdout to write to standard output.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - path
+                              type: object
+                            type:
+                              description: Type defines the type of sink.
+                              enum:
+                              - File
+                              type: string
+                          required:
+                          - type
+                          type: object
+                          x-kubernetes-validations:
+                          - message: If ProxyHealthCheckLogSink type is File, file
+                              field needs to be set.
+                            rule: 'self.type == ''File'' ? has(self.file) : !has(self.file)'
+                        maxItems: 1
+                        type: array
+                    type: object
                   metrics:
                     description: Metrics defines metrics configuration for managed
                       proxies.
@@ -24989,6 +25622,82 @@ spec:
                                                     server and not to a specific service.
                                                   type: string
                                               type: object
+                                            healthCheckLog:
+                                              description: |-
+                                                HealthCheckLog defines health check event logging configuration for this cluster.
+                                                When set, HC probe outcomes are logged to the configured sinks.
+                                                Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                                              properties:
+                                                matches:
+                                                  description: |-
+                                                    Matches defines which health check probe outcomes produce a log entry.
+                                                    When omitted or empty, all events are logged.
+
+                                                    Each value must be unique. Multiple values are ORed. If any failure type is
+                                                    specified then a success type must also be specified, and vice versa.
+                                                  items:
+                                                    description: ProxyHealthCheckLogEventType
+                                                      specifies which health check
+                                                      probe outcomes produce a log
+                                                      entry.
+                                                    enum:
+                                                    - Failure
+                                                    - FailureSeriesStart
+                                                    - Success
+                                                    - HealthyTransition
+                                                    type: string
+                                                  maxItems: 4
+                                                  type: array
+                                                  x-kubernetes-list-type: set
+                                                  x-kubernetes-validations:
+                                                  - message: a failure type and a
+                                                      success type must both be specified
+                                                      together
+                                                    rule: self.exists(e, e == 'Failure'
+                                                      || e == 'FailureSeriesStart')
+                                                      == self.exists(e, e == 'Success'
+                                                      || e == 'HealthyTransition')
+                                                sinks:
+                                                  description: |-
+                                                    Sinks defines where health check events are written.
+                                                    When omitted, events are written to /dev/stdout.
+                                                  items:
+                                                    description: ProxyHealthCheckLogSink
+                                                      defines a destination for health
+                                                      check event logs.
+                                                    properties:
+                                                      file:
+                                                        description: |-
+                                                          File defines the file sink configuration.
+                                                          Required when type is File.
+                                                        properties:
+                                                          path:
+                                                            description: |-
+                                                              Path specifies the file path for health check event output.
+                                                              Use /dev/stdout to write to standard output.
+                                                            minLength: 1
+                                                            type: string
+                                                        required:
+                                                        - path
+                                                        type: object
+                                                      type:
+                                                        description: Type defines
+                                                          the type of sink.
+                                                        enum:
+                                                        - File
+                                                        type: string
+                                                    required:
+                                                    - type
+                                                    type: object
+                                                    x-kubernetes-validations:
+                                                    - message: If ProxyHealthCheckLogSink
+                                                        type is File, file field needs
+                                                        to be set.
+                                                      rule: 'self.type == ''File''
+                                                        ? has(self.file) : !has(self.file)'
+                                                  maxItems: 1
+                                                  type: array
+                                              type: object
                                             healthyThreshold:
                                               default: 1
                                               description: HealthyThreshold defines
@@ -25494,9 +26203,12 @@ spec:
                                                 The backend must implement OpenRcaService for this to take effect.
                                               properties:
                                                 authority:
-                                                  description: Authority overrides
-                                                    the :authority header on the OutOfBand
-                                                    gRPC stream.
+                                                  description: |-
+                                                    Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                                    If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                                    the cluster name.
+                                                  maxLength: 259
+                                                  minLength: 1
                                                   pattern: ^[^\x00\n\r]*$
                                                   type: string
                                                 port:
@@ -25510,9 +26222,13 @@ spec:
                                                 reportingPeriod:
                                                   description: |-
                                                     ReportingPeriod is how often Envoy requests load reports from the server.
-                                                    If omitted, uses Envoy's default of 10s.
+                                                    Must be greater than 0. Defaults to 10s.
                                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                   type: string
+                                                  x-kubernetes-validations:
+                                                  - message: reportingPeriod must
+                                                      be greater than 0
+                                                    rule: duration(self) > duration('0s')
                                               type: object
                                             weightExpirationPeriod:
                                               description: If a given endpoint has
@@ -26716,6 +27432,79 @@ spec:
                                               server and not to a specific service.
                                             type: string
                                         type: object
+                                      healthCheckLog:
+                                        description: |-
+                                          HealthCheckLog defines health check event logging configuration for this cluster.
+                                          When set, HC probe outcomes are logged to the configured sinks.
+                                          Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                                        properties:
+                                          matches:
+                                            description: |-
+                                              Matches defines which health check probe outcomes produce a log entry.
+                                              When omitted or empty, all events are logged.
+
+                                              Each value must be unique. Multiple values are ORed. If any failure type is
+                                              specified then a success type must also be specified, and vice versa.
+                                            items:
+                                              description: ProxyHealthCheckLogEventType
+                                                specifies which health check probe
+                                                outcomes produce a log entry.
+                                              enum:
+                                              - Failure
+                                              - FailureSeriesStart
+                                              - Success
+                                              - HealthyTransition
+                                              type: string
+                                            maxItems: 4
+                                            type: array
+                                            x-kubernetes-list-type: set
+                                            x-kubernetes-validations:
+                                            - message: a failure type and a success
+                                                type must both be specified together
+                                              rule: self.exists(e, e == 'Failure'
+                                                || e == 'FailureSeriesStart') == self.exists(e,
+                                                e == 'Success' || e == 'HealthyTransition')
+                                          sinks:
+                                            description: |-
+                                              Sinks defines where health check events are written.
+                                              When omitted, events are written to /dev/stdout.
+                                            items:
+                                              description: ProxyHealthCheckLogSink
+                                                defines a destination for health check
+                                                event logs.
+                                              properties:
+                                                file:
+                                                  description: |-
+                                                    File defines the file sink configuration.
+                                                    Required when type is File.
+                                                  properties:
+                                                    path:
+                                                      description: |-
+                                                        Path specifies the file path for health check event output.
+                                                        Use /dev/stdout to write to standard output.
+                                                      minLength: 1
+                                                      type: string
+                                                  required:
+                                                  - path
+                                                  type: object
+                                                type:
+                                                  description: Type defines the type
+                                                    of sink.
+                                                  enum:
+                                                  - File
+                                                  type: string
+                                              required:
+                                              - type
+                                              type: object
+                                              x-kubernetes-validations:
+                                              - message: If ProxyHealthCheckLogSink
+                                                  type is File, file field needs to
+                                                  be set.
+                                                rule: 'self.type == ''File'' ? has(self.file)
+                                                  : !has(self.file)'
+                                            maxItems: 1
+                                            type: array
+                                        type: object
                                       healthyThreshold:
                                         default: 1
                                         description: HealthyThreshold defines the
@@ -27218,8 +28007,12 @@ spec:
                                           The backend must implement OpenRcaService for this to take effect.
                                         properties:
                                           authority:
-                                            description: Authority overrides the :authority
-                                              header on the OutOfBand gRPC stream.
+                                            description: |-
+                                              Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                              If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                              the cluster name.
+                                            maxLength: 259
+                                            minLength: 1
                                             pattern: ^[^\x00\n\r]*$
                                             type: string
                                           port:
@@ -27233,9 +28026,13 @@ spec:
                                           reportingPeriod:
                                             description: |-
                                               ReportingPeriod is how often Envoy requests load reports from the server.
-                                              If omitted, uses Envoy's default of 10s.
+                                              Must be greater than 0. Defaults to 10s.
                                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
+                                            x-kubernetes-validations:
+                                            - message: reportingPeriod must be greater
+                                                than 0
+                                              rule: duration(self) > duration('0s')
                                         type: object
                                       weightExpirationPeriod:
                                         description: If a given endpoint has not reported
@@ -28017,6 +28814,8 @@ spec:
                 type: object
             type: object
             x-kubernetes-validations:
+            - message: only one of luaValidation or lua may be set
+              rule: '!has(self.luaValidation) || !has(self.lua)'
             - message: mergeGateways and mergeBackends cannot both be enabled
               rule: '!(has(self.mergeGateways) && self.mergeGateways && has(self.mergeBackends))'
           status:
@@ -28664,12 +29463,48 @@ spec:
                         description: Header is the name of the header whose value
                           would be used to rewrite the Host header
                         type: string
+                      pathRegex:
+                        description: |-
+                          PathRegex defines a regex match and substitution applied to the request path to compute
+                          the rewritten Host header.
+                          For example, with:
+                          pathRegex:
+                            pattern: "^/tenant/([a-z0-9-]+)/.*"
+                            substitution: "\\1.example.internal"
+                          a request to "http://foo.bar.com/tenant/tenant1/api/v1" has its upstream Host header rewritten
+                          to "tenant1.example.internal" (the request path "/tenant/tenant1/api/v1" is preserved).
+                        properties:
+                          pattern:
+                            description: |-
+                              Pattern matches a regular expression against the value of the HTTP Path. The regex string must
+                              adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
+                            minLength: 1
+                            type: string
+                          substitution:
+                            description: |-
+                              Substitution is an expression that replaces the matched portion. The expression may include numbered
+                              capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.
+
+                              The resulting value is used as the upstream Host header and should be constrained to a valid
+                              DNS hostname by using explicit regex capture groups in Pattern.
+
+                              The NUL, CR, and LF characters are not allowed: they are invalid in an HTTP header value and are
+                              rejected by the Envoy proto (well_known_regex HTTP_HEADER_VALUE), which would otherwise cause the
+                              generated configuration to be rejected by the data plane.
+                            minLength: 1
+                            pattern: ^[^\r\n\x00]*$
+                            type: string
+                        required:
+                        - pattern
+                        - substitution
+                        type: object
                       type:
                         description: HTTPPathModifierType defines the type of Hostname
                           rewrite.
                         enum:
                         - Header
                         - Backend
+                        - PathRegex
                         type: string
                     required:
                     - type
@@ -28679,6 +29514,10 @@ spec:
                       rule: '!(has(self.header) && self.type != ''Header'')'
                     - message: header must be specified for Header type
                       rule: '!(!has(self.header) && self.type == ''Header'')'
+                    - message: pathRegex must be nil if the type is not PathRegex
+                      rule: '!(has(self.pathRegex) && self.type != ''PathRegex'')'
+                    - message: pathRegex must be specified for PathRegex type
+                      rule: '!(!has(self.pathRegex) && self.type == ''PathRegex'')'
                   path:
                     description: Path defines a path rewrite.
                     properties:
@@ -29435,6 +30274,75 @@ spec:
                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                 type: object
+              csrf:
+                description: |-
+                  CSRF defines the configuration for Cross-Site Request Forgery (CSRF) protection.
+                  When enabled, the CSRF filter checks that the Origin header matches the destination
+                  or one of the additional allowed origins on mutating requests (POST, PUT, DELETE, PATCH).
+                properties:
+                  additionalOrigins:
+                    description: |-
+                      AdditionalOrigins specifies additional origins that are allowed to make mutating
+                      requests, beyond the destination origin. A request whose Origin header matches one
+                      of them is allowed. The value "*" allows any origin, which effectively disables
+                      origin validation.
+
+                      Note: Envoy's CSRF filter compares the host and port of the origin only, so the
+                      scheme is ignored: "https://www.example.com" and "http://www.example.com" are
+                      equivalent here, and both allow the request regardless of the scheme the client
+                      used.
+                    items:
+                      description: |-
+                        Origin is defined by the scheme (protocol), hostname (domain), and port of
+                        the URL used to access it. The hostname can be "precise" which is just the
+                        domain name or "wildcard" which is a domain name prefixed with a single
+                        wildcard label such as "*.example.com".
+                        In addition to that a single wildcard (with or without scheme) can be
+                        configured to match any origin.
+
+                        For example, the following are valid origins:
+                        - https://foo.example.com
+                        - https://*.example.com
+                        - http://foo.example.com:8080
+                        - http://*.example.com:8080
+                        - https://*
+                        - moz-extension://example.com
+                        - foo://*.example.com:8080
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^(\*|[A-Za-z][A-Za-z0-9+.-]*:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$
+                      type: string
+                    maxItems: 16
+                    type: array
+                  shadowFraction:
+                    description: |-
+                      ShadowFraction represents the fraction of requests for which the CSRF policy is
+                      evaluated in shadow (dry-run) mode. For these requests, the filter records whether
+                      the request would have been allowed or rejected in the `csrf.request_valid` and
+                      `csrf.request_invalid` stats, but always lets the request through. The remaining
+                      requests are enforced, i.e. a mutating request with a missing or non-matching
+                      Origin header is rejected with a 403.
+
+                      Defaults to 0% (all requests are enforced) if not specified. Set it to 100% to
+                      dry run the filter, watch the stats to find origins that would be rejected, then
+                      lower it to roll enforcement out gradually.
+                    properties:
+                      denominator:
+                        default: 100
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      numerator:
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    required:
+                    - numerator
+                    type: object
+                    x-kubernetes-validations:
+                    - message: numerator must be less than or equal to denominator
+                      rule: self.numerator <= self.denominator
+                type: object
               extAuth:
                 description: ExtAuth defines the configuration for External Authorization.
                 properties:
@@ -29951,6 +30859,77 @@ spec:
                                           server and not to a specific service.
                                         type: string
                                     type: object
+                                  healthCheckLog:
+                                    description: |-
+                                      HealthCheckLog defines health check event logging configuration for this cluster.
+                                      When set, HC probe outcomes are logged to the configured sinks.
+                                      Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                                    properties:
+                                      matches:
+                                        description: |-
+                                          Matches defines which health check probe outcomes produce a log entry.
+                                          When omitted or empty, all events are logged.
+
+                                          Each value must be unique. Multiple values are ORed. If any failure type is
+                                          specified then a success type must also be specified, and vice versa.
+                                        items:
+                                          description: ProxyHealthCheckLogEventType
+                                            specifies which health check probe outcomes
+                                            produce a log entry.
+                                          enum:
+                                          - Failure
+                                          - FailureSeriesStart
+                                          - Success
+                                          - HealthyTransition
+                                          type: string
+                                        maxItems: 4
+                                        type: array
+                                        x-kubernetes-list-type: set
+                                        x-kubernetes-validations:
+                                        - message: a failure type and a success type
+                                            must both be specified together
+                                          rule: self.exists(e, e == 'Failure' || e
+                                            == 'FailureSeriesStart') == self.exists(e,
+                                            e == 'Success' || e == 'HealthyTransition')
+                                      sinks:
+                                        description: |-
+                                          Sinks defines where health check events are written.
+                                          When omitted, events are written to /dev/stdout.
+                                        items:
+                                          description: ProxyHealthCheckLogSink defines
+                                            a destination for health check event logs.
+                                          properties:
+                                            file:
+                                              description: |-
+                                                File defines the file sink configuration.
+                                                Required when type is File.
+                                              properties:
+                                                path:
+                                                  description: |-
+                                                    Path specifies the file path for health check event output.
+                                                    Use /dev/stdout to write to standard output.
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - path
+                                              type: object
+                                            type:
+                                              description: Type defines the type of
+                                                sink.
+                                              enum:
+                                              - File
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: If ProxyHealthCheckLogSink type
+                                              is File, file field needs to be set.
+                                            rule: 'self.type == ''File'' ? has(self.file)
+                                              : !has(self.file)'
+                                        maxItems: 1
+                                        type: array
+                                    type: object
                                   healthyThreshold:
                                     default: 1
                                     description: HealthyThreshold defines the number
@@ -30437,8 +31416,12 @@ spec:
                                       The backend must implement OpenRcaService for this to take effect.
                                     properties:
                                       authority:
-                                        description: Authority overrides the :authority
-                                          header on the OutOfBand gRPC stream.
+                                        description: |-
+                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                          the cluster name.
+                                        maxLength: 259
+                                        minLength: 1
                                         pattern: ^[^\x00\n\r]*$
                                         type: string
                                       port:
@@ -30452,9 +31435,13 @@ spec:
                                       reportingPeriod:
                                         description: |-
                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                          If omitted, uses Envoy's default of 10s.
+                                          Must be greater than 0. Defaults to 10s.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: reportingPeriod must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
                                     type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
@@ -31426,6 +32413,77 @@ spec:
                                           server and not to a specific service.
                                         type: string
                                     type: object
+                                  healthCheckLog:
+                                    description: |-
+                                      HealthCheckLog defines health check event logging configuration for this cluster.
+                                      When set, HC probe outcomes are logged to the configured sinks.
+                                      Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                                    properties:
+                                      matches:
+                                        description: |-
+                                          Matches defines which health check probe outcomes produce a log entry.
+                                          When omitted or empty, all events are logged.
+
+                                          Each value must be unique. Multiple values are ORed. If any failure type is
+                                          specified then a success type must also be specified, and vice versa.
+                                        items:
+                                          description: ProxyHealthCheckLogEventType
+                                            specifies which health check probe outcomes
+                                            produce a log entry.
+                                          enum:
+                                          - Failure
+                                          - FailureSeriesStart
+                                          - Success
+                                          - HealthyTransition
+                                          type: string
+                                        maxItems: 4
+                                        type: array
+                                        x-kubernetes-list-type: set
+                                        x-kubernetes-validations:
+                                        - message: a failure type and a success type
+                                            must both be specified together
+                                          rule: self.exists(e, e == 'Failure' || e
+                                            == 'FailureSeriesStart') == self.exists(e,
+                                            e == 'Success' || e == 'HealthyTransition')
+                                      sinks:
+                                        description: |-
+                                          Sinks defines where health check events are written.
+                                          When omitted, events are written to /dev/stdout.
+                                        items:
+                                          description: ProxyHealthCheckLogSink defines
+                                            a destination for health check event logs.
+                                          properties:
+                                            file:
+                                              description: |-
+                                                File defines the file sink configuration.
+                                                Required when type is File.
+                                              properties:
+                                                path:
+                                                  description: |-
+                                                    Path specifies the file path for health check event output.
+                                                    Use /dev/stdout to write to standard output.
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - path
+                                              type: object
+                                            type:
+                                              description: Type defines the type of
+                                                sink.
+                                              enum:
+                                              - File
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: If ProxyHealthCheckLogSink type
+                                              is File, file field needs to be set.
+                                            rule: 'self.type == ''File'' ? has(self.file)
+                                              : !has(self.file)'
+                                        maxItems: 1
+                                        type: array
+                                    type: object
                                   healthyThreshold:
                                     default: 1
                                     description: HealthyThreshold defines the number
@@ -31912,8 +32970,12 @@ spec:
                                       The backend must implement OpenRcaService for this to take effect.
                                     properties:
                                       authority:
-                                        description: Authority overrides the :authority
-                                          header on the OutOfBand gRPC stream.
+                                        description: |-
+                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                          the cluster name.
+                                        maxLength: 259
+                                        minLength: 1
                                         pattern: ^[^\x00\n\r]*$
                                         type: string
                                       port:
@@ -31927,9 +32989,13 @@ spec:
                                       reportingPeriod:
                                         description: |-
                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                          If omitted, uses Envoy's default of 10s.
+                                          Must be greater than 0. Defaults to 10s.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: reportingPeriod must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
                                     type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
@@ -33193,6 +34259,80 @@ spec:
                                                 server and not to a specific service.
                                               type: string
                                           type: object
+                                        healthCheckLog:
+                                          description: |-
+                                            HealthCheckLog defines health check event logging configuration for this cluster.
+                                            When set, HC probe outcomes are logged to the configured sinks.
+                                            Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                                          properties:
+                                            matches:
+                                              description: |-
+                                                Matches defines which health check probe outcomes produce a log entry.
+                                                When omitted or empty, all events are logged.
+
+                                                Each value must be unique. Multiple values are ORed. If any failure type is
+                                                specified then a success type must also be specified, and vice versa.
+                                              items:
+                                                description: ProxyHealthCheckLogEventType
+                                                  specifies which health check probe
+                                                  outcomes produce a log entry.
+                                                enum:
+                                                - Failure
+                                                - FailureSeriesStart
+                                                - Success
+                                                - HealthyTransition
+                                                type: string
+                                              maxItems: 4
+                                              type: array
+                                              x-kubernetes-list-type: set
+                                              x-kubernetes-validations:
+                                              - message: a failure type and a success
+                                                  type must both be specified together
+                                                rule: self.exists(e, e == 'Failure'
+                                                  || e == 'FailureSeriesStart') ==
+                                                  self.exists(e, e == 'Success' ||
+                                                  e == 'HealthyTransition')
+                                            sinks:
+                                              description: |-
+                                                Sinks defines where health check events are written.
+                                                When omitted, events are written to /dev/stdout.
+                                              items:
+                                                description: ProxyHealthCheckLogSink
+                                                  defines a destination for health
+                                                  check event logs.
+                                                properties:
+                                                  file:
+                                                    description: |-
+                                                      File defines the file sink configuration.
+                                                      Required when type is File.
+                                                    properties:
+                                                      path:
+                                                        description: |-
+                                                          Path specifies the file path for health check event output.
+                                                          Use /dev/stdout to write to standard output.
+                                                        minLength: 1
+                                                        type: string
+                                                    required:
+                                                    - path
+                                                    type: object
+                                                  type:
+                                                    description: Type defines the
+                                                      type of sink.
+                                                    enum:
+                                                    - File
+                                                    type: string
+                                                required:
+                                                - type
+                                                type: object
+                                                x-kubernetes-validations:
+                                                - message: If ProxyHealthCheckLogSink
+                                                    type is File, file field needs
+                                                    to be set.
+                                                  rule: 'self.type == ''File'' ? has(self.file)
+                                                    : !has(self.file)'
+                                              maxItems: 1
+                                              type: array
+                                          type: object
                                         healthyThreshold:
                                           default: 1
                                           description: HealthyThreshold defines the
@@ -33695,9 +34835,12 @@ spec:
                                             The backend must implement OpenRcaService for this to take effect.
                                           properties:
                                             authority:
-                                              description: Authority overrides the
-                                                :authority header on the OutOfBand
-                                                gRPC stream.
+                                              description: |-
+                                                Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                                If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                                the cluster name.
+                                              maxLength: 259
+                                              minLength: 1
                                               pattern: ^[^\x00\n\r]*$
                                               type: string
                                             port:
@@ -33711,9 +34854,13 @@ spec:
                                             reportingPeriod:
                                               description: |-
                                                 ReportingPeriod is how often Envoy requests load reports from the server.
-                                                If omitted, uses Envoy's default of 10s.
+                                                Must be greater than 0. Defaults to 10s.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: reportingPeriod must be greater
+                                                  than 0
+                                                rule: duration(self) > duration('0s')
                                           type: object
                                         weightExpirationPeriod:
                                           description: If a given endpoint has not
@@ -34451,7 +35598,7 @@ spec:
                       If not set, the cookies will default to the host of the request, not including the subdomains.
                       If set, the cookies will be set on the specified domain and all subdomains.
                       This means that requests to any subdomain will not require reauthentication after users log in to the parent domain.
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                     type: string
                   cookieNames:
                     description: |-
@@ -35012,6 +36159,77 @@ spec:
                                           server and not to a specific service.
                                         type: string
                                     type: object
+                                  healthCheckLog:
+                                    description: |-
+                                      HealthCheckLog defines health check event logging configuration for this cluster.
+                                      When set, HC probe outcomes are logged to the configured sinks.
+                                      Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+                                    properties:
+                                      matches:
+                                        description: |-
+                                          Matches defines which health check probe outcomes produce a log entry.
+                                          When omitted or empty, all events are logged.
+
+                                          Each value must be unique. Multiple values are ORed. If any failure type is
+                                          specified then a success type must also be specified, and vice versa.
+                                        items:
+                                          description: ProxyHealthCheckLogEventType
+                                            specifies which health check probe outcomes
+                                            produce a log entry.
+                                          enum:
+                                          - Failure
+                                          - FailureSeriesStart
+                                          - Success
+                                          - HealthyTransition
+                                          type: string
+                                        maxItems: 4
+                                        type: array
+                                        x-kubernetes-list-type: set
+                                        x-kubernetes-validations:
+                                        - message: a failure type and a success type
+                                            must both be specified together
+                                          rule: self.exists(e, e == 'Failure' || e
+                                            == 'FailureSeriesStart') == self.exists(e,
+                                            e == 'Success' || e == 'HealthyTransition')
+                                      sinks:
+                                        description: |-
+                                          Sinks defines where health check events are written.
+                                          When omitted, events are written to /dev/stdout.
+                                        items:
+                                          description: ProxyHealthCheckLogSink defines
+                                            a destination for health check event logs.
+                                          properties:
+                                            file:
+                                              description: |-
+                                                File defines the file sink configuration.
+                                                Required when type is File.
+                                              properties:
+                                                path:
+                                                  description: |-
+                                                    Path specifies the file path for health check event output.
+                                                    Use /dev/stdout to write to standard output.
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - path
+                                              type: object
+                                            type:
+                                              description: Type defines the type of
+                                                sink.
+                                              enum:
+                                              - File
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: If ProxyHealthCheckLogSink type
+                                              is File, file field needs to be set.
+                                            rule: 'self.type == ''File'' ? has(self.file)
+                                              : !has(self.file)'
+                                        maxItems: 1
+                                        type: array
+                                    type: object
                                   healthyThreshold:
                                     default: 1
                                     description: HealthyThreshold defines the number
@@ -35498,8 +36716,12 @@ spec:
                                       The backend must implement OpenRcaService for this to take effect.
                                     properties:
                                       authority:
-                                        description: Authority overrides the :authority
-                                          header on the OutOfBand gRPC stream.
+                                        description: |-
+                                          Authority overrides the :authority header on the OutOfBand gRPC stream.
+                                          If unset, Envoy uses the endpoint hostname, then the dialed address, then
+                                          the cluster name.
+                                        maxLength: 259
+                                        minLength: 1
                                         pattern: ^[^\x00\n\r]*$
                                         type: string
                                       port:
@@ -35513,9 +36735,13 @@ spec:
                                       reportingPeriod:
                                         description: |-
                                           ReportingPeriod is how often Envoy requests load reports from the server.
-                                          If omitted, uses Envoy's default of 10s.
+                                          Must be greater than 0. Defaults to 10s.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: reportingPeriod must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
                                     type: object
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
@@ -36063,7 +37289,7 @@ spec:
                           Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST
                           be https, a host component, and optionally, port and path components and
                           no query or fragment components.
-                        minLength: 1
+                        pattern: ^https://[^/?#@]+(/[^?#]*)?$
                         type: string
                       tokenEndpoint:
                         description: |-

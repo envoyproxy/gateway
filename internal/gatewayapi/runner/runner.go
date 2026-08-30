@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
@@ -210,12 +211,13 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
-			parentCtx := context.Background()
-			if update.Value != nil && update.Value.Context != nil {
-				parentCtx = update.Value.Context
+			parentCtx := update.Value.ParentContext(context.Background())
+			var startOpts []trace.SpanStartOption
+			if !update.Delete && !update.Initial {
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 			}
 
-			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
+			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate", startOpts...)
 			defer span.End()
 			traceLogger := r.Logger.WithTrace(traceCtx)
 			traceLogger.Info("received an update", "key", update.Key)
@@ -287,7 +289,21 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 
 			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
-			for _, resources := range *val {
+
+			rtcTraceCtx, rtcSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle")
+			defer rtcSpan.End()
+			translateGatewayClass := func(resources *resource.Resources) {
+				// The GatewayClass name is deliberately kept out of the span name and passed as
+				// an attribute instead: span names are what most trace backends group/aggregate
+				// by (latency percentiles, error rates, etc.), and this loop runs once per
+				// GatewayClass in the cluster. Baking the name into the span name would fragment
+				// those aggregates into one bucket per class - unbounded and growing over the
+				// cluster's lifetime - for no benefit, since the attribute already makes the span
+				// filterable/searchable by GatewayClass in any trace UI.
+				translateGCCtx, translateGCSpan := tracer.Start(rtcTraceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateGatewayClass",
+					trace.WithAttributes(attribute.String("gatewayclass.name", resources.GatewayClass.Name)),
+				)
+				defer translateGCSpan.End()
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
 					GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
@@ -299,7 +315,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					ControllerNamespace:             r.ControllerNamespace,
 					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
 					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
-					MergeBackends:                   gatewayapi.IsMergeBackendsEnabled(resources),
+					MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
 					PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
 					WasmCache:                       r.wasmCache,
 					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
@@ -323,10 +339,17 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					t.ExtensionGroupKinds = extGKs
 					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
-				// Translate to IR
-				_, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
-				result, err := t.Translate(resources)
-				translateToIRSpan.End()
+				// Translate to IR.
+				// The span is ended by a deferred call inside the closure: the translator
+				// panics on some inputs and HandleSubscription recovers from it, and an
+				// unended span is never exported, so a plain End() here would drop the
+				// stage span and the input sizes recorded on it. The closure keeps that
+				// defer scoped to this iteration instead of the whole update.
+				result, err := func() (*gatewayapi.TranslateResult, error) {
+					translateToIRCtx, translateToIRSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
+					defer translateToIRSpan.End()
+					return t.Translate(translateToIRCtx, resources)
+				}()
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
 					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
@@ -346,7 +369,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
-						r.InfraIR.Store(key, val)
+						r.InfraIR.Store(key, &message.InfraIRWithContext{
+							Infra:    val,
+							Context:  translateGCCtx,
+							StoredAt: time.Now(),
+						})
 						infraIRCount++
 						// Track IR key for mark and sweep
 						r.keyCache.IR[key] = true
@@ -364,8 +391,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						errChan <- err
 					} else {
 						m := message.XdsIRWithContext{
-							XdsIR:   val,
-							Context: traceCtx,
+							XdsIR:    val,
+							Context:  translateGCCtx,
+							StoredAt: time.Now(),
 						}
 						r.XdsIR.Store(key, &m)
 						xdsIRCount++
@@ -373,7 +401,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				// Update Status
-				_, statusUpdateSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
+				_, statusUpdateSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
+				defer statusUpdateSpan.End()
 				if result.GatewayClass != nil {
 					key := utils.NamespacedName(result.GatewayClass)
 					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
@@ -487,7 +516,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
 					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
 				}
-				statusUpdateSpan.End()
+			}
+			for _, resources := range *val {
+				translateGatewayClass(resources)
 			}
 
 			// Store the stauses of all objects atomically with the aggregated status.
