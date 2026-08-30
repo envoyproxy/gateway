@@ -37,7 +37,11 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 			serviceSpec.AllocateLoadBalancerNodePorts = service.AllocateLoadBalancerNodePorts
 		}
 		if len(service.LoadBalancerSourceRanges) > 0 {
-			serviceSpec.LoadBalancerSourceRanges = service.LoadBalancerSourceRanges
+			ranges := make([]string, len(service.LoadBalancerSourceRanges))
+			for i, r := range service.LoadBalancerSourceRanges {
+				ranges[i] = string(r)
+			}
+			serviceSpec.LoadBalancerSourceRanges = ranges
 		}
 		if service.LoadBalancerIP != nil {
 			serviceSpec.LoadBalancerIP = *service.LoadBalancerIP

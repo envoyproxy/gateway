@@ -130,7 +130,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"1.1.1.1/32", "2001:db8::/32"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"1.1.1.1/32", "2001:db8::/32"},
 							},
 						},
 					},
@@ -147,7 +147,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"2001:db8::/32"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"2001:db8::/32"},
 							},
 						},
 					},
@@ -180,7 +180,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeClusterIP),
-								LoadBalancerSourceRanges: []string{"10.0.0.0/8"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"10.0.0.0/8"},
 							},
 						},
 					},
@@ -197,7 +197,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"not-a-cidr"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"not-a-cidr"},
 							},
 						},
 					},
@@ -208,7 +208,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 		{
 			desc: "loadBalancerSourceRanges-too-many-items",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				sourceRanges := make([]string, 17)
+				sourceRanges := make([]egv1a1.LoadBalancerSourceRange, 65)
 				for i := range sourceRanges {
 					sourceRanges[i] = "10.0.0.0/8"
 				}
@@ -224,7 +224,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Too many: 17: must have at most 16 items"},
+			wantErrors: []string{"Too many: 65: must have at most 64 items"},
 		},
 		{
 			desc: "ServiceTypeLoadBalancer-with-valid-IP",

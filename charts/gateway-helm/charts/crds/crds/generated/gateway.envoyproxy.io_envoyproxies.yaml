@@ -11255,8 +11255,12 @@ spec:
                               This field may only be set for services with type LoadBalancer and will be cleared if the type
                               is changed to any other type.
                             items:
+                              description: |-
+                                LoadBalancerSourceRange is a CIDR string allowed in LoadBalancerSourceRanges.
+                                MaxLength bounds CEL cost estimation for isCIDR validation over this list.
+                              maxLength: 64
                               type: string
-                            maxItems: 16
+                            maxItems: 64
                             type: array
                           name:
                             description: |-

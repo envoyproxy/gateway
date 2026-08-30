@@ -78,7 +78,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 			name: "LoadBalancerWithLoadBalancerSourceRanges",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-				LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+				LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"1.1.1.1/32"},
 			}},
 			want: corev1.ServiceSpec{
 				Type:                     corev1.ServiceTypeLoadBalancer,
