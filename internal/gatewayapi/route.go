@@ -2854,7 +2854,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 ) (ds *ir.DestinationSetting, unstructuredRef *ir.UnstructuredRef, err status.Error) {
 	var (
 		routeType  = route.GetRouteType()
-		weight     = (uint32(ptr.Deref(backendRefContext.GetBackendRef().Weight, int32(1))))
+		weight     = uint32(ptr.Deref(backendRefContext.GetBackendRef().Weight, int32(1)))
 		backendRef = backendRefContext.GetBackendRef()
 	)
 

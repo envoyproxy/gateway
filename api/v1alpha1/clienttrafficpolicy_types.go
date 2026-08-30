@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -193,6 +194,21 @@ type HeaderSettings struct {
 	//
 	// +optional
 	Host *HostSettings `json:"host,omitempty"`
+
+	// MaxRequestHeaderLimit provides configuration for the maximum size of the
+	// request headers allowed for incoming connections, mapping to the Envoy
+	// `max_request_headers_kb` HTTP connection manager setting. Requests whose
+	// headers exceed this limit receive a 431 (Request Header Fields Too Large)
+	// response. The value is rounded up to the nearest KiB, must be at least 1Ki,
+	// and cannot exceed 8192Ki (the maximum Envoy supports).
+	// For example, 60Ki, 96Ki, 128Ki etc.
+	// Note that when the suffix is not provided, the value is interpreted as bytes.
+	// Default: 60Ki bytes.
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	MaxRequestHeaderLimit *resource.Quantity `json:"maxRequestHeaderLimit,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores

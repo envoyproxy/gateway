@@ -29,10 +29,8 @@ const (
 //go:embed mocks.lua
 var mockData string
 
-// securityData contains Lua security wrappers that restrict access to sensitive filesystem paths and
-// critical environment variables during Lua code validation in the gateway controller.
-//
-// TODO: Create a configurable set of filesystem paths and environment variables to check for in the proxy apart from default configured here.
+// securityData contains Lua wrappers that delegate filesystem path and environment variable
+// validation to Go during Lua code validation in the gateway controller.
 //
 //go:embed security.lua
 var securityData string
@@ -82,10 +80,16 @@ func (l *LuaValidator) validate(code string) error {
 	}
 }
 
-// getLuaValidation returns the Lua validation level, defaulting to strict if not configured
+// getLuaValidation returns the Lua validation level, defaulting to strict if not configured.
+// The union Lua.ValidationType takes precedence over the deprecated LuaValidation field.
 func (l *LuaValidator) getLuaValidation() egv1a1.LuaValidation {
-	if l.envoyProxy != nil && l.envoyProxy.Spec.LuaValidation != nil {
-		return *l.envoyProxy.Spec.LuaValidation
+	if l.envoyProxy != nil {
+		if cfg := l.envoyProxy.Spec.Lua; cfg != nil && cfg.ValidationType != nil {
+			return *cfg.ValidationType
+		}
+		if l.envoyProxy.Spec.LuaValidation != nil {
+			return *l.envoyProxy.Spec.LuaValidation
+		}
 	}
 	return egv1a1.LuaValidationStrict
 }
@@ -123,6 +127,7 @@ func (l *LuaValidator) runLua(code string) error {
 
 	// Execute mocks first (trusted code, needs setmetatable, defines StreamHandle, etc.)
 	_ = L.DoString(mockData)
+	newSecurityValidator(l.envoyProxy).install(L)
 	// Execute Lua security wrappers (trusted code) to protect the gateway controller
 	// See security advisory: https://github.com/envoyproxy/gateway/security/advisories/GHSA-xrwg-mqj6-6m22
 	_ = L.DoString(securityData)
