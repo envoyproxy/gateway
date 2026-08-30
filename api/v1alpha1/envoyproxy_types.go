@@ -241,23 +241,6 @@ type EnvoyProxySpec struct {
 	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
-
-	// Features defines the features that are enabled for this EnvoyProxy.
-	// +optional
-	Features *EnvoyProxyFeatures `json:"features,omitempty"`
-}
-
-// EnvoyProxyFeatures defines feature flags for EnvoyProxy.
-type EnvoyProxyFeatures struct {
-	// DetectMisdirectedRequests enables 421 responses for HTTP/2 requests
-	// coalesced onto a TLS connection selected by a different SNI, as described in
-	// [GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).
-	// When disabled, overlapping TLS listeners keep the default ALPN downgrade to
-	// HTTP/1.1 unless ClientTrafficPolicy configures ALPN.
-	// Default: false
-	//
-	// +optional
-	DetectMisdirectedRequests *bool `json:"detectMisdirectedRequests,omitempty"`
 }
 
 // MergeBackendsConfig configures backend cluster deduplication (MergeBackends). Its mere

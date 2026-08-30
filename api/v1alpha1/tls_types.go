@@ -19,6 +19,16 @@ type ClientTLSSettings struct {
 	ClientValidation *ClientValidationContext `json:"clientValidation,omitempty"`
 	TLSSettings      `json:",inline"`
 
+	// DetectMisdirectedRequests enables 421 responses for HTTP/2 requests
+	// coalesced onto a TLS connection selected by a different SNI, as described in
+	// [GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).
+	// When disabled, overlapping TLS listeners keep the default ALPN downgrade to
+	// HTTP/1.1 unless ClientTrafficPolicy configures ALPN.
+	// Default: false
+	//
+	// +optional
+	DetectMisdirectedRequests *bool `json:"detectMisdirectedRequests,omitempty"`
+
 	// Session defines settings related to TLS session management.
 	// +optional
 	Session *Session `json:"session,omitempty"`

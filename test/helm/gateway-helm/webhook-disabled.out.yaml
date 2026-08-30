@@ -433,7 +433,6 @@ spec:
     spec:
       automountServiceAccountToken: true
       securityContext:
-        fsGroup: 65532
         runAsGroup: 65532
         runAsNonRoot: true
         runAsUser: 65532
@@ -454,20 +453,9 @@ spec:
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
         startupProbe:
-          failureThreshold: 30
-          httpGet:
-            path: /healthz
-            port: 8081
-          periodSeconds: 1
-          successThreshold: 1
-          timeoutSeconds: 1
+          null
         livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          periodSeconds: 20
-          successThreshold: 1
-          timeoutSeconds: 1
+          null
         name: envoy-gateway
         ports:
         - containerPort: 18000
@@ -479,12 +467,7 @@ spec:
         - containerPort: 19001
           name: metrics
         readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
+          null
         resources:
           limits:
             memory: 1024Mi
@@ -497,7 +480,6 @@ spec:
             drop:
             - ALL
           privileged: false
-          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -675,13 +657,6 @@ spec:
         app: certgen
     spec:
       automountServiceAccountToken: true
-      securityContext:
-        fsGroup: 65532
-        runAsGroup: 65532
-        runAsNonRoot: true
-        runAsUser: 65532
-        seccompProfile:
-          type: RuntimeDefault
       containers:
       - args:
         - --disable-topology-injector

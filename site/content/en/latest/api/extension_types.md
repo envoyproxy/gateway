@@ -965,6 +965,7 @@ _Appears in:_
 | `signatureAlgorithms` | _string array_ |  false  |  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Defaults to [h2, http/1.1] if not specified.<br />Typical Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
 | `fingerprints` | _[TLSFingerprintType](#tlsfingerprinttype) array_ |  false  |  | Fingerprints specifies TLS client fingerprinting.<br />When specified, a JAX fingerprint derived from the client’s TLS handshake<br />is generated. The fingerprint can be logged in access logs or<br />forwarded to upstream services using request headers.<br />Fingerprinting is disabled if not specified.<br />Supported values are:<br />- JA3<br />- JA4 |
+| `detectMisdirectedRequests` | _boolean_ |  false  |  | DetectMisdirectedRequests enables 421 responses for HTTP/2 requests<br />coalesced onto a TLS connection selected by a different SNI, as described in<br />[GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).<br />When disabled, overlapping TLS listeners keep the default ALPN downgrade to<br />HTTP/1.1 unless ClientTrafficPolicy configures ALPN.<br />Default: false |
 | `session` | _[Session](#session)_ |  false  |  | Session defines settings related to TLS session management. |
 
 
@@ -2243,20 +2244,6 @@ _Appears in:_
 
 
 
-#### EnvoyProxyFeatures
-
-
-
-EnvoyProxyFeatures defines feature flags for EnvoyProxy.
-
-_Appears in:_
-- [EnvoyProxySpec](#envoyproxyspec)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `detectMisdirectedRequests` | _boolean_ |  false  |  | DetectMisdirectedRequests enables 421 responses for HTTP/2 requests<br />coalesced onto a TLS connection selected by a different SNI, as described in<br />[GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).<br />When disabled, overlapping TLS listeners keep the default ALPN downgrade to<br />HTTP/1.1 unless ClientTrafficPolicy configures ALPN.<br />Default: false |
-
-
 #### EnvoyProxyGeoIP
 
 
@@ -2369,7 +2356,6 @@ _Appears in:_
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
-| `features` | _[EnvoyProxyFeatures](#envoyproxyfeatures)_ |  false  |  | Features defines the features that are enabled for this EnvoyProxy. |
 
 
 #### EnvoyProxyStatus
