@@ -1070,6 +1070,8 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// Credentials to be injected into the request.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
+	// GRPCJSONTranscoder defines the gRPC-JSON transcoding configuration for this route.
+	GRPCJSONTranscoder *GRPCJSONTranscoder `json:"grpcJSONTranscoder,omitempty" yaml:"grpcJSONTranscoder,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and
@@ -4276,6 +4278,43 @@ type EndpointOverride struct {
 type EndpointOverrideExtractFrom struct {
 	// Header defines the header to get the override endpoint addresses.
 	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// GRPCJSONTranscoder defines the configuration for gRPC-JSON transcoding in the IR.
+// +k8s:deepcopy-gen=true
+type GRPCJSONTranscoder struct {
+	// Name is the unique name of the per-route HCM filter instance.
+	Name string `json:"name" yaml:"name"`
+	// ProtoDescriptorBin is the binary FileDescriptorSet for the gRPC services.
+	ProtoDescriptorBin []byte `json:"protoDescriptorBin" yaml:"protoDescriptorBin"`
+	// Services are the fully-qualified gRPC service names to transcode. Always non-empty:
+	// Envoy treats an empty list as "filter disabled".
+	Services []string `json:"services" yaml:"services"`
+	// PrintOptions defines the output format options for JSON conversion.
+	PrintOptions *JSONPrintOptions `json:"printOptions,omitempty" yaml:"printOptions,omitempty"`
+	// MatchIncomingRequestRoute enables matching the incoming request route pattern.
+	MatchIncomingRequestRoute *bool `json:"matchIncomingRequestRoute,omitempty" yaml:"matchIncomingRequestRoute,omitempty"`
+	// IgnoredQueryParameters defines query parameters to ignore during transcoding.
+	IgnoredQueryParameters []string `json:"ignoredQueryParameters,omitempty" yaml:"ignoredQueryParameters,omitempty"`
+	// AutoMapping enables automatic field mapping for HTTP query parameters and headers.
+	AutoMapping *bool `json:"autoMapping,omitempty" yaml:"autoMapping,omitempty"`
+	// IgnoreUnknownQueryParameters determines whether to ignore unknown query parameters.
+	IgnoreUnknownQueryParameters *bool `json:"ignoreUnknownQueryParameters,omitempty" yaml:"ignoreUnknownQueryParameters,omitempty"`
+	// ConvertGRPCStatus enables converting gRPC status to HTTP status codes.
+	ConvertGRPCStatus *bool `json:"convertGRPCStatus,omitempty" yaml:"convertGRPCStatus,omitempty"`
+}
+
+// JSONPrintOptions defines options for JSON output formatting in the IR.
+// +k8s:deepcopy-gen=true
+type JSONPrintOptions struct {
+	// AddWhitespace adds whitespace for pretty-printing JSON output.
+	AddWhitespace *bool `json:"addWhitespace,omitempty" yaml:"addWhitespace,omitempty"`
+	// AlwaysPrintPrimitiveFields always prints primitive fields even if they have default values.
+	AlwaysPrintPrimitiveFields *bool `json:"alwaysPrintPrimitiveFields,omitempty" yaml:"alwaysPrintPrimitiveFields,omitempty"`
+	// AlwaysPrintEnumsAsInts always prints enum values as integers instead of strings.
+	AlwaysPrintEnumsAsInts *bool `json:"alwaysPrintEnumsAsInts,omitempty" yaml:"alwaysPrintEnumsAsInts,omitempty"`
+	// PreserveProtoFieldNames preserves proto field names in JSON output.
+	PreserveProtoFieldNames *bool `json:"preserveProtoFieldNames,omitempty" yaml:"preserveProtoFieldNames,omitempty"`
 }
 
 // LoadBalancerType defines the type of load balancer for IR.

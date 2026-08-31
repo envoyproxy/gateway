@@ -1,0 +1,33 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "/greet/world"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50051
+        name: "first-route-dest/backend/0"
+    grpcJSONTranscoder:
+      name: "httproutefilter/default/transcode"
+      protoDescriptorBin: "CrsBChNleGFtcGxlL2hlbGxvLnByb3RvEgdleGFtcGxlIiIKDEhlbGxvUmVxdWVzdBISCgRuYW1lGAEgASgJUgRuYW1lIikKDUhlbGxvUmVzcG9uc2USGAoHbWVzc2FnZRgBIAEoCVIHbWVzc2FnZTJECgdHcmVldGVyEjkKCFNheUhlbGxvEhUuZXhhbXBsZS5IZWxsb1JlcXVlc3QaFi5leGFtcGxlLkhlbGxvUmVzcG9uc2ViBnByb3RvMw=="
+      services:
+      - "example.Greeter"
+      printOptions:
+        addWhitespace: true
+        alwaysPrintPrimitiveFields: false
+      matchIncomingRequestRoute: true
+      autoMapping: true
+      ignoreUnknownQueryParameters: true
+      convertGRPCStatus: true

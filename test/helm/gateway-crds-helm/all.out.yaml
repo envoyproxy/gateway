@@ -34580,6 +34580,8 @@ spec:
 
                   - envoy.filters.http.grpc_web
 
+                  - envoy.filters.http.grpc_json_transcoder
+
                   - envoy.filters.http.grpc_stats
 
                   - envoy.filters.http.credential_injector
@@ -34623,6 +34625,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
@@ -34656,6 +34659,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
@@ -34687,6 +34691,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
@@ -53457,6 +53462,136 @@ spec:
                       Note: when this filter is referenced from a GRPCRoute, a 2xx status code
                       (including the default 200) is rejected; a non-2xx status code must be set.
                     type: integer
+                type: object
+              grpcJSONTranscoder:
+                description: |-
+                  GRPCJSONTranscoder transcodes a JSON/HTTP request into a gRPC call, and the gRPC
+                  response back into JSON.
+
+                  This filter is only supported at the rule level of an HTTPRoute. Referencing it
+                  from a GRPCRoute, or from a backendRef, makes the route unresolvable: the incoming
+                  request must be JSON/HTTP for there to be anything to transcode, and a backendRef
+                  filter has no route table on which to enable the transcoder.
+                properties:
+                  autoMapping:
+                    description: |-
+                      AutoMapping enables automatic field mapping for HTTP query parameters and headers
+                      to gRPC message fields when explicit field mapping is not present in the proto.
+                    type: boolean
+                  convertGRPCStatus:
+                    description: |-
+                      ConvertGRPCStatus enables converting gRPC status to HTTP status codes.
+                      If true, gRPC status codes are converted to appropriate HTTP status codes.
+                    type: boolean
+                  ignoreUnknownQueryParameters:
+                    description: |-
+                      IgnoreUnknownQueryParameters ignores query parameters that cannot be mapped to a
+                      gRPC request field. Set this when the query parameters are not known in advance;
+                      otherwise list them in IgnoredQueryParameters.
+
+                      When false (the default), a request carrying an unmappable parameter is not
+                      transcoded at all and is forwarded unchanged, which a gRPC backend rejects.
+                    type: boolean
+                  ignoredQueryParameters:
+                    description: IgnoredQueryParameters defines query parameters to
+                      ignore during transcoding.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                  matchIncomingRequestRoute:
+                    description: |-
+                      MatchIncomingRequestRoute keeps the route that matched the incoming request after
+                      the transcoder rewrites the path to the gRPC method.
+
+                      When false (the default), the rewritten path is matched against the routing table
+                      again, so a route matching the gRPC method must also exist or the request is
+                      answered with 404. Either a GRPCRoute for the service, or an HTTPRoute matching
+                      `/<package>.<Service>/<Method>`, satisfies this.
+                    type: boolean
+                  printOptions:
+                    description: PrintOptions defines the output format options for
+                      JSON conversion.
+                    properties:
+                      addWhitespace:
+                        description: AddWhitespace adds whitespace for pretty-printing
+                          JSON output.
+                        type: boolean
+                      alwaysPrintEnumsAsInts:
+                        description: AlwaysPrintEnumsAsInts always prints enum values
+                          as integers instead of strings.
+                        type: boolean
+                      alwaysPrintPrimitiveFields:
+                        description: AlwaysPrintPrimitiveFields always prints primitive
+                          fields even if they have default values.
+                        type: boolean
+                      preserveProtoFieldNames:
+                        description: |-
+                          PreserveProtoFieldNames preserves proto field names in JSON output instead
+                          of converting them to camelCase.
+                        type: boolean
+                    type: object
+                  protoDescriptor:
+                    description: |-
+                      ProtoDescriptor defines how to obtain the protocol buffer descriptor set.
+                      This is required for the transcoder to understand the gRPC service definition.
+                    properties:
+                      valueRef:
+                        description: |-
+                          ValueRef is a reference to a ConfigMap in the same namespace holding the descriptor.
+                          The key `proto-descriptor` is used if present, otherwise the ConfigMap must hold
+                          exactly one entry. A `binaryData` entry is used as-is; a `data` entry must be
+                          base64-encoded.
+
+                          Generate the descriptor with `protoc --include_imports`; without the imported files
+                          Envoy cannot build a descriptor pool.
+                        properties:
+                          group:
+                            description: |-
+                              Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                              When unspecified or empty string, core API group is inferred.
+                            maxLength: 253
+                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          kind:
+                            description: Kind is kind of the referent. For example
+                              "HTTPRoute" or "Service".
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                            type: string
+                          name:
+                            description: Name is the name of the referent.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                        required:
+                        - group
+                        - kind
+                        - name
+                        type: object
+                    required:
+                    - valueRef
+                    type: object
+                    x-kubernetes-validations:
+                    - message: valueRef must refer to a core ConfigMap
+                      rule: size(self.valueRef.group) == 0 && self.valueRef.kind ==
+                        'ConfigMap'
+                  services:
+                    description: |-
+                      Services defines the gRPC services that should be transcoded.
+
+                      If not specified, every service declared by the proto files in the descriptor is
+                      transcoded, excluding services that come from imported files.
+
+                      Entries must be unique. Envoy registers every method of each listed service into one
+                      path matcher, and a repeated service silently stops the filter from transcoding.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                required:
+                - protoDescriptor
                 type: object
               matches:
                 description: |-
