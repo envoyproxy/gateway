@@ -38,7 +38,7 @@ spec:
       containers:
       - name: multi-ports-backend
         # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
-        image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
         ports:
         - containerPort: 8080
           name: http
@@ -63,7 +63,7 @@ spec:
       # Sidecar for health check on port 9090
       - name: multi-ports-backend-health
         # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
-        image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
         ports:
         - containerPort: 9090
           name: health
@@ -121,7 +121,7 @@ spec:
       containers:
       - name: single-port-backend
         # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
-        image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
         ports:
         - containerPort: 8080
           name: http-and-health

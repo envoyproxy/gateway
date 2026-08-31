@@ -1,0 +1,211 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    name: ctp-section-a-header-limit
+    namespace: envoy-gateway
+  spec:
+    headers:
+      maxRequestHeaderLimit: 64Ki
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-port-gateway
+      sectionName: http-a
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: same-port-gateway
+        namespace: envoy-gateway
+        sectionName: http-a
+      conditions:
+      - lastTransitionTime: null
+        message: ClientTrafficPolicy is being applied to multiple http (non https)
+          listeners (envoy-gateway/same-port-gateway/http-b) on the same port, which
+          is not allowed.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    name: ctp-section-b-header-limit
+    namespace: envoy-gateway
+  spec:
+    headers:
+      maxRequestHeaderLimit: 256Ki
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-port-gateway
+      sectionName: http-b
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: same-port-gateway
+        namespace: envoy-gateway
+        sectionName: http-b
+      conditions:
+      - lastTransitionTime: null
+        message: ClientTrafficPolicy is being applied to multiple http (non https)
+          listeners (envoy-gateway/same-port-gateway/http-a) on the same port, which
+          is not allowed.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: same-port-gateway
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      hostname: a.example.com
+      name: http-a
+      port: 8081
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      hostname: b.example.com
+      name: http-b
+      port: 8081
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-a
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-b
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+infraIR:
+  envoy-gateway/same-port-gateway:
+    proxy:
+      listeners:
+      - name: envoy-gateway/same-port-gateway/http-a
+        ports:
+        - containerPort: 8081
+          name: http-8081
+          protocol: HTTP
+          servicePort: 8081
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: same-port-gateway
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/same-port-gateway
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway/same-port-gateway:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-same-port-gateway-dafdfcca
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/same-port-gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-same-port-gateway-dafdfcca
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/same-port-gateway
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 8081
+      hostnames:
+      - a.example.com
+      metadata:
+        kind: Gateway
+        name: same-port-gateway
+        namespace: envoy-gateway
+        sectionName: http-a
+      name: envoy-gateway/same-port-gateway/http-a
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8081
+    - address: 0.0.0.0
+      externalPort: 8081
+      hostnames:
+      - b.example.com
+      metadata:
+        kind: Gateway
+        name: same-port-gateway
+        namespace: envoy-gateway
+        sectionName: http-b
+      name: envoy-gateway/same-port-gateway/http-b
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8081
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

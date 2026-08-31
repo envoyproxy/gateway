@@ -1,0 +1,49 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: backend-utilization-oob-dest
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.client_side_weighted_round_robin
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+          blackoutPeriod: 10s
+          enableOobLoadReport: true
+          oobReportingConfig:
+            authority: orca.example.com
+            portValue: 9001
+          oobReportingPeriod: 5s
+  name: backend-utilization-oob-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: backend-utilization-oob-defaults-dest
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.client_side_weighted_round_robin
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+          enableOobLoadReport: true
+  name: backend-utilization-oob-defaults-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

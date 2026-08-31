@@ -7,8 +7,8 @@ package gatewayapi
 
 import (
 	"bytes"
-	//nolint:gosec // SHA1 is required to validate htpasswd {SHA} format.
-	"crypto/sha1"
+	"context"
+	"crypto/sha1" //nolint:gosec // SHA1 is required to validate htpasswd {SHA} format
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -52,6 +52,7 @@ const (
 	defaultRefreshToken          = true
 	defaultPassThroughAuthHeader = false
 	defaultOIDCHTTPTimeout       = 5 * time.Second
+	defaultOIDCMaxRedirects      = 3
 
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
@@ -59,6 +60,8 @@ const (
 	// JWKSConfigMapKey is the key used in ConfigMaps to store JWKS data
 	JWKSConfigMapKey = "jwks"
 )
+
+var newOIDCDiscoveryHTTPClient = newGuardedOIDCDiscoveryHTTPClient
 
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
@@ -435,7 +438,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
 	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
 	routeNN := utils.NamespacedName(targetedRoute)
-	routeAsChildScope := routeScope(routeNN)
+	routeAsChildScope := routeScope(routeNN, string(targetedRoute.GetRouteType()))
 	for _, p := range parentRefs {
 		parentNamespace := targetedRoute.GetNamespace()
 		if p.Namespace != nil {
@@ -976,7 +979,7 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // - Empty/no Authorization is allowed and results in no-op on TCP.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
-	if p.Spec.CORS != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
+	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
 		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
@@ -1249,6 +1252,11 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
+	var csrf *ir.CSRF
+	if policy.Spec.CSRF != nil {
+		csrf = t.buildCSRF(policy.Spec.CSRF)
+	}
+
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(
 			policy,
@@ -1362,6 +1370,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		// Pre-create security features to avoid repeated allocations
 		securityFeatures := &ir.SecurityFeatures{
 			CORS:          cors,
+			CSRF:          csrf,
 			JWT:           jwt,
 			OIDC:          oidc,
 			APIKeyAuth:    apiKeyAuth,
@@ -1379,6 +1388,9 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					continue
 				}
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+				if tl == nil {
+					continue
+				}
 				for _, r := range tl.Routes {
 					// If target.SectionName is specified it must match the route-rule section name
 					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
@@ -1532,6 +1544,11 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
+	var csrf *ir.CSRF
+	if policy.Spec.CSRF != nil {
+		csrf = t.buildCSRF(policy.Spec.CSRF)
+	}
+
 	if policy.Spec.JWT != nil {
 		if jwt, err = t.buildJWT(
 			policy,
@@ -1616,6 +1633,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	// Pre-create security features and error response to avoid repeated allocations
 	securityFeatures := &ir.SecurityFeatures{
 		CORS:          cors,
+		CSRF:          csrf,
 		JWT:           jwt,
 		OIDC:          oidc,
 		APIKeyAuth:    apiKeyAuth,
@@ -1745,6 +1763,40 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	}
 
 	return irCORS
+}
+
+func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
+	var additionalOrigins []*ir.StringMatch
+
+	for _, origin := range csrf.AdditionalOrigins {
+		// Envoy's CSRF filter matches the host and port of the Origin header against the
+		// target host, so the scheme is dropped before the matcher is built.
+		hostAndPort := originHostAndPort(string(origin))
+		if containsWildcard(hostAndPort) {
+			regexStr := wildcard2regex(hostAndPort)
+			additionalOrigins = append(additionalOrigins, &ir.StringMatch{
+				SafeRegex: &regexStr,
+			})
+		} else {
+			additionalOrigins = append(additionalOrigins, &ir.StringMatch{
+				Exact: &hostAndPort,
+			})
+		}
+	}
+
+	return &ir.CSRF{
+		ShadowFraction:    csrf.ShadowFraction,
+		AdditionalOrigins: additionalOrigins,
+	}
+}
+
+// originHostAndPort strips the scheme from an Origin, leaving its host and optional port.
+// A bare "*" carries no scheme and is returned as is.
+func originHostAndPort(origin string) string {
+	if _, hostAndPort, found := strings.Cut(origin, "://"); found {
+		return hostAndPort
+	}
+	return origin
 }
 
 func containsWildcard(s string) bool {
@@ -2188,6 +2240,10 @@ func (t *Translator) buildOIDCProvider(
 		return nil, err
 	}
 
+	if _, err = validateOIDCIssuerURL(provider.Issuer); err != nil {
+		return nil, err
+	}
+
 	if u.Scheme == "https" {
 		protocol = ir.HTTPS
 	} else {
@@ -2348,7 +2404,37 @@ func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.
 	return config, nil
 }
 
-func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
+func validateOIDCIssuerURL(raw string) (*url.URL, error) {
+	issuer, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid issuer URL: %w", err)
+	}
+
+	switch {
+	case issuer.Scheme != "https":
+		return nil, fmt.Errorf("issuer URL must use https scheme")
+	case issuer.Hostname() == "":
+		return nil, fmt.Errorf("issuer URL must include a host")
+	case issuer.User != nil:
+		return nil, fmt.Errorf("issuer URL must not include userinfo")
+	case issuer.RawQuery != "" || strings.Contains(raw, "?"):
+		return nil, fmt.Errorf("issuer URL must not include a query")
+	case issuer.Fragment != "" || strings.Contains(raw, "#"):
+		return nil, fmt.Errorf("issuer URL must not include a fragment")
+	}
+
+	return issuer, nil
+}
+
+func buildOIDCDiscoveryURL(issuer *url.URL) string {
+	discoveryURL := *issuer
+	discoveryURL.RawQuery = ""
+	discoveryURL.Fragment = ""
+	discoveryURL.Path = strings.TrimRight(discoveryURL.Path, "/") + "/.well-known/openid-configuration"
+	return discoveryURL.String()
+}
+
+func newGuardedOIDCDiscoveryHTTPClient(providerTLS *ir.TLSUpstreamConfig) (*http.Client, error) {
 	var (
 		tlsConfig *tls.Config
 		err       error
@@ -2360,17 +2446,96 @@ func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamCo
 		}
 	}
 
-	client := &http.Client{Timeout: defaultOIDCHTTPTimeout}
-	if tlsConfig != nil {
-		client.Transport = &http.Transport{
-			TLSClientConfig: tlsConfig,
+	transport := &http.Transport{
+		DialContext: (&oidcDiscoveryDialer{
+			dialer: &net.Dialer{Timeout: defaultOIDCHTTPTimeout},
+		}).DialContext,
+		TLSClientConfig: tlsConfig,
+	}
+
+	return &http.Client{
+		Timeout:   defaultOIDCHTTPTimeout,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= defaultOIDCMaxRedirects {
+				return fmt.Errorf("stopped after %d redirects", defaultOIDCMaxRedirects)
+			}
+			if _, err := validateOIDCIssuerURL(req.URL.String()); err != nil {
+				return err
+			}
+			_, err := validateOIDCDiscoveryHost(req.Context(), req.URL.Hostname())
+			return err
+		},
+	}, nil
+}
+
+type oidcDiscoveryDialer struct {
+	dialer *net.Dialer
+}
+
+func (d *oidcDiscoveryDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+
+	addrs, err := validateOIDCDiscoveryHost(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, fmt.Errorf("issuer host %q did not resolve to any addresses", host)
+	}
+
+	return d.dialer.DialContext(ctx, network, net.JoinHostPort(addrs[0].String(), port))
+}
+
+func validateOIDCDiscoveryHost(ctx context.Context, host string) ([]netip.Addr, error) {
+	if addr, err := netip.ParseAddr(host); err == nil {
+		if isBlockedOIDCDiscoveryAddr(addr) {
+			return nil, fmt.Errorf("issuer host resolves to blocked address %s", addr)
+		}
+		return []netip.Addr{addr}, nil
+	}
+
+	addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+	if err != nil {
+		return nil, err
+	}
+	for _, addr := range addrs {
+		if isBlockedOIDCDiscoveryAddr(addr) {
+			return nil, fmt.Errorf("issuer host %q resolves to blocked address %s", host, addr)
 		}
 	}
+	return addrs, nil
+}
+
+func isBlockedOIDCDiscoveryAddr(addr netip.Addr) bool {
+	addr = addr.Unmap()
+
+	return !addr.IsValid() ||
+		addr.IsUnspecified() ||
+		addr.IsLoopback() ||
+		addr.IsLinkLocalUnicast() ||
+		addr.IsMulticast()
+}
+
+func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
+	issuer, err := validateOIDCIssuerURL(issuerURL)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := newOIDCDiscoveryHTTPClient(providerTLS)
+	if err != nil {
+		return nil, err
+	}
+	discoveryURL := buildOIDCDiscoveryURL(issuer)
 
 	// Parse the OpenID configuration response
 	var config OpenIDConfig
 	if err = backoff.Retry(func() error {
-		resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
+		resp, err := client.Get(discoveryURL)
 		// Retry on transport errors
 		if err != nil {
 			return err
@@ -3050,17 +3215,6 @@ type securityPolicyOwners struct {
 	jwtProviders             *egv1a1.SecurityPolicy
 }
 
-// policyOwnerOr returns owner if non-nil, otherwise fallback.
-// Used to resolve per-field owners from securityPolicyOwners: the owner is the policy
-// that contributed the field (route overrides parent), falling back to the active policy
-// when no merge occurred or the field was not set by either side.
-func policyOwnerOr(owner, fallback *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if owner != nil {
-		return owner
-	}
-	return fallback
-}
-
 // mergeSecurityPolicy merges a route-level SecurityPolicy with a parent (Gateway/Listener) SecurityPolicy.
 func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, *securityPolicyOwners, error) {
 	if routePolicy.Spec.MergeType == nil || parentPolicy == nil {
@@ -3071,18 +3225,6 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 		return nil, nil, err
 	}
 	return mergedPolicy, buildSecurityPolicyOwners(routePolicy, parentPolicy), nil
-}
-
-// ownerOf returns route if routeOwns(route) is true, otherwise parent.
-// Use this when ownership of a merged field is determined by a single predicate.
-func ownerOf(
-	route, parent *egv1a1.SecurityPolicy,
-	routeOwns func(*egv1a1.SecurityPolicy) bool,
-) *egv1a1.SecurityPolicy {
-	if routeOwns(route) {
-		return route
-	}
-	return parent
 }
 
 // buildSecurityPolicyOwners determines, for each merged field, which policy

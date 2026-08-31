@@ -127,6 +127,10 @@ const (
 	// BackendHTTPHostnameModifier indicates that the Host header value would be replaced by the DNS name of the backend if it exists.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
 	BackendHTTPHostnameModifier HTTPHostnameModifierType = "Backend"
+	// PathRegexHTTPHostnameModifier indicates that the Host header value would be rewritten by applying a regex
+	// match and substitution to the request path.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-path-regex
+	PathRegexHTTPHostnameModifier HTTPHostnameModifierType = "PathRegex"
 )
 
 type ReplaceRegexMatch struct {
@@ -136,6 +140,26 @@ type ReplaceRegexMatch struct {
 	Pattern string `json:"pattern"`
 	// Substitution is an expression that replaces the matched portion.The expression may include numbered
 	// capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.
+	Substitution string `json:"substitution"`
+}
+
+// HostnamePathRegexRewrite defines a hostname rewrite computed from the request path using regex.
+type HostnamePathRegexRewrite struct {
+	// Pattern matches a regular expression against the value of the HTTP Path. The regex string must
+	// adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
+	// +kubebuilder:validation:MinLength=1
+	Pattern string `json:"pattern"`
+	// Substitution is an expression that replaces the matched portion. The expression may include numbered
+	// capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.
+	//
+	// The resulting value is used as the upstream Host header and should be constrained to a valid
+	// DNS hostname by using explicit regex capture groups in Pattern.
+	//
+	// The NUL, CR, and LF characters are not allowed: they are invalid in an HTTP header value and are
+	// rejected by the Envoy proto (well_known_regex HTTP_HEADER_VALUE), which would otherwise cause the
+	// generated configuration to be rejected by the data plane.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^[^\r\n\x00]*$`
 	Substitution string `json:"substitution"`
 }
 
@@ -169,14 +193,28 @@ type HTTPPathModifier struct {
 
 // +kubebuilder:validation:XValidation:message="header must be nil if the type is not Header",rule="!(has(self.header) && self.type != 'Header')"
 // +kubebuilder:validation:XValidation:message="header must be specified for Header type",rule="!(!has(self.header) && self.type == 'Header')"
+// +kubebuilder:validation:XValidation:message="pathRegex must be nil if the type is not PathRegex",rule="!(has(self.pathRegex) && self.type != 'PathRegex')"
+// +kubebuilder:validation:XValidation:message="pathRegex must be specified for PathRegex type",rule="!(!has(self.pathRegex) && self.type == 'PathRegex')"
 type HTTPHostnameModifier struct {
-	// +kubebuilder:validation:Enum=Header;Backend
+	// +kubebuilder:validation:Enum=Header;Backend;PathRegex
 	// +kubebuilder:validation:Required
 	Type HTTPHostnameModifierType `json:"type"`
 
 	// Header is the name of the header whose value would be used to rewrite the Host header
 	// +optional
 	Header *string `json:"header,omitempty"`
+
+	// PathRegex defines a regex match and substitution applied to the request path to compute
+	// the rewritten Host header.
+	// For example, with:
+	// pathRegex:
+	//   pattern: "^/tenant/([a-z0-9-]+)/.*"
+	//   substitution: "\\1.example.internal"
+	// a request to "http://foo.bar.com/tenant/tenant1/api/v1" has its upstream Host header rewritten
+	// to "tenant1.example.internal" (the request path "/tenant/tenant1/api/v1" is preserved).
+	//
+	// +optional
+	PathRegex *HostnamePathRegexRewrite `json:"pathRegex,omitempty"`
 }
 
 // HTTPCredentialInjectionFilter defines the configuration to inject credentials into the request.

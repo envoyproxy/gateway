@@ -1,0 +1,1 @@
+Fixed HTTPRoute (and other xRoute) acceptance not being re-evaluated when a namespace's labels changed to newly match, or stop matching, a Gateway listener's `allowedRoutes.namespaces.from: Selector`, requiring a controller restart to pick up the change. Envoy Gateway now watches Namespace label updates and re-reconciles affected Gateways automatically.

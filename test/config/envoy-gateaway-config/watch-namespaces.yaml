@@ -26,12 +26,14 @@ data:
               - monitoring
               - multireferencegrants-ns
               - sp-cross-ns
+              - namespace-selector-relabel-app
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
       enableEnvoyPatchPolicy: true
       enableBackend: true
       enableLua: true
+      enableSDSSecretRef: true
     gatewayAPI:
       enabled: [XListenerSet]
     rateLimit:

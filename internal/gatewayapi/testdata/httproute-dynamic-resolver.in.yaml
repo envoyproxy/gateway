@@ -44,7 +44,10 @@ httpRoutes:
       name: gateway-1
       sectionName: http
     rules:
-    - backendRefs:
+    - matches:
+      - path:
+          value: "/route-2"
+      backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-with-system-ca
