@@ -80,6 +80,8 @@ var RateLimitCluster = suite.ConformanceTest{
 			Name:      "same-namespace",
 			Namespace: "gateway-conformance-infra",
 		}
+		// Check the ratelimit cluster in Envoy config dump, and make sure the MaxConnectionDuration is set to 10s.
+		// See test/config/envoy-gateaway-config/gateway-namespace-mode.yaml Line 36 for the ratelimit cluster configuration.
 		if IsGatewayNamespaceMode() {
 			err := wait.PollUntilContextTimeout(t.Context(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 				c, err := getRatelimitCluster(t, cts, gwNN)
