@@ -34,7 +34,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     namespace: envoy-gateway
-    name: httproute-1
+    name: httproute-6
   spec:
     parentRefs:
     - namespace: envoy-gateway

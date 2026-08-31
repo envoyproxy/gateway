@@ -30,7 +30,7 @@ import (
 
 func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager) error {
 	// Do nothing unless there is an extension manager and the ir.HTTPRoute has extension filters
-	if em == nil || len(irRoute.ExtensionRefs) == 0 {
+	if em == nil || (len(irRoute.ExtensionRefs) == 0 && len(irRoute.ExtensionServerPolicies) == 0) {
 		return nil
 	}
 
@@ -47,10 +47,16 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 	for refIdx, ref := range irRoute.ExtensionRefs {
 		unstructuredResources[refIdx] = ref.Object
 	}
+	unstructuredPolicies := make([]*unstructured.Unstructured, len(irRoute.ExtensionServerPolicies))
+	for refIdx, ref := range irRoute.ExtensionServerPolicies {
+		unstructuredPolicies[refIdx] = ref.Object
+	}
+
 	modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
 		route,
 		vHost.Domains,
 		unstructuredResources,
+		unstructuredPolicies,
 	)
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
@@ -315,7 +321,7 @@ func deepCopyPtr(src, dest interface{}) error {
 	}
 	srcVal := reflect.ValueOf(src)
 	destVal := reflect.ValueOf(dest)
-	if srcVal.Kind() == reflect.Ptr && destVal.Kind() == reflect.Ptr {
+	if srcVal.Kind() == reflect.Pointer && destVal.Kind() == reflect.Pointer {
 		srcElem := srcVal.Elem()
 		destVal = reflect.New(srcElem.Type())
 		destElem := destVal.Elem()

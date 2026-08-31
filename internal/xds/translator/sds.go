@@ -9,14 +9,17 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -24,6 +27,23 @@ import (
 )
 
 const defaultConnectionTimeout = 10 * time.Second
+
+func sdsClusterNameFromURL(url string) string {
+	address := strings.TrimPrefix(url, "unix://")
+	hash := sha256.Sum256([]byte(address))
+	const maxReadablePrefixLength = 48
+
+	hashSuffix := hex.EncodeToString(hash[:16])
+	readablePrefix := strings.Trim(strings.ReplaceAll(address, "/", "_"), "_")
+	for len(readablePrefix) > maxReadablePrefixLength {
+		_, size := utf8.DecodeLastRuneInString(readablePrefix)
+		readablePrefix = readablePrefix[:len(readablePrefix)-size]
+	}
+	if readablePrefix != "" {
+		return fmt.Sprintf("sds_%s_%s", readablePrefix, hashSuffix)
+	}
+	return fmt.Sprintf("sds_%s", hashSuffix)
+}
 
 func sdsSecretConfig(secretName, clusterName string) *tlsv3.SdsSecretConfig {
 	return &tlsv3.SdsSecretConfig{
@@ -47,50 +67,11 @@ func sdsSecretConfig(secretName, clusterName string) *tlsv3.SdsSecretConfig {
 	}
 }
 
-// sdsClusterNameFromURL generates a unique cluster name from an SDS URL
-func sdsClusterNameFromURL(url string) string {
-	// Sanitize the URL to create a valid cluster name
-	// For Unix domain sockets like "unix:///var/run/sds" or "/var/run/sds", create a meaningful name
-	if strings.HasPrefix(url, "unix://") {
-		// Unix domain socket with scheme - extract the path
-		path := strings.TrimPrefix(url, "unix://")
-		sanitized := strings.ReplaceAll(path, "/", "_")
-		sanitized = strings.Trim(sanitized, "_")
-		return fmt.Sprintf("sds_%s", sanitized)
-	}
-	if strings.HasPrefix(url, "/") {
-		// Unix domain socket path without scheme
-		sanitized := strings.ReplaceAll(url, "/", "_")
-		sanitized = strings.Trim(sanitized, "_")
-		return fmt.Sprintf("sds_%s", sanitized)
-	}
-	// For other URLs, use a hash
-	hash := sha256.Sum256([]byte(url))
-	return fmt.Sprintf("sds_%s", hex.EncodeToString(hash[:8]))
-}
-
-// createSDSCluster creates an SDS cluster for the given URL
-func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
+func buildSDSCluster(sdsURL string) *cluster.Cluster {
 	clusterName := sdsClusterNameFromURL(sdsURL)
+	pipePath := strings.TrimPrefix(sdsURL, "unix://")
 
-	// Check if cluster already exists
-	if tCtx.XdsResources[resourcev3.ClusterType] != nil {
-		for _, resource := range tCtx.XdsResources[resourcev3.ClusterType] {
-			if c, ok := resource.(*cluster.Cluster); ok && c.Name == clusterName {
-				// Cluster already exists
-				return nil
-			}
-		}
-	}
-
-	// Create the cluster based on the URL type
-	pipePath := sdsURL
-	// Extract path for Unix domain sockets
-	if strings.HasPrefix(sdsURL, "unix://") {
-		pipePath = strings.TrimPrefix(sdsURL, "unix://")
-	}
-
-	c := &cluster.Cluster{
+	return &cluster.Cluster{
 		Name: clusterName,
 		ClusterDiscoveryType: &cluster.Cluster_Type{
 			Type: cluster.Cluster_STATIC,
@@ -120,6 +101,18 @@ func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
 		ConnectTimeout:       durationpb.New(defaultConnectionTimeout),
 		Http2ProtocolOptions: &corev3.Http2ProtocolOptions{},
 	}
+}
+
+// createSDSCluster creates an SDS cluster for the given URL
+func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
+	c := buildSDSCluster(sdsURL)
+
+	if existing := findXdsCluster(tCtx, c.Name); existing != nil {
+		if !proto.Equal(existing, c) {
+			return fmt.Errorf("SDS cluster %q conflicts with an existing cluster", c.Name)
+		}
+		return nil
+	}
 
 	if err := tCtx.AddXdsResource(resourcev3.ClusterType, c); err != nil {
 		return err
@@ -129,60 +122,67 @@ func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
 
 // processSDSClusters scans the IR for SDS URLs and creates clusters for them
 func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
-	sdsURLs := make(map[string]bool)
+	sdsURLs := make(map[string]struct{})
 
-	// Collect SDS URLs from HTTP listeners
-	for _, httpListener := range xdsIR.HTTP {
-		for _, route := range httpListener.Routes {
-			if route.Destination == nil {
+	collectSDSURLs := func(dest []*ir.DestinationSetting) {
+		for _, d := range dest {
+			if d.TLS == nil {
 				continue
 			}
-			for _, dest := range route.Destination.Settings {
-				if dest.TLS != nil {
-					// Check CA certificate
-					if caCert := dest.TLS.CACertificate; caCert != nil {
-						if caCert.SDS != nil && caCert.SDS.GetURL() != "" {
-							sdsURLs[caCert.SDS.GetURL()] = true
-						}
-					}
-					// Check client certificates
-					for _, cert := range dest.TLS.ClientCertificates {
-						if cert.SDS != nil && cert.SDS.GetURL() != "" {
-							sdsURLs[cert.SDS.GetURL()] = true
-						}
-					}
+			if caCert := d.TLS.CACertificate; caCert != nil && caCert.SDS != nil && caCert.SDS.GetURL() != "" {
+				sdsURLs[caCert.SDS.GetURL()] = struct{}{}
+			}
+			for _, cert := range d.TLS.ClientCertificates {
+				if cert.SDS != nil && cert.SDS.GetURL() != "" {
+					sdsURLs[cert.SDS.GetURL()] = struct{}{}
 				}
 			}
 		}
 	}
 
-	// Collect SDS URLs from TCP listeners
+	for _, bc := range xdsIR.BackendClusters {
+		collectSDSURLs([]*ir.DestinationSetting{bc.Setting})
+	}
+
+	for _, httpListener := range xdsIR.HTTP {
+		if httpListener.TLS != nil {
+			for _, cert := range httpListener.TLS.Certificates {
+				if cert.SDS != nil && cert.SDS.GetURL() != "" {
+					sdsURLs[cert.SDS.GetURL()] = struct{}{}
+				}
+			}
+		}
+
+		for _, route := range httpListener.Routes {
+			if route.Destination != nil {
+				collectSDSURLs(route.Destination.Settings)
+			}
+		}
+	}
+
 	for _, tcpListener := range xdsIR.TCP {
 		for _, route := range tcpListener.Routes {
-			if route.Destination == nil {
-				continue
-			}
-			for _, dest := range route.Destination.Settings {
-				if dest.TLS != nil {
-					// Check CA certificate
-					if caCert := dest.TLS.CACertificate; caCert != nil {
-						if caCert.SDS != nil && caCert.SDS.GetURL() != "" {
-							sdsURLs[caCert.SDS.GetURL()] = true
-						}
-					}
-					// Check client certificates
-					for _, cert := range dest.TLS.ClientCertificates {
-						if cert.SDS != nil && cert.SDS.GetURL() != "" {
-							sdsURLs[cert.SDS.GetURL()] = true
-						}
+			if route.TLS != nil && route.TLS.Terminate != nil {
+				for _, cert := range route.TLS.Terminate.Certificates {
+					if cert.SDS != nil && cert.SDS.GetURL() != "" {
+						sdsURLs[cert.SDS.GetURL()] = struct{}{}
 					}
 				}
+			}
+
+			if route.Destination != nil {
+				collectSDSURLs(route.Destination.Settings)
 			}
 		}
 	}
 
-	// Create clusters for each unique SDS URL
+	urls := make([]string, 0, len(sdsURLs))
 	for url := range sdsURLs {
+		urls = append(urls, url)
+	}
+	slices.Sort(urls)
+
+	for _, url := range urls {
 		if err := createSDSCluster(tCtx, url); err != nil {
 			return err
 		}

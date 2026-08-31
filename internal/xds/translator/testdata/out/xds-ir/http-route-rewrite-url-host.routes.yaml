@@ -52,6 +52,23 @@
         - name: :authority
           stringMatch:
             exact: gateway.envoyproxy.io
+        pathSeparatedPrefix: /node
+      name: rewrite-host-path-regex
+      route:
+        appendXForwardedHost: true
+        cluster: rewrite-route-dest
+        hostRewritePathRegex:
+          pattern:
+            regex: ^/node/([0-9]+)/api.*
+          substitution: backend-\1.service.namespace.svc.cluster.local
+        prefixRewrite: /rewrite
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: gateway.envoyproxy.io
         pathSeparatedPrefix: /origin
       name: rewrite-route-timeout
       route:
