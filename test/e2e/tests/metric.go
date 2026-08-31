@@ -195,7 +195,7 @@ var OtelMetricPrefixTest = suite.ConformanceTest{
 			}
 			return ok, nil
 		})
-		require.NoError(t, err, "failed to retrive metrics with expected prefix within timeout.")
+		require.NoError(t, err, "failed to retrieve metrics with expected prefix within timeout.")
 	},
 }
 
