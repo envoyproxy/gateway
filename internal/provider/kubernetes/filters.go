@@ -70,39 +70,40 @@ func (r *gatewayAPIReconciler) getHTTPRouteFilter(ctx context.Context, name, nam
 	return hrf, nil
 }
 
-// processRouteFilterConfigMapRef adds the referenced ConfigMap in a HTTPRouteFilter
+// processRouteFilterConfigMapRef adds the ConfigMaps referenced by a HTTPRouteFilter
 // to the resourceTree
 func (r *gatewayAPIReconciler) processRouteFilterConfigMapRef(
 	ctx context.Context, filter *egv1a1.HTTPRouteFilter,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
-	if filter.Spec.DirectResponse != nil &&
-		filter.Spec.DirectResponse.Body != nil &&
-		filter.Spec.DirectResponse.Body.ValueRef != nil &&
-		string(filter.Spec.DirectResponse.Body.ValueRef.Kind) == resource.KindConfigMap {
-		configMap := new(corev1.ConfigMap)
-		err := r.client.Get(ctx,
-			types.NamespacedName{Namespace: filter.Namespace, Name: string(filter.Spec.DirectResponse.Body.ValueRef.Name)},
-			configMap)
-		// we don't return an error here, because we want to continue
-		// reconciling the rest of the HTTPRouteFilter despite that this
-		// reference is invalid.
-		// This HTTPRouteFilter will be marked as invalid in its status
-		// when translating to IR because the referenced configmap can't be
-		// found.
-		if err != nil {
-			r.log.Error(err,
-				"failed to process DirectResponse ValueRef for HTTPRouteFilter",
-				"filter", filter, "ValueRef", filter.Spec.DirectResponse.Body.ValueRef.Name)
-			return
-		}
-		resourceMap.allAssociatedNamespaces.Insert(filter.Namespace)
-		if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
-			resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
-			resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
-			r.log.Info("processing ConfigMap", "namespace", filter.Namespace, "name", string(filter.Spec.DirectResponse.Body.ValueRef.Name))
+	if dr := filter.Spec.DirectResponse; dr != nil && dr.Body != nil && dr.Body.ValueRef != nil &&
+		string(dr.Body.ValueRef.Kind) == resource.KindConfigMap {
+		r.addRouteFilterConfigMap(ctx, filter, "DirectResponse", string(dr.Body.ValueRef.Name), resourceMap, resourceTree)
+	}
+}
 
-		}
+// addRouteFilterConfigMap fetches one ConfigMap referenced by a HTTPRouteFilter into the
+// resourceTree. We don't return an error here, because we want to continue reconciling the
+// rest of the HTTPRouteFilter despite that this reference is invalid. This HTTPRouteFilter
+// will be marked as invalid in its status when translating to IR because the referenced
+// configmap can't be found.
+func (r *gatewayAPIReconciler) addRouteFilterConfigMap(
+	ctx context.Context, filter *egv1a1.HTTPRouteFilter, field, name string,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	configMap := new(corev1.ConfigMap)
+	if err := r.client.Get(ctx,
+		types.NamespacedName{Namespace: filter.Namespace, Name: name}, configMap); err != nil {
+		r.log.Error(err, "failed to process ValueRef for HTTPRouteFilter",
+			"field", field, "filter", filter, "ValueRef", name)
+		return
+	}
+
+	resourceMap.allAssociatedNamespaces.Insert(filter.Namespace)
+	if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
+		resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
+		resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
+		r.log.Info("processing ConfigMap", "namespace", filter.Namespace, "name", name)
 	}
 }
 
