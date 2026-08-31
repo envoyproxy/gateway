@@ -54,7 +54,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 			if containsGlobalRateLimit(xdsIR.HTTP) {
 				xdsIR.GlobalResources.RateLimitServiceCluster = t.processRateLimitServiceCluster(resources)
 
-				tf, err := translateTrafficFeatures(t.RateLimitClusterSettings)
+				tf, err := translateTrafficFeatures(t.RateLimitBackendSettings)
 				if err != nil {
 					return fmt.Errorf("invalid rate limit cluster settings: %w", err)
 				}

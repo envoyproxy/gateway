@@ -7528,8 +7528,8 @@ func (in *RateLimit) DeepCopyInto(out *RateLimit) {
 		*out = new(RateLimitTelemetry)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.ClusterSettings != nil {
-		in, out := &in.ClusterSettings, &out.ClusterSettings
+	if in.BackendSettings != nil {
+		in, out := &in.BackendSettings, &out.BackendSettings
 		*out = new(ClusterSettings)
 		(*in).DeepCopyInto(*out)
 	}

@@ -196,7 +196,7 @@ func TestTranslate(t *testing.T) {
 				GatewayControllerName:           egv1a1.GatewayControllerName,
 				GatewayClassName:                "envoy-gateway-class",
 				GlobalRateLimitEnabled:          true,
-				RateLimitClusterSettings:        rateLimitClusterSettings,
+				RateLimitBackendSettings:        rateLimitClusterSettings,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
