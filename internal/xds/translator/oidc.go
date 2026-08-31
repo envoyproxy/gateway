@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -25,6 +26,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
+
+// cookiePathPattern mirrors the constraint the Envoy oauth2 proto puts on
+// CookieConfig.path. It is stricter than what a URL path allows - "," and ";"
+// for example are legal RFC 3986 sub-delims but are rejected here.
+var cookiePathPattern = regexp.MustCompile(`^$|^/[^\x00-\x1f\x7f ",;<>\\]*$`)
 
 func init() {
 	registerHTTPFilter(&oidc{})
@@ -170,6 +176,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 					IdToken:      fmt.Sprintf("IdToken-%s", oidc.CookieSuffix),
 					RefreshToken: fmt.Sprintf("RefreshToken-%s", oidc.CookieSuffix),
 					OauthNonce:   fmt.Sprintf("OauthNonce-%s", oidc.CookieSuffix),
+					CodeVerifier: fmt.Sprintf("CodeVerifier-%s", oidc.CookieSuffix),
 				},
 			},
 			// every OIDC provider supports basic auth
@@ -264,24 +271,42 @@ func buildSameSite(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSi
 	}
 }
 
-// buildCookieConfigs translates the OIDC configuration from the US
+// buildCookieConfigs builds the attributes Envoy sets on the OAuth2 cookies.
 func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
-	// If the user did not specify any custom cookie configurations at all, return the defaults.
-	if oidc.CookieConfig == nil || oidc.CookieConfig.SameSite == nil {
-		return nil
+	// The nonce (CSRF) and PKCE code verifier cookies only carry state for an
+	// in-flight authorization flow, and Envoy only reads them back when it
+	// validates the callback from the authorization server. Scoping them to the
+	// redirect path keeps them off every other request: a flow that is started
+	// but never completed - a parallel request from a logged out browser, a user
+	// navigating away from the provider's login page - leaves its cookies behind
+	// until they expire, and at the default path "/" those orphans are sent on
+	// every request until then.
+	// A path Envoy refuses to accept on a cookie would fail xDS validation and take
+	// the whole route down with it, so fall back to leaving the path unset - Envoy
+	// then defaults it to "/", which is the behavior we had before scoping.
+	redirectPath := oidc.RedirectPath
+	if !cookiePathPattern.MatchString(redirectPath) {
+		redirectPath = ""
 	}
 
-	// Apply the user-defined SameSite policy for each cookie if it has been configured.
-	sameSite := buildSameSite(oidc.CookieConfig)
-	return &oauth2v3.CookieConfigs{
-		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: sameSite},
-		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: sameSite},
-		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
-		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: sameSite},
-		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
-		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: sameSite},
-		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+	cookieConfigs := &oauth2v3.CookieConfigs{
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{Path: redirectPath},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{Path: redirectPath},
 	}
+
+	// Apply the user-defined SameSite policy to each cookie if it has been configured.
+	if oidc.CookieConfig != nil && oidc.CookieConfig.SameSite != nil {
+		sameSite := buildSameSite(oidc.CookieConfig)
+		cookieConfigs.BearerTokenCookieConfig = &oauth2v3.CookieConfig{SameSite: sameSite}
+		cookieConfigs.OauthHmacCookieConfig = &oauth2v3.CookieConfig{SameSite: sameSite}
+		cookieConfigs.OauthExpiresCookieConfig = &oauth2v3.CookieConfig{SameSite: sameSite}
+		cookieConfigs.IdTokenCookieConfig = &oauth2v3.CookieConfig{SameSite: sameSite}
+		cookieConfigs.RefreshTokenCookieConfig = &oauth2v3.CookieConfig{SameSite: sameSite}
+		cookieConfigs.OauthNonceCookieConfig.SameSite = sameSite
+		cookieConfigs.CodeVerifierCookieConfig.SameSite = sameSite
+	}
+
+	return cookieConfigs
 }
 
 func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {

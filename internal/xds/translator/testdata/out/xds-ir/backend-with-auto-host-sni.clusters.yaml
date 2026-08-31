@@ -61,7 +61,6 @@
               name: backend-default/ca
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:

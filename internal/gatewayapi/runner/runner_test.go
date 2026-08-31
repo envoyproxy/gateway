@@ -22,7 +22,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
-	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	pb "github.com/envoyproxy/gateway/proto/extension"
 )
@@ -51,7 +50,7 @@ func TestRunner(t *testing.T) {
 
 	// IR is nil at start
 	require.Equal(t, map[string]*message.XdsIRWithContext{}, xdsIR.LoadAll())
-	require.Equal(t, map[string]*ir.Infra{}, infraIR.LoadAll())
+	require.Equal(t, map[string]*message.InfraIRWithContext{}, infraIR.LoadAll())
 
 	// TODO: pass valid provider resources
 
@@ -63,7 +62,7 @@ func TestRunner(t *testing.T) {
 			return false
 		}
 		// Ensure ir is empty
-		return maps.Equal(xdsIR.LoadAll(), map[string]*message.XdsIRWithContext{}) && maps.Equal(infraIR.LoadAll(), map[string]*ir.Infra{})
+		return maps.Equal(xdsIR.LoadAll(), map[string]*message.XdsIRWithContext{}) && maps.Equal(infraIR.LoadAll(), map[string]*message.InfraIRWithContext{})
 	}, time.Second*1, time.Millisecond*20)
 }
 

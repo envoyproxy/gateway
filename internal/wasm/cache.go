@@ -228,7 +228,7 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 	if ce != nil {
 		// We still need to check if the pull secret is correct if it is a private OCI image.
 		if u.Scheme == "oci" && ce.isPrivate {
-			if _, err := c.permissionCheckCache.IsAllowed(ctx, u, opts.PullSecret, insecure); err != nil {
+			if _, err := c.permissionCheckCache.IsAllowed(ctx, u, opts.PullSecret, insecure, opts.CACert); err != nil {
 				return nil, err
 			}
 		}

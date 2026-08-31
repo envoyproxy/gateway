@@ -27,7 +27,7 @@ jobs:
     outputs:
       run_test_workflow: ${{ steps.check-changes.outputs.run_test_workflow }}
     steps:
-    - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706  # v4.0.2
+    - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d  # v4.0.3
       id: check-changes
       # A dependent job will be automatically skipped if its parent job is skipped.
       # So we skip this step in pull_request event if the changes are not relevant.
@@ -97,9 +97,13 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
-        fetch-depth: 0  # Need main branch access for benchmark comparison
+        fetch-depth: 0  # Need base branch access for benchmark comparison
     - uses: ./tools/github-actions/setup-deps
     - name: Run Benchmark Comparison
+      env:
+        # Compare against the PR's base branch, not always main: release branch
+        # PRs pin an older Go toolchain and main would fail to build with it.
+        BASE_REF: origin/${{ github.base_ref || 'main' }}
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           ./tools/hack/go-benchmark-compare.sh
@@ -215,7 +219,16 @@ jobs:
         # which means to dump the current state when there's a case failed.
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
         SKIP_GO_BUILD: "true"
+        E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/conformance
       run: make conformance
+
+    - name: Upload E2E failure artifacts
+      if: failure()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: conformance-failure-artifacts-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}
+        path: artifacts/conformance/
+        if-no-files-found: ignore
 
   e2e-test:
     runs-on: ubuntu-latest
@@ -282,8 +295,17 @@ jobs:
         # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
         # which means to dump the current state when there's a case failed.
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
+        E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/e2e
         SKIP_GO_BUILD: "true"
       run: make e2e
+
+    - name: Upload failure artifacts
+      if: failure()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: e2e-failure-artifacts-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}
+        path: artifacts/e2e/
+        if-no-files-found: ignore
 
   benchmark-test:
     runs-on: ubuntu-latest

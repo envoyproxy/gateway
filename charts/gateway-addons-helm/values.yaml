@@ -766,6 +766,7 @@ loki:
       storage:
         type: "local"
     limits_config:
+      max_structured_metadata_size: 131072
       otlp_config:
         resource_attributes:
           attributes_config:
@@ -940,7 +941,7 @@ opentelemetry-collector:
   mode: deployment
   image:
     repository: "otel/opentelemetry-collector-contrib"
-    tag: "0.158.0"
+    tag: "0.159.0"
   config:
     exporters:
       prometheus:
