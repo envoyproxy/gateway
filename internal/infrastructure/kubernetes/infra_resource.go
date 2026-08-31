@@ -212,7 +212,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		}
 	}
 
-	return i.applyIfOwned(ctx, deployment)
+	return i.Client.ServerSideApply(ctx, deployment)
 }
 
 // createOrUpdateDaemonSet creates a DaemonSet in the kube api server based on the provided
@@ -307,7 +307,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		}
 	}
 
-	return i.applyIfOwned(ctx, daemonSet)
+	return i.Client.ServerSideApply(ctx, daemonSet)
 }
 
 func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {
@@ -767,21 +767,18 @@ func noGatewayIdentityLabels(labels map[string]string) bool {
 // this Gateway, the apply is skipped to avoid hijacking (and later garbage-
 // collecting) an unrelated resource.
 //
-// The existence read uses the uncached API reader when available so it observes
-// resources the label-filtered controller cache would miss (e.g. an unmanaged
-// same-name DaemonSet, whose cache is filtered by the envoy managed labels).
-// When no API reader is configured (e.g. unit tests) it falls back to the
-// cached client. Even with the live read there is a small window where a
-// same-named resource created just before this reconcile may not yet be
-// reflected; this is an acceptable edge case — it does not cause EG to fail
-// (see #8764, #9132).
+// For resource kinds behind a label-filtered cache, the existence read uses the
+// uncached API reader when available so it observes unmanaged resources that the
+// cache would miss. Other kinds use the cache to avoid unnecessary API-server
+// requests. Even with the live read there is a small window where a same-named
+// resource can be created between this check and the apply (see #8764, #9132).
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
 	if !i.EnvoyGateway.GatewayNamespaceMode() || noGatewayIdentityLabels(obj.GetLabels()) {
 		return nil
 	}
 
 	existing := obj.DeepCopyObject().(client.Object)
-	reader := i.readerForOwnershipCheck()
+	reader := i.readerForOwnershipCheck(obj)
 	err := reader.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -801,13 +798,19 @@ func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
 	return nil
 }
 
-// readerForOwnershipCheck returns the uncached API reader for the conflict
-// existence check when one is configured, otherwise the cached client.
-func (i *Infra) readerForOwnershipCheck() client.Reader {
-	if i.apiReader != nil {
-		return i.apiReader
+// readerForOwnershipCheck returns the uncached API reader for resource kinds
+// whose caches are label-filtered. Other kinds use the cached client.
+func (i *Infra) readerForOwnershipCheck(obj client.Object) client.Reader {
+	if i.apiReader == nil {
+		return i.Client
 	}
-	return i.Client
+
+	switch obj.(type) {
+	case *appsv1.DaemonSet, *autoscalingv2.HorizontalPodAutoscaler, *policyv1.PodDisruptionBudget:
+		return i.apiReader
+	default:
+		return i.Client
+	}
 }
 
 func ownedByGateway(existingLabels, desiredLabels map[string]string) bool {

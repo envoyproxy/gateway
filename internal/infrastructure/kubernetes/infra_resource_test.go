@@ -741,6 +741,47 @@ func TestCreateOrUpdateDeployment_OwnedSameNameStillApplies(t *testing.T) {
 	require.NoError(t, kube.createOrUpdateDeployment(ctx, r2))
 }
 
+// TestCreateOrUpdateDaemonSet_ChecksOwnershipOnceOnUpdate verifies that an
+// existing DaemonSet does not perform a second live ownership read while
+// applying after the pre-update ownership check has succeeded.
+func TestCreateOrUpdateDaemonSet_ChecksOwnershipOnceOnUpdate(t *testing.T) {
+	ctx := context.Background()
+
+	ds, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDaemonSet(t, true)
+	require.NoError(t, err)
+	require.NotNil(t, ds)
+
+	cachedCli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(ds.DeepCopy()).
+		WithInterceptorFuncs(interceptorFunc).
+		Build()
+
+	apiReaderGets := 0
+	apiReader := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(ds.DeepCopy()).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*appsv1.DaemonSet); ok {
+					apiReaderGets++
+				}
+				return c.Get(ctx, key, obj, opts...)
+			},
+		}).
+		Build()
+
+	errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	kube := NewInfra(cachedCli, gwCfg, errorNotifier)
+	kube.apiReader = apiReader
+	require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
+
+	r, err := proxy.NewResourceRender(ctx, kube, gwInfra)
+	require.NoError(t, err)
+	require.NoError(t, kube.createOrUpdateDaemonSet(ctx, r))
+	assert.Equal(t, 1, apiReaderGets, "DaemonSet updates must perform one live ownership read")
+}
+
 // TestCheckOwnership_UsesAPIReaderWhenCacheMisses covers the production cache
 // behavior called out in the #9132 review: DaemonSets (and HPA/PDB) are cached
 // behind the envoy managed-label selector, so an unmanaged same-name DaemonSet
@@ -786,6 +827,46 @@ func TestCheckOwnership_UsesAPIReaderWhenCacheMisses(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway",
 		"ownership check must read through the cache miss via the API reader")
+}
+
+// TestCheckOwnership_UsesCachedClientForUnfilteredKind verifies that configuring
+// an API reader does not add live API calls for resource kinds whose caches are
+// not label-filtered.
+func TestCheckOwnership_UsesCachedClientForUnfilteredKind(t *testing.T) {
+	ctx := context.Background()
+
+	unmanaged := &appsv1.Deployment{
+		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns1", Name: "gateway-1"},
+	}
+	cachedCli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(unmanaged).
+		Build()
+
+	apiReaderCalled := false
+	apiReader := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				apiReaderCalled = true
+				return c.Get(ctx, key, obj, opts...)
+			},
+		}).
+		Build()
+
+	kube := newGatewayNamespaceInfra(t, cachedCli)
+	kube.apiReader = apiReader
+
+	desired := &appsv1.Deployment{
+		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns1", Name: "gateway-1", Labels: owningLabels("ns1", "gateway-1")},
+	}
+
+	err := kube.checkOwnership(ctx, desired)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists and is not owned by this Gateway")
+	assert.False(t, apiReaderCalled, "unfiltered resource kinds must use the cached client")
 }
 
 // TestCheckOwnership_FallsBackToCachedClientWhenNoAPIReader confirms the
