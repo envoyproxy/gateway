@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -143,11 +142,11 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled:          true,
 			RateLimitClusterSettings: &egv1a1.ClusterSettings{
 				CircuitBreaker: &egv1a1.CircuitBreaker{
-					MaxRequestsPerConnection: ptr.To[int64](10),
+					MaxRequestsPerConnection: new(int64(10)),
 				},
 				Timeout: &egv1a1.Timeout{
 					HTTP: &egv1a1.HTTPTimeout{
-						MaxConnectionDuration: ptr.To(gwapiv1.Duration("30s")),
+						MaxConnectionDuration: new(gwapiv1.Duration("30s")),
 					},
 				},
 			},
