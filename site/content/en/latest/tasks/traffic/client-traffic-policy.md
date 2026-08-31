@@ -714,8 +714,7 @@ Curl the example app through Envoy proxy with a request whose headers exceed the
 ```shell
 curl -v http://$GATEWAY_HOST/get \
   -H "Host: www.example.com" \
-  -H "X-Big-Header: $(head -c 100000 </dev/zero | tr '\0' 'a')"
-```
+  -H "X-Big-Header: $(head -c 100000 </dev/zero | tr '\000' 'a')"
 
 You should expect a `431` response status once the combined request header size exceeds `96Ki`:
 
