@@ -1,1 +1,0 @@
-Fixed the Envoy proxy container's PreStop hook failing with "failed to find networking container" in `hostNetwork` deployments by setting the hook's `httpGet` host explicitly to `127.0.0.1` instead of relying on kubelet to resolve the pod IP.
