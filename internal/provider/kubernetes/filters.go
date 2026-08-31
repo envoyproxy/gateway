@@ -80,6 +80,13 @@ func (r *gatewayAPIReconciler) processRouteFilterConfigMapRef(
 		string(dr.Body.ValueRef.Kind) == resource.KindConfigMap {
 		r.addRouteFilterConfigMap(ctx, filter, "DirectResponse", string(dr.Body.ValueRef.Name), resourceMap, resourceTree)
 	}
+
+	if t := filter.Spec.GRPCJSONTranscoder; t != nil {
+		ref := t.ProtoDescriptor.ValueRef
+		if string(ref.Group) == "" && string(ref.Kind) == resource.KindConfigMap {
+			r.addRouteFilterConfigMap(ctx, filter, "GRPCJSONTranscoder", string(ref.Name), resourceMap, resourceTree)
+		}
+	}
 }
 
 // addRouteFilterConfigMap fetches one ConfigMap referenced by a HTTPRouteFilter into the
