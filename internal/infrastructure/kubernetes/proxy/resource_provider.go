@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"strconv"
@@ -363,31 +362,6 @@ func (r *ResourceRender) stableSelector() *metav1.LabelSelector {
 	return resource.GetSelector(r.envoyLabels(stableLabels))
 }
 
-// hostNetworkFromPatch reports whether a user-supplied Deployment/DaemonSet
-// patch sets spec.template.spec.hostNetwork to true. EnvoyProxy has no
-// first-class hostNetwork field: it's only ever enabled via this patch
-// mechanism (see the "Patching Deployment for EnvoyProxy" doc), applied
-// after the pod spec is built, so this is the only way to detect it.
-func hostNetworkFromPatch(patch *egv1a1.KubernetesPatchSpec) bool {
-	if patch == nil || patch.Value.Raw == nil {
-		return false
-	}
-
-	var patched struct {
-		Spec struct {
-			Template struct {
-				Spec struct {
-					HostNetwork bool `json:"hostNetwork"`
-				} `json:"spec"`
-			} `json:"template"`
-		} `json:"spec"`
-	}
-	if err := json.Unmarshal(patch.Value.Raw, &patched); err != nil {
-		return false
-	}
-	return patched.Spec.Template.Spec.HostNetwork
-}
-
 // Deployment returns the expected Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	proxyConfig := r.infra.GetProxyConfig()
@@ -405,7 +379,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode, hostNetworkFromPatch(deploymentConfig.Patch))
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -505,7 +479,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode, hostNetworkFromPatch(daemonSetConfig.Patch))
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}

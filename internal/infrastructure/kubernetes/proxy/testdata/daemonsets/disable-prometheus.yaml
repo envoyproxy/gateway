@@ -191,6 +191,7 @@ spec:
         lifecycle:
           preStop:
             httpGet:
+              host: 127.0.0.1
               path: /shutdown/ready
               port: 19002
               scheme: HTTP
