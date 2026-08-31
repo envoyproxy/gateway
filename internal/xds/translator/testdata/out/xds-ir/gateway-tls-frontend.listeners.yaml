@@ -24,7 +24,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/client-validation-insecure-fallback/https
         serverHeaderTransformation: PASS_THROUGH
@@ -43,13 +42,11 @@
           - name: envoy-gateway/tls-validity-checks-certificate
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
           validationContextSdsSecretConfig:
             name: gateway/envoy-gateway/client-validation-insecure-fallback/default/ca.crt
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -86,7 +83,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/client-validation-insecure-fallback/https-with-hostname
         serverHeaderTransformation: PASS_THROUGH
@@ -108,13 +104,11 @@
               name: gateway/envoy-gateway/client-validation-insecure-fallback/8443/ca.crt
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway/tls-validity-checks-certificate
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true

@@ -97,9 +97,13 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
-        fetch-depth: 0  # Need main branch access for benchmark comparison
+        fetch-depth: 0  # Need base branch access for benchmark comparison
     - uses: ./tools/github-actions/setup-deps
     - name: Run Benchmark Comparison
+      env:
+        # Compare against the PR's base branch, not always main: release branch
+        # PRs pin an older Go toolchain and main would fail to build with it.
+        BASE_REF: origin/${{ github.base_ref || 'main' }}
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           ./tools/hack/go-benchmark-compare.sh

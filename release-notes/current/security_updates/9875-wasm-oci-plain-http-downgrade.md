@@ -1,0 +1,1 @@
+Fixed OCI Wasm image pulls silently downgrading to plain HTTP when the registry rejected the HTTPS request, which allowed an on-path attacker to serve arbitrary Wasm code to the Envoy proxies. Plain HTTP is now used only for registries that are explicitly configured as insecure.
