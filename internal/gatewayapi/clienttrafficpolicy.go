@@ -233,7 +233,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				// Check if another policy targeting the same section exists
-				section := string(*(targetRef.SectionName))
+				section := string(*targetRef.SectionName)
 				sectionKey := section
 				if targetRef.Kind == resource.KindListenerSet {
 					sectionKey = fmt.Sprintf("%s%s", lsPrefix(ls), section)
@@ -1241,7 +1241,7 @@ func (t *Translator) buildListenerTLSParameters(
 	if tlsParams.Fingerprints != nil {
 		irTLSConfig.Fingerprints = make([]ir.TLSFingerprintType, len(tlsParams.Fingerprints))
 		for i := range tlsParams.Fingerprints {
-			irTLSConfig.Fingerprints[i] = (ir.TLSFingerprintType)(tlsParams.Fingerprints[i])
+			irTLSConfig.Fingerprints[i] = ir.TLSFingerprintType(tlsParams.Fingerprints[i])
 		}
 	}
 
