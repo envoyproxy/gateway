@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -53,6 +54,18 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 			}
 			if containsGlobalRateLimit(xdsIR.HTTP) {
 				xdsIR.GlobalResources.RateLimitServiceCluster = t.processRateLimitServiceCluster(resources)
+
+				var backendSetting *egv1a1.BackendSettings
+				if t.RateLimitClusterSettings != nil {
+					backendSetting = &egv1a1.BackendSettings{
+						ClusterSettings: *t.RateLimitClusterSettings,
+					}
+				}
+				tf, err := translateTrafficFeatures(backendSetting)
+				if err != nil {
+					return fmt.Errorf("invalid rate limit cluster settings: %w", err)
+				}
+				xdsIR.GlobalResources.RateLimitClusterTraffic = tf.ClusterFeatures()
 			}
 			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
 				Name:        irGlobalConfigName(envoyTLSSecret),

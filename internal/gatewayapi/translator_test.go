@@ -28,6 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -57,6 +59,7 @@ func TestTranslate(t *testing.T) {
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
+		RateLimitClusterSettings        *egv1a1.ClusterSettings
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -134,6 +137,21 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled: true,
 			SDSEnabled:     true,
 		},
+		{
+			name:                    "ratelimit-cluster-settings",
+			EnvoyPatchPolicyEnabled: true,
+			BackendEnabled:          true,
+			RateLimitClusterSettings: &egv1a1.ClusterSettings{
+				CircuitBreaker: &egv1a1.CircuitBreaker{
+					MaxRequestsPerConnection: ptr.To[int64](10),
+				},
+				Timeout: &egv1a1.Timeout{
+					HTTP: &egv1a1.HTTPTimeout{
+						MaxConnectionDuration: ptr.To(gwapiv1.Duration("30s")),
+					},
+				},
+			},
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -160,6 +178,7 @@ func TestTranslate(t *testing.T) {
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
 			perResourceSystemCASecret := false
+			var rateLimitClusterSettings *egv1a1.ClusterSettings
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -170,6 +189,7 @@ func TestTranslate(t *testing.T) {
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
+					rateLimitClusterSettings = config.RateLimitClusterSettings
 				}
 			}
 
@@ -177,6 +197,7 @@ func TestTranslate(t *testing.T) {
 				GatewayControllerName:           egv1a1.GatewayControllerName,
 				GatewayClassName:                "envoy-gateway-class",
 				GlobalRateLimitEnabled:          true,
+				RateLimitClusterSettings:        rateLimitClusterSettings,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,

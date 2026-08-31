@@ -184,14 +184,17 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		return err
 	}
 
-	return addXdsCluster(tCtx, &xdsClusterArgs{
+	args := &xdsClusterArgs{
 		name:         clusterName,
 		settings:     destination.Settings,
 		tSocket:      tSocket,
 		endpointType: endpointType,
 		metrics:      metrics,
 		metadata:     destination.Settings[0].Metadata,
-	})
+	}
+	applyTraffic(args, globalResources.RateLimitClusterTraffic)
+
+	return addXdsCluster(tCtx, args)
 }
 
 // buildEnvoyClientTLSSocket builds the TLS socket for Envoy to connect to the control plane components.
