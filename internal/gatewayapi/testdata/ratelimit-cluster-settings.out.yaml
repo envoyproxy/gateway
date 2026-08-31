@@ -162,12 +162,13 @@ xdsIR:
             sectionName: "8080"
           name: envoy-gateway/gateway-1
           protocol: TCP
-      rateLimitClusterTraffic:
-        circuitBreaker:
-          maxRequestsPerConnection: 10
-        timeout:
-          http:
-            maxConnectionDuration: 30s
+      rateLimitServiceCluster:
+        traffic:
+          circuitBreaker:
+            maxRequestsPerConnection: 10
+          timeout:
+            http:
+              maxConnectionDuration: 30s
     http:
     - address: 0.0.0.0
       externalPort: 80

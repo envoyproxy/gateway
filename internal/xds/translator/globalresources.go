@@ -158,12 +158,16 @@ func createEnvoyClientTLSCertSecret(tCtx *types.ResourceVersionTable, globalReso
 
 func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, globalResources *ir.GlobalResources, metrics *ir.Metrics) error {
 	clusterName := getRateLimitServiceClusterName()
-	destination := globalResources.RateLimitServiceCluster
+	rlsc := globalResources.RateLimitServiceCluster
+	if rlsc == nil {
+		rlsc = &ir.RateLimitServiceCluster{}
+	}
+	destination := &rlsc.RouteDestination
 	// EDS-discovered destinations resolve directly to endpoint IPs, so they use a
 	// STATIC cluster. The DNS fallback below resolves a hostname, so it keeps the
 	// original STRICT_DNS cluster type.
 	endpointType := EndpointTypeStatic
-	if destination == nil {
+	if len(destination.Settings) == 0 {
 		host, port := t.getRateLimitServiceGrpcHostPort()
 		destination = &ir.RouteDestination{
 			Name: clusterName,
@@ -192,7 +196,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		metrics:      metrics,
 		metadata:     destination.Settings[0].Metadata,
 	}
-	applyTraffic(args, globalResources.RateLimitClusterTraffic)
+	applyTraffic(args, rlsc.Traffic)
 
 	return addXdsCluster(tCtx, args)
 }

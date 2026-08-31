@@ -53,19 +53,29 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 				xdsIR.GlobalResources = &ir.GlobalResources{}
 			}
 			if containsGlobalRateLimit(xdsIR.HTTP) {
-				xdsIR.GlobalResources.RateLimitServiceCluster = t.processRateLimitServiceCluster(resources)
+				dest := t.processRateLimitServiceCluster(resources)
 
 				var backendSetting *egv1a1.BackendSettings
-				if t.RateLimitClusterSettings != nil {
+				if t.RateLimitBackendSettings != nil {
 					backendSetting = &egv1a1.BackendSettings{
-						ClusterSettings: *t.RateLimitClusterSettings,
+						ClusterSettings: *t.RateLimitBackendSettings,
 					}
 				}
 				tf, err := translateTrafficFeatures(backendSetting)
 				if err != nil {
 					return fmt.Errorf("invalid rate limit cluster settings: %w", err)
 				}
-				xdsIR.GlobalResources.RateLimitClusterTraffic = tf.ClusterFeatures()
+				traffic := tf.ClusterFeatures()
+
+				// Only populate the field when there's something to say: either a discovered
+				// destination or cluster-scoped traffic settings.
+				if dest != nil || traffic != nil {
+					rlsc := &ir.RateLimitServiceCluster{Traffic: traffic}
+					if dest != nil {
+						rlsc.RouteDestination = *dest
+					}
+					xdsIR.GlobalResources.RateLimitServiceCluster = rlsc
+				}
 			}
 			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
 				Name:        irGlobalConfigName(envoyTLSSecret),

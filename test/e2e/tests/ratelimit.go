@@ -9,13 +9,20 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net"
 	"strconv"
 	"testing"
 	"time"
 
+	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/anypb"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -60,7 +67,99 @@ func init() {
 		RateLimitGlobalShadowModeTest,
 		RateLimitQueryParametersTest,
 		RateLimitGlobalSharedWithCost,
+		RateLimitCluster,
 	)
+}
+
+var RateLimitCluster = suite.ConformanceTest{
+	ShortName:   "RateLimitCluster",
+	Description: "make sure the ratelimit worked as expected",
+	Manifests:   []string{"testdata/ratelimit-cidr-invert-match-always-enforce.yaml"},
+	Test: func(t *testing.T, cts *suite.ConformanceTestSuite) {
+		gwNN := types.NamespacedName{
+			Name:      "same-namespace",
+			Namespace: "gateway-conformance-infra",
+		}
+		// Check the ratelimit cluster in Envoy config dump, and make sure the MaxConnectionDuration is set to 10s.
+		// See test/config/envoy-gateaway-config/gateway-namespace-mode.yaml Line 36 for the ratelimit cluster configuration.
+		if IsGatewayNamespaceMode() {
+			err := wait.PollUntilContextTimeout(t.Context(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+				c, err := getRatelimitCluster(t, cts, gwNN)
+				if err != nil {
+					tlog.Logf(t, "failed to get ratelimit cluster from Envoy config dump: %v", err)
+					return false, nil
+				}
+				data, ok := c.TypedExtensionProtocolOptions["envoy.extensions.upstreams.http.v3.HttpProtocolOptions"]
+				if !ok {
+					return false, fmt.Errorf("ratelimit cluster does not have HttpProtocolOptions")
+				}
+				opts := &httpv3.HttpProtocolOptions{}
+				if err := data.UnmarshalTo(opts); err != nil {
+					return false, err
+				}
+				if opts.CommonHttpProtocolOptions.MaxConnectionDuration.AsDuration() != 10*time.Second {
+					return false, fmt.Errorf("expected MaxConnectionDuration to be 10s, got %v", opts.CommonHttpProtocolOptions.MaxConnectionDuration.AsDuration())
+				}
+				return true, nil
+			})
+			require.NoError(t, err, "failed to get ratelimit cluster from Envoy config dump")
+		}
+	},
+}
+
+func getRatelimitCluster(t *testing.T, cts *suite.ConformanceTestSuite, gwNN types.NamespacedName) (*clusterv3.Cluster, error) {
+	body, err := fetchEnvoyOutput(t, cts,
+		"/config_dump?resource=dynamic_active_clusters",
+		"app.kubernetes.io/name=envoy",
+		"gateway.envoyproxy.io/owning-gateway-name="+gwNN.Name,
+		"gateway.envoyproxy.io/owning-gateway-namespace="+gwNN.Namespace,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	dump := &clusterConfigDump{}
+	if err := json.Unmarshal([]byte(body), dump); err != nil {
+		return nil, err
+	}
+	// The ratelimit cluster name is hardcoded in the Envoy Gateway codebase, so we can just look for it.
+	//
+	// Each element of "configs" is a protobuf message (with well-known types like
+	// google.protobuf.Any and google.protobuf.Timestamp nested inside), so it must be
+	// unmarshalled with protojson rather than encoding/json - encoding/json doesn't
+	// understand proto3 JSON's special-cased representations (e.g. Any's "@type" field,
+	// or Timestamp being encoded as an RFC3339 string) and either silently leaves the
+	// affected fields empty or fails outright.
+	//
+	// The elements themselves are also wrapped as google.protobuf.Any (they carry their
+	// own top-level "@type"), so they must be unwrapped before they can be unmarshalled
+	// into a concrete ClustersConfigDump_DynamicCluster.
+	for _, raw := range dump.Configs {
+		entry := &anypb.Any{}
+		if err := protojson.Unmarshal(raw, entry); err != nil {
+			return nil, err
+		}
+
+		dynCluster := &adminv3.ClustersConfigDump_DynamicCluster{}
+		if err := entry.UnmarshalTo(dynCluster); err != nil {
+			return nil, err
+		}
+
+		// convert to clusterv3.cluster
+		cluster := &clusterv3.Cluster{}
+		if err := dynCluster.GetCluster().UnmarshalTo(cluster); err != nil {
+			return nil, err
+		}
+		if cluster.Name == "ratelimit_cluster" {
+			return cluster, nil
+		}
+	}
+
+	return nil, fmt.Errorf("ratelimit cluster not found in Envoy config dump")
+}
+
+type clusterConfigDump struct {
+	Configs []json.RawMessage `json:"configs,omitempty"`
 }
 
 var RateLimitCIDRMatchTest = suite.ConformanceTest{

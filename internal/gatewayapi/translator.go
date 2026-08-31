@@ -123,10 +123,10 @@ type Translator struct {
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
 
-	// RateLimitClusterSettings holds cluster-level connection settings (circuit breakers,
+	// RateLimitBackendSettings holds cluster-level connection settings (circuit breakers,
 	// timeouts, health checks, etc.) for the rate limit service cluster, as configured on
 	// EnvoyGateway.RateLimit.ClusterSettings.
-	RateLimitClusterSettings *egv1a1.ClusterSettings
+	RateLimitBackendSettings *egv1a1.ClusterSettings
 
 	// EndpointRoutingDisabled can be set to true to use
 	// the Service Cluster IP for routing to the backend

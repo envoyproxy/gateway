@@ -30,6 +30,10 @@ data:
         type: Redis
         redis:
           url: redis.redis-system.svc.cluster.local:6379
+      backendSettings:
+        timeout:
+          http:
+            maxConnectionDuration: 10s
     telemetry:
       traces:
         sink:
