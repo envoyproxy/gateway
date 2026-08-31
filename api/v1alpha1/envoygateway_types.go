@@ -673,6 +673,12 @@ type RateLimit struct {
 	// Telemetry defines telemetry configuration for RateLimit.
 	// +optional
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+
+	// ClusterSettings holds configuration for managing the connection to the rate limit
+	// service, such as circuit breakers, timeouts, health checks, and load balancing.
+	//
+	// +optional
+	ClusterSettings *ClusterSettings `json:"clusterSettings,omitempty"`
 }
 
 type RateLimitTelemetry struct {

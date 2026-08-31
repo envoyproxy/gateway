@@ -2884,6 +2884,10 @@ type GlobalResources struct {
 	RateLimitServiceCluster *RouteDestination `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
 	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
+	// RateLimitClusterTraffic holds cluster-scoped traffic settings (circuit breakers, timeouts,
+	// health checks, etc.) for the rate limit service cluster, translated from
+	// EnvoyGateway.RateLimit.ClusterSettings.
+	RateLimitClusterTraffic *ClusterTrafficFeatures `json:"rateLimitClusterTraffic,omitempty" yaml:"rateLimitClusterTraffic,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.
 	// TODO: zhaohuabing move HMACSecret here
 	// HMACSecret PrivateBytes
