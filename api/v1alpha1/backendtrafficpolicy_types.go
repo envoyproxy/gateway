@@ -45,7 +45,7 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'])))", message="mergeType can only be used with xRoute targets"
 // +kubebuilder:validation:XValidation:rule="!has(self.compression) || !has(self.compressor)", message="either compression or compressor can be set, not both"
-// +kubebuilder:validation:XValidation:rule="!has(self.requestBuffer) || self.requestBuffer.mode == 'LimitOnly' || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0", message="requestBuffer with mode FullBuffer cannot be used together with httpUpgrade"
+// +kubebuilder:validation:XValidation:rule="!has(self.requestBuffer) || self.requestBuffer.mode == 'LimitOnly' || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0", message="requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"
 // +kubebuilder:validation:XValidation:rule="!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute'])))", message="admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets"
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
@@ -117,7 +117,7 @@ type BackendTrafficPolicySpec struct {
 	ResponseOverride []*ResponseOverride `json:"responseOverride,omitempty"`
 	// HTTPUpgrade defines the configuration for HTTP protocol upgrades.
 	// If not specified, the default upgrade configuration (websocket) will be used.
-	// However, if requestBuffer is configured with mode FullBuffer, the default
+	// However, if requestBuffer is configured with mode BufferAndLimit, the default
 	// upgrade configuration will be ignored.
 	//
 	// +patchMergeKey=type
@@ -208,7 +208,7 @@ type RequestBuffer struct {
 	// If a request's buffered body exceeds this limit, the request is rejected with HTTP 413 Content
 	// Too Large.
 	//
-	// In FullBuffer mode the entire body is always buffered, so this acts as a maximum request body size.
+	// In BufferAndLimit mode the entire body is always buffered, so this acts as a maximum request body size.
 	// In LimitOnly mode only what a filter later in the chain actually buffers counts against the limit,
 	// so a streamed request that nothing buffers can exceed it and still be forwarded upstream.
 	//
@@ -218,9 +218,13 @@ type RequestBuffer struct {
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	Limit resource.Quantity `json:"limit,omitempty"`
 
-	// Mode determines how Limit is enforced. Defaults to FullBuffer.
+	// Mode determines how Limit is enforced. Defaults to BufferAndLimit.
 	//
-	// FullBuffer makes the gateway receive each request from the client in full before it starts sending
+	// Limit applies in both modes: it is always set as the request body buffer limit for the route. Mode
+	// only controls whether the gateway additionally buffers the whole request body itself, which is what
+	// makes Limit a guaranteed maximum request body size.
+	//
+	// BufferAndLimit makes the gateway receive each request from the client in full before it starts sending
 	// the request upstream to the backends. This can be helpful to shield your backend servers from slow
 	// clients, and Limit acts as a maximum request body size for the route.
 	// Buffering whole request bodies costs memory and adds latency, so this mode should only be used when
@@ -231,7 +235,7 @@ type RequestBuffer struct {
 	//
 	// LimitOnly only raises how much of a request body the gateway is allowed to buffer, without buffering
 	// requests itself. Use this mode when something later in the request path (ext_proc, Lua, Wasm, ...)
-	// buffers the request body and the default limit is too small. Unlike FullBuffer, this mode is
+	// buffers the request body and the default limit is too small. Unlike BufferAndLimit, this mode is
 	// compatible with streaming APIs and protocol upgrades, because the gateway does not wait for the whole
 	// request body before forwarding it upstream.
 	//
@@ -240,20 +244,21 @@ type RequestBuffer struct {
 	// read/write buffering and back pressure. There is no need to raise the connection buffer limits for
 	// Limit to take effect.
 	//
-	// +kubebuilder:default=FullBuffer
+	// +kubebuilder:default=BufferAndLimit
 	// +optional
 	Mode *RequestBufferMode `json:"mode,omitempty"`
 }
 
 // RequestBufferMode determines how RequestBuffer.Limit is applied.
 //
-// +kubebuilder:validation:Enum=FullBuffer;LimitOnly
+// +kubebuilder:validation:Enum=BufferAndLimit;LimitOnly
 type RequestBufferMode string
 
 const (
-	// RequestBufferModeFullBuffer buffers the entire request body in the gateway before forwarding the
-	// request upstream. It is incompatible with streaming APIs and protocol upgrades.
-	RequestBufferModeFullBuffer RequestBufferMode = "FullBuffer"
+	// RequestBufferModeBufferAndLimit buffers the entire request body in the gateway before forwarding the
+	// request upstream, so Limit acts as a maximum request body size. It is incompatible with streaming
+	// APIs and protocol upgrades.
+	RequestBufferModeBufferAndLimit RequestBufferMode = "BufferAndLimit"
 
 	// RequestBufferModeLimitOnly only raises the request body buffer limit for the route, without
 	// enabling full request buffering.

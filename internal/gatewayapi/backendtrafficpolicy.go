@@ -1566,7 +1566,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 	if rb != nil && len(httpUpgrade) > 0 {
-		err = errors.New("requestBuffer with mode FullBuffer cannot be used together with httpUpgrade")
+		err = errors.New("requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade")
 		err = perr.WithMessage(err, "RequestBuffer")
 		errs = errors.Join(errs, err)
 	}
@@ -2358,7 +2358,7 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, *uint64,
 		return nil, nil, fmt.Errorf("limit value %s is out of range, must be greater than 0", spec.Limit.String())
 	}
 
-	if ptr.Deref(spec.Mode, egv1a1.RequestBufferModeFullBuffer) == egv1a1.RequestBufferModeLimitOnly {
+	if ptr.Deref(spec.Mode, egv1a1.RequestBufferModeBufferAndLimit) == egv1a1.RequestBufferModeLimitOnly {
 		// The route-level request body buffer limit is a uint64, so it is not capped at MaxUint32 like
 		// the Buffer filter is. Anything above MaxInt64 is already rejected by the AsInt64 check above.
 		return nil, new(uint64(maxBytes)), nil

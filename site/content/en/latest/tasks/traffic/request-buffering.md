@@ -11,14 +11,14 @@ If the target of the BackendTrafficPolicy is a Gateway, the configuration will b
 Configuring `requestBuffer` requires specifying a size limit. Any request whose buffered body is larger than the limit will stop the
 buffering and return a HTTP 413 Content Too Large response. The `requestBuffer.mode` field selects how that limit is enforced:
 
-- `FullBuffer` (the default) stops filter iteration and waits for a fully buffered complete request before forwarding it upstream, using the
+- `BufferAndLimit` (the default) stops filter iteration and waits for a fully buffered complete request before forwarding it upstream, using the
   [Envoy buffer filter]. This is useful in several situations, including protecting applications from having to deal with partial requests
   and high network latency.
 - `LimitOnly` only raises the request body buffer limit for the route, without enabling full request buffering. Use it when a filter later
   in the chain — such as ext_proc, Lua, or WASM — buffers the request body and the default buffer limit is too small.
 
-Warning: `FullBuffer` requires Envoy to fully receive the request before forwarding it upstream. This does not work with streaming or
-upgrade-based traffic such as gRPC streaming and WebSocket. Using `FullBuffer` for those routes can cause requests to hang indefinitely
+Warning: `BufferAndLimit` requires Envoy to fully receive the request before forwarding it upstream. This does not work with streaming or
+upgrade-based traffic such as gRPC streaming and WebSocket. Using `BufferAndLimit` for those routes can cause requests to hang indefinitely
 because the request may never be forwarded upstream. Use full request buffering only on non-streaming HTTP request flows, or use
 `LimitOnly` instead, which is compatible with streaming and protocol upgrades.
 

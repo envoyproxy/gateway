@@ -79,7 +79,7 @@ backendTrafficPolicies:
       name: httproute-2
     requestBuffer:
       limit: 4Mi
-      mode: FullBuffer
+      mode: BufferAndLimit
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:

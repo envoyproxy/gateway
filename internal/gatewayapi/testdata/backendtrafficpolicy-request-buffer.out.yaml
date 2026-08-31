@@ -7,7 +7,7 @@ backendTrafficPolicies:
   spec:
     requestBuffer:
       limit: 4Mi
-      mode: FullBuffer
+      mode: BufferAndLimit
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute

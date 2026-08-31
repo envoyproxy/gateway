@@ -12,7 +12,7 @@
 #   that is rejected with HTTP 413.
 # - request-buffer-limit-only-high sets requestBuffer with mode LimitOnly and a 1Mi
 #   limit, which raises the stream decoder buffer limit so the same body is buffered
-#   and forwarded (200). Unlike mode FullBuffer, the Buffer filter is not inserted.
+#   and forwarded (200). Unlike mode BufferAndLimit, the Buffer filter is not inserted.
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

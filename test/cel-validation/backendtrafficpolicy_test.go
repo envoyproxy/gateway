@@ -3610,7 +3610,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.requestBuffer.mode: Unsupported value: \"Foo\": supported values: \"FullBuffer\", \"LimitOnly\"",
+				"spec.requestBuffer.mode: Unsupported value: \"Foo\": supported values: \"BufferAndLimit\", \"LimitOnly\"",
 			},
 		},
 		{
@@ -3630,7 +3630,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					RequestBuffer: &egv1a1.RequestBuffer{
 						Limit: resource.MustParse("1Mi"),
-						Mode:  new(egv1a1.RequestBufferModeFullBuffer),
+						Mode:  new(egv1a1.RequestBufferModeBufferAndLimit),
 					},
 					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
 						{
@@ -3639,7 +3639,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"requestBuffer with mode FullBuffer cannot be used together with httpUpgrade"},
+			wantErrors: []string{"requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"},
 		},
 		{
 			desc: "request buffer with defaulted mode and websocket upgrade",
@@ -3666,7 +3666,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"requestBuffer with mode FullBuffer cannot be used together with httpUpgrade"},
+			wantErrors: []string{"requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"},
 		},
 		{
 			desc: "request buffer with connect upgrade",
@@ -3693,7 +3693,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"requestBuffer with mode FullBuffer cannot be used together with httpUpgrade"},
+			wantErrors: []string{"requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"},
 		},
 		{
 			desc: "http with connect config",

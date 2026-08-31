@@ -218,7 +218,7 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 		}
 
 		tf, err := tr.buildTrafficFeatures(policy, nil)
-		require.ErrorContains(t, err, "RequestBuffer: requestBuffer with mode FullBuffer cannot be used together with httpUpgrade")
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})
 
@@ -244,7 +244,7 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 		require.NoError(t, err)
 
 		tf, err := tr.buildTrafficFeatures(mergedPolicy, owners)
-		require.ErrorContains(t, err, "RequestBuffer: requestBuffer with mode FullBuffer cannot be used together with httpUpgrade")
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})
 }
@@ -272,13 +272,13 @@ func TestBuildTrafficFeaturesRequestBufferMode(t *testing.T) {
 		require.Equal(t, new(uint64(1024*1024)), tf.RequestBodyBufferLimit)
 	})
 
-	t.Run("mode FullBuffer only sets the buffer filter", func(t *testing.T) {
+	t.Run("mode BufferAndLimit only sets the buffer filter", func(t *testing.T) {
 		tr := &Translator{}
 		policy := &egv1a1.BackendTrafficPolicy{
 			Spec: egv1a1.BackendTrafficPolicySpec{
 				RequestBuffer: &egv1a1.RequestBuffer{
 					Limit: resource.MustParse("1Mi"),
-					Mode:  new(egv1a1.RequestBufferModeFullBuffer),
+					Mode:  new(egv1a1.RequestBufferModeBufferAndLimit),
 				},
 			},
 		}
@@ -290,7 +290,7 @@ func TestBuildTrafficFeaturesRequestBufferMode(t *testing.T) {
 		require.Nil(t, tf.RequestBodyBufferLimit)
 	})
 
-	t.Run("an unset mode defaults to FullBuffer", func(t *testing.T) {
+	t.Run("an unset mode defaults to BufferAndLimit", func(t *testing.T) {
 		tr := &Translator{}
 		policy := &egv1a1.BackendTrafficPolicy{
 			Spec: egv1a1.BackendTrafficPolicySpec{
@@ -312,7 +312,7 @@ func TestBuildTrafficFeaturesRequestBufferMode(t *testing.T) {
 		policy := &egv1a1.BackendTrafficPolicy{
 			Spec: egv1a1.BackendTrafficPolicySpec{
 				RequestBuffer: &egv1a1.RequestBuffer{
-					// Rejected under FullBuffer, but the route-level limit is a uint64.
+					// Rejected under BufferAndLimit, but the route-level limit is a uint64.
 					Limit: resource.MustParse("5000Mi"),
 					Mode:  new(egv1a1.RequestBufferModeLimitOnly),
 				},
@@ -328,7 +328,7 @@ func TestBuildTrafficFeaturesRequestBufferMode(t *testing.T) {
 	t.Run("an omitted limit is rejected in both modes", func(t *testing.T) {
 		for _, mode := range []*egv1a1.RequestBufferMode{
 			nil,
-			new(egv1a1.RequestBufferModeFullBuffer),
+			new(egv1a1.RequestBufferModeBufferAndLimit),
 			new(egv1a1.RequestBufferModeLimitOnly),
 		} {
 			tr := &Translator{}
