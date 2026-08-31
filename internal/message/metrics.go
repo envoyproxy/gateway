@@ -28,7 +28,8 @@ var (
 	watchableSubscribeDurationSeconds = metrics.NewHistogram(
 		"watchable_subscribe_duration_seconds",
 		"How long in seconds a subscribed watchable queue is handled.",
-		[]float64{0.001, 0.01, 0.1, 1, 5, 10, 30, 60, 120},
+		// Same spacing as the k8s rest client metrics, extended to 120s.
+		[]float64{0.005, 0.025, 0.1, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 15.0, 30.0, 60.0, 120.0},
 	)
 
 	watchableSubscribeTotal = metrics.NewCounter(

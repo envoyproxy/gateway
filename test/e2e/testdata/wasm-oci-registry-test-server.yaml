@@ -34,13 +34,22 @@ spec:
           value: Registry Realm
         - name: REGISTRY_AUTH_HTPASSWD_PATH
           value: /auth/htpasswd
+        - name: REGISTRY_HTTP_TLS_CERTIFICATE
+          value: /certs/tls.crt
+        - name: REGISTRY_HTTP_TLS_KEY
+          value: /certs/tls.key
         volumeMounts:
         - name: htpasswd
           mountPath: /auth
+        - name: tls
+          mountPath: /certs
       volumes:
       - name: htpasswd
         configMap:
           name: htpasswd
+      - name: tls
+        secret:
+          secretName: oci-registry-tls
 ---
 apiVersion: v1
 kind: Service

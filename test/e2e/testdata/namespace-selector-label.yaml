@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: namespace-selector-relabel-app
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: namespace-selector-relabel
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-e2e-access: granted
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: namespace-selector-relabel-backend
+  namespace: namespace-selector-relabel-app
+spec:
+  selector:
+    app: namespace-selector-relabel-backend
+  ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: namespace-selector-relabel-route
+  namespace: namespace-selector-relabel-app
+spec:
+  parentRefs:
+    - name: namespace-selector-relabel
+      namespace: gateway-conformance-infra
+  rules:
+    - backendRefs:
+        - name: namespace-selector-relabel-backend
+          port: 8080

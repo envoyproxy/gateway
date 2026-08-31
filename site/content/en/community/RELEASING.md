@@ -256,6 +256,8 @@ export GITHUB_REMOTE=origin
    ```
 
 17. Update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
+18. Update the configuration of the dependabot for the release branch to ensure that it is using the correct version of the dependencies.
+19. Update the previous version with `make_latest: false` like [PR #9888](https://github.com/envoyproxy/gateway/pull/9888).
 
 If you find any bugs in this process, please create an issue.
 

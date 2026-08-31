@@ -43,7 +43,7 @@ func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXd
 		}
 
 		if containsGlobalRateLimit(irXds.HTTP) {
-			if err := t.createRateLimitServiceCluster(tCtx, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
+			if err := t.createRateLimitServiceCluster(tCtx, irXds.GlobalResources, irXds.Metrics); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -156,31 +156,41 @@ func createEnvoyClientTLSCertSecret(tCtx *types.ResourceVersionTable, globalReso
 	return nil
 }
 
-func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, envoyClientCertificate *ir.TLSCertificate, metrics *ir.Metrics) error {
+func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, globalResources *ir.GlobalResources, metrics *ir.Metrics) error {
 	clusterName := getRateLimitServiceClusterName()
-	// Create cluster if it does not exist
-	host, port := t.getRateLimitServiceGrpcHostPort()
-	ds := &ir.DestinationSetting{
-		Weight:    new(uint32(1)),
-		Protocol:  ir.GRPC,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
-		Name:      destinationSettingName(clusterName),
-		// TODO: tracked with issue #6861
-		Metadata: nil,
+	destination := globalResources.RateLimitServiceCluster
+	// EDS-discovered destinations resolve directly to endpoint IPs, so they use a
+	// STATIC cluster. The DNS fallback below resolves a hostname, so it keeps the
+	// original STRICT_DNS cluster type.
+	endpointType := EndpointTypeStatic
+	if destination == nil {
+		host, port := t.getRateLimitServiceGrpcHostPort()
+		destination = &ir.RouteDestination{
+			Name: clusterName,
+			Settings: []*ir.DestinationSetting{{
+				Weight:    new(uint32(1)),
+				Protocol:  ir.GRPC,
+				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
+				Name:      destinationSettingName(clusterName),
+				// TODO: tracked with issue #6861
+				Metadata: nil,
+			}},
+		}
+		endpointType = EndpointTypeDNS
 	}
 
-	tSocket, err := buildEnvoyClientTLSSocket(envoyClientCertificate)
+	tSocket, err := buildEnvoyClientTLSSocket(globalResources.EnvoyClientCertificate)
 	if err != nil {
 		return err
 	}
 
 	return addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         clusterName,
-		settings:     []*ir.DestinationSetting{ds},
+		settings:     destination.Settings,
 		tSocket:      tSocket,
-		endpointType: EndpointTypeDNS,
+		endpointType: endpointType,
 		metrics:      metrics,
-		metadata:     ds.Metadata,
+		metadata:     destination.Settings[0].Metadata,
 	})
 }
 
@@ -235,7 +245,7 @@ func containsWasm(httpListeners []*ir.HTTPListener) bool {
 func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTable, envoyClientCertificate *ir.TLSCertificate, metrics *ir.Metrics) error {
 	ds := &ir.DestinationSetting{
 		Weight:    new(uint32(1)),
-		Protocol:  ir.GRPC,
+		Protocol:  ir.HTTP2,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
 		Name:      destinationSettingName(wasmHTTPServiceClusterName),
 		// TODO: tracked with issue #6861
