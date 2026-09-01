@@ -53,7 +53,7 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     namespace: envoy-gateway
-    name: policy-for-gateway  # This policy should attach httproute-2
+    name: policy-for-gateway
     uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
   spec:
     targetRef:
@@ -69,10 +69,5 @@ securityPolicies:
       redirectURL: "https://www.example.com/bar/oauth2/callback"
       logoutPath: "/bar/logout"
       cookieNames:
-        accessToken: "CustomAccessTokenCookie"
-        oauthHmac: "CustomOauthHMACCookie"
-        oauthExpires: "CustomOauthExpiresCookie"
-        idToken: "CustomIdTokenCookie"
-        refreshToken: "CustomRefreshTokenCookie"
-        oauthNonce: "CustomOauthNonceCookie"
-        codeVerifier: "CustomCodeVerifierCookie"
+        suffix: "checkout"
+        idToken: "myapp_id_token"
