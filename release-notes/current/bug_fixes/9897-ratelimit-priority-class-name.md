@@ -1,0 +1,1 @@
+Fixed `rateLimitDeployment.pod.priorityClassName` being ignored when rendering the rate limit Deployment, so the configured PriorityClass is now applied to the rate limit pod the same way it is for the Envoy Proxy deployment.
