@@ -52,7 +52,7 @@ func TestE2E(t *testing.T) {
 			tests.DynamicResolverBackendTest.ShortName,
 			tests.DynamicResolverBackendWithTLSTest.ShortName,
 			tests.RateLimitCIDRMatchTest.ShortName,
-			tests.RateLimitCIDRInvertMatchAlwaysEnforceTest.ShortName,
+			tests.RateLimitCIDRInvertMatchAlwaysEnforce.ShortName,
 			tests.RateLimitCIDRInvertAlwaysExemptTest.ShortName,
 			tests.RateLimitMultipleListenersTest.ShortName,
 			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
@@ -84,7 +84,7 @@ func TestE2E(t *testing.T) {
 	// All e2e tests should leave Features empty.
 	suiteOpts.SupportedFeatures = enabledFeatures.UnsortedList()
 	suiteOpts.SkipTests = skipTests
-	suiteOpts.FailFast = true
+	// suiteOpts.FailFast = true
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:              c,
 		RestConfig:          cfg,
