@@ -62,6 +62,17 @@ type ResourceRender struct {
 	// controllerNamespace is the namespace used for Envoy Gateway controller.
 	controllerNamespace string
 
+	// controllerSAName is the service account name of the Envoy Gateway controller pod.
+	controllerSAName string
+
+	// controllerName is the well-known name of the Envoy Gateway controller's own resources
+	// (Deployment, Service, ServiceAccount). Used to detect naming collision attacks.
+	controllerName string
+
+	// controllerFullName is the Helm release fullname (eg.fullname) used for certgen and other
+	// release-scoped resources.
+	controllerFullName string
+
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 
@@ -80,6 +91,9 @@ type ResourceRender struct {
 // KubernetesInfraProvider provide information for initializing the proxy resource render.
 type KubernetesInfraProvider interface {
 	GetControllerNamespace() string
+	GetControllerName() string
+	GetControllerFullName() string
+	GetControllerServiceAccountName() string
 	GetDNSDomain() string
 	GetEnvoyGateway() *egv1a1.EnvoyGateway
 	GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error)
@@ -95,6 +109,9 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 	return &ResourceRender{
 		envoyNamespace:           kubeInfra.GetResourceNamespace(infra),
 		controllerNamespace:      kubeInfra.GetControllerNamespace(),
+		controllerName:           kubeInfra.GetControllerName(),
+		controllerFullName:       kubeInfra.GetControllerFullName(),
+		controllerSAName:         kubeInfra.GetControllerServiceAccountName(),
 		DNSDomain:                kubeInfra.GetDNSDomain(),
 		infra:                    infra.GetProxyInfra(),
 		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
@@ -113,6 +130,94 @@ func (r *ResourceRender) serviceAccountName() string {
 	}
 
 	return r.Name()
+}
+
+// validateName returns an error if the resource name collides with a controller-owned name
+// in ControllerNamespace mode.
+func (r *ResourceRender) validateName(name string) error {
+	if r.GatewayNamespaceMode || r.controllerName == "" {
+		return nil
+	}
+	if name == r.controllerName || name == r.controllerName+"-config" {
+		return fmt.Errorf("resource name %q is reserved for the Envoy Gateway controller "+
+			"and cannot be used in a gateway deployment", name)
+	}
+	return nil
+}
+
+// validatePodSpec returns an error if the pod spec references controller-owned resources
+// in ControllerNamespace mode.
+func (r *ResourceRender) validatePodSpec(pod *corev1.PodSpec) error {
+	if r.GatewayNamespaceMode {
+		return nil
+	}
+	if r.controllerSAName != "" && pod.ServiceAccountName == r.controllerSAName {
+		return fmt.Errorf("serviceAccountName %q is reserved for the Envoy Gateway controller "+
+			"and cannot be used in a gateway deployment", pod.ServiceAccountName)
+	}
+	if r.controllerFullName != "" && pod.ServiceAccountName == r.controllerFullName+"-certgen" {
+		return fmt.Errorf("serviceAccountName %q is reserved for the Envoy Gateway controller "+
+			"and cannot be used in a gateway deployment", pod.ServiceAccountName)
+	}
+	for i := range pod.Volumes {
+		vol := &pod.Volumes[i]
+		if vol.Secret != nil && vol.Secret.SecretName == r.controllerName {
+			return fmt.Errorf("volume %q references secret %q which is reserved for the Envoy Gateway controller",
+				vol.Name, vol.Secret.SecretName)
+		}
+		if vol.ConfigMap != nil &&
+			(vol.ConfigMap.Name == r.controllerName || vol.ConfigMap.Name == r.controllerName+"-config") {
+			return fmt.Errorf("volume %q references configmap %q which is reserved for the Envoy Gateway controller",
+				vol.Name, vol.ConfigMap.Name)
+		}
+		if vol.Projected != nil {
+			for _, src := range vol.Projected.Sources {
+				if src.Secret != nil && src.Secret.Name == r.controllerName {
+					return fmt.Errorf("volume %q references secret %q which is reserved for the Envoy Gateway controller",
+						vol.Name, src.Secret.Name)
+				}
+				if src.ConfigMap != nil &&
+					(src.ConfigMap.Name == r.controllerName || src.ConfigMap.Name == r.controllerName+"-config") {
+					return fmt.Errorf("volume %q references configmap %q which is reserved for the Envoy Gateway controller",
+						vol.Name, src.ConfigMap.Name)
+				}
+			}
+		}
+	}
+	for _, containers := range [][]corev1.Container{pod.Containers, pod.InitContainers} {
+		for i := range containers {
+			c := &containers[i]
+			for _, env := range c.Env {
+				if env.ValueFrom == nil {
+					continue
+				}
+				if env.ValueFrom.SecretKeyRef != nil &&
+					env.ValueFrom.SecretKeyRef.Name == r.controllerName {
+					return fmt.Errorf("env var %q in container %q references secret %q which is reserved for the Envoy Gateway controller",
+						env.Name, c.Name, r.controllerName)
+				}
+				if env.ValueFrom.ConfigMapKeyRef != nil &&
+					(env.ValueFrom.ConfigMapKeyRef.Name == r.controllerName ||
+						env.ValueFrom.ConfigMapKeyRef.Name == r.controllerName+"-config") {
+					return fmt.Errorf("env var %q in container %q references configmap %q which is reserved for the Envoy Gateway controller",
+						env.Name, c.Name, env.ValueFrom.ConfigMapKeyRef.Name)
+				}
+			}
+			for _, envFrom := range c.EnvFrom {
+				if envFrom.SecretRef != nil && envFrom.SecretRef.Name == r.controllerName {
+					return fmt.Errorf("envFrom in container %q references secret %q which is reserved for the Envoy Gateway controller",
+						c.Name, envFrom.SecretRef.Name)
+				}
+				if envFrom.ConfigMapRef != nil &&
+					(envFrom.ConfigMapRef.Name == r.controllerName ||
+						envFrom.ConfigMapRef.Name == r.controllerName+"-config") {
+					return fmt.Errorf("envFrom in container %q references configmap %q which is reserved for the Envoy Gateway controller",
+						c.Name, envFrom.ConfigMapRef.Name)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (r *ResourceRender) Name() string {
@@ -309,6 +414,10 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		return nil, err
 	}
 
+	if err := r.validateName(svc.Name); err != nil {
+		return nil, err
+	}
+
 	return svc, nil
 }
 
@@ -459,6 +568,14 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		return nil, err
 	}
 
+	if err := r.validateName(deployment.Name); err != nil {
+		return nil, err
+	}
+
+	if err := r.validatePodSpec(&deployment.Spec.Template.Spec); err != nil {
+		return nil, err
+	}
+
 	return deployment, nil
 }
 
@@ -530,6 +647,9 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 		return nil, err
 	}
 
+	if err := r.validatePodSpec(&daemonSet.Spec.Template.Spec); err != nil {
+		return nil, err
+	}
 	return daemonSet, nil
 }
 

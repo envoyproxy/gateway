@@ -1,0 +1,2 @@
+
+Prevent user-defined proxies from conflicting with or using controller-owned resources in ControllerNamespace mode. The following are now rejected: resource names colliding with `envoy-gateway` or `envoy-gateway-config`; service account names matching the controller's own SA or the certgen SA (`<fullname>-certgen`, where `<fullname>` is the Helm release fullname, defaulting to `envoy-gateway`); volumes mounting the `envoy-gateway` Secret or ConfigMap; and environment variables referencing those resources via `secretKeyRef`, `configMapKeyRef`, or `envFrom`.
