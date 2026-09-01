@@ -31,7 +31,14 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, MetricTest, MetricWorkqueueAndRestclientTest, MetricCompressorTest, OtelMetricPrefixTest)
+	ConformanceTests = append(ConformanceTests,
+		MetricTest,
+		MetricWorkqueueAndRestclientTest,
+		MetricCompressorGzipTest,
+		MetricCompressorBrotliTest,
+		MetricCompressorZstdTest,
+		OtelMetricPrefixTest,
+	)
 }
 
 var MetricTest = suite.ConformanceTest{
@@ -144,21 +151,33 @@ var MetricWorkqueueAndRestclientTest = suite.ConformanceTest{
 	},
 }
 
-var MetricCompressorTest = suite.ConformanceTest{
-	ShortName:   "MetricCompressor",
-	Description: "Make sure metric is working with compressor",
-	Manifests:   []string{"testdata/metric-compressor.yaml"},
+// MetricCompressorGzipTest, MetricCompressorBrotliTest and MetricCompressorZstdTest are split into
+// separate ConformanceTests (each with its own manifest) rather than one test applying all three
+// Gateways/Services at once, so MetalLB isn't asked to assign three LoadBalancer IPs at the same time.
+var MetricCompressorGzipTest = suite.ConformanceTest{
+	ShortName:   "MetricCompressorGzip",
+	Description: "Make sure metric is working with gzip compressor",
+	Manifests:   []string{"testdata/metric-compressor-gzip.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ns := "gateway-conformance-infra"
-		t.Run("gzip", func(t *testing.T) {
-			runMetricCompressorTest(t, suite, ns, egv1a1.GzipCompressorType)
-		})
-		t.Run("brotli", func(t *testing.T) {
-			runMetricCompressorTest(t, suite, ns, egv1a1.BrotliCompressorType)
-		})
-		t.Run("zstd", func(t *testing.T) {
-			runMetricCompressorTest(t, suite, ns, egv1a1.ZstdCompressorType)
-		})
+		runMetricCompressorTest(t, suite, "gateway-conformance-infra", egv1a1.GzipCompressorType)
+	},
+}
+
+var MetricCompressorBrotliTest = suite.ConformanceTest{
+	ShortName:   "MetricCompressorBrotli",
+	Description: "Make sure metric is working with brotli compressor",
+	Manifests:   []string{"testdata/metric-compressor-brotli.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		runMetricCompressorTest(t, suite, "gateway-conformance-infra", egv1a1.BrotliCompressorType)
+	},
+}
+
+var MetricCompressorZstdTest = suite.ConformanceTest{
+	ShortName:   "MetricCompressorZstd",
+	Description: "Make sure metric is working with zstd compressor",
+	Manifests:   []string{"testdata/metric-compressor-zstd.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		runMetricCompressorTest(t, suite, "gateway-conformance-infra", egv1a1.ZstdCompressorType)
 	},
 }
 
@@ -244,7 +263,7 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 	statsAddr := fmt.Sprintf("http://%s/stats/prometheus", statsHost)
 	tlog.Logf(t, "check stats from %s", statsAddr)
 
-	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+	err := wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 		if err := checkStatsEncoding(suite, statsAddr, compressorType); err != nil {
 			tlog.Logf(t, "failed to check stats encoding: %v", err)
 			return false, nil

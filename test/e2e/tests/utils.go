@@ -84,6 +84,10 @@ func TimeoutConfig() config.TimeoutConfig {
 	return timeout
 }
 
+func WaitForPodsReady(t *testing.T, cl client.Client, namespace string, selectors map[string]string) {
+	WaitForPods(t, cl, namespace, selectors, corev1.PodRunning, &PodReady)
+}
+
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
 func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition *corev1.PodCondition) {
