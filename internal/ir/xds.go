@@ -1550,6 +1550,8 @@ type OIDC struct {
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
 	// These cookies are set by the oauth filter, including: AccessToken,
 	// OauthHMAC, OauthExpires, IdToken, RefreshToken, OauthNonce and CodeVerifier.
+	// It defaults to a digest of the policy identity, and can be pinned by the user
+	// through the OIDC cookieNames.suffix field.
 	CookieSuffix string `json:"cookieSuffix,omitempty"`
 
 	// CookieNameOverrides can optionally override the generated name of the cookies set by the oauth filter.

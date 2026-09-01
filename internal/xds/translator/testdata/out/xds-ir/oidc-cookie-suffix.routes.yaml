@@ -18,8 +18,6 @@
           config:
             authScopes:
             - openid
-            - email
-            - profile
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
             cookieConfigs:
@@ -30,13 +28,13 @@
             credentials:
               clientId: client.oauth.foo.com
               cookieNames:
-                bearerToken: AccessToken-5F93C2E4
-                codeVerifier: CodeVerifier-5F93C2E4
-                idToken: IdToken-5F93C2E4
-                oauthExpires: OauthExpires-5F93C2E4
-                oauthHmac: OauthHMAC-5F93C2E4
-                oauthNonce: OauthNonce-5F93C2E4
-                refreshToken: RefreshToken-5F93C2E4
+                bearerToken: AccessToken-checkout
+                codeVerifier: CodeVerifier-checkout
+                idToken: IdToken-checkout
+                oauthExpires: OauthExpires-checkout
+                oauthHmac: OauthHMAC-checkout
+                oauthNonce: OauthNonce-checkout
+                refreshToken: RefreshToken-checkout
               hmacSecret:
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-first-route
                 sdsConfig:
@@ -47,21 +45,11 @@
                 sdsConfig:
                   ads: {}
                   resourceApiVersion: V3
-            csrfTokenExpiresIn: 2100s
-            defaultExpiresIn: 3600s
-            defaultRefreshTokenExpiresIn: 172800s
-            endSessionEndpoint: https://oauth.foo.com/logout
-            forwardBearerToken: true
-            forwardIdToken:
-              header: X-ID-Token
-            postLogoutRedirectUri:
-              uri: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/foo/loggedout'
+            preserveAuthorizationHeader: true
             redirectPathMatcher:
               path:
                 exact: /foo/oauth2/callback
             redirectUri: https://www.example.com/foo/oauth2/callback
-            resources:
-            - api
             signoutPath:
               path:
                 exact: /foo/logout
@@ -84,8 +72,6 @@
           config:
             authScopes:
             - openid
-            - email
-            - profile
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
             cookieConfigs:
@@ -97,13 +83,13 @@
               clientId: client.oauth.bar.com
               cookieDomain: example.com
               cookieNames:
-                bearerToken: CustomAccessTokenOverride
-                codeVerifier: CustomCodeVerifierOverride
-                idToken: CustomIdTokenOverride
-                oauthExpires: CustomOauthExpiresOverride
-                oauthHmac: CustomOauthHMACOverride
-                oauthNonce: CustomOauthNonceOverride
-                refreshToken: CustomRefreshTokenOverride
+                bearerToken: myapp_access_token
+                codeVerifier: CodeVerifier-checkout
+                idToken: myapp_id_token
+                oauthExpires: OauthExpires-checkout
+                oauthHmac: OauthHMAC-checkout
+                oauthNonce: OauthNonce-checkout
+                refreshToken: RefreshToken-checkout
               hmacSecret:
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-second-route
                 sdsConfig:
@@ -114,35 +100,11 @@
                 sdsConfig:
                   ads: {}
                   resourceApiVersion: V3
-            denyRedirectMatcher:
-            - name: test-exact
-              stringMatch:
-                exact: /api
-            - name: test-regex
-              stringMatch:
-                safeRegex:
-                  regex: .*
-            - name: test-suffix
-              stringMatch:
-                suffix: bar
-            - name: test-prefix
-              stringMatch:
-                prefix: foo
-            - name: test-no-type
-              stringMatch:
-                exact: foobar
-            disableTokenEncryption: true
-            endSessionEndpoint: https://oauth.bar.com/logout
-            forwardIdToken:
-              header: Authorization
-            postLogoutRedirectUri:
-              disabled: true
+            preserveAuthorizationHeader: true
             redirectPathMatcher:
               path:
                 exact: /bar/oauth2/callback
             redirectUri: https://www.example.com/bar/oauth2/callback
-            resources:
-            - api
             signoutPath:
               path:
                 exact: /bar/logout
@@ -151,4 +113,4 @@
               cluster: oauth_bar_com_443
               timeout: 10s
               uri: https://oauth.bar.com/token
-            useRefreshToken: false
+            useRefreshToken: true

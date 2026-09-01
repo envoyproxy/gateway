@@ -198,15 +198,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 		oauth2.Config.DefaultRefreshTokenExpiresIn = durationpb.New(oidc.DefaultRefreshTokenTTL.Duration)
 	}
 
-	if oidc.CookieNameOverrides != nil &&
-		oidc.CookieNameOverrides.AccessToken != nil {
-		oauth2.Config.Credentials.CookieNames.BearerToken = *oidc.CookieNameOverrides.AccessToken
-	}
-
-	if oidc.CookieNameOverrides != nil &&
-		oidc.CookieNameOverrides.IDToken != nil {
-		oauth2.Config.Credentials.CookieNames.IdToken = *oidc.CookieNameOverrides.IDToken
-	}
+	applyCookieNameOverrides(oauth2.Config.Credentials.CookieNames, oidc.CookieNameOverrides)
 
 	if oidc.CookieDomain != nil {
 		oauth2.Config.Credentials.CookieDomain = *oidc.CookieDomain
@@ -263,6 +255,33 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 	}
 
 	return oauth2, nil
+}
+
+func applyCookieNameOverrides(cookieNames *oauth2v3.OAuth2Credentials_CookieNames, overrides *egv1a1.OIDCCookieNames) {
+	if cookieNames == nil || overrides == nil {
+		return
+	}
+	if overrides.AccessToken != nil {
+		cookieNames.BearerToken = *overrides.AccessToken
+	}
+	if overrides.OAuthHMAC != nil {
+		cookieNames.OauthHmac = *overrides.OAuthHMAC
+	}
+	if overrides.OAuthExpires != nil {
+		cookieNames.OauthExpires = *overrides.OAuthExpires
+	}
+	if overrides.IDToken != nil {
+		cookieNames.IdToken = *overrides.IDToken
+	}
+	if overrides.RefreshToken != nil {
+		cookieNames.RefreshToken = *overrides.RefreshToken
+	}
+	if overrides.OAuthNonce != nil {
+		cookieNames.OauthNonce = *overrides.OAuthNonce
+	}
+	if overrides.CodeVerifier != nil {
+		cookieNames.CodeVerifier = *overrides.CodeVerifier
+	}
 }
 
 func buildSameSite(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSite {

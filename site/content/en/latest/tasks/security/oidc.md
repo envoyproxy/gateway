@@ -542,6 +542,47 @@ Additional connection settings for the OIDC provider can be configured in the [b
 For more information about [Backend] and [BackendTLSPolicy], refer to the [Backend Routing][backend-routing] and [Backend TLS: Gateway to Backend][backend-tls] tasks.
 
 
+## Cookie Names
+
+Envoy keeps the OIDC session in a set of cookies, and names each one `<Purpose>-<suffix>`,
+for example `AccessToken-1a2b3c4d`. Envoy Gateway derives the suffix from the identity of
+the [SecurityPolicy], so that policies applying to the same route don't overwrite each
+other's cookies.
+
+Because the generated suffix is tied to the identity of the policy, it changes when the
+policy is deleted and recreated, which logs users out. Pin it with `cookieNames.suffix`:
+
+```yaml
+  oidc:
+    cookieNames:
+      suffix: "myapp"
+```
+
+Envoy then sets `AccessToken-myapp`, `IdToken-myapp`, `OauthHMAC-myapp`,
+`OauthExpires-myapp`, `RefreshToken-myapp`, `OauthNonce-myapp` and
+`CodeVerifier-myapp`.
+
+Policies that share a suffix also share the session cookies, so a user authenticated
+through one is authenticated through the others. This only works if those policies agree
+on the OIDC provider, the client, and the `cookieDomain`.
+
+If something that runs after OIDC expects a particular cookie name, name that cookie
+outright. A filter later in the chain, or the backend application itself, may read a token
+from a cookie whose name it hardcodes, most often the access token. The per-cookie fields
+take precedence over `suffix`:
+
+```yaml
+  oidc:
+    cookieNames:
+      suffix: "myapp"
+      accessToken: "my_access_token"
+```
+
+Here Envoy sets `my_access_token`, and keeps the suffix for the cookies that aren't named
+explicitly, such as `IdToken-myapp` and `OauthHMAC-myapp`.
+
+Each cookie holds a different value, so all the resulting names must be distinct.
+
 ## Logout
 
 Requesting the `logoutPath` clears the OIDC cookies Envoy Gateway set for the session. If not
@@ -611,8 +652,8 @@ entirely:
       disabled: true
 ```
 
-The logout itself still completes — Envoy Gateway clears its cookies and the provider terminates the
-session — but because the provider is not told where to send the user, the browser is left on a page
+The logout itself still completes - Envoy Gateway clears its cookies and the provider terminates the
+session - but because the provider is not told where to send the user, the browser is left on a page
 controlled by the provider rather than returning to your application.
 
 Exactly one of `uri` or `disabled` must be set. `postLogoutRedirect` has no effect when no end
@@ -647,7 +688,7 @@ spec:
     
     cookieDomain: "example.com"
     cookieNames:
-      accessToken: "azure-access-token"
+      suffix: "azure"
 
     provider:
       issuer: "https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0"

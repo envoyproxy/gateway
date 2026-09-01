@@ -101,8 +101,13 @@ http:
           disabled: true
         cookieSuffix: 5f93c2e4
         cookieNameOverrides:
-          idToken: "CustomIdTokenOverride"
           accessToken: "CustomAccessTokenOverride"
+          oauthHmac: "CustomOauthHMACOverride"
+          oauthExpires: "CustomOauthExpiresOverride"
+          idToken: "CustomIdTokenOverride"
+          refreshToken: "CustomRefreshTokenOverride"
+          oauthNonce: "CustomOauthNonceOverride"
+          codeVerifier: "CustomCodeVerifierOverride"
         cookieDomain: "example.com"
         disableTokenEncryption: true
         refreshToken: false
