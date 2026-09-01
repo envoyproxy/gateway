@@ -88,6 +88,22 @@ func WaitForPodsReady(t *testing.T, cl client.Client, namespace string, selector
 	WaitForPods(t, cl, namespace, selectors, corev1.PodRunning, &PodReady)
 }
 
+// WaitForGatewayPodsReady waits for the Envoy Proxy pod(s) backing the given Gateway to reach
+// Ready. GatewayAndRoutesMustBeAccepted/GatewayAndHTTPRoutesMustBeAccepted only confirm the
+// Gateway's k8s status conditions and that its Service was assigned an address - which happens
+// almost instantly (e.g. via MetalLB) regardless of whether the data-plane pod behind it is
+// actually up yet. Since this suite's EnvoyProxy config doesn't set mergeGateways, every distinct
+// Gateway gets its own freshly-provisioned Envoy Proxy Deployment/Pod, which can take tens of
+// seconds to become Ready - without this wait, the first request(s) sent to a newly-created
+// Gateway race pod startup instead of deterministically waiting for it.
+func WaitForGatewayPodsReady(t *testing.T, cl client.Client, gwNN types.NamespacedName) {
+	t.Helper()
+	WaitForPodsReady(t, cl, GetGatewayResourceNamespace(), map[string]string{
+		"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+		"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
+	})
+}
+
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
 func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition *corev1.PodCondition) {
@@ -788,6 +804,122 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 	}
 
 	return total, nil
+}
+
+// rateLimitDebugPort is the debug HTTP port the envoy-ratelimit service listens on
+// (DEBUG_HOST/DEBUG_PORT in the envoyproxy/ratelimit project), which exposes the
+// /rlconfig endpoint used to dump the currently loaded rate limit config.
+const rateLimitDebugPort = 6070
+
+// DumpRateLimitConfig fetches the config currently loaded by the envoy-ratelimit service via
+// its /rlconfig debug endpoint - the same one used by `egctl config envoy-ratelimit`.
+func DumpRateLimitConfig(suite *suite.ConformanceTestSuite) (string, error) {
+	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
+	if err != nil {
+		return "", err
+	}
+
+	pods, err := cli.PodsForSelector("envoy-gateway-system", "app.kubernetes.io/name=envoy-ratelimit")
+	if err != nil {
+		return "", err
+	}
+
+	if len(pods.Items) == 0 {
+		return "", fmt.Errorf("no envoy-ratelimit pod found")
+	}
+
+	fwd, err := kubernetes.NewLocalPortForwarder(cli, types.NamespacedName{
+		Namespace: "envoy-gateway-system",
+		Name:      pods.Items[0].Name,
+	}, 0, rateLimitDebugPort)
+	if err != nil {
+		return "", err
+	}
+	if err := fwd.Start(); err != nil {
+		return "", err
+	}
+	defer fwd.Stop()
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, fmt.Sprintf("http://%s/rlconfig", fwd.Address()), nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
+}
+
+// WaitForRateLimitDomainToBeLoaded polls the envoy-ratelimit service's /rlconfig debug endpoint
+// until it reports a loaded config for the given rate limit domain, failing the test if it
+// doesn't appear within the suite's MaxTimeToConsistency. This closes a race that
+// BackendTrafficPolicyMustBeAccepted alone cannot: the k8s Accepted status only means EG's
+// controller finished translating the policy, not that the ratelimit service - a separate
+// component, updated via its own xDS push from EG (see internal/globalratelimit/runner) - has
+// received and applied the descriptor config for this domain yet. Sending test traffic before
+// that happens can look like "rate limiting isn't working" (an unmatched domain is unlimited,
+// not rejected).
+//
+// domain must match EG's internal rate limit domain naming convention exactly - see
+// RateLimitListenerDomain and RateLimitSharedDomain, which build it correctly. That's an internal
+// implementation detail, not a stable public API, so this helper may need updating if that naming
+// convention ever changes.
+func WaitForRateLimitDomainToBeLoaded(t *testing.T, suite *suite.ConformanceTestSuite, domain string) {
+	t.Helper()
+	WaitForRateLimitDomainsToBeLoaded(t, suite, domain)
+}
+
+// WaitForRateLimitDomainsToBeLoaded is like WaitForRateLimitDomainToBeLoaded, but waits for all
+// of the given rate limit domains to be loaded, using a single poll loop. Use this when a test
+// exercises more than one domain (e.g. multiple listeners, or a mix of shared and non-shared
+// rules) so that traffic doesn't start until every domain it depends on is ready.
+func WaitForRateLimitDomainsToBeLoaded(t *testing.T, suite *suite.ConformanceTestSuite, domains ...string) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		cfg, err := DumpRateLimitConfig(suite)
+		if err != nil {
+			tlog.Logf(t, "failed to fetch envoy-ratelimit config, retrying: %v", err)
+			return false
+		}
+		tlog.Logf(t, "dump rate limit config: %s", cfg)
+		// Dump() emits one line per configured descriptor limit, keyed as "<domain>.<descriptor
+		// path>: ...", so this substring is present only once the ratelimit service has actually
+		// loaded a limit for this domain.
+		for _, domain := range domains {
+			if !strings.Contains(cfg, domain) {
+				return false
+			}
+		}
+		return true
+	}, suite.TimeoutConfig.MaxTimeToConsistency, time.Second, "envoy-ratelimit service never loaded config for domains %v", domains)
+}
+
+// RateLimitListenerDomain returns the rate limit domain name EG assigns to a non-shared
+// (rule's "shared" field false or unset) global rate limit rule that applies to the given
+// listener - see irListenerName in internal/gatewayapi/helpers.go. This is the domain used
+// whether the policy directly targets that Gateway or targets an HTTPRoute attached to it, since
+// non-shared rules are always keyed by listener rather than by policy.
+func RateLimitListenerDomain(gwNN types.NamespacedName, listenerName string) string {
+	return fmt.Sprintf("%s/%s/%s.", gwNN.Namespace, gwNN.Name, listenerName)
+}
+
+// RateLimitSharedDomain returns the rate limit domain name EG assigns to a "shared: true" global
+// rate limit rule defined by the given BackendTrafficPolicy - see stripRuleIndexSuffix in
+// internal/xds/translator/ratelimit.go. Unlike non-shared rules, all shared rules on the same
+// policy collapse onto this one domain regardless of which listener(s) or route(s) they end up
+// applying to.
+func RateLimitSharedDomain(policyNN types.NamespacedName) string {
+	return fmt.Sprintf("%s/%s.", policyNN.Namespace, policyNN.Name)
 }
 
 func buildLokiQuery(keyValues map[string]string, match string) string {
