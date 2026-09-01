@@ -1366,6 +1366,11 @@ func (in *ClientTLSSettings) DeepCopyInto(out *ClientTLSSettings) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.TLSSettings.DeepCopyInto(&out.TLSSettings)
+	if in.DetectMisdirectedRequests != nil {
+		in, out := &in.DetectMisdirectedRequests, &out.DetectMisdirectedRequests
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Session != nil {
 		in, out := &in.Session, &out.Session
 		*out = new(Session)
