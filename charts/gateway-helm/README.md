@@ -130,6 +130,7 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.envoyGateway.startupProbe.timeoutSeconds | int | `1` |  |
 | deployment.envoyGateway.strategy | object | `{}` | Volume source for the Wasm module cache mounted at /var/lib/eg/wasm. Defaults to an emptyDir when left empty. Example: persist the Wasm module cache across controller restarts by backing it with a PersistentVolumeClaim:   wasmCacheVolume:     persistentVolumeClaim:       claimName: envoy-gateway-wasm-cache |
 | deployment.envoyGateway.wasmCacheVolume | object | `{}` |  |
+| deployment.minReadySeconds | int | `0` | Minimum number of seconds a newly created Pod must be Ready, with no container crashing, before Kubernetes considers it available and proceeds to replace the next Pod during a rolling update. Zero (the Kubernetes default) means each new replica is eligible as soon as its readiness probe passes, so on a multi-replica deployment the whole rollout can replace every replica within seconds of each other. Raising this gives already-connected Envoy proxies (and anything else relying on this controller's xDS/SDS streams) a bake period to reconnect and resync against a stable subset of replicas before the next one is cycled, bounding how many proxies can be disrupted at once by a single controller rollout. |
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
@@ -157,6 +158,7 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.ports[3].port | int | `19001` |  |
 | deployment.ports[3].targetPort | int | `19001` |  |
 | deployment.priorityClassName | string | `nil` |  |
+| deployment.progressDeadlineSeconds | int | `0` | Kubernetes' Deployment.spec.progressDeadlineSeconds, i.e. how long a rollout can run without making progress before it's marked failed. Kubernetes requires this to be strictly greater than minReadySeconds and defaults it to 600 when unset — so minReadySeconds values of 600 or more will make the Deployment fail to apply unless this is also raised to exceed it. Leave unset (the default here) to accept Kubernetes' own default of 600. |
 | deployment.replicas | int | `1` |  |
 | global.imagePullSecrets | list | `[]` | Global override for image pull secrets |
 | global.imageRegistry | string | `""` | Global override for image registry |
