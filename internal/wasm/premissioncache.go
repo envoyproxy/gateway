@@ -21,6 +21,7 @@ package wasm
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -126,13 +127,13 @@ func (e *permissionCacheEntry) isCacheExpired(expiry time.Duration) bool {
 }
 
 // permissionCacheKey generates a key for a permission cache entry.
-// The key is the hex encoded of concatenation of the image URL, pull secret, and CA certificate.
+// The key is the hex encoded SHA-256 of the image URL, the pull secret, and the
+// CA certificate. The pull secret and CA certificate are hex encoded before
+// hashing so that they can't contain the separator, making the split between the
+// components unambiguous.
 func permissionCacheKey(image *url.URL, pullSecret, caCert []byte) string {
-	b := make([]byte, len(image.String())+len(pullSecret)+len(caCert))
-	copy(b, image.String())
-	copy(b[len(image.String()):], pullSecret)
-	copy(b[len(image.String())+len(pullSecret):], caCert)
-	return hex.EncodeToString(b)
+	sum := sha256.Sum256(fmt.Appendf(nil, "%s|%x|%x", image.String(), pullSecret, caCert))
+	return hex.EncodeToString(sum[:])
 }
 
 // newPermissionCache creates a new permission cache with a given TTL.
