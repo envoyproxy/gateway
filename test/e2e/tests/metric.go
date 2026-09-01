@@ -206,7 +206,7 @@ var OtelMetricPrefixTest = suite.ConformanceTest{
 		err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 			ok, err := scrapeMetricsHasPrefix(suite.Client, types.NamespacedName{
 				Namespace: "monitoring",
-				Name:      "otel-collector-prometheus",
+				Name:      "prefix-metrix-gtw-metrics",
 			}, 19001, "/metrics", "eg_e2e_prefix")
 			if err != nil {
 				tlog.Logf(t, "failed to scrape metrics: %v", err)
