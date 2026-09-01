@@ -84,8 +84,19 @@ var HTTPRouteMixedProtocols = suite.ConformanceTest{
 			},
 		}
 
+		// A single matching response is enough, so the requests are not sent through
+		// MakeRequestAndExpectEventuallyConsistentResponse: that helper asks for
+		// TimeoutConfig.RequiredConsecutiveSuccesses (3) consecutive matches, and every
+		// mismatch resets the count. The /mixed-protocols rule has two backendRefs, which
+		// Envoy translates into weighted Clusters and picks between per request, so waiting
+		// for the same backend to answer three times in a row is waiting for a coin to land
+		// on the same side three times: it usually happens within the timeout, but not
+		// always, which is what made this test flaky. What is asserted here is only that the
+		// mixed HTTP and HTTPS backends are both reachable through the same rule, and one
+		// response from each proves that.
 		for _, res := range responses {
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, res)
+			req := http.MakeRequest(t, &res, gwAddr, "HTTP", "http")
+			http.WaitForConsistentResponse(t, suite.RoundTripper, req, res, 1, suite.TimeoutConfig.MaxTimeToConsistency)
 		}
 	},
 }

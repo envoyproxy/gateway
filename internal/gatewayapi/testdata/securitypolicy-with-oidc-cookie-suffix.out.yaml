@@ -108,13 +108,8 @@ securityPolicies:
       clientSecret:
         name: client1-secret
       cookieNames:
-        accessToken: CustomAccessTokenCookie
-        codeVerifier: CustomCodeVerifierCookie
-        idToken: CustomIdTokenCookie
-        oauthExpires: CustomOauthExpiresCookie
-        oauthHmac: CustomOauthHMACCookie
-        oauthNonce: CustomOauthNonceCookie
-        refreshToken: CustomRefreshTokenCookie
+        idToken: myapp_id_token
+        suffix: checkout
       logoutPath: /bar/logout
       provider:
         issuer: https://accounts.google.com
@@ -219,14 +214,9 @@ xdsIR:
             clientID: client1.apps.googleusercontent.com
             clientSecret: '[redacted]'
             cookieNameOverrides:
-              accessToken: CustomAccessTokenCookie
-              codeVerifier: CustomCodeVerifierCookie
-              idToken: CustomIdTokenCookie
-              oauthExpires: CustomOauthExpiresCookie
-              oauthHmac: CustomOauthHMACCookie
-              oauthNonce: CustomOauthNonceCookie
-              refreshToken: CustomRefreshTokenCookie
-            cookieSuffix: b0a1b740
+              idToken: myapp_id_token
+              suffix: checkout
+            cookieSuffix: checkout
             hmacSecret: '[redacted]'
             logoutPath: /bar/logout
             name: securitypolicy/envoy-gateway/policy-for-gateway
