@@ -715,12 +715,13 @@ Curl the example app through Envoy proxy with a request whose headers exceed the
 curl -v http://$GATEWAY_HOST/get \
   -H "Host: www.example.com" \
   -H "X-Big-Header: $(head -c 100000 </dev/zero | tr '\000' 'a')"
+```
 
 You should expect a `431` response status once the combined request header size exceeds `96Ki`:
 
 ```shell
 < HTTP/1.1 431 Request Header Fields Too Large
-< content-length: 24
+< content-length: 31
 < content-type: text/plain
 <
 Request Header Fields Too Large
