@@ -1,0 +1,89 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: class-proxy
+      namespace: envoy-gateway-system
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: class-proxy
+  spec:
+    telemetry:
+      tracing:
+        provider:
+          type: Datadog
+          backendRefs:
+          - name: datadog-agent
+            port: 8126
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-proxy
+  spec:
+    mergeType: StrategicMerge
+    telemetry:
+      tracing:
+        provider:
+          serviceName: my-custom-service
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: gateway-proxy
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: datadog-agent
+    namespace: envoy-gateway-system
+  spec:
+    clusterIP: 10.11.12.13
+    ports:
+    - name: traces
+      port: 8126
+      protocol: TCP
+      targetPort: 8126
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-datadog-agent
+    namespace: envoy-gateway-system
+    labels:
+      kubernetes.io/service-name: datadog-agent
+  addressType: IPv4
+  ports:
+  - name: traces
+    protocol: TCP
+    port: 8126
+  endpoints:
+  - addresses:
+    - 7.7.7.7
+    conditions:
+      ready: true
