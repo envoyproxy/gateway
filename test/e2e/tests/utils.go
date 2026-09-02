@@ -775,7 +775,8 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 	}
 
 	total := 0
-	for _, pod := range pods.Items {
+	for i := range pods.Items {
+		pod := &pods.Items[i]
 		count, err := getOverLimitCount(cli, pod)
 		if err != nil {
 			return -1, err
@@ -786,7 +787,7 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 	return total, nil
 }
 
-func getOverLimitCount(cli kubernetes.CLIClient, pod corev1.Pod) (int, error) {
+func getOverLimitCount(cli kubernetes.CLIClient, pod *corev1.Pod) (int, error) {
 	fwd, err := kubernetes.NewLocalPortForwarder(cli, types.NamespacedName{
 		Namespace: "envoy-gateway-system",
 		Name:      pod.Name,
