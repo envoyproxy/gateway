@@ -6,9 +6,9 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
-    - name: http
-      port: 8080
-      protocol: HTTP
+  - name: http
+    port: 8080
+    protocol: HTTP
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
