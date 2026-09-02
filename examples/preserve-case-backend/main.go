@@ -27,7 +27,7 @@ func HandleFastHTTP(ctx *fasthttp.RequestCtx) {
 	if d, err := json.MarshalIndent(headers, "", "  "); err != nil {
 		ctx.Error(fmt.Sprintf("%s", err), fasthttp.StatusBadRequest)
 	} else {
-		fmt.Fprintf(ctx, string(d)+"\n")
+		fmt.Fprintf(ctx, "%s\n", d)
 	}
 }
 
