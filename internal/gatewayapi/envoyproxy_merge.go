@@ -8,6 +8,8 @@ package gatewayapi
 import (
 	"fmt"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -90,9 +92,81 @@ func mergeEnvoyProxies(
 		return override, nil
 	}
 
-	merged, err := utils.Merge(*base, *override, mergeType)
+	// The merged object carries the override's metadata, so a backendRef
+	// inherited from base without a namespace would later be resolved in the
+	// override's namespace. Pin it to the namespace it was written in first.
+	merged, err := utils.Merge(*qualifyTelemetryBackendRefs(base), *override, mergeType)
 	if err != nil {
 		return nil, err
 	}
 	return &merged, nil
+}
+
+// qualifyTelemetryBackendRefs returns ep with every telemetry backendRef that
+// omits a namespace set to ep's own namespace, which is where the ref resolves
+// when ep is used on its own. ep itself is not modified: a copy is returned
+// when there is anything to set. An EnvoyProxy without a namespace, such as
+// the one built from the EnvoyGateway default spec, is returned unchanged.
+func qualifyTelemetryBackendRefs(ep *egv1a1.EnvoyProxy) *egv1a1.EnvoyProxy {
+	if ep.Namespace == "" || !hasUnqualifiedTelemetryBackendRef(ep) {
+		return ep
+	}
+
+	ep = ep.DeepCopy()
+	ns := gwapiv1.Namespace(ep.Namespace)
+	for _, cluster := range telemetryBackendClusters(ep) {
+		for i := range cluster.BackendRefs {
+			if cluster.BackendRefs[i].Namespace == nil {
+				cluster.BackendRefs[i].Namespace = new(ns)
+			}
+		}
+	}
+	return ep
+}
+
+func hasUnqualifiedTelemetryBackendRef(ep *egv1a1.EnvoyProxy) bool {
+	for _, cluster := range telemetryBackendClusters(ep) {
+		for i := range cluster.BackendRefs {
+			if cluster.BackendRefs[i].Namespace == nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// telemetryBackendClusters returns every BackendCluster under the telemetry
+// settings of ep: the tracing provider, the ALS and OpenTelemetry access log
+// sinks and the OpenTelemetry metric sinks. The returned pointers alias ep.
+func telemetryBackendClusters(ep *egv1a1.EnvoyProxy) []*egv1a1.BackendCluster {
+	telemetry := ep.Spec.Telemetry
+	if telemetry == nil {
+		return nil
+	}
+
+	var clusters []*egv1a1.BackendCluster
+	if telemetry.Tracing != nil {
+		clusters = append(clusters, &telemetry.Tracing.Provider.BackendCluster)
+	}
+	if telemetry.AccessLog != nil {
+		for i := range telemetry.AccessLog.Settings {
+			for j := range telemetry.AccessLog.Settings[i].Sinks {
+				sink := &telemetry.AccessLog.Settings[i].Sinks[j]
+				if sink.ALS != nil {
+					clusters = append(clusters, &sink.ALS.BackendCluster)
+				}
+				if sink.OpenTelemetry != nil {
+					clusters = append(clusters, &sink.OpenTelemetry.BackendCluster)
+				}
+			}
+		}
+	}
+	if telemetry.Metrics != nil {
+		for i := range telemetry.Metrics.Sinks {
+			if sink := telemetry.Metrics.Sinks[i].OpenTelemetry; sink != nil {
+				clusters = append(clusters, &sink.BackendCluster)
+			}
+		}
+	}
+	return clusters
 }
