@@ -147,8 +147,8 @@ func (in *ActiveHealthCheck) DeepCopyInto(out *ActiveHealthCheck) {
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.ReuseConnection != nil {
-		in, out := &in.ReuseConnection, &out.ReuseConnection
+	if in.DisableConnectionReuse != nil {
+		in, out := &in.DisableConnectionReuse, &out.DisableConnectionReuse
 		*out = new(bool)
 		**out = **in
 	}

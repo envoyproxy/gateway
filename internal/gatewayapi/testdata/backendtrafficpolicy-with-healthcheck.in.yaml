@@ -205,7 +205,7 @@ backendTrafficPolicies:
         interval: "3s"
         unhealthyThreshold: 3
         healthyThreshold: 1
-        reuseConnection: false
+        disableConnectionReuse: true
         type: HTTP
         http:
           path: "/healthz"

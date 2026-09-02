@@ -135,14 +135,14 @@ type ActiveHealthCheck struct {
 	// +optional
 	HealthyThreshold *uint32 `json:"healthyThreshold"`
 
-	// ReuseConnection determines whether the active health check connection to a backend host
-	// is reused across health check probes. When set to false, Envoy opens a new connection
-	// for each health check, which is useful for backends (such as haproxy-style agent checks)
-	// that do not expect a reused connection.
-	// Defaults to true.
+	// DisableConnectionReuse determines whether the active health check connection to a
+	// backend host is closed after each health check probe. When set to true, Envoy opens a
+	// new connection for each health check, which is useful for backends (such as
+	// haproxy-style agent checks) that do not expect a reused connection.
+	// Defaults to false, which reuses the connection across probes.
 	//
 	// +optional
-	ReuseConnection *bool `json:"reuseConnection,omitempty"`
+	DisableConnectionReuse *bool `json:"disableConnectionReuse,omitempty"`
 
 	// Type defines the type of health checker.
 	// +kubebuilder:validation:Enum=HTTP;TCP;GRPC
