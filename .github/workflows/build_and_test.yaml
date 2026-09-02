@@ -97,9 +97,13 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
-        fetch-depth: 0  # Need main branch access for benchmark comparison
+        fetch-depth: 0  # Need base branch access for benchmark comparison
     - uses: ./tools/github-actions/setup-deps
     - name: Run Benchmark Comparison
+      env:
+        # Compare against the PR's base branch, not always main: release branch
+        # PRs pin an older Go toolchain and main would fail to build with it.
+        BASE_REF: origin/${{ github.base_ref || 'main' }}
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           ./tools/hack/go-benchmark-compare.sh
@@ -161,6 +165,14 @@ jobs:
           ipFamily: ipv4
           profile: default
           gwapiChannel: standard
+        - version: v1.33.12
+          ipFamily: ipv4
+          profile: default
+          gwapiChannel: standard
+          # disable parallel to make sure the test is stable,
+          # this should be able to be run in a private forked repo
+          # with less CPU and memory resources
+          disableParallel: true
         - version: v1.34.8
           ipFamily: ipv4
           profile: default
@@ -211,18 +223,21 @@ jobs:
         IP_FAMILY: ${{ matrix.target.ipFamily }}
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
         E2E_GATEWAY_API_CHANNEL: ${{ matrix.target.gwapiChannel }}
+        # Increase the timeout to 1h to avoid timeout in CI, especially for non parallel tests.
+        E2E_TIMEOUT: 1h
         # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
         # which means to dump the current state when there's a case failed.
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
         SKIP_GO_BUILD: "true"
         E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/conformance
+        E2E_DISABLE_PARALLEL: ${{ matrix.target.disableParallel || 'false' }}
       run: make conformance
 
     - name: Upload E2E failure artifacts
       if: failure()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
       with:
-        name: conformance-failure-artifacts-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}
+        name: conformance-failure-artifacts-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}-${{ matrix.target.disableParallel || 'false' }}
         path: artifacts/conformance/
         if-no-files-found: ignore
 

@@ -94,6 +94,7 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+	extBackendCRDExists    map[schema.GroupVersionKind]bool
 
 	clusterTrustBundleExits bool
 
@@ -175,6 +176,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		mergeGateways:        sets.New[string](),
 		extServerPolicies:    extServerPoliciesGVKs,
 		extBackendGVKs:       extBackendGVKs,
+		extBackendCRDExists:  make(map[schema.GroupVersionKind]bool),
 		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
 	}
 
@@ -617,13 +619,15 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	//    which impacts translation output
 	gwcResources.Sort()
 
-	// Store the Gateway Resources for the GatewayClass with trace context.
+	// Store the Gateway Resources for the GatewayClass with trace context. Consumers
+	// propagate only its SpanContext, so their spans may outlive this reconciliation.
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.
 	resourcesWithContext := &resource.ControllerResourcesContext{
 		Resources: &gwcResources,
 		Context:   ctx,
+		StoredAt:  time.Now(),
 	}
 	r.resources.GatewayAPIResources.Store(string(r.classController), resourcesWithContext)
 	message.PublishMetric(message.Metadata{
@@ -1851,6 +1855,16 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		r.processServiceClusterForGatewayClass(ctx, resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
 	}
 
+	if len(gatewayList.Items) == 0 {
+		return nil
+	}
+
+	// The extension ref filters and backend resources are cluster-wide,
+	// so they are collected once per GatewayClass instead of once per Gateway.
+	if err := r.populateExtensionResources(ctx, resourceMap); err != nil {
+		return err
+	}
+
 	for i := range gatewayList.Items {
 		gtw := &gatewayList.Items[i]
 
@@ -3019,6 +3033,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("Watching additional policy resource", "resource", gvk.String())
 	}
 	for _, gvk := range r.extBackendGVKs {
+		// Check if the backend resource CRD exists before registering the watch.
+		// If the CRD is missing (or RBAC is insufficient), skip the watch for this
+		// GVK instead of failing WaitForCacheSync and crashing the controller.
+		// This follows the same pattern used for ServiceImport, Backend, and other
+		// optional CRDs.
+		crdExists, err := checkCRD(gvk.Kind, gvk.GroupVersion().String())
+		if err != nil {
+			return err
+		}
+		if !crdExists {
+			r.log.Info("backend resource CRD not found, skipping watch", "resource", gvk.String())
+			continue
+		}
+		r.extBackendCRDExists[gvk] = true
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
 		if err := c.Watch(source.Kind(mgr.GetCache(), u,

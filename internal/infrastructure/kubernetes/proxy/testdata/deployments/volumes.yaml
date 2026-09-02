@@ -232,7 +232,6 @@ spec:
                   value: 0.98
         - --log-level
         - warn
-        - --cpuset-threads
         - --drain-strategy
         - immediate
         - --component-log-level
@@ -303,7 +302,16 @@ spec:
             cpu: 200m
             memory: 1Gi
         securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
           privileged: true
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -375,7 +383,16 @@ spec:
             cpu: 10m
             memory: 32Mi
         securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
           privileged: true
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:

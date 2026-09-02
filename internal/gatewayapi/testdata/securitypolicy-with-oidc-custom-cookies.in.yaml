@@ -69,5 +69,10 @@ securityPolicies:
       redirectURL: "https://www.example.com/bar/oauth2/callback"
       logoutPath: "/bar/logout"
       cookieNames:
-        idToken: "CustomIdTokenCookie"
         accessToken: "CustomAccessTokenCookie"
+        oauthHmac: "CustomOauthHMACCookie"
+        oauthExpires: "CustomOauthExpiresCookie"
+        idToken: "CustomIdTokenCookie"
+        refreshToken: "CustomRefreshTokenCookie"
+        oauthNonce: "CustomOauthNonceCookie"
+        codeVerifier: "CustomCodeVerifierCookie"

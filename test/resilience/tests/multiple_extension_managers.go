@@ -80,8 +80,6 @@ var MultipleExtManagers = suite.ResilienceTest{
 		err = suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 1, time.Minute, false)
 		require.NoError(t, err, "Failed to scale up envoy-gateway")
 
-		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
-
 		localTimeout := suite.TimeoutConfig
 		localTimeout.RequiredConsecutiveSuccesses = 2
 		localTimeout.MaxTimeToConsistency = time.Minute
