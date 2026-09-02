@@ -72,7 +72,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "ratelimit-cidr-match", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -132,8 +132,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "ratelimit-gateway", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
-				kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -178,7 +177,7 @@ var RateLimitCIDRInvertMatchAlwaysEnforce = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "cidr-invert-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "ratelimit-cidr-invert-match-always-enforce", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			WaitForGatewayPodsReady(t, suite.Client, gwNN)
 			WaitForRateLimitDomainToBeLoaded(t, suite, RateLimitListenerDomain(gwNN, "http"))
 
@@ -247,7 +246,7 @@ var RateLimitCIDRInvertAlwaysExemptTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "cidr-invert-always-exempt", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "ratelimit-cidr-invert-always-exempt", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			WaitForGatewayPodsReady(t, suite.Client, gwNN)
 			WaitForRateLimitDomainToBeLoaded(t, suite, RateLimitListenerDomain(gwNN, "http"))
 
@@ -280,7 +279,7 @@ var RateLimitMethodMatchTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "method-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "ratelimit-method-match", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -371,7 +370,7 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "path-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "ratelimit-path-match", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -489,7 +488,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "ratelimit-header-match", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		// TODO: this seems not right,
@@ -577,7 +576,7 @@ var GlobalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-ratelimit-invert", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "ratelimit-header-invert-match-global", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -675,7 +674,7 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "ratelimit-headers-disabled", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "ratelimit-headers-disabled", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -775,7 +774,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-ratelimit-based-jwt-claims", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "ratelimit-based-jwt-claims", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -918,7 +917,7 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "multiple-listeners", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "eg-multiple-listeners", Namespace: ns}
-		gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwHost := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -989,7 +988,7 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-and-cidr-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "ratelimit-headers-and-cidr-match", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -1116,7 +1115,7 @@ var UsageRateLimitTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "usage-rate-limit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "ratelimit-usage-ratelimit", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -1612,7 +1611,7 @@ var RateLimitGlobalShadowModeTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		shadowRouteNN := types.NamespacedName{Name: "shadow-mode-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "ratelimit-global-shadow-mode", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, shadowRouteNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), shadowRouteNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
@@ -1668,7 +1667,7 @@ var RateLimitQueryParametersTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "query-parameters-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "ratelimit-query-parameters", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
