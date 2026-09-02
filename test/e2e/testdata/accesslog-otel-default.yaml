@@ -1,7 +1,10 @@
+# The Gateway is named for this test alone: a name shared with another test gets
+# deleted and recreated back to back as the suite moves on, and the recreated
+# Gateway can end up without status. xref https://github.com/envoyproxy/gateway/issues/8677
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: accesslog-gtw
+  name: accesslog-otel-default-gtw
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: {GATEWAY_CLASS_NAME}
@@ -64,7 +67,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: accesslog-gtw
+    - name: accesslog-otel-default-gtw
   rules:
     - matches:
         - path:
