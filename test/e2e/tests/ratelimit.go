@@ -50,7 +50,7 @@ func init() {
 		RateLimitPathMatchTest,
 		GlobalRateLimitHeaderInvertMatchTest,
 		RateLimitHeadersDisabled,
-		RateLimitBasedJwtClaimsTest,
+		RateLimitBasedJwtClaims,
 		RateLimitMultipleListenersTest,
 		RateLimitHeadersAndCIDRMatchTest,
 		UsageRateLimitTest,
@@ -765,7 +765,7 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 	},
 }
 
-var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
+var RateLimitBasedJwtClaims = suite.ConformanceTest{
 	ShortName:   "RateLimitBasedJwtClaims",
 	Description: "Limit based jwt claims",
 	Manifests:   []string{"testdata/ratelimit-based-jwt-claims.yaml"},
@@ -813,7 +813,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			// Just to construct the request that carries a jwt token that can be limited
 			ratelimitHeader := make(map[string]string)
 			TokenHeader := make(map[string]string)
-			JwtOkResp := http.ExpectedResponse{
+			jwtOkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path:    "/foo",
 					Headers: TokenHeader,
@@ -829,17 +829,15 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			JwtOkResp.Request.Headers["Authorization"] = "Bearer " + "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc4TSMb4bXP3l3YlNWACwyXPGffz5aXHc6lty1Y2t4SWRqGteragsVdZufDn5BlnJl9pdR_kdVFUsra2rWKEofkZeIC4yWytE58sMIihvo9H1ScmmVwBcQP6XETqYd0aSHp1gOa9RdUPDvoXQ5oqygTqVtxaDr6wUFKrKItgBMzWIdNZ6y7O9E0DhEPTbE9rfBo6KTFsHAZnMg4k68CDp2woYIaXbmYTWcvbzIuHO7_37GT79XdIwkm95QJ7hYC9RiwrV7mesbY4PAahERJawntho0my942XheVLmGwLMBkQ"
-			JwtOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
-
-			JwtReq := http.MakeRequest(t, &JwtOkResp, gwAddr, "HTTP", "http")
+			jwtOkResp.Request.Headers["Authorization"] = "Bearer " + "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc4TSMb4bXP3l3YlNWACwyXPGffz5aXHc6lty1Y2t4SWRqGteragsVdZufDn5BlnJl9pdR_kdVFUsra2rWKEofkZeIC4yWytE58sMIihvo9H1ScmmVwBcQP6XETqYd0aSHp1gOa9RdUPDvoXQ5oqygTqVtxaDr6wUFKrKItgBMzWIdNZ6y7O9E0DhEPTbE9rfBo6KTFsHAZnMg4k68CDp2woYIaXbmYTWcvbzIuHO7_37GT79XdIwkm95QJ7hYC9RiwrV7mesbY4PAahERJawntho0my942XheVLmGwLMBkQ"
+			jwtOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
 
 			// Just to construct the request that carries a jwt token that can not be limited
-			DifTokenHeader := make(map[string]string)
+			difTokenHeader := make(map[string]string)
 			difJwtOkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path:    "/foo",
-					Headers: DifTokenHeader,
+					Headers: difTokenHeader,
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
@@ -867,13 +865,14 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			// should just send exactly 4 requests, and expect 429
 
 			// keep sending requests till get 200 first, that will cost one 200
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &JwtOkResp)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &jwtOkResp)
 
 			// fire the rest of requests
-			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, JwtReq, JwtOkResp); err != nil {
+			jwtReq := http.MakeRequest(t, &jwtOkResp, gwAddr, "HTTP", "http")
+			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, jwtReq, jwtOkResp); err != nil {
 				tlog.Fatalf(t, "failed to get expected response at third request: %v", err)
 			}
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, JwtReq, expectLimitResp); err != nil {
+			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, jwtReq, expectLimitResp); err != nil {
 				tlog.Fatalf(t, "failed to get expected response at the fourth request: %v", err)
 			}
 
@@ -897,10 +896,16 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 				tlog.Fatalf(t, "failed to get expected response: %v", err)
 			}
 
-			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 1*time.Minute, true, func(_ context.Context) (bool, error) {
+			// There're multiple ratelimit replicas in gateway namespace mode.
+
+			err = wait.PollUntilContextTimeout(t.Context(), time.Second, 1*time.Minute, true, func(_ context.Context) (bool, error) {
 				curCount, err := OverLimitCount(suite)
 				if err != nil {
 					return false, err
+				}
+				if curCount <= preCount {
+					tlog.Logf(t, "current over limit count %d is not greater than previous count %d, retrying...", curCount, preCount)
+					return false, nil
 				}
 				return curCount > preCount, nil
 			})
@@ -917,7 +922,7 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "multiple-listeners", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "eg-multiple-listeners", Namespace: ns}
-		gwHost := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 		WaitForGatewayPodsReady(t, suite.Client, gwNN)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,

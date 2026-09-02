@@ -774,9 +774,22 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 		return -1, fmt.Errorf("no envoy-ratelimit pod found")
 	}
 
+	total := 0
+	for _, pod := range pods.Items {
+		count, err := getOverLimitCount(cli, pod)
+		if err != nil {
+			return -1, err
+		}
+		total += count
+	}
+
+	return total, nil
+}
+
+func getOverLimitCount(cli kubernetes.CLIClient, pod corev1.Pod) (int, error) {
 	fwd, err := kubernetes.NewLocalPortForwarder(cli, types.NamespacedName{
 		Namespace: "envoy-gateway-system",
-		Name:      pods.Items[0].Name,
+		Name:      pod.Name,
 	}, 0, 19001)
 	if err != nil {
 		return -1, err
@@ -802,7 +815,6 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 			total += int(*m.Counter.Value)
 		}
 	}
-
 	return total, nil
 }
 
