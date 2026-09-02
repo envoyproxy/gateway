@@ -167,7 +167,7 @@ var BackendUtilizationOutOfBandLoadBalancingTest = suite.ConformanceTest{
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-		expectedResponse := http.ExpectedResponse{
+		res := http.ExpectedResponse{
 			Request: http.Request{
 				Path: "/backend-utilization-oob",
 			},
@@ -176,7 +176,7 @@ var BackendUtilizationOutOfBandLoadBalancingTest = suite.ConformanceTest{
 			},
 			Namespace: ns,
 		}
-		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+		req := http.MakeRequest(t, &res, gwAddr, "HTTP", "http")
 
 		// Identify which pod is low-util vs high-util by deployment name prefix.
 		isLowUtil := func(podName string) bool {
@@ -185,7 +185,7 @@ var BackendUtilizationOutOfBandLoadBalancingTest = suite.ConformanceTest{
 
 		t.Run("warmup until both backends are hit", func(t *testing.T) {
 			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, &req, &expectedResponse, warmupRequests, func(trafficMap map[string]int) bool {
+				return runTrafficTest(t, suite, &req, &res, warmupRequests, func(trafficMap map[string]int) bool {
 					return len(trafficMap) >= 2
 				}), nil
 			}); err != nil {
@@ -199,7 +199,7 @@ var BackendUtilizationOutOfBandLoadBalancingTest = suite.ConformanceTest{
 
 		t.Run("traffic should skew toward low-utilization backend", func(t *testing.T) {
 			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
+				return runTrafficTest(t, suite, &req, &res, sendRequests, func(trafficMap map[string]int) bool {
 					lowCount := 0
 					total := 0
 					for podName, count := range trafficMap {
@@ -438,10 +438,6 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	ret := compareFunc(trafficMap)
 	if !ret {
 		tlog.Logf(t, "traffic map: %v", trafficMap)
-		// wait for a while to let envoy flush all the logs.
-		time.Sleep(6 * time.Second)
-		consistentHashDump(t, suite.RestConfig)
-		t.FailNow()
 	}
 
 	return ret
