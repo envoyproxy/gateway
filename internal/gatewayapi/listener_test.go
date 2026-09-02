@@ -950,7 +950,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
+								Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -986,7 +986,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
+								Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1026,7 +1026,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
+								Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1067,7 +1067,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
+								Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1104,7 +1104,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type:        ptr.To(egv1a1.TracingProviderTypeOpenTelemetry),
+								Type:        new(egv1a1.TracingProviderTypeOpenTelemetry),
 								ServiceName: new("only-name-overridden"),
 							},
 						},
@@ -1204,7 +1204,7 @@ func TestProcessTracingProviderDefaults(t *testing.T) {
 		{
 			name: "unset type and port fall back to the documented defaults",
 			provider: egv1a1.TracingProvider{
-				Host: ptr.To("otel-collector.monitoring.svc.cluster.local"),
+				Host: new("otel-collector.monitoring.svc.cluster.local"),
 			},
 			expectedType: egv1a1.TracingProviderTypeOpenTelemetry,
 			expectedPort: 4317,
@@ -1212,9 +1212,9 @@ func TestProcessTracingProviderDefaults(t *testing.T) {
 		{
 			name: "type and port inherited from the GatewayClass level are kept",
 			provider: egv1a1.TracingProvider{
-				Host: ptr.To("datadog-agent.monitoring.svc.cluster.local"),
-				Type: ptr.To(egv1a1.TracingProviderTypeDatadog),
-				Port: ptr.To(int32(8126)),
+				Host: new("datadog-agent.monitoring.svc.cluster.local"),
+				Type: new(egv1a1.TracingProviderTypeDatadog),
+				Port: new(int32(8126)),
 			},
 			expectedType: egv1a1.TracingProviderTypeDatadog,
 			expectedPort: 8126,

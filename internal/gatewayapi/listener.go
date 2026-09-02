@@ -1068,10 +1068,10 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	// The copy keeps the EnvoyProxy resource itself untouched.
 	provider := tracing.Provider
 	if provider.Type == nil {
-		provider.Type = ptr.To(egv1a1.DefaultTracingProviderType)
+		provider.Type = new(egv1a1.DefaultTracingProviderType)
 	}
 	if provider.Port == nil {
-		provider.Port = ptr.To(egv1a1.DefaultTracingProviderPort)
+		provider.Port = new(egv1a1.DefaultTracingProviderPort)
 	}
 
 	// TODO: rename this, so that we can share backend with accesslog?
