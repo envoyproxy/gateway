@@ -652,8 +652,6 @@ type EnvoyGatewayRemoteInfrastructureProvider struct {
 // RateLimit defines the configuration associated with the Rate Limit Service
 // used for Global Rate Limiting.
 type RateLimit struct {
-	ClusterSettings `json:",inline"`
-
 	// Backend holds the configuration associated with the
 	// database backend used by the rate limit service to store
 	// state associated with global ratelimiting.
@@ -675,6 +673,12 @@ type RateLimit struct {
 	// Telemetry defines telemetry configuration for RateLimit.
 	// +optional
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+
+	// BackendSettings holds configuration for managing the connection to the rate limit
+	// service, such as circuit breakers, timeouts, health checks, and load balancing.
+	//
+	// +optional
+	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
 }
 
 type RateLimitTelemetry struct {

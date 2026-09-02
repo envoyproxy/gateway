@@ -1444,7 +1444,7 @@ func TestWarnEnvoyGateway(t *testing.T) {
 					Gateway:  egv1a1.DefaultGateway(),
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
-						ClusterSettings: egv1a1.ClusterSettings{
+						BackendSettings: &egv1a1.ClusterSettings{
 							CircuitBreaker: &egv1a1.CircuitBreaker{
 								MaxRequestsPerConnection: new(int64(10)),
 							},
@@ -1461,7 +1461,7 @@ func TestWarnEnvoyGateway(t *testing.T) {
 					Gateway:  egv1a1.DefaultGateway(),
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
-						ClusterSettings: egv1a1.ClusterSettings{
+						BackendSettings: &egv1a1.ClusterSettings{
 							Retry: &egv1a1.Retry{},
 						},
 					},
@@ -1476,7 +1476,7 @@ func TestWarnEnvoyGateway(t *testing.T) {
 					Gateway:  egv1a1.DefaultGateway(),
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
-						ClusterSettings: egv1a1.ClusterSettings{
+						BackendSettings: &egv1a1.ClusterSettings{
 							Timeout: &egv1a1.Timeout{
 								HTTP: &egv1a1.HTTPTimeout{
 									RequestTimeout:    new(gwapiv1.Duration("30s")),
@@ -1662,16 +1662,13 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 
 func TestValidateRateLimitClusterSettings(t *testing.T) {
 	validRedis := func(cs *egv1a1.ClusterSettings) *egv1a1.RateLimit {
-		rl := &egv1a1.RateLimit{
+		return &egv1a1.RateLimit{
 			Backend: egv1a1.RateLimitDatabaseBackend{
 				Type:  egv1a1.RedisBackendType,
 				Redis: &egv1a1.RateLimitRedisSettings{URL: new("redis.redis.svc:6379")},
 			},
+			BackendSettings: cs,
 		}
-		if cs != nil {
-			rl.ClusterSettings = *cs
-		}
-		return rl
 	}
 	cases := []struct {
 		name      string

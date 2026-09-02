@@ -101,10 +101,10 @@ func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
 // ir.Timeout.ClusterOnly() strips HTTP.RequestTimeout/HTTP.StreamIdleTimeout, before the CDS
 // cluster is built.
 func warnRateLimitBackendSettings(rateLimit *egv1a1.RateLimit) []string {
-	if rateLimit == nil {
+	if rateLimit == nil || rateLimit.BackendSettings == nil {
 		return nil
 	}
-	cs := &rateLimit.ClusterSettings
+	cs := rateLimit.BackendSettings
 
 	var warnings []string
 	if cs.Retry != nil {
@@ -257,8 +257,8 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return nil
 	}
 
-	if err := validateRateLimitClusterSettings(&rateLimit.ClusterSettings); err != nil {
-		return fmt.Errorf("invalid rateLimit cluster settings: %w", err)
+	if err := validateRateLimitClusterSettings(rateLimit.BackendSettings); err != nil {
+		return fmt.Errorf("invalid rateLimit.backendSettings: %w", err)
 	}
 
 	if rateLimit.Backend.Type != egv1a1.RedisBackendType {
