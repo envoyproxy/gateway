@@ -79,18 +79,18 @@ var CircuitBreakerTest = suite.ConformanceTest{
 
 			promQL := `envoy_cluster_upstream_rq_retry_overflow{app_kubernetes_io_name="envoy",app_kubernetes_io_managed_by="envoy-gateway"}`
 
-			// expect 503 since the policy applies a retry budget with 0% success rate
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/status/503",
-				},
-				Response: http.Response{
-					StatusCodes: []int{503},
-				},
-				Namespace: ns,
-			})
+			err = wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+				// expect 503 since the policy applies a retry budget with 0% success rate
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/status/503",
+					},
+					Response: http.Response{
+						StatusCodes: []int{503},
+					},
+					Namespace: ns,
+				})
 
-			err = wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
 				v, err := promClient.QuerySum(ctx, promQL)
 				if err != nil {
 					tlog.Logf(t, "failed to query prometheus: %v", err)
@@ -105,6 +105,7 @@ var CircuitBreakerTest = suite.ConformanceTest{
 				tlog.Logf(t, "retry overflow metric not updated yet: %v", v)
 				return false, nil
 			})
+
 			require.NoError(t, err)
 		})
 	},

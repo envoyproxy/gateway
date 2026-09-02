@@ -80,8 +80,12 @@ func TimeoutConfig() config.TimeoutConfig {
 	// The default value of RequiredConsecutiveSuccesses is 3,
 	// which means a test needs to pass 3 times in a row to be considered successful.
 	// This's not necessary for E2E test.
-	timeout.RequiredConsecutiveSuccesses = 0
+	timeout.RequiredConsecutiveSuccesses = 1
 	return timeout
+}
+
+func WaitForPodsReady(t *testing.T, cl client.Client, namespace string, selectors map[string]string) {
+	WaitForPods(t, cl, namespace, selectors, corev1.PodRunning, &PodReady)
 }
 
 // WaitForPods waits for the pods in the given namespace and with the given selector
