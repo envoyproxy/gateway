@@ -19,7 +19,7 @@ permissions:
 jobs:
   scan-scheduled:
     if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@ffa0a5f39214d80778c9b494822d94d0d9668458"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@8e5cf47b818121e8b405931c82126c2630b0b20d"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
     with:
       scan-args: |-
         --config tools/osv-scanner/vulnerability-scan-config.toml
@@ -33,7 +33,7 @@ jobs:
 
   scan-pr:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@ffa0a5f39214d80778c9b494822d94d0d9668458"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@8e5cf47b818121e8b405931c82126c2630b0b20d"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
     with:
       scan-args: |-
         --config tools/osv-scanner/vulnerability-scan-config.toml
