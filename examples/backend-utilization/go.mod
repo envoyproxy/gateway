@@ -4,7 +4,7 @@ go 1.27.0
 
 require (
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2
-	google.golang.org/grpc v1.83.1
+	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
 )
 
