@@ -31,7 +31,7 @@ func init() {
 	// Add Gateway API types.
 	utilruntime.Must(gwapischeme.AddToScheme(scheme))
 	// Add mcs api types.
-	utilruntime.Must(mcsapiv1a1.AddToScheme(scheme))
+	utilruntime.Must(mcsapiv1a1.Install(scheme))
 	// Add CRD kind to known types, experimental conformance test requires this.
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 }

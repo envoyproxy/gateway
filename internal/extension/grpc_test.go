@@ -310,8 +310,8 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		{
 			Name: "has a Unix path",
 			Service: &egv1a1.ExtensionService{
-				Host: "foo.bar",
-				Port: 5050,
+				Host: "foo.bar", //nolint:staticcheck
+				Port: 5050,      //nolint:staticcheck
 			},
 			Expected: "foo.bar:5050",
 		},

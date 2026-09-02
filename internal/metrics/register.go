@@ -14,6 +14,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/otlptranslator"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -188,9 +189,8 @@ func (r *Runner) registerOTELPromExporter(otelOpts *[]metric.Option, opts *regis
 		promOpts := []otelprom.Option{
 			otelprom.WithoutScopeInfo(),
 			otelprom.WithoutTargetInfo(),
-			otelprom.WithoutUnits(),
+			otelprom.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes),
 			otelprom.WithRegisterer(opts.pullOptions.registry),
-			otelprom.WithoutCounterSuffixes(),
 		}
 		promreader, err := otelprom.New(promOpts...)
 		if err != nil {

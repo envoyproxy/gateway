@@ -928,7 +928,7 @@ func TestResolvePolicyTargetsFromReferences(t *testing.T) {
 		{
 			name: "target ref",
 			targetRefs: egv1a1.PolicyTargetReferences{
-				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "Gateway",

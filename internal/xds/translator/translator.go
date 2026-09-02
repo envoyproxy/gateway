@@ -930,7 +930,7 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 
 func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
 	return &corev3.HeaderValueOption{
-		Append: &wrapperspb.BoolValue{Value: true},
+		Append: &wrapperspb.BoolValue{Value: true}, //nolint:staticcheck
 		Header: &corev3.HeaderValue{
 			Key:   "alt-svc",
 			Value: strings.Join([]string{fmt.Sprintf(`%s=":%d"; ma=86400`, "h3", port)}, ", "),

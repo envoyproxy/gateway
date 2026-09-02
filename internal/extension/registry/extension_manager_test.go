@@ -68,7 +68,7 @@ func TestNewManager(t *testing.T) {
 						Resources: []egv1a1.GroupVersionKind{
 							{Group: "foo.io", Version: "v1", Kind: "Foo"},
 						},
-						Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
+						Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080}, //nolint:staticcheck
 					},
 				},
 			},
@@ -101,7 +101,7 @@ func TestNewManager(t *testing.T) {
 							BackendResources: []egv1a1.GroupVersionKind{
 								{Group: "foo.io", Version: "v1", Kind: "FooBackend"},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
+							Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080}, //nolint:staticcheck
 						},
 						{
 							Name: "ext2",
@@ -114,7 +114,7 @@ func TestNewManager(t *testing.T) {
 							BackendResources: []egv1a1.GroupVersionKind{
 								{Group: "bar.io", Version: "v1", Kind: "BarBackend"},
 							},
-							Service: &egv1a1.ExtensionService{Host: "bar.svc", Port: 8080},
+							Service: &egv1a1.ExtensionService{Host: "bar.svc", Port: 8080}, //nolint:staticcheck
 						},
 					},
 				},
@@ -249,7 +249,7 @@ func Test_TLS(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, opts)
 
-	conn, err := grpc.DialContext(context.Background(), fmt.Sprintf("localhost:%d", port),
+	conn, err := grpc.NewClient(fmt.Sprintf("localhost:%d", port),
 		opts...,
 	)
 	require.NoError(t, err)
@@ -361,7 +361,7 @@ func Test_mTLS(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, opts)
 
-	conn, err := grpc.DialContext(context.Background(), fmt.Sprintf("localhost:%d", port),
+	conn, err := grpc.NewClient(fmt.Sprintf("localhost:%d", port),
 		opts...,
 	)
 	require.NoError(t, err)

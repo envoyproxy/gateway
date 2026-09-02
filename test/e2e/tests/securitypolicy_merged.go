@@ -78,7 +78,7 @@ var SecurityPolicyMergedTest = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 					Headers: map[string]string{
 						"Access-Control-Allow-Origin": "https://www.example.com",
 					},

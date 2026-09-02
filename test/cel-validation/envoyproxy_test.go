@@ -783,7 +783,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 														},
 													},
 												},
-												Resources: map[string]string{
+												Resources: map[string]string{ //nolint:staticcheck
 													"service.name": "eg",
 												},
 											},
@@ -861,7 +861,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 														},
 													},
 												},
-												Resources: map[string]string{
+												Resources: map[string]string{ //nolint:staticcheck
 													"service.name": "eg",
 												},
 												ResourceAttributes: map[string]string{
@@ -2603,7 +2603,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			desc: "luaValidation-and-lua-mutually-exclusive",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
-					LuaValidation: new(egv1a1.LuaValidationStrict),
+					LuaValidation: new(egv1a1.LuaValidationStrict), //nolint:staticcheck
 					Lua:           &egv1a1.LuaValidationConfig{StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}}},
 				}
 			},

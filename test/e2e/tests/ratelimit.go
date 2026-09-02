@@ -376,8 +376,8 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 					Path: "/get/specific-path",
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -389,7 +389,7 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 					Path: "/get/specific-path",
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -414,7 +414,7 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 					Path: "/get/specific-path/subpath",
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -429,7 +429,7 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 					Path: "/get/specific-path2",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -446,7 +446,7 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 					Path: "/get/no-specific-path",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -1568,8 +1568,8 @@ var RateLimitGlobalShadowModeTest = suite.ConformanceTest{
 					Method: "GET",
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}

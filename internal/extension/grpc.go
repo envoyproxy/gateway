@@ -57,9 +57,9 @@ func GetExtensionServerAddress(service *egv1a1.ExtensionService) string {
 	case service.Unix != nil:
 		serverAddr = fmt.Sprintf("unix://%s", service.Unix.Path)
 	case service.Hostname != nil:
-		serverAddr = net.JoinHostPort(*service.Hostname, strconv.Itoa(int(service.Port)))
-	case service.Host != "":
-		serverAddr = net.JoinHostPort(service.Host, strconv.Itoa(int(service.Port)))
+		serverAddr = net.JoinHostPort(*service.Hostname, strconv.Itoa(int(service.Port))) //nolint:staticcheck
+	case service.Host != "": //nolint:staticcheck
+		serverAddr = net.JoinHostPort(service.Host, strconv.Itoa(int(service.Port))) //nolint:staticcheck
 	}
 	return serverAddr
 }

@@ -443,8 +443,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										Host: new("0.0.0.0"),
-										Port: 3217,
+										Host: new("0.0.0.0"), //nolint:staticcheck
+										Port: 3217,           //nolint:staticcheck
 									},
 								},
 							},

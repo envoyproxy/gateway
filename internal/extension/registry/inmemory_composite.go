@@ -45,7 +45,7 @@ func NewInMemoryCompositeManager(
 		_ = baseServer.Serve(lis)
 	}()
 
-	conn, err := grpc.DialContext(context.Background(), "",
+	conn, err := grpc.NewClient("passthrough:///",
 		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
 			return lis.Dial()
 		}),

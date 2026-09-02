@@ -42,7 +42,7 @@ func newTestScheme(unstructuredGVKs ...schema.GroupVersionKind) *runtime.Scheme 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(egv1a1.AddToScheme(scheme))
 	utilruntime.Must(gwapischeme.AddToScheme(scheme))
-	utilruntime.Must(mcsapiv1a1.AddToScheme(scheme))
+	utilruntime.Must(mcsapiv1a1.Install(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 	for _, gvk := range unstructuredGVKs {
 		scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})

@@ -144,7 +144,7 @@ func Test_BasicValidation(t *testing.T) {
                   end`,
 			proxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					LuaValidation: new(egv1a1.LuaValidationInsecureSyntax),
+					LuaValidation: new(egv1a1.LuaValidationInsecureSyntax), //nolint:staticcheck
 				},
 			},
 			expectedErrSubstring: "",
@@ -161,7 +161,7 @@ func Test_BasicValidation(t *testing.T) {
                   end`,
 			proxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					LuaValidation: new(egv1a1.LuaValidationInsecureSyntax),
+					LuaValidation: new(egv1a1.LuaValidationInsecureSyntax), //nolint:staticcheck
 				},
 			},
 			expectedErrSubstring: "<string> at EOF:   syntax error",
@@ -178,7 +178,7 @@ func Test_BasicValidation(t *testing.T) {
                    end`,
 			proxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					LuaValidation: new(egv1a1.LuaValidationDisabled),
+					LuaValidation: new(egv1a1.LuaValidationDisabled), //nolint:staticcheck
 				},
 			},
 			expectedErrSubstring: "",

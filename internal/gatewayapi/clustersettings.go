@@ -468,10 +468,10 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	switch policy.ConsistentHash.Type {
 	case egv1a1.SourceIPConsistentHashType:
 		consistentHash.SourceIP = new(true)
-	case egv1a1.HeaderConsistentHashType:
+	case egv1a1.HeaderConsistentHashType: //nolint:staticcheck
 		consistentHash.Headers = []*egv1a1.Header{
 			{
-				Name: policy.ConsistentHash.Header.Name,
+				Name: policy.ConsistentHash.Header.Name, //nolint:staticcheck
 			},
 		}
 	case egv1a1.HeadersConsistentHashType:

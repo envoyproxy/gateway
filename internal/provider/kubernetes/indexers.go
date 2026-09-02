@@ -868,16 +868,16 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	if securityPolicy.Spec.ExtAuth != nil {
 		if securityPolicy.Spec.ExtAuth.HTTP != nil {
 			http := securityPolicy.Spec.ExtAuth.HTTP
-			if http.BackendRef != nil {
-				backendRefs = append(backendRefs, *http.BackendRef)
+			if http.BackendRef != nil { //nolint:staticcheck
+				backendRefs = append(backendRefs, *http.BackendRef) //nolint:staticcheck
 			}
 			if len(http.BackendRefs) > 0 {
 				backendRefs = append(backendRefs, http.BackendRefs[0].BackendObjectReference)
 			}
 		} else if securityPolicy.Spec.ExtAuth.GRPC != nil {
 			grpc := securityPolicy.Spec.ExtAuth.GRPC
-			if grpc.BackendRef != nil {
-				backendRefs = append(backendRefs, *grpc.BackendRef)
+			if grpc.BackendRef != nil { //nolint:staticcheck
+				backendRefs = append(backendRefs, *grpc.BackendRef) //nolint:staticcheck
 			}
 			if len(grpc.BackendRefs) > 0 {
 				backendRefs = append(backendRefs, grpc.BackendRefs[0].BackendObjectReference)

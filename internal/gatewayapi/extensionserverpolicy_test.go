@@ -64,7 +64,7 @@ func TestExtractTargetRefs(t *testing.T) {
 				},
 			},
 			output: egv1a1.PolicyTargetReferences{
-				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind",

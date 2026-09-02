@@ -60,9 +60,6 @@ linters:
       - std-error-handling
     rules:
       - linters:
-          - staticcheck
-        text: 'SA1019:'
-      - linters:
           - bodyclose
         path: test/e2e
       - linters:

@@ -68,7 +68,7 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		return err
 	}
 
-	if eg.ExtensionAPIs != nil && eg.ExtensionAPIs.DisableLua != nil && *eg.ExtensionAPIs.DisableLua == eg.ExtensionAPIs.EnableLua {
+	if eg.ExtensionAPIs != nil && eg.ExtensionAPIs.DisableLua != nil && *eg.ExtensionAPIs.DisableLua == eg.ExtensionAPIs.EnableLua { //nolint:staticcheck
 		return fmt.Errorf("disableLua and enableLua must not have the same value")
 	}
 
@@ -81,7 +81,7 @@ func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
 		return nil
 	}
 	var warnings []string
-	if eg.ExtensionAPIs.DisableLua != nil {
+	if eg.ExtensionAPIs.DisableLua != nil { //nolint:staticcheck
 		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
 	}
 	return warnings
@@ -415,12 +415,12 @@ func validateExtensionService(extensionService *egv1a1.ExtensionService) error {
 	}
 
 	switch {
-	case extensionService.Host == "" && extensionService.FQDN == nil && extensionService.Unix == nil && extensionService.IP == nil:
+	case extensionService.Host == "" && extensionService.FQDN == nil && extensionService.Unix == nil && extensionService.IP == nil: //nolint:staticcheck
 		return fmt.Errorf("extension service must contain a configured target")
 
-	case extensionService.FQDN != nil && (extensionService.IP != nil || extensionService.Unix != nil || extensionService.Host != ""),
-		extensionService.IP != nil && (extensionService.FQDN != nil || extensionService.Unix != nil || extensionService.Host != ""),
-		extensionService.Unix != nil && (extensionService.IP != nil || extensionService.FQDN != nil || extensionService.Host != ""):
+	case extensionService.FQDN != nil && (extensionService.IP != nil || extensionService.Unix != nil || extensionService.Host != ""), //nolint:staticcheck
+		extensionService.IP != nil && (extensionService.FQDN != nil || extensionService.Unix != nil || extensionService.Host != ""), //nolint:staticcheck
+		extensionService.Unix != nil && (extensionService.IP != nil || extensionService.FQDN != nil || extensionService.Host != ""): //nolint:staticcheck
 		return fmt.Errorf("only one backend target can be configured for the extension manager")
 	}
 

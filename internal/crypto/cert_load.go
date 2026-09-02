@@ -6,7 +6,6 @@
 package crypto
 
 import (
-	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -49,7 +48,6 @@ func LoadTLSConfig(tlsCrt, tlsKey, caCrt string) (*tls.Config, error) {
 	return &tls.Config{
 		MinVersion: tls.VersionTLS13,
 		ClientAuth: tls.RequireAndVerifyClientCert,
-		Rand:       rand.Reader,
 		GetConfigForClient: func(*tls.ClientHelloInfo) (*tls.Config, error) {
 			return loadConfig()
 		},
@@ -80,7 +78,6 @@ func LoadServerTLSConfig(tlsCrt, tlsKey string) (*tls.Config, error) {
 
 	return &tls.Config{
 		MinVersion: tls.VersionTLS13,
-		Rand:       rand.Reader,
 		GetConfigForClient: func(*tls.ClientHelloInfo) (*tls.Config, error) {
 			return loadConfig()
 		},

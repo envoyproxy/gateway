@@ -288,7 +288,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && otel.LogType == nil
 
 		al := &otelaccesslog.OpenTelemetryAccessLogConfig{
-			CommonConfig: &grpcaccesslog.CommonGrpcAccessLogConfig{
+			CommonConfig: &grpcaccesslog.CommonGrpcAccessLogConfig{ //nolint:staticcheck
 				LogName: otelLogName,
 				GrpcService: &cfgcore.GrpcService{
 					TargetSpecifier: &cfgcore.GrpcService_EnvoyGrpc_{

@@ -1454,7 +1454,7 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
 							BackendCluster: egv1a1.BackendCluster{
-								BackendRef: &gwapiv1.BackendObjectReference{
+								BackendRef: &gwapiv1.BackendObjectReference{ //nolint:staticcheck
 									Namespace: gatewayapi.NamespacePtr("ns-2"),
 									Name:      "test-backend",
 									Kind:      gatewayapi.KindPtr(resource.KindBackend),
@@ -1618,7 +1618,7 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
 							BackendCluster: egv1a1.BackendCluster{
-								BackendRef: &gwapiv1.BackendObjectReference{
+								BackendRef: &gwapiv1.BackendObjectReference{ //nolint:staticcheck
 									Namespace: gatewayapi.NamespacePtr("ns-2"),
 									Name:      "test-backend",
 									Kind:      gatewayapi.KindPtr(resource.KindBackend),

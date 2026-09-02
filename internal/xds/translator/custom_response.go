@@ -564,7 +564,7 @@ func (c *customResponse) buildResponseAction(r *ir.ResponseOverrideRule) (*anypb
 	if len(r.Response.Body) > 0 {
 		response.BodyFormat = &corev3.SubstitutionFormatString{
 			Format: &corev3.SubstitutionFormatString_TextFormat{
-				TextFormat: string(r.Response.Body),
+				TextFormat: string(r.Response.Body), //nolint:staticcheck
 			},
 		}
 	}

@@ -1021,7 +1021,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1039,7 +1039,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1068,7 +1068,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1097,7 +1097,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1115,7 +1115,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1146,7 +1146,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1164,7 +1164,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1195,7 +1195,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1213,7 +1213,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("ListenerSet"),
@@ -1231,7 +1231,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("ListenerSet"),
@@ -1264,7 +1264,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1282,7 +1282,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("ListenerSet"),
@@ -1314,7 +1314,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1333,7 +1333,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1365,7 +1365,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("ListenerSet"),
@@ -1384,7 +1384,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1418,7 +1418,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1436,7 +1436,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1465,7 +1465,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1484,7 +1484,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1510,7 +1510,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1525,7 +1525,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-rule-oldest-accepted"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1540,7 +1540,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-rule-younger-conflicting"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1568,7 +1568,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1583,7 +1583,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route-oldest-accepted"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1597,7 +1597,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route-younger-conflicting"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1623,7 +1623,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1638,7 +1638,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-listener-oldest-accepted"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1654,7 +1654,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-listener-younger-conflicting"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1681,7 +1681,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway-oldest-accepted"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1695,7 +1695,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway-younger-conflicting"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1723,7 +1723,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1790,7 +1790,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1808,7 +1808,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -1827,7 +1827,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1857,7 +1857,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1875,7 +1875,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1906,7 +1906,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1925,7 +1925,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -1955,7 +1955,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2116,7 +2116,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2156,7 +2156,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -2174,7 +2174,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -2193,7 +2193,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2211,7 +2211,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2689,7 +2689,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-no-mergetype"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2714,7 +2714,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-with-mergetype"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2740,7 +2740,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route-no-mergetype"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2763,7 +2763,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route-with-mergetype"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2787,7 +2787,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -2811,7 +2811,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2826,7 +2826,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-rule-a"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2852,7 +2852,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2867,7 +2867,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-rule-a"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2893,7 +2893,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-rule-oldest-accepted"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2909,7 +2909,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-rule-younger-conflicting"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2935,7 +2935,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route-oldest-accepted"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2950,7 +2950,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route-younger-conflicting"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("HTTPRoute"),
@@ -2974,7 +2974,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-oldest-accepted"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -2989,7 +2989,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-younger-conflicting"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
@@ -3016,7 +3016,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-listenerset"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("ListenerSet"),
@@ -3043,7 +3043,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-listenerset-listener"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("ListenerSet"),
@@ -3071,7 +3071,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-other-listenerset"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("ListenerSet"),
@@ -3098,7 +3098,7 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway-for-ls-fallthrough"},
 					Spec: egv1a1.BackendTrafficPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{ //nolint:staticcheck
 								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Group: gwapiv1.Group("gateway.networking.k8s.io"),
 									Kind:  gwapiv1.Kind("Gateway"),
