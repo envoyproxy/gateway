@@ -214,7 +214,6 @@ type Principal struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || !has(self.subjectAltNames.emailAddresses)",message="emailAddresses is not supported in clientCert; use uris or dnsNames"
 // +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || !has(self.subjectAltNames.ipAddresses)",message="ipAddresses is not supported in clientCert; use uris or dnsNames"
 // +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || !has(self.subjectAltNames.otherNames)",message="otherNames is not supported in clientCert; use uris or dnsNames"
-// +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || has(self.subjectAltNames.uris) || has(self.subjectAltNames.dnsNames)",message="subjectAltNames must specify at least one of uris or dnsNames"
 type ClientCertPrincipal struct {
 	// Subject matches the client certificate's Subject Distinguished Name in
 	// RFC 4514 string form (e.g. "CN=client.example.com,O=Example Inc.,C=US").

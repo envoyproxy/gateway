@@ -1857,6 +1857,22 @@ func (a *Authorization) GeoIPRequirements() (country, region, city, asn, isp, an
 	return country, region, city, asn, isp, anonymous
 }
 
+// UsesClientCert reports whether any rule in this Authorization matches on the
+// mTLS client certificate via a ClientCert principal.
+func (a *Authorization) UsesClientCert() bool {
+	if a == nil {
+		return false
+	}
+
+	for _, rule := range a.Rules {
+		if rule != nil && rule.Principal.ClientCert != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
 // AuthorizationRule defines the schema for the authorization rule.
 //
 // +k8s:deepcopy-gen=true

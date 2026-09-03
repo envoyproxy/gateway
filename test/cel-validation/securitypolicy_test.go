@@ -2601,41 +2601,6 @@ func TestSecurityPolicyClientCert(t *testing.T) {
 			wantErrors: []string{"at least one of subject or subjectAltNames"},
 		},
 		{
-			desc: "invalid clientCert principal with empty subjectAltNames object",
-			mutate: func(sp *egv1a1.SecurityPolicy) {
-				sp.Spec = egv1a1.SecurityPolicySpec{
-					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetSelectors: []egv1a1.TargetSelector{
-							{
-								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
-								Kind:  "HTTPRoute",
-								MatchLabels: map[string]string{
-									"eg/namespace": "reference-apps",
-								},
-							},
-						},
-					},
-					Authorization: &egv1a1.Authorization{
-						Rules: []egv1a1.AuthorizationRule{
-							{
-								Action: egv1a1.AuthorizationActionAllow,
-								Principal: &egv1a1.Principal{
-									ClientCert: &egv1a1.ClientCertPrincipal{
-										// subjectAltNames present but empty: must not silently drop the
-										// SAN constraint (a principal that also ANDs a CIDR/header/JWT
-										// condition would otherwise authorize without matching any
-										// certificate identity).
-										SubjectAltNames: &egv1a1.SubjectAltNames{},
-									},
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"subjectAltNames must specify at least one of uris or dnsNames"},
-		},
-		{
 			desc: "invalid clientCert principal with emailAddresses",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{

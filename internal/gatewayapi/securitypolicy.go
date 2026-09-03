@@ -1430,8 +1430,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					var (
 						geoIPProvider              *ir.GeoIPProvider
 						geoIPErr                   error
+						clientCertErr              error
 						listenerHasNonExtAuthError = hasNonExtAuthError
 						geoIPValidated             bool
+						clientCertValidated        bool
 					)
 
 					for _, r := range irListener.Routes {
@@ -1465,7 +1467,18 @@ func (t *Translator) translateSecurityPolicyForRoute(
 								geoIPValidated = true
 							}
 
-							if geoIPErr != nil || hasBaseErrs {
+							// Validate that clientCert principals are only used on a listener whose
+							// ClientTrafficPolicy actually verifies the certificate chain.
+							if r.Security.Authorization.UsesClientCert() && !clientCertValidated {
+								if clientCertErr = validateAuthorizationClientCert(irListener.TLS); clientCertErr != nil {
+									clientCertErr = perr.WithMessage(clientCertErr, "Authorization")
+									errs = errors.Join(errs, clientCertErr)
+									listenerHasNonExtAuthError = true
+								}
+								clientCertValidated = true
+							}
+
+							if geoIPErr != nil || clientCertErr != nil || hasBaseErrs {
 								// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
 								// and allow the request to go through.
 								// Otherwise, return a 500 direct response to avoid unauthorized access.
@@ -1659,6 +1672,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		var (
 			geoIPProvider              *ir.GeoIPProvider
 			geoIPErr                   error
+			clientCertErr              error
 			listenerHasNonExtAuthError = hasNonExtAuthError
 		)
 
@@ -1674,8 +1688,17 @@ func (t *Translator) translateSecurityPolicyForListeners(
 			}
 		}
 
+		if authorization.UsesClientCert() {
+			// We have to validate this here because it requires the listener-level TLS configuration from CTP.
+			if clientCertErr = validateAuthorizationClientCert(h.TLS); clientCertErr != nil {
+				clientCertErr = perr.WithMessage(clientCertErr, "Authorization")
+				errs = errors.Join(errs, clientCertErr)
+				listenerHasNonExtAuthError = true
+			}
+		}
+
 		var errorResponse *ir.CustomResponse
-		if geoIPErr != nil || hasBaseErrs {
+		if geoIPErr != nil || clientCertErr != nil || hasBaseErrs {
 			// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
 			// and allow the request to go through.
 			// Otherwise, return a 500 direct response to avoid unauthorized access.
@@ -3133,6 +3156,18 @@ func validateClientCertPrincipal(clientCert *egv1a1.ClientCertPrincipal) error {
 	}
 
 	if san := clientCert.SubjectAltNames; san != nil {
+		// CEL admission only checks has(self.subjectAltNames.uris)/.dnsNames, which is
+		// true even for an explicitly empty array (uris: []); enforcing "at least one
+		// non-empty entry" here in Go instead avoids the CEL cost-budget limit that a
+		// size()-based admission rule hits on this already-XValidation-heavy type.
+		// Without this check, an empty subjectAltNames{} (or uris: []/dnsNames: [])
+		// would silently contribute no certificate predicate, and a principal that
+		// also ANDs a CIDR/header/JWT condition could authorize without matching any
+		// certificate identity.
+		if len(san.URIs) == 0 && len(san.DNSNames) == 0 {
+			return errors.New("clientCert.subjectAltNames must specify at least one non-empty entry in uris or dnsNames")
+		}
+
 		for i := range san.URIs {
 			if err := validateStringMatchRegex(&san.URIs[i]); err != nil {
 				return fmt.Errorf("invalid clientCert.subjectAltNames.uris[%d]: %w", i, err)
@@ -3250,6 +3285,25 @@ func localGeoIPDBPath(source *egv1a1.GeoIPDBSource) *string {
 		return nil
 	}
 	return &source.Local.Path
+}
+
+// validateAuthorizationClientCert ensures a clientCert principal is only used on a
+// listener whose ClientTrafficPolicy verifies the presented certificate's chain.
+//
+// A ClientTrafficPolicy in Request or RequireAny mode still requests/accepts a
+// client certificate, but sets AcceptUntrusted so Envoy does not verify the
+// certificate chain (ACCEPT_UNTRUSTED). Without this check, an attacker could
+// present a self-signed certificate carrying an allowed Subject or SAN and
+// satisfy a clientCert rule, even though the API documents this principal as
+// matching a validated peer certificate.
+func validateAuthorizationClientCert(tlsConfig *ir.TLSConfig) error {
+	if tlsConfig == nil || !tlsConfig.ClientValidationEnabled {
+		return errors.New("authorization clientCert requires a ClientTrafficPolicy configuring spec.tls.clientValidation on the gateway listener")
+	}
+	if tlsConfig.AcceptUntrusted {
+		return errors.New("authorization clientCert requires ClientTrafficPolicy.spec.tls.clientValidation.mode of VerifyIfGiven or RequireAndVerify; Request and RequireAny do not verify the certificate chain")
+	}
+	return nil
 }
 
 func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) string {

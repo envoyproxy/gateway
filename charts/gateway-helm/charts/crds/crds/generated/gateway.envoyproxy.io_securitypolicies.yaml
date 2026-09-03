@@ -555,10 +555,6 @@ spec:
                               - message: otherNames is not supported in clientCert;
                                   use uris or dnsNames
                                 rule: '!has(self.subjectAltNames) || !has(self.subjectAltNames.otherNames)'
-                              - message: subjectAltNames must specify at least one
-                                  of uris or dnsNames
-                                rule: '!has(self.subjectAltNames) || has(self.subjectAltNames.uris)
-                                  || has(self.subjectAltNames.dnsNames)'
                             clientIPGeoLocations:
                               description: |-
                                 ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
