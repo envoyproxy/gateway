@@ -1795,6 +1795,11 @@ type HTTPExtAuthService struct {
 	// original client request.
 	// +optional
 	HeadersToBackend []string `json:"headersToBackend,omitempty"`
+
+	// HeadersToClientOnSuccess are the authorization response headers that will be added
+	// to the response sent to the client when the authorization response is successful.
+	// +optional
+	HeadersToClientOnSuccess []string `json:"headersToClientOnSuccess,omitempty"`
 }
 
 // GRPCExtAuthService defines the gRPC External Authorization service
