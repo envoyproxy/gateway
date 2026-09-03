@@ -2958,8 +2958,10 @@ type RateLimitRule struct {
 	// When nil, the rule inherits the listener-level setting from DisableRateLimitHeaders.
 	// +optional
 	XRateLimitOption *egv1a1.XRateLimitHeadersOption `json:"xRateLimitOption,omitempty" yaml:"xRateLimitOption,omitempty"`
-	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
+	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-name-or-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// NameFromUser indicates whether Name contains an API-supplied rule name rather than a generated index.
+	NameFromUser bool `json:"nameFromUser,omitempty" yaml:"nameFromUser,omitempty"`
 }
 
 // RateLimitCost specifies the cost of the request or response.

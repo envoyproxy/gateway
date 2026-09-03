@@ -17,6 +17,7 @@ http:
           # array index. stripRuleIndexSuffix must still recover the domain
           # "test-namespace/test-policy-1" by cutting at "/rule/".
           - name: "test-namespace/test-policy-1/rule/by-user"
+            nameFromUser: true
             headerMatches:
             - name: "x-user-id"
               distinct: true

@@ -7,10 +7,6 @@ rateLimitsByDomain:
           descriptor_value: first-route
     - ActionSpecifier:
         GenericKey:
-          descriptor_key: test-namespace/test-policy-1/rule/0
-          descriptor_value: test-namespace/test-policy-1/rule/0
-    - ActionSpecifier:
-        GenericKey:
           descriptor_key: rule-0-match--1
           descriptor_value: rule-0-match--1
 routeName: first-route

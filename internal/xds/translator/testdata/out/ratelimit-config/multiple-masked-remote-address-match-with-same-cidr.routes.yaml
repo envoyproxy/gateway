@@ -6,10 +6,6 @@ rateLimitsByDomain:
           descriptor_key: first-route
           descriptor_value: first-route
     - ActionSpecifier:
-        GenericKey:
-          descriptor_key: test-namespace/test-policy-1/rule/0
-          descriptor_value: test-namespace/test-policy-1/rule/0
-    - ActionSpecifier:
         RemoteAddressMatch:
           address_matcher:
             ranges:
@@ -27,10 +23,6 @@ rateLimitsByDomain:
         GenericKey:
           descriptor_key: second-route
           descriptor_value: second-route
-    - ActionSpecifier:
-        GenericKey:
-          descriptor_key: test-namespace/test-policy-2/rule/0
-          descriptor_value: test-namespace/test-policy-2/rule/0
     - ActionSpecifier:
         RemoteAddressMatch:
           address_matcher:

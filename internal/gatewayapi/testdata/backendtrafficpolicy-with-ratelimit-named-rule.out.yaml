@@ -249,6 +249,7 @@ xdsIR:
                   requests: 20
                   unit: Hour
                 name: default/policy-for-route/rule/by-ip
+                nameFromUser: true
                 shared: true
               - headerMatches:
                 - distinct: true
@@ -257,6 +258,7 @@ xdsIR:
                   requests: 30
                   unit: Hour
                 name: default/policy-for-route/rule/by-org
+                nameFromUser: true
               - headerMatches:
                 - distinct: false
                   exact: blue

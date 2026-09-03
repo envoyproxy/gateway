@@ -1957,6 +1957,7 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		Shared:           rule.Shared,
 		ShadowMode:       rule.ShadowMode,
 		XRateLimitOption: rule.XRateLimitHeaders,
+		NameFromUser:     rule.Name != nil,
 	}
 
 	if md := rule.Limit.FromMetadata; md != nil {

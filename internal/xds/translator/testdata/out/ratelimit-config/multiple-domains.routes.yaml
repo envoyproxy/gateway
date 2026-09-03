@@ -27,10 +27,6 @@ rateLimitsByDomain:
           descriptor_key: second-route
           descriptor_value: second-route
     - ActionSpecifier:
-        GenericKey:
-          descriptor_key: test-namespace/test-policy-2/rule/0
-          descriptor_value: test-namespace/test-policy-2/rule/0
-    - ActionSpecifier:
         HeaderValueMatch:
           descriptor_key: rule-0-match-0
           descriptor_value: rule-0-match-0

@@ -5,7 +5,7 @@ descriptors:
     value: test-namespace/test-policy-1/rule/by-user
     rate_limit: null
     descriptors:
-      - key: rule-0-match-0
+      - key: rule-match-0
         value: ""
         rate_limit:
           requests_per_unit: 5

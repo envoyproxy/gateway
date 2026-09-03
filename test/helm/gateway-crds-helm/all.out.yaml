@@ -26582,6 +26582,8 @@ spec:
                                 <policy-namespace>/<policy-name>/rule/<rule-name>
                                 When name is not set, the format remains:
                                 <policy-namespace>/<policy-name>/rule/<rule-index>
+                                For local rate limiting, name can only be set on rules with clientSelectors;
+                                the selectorless rule configures the default bucket and has no descriptor key.
                               maxLength: 64
                               pattern: ^[a-zA-Z0-9._-]+$
                               type: string
@@ -27019,6 +27021,8 @@ spec:
                                 <policy-namespace>/<policy-name>/rule/<rule-name>
                                 When name is not set, the format remains:
                                 <policy-namespace>/<policy-name>/rule/<rule-index>
+                                For local rate limiting, name can only be set on rules with clientSelectors;
+                                the selectorless rule configures the default bucket and has no descriptor key.
                               maxLength: 64
                               pattern: ^[a-zA-Z0-9._-]+$
                               type: string
@@ -27066,6 +27070,9 @@ spec:
                             local rules slice
                           rule: self.all(r, !has(r.name) || self.filter(r2, has(r2.name)
                             && r2.name == r.name).size() == 1)
+                        - message: local rate limit rule names require clientSelectors
+                          rule: self.all(r, !has(r.name) || (has(r.clientSelectors)
+                            && r.clientSelectors.size() > 0))
                     type: object
                   type:
                     description: |-

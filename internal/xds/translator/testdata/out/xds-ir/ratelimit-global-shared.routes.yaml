@@ -122,9 +122,6 @@
             - genericKey:
                 descriptorKey: fourth-route
                 descriptorValue: fourth-route
-            - genericKey:
-                descriptorKey: test-namespace/test-policy-3/rule/0
-                descriptorValue: test-namespace/test-policy-3/rule/0
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
                 descriptorValue: rule-0-match-0
@@ -149,9 +146,6 @@
             - genericKey:
                 descriptorKey: fifth-route
                 descriptorValue: fifth-route
-            - genericKey:
-                descriptorKey: test-namespace/test-policy-4/rule/1
-                descriptorValue: test-namespace/test-policy-4/rule/1
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
                 descriptorValue: rule-0-match-0

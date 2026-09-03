@@ -40,9 +40,6 @@
             - genericKey:
                 descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
                 descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-            - genericKey:
-                descriptorKey: default/policy-for-route/rule/0
-                descriptorValue: default/policy-for-route/rule/0
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
                 descriptorValue: rule-0-match-0
@@ -56,9 +53,6 @@
             - genericKey:
                 descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
                 descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-            - genericKey:
-                descriptorKey: default/policy-for-route/rule/1
-                descriptorValue: default/policy-for-route/rule/1
             - headerValueMatch:
                 descriptorKey: rule-1-match-0
                 descriptorValue: rule-1-match-0
@@ -72,9 +66,6 @@
             - genericKey:
                 descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
                 descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-            - genericKey:
-                descriptorKey: default/policy-for-route/rule/2
-                descriptorValue: default/policy-for-route/rule/2
             - headerValueMatch:
                 descriptorKey: rule-2-match-0
                 descriptorValue: rule-2-match-0
@@ -122,8 +113,6 @@
           alwaysConsumeDefaultTokenBucket: false
           descriptors:
           - entries:
-            - key: default/policy-for-route-2/rule/0
-              value: default/policy-for-route-2/rule/0
             - key: rule-0-match-0
               value: rule-0-match-0
             tokenBucket:
@@ -131,8 +120,6 @@
               maxTokens: 10
               tokensPerFill: 10
           - entries:
-            - key: default/policy-for-route-2/rule/1
-              value: default/policy-for-route-2/rule/1
             - key: rule-1-match-0
               value: rule-1-match-0
             tokenBucket:
@@ -140,8 +127,6 @@
               maxTokens: 20
               tokensPerFill: 20
           - entries:
-            - key: default/policy-for-route-2/rule/2
-              value: default/policy-for-route-2/rule/2
             - key: rule-2-match-0
               value: rule-2-match-0
             tokenBucket:
@@ -157,9 +142,6 @@
               numerator: 100
           rateLimits:
           - actions:
-            - genericKey:
-                descriptorKey: default/policy-for-route-2/rule/0
-                descriptorValue: default/policy-for-route-2/rule/0
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
                 descriptorValue: rule-0-match-0
@@ -170,9 +152,6 @@
                     exact: one
             xRatelimitOption: "OFF"
           - actions:
-            - genericKey:
-                descriptorKey: default/policy-for-route-2/rule/1
-                descriptorValue: default/policy-for-route-2/rule/1
             - headerValueMatch:
                 descriptorKey: rule-1-match-0
                 descriptorValue: rule-1-match-0
@@ -183,9 +162,6 @@
                     exact: two
             xRatelimitOption: DRAFT_VERSION_03
           - actions:
-            - genericKey:
-                descriptorKey: default/policy-for-route-2/rule/2
-                descriptorValue: default/policy-for-route-2/rule/2
             - headerValueMatch:
                 descriptorKey: rule-2-match-0
                 descriptorValue: rule-2-match-0

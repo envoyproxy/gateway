@@ -71,6 +71,7 @@ type LocalRateLimit struct {
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.limit.fromMetadata))", message="limit fromMetadata is not supported for Local Rate Limits"
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.name) || self.filter(r2, has(r2.name) && r2.name == r.name).size() == 1)", message="rate limit rule names must be unique within the local rules slice"
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.name) || (has(r.clientSelectors) && r.clientSelectors.size() > 0))", message="local rate limit rule names require clientSelectors"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -104,6 +105,8 @@ type RateLimitRule struct {
 	// <policy-namespace>/<policy-name>/rule/<rule-name>
 	// When name is not set, the format remains:
 	// <policy-namespace>/<policy-name>/rule/<rule-index>
+	// For local rate limiting, name can only be set on rules with clientSelectors;
+	// the selectorless rule configures the default bucket and has no descriptor key.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=64
