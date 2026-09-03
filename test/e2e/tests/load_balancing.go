@@ -231,10 +231,8 @@ var BackendUtilizationWeightedZonesLoadBalancingTest = suite.ConformanceTest{
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const (
-			maxWarmupRequests = 200
-			warmupTimeout     = 20 * time.Second
-			sampleRequests    = 100
-			zone1MinPct       = 80 // WeightedZones split is 90:10 but this gives a buffer of ~10%
+			sampleRequests = 100
+			zone1MinPct    = 80 // WeightedZones split is 90:10 but this gives a buffer of ~10%
 		)
 
 		ns := "gateway-conformance-infra"
@@ -271,38 +269,41 @@ var BackendUtilizationWeightedZonesLoadBalancingTest = suite.ConformanceTest{
 		}
 
 		t.Run("warmup until both zones are hit", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(t.Context(), warmupTimeout)
+			ctx, cancel := context.WithTimeout(t.Context(), suite.TimeoutConfig.MaxTimeToConsistency)
 			defer cancel()
 
 			hitZone1, hitZone2 := false, false
 			sent := 0
-			for sent < maxWarmupRequests {
-				if ctx.Err() != nil {
-					break
-				}
-				request := req
-				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(request)
-				sent++
-				if err != nil {
-					tlog.Logf(t, "warmup request failed: %v", err)
-					continue
-				}
-				if err := http.CompareRoundTrip(t, &request, cReq, cResp, expectedResponse); err != nil {
-					tlog.Logf(t, "warmup unexpected response: %v", err)
-					continue
-				}
-				if isZone1(cReq.Pod) {
-					hitZone1 = true
-				}
-				if isZone2(cReq.Pod) {
-					hitZone2 = true
-				}
-				if hitZone1 && hitZone2 {
-					tlog.Logf(t, "both zones hit after %d warmup requests", sent)
+			for {
+				select {
+				case <-ctx.Done():
+					tlog.Errorf(t, "warmup context deadline exceeded after %d requests: zone1=%v zone2=%v", sent, hitZone1, hitZone2)
 					return
+				default:
+					request := req
+					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(request)
+					sent++
+					if err != nil {
+						tlog.Logf(t, "warmup request failed: %v", err)
+						continue
+					}
+					if err := http.CompareRoundTrip(t, &request, cReq, cResp, expectedResponse); err != nil {
+						tlog.Logf(t, "warmup unexpected response: %v", err)
+						continue
+					}
+					tlog.Logf(t, "warmup request %d hit pod %s", sent, cReq.Pod)
+					if !hitZone1 && isZone1(cReq.Pod) {
+						hitZone1 = true
+					}
+					if !hitZone2 && isZone2(cReq.Pod) {
+						hitZone2 = true
+					}
+					if hitZone1 && hitZone2 {
+						tlog.Logf(t, "both zones hit after %d warmup requests", sent)
+						return
+					}
 				}
 			}
-			tlog.Errorf(t, "failed to hit both zones during warmup after %d requests: zone1=%v zone2=%v", sent, hitZone1, hitZone2)
 		})
 
 		// Pause to allow envoy to compute weights. Should be longer than WeightUpdatePeriod duration.
