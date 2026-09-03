@@ -661,13 +661,10 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 						continue
 					}
 
-					mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
-					if err != nil {
-						status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
-							&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
-						continue
-					}
-					tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
+					// route.Traffic already reflects gateway+route precedence - merging policy
+					// with gwPolicy here would let an untouched field leak in from gwPolicy and
+					// wrongly override the route's own resolved value for it.
+					tf, err := t.buildTrafficFeatures(policy, nil)
 					if err != nil || tf == nil {
 						if err != nil {
 							status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
@@ -716,13 +713,9 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 						continue
 					}
 
-					mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
-					if err != nil {
-						status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
-							&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
-						continue
-					}
-					tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
+					// tcpRoute's own resolved fields already reflect gateway+route precedence -
+					// only the backend policy's own fields belong in the override below.
+					tf, err := t.buildTrafficFeatures(policy, nil)
 					if err != nil || tf == nil {
 						if err != nil {
 							status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
@@ -778,13 +771,9 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					continue
 				}
 
-				mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
-				if err != nil {
-					status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
-						&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
-					continue
-				}
-				tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
+				// udpRoute's own resolved fields already reflect gateway+route precedence -
+				// only the backend policy's own fields belong in the override below.
+				tf, err := t.buildTrafficFeatures(policy, nil)
 				if err != nil || tf == nil {
 					if err != nil {
 						status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
