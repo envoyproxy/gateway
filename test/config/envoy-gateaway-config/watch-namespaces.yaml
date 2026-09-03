@@ -20,7 +20,6 @@ data:
               - btp-cross-ns-denied
               - btp-cross-ns-granted
               - gateway-conformance-infra
-              - gateway-preserve-case-backend
               - gateway-upgrade-infra
               - listenerset-tls-termination-secret
               - monitoring
