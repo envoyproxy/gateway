@@ -586,6 +586,9 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 
 	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(gateways))
 	for _, gw := range gateways {
+		if x, ok := xdsIR[t.getIRKey(gw.Gateway)]; !ok || !gatewayReferencesBackend(x, key) {
+			continue
+		}
 		ref := getAncestorRefForPolicy(utils.NamespacedName(gw), nil)
 		ancestorRefs = append(ancestorRefs, &ref)
 	}
@@ -600,7 +603,18 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	}
 	backendPolicyMap[key] = policy
 
-	matchedGWs := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
+	// Unmerged with gwPolicy: route.Traffic already reflects it, merging again here would
+	// leak an untouched field back over the route's own resolved value.
+	var backendTraffic *ir.ClusterTrafficFeatures
+	var backendTrafficErr error
+	if tf, err := t.buildTrafficFeatures(policy, nil); err != nil || tf == nil {
+		backendTrafficErr = err
+	} else {
+		backendTraffic = tf.ClusterFeatures()
+	}
+
+	matchedGWs := make(sets.Set[types.NamespacedName])
+	mergedGWs := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
 	for _, gw := range gateways {
 		x, ok := xdsIR[t.getIRKey(gw.Gateway)]
 		if !ok {
@@ -631,24 +645,30 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			}
 			mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
 			if err != nil {
-				status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+				ref := getAncestorRefForPolicy(gwNN, nil)
+				status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
 					&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
 				continue
 			}
 			tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
 			if err != nil || tf == nil {
 				if err != nil {
-					status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
+					ref := getAncestorRefForPolicy(gwNN, nil)
+					status.SetTranslationErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
 						status.Error2ConditionMsg(err))
 				}
 				continue
 			}
 			bc.Traffic = tf.ClusterFeatures()
 			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
-			matchedGWs[gwNN] = gwPolicy
+			matchedGWs.Insert(gwNN)
+			if gwPolicy != nil {
+				mergedGWs[gwNN] = gwPolicy
+			}
 		}
 
 		unsupportedRoutes := make(map[string]bool) // dedupe within this gateway
+		needsTranslationError := false
 
 		for _, http := range x.HTTP {
 			for _, route := range http.Routes {
@@ -661,19 +681,11 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 						continue
 					}
 
-					// route.Traffic already reflects gateway+route precedence - merging policy
-					// with gwPolicy here would let an untouched field leak in from gwPolicy and
-					// wrongly override the route's own resolved value for it.
-					tf, err := t.buildTrafficFeatures(policy, nil)
-					if err != nil || tf == nil {
-						if err != nil {
-							status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
-								status.Error2ConditionMsg(err))
-						}
+					if backendTraffic == nil {
+						needsTranslationError = needsTranslationError || backendTrafficErr != nil
 						continue
 					}
 
-					backendTraffic := tf.ClusterFeatures()
 					resolved := &ir.ClusterTrafficFeatures{}
 					if cf := route.Traffic.ClusterFeatures(); cf != nil {
 						*resolved = *cf
@@ -691,7 +703,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
 
 					ds.Traffic = resolved
-					matchedGWs[gwNN] = gwPolicy
+					matchedGWs.Insert(gwNN)
 				}
 			}
 		}
@@ -713,18 +725,11 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 						continue
 					}
 
-					// tcpRoute's own resolved fields already reflect gateway+route precedence -
-					// only the backend policy's own fields belong in the override below.
-					tf, err := t.buildTrafficFeatures(policy, nil)
-					if err != nil || tf == nil {
-						if err != nil {
-							status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
-								status.Error2ConditionMsg(err))
-						}
+					if backendTraffic == nil {
+						needsTranslationError = needsTranslationError || backendTrafficErr != nil
 						continue
 					}
 
-					backendTraffic := tf.ClusterFeatures()
 					resolved := &ir.ClusterTrafficFeatures{
 						LoadBalancer:      tcpRoute.LoadBalancer,
 						ProxyProtocol:     tcpRoute.ProxyProtocol,
@@ -746,7 +751,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
 
 					ds.Traffic = resolved
-					matchedGWs[gwNN] = gwPolicy
+					matchedGWs.Insert(gwNN)
 				}
 			}
 		}
@@ -771,18 +776,11 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					continue
 				}
 
-				// udpRoute's own resolved fields already reflect gateway+route precedence -
-				// only the backend policy's own fields belong in the override below.
-				tf, err := t.buildTrafficFeatures(policy, nil)
-				if err != nil || tf == nil {
-					if err != nil {
-						status.SetTranslationErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
-							status.Error2ConditionMsg(err))
-					}
+				if backendTraffic == nil {
+					needsTranslationError = needsTranslationError || backendTrafficErr != nil
 					continue
 				}
 
-				backendTraffic := tf.ClusterFeatures()
 				resolved := &ir.ClusterTrafficFeatures{
 					LoadBalancer: udpRoute.LoadBalancer,
 					DNS:          udpRoute.DNS,
@@ -799,8 +797,14 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 				resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
 
 				ds.Traffic = resolved
-				matchedGWs[gwNN] = gwPolicy
+				matchedGWs.Insert(gwNN)
 			}
+		}
+
+		if needsTranslationError {
+			ref := getAncestorRefForPolicy(gwNN, nil)
+			status.SetTranslationErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
+				status.Error2ConditionMsg(backendTrafficErr))
 		}
 
 		// One combined Warning per gateway, never per occurrence.
@@ -818,7 +822,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 		}
 	}
 
-	matchedRefs := make([]*gwapiv1.ParentReference, 0, len(matchedGWs))
+	matchedRefs := make([]*gwapiv1.ParentReference, 0, matchedGWs.Len())
 	for gwNN := range matchedGWs {
 		ref := getAncestorRefForPolicy(gwNN, nil)
 		matchedRefs = append(matchedRefs, &ref)
@@ -826,10 +830,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 
 	status.SetAcceptedForPolicyAncestors(&policy.Status, matchedRefs, t.GatewayControllerName, policy.Generation)
 	if policy.Spec.MergeType != nil {
-		for gwNN, gwPolicy := range matchedGWs {
-			if gwPolicy == nil {
-				continue
-			}
+		for gwNN, gwPolicy := range mergedGWs {
 			ancestorRef := getAncestorRefForPolicy(gwNN, nil)
 			status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
 				egv1a1.PolicyConditionMerged, metav1.ConditionTrue, egv1a1.PolicyReasonMerged,
