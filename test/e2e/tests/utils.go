@@ -858,7 +858,10 @@ func DumpRateLimitConfig(t *testing.T, suite *suite.ConformanceTestSuite) (strin
 		return "", err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	httpClient := &http.Client{
+		Timeout: 3 * time.Second,
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
