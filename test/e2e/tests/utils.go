@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -79,8 +80,12 @@ func TimeoutConfig() config.TimeoutConfig {
 	// The default value of RequiredConsecutiveSuccesses is 3,
 	// which means a test needs to pass 3 times in a row to be considered successful.
 	// This's not necessary for E2E test.
-	timeout.RequiredConsecutiveSuccesses = 0
+	timeout.RequiredConsecutiveSuccesses = 1
 	return timeout
+}
+
+func WaitForPodsReady(t *testing.T, cl client.Client, namespace string, selectors map[string]string) {
+	WaitForPods(t, cl, namespace, selectors, corev1.PodRunning, &PodReady)
 }
 
 // WaitForPods waits for the pods in the given namespace and with the given selector
@@ -583,6 +588,29 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
 }
 
+// EnvoyExtensionPolicyMustBeMerged waits for the specified EnvoyExtensionPolicy to have Merged condition.
+func EnvoyExtensionPolicyMustBeMerged(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.EnvoyExtensionPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyExtensionPolicy: %w", err)
+		}
+
+		if policyMergedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "EnvoyExtensionPolicy has Merged condition: %+v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "EnvoyExtensionPolicy does not have Merged condition yet: %+v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to have Merged condition")
+}
+
 // BackendMustBeAccepted waits for the specified Backend to be accepted.
 func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types.NamespacedName) {
 	t.Helper()
@@ -878,23 +906,42 @@ type LokiQueryResponse struct {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
-	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
-		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
-		return
-	}
 	dumpedNamespaces := []string{"envoy-gateway-system"}
 	if IsGatewayNamespaceMode() {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
 	}
 
-	runCollectAndDump(t, rest, tb.WithCollectedNamespaces(dumpedNamespaces))
+	runCollectAndDump(t, rest,
+		tb.WithCollectedNamespaces(dumpedNamespaces),
+	)
 }
 
 func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
-	result, _ := tb.CollectResult(t.Context(), rest, opts...)
-	for r, data := range result {
-		tlog.Logf(t, "\nfilename: %s", r)
-		tlog.Logf(t, "\ndata: \n%s\n", data)
+	artifactsDir := os.Getenv("E2E_ARTIFACTS_DIR")
+	if artifactsDir == "" {
+		artifactsDir = "artifacts/e2e"
+	}
+
+	root := filepath.Clean(artifactsDir)
+	basename := fmt.Sprintf("%s-%s", t.Name(), time.Now().Format("2006-01-02T15_04_05"))
+	bundlePath := filepath.Join(root, strings.TrimSuffix(basename, ".tar.gz"))
+	// Guard against t.Name() escaping the artifacts root (e.g. via "..") before
+	// it reaches the filesystem sink below.
+	if bundlePath != root && !strings.HasPrefix(bundlePath, root+string(os.PathSeparator)) {
+		tlog.Logf(t, "refusing to create e2e artifacts directory outside of %s: %s", root, bundlePath)
+		return
+	}
+
+	// bundlePath is validated above to stay within root
+	if err := os.MkdirAll(bundlePath, 0o755); err != nil { // nolint:gosec
+		tlog.Logf(t, "failed to create e2e artifacts directory %s: %v", bundlePath, err)
+	} else {
+		opts = append(opts, tb.WithBundlePath(bundlePath))
+	}
+
+	tlog.Logf(t, "creating e2e artifacts directory %s", bundlePath)
+	if _, err := tb.CollectResult(t.Context(), rest, opts...); err != nil {
+		tlog.Logf(t, "failed to collect all data: %v", err)
 	}
 }
 

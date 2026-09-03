@@ -12,12 +12,17 @@ data:
       kubernetes:
         deploy:
           type: GatewayNamespace
+        # increase the replicas of the rate limit deployment to 2,
+        # this is to test the rate limit service discovery with multiple replicas.
+        rateLimitDeployment:
+          replicas: 2
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
       enableEnvoyPatchPolicy: true
       enableBackend: true
       enableLua: true
+      enableSDSSecretRef: true
     gatewayAPI:
       enabled: [XListenerSet]
     rateLimit:

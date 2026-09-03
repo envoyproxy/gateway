@@ -109,7 +109,12 @@ securityPolicies:
         name: client1-secret
       cookieNames:
         accessToken: CustomAccessTokenCookie
+        codeVerifier: CustomCodeVerifierCookie
         idToken: CustomIdTokenCookie
+        oauthExpires: CustomOauthExpiresCookie
+        oauthHmac: CustomOauthHMACCookie
+        oauthNonce: CustomOauthNonceCookie
+        refreshToken: CustomRefreshTokenCookie
       logoutPath: /bar/logout
       provider:
         issuer: https://accounts.google.com
@@ -215,7 +220,12 @@ xdsIR:
             clientSecret: '[redacted]'
             cookieNameOverrides:
               accessToken: CustomAccessTokenCookie
+              codeVerifier: CustomCodeVerifierCookie
               idToken: CustomIdTokenCookie
+              oauthExpires: CustomOauthExpiresCookie
+              oauthHmac: CustomOauthHMACCookie
+              oauthNonce: CustomOauthNonceCookie
+              refreshToken: CustomRefreshTokenCookie
             cookieSuffix: b0a1b740
             hmacSecret: '[redacted]'
             logoutPath: /bar/logout

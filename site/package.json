@@ -43,7 +43,10 @@
     "rtlcss": "^4.3.0"
   },
   "optionalDependencies": {
-    "npm-check-updates": "^23.0.0"
+    "npm-check-updates": "^23.1.0"
+  },
+  "overrides": {
+    "adm-zip": "^0.6.0"
   },
   "private": true,
   "prettier": {

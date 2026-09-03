@@ -1,1 +1,0 @@
-Added support for `ListenerSet` as a `targetRef` kind in `BackendTrafficPolicy`.
