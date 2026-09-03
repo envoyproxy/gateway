@@ -1,0 +1,1 @@
+Added an optional `gateway.envoyproxy.io/route-priority` annotation for HTTPRoute and GRPCRoute matches (higher wins). Gateway owners enable it with `EnvoyProxy.spec.enableRoutePriority` (default false). Unannotated routes have priority 0. Existing match precedence breaks equal-priority ties by default. With `preserveRouteOrder`, equal-priority routes keep their existing order.

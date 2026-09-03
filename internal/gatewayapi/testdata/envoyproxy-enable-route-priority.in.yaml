@@ -1,0 +1,63 @@
+# enableRoutePriority is on. The catch-all (100) must match before /api (1).
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    enableRoutePriority: true
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: specific
+    annotations:
+      gateway.envoyproxy.io/route-priority: "1"
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/api"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: catch-all
+    annotations:
+      gateway.envoyproxy.io/route-priority: "100"
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
