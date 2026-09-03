@@ -4,6 +4,11 @@ go 1.27.1
 
 replace github.com/envoyproxy/gateway => ../
 
+// TODO: remove this once https://github.com/kubernetes-sigs/gateway-api/pull/5185 merged
+replace sigs.k8s.io/gateway-api/conformance => github.com/zirain-dev/gateway-api/conformance v0.0.0-20260902000054-e1b624c0d116
+
+replace sigs.k8s.io/gateway-api => github.com/zirain-dev/gateway-api v0.0.0-20260902000054-e1b624c0d116
+
 require (
 	fortio.org/fortio v1.73.2
 	fortio.org/log v1.18.3
