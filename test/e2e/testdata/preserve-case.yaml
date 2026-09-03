@@ -1,23 +1,3 @@
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: gateway-preserve-case-backend
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: ReferenceGrant
-metadata:
-  name: allow-preserve-case
-  namespace: gateway-preserve-case-backend
-spec:
-  from:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      namespace: gateway-conformance-infra
-  to:
-    - group: ""
-      kind: Service
----
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -46,14 +26,13 @@ spec:
             value: /preserve
       backendRefs:
         - name: fasthttp-backend
-          namespace: gateway-preserve-case-backend
           port: 8000
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: preserve-case
-  namespace: gateway-preserve-case-backend
+  namespace: gateway-conformance-infra
 spec:
   replicas: 1
   selector:
@@ -75,7 +54,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: fasthttp-backend
-  namespace: gateway-preserve-case-backend
+  namespace: gateway-conformance-infra
 spec:
   selector:
     app: preserve-case
