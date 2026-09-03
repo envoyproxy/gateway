@@ -644,6 +644,9 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 	if healthcheck.HealthyThreshold != nil {
 		hc.HealthyThreshold = wrapperspb.UInt32(*healthcheck.HealthyThreshold)
 	}
+	if healthcheck.DisableConnectionReuse != nil {
+		hc.ReuseConnection = wrapperspb.Bool(!*healthcheck.DisableConnectionReuse)
+	}
 	switch {
 	case healthcheck.HTTP != nil:
 		httpChecker := &corev3.HealthCheck_HttpHealthCheck{

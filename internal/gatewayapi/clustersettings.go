@@ -595,6 +595,7 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 		InitialJitter:      hc.InitialJitter,
 		UnhealthyThreshold: hc.UnhealthyThreshold,
 		HealthyThreshold:   hc.HealthyThreshold,
+		DisableConnectionReuse: hc.DisableConnectionReuse,
 	}
 
 	if hc.Timeout != nil {

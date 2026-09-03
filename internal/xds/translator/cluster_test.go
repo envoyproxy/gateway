@@ -79,6 +79,36 @@ func TestBuildXdsClusterDNSRefreshRateValidation(t *testing.T) {
 	require.ErrorContains(t, err, "DnsRefreshRate")
 }
 
+func TestBuildXdsHealthCheckDisableConnectionReuse(t *testing.T) {
+	base := func() *ir.ActiveHealthCheck {
+		return &ir.ActiveHealthCheck{
+			Timeout:  ir.MetaV1DurationPtr(time.Second),
+			Interval: ir.MetaV1DurationPtr(5 * time.Second),
+			TCP:      &ir.TCPHealthChecker{},
+		}
+	}
+	// DisableConnectionReuse is the inverse of Envoy's reuse_connection.
+	tests := []struct {
+		name     string
+		disable  *bool
+		expected *wrapperspb.BoolValue
+	}{
+		{"unset", nil, nil},
+		{"disabled", new(true), wrapperspb.Bool(false)},
+		{"enabled", new(false), wrapperspb.Bool(true)},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			hc := base()
+			hc.DisableConnectionReuse = tc.disable
+			out, err := buildXdsHealthCheck(hc, "", nil)
+			require.NoError(t, err)
+			require.Len(t, out, 1)
+			require.Equal(t, tc.expected, out[0].ReuseConnection)
+		})
+	}
+}
+
 func TestToCommonDNSLookupFamily(t *testing.T) {
 	tests := []struct {
 		name     string
