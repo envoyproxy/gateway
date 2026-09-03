@@ -1854,7 +1854,7 @@ var RateLimitGlobalSharedWithCost = suite.ConformanceTest{
 //
 // We use a 1s poll interval (not RequestTimeout) so we get many attempts within
 // MaxTimeToConsistency, matching gateway-api's AwaitConvergence which only delays 1s on failure.
-func MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t *testing.T, r roundtripper.RoundTripper, _ *config.TimeoutConfig, gwAddr string, expectedResponse *http.ExpectedResponse) {
+func MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t *testing.T, r roundtripper.RoundTripper, timeout *config.TimeoutConfig, gwAddr string, expectedResponse *http.ExpectedResponse) {
 	req := http.MakeRequest(t, expectedResponse, gwAddr, "HTTP", "http")
 	require.Eventually(t, func() bool {
 		cReq, cRes, err := r.CaptureRoundTrip(req)
@@ -1863,7 +1863,7 @@ func MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t *testing.T, 
 			return false // retry on network/transport error
 		}
 		return http.CompareRoundTrip(t, &req, cReq, cRes, *expectedResponse) == nil
-	}, time.Minute, time.Second) // we need more time for the gateway to converge
+	}, timeout.MaxTimeToConsistency, time.Second)
 }
 
 // GotExactExpectedResponseExceptErrors requires exactly n round trips that match the expected response.

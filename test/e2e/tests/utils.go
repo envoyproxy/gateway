@@ -826,7 +826,7 @@ const rateLimitDebugPort = 6070
 
 // DumpRateLimitConfig fetches the config currently loaded by the envoy-ratelimit service via
 // its /rlconfig debug endpoint - the same one used by `egctl config envoy-ratelimit`.
-func DumpRateLimitConfig(suite *suite.ConformanceTestSuite) (string, error) {
+func DumpRateLimitConfig(t *testing.T, suite *suite.ConformanceTestSuite) (string, error) {
 	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
 	if err != nil {
 		return "", err
@@ -853,7 +853,7 @@ func DumpRateLimitConfig(suite *suite.ConformanceTestSuite) (string, error) {
 	}
 	defer fwd.Stop()
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, fmt.Sprintf("http://%s/rlconfig", fwd.Address()), nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://%s/rlconfig", fwd.Address()), nil)
 	if err != nil {
 		return "", err
 	}
@@ -899,7 +899,7 @@ func WaitForRateLimitDomainsToBeLoaded(t *testing.T, suite *suite.ConformanceTes
 	t.Helper()
 
 	require.Eventually(t, func() bool {
-		cfg, err := DumpRateLimitConfig(suite)
+		cfg, err := DumpRateLimitConfig(t, suite)
 		if err != nil {
 			tlog.Logf(t, "failed to fetch envoy-ratelimit config, retrying: %v", err)
 			return false
