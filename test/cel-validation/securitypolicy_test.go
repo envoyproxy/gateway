@@ -1636,7 +1636,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"at least one of clientCIDRs, jwt, headers, or clientIPGeoLocations must be specified"},
+			wantErrors: []string{"at least one of clientCIDRs, jwt, headers, clientIPGeoLocations, or clientCert must be specified"},
 		},
 		{
 			desc: "authorization-cel-only",
@@ -2484,7 +2484,7 @@ func TestSecurityPolicyClientCert(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									ClientCert: &egv1a1.ClientCertPrincipal{
 										Subject: &egv1a1.StringMatch{
 											Value: "CN=test",
@@ -2517,7 +2517,7 @@ func TestSecurityPolicyClientCert(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									ClientCert: &egv1a1.ClientCertPrincipal{
 										SubjectAltNames: &egv1a1.SubjectAltNames{
 											URIs: []egv1a1.StringMatch{
@@ -2552,7 +2552,7 @@ func TestSecurityPolicyClientCert(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									ClientCert: &egv1a1.ClientCertPrincipal{
 										Subject: &egv1a1.StringMatch{
 											Value: "CN=test",
@@ -2590,7 +2590,7 @@ func TestSecurityPolicyClientCert(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									ClientCert: &egv1a1.ClientCertPrincipal{},
 								},
 							},
@@ -2599,6 +2599,41 @@ func TestSecurityPolicyClientCert(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"at least one of subject or subjectAltNames"},
+		},
+		{
+			desc: "invalid clientCert principal with empty subjectAltNames object",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: &egv1a1.Principal{
+									ClientCert: &egv1a1.ClientCertPrincipal{
+										// subjectAltNames present but empty: must not silently drop the
+										// SAN constraint (a principal that also ANDs a CIDR/header/JWT
+										// condition would otherwise authorize without matching any
+										// certificate identity).
+										SubjectAltNames: &egv1a1.SubjectAltNames{},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"subjectAltNames must specify at least one of uris or dnsNames"},
 		},
 		{
 			desc: "invalid clientCert principal with emailAddresses",
@@ -2619,7 +2654,7 @@ func TestSecurityPolicyClientCert(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									ClientCert: &egv1a1.ClientCertPrincipal{
 										SubjectAltNames: &egv1a1.SubjectAltNames{
 											EmailAddresses: []egv1a1.StringMatch{
@@ -2654,7 +2689,7 @@ func TestSecurityPolicyClientCert(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									ClientCert: &egv1a1.ClientCertPrincipal{
 										SubjectAltNames: &egv1a1.SubjectAltNames{
 											IPAddresses: []egv1a1.StringMatch{
@@ -2689,7 +2724,7 @@ func TestSecurityPolicyClientCert(t *testing.T) {
 						Rules: []egv1a1.AuthorizationRule{
 							{
 								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
+								Principal: &egv1a1.Principal{
 									ClientCert: &egv1a1.ClientCertPrincipal{
 										SubjectAltNames: &egv1a1.SubjectAltNames{
 											OtherNames: []egv1a1.OtherSANMatch{

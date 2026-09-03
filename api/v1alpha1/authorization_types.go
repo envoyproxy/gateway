@@ -207,10 +207,14 @@ type Principal struct {
 // The following SAN types are not currently supported and will produce a
 // validation error if specified: `emailAddresses`, `ipAddresses`, `otherNames`.
 //
+// If both `subject` and `subjectAltNames` are specified, the certificate must
+// match `subject` AND the `subjectAltNames` group for the principal to match.
+//
 // +kubebuilder:validation:XValidation:rule="has(self.subject) || has(self.subjectAltNames)",message="at least one of subject or subjectAltNames must be specified"
 // +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || !has(self.subjectAltNames.emailAddresses)",message="emailAddresses is not supported in clientCert; use uris or dnsNames"
 // +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || !has(self.subjectAltNames.ipAddresses)",message="ipAddresses is not supported in clientCert; use uris or dnsNames"
 // +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || !has(self.subjectAltNames.otherNames)",message="otherNames is not supported in clientCert; use uris or dnsNames"
+// +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || has(self.subjectAltNames.uris) || has(self.subjectAltNames.dnsNames)",message="subjectAltNames must specify at least one of uris or dnsNames"
 type ClientCertPrincipal struct {
 	// Subject matches the client certificate's Subject Distinguished Name in
 	// RFC 4514 string form (e.g. "CN=client.example.com,O=Example Inc.,C=US").
@@ -221,9 +225,13 @@ type ClientCertPrincipal struct {
 	// SubjectAltNames matches values in the certificate's Subject Alternative
 	// Name extension.
 	//
-	// Only `uris` (URI SANs) and `dnsNames` (DNS SANs) are currently supported.
-	// Specifying `emailAddresses`, `ipAddresses`, or `otherNames` will produce
-	// a validation error.
+	// Only `uris` (URI SANs) and `dnsNames` (DNS SANs) are currently supported,
+	// and at least one of them must be specified. Specifying `emailAddresses`,
+	// `ipAddresses`, or `otherNames` will produce a validation error.
+	//
+	// Every entry across `uris` and `dnsNames` OR-combines into a single match
+	// group: the certificate matches if any listed URI or DNS SAN is present,
+	// regardless of type.
 	//
 	// +optional
 	SubjectAltNames *SubjectAltNames `json:"subjectAltNames,omitempty"`

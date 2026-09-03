@@ -393,9 +393,13 @@ spec:
                                     SubjectAltNames matches values in the certificate's Subject Alternative
                                     Name extension.
 
-                                    Only `uris` (URI SANs) and `dnsNames` (DNS SANs) are currently supported.
-                                    Specifying `emailAddresses`, `ipAddresses`, or `otherNames` will produce
-                                    a validation error.
+                                    Only `uris` (URI SANs) and `dnsNames` (DNS SANs) are currently supported,
+                                    and at least one of them must be specified. Specifying `emailAddresses`,
+                                    `ipAddresses`, or `otherNames` will produce a validation error.
+
+                                    Every entry across `uris` and `dnsNames` OR-combines into a single match
+                                    group: the certificate matches if any listed URI or DNS SAN is present,
+                                    regardless of type.
                                   properties:
                                     dnsNames:
                                       description: DNS names matchers
@@ -552,6 +556,10 @@ spec:
                               - message: otherNames is not supported in clientCert;
                                   use uris or dnsNames
                                 rule: '!has(self.subjectAltNames) || !has(self.subjectAltNames.otherNames)'
+                              - message: subjectAltNames must specify at least one
+                                  of uris or dnsNames
+                                rule: '!has(self.subjectAltNames) || has(self.subjectAltNames.uris)
+                                  || has(self.subjectAltNames.dnsNames)'
                             clientIPGeoLocations:
                               description: |-
                                 ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
@@ -8223,6 +8231,10 @@ spec:
 
                         When specified, the effective set of namespaces is always constrained to the
                         namespaces watched by Envoy Gateway.
+
+                        Selecting targets across namespaces requires a ReferenceGrant in the target
+                        namespace that allows this policy kind to reference the selected target kind.
+                        Cross-namespace targets without a matching ReferenceGrant are ignored.
                       properties:
                         from:
                           default: Same

@@ -901,13 +901,24 @@ ClientCertPrincipal specifies match criteria against fields of the validated
 peer client certificate. Used in conjunction with mTLS configured via
 ClientTrafficPolicy.
 
+Supported match fields:
+  - `subject`: matches the Subject Distinguished Name (DN) of the certificate.
+  - `subjectAltNames.uris`: matches URI SANs (e.g. SPIFFE IDs).
+  - `subjectAltNames.dnsNames`: matches DNS SANs.
+
+The following SAN types are not currently supported and will produce a
+validation error if specified: `emailAddresses`, `ipAddresses`, `otherNames`.
+
+If both `subject` and `subjectAltNames` are specified, the certificate must
+match `subject` AND the `subjectAltNames` group for the principal to match.
+
 _Appears in:_
 - [Principal](#principal)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `subject` | _[StringMatch](#stringmatch)_ |  false  |  | Subject matches the client certificate's Subject Distinguished Name in<br />RFC 4514 string form (e.g. "CN=client.example.com,O=Example Inc.,C=US").<br />Use a `RegularExpression` matcher to match a subset of the DN. |
-| `subjectAltNames` | _[SubjectAltNames](#subjectaltnames)_ |  false  |  | SubjectAltNames matches values in the certificate's Subject Alternative<br />Name extension. At least one entry across the listed SAN type lists must<br />match for this principal to match. |
+| `subjectAltNames` | _[SubjectAltNames](#subjectaltnames)_ |  false  |  | SubjectAltNames matches values in the certificate's Subject Alternative<br />Name extension.<br />Only `uris` (URI SANs) and `dnsNames` (DNS SANs) are currently supported,<br />and at least one of them must be specified. Specifying `emailAddresses`,<br />`ipAddresses`, or `otherNames` will produce a validation error.<br />Every entry across `uris` and `dnsNames` OR-combines into a single match<br />group: the certificate matches if any listed URI or DNS SAN is present,<br />regardless of type. |
 
 
 #### ClientConnection
@@ -4903,7 +4914,7 @@ _Appears in:_
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 | `headers` | _[AuthorizationHeaderMatch](#authorizationheadermatch) array_ |  false  |  | Headers authorize the request based on user identity extracted from custom headers.<br />If multiple headers are specified, all headers must match for the rule to match. |
 | `clientIPGeoLocations` | _[ClientIPGeoLocation](#clientipgeolocation) array_ |  false  |  | ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.<br />This field is supported for HTTPRoute and GRPCRoute authorization.<br />It is not supported for TCPRoute targets.<br />If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header, or the<br />direct downstream connection source address (the TCP peer of the connection terminated by Envoy).<br />You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection. |
-| `clientCert` | _[ClientCertPrincipal](#clientcertprincipal)_ |  false  |  | ClientCert authorizes the request based on the client certificate<br />presented during the mutual TLS handshake.<br />This principal requires that mTLS is configured for the gateway listener<br />receiving the request, via a `ClientTrafficPolicy` whose<br />`spec.tls.clientValidation.caCertificateRefs` validates the presented<br />client certificate. Without mTLS configured, no client certificate is<br />available and this principal will never match.<br />At least one of `subject` or `subjectAltNames` must be specified. When<br />both are set, both must match for the principal to match. Within<br />`subjectAltNames`, any matching SAN entry across DNS, email, IP, URI,<br />or otherNames satisfies the principal.<br />This principal is supported for HTTPRoute and GRPCRoute authorization<br />targets. It is not applicable to TCPRoute targets. |
+| `clientCert` | _[ClientCertPrincipal](#clientcertprincipal)_ |  false  |  | ClientCert authorizes the request based on the client certificate<br />presented during the mutual TLS handshake.<br />Prerequisites: mTLS must be configured on the gateway listener receiving<br />the request. This requires a `ClientTrafficPolicy` targeting that listener<br />with `spec.tls.clientValidation.caCertificateRefs` set to validate the<br />client certificate. Without mTLS configured, no client certificate is<br />available and this principal will never match.<br />At least one of `subject` or `subjectAltNames` must be specified. When<br />both are set, both must match for the principal to match.<br />Supported match types: Subject DN (via `subject`), URI SANs (via<br />`subjectAltNames.uris`), and DNS SANs (via `subjectAltNames.dnsNames`).<br />Email address, IP address, and OtherName SAN types are not currently<br />supported and will be rejected with a validation error.<br />This principal is supported for HTTPRoute and GRPCRoute authorization<br />targets. It is not applicable to TCPRoute targets. |
 
 
 #### ProcessingModeOptions
@@ -6631,7 +6642,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `group` | _[Group](#group)_ |  true  | gateway.networking.k8s.io | Group is the group that this selector targets. Defaults to gateway.networking.k8s.io |
 | `kind` | _[Kind](#kind)_ |  true  |  | Kind is the resource kind that this selector targets. |
-| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway. |
+| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway.<br />Selecting targets across namespaces requires a ReferenceGrant in the target<br />namespace that allows this policy kind to reference the selected target kind.<br />Cross-namespace targets without a matching ReferenceGrant are ignored. |
 | `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource. |
 | `matchExpressions` | _[LabelSelectorRequirement](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselectorrequirement-v1-meta) array_ |  false  |  | MatchExpressions is a list of label selector requirements. The requirements are ANDed. |
 
