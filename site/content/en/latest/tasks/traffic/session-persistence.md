@@ -83,6 +83,10 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+The session cookie is always issued with `Path=/`, as recommended by [GEP-1619](https://gateway-api.sigs.k8s.io/geps/gep-1619/#path),
+so it keeps working when the path seen by the client differs from the path matched by the HTTPRoute, for example
+when an edge proxy rewrites the request path before it reaches Envoy Gateway.
+
 {{< boilerplate rollout-envoy-gateway >}}
 
 ### Testing
