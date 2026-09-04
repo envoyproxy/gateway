@@ -91,6 +91,9 @@ func (t *Translator) ProcessSecurityPolicies(
 	// The failed fetches will be retried in the next translation when the provider resources are reconciled again.
 	t.oidcDiscoveryCache = newOIDCDiscoveryCache()
 
+	// Tracking is only valid during one translation across multiple routes and gateways.
+	replacedRoutes := sets.New[string]()
+
 	// SecurityPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
@@ -167,7 +170,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, replacedRoutes, policy, currTarget)
 			}
 		}
 	}
@@ -191,7 +194,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, replacedRoutes, policy, currTarget)
 			}
 		}
 	}
@@ -214,7 +217,7 @@ func (t *Translator) ProcessSecurityPolicies(
 						res = append(res, policy)
 					}
 
-					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, replacedRoutes, policy, currTarget)
 				}
 			}
 		}
@@ -239,7 +242,7 @@ func (t *Translator) ProcessSecurityPolicies(
 						res = append(res, policy)
 					}
 
-					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, replacedRoutes, policy, currTarget)
 				}
 			}
 		}
@@ -259,7 +262,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, replacedRoutes, policy, currTarget)
 			}
 		}
 	}
@@ -284,7 +287,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, replacedRoutes, policy, currTarget)
 			}
 		}
 	}
@@ -414,6 +417,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	listenerSetPolicyMap map[NamespacedNameWithSection]*egv1a1.SecurityPolicy,
 	overrides policyScopeGraph,
 	merged policyScopeGraph,
+	replacedRoutes sets.Set[string],
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -533,7 +537,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// Check if merging is enabled
 	if policy.Spec.MergeType == nil {
 		// No merging - use existing translation logic
-		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil); err != nil {
+		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil, replacedRoutes); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -590,7 +594,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 				if parentPolicy == nil {
 					// No parent policy found, fall back to current policy
-					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
+					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener, replacedRoutes); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
@@ -630,7 +634,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Apply merged policy
-				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
+				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, listener, replacedRoutes); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
 						t.GatewayControllerName,
@@ -639,6 +643,14 @@ func (t *Translator) processSecurityPolicyForRoute(
 						status.Error2ConditionMsg(err),
 						policy.Generation,
 					)
+					continue
+				}
+
+				// Replace discards the parent policy rather than combining with it, so
+				// report it the same way an unset MergeType is reported: the route stays
+				// recorded only under overrides, which makes the parent's status say it
+				// is being overridden by this route instead of merged into it.
+				if *policy.Spec.MergeType == egv1a1.Replace {
 					continue
 				}
 
@@ -700,6 +712,7 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
 	overrides policyScopeGraph,
 	merged policyScopeGraph,
+	replacedRoutes sets.Set[string],
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -753,7 +766,7 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
-	if err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR); err != nil {
+	if err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR, replacedRoutes); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -814,6 +827,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	overrides policyScopeGraph,
 	merged policyScopeGraph,
+	replacedRoutes sets.Set[string],
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -853,7 +867,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
+	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR, replacedRoutes); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -1237,6 +1251,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	targetListener *ListenerContext,
+	replacedRoutes sets.Set[string],
 ) error {
 	// Build IR
 	var (
@@ -1382,6 +1397,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		switch route.GetRouteType() {
 		case resource.KindTCPRoute:
+			// A policy with mergeType Replace discards the parent policy configuration
+			// entirely, so claim the matched TCP routes to prevent the parent
+			// Gateway/Listener policy from re-applying an authorization this policy omitted.
+			replaceClaimsRoutes := policy.Spec.MergeType != nil && *policy.Spec.MergeType == egv1a1.Replace
 			for _, listener := range parentRefCtx.listeners {
 				// If targetListener is set, only apply to that exact listener.
 				if targetListener != nil && targetListenerName != irListenerName(listener) {
@@ -1397,6 +1416,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					// routes the section name is currently stored on r.Destination.Metadata.SectionName.
 					if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
 						continue
+					}
+
+					// Only claim IR routes that belong to the targeted route:
+					// other routes on the same listener must keep inheriting
+					// the parent policy's authorization.
+					if replaceClaimsRoutes && strings.HasPrefix(r.Destination.Name, prefix) {
+						replacedRoutes.Insert(replacedRouteKey(tl.Name, r.Destination.Name))
 					}
 
 					if r.Authorization != nil {
@@ -1493,6 +1519,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
+	replacedRoutes sets.Set[string],
 ) error {
 	return t.translateSecurityPolicyForListeners(
 		policy,
@@ -1500,6 +1527,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 		resources,
 		xdsIR,
 		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
+		replacedRoutes,
 	)
 }
 
@@ -1509,6 +1537,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
+	replacedRoutes sets.Set[string],
 ) error {
 	return t.translateSecurityPolicyForListeners(
 		policy,
@@ -1516,6 +1545,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		resources,
 		xdsIR,
 		gatewayPolicyTargetListeners(gtwCtx, target),
+		replacedRoutes,
 	)
 }
 
@@ -1525,6 +1555,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	targetListeners []*ListenerContext,
+	replacedRoutes sets.Set[string],
 ) error {
 	// Build IR
 	noOwners := &securityPolicyOwners{}
@@ -1720,6 +1751,11 @@ func (t *Translator) translateSecurityPolicyForListeners(
 			// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 			// targeting a lesser specific scope(Gateway).
 			for _, r := range tl.Routes {
+				// Skip routes claimed by a route-scoped policy with mergeType Replace,
+				// which discards the parent policy configuration entirely.
+				if replacedRoutes.Has(replacedRouteKey(tl.Name, r.Destination.Name)) {
+					continue
+				}
 				// if already set - there's a specific level policy, so skip.
 				if r.Authorization != nil {
 					continue
