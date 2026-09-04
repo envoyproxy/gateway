@@ -1,0 +1,1 @@
+Added EndpointHostname in BTP to set hostname field in Endpoint

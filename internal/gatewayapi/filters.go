@@ -1102,7 +1102,8 @@ func (t *Translator) processRequestMirrorFilter(
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
 	gatewayCtx := GetRouteParentContext(filterContext.Route, *filterContext.ParentRef.ParentReference, t.GatewayControllerName).GetGateway()
 	btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, filterContext.Route, filterContext.ParentRef, nil)
-	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, gatewayCtx, btpRoutingType, xdsIR)
+	btpEndpointHostname := t.resolveBTPEndpointHostname(gatewayCtx, filterContext.Route, filterContext.ParentRef, nil)
+	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, gatewayCtx, btpRoutingType, btpEndpointHostname, xdsIR)
 	if err != nil {
 		// Gateway API conformance: When backendRef Service exists but has no endpoints,
 		// the ResolvedRefs condition should NOT be set to False.

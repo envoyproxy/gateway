@@ -165,6 +165,9 @@ type Translator struct {
 	// ControllerNamespace is the namespace that Envoy Gateway controller runs in.
 	ControllerNamespace string
 
+	// DNSDomain is the DNS domain used by Kubernetes services.
+	DNSDomain string
+
 	// WasmCache is the cache for Wasm modules.
 	WasmCache wasm.Cache
 
@@ -360,6 +363,7 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
 	)
 	t.BTPRoutingTypeIndex = btpIndexes.RoutingType
+	t.BTPEndpointHostnameIndex = btpIndexes.EndpointHostname
 	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
 	t.BTPLoadBalancerIndex = btpIndexes.LoadBalancer
 
