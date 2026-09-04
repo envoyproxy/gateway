@@ -187,6 +187,63 @@ Verify logs from envoy-als:
 curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={exporter=\"OTLP\"}" | jq '.data.result[0].values'
 ```
 
+## Buffering for gRPC Sinks
+
+The OpenTelemetry and ALS sinks both stream over gRPC, and Envoy buffers log entries before flushing them. By default it flushes every `1s` or once `16384` bytes of entries have accumulated, whichever comes first.
+
+`sizeBytes` is a soft limit on the entry buffer: when buffered entries exceed it, Envoy flushes early instead of waiting for `flushInterval`. Entries are discarded — and counted by the sink's `logs_dropped` stat — only when that flush cannot drain the buffer, which is what happens while the sink is unavailable. Raising it trades proxy memory for a larger batch, so size it from your own measured entry size and request rate.
+
+The two settings together determine how much of a sink outage you can absorb, and they have to be tuned as a pair. Entries survive an outage only for as long as they stay buffered: a flush that fires while the sink is unreachable loses the batch it was carrying. So `flushInterval` has to be longer than the outage you want to ride out, and `sizeBytes` large enough to hold the entries that arrive during it — whichever limit is reached first ends the window. Leaving `flushInterval` at its 1s default means a flush is attempted every second, so raising `sizeBytes` on its own will not widen that window.
+
+Both settings are configured per sink under `buffer`:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: accesslog-buffer
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: accesslog-buffer
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - sinks:
+            - type: OpenTelemetry
+              openTelemetry:
+                backendRefs:
+                  - name: otel-collector
+                    namespace: monitoring
+                    port: 4317
+                buffer:
+                  flushInterval: 5s
+                  sizeBytes: 16Mi
+            - type: ALS
+              als:
+                backendRefs:
+                  - name: envoy-als
+                    namespace: monitoring
+                    port: 9000
+                type: HTTP
+                buffer:
+                  sizeBytes: 4Mi
+EOF
+```
+
+`sizeBytes` accepts a plain byte count or a quantity suffix (`256Ki`, `4Mi`, `1Gi`). Envoy carries it as a 32-bit unsigned integer, so `4Gi` and above is rejected — with the Gateway reported as not accepted — when the `EnvoyProxy` is translated. `flushInterval` must be greater than zero. Anything left unset keeps Envoy's default.
+
 ## CEL Expressions
 
 Envoy Gateway provides [CEL expressions](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) to filter access log .

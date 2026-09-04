@@ -8,11 +8,13 @@ package gatewayapi
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -1312,6 +1314,102 @@ func TestProcessAccessLog(t *testing.T) {
 			translator := &Translator{}
 			resources := &resource.Resources{}
 			actual, err := translator.processAccessLog(&GatewayContext{}, tc.envoyProxy, resources)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestBuildAccessLogBuffer(t *testing.T) {
+	tests := []struct {
+		name     string
+		buffer   *egv1a1.GRPCAccessLogBufferSettings
+		expected *ir.AccessLogBuffer
+		wantErr  string
+	}{
+		{
+			name:     "unset leaves envoy defaults in place",
+			buffer:   nil,
+			expected: nil,
+		},
+		{
+			name: "flush interval only",
+			buffer: &egv1a1.GRPCAccessLogBufferSettings{
+				FlushInterval: new(gwapiv1.Duration("5s")),
+			},
+			expected: &ir.AccessLogBuffer{
+				FlushInterval: ir.MetaV1DurationPtr(5 * time.Second),
+			},
+		},
+		{
+			name: "size only, suffixed quantity is resolved to bytes",
+			buffer: &egv1a1.GRPCAccessLogBufferSettings{
+				SizeBytes: new(apiresource.MustParse("4Mi")),
+			},
+			expected: &ir.AccessLogBuffer{
+				SizeBytes: new(uint32(4194304)),
+			},
+		},
+		{
+			name: "both fields",
+			buffer: &egv1a1.GRPCAccessLogBufferSettings{
+				FlushInterval: new(gwapiv1.Duration("1m30s")),
+				SizeBytes:     new(apiresource.MustParse("32768")),
+			},
+			expected: &ir.AccessLogBuffer{
+				FlushInterval: ir.MetaV1DurationPtr(90 * time.Second),
+				SizeBytes:     new(uint32(32768)),
+			},
+		},
+		{
+			name: "unparsable flush interval",
+			buffer: &egv1a1.GRPCAccessLogBufferSettings{
+				FlushInterval: new(gwapiv1.Duration("5 seconds")),
+			},
+			wantErr: "invalid access log buffer flushInterval value 5 seconds",
+		},
+		{
+			name: "size beyond uint32",
+			buffer: &egv1a1.GRPCAccessLogBufferSettings{
+				SizeBytes: new(apiresource.MustParse("5Gi")),
+			},
+			wantErr: "access log buffer sizeBytes value 5Gi is out of range",
+		},
+		{
+			name: "size beyond int64",
+			buffer: &egv1a1.GRPCAccessLogBufferSettings{
+				SizeBytes: new(apiresource.MustParse("1e30")),
+			},
+			wantErr: "invalid access log buffer sizeBytes value 1e30",
+		},
+		{
+			// The pattern accepts only values of 1 and above, but it constrains just the
+			// string branch, so a bare YAML 0 would otherwise slip through.
+			name: "zero size",
+			buffer: &egv1a1.GRPCAccessLogBufferSettings{
+				SizeBytes: new(apiresource.MustParse("0")),
+			},
+			wantErr: "access log buffer sizeBytes value 0 is out of range",
+		},
+		{
+			// A raw manifest can write sizeBytes as a bare YAML number, which the CRD
+			// pattern does not constrain (JSON Schema applies it to strings only), so a
+			// negative value reaches the translator.
+			name: "negative size",
+			buffer: &egv1a1.GRPCAccessLogBufferSettings{
+				SizeBytes: new(apiresource.MustParse("-5")),
+			},
+			wantErr: "access log buffer sizeBytes value -5 is out of range",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := buildAccessLogBuffer(tc.buffer)
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+				return
+			}
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, actual)
 		})

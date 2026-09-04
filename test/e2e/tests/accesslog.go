@@ -23,7 +23,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, FileAccessLogTest, OpenTelemetryTestText, OpenTelemetryTestJSON, ALSTest, OpenTelemetryTestJSONAsDefault)
+	ConformanceTests = append(ConformanceTests, FileAccessLogTest, OpenTelemetryTestText, OpenTelemetryTestJSON, ALSTest, OpenTelemetryTestJSONAsDefault, OpenTelemetryTestBuffer, ALSTestBuffer)
 }
 
 var FileAccessLogTest = suite.ConformanceTest{
@@ -176,6 +176,72 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 
 			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
 		})
+	},
+}
+
+// OpenTelemetryTestBuffer proves Envoy accepts the buffering fields Envoy Gateway writes
+// into CommonGrpcAccessLogConfig. Malformed values would be rejected by Envoy's own proto
+// validation, the listener would never program, and no log would reach the collector - so a
+// log arriving is the end-to-end evidence that the config was accepted and still delivers.
+var OpenTelemetryTestBuffer = suite.ConformanceTest{
+	ShortName:   "OpenTelemetryAccessLogBuffer",
+	Description: "Make sure OpenTelemetry access log delivery works with buffering configured",
+	Manifests:   []string{"testdata/accesslog-otel-buffer.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		labels := getOTELLabels(ns)
+		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		expectedResponse := httputils.ExpectedResponse{
+			Request: httputils.Request{
+				Path: "/otel",
+				Headers: map[string]string{
+					"x-envoy-logged": "1",
+				},
+			},
+			Response: httputils.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+		// make sure listener is ready
+		httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+		runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
+	},
+}
+
+// ALSTestBuffer covers the buffering fields on the ALS sink. Both sinks share the
+// CommonGrpcAccessLogConfig the fields live on, but Envoy Gateway reaches it through a
+// separate translation path for ALS, and the repo covers access log sinks individually.
+var ALSTestBuffer = suite.ConformanceTest{
+	ShortName:   "ALSAccessLogBuffer",
+	Description: "Make sure ALS access log delivery works with buffering configured",
+	Manifests:   []string{"testdata/accesslog-als-buffer.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		labels := map[string]string{
+			"exporter": "OTLP",
+		}
+		routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		expectedResponse := httputils.ExpectedResponse{
+			Request: httputils.Request{
+				Path: "/als",
+			},
+			Response: httputils.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+		// make sure listener is ready
+		httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+		runLogTest(t, suite, gwAddr, &expectedResponse, labels, "common_properties", 1)
 	},
 }
 
