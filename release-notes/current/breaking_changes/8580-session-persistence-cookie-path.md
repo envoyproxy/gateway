@@ -6,5 +6,6 @@ an edge proxy rewrites `/` to `/foo/bar` before the request reaches the gateway:
 Because the cookie is now sent to every route on the same host, HTTPRoute rules on the same host that
 enable cookie-based session persistence must use distinct `sessionName` values. Rules that share a
 `sessionName` previously got separate cookies because their paths differed; they now overwrite each other's
-cookie and session persistence stops working for both. Clients holding a cookie scoped to the old path keep
+cookie and session persistence stops working for both. Omitting `sessionName` makes Envoy Gateway generate a
+unique cookie name per rule. Clients holding a cookie scoped to the old path keep
 sending it until it expires, and are issued a new one at `Path=/` on their next request.
