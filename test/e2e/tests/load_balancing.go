@@ -97,10 +97,8 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 		}
 
 		t.Run("warmup until both backends are hit", func(t *testing.T) {
-			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, &req, &expectedResponse, warmupRequests, func(trafficMap map[string]int) bool {
-					return len(trafficMap) >= 2
-				}), nil
+			if err := pollTrafficTest(t, suite, &req, &expectedResponse, warmupRequests, 60*time.Second, func(trafficMap map[string]int) bool {
+				return len(trafficMap) >= 2
 			}); err != nil {
 				tlog.Errorf(t, "failed to hit both backends during warmup: %v", err)
 			}
@@ -110,24 +108,22 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 		time.Sleep(200 * time.Millisecond)
 
 		t.Run("traffic should skew toward low-utilization backend", func(t *testing.T) {
-			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
-					lowCount := 0
-					total := 0
-					for podName, count := range trafficMap {
-						total += count
-						if isLowUtil(podName) {
-							lowCount += count
-						}
+			if err := pollTrafficTest(t, suite, &req, &expectedResponse, sendRequests, 60*time.Second, func(trafficMap map[string]int) bool {
+				lowCount := 0
+				total := 0
+				for podName, count := range trafficMap {
+					total += count
+					if isLowUtil(podName) {
+						lowCount += count
 					}
-					if total == 0 {
-						return false
-					}
-					lowPct := (lowCount * 100) / total
-					tlog.Logf(t, "traffic distribution: low-util=%d/%d (%d%%), high-util=%d/%d",
-						lowCount, total, lowPct, total-lowCount, total)
-					return lowPct >= lowUtilMinPct
-				}), nil
+				}
+				if total == 0 {
+					return false
+				}
+				lowPct := (lowCount * 100) / total
+				tlog.Logf(t, "traffic distribution: low-util=%d/%d (%d%%), high-util=%d/%d",
+					lowCount, total, lowPct, total-lowCount, total)
+				return lowPct >= lowUtilMinPct
 			}); err != nil {
 				tlog.Errorf(t, "failed to run backend utilization load balancing test: %v", err)
 			}
@@ -184,10 +180,8 @@ var BackendUtilizationOutOfBandLoadBalancingTest = suite.ConformanceTest{
 		}
 
 		t.Run("warmup until both backends are hit", func(t *testing.T) {
-			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, &req, &expectedResponse, warmupRequests, func(trafficMap map[string]int) bool {
-					return len(trafficMap) >= 2
-				}), nil
+			if err := pollTrafficTest(t, suite, &req, &expectedResponse, warmupRequests, 60*time.Second, func(trafficMap map[string]int) bool {
+				return len(trafficMap) >= 2
 			}); err != nil {
 				tlog.Errorf(t, "failed to hit both backends during warmup: %v", err)
 			}
@@ -198,24 +192,22 @@ var BackendUtilizationOutOfBandLoadBalancingTest = suite.ConformanceTest{
 		time.Sleep(reportSettleTime)
 
 		t.Run("traffic should skew toward low-utilization backend", func(t *testing.T) {
-			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
-					lowCount := 0
-					total := 0
-					for podName, count := range trafficMap {
-						total += count
-						if isLowUtil(podName) {
-							lowCount += count
-						}
+			if err := pollTrafficTest(t, suite, &req, &expectedResponse, sendRequests, 60*time.Second, func(trafficMap map[string]int) bool {
+				lowCount := 0
+				total := 0
+				for podName, count := range trafficMap {
+					total += count
+					if isLowUtil(podName) {
+						lowCount += count
 					}
-					if total == 0 {
-						return false
-					}
-					lowPct := (lowCount * 100) / total
-					tlog.Logf(t, "oob traffic distribution: low-util=%d/%d (%d%%), high-util=%d/%d",
-						lowCount, total, lowPct, total-lowCount, total)
-					return lowPct >= lowUtilMinPct
-				}), nil
+				}
+				if total == 0 {
+					return false
+				}
+				lowPct := (lowCount * 100) / total
+				tlog.Logf(t, "oob traffic distribution: low-util=%d/%d (%d%%), high-util=%d/%d",
+					lowCount, total, lowPct, total-lowCount, total)
+				return lowPct >= lowUtilMinPct
 			}); err != nil {
 				tlog.Errorf(t, "failed to run out-of-band backend utilization load balancing test: %v", err)
 			}
@@ -310,27 +302,25 @@ var BackendUtilizationWeightedZonesLoadBalancingTest = suite.ConformanceTest{
 		time.Sleep(200 * time.Millisecond)
 
 		t.Run("traffic should favor the higher weighted zone", func(t *testing.T) {
-			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, &req, &expectedResponse, sampleRequests, func(trafficMap map[string]int) bool {
-					zone1Count := 0
-					zone2Count := 0
-					total := 0
-					for podName, count := range trafficMap {
-						total += count
-						if isZone1(podName) {
-							zone1Count += count
-						}
-						if isZone2(podName) {
-							zone2Count += count
-						}
+			if err := pollTrafficTest(t, suite, &req, &expectedResponse, sampleRequests, 60*time.Second, func(trafficMap map[string]int) bool {
+				zone1Count := 0
+				zone2Count := 0
+				total := 0
+				for podName, count := range trafficMap {
+					total += count
+					if isZone1(podName) {
+						zone1Count += count
 					}
-					if total == 0 {
-						return false
+					if isZone2(podName) {
+						zone2Count += count
 					}
-					zone1Pct := (zone1Count * 100) / total
-					tlog.Logf(t, "traffic distribution: zone1=%d/%d (%d%%), zone2=%d/%d", zone1Count, total, zone1Pct, zone2Count, total)
-					return zone1Pct >= zone1MinPct && zone2Count > 0
-				}), nil
+				}
+				if total == 0 {
+					return false
+				}
+				zone1Pct := (zone1Count * 100) / total
+				tlog.Logf(t, "traffic distribution: zone1=%d/%d (%d%%), zone2=%d/%d", zone1Count, total, zone1Pct, zone2Count, total)
+				return zone1Pct >= zone1MinPct && zone2Count > 0
 			}); err != nil {
 				tlog.Errorf(t, "failed to run backend utilization weighted zones test: %v", err)
 			}
@@ -388,9 +378,7 @@ var RoundRobinLoadBalancing = suite.ConformanceTest{
 				return true
 			}
 
-			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
-			}); err != nil {
+			if err := pollTrafficTest(t, suite, &req, &expectedResponse, sendRequests, 30*time.Second, compareFunc); err != nil {
 				tlog.Errorf(t, "failed to run round robin load balancing test: %v", err)
 			}
 		})
@@ -439,13 +427,24 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	ret := compareFunc(trafficMap)
 	if !ret {
 		tlog.Logf(t, "traffic map: %v", trafficMap)
-		// wait for a while to let envoy flush all the logs.
-		time.Sleep(6 * time.Second)
-		consistentHashDump(t, suite.RestConfig)
-		t.FailNow()
 	}
 
 	return ret
+}
+
+// pollTrafficTest sends totalRequestCount requests and checks the resulting
+// traffic distribution with compareFunc, retrying until it is satisfied or the
+// timeout expires. A single unsatisfied round is not a failure: Envoy needs
+// time to pick up the endpoints of a newly ready backend, and load balancing
+// types that derive weights from traffic need a few rounds before the weights
+// take effect.
+func pollTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
+	req *roundtripper.Request, expectedResponse *http.ExpectedResponse,
+	totalRequestCount int, timeout time.Duration, compareFunc TrafficCompareFunc,
+) error {
+	return wait.PollUntilContextTimeout(t.Context(), time.Second, timeout, true, func(_ context.Context) (bool, error) {
+		return runTrafficTest(t, suite, req, expectedResponse, totalRequestCount, compareFunc), nil
+	})
 }
 
 var SourceIPBasedConsistentHashLoadBalancing = suite.ConformanceTest{
@@ -582,12 +581,9 @@ var MultiHeaderConsistentHashHeaderLoadBalancing = suite.ConformanceTest{
 }
 
 func runConsistentHashLoadBalancingTest(t *testing.T, suite *suite.ConformanceTestSuite, req *roundtripper.Request, expectedResponse *http.ExpectedResponse) {
-	if err := wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(_ context.Context) (bool, error) {
-		got := runTrafficTest(t, suite, req, expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
-			// All traffic with the same hash combination should route to the same pod
-			return len(trafficMap) == 1
-		})
-		return got, nil
+	if err := pollTrafficTest(t, suite, req, expectedResponse, sendRequests, time.Minute, func(trafficMap map[string]int) bool {
+		// All traffic with the same hash combination should route to the same pod
+		return len(trafficMap) == 1
 	}); err != nil {
 		tlog.Errorf(t, "failed to run consistent hash load balancing test: %v", err)
 	}
