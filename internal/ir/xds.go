@@ -2106,7 +2106,7 @@ type RouteDestination struct {
 	// Name of the destination. This field allows the xds layer
 	// to check if this route destination already exists and can be
 	// reused
-	Name     string  `json:"name" yaml:"name"`
+	Name     string  `json:"name,omitempty" yaml:"name,omitempty"`
 	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// Settings holds this destination's own, non-merged backends. Never shared with another
 	// route.
@@ -2880,13 +2880,25 @@ type GlobalResources struct {
 	// EnvoyClientCertificate holds the client certificate secret for envoy to use when establishing a TLS connection to
 	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
-	// RateLimitServiceCluster holds the rate limit service endpoints discovered from Kubernetes resources.
-	RateLimitServiceCluster *RouteDestination `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
+	// RateLimitServiceCluster holds the rate limit service's endpoints, discovered from Kubernetes
+	// resources, along with its cluster-scoped traffic settings.
+	RateLimitServiceCluster *RateLimitServiceCluster `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
 	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.
 	// TODO: zhaohuabing move HMACSecret here
 	// HMACSecret PrivateBytes
+}
+
+// RateLimitServiceCluster holds the rate limit service's destination and cluster-scoped settings.
+// +k8s:deepcopy-gen=true
+type RateLimitServiceCluster struct {
+	// RouteDestination holds the rate limit service endpoints discovered from Kubernetes resources.
+	RouteDestination `json:",inline" yaml:",inline"`
+	// Traffic holds cluster-scoped traffic settings (circuit breakers, timeouts, health checks,
+	// etc.) for the rate limit service cluster, translated from
+	// EnvoyGateway.RateLimit.ClusterSettings.
+	Traffic *ClusterTrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // GeoIPProvider holds the shared GeoIP provider configuration used by request-time GeoIP filters.
