@@ -1094,6 +1094,7 @@ By default, Envoy Gateway applies the following filters in the order shown:
 * envoy.filters.http.local_ratelimit
 * envoy.filters.http.ratelimit
 * envoy.filters.http.grpc_web
+* envoy.filters.http.grpc_json_transcoder
 * envoy.filters.http.grpc_stats
 * envoy.filters.http.custom_response
 * envoy.filters.http.credential_injector
