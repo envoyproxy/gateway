@@ -207,6 +207,7 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 
 	// Rules are ORed
 	for rIdx, rule := range local.Rules {
+		descriptorRuleIdx := getRuleDescriptorIndex(rule, rIdx)
 		// If method matches specified, create one rate limit rule per method (OR behavior),
 		// these rules share the same limit counter, so they share the same descriptor.
 		methodMatches := rule.MethodMatches
@@ -219,18 +220,26 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			var rlActions []*routev3.RateLimit_Action
 			var descriptorEntries []*rlv3.RateLimitDescriptor_Entry
 
+			if rule.NameFromUser {
+				rlActions = append(rlActions, buildGenericKeyRateLimitAction(rule.Name))
+				descriptorEntries = append(descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
+					Key:   rule.Name,
+					Value: rule.Name,
+				})
+			}
+
 			// Build all match conditions
 			// - HeaderMatch
 			// - MethodMatch
 			// - PathMatch
 			// - CIDRMatch
 			// - QueryParamMatch
-			buildHeaderMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.HeaderMatches)
-			buildMethodMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, methodMatch)
-			buildPathMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, rule.PathMatch)
-			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.CIDRMatch)
+			buildHeaderMatchLocalRateLimitActions(&rlActions, &descriptorEntries, descriptorRuleIdx, rule.HeaderMatches)
+			buildMethodMatchLocalRateLimitAction(&rlActions, &descriptorEntries, descriptorRuleIdx, methodMatch)
+			buildPathMatchLocalRateLimitAction(&rlActions, &descriptorEntries, descriptorRuleIdx, rule.PathMatch)
+			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, descriptorRuleIdx, rule.CIDRMatch)
 			// Pass header match count as offset to continue match index sequence
-			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
+			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, descriptorRuleIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
 
 			// Create rate limit and descriptor
 			rateLimit := &routev3.RateLimit{Actions: rlActions}

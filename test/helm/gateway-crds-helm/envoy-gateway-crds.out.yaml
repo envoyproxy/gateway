@@ -2508,6 +2508,28 @@ spec:
                               - requests
                               - unit
                               type: object
+                            name:
+                              description: |-
+                                Name is a user-facing name for this rule that can be used for debugging
+                                and observability. When set, the rate limit key will include this name,
+                                making it easier to identify in metrics and dashboards.
+                                The name must be unique within a policy and should be a stable identifier
+                                that won't change when the rule order changes.
+
+                                When name is set, the rate limit key format becomes:
+                                <policy-namespace>/<policy-name>/rule/<rule-name>
+                                When name is not set, the format remains:
+                                <policy-namespace>/<policy-name>/rule/<rule-index>
+                                For local rate limiting, name can only be set on rules with clientSelectors;
+                                the selectorless rule configures the default bucket and has no descriptor key.
+                              maxLength: 64
+                              pattern: ^[a-zA-Z0-9._-]+$
+                              type: string
+                              x-kubernetes-validations:
+                              - message: rate limit rule name must not be purely numeric
+                                  to avoid collision with auto-generated index-based
+                                  rule names
+                                rule: '!self.matches(''^[0-9]+$'')'
                             shadowMode:
                               description: |-
                                 ShadowMode indicates whether this rate-limit rule runs in shadow mode.
@@ -2537,6 +2559,11 @@ spec:
                           type: object
                         maxItems: 256
                         type: array
+                        x-kubernetes-validations:
+                        - message: rate limit rule names must be unique within the
+                            global rules slice
+                          rule: self.all(r, !has(r.name) || self.filter(r2, has(r2.name)
+                            && r2.name == r.name).size() == 1)
                     required:
                     - rules
                     type: object
@@ -2920,6 +2947,28 @@ spec:
                               - requests
                               - unit
                               type: object
+                            name:
+                              description: |-
+                                Name is a user-facing name for this rule that can be used for debugging
+                                and observability. When set, the rate limit key will include this name,
+                                making it easier to identify in metrics and dashboards.
+                                The name must be unique within a policy and should be a stable identifier
+                                that won't change when the rule order changes.
+
+                                When name is set, the rate limit key format becomes:
+                                <policy-namespace>/<policy-name>/rule/<rule-name>
+                                When name is not set, the format remains:
+                                <policy-namespace>/<policy-name>/rule/<rule-index>
+                                For local rate limiting, name can only be set on rules with clientSelectors;
+                                the selectorless rule configures the default bucket and has no descriptor key.
+                              maxLength: 64
+                              pattern: ^[a-zA-Z0-9._-]+$
+                              type: string
+                              x-kubernetes-validations:
+                              - message: rate limit rule name must not be purely numeric
+                                  to avoid collision with auto-generated index-based
+                                  rule names
+                                rule: '!self.matches(''^[0-9]+$'')'
                             shadowMode:
                               description: |-
                                 ShadowMode indicates whether this rate-limit rule runs in shadow mode.
@@ -2955,6 +3004,13 @@ spec:
                         - message: limit fromMetadata is not supported for Local Rate
                             Limits
                           rule: self.all(r, !has(r.limit.fromMetadata))
+                        - message: rate limit rule names must be unique within the
+                            local rules slice
+                          rule: self.all(r, !has(r.name) || self.filter(r2, has(r2.name)
+                            && r2.name == r.name).size() == 1)
+                        - message: local rate limit rule names require clientSelectors
+                          rule: self.all(r, !has(r.name) || (has(r.clientSelectors)
+                            && r.clientSelectors.size() > 0))
                     type: object
                   type:
                     description: |-
