@@ -437,21 +437,14 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 // timeout expires. A single unsatisfied round is not a failure: Envoy needs
 // time to pick up the endpoints of a newly ready backend, and load balancing
 // types that derive weights from traffic need a few rounds before the weights
-// take effect. The proxy state is dumped when the timeout expires.
+// take effect.
 func pollTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	req *roundtripper.Request, expectedResponse *http.ExpectedResponse,
 	totalRequestCount int, timeout time.Duration, compareFunc TrafficCompareFunc,
 ) error {
-	err := wait.PollUntilContextTimeout(t.Context(), time.Second, timeout, true, func(_ context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(t.Context(), time.Second, timeout, true, func(_ context.Context) (bool, error) {
 		return runTrafficTest(t, suite, req, expectedResponse, totalRequestCount, compareFunc), nil
 	})
-	if err != nil {
-		// wait for a while to let envoy flush all the logs.
-		time.Sleep(6 * time.Second)
-		consistentHashDump(t, suite.RestConfig)
-	}
-
-	return err
 }
 
 var SourceIPBasedConsistentHashLoadBalancing = suite.ConformanceTest{
