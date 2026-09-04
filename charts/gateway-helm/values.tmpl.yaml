@@ -50,6 +50,13 @@ podDisruptionBudget:
   # maxUnavailable: 1
   # unhealthyPodEvictionPolicy: IfHealthyBudget
 
+# Control-plane Prometheus metrics configuration. This does not configure EnvoyProxy data-plane metrics.
+metrics:
+  tls:
+    enable: false
+    secretRef:
+      name: ""
+
 deployment:
   annotations: {}
   envoyGateway:
