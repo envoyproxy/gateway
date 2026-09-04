@@ -1,0 +1,1 @@
+Added `defaultChildMergeType` to `BackendTrafficPolicy` for policies targeting a Gateway, so a route-level policy that doesn't set `mergeType` merges into the parent policy instead of replacing it. A child policy with an explicit `mergeType` keeps its own behavior.
