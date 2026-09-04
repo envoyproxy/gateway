@@ -15344,6 +15344,19 @@ spec:
                           Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
                           Example: `httproute/my-ns/my-route/rule/0`
                         type: string
+                      enableCircuitBreakerRemainingStats:
+                        description: |-
+                          EnableCircuitBreakerRemainingStats enables Envoy's circuit breaker `remaining_*` gauges,
+                          which expose the number of resources remaining before each circuit breaker opens.
+                          Enabling this adds 4 additional gauges per cluster, see:
+                          https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats#circuit-breakers-statistics
+
+                          Remaining retry resources are not tracked when a retry budget is configured, since the
+                          retry budget replaces the maxParallelRetries circuit breaker.
+
+                          This setting does not apply to clusters generated for ext-auth, ext-proc, JWT and OIDC
+                          providers, as those are translated without proxy-level telemetry context.
+                        type: boolean
                       enableGRPCStats:
                         description: |-
                           EnableGRPCStats enables the gRPC stats filter on listeners.
