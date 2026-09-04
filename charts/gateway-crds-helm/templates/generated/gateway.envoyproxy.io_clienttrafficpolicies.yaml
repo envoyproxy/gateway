@@ -1014,6 +1014,17 @@ spec:
                 type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
+                properties:
+                  advertisedPort:
+                    description: |-
+                      AdvertisedPort specifies the port advertised to clients in the HTTP/3
+                      `alt-svc` response header. It does not change the listener or Service port.
+                      If unset, the Gateway listener port is advertised.
+                    format: int32
+                    type: integer
+                    x-kubernetes-validations:
+                    - message: advertisedPort must be between 1 and 65535
+                      rule: self >= 1 && self <= 65535
                 type: object
               path:
                 description: Path enables managing how the incoming path set by clients
