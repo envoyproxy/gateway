@@ -6,6 +6,9 @@
 package translator
 
 import (
+	"fmt"
+	"regexp"
+	"strings"
 	"testing"
 
 	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -174,6 +177,154 @@ func TestBuildClientCertPredicate_URIAndDNS_NoSubject_SingleORGroup(t *testing.T
 	orMatcher, ok := preds[0].MatchType.(*matcherv3.Matcher_MatcherList_Predicate_OrMatcher)
 	require.True(t, ok, "expected one OR group for the URI+DNS mix")
 	require.Len(t, orMatcher.OrMatcher.Predicate, 3)
+}
+
+// ---- buildSanStringMatcherFromEG ----
+//
+// Envoy's uri_san/dns_san inputs join every SAN of that type on the peer certificate
+// into one comma-separated string. buildSanStringMatcherFromEG lowers Exact/Prefix/
+// Suffix to a regex anchored on comma boundaries so they match one token anywhere in
+// that string, per the formulas in the doc comment:
+//
+//	Exact X   -> (^|,)X(,|$)
+//	Prefix P  -> (^|,)P.*(,|$)
+//	Suffix S  -> (^|,).*S(,|$)
+
+func sanRegexPattern(t *testing.T, sm *egv1a1.StringMatch) string {
+	t.Helper()
+	matcher, err := buildSanStringMatcherFromEG(sm)
+	require.NoError(t, err)
+	safeRegex, ok := matcher.MatchPattern.(*matcherv3.StringMatcher_SafeRegex)
+	require.True(t, ok, "expected a SafeRegex match pattern, got %T", matcher.MatchPattern)
+	return safeRegex.SafeRegex.Regex
+}
+
+func TestBuildSanStringMatcherFromEG_Formulas(t *testing.T) {
+	cases := []struct {
+		desc     string
+		matchTyp egv1a1.StringMatchType
+		value    string
+		want     string
+	}{
+		{"exact", egv1a1.StringMatchExact, "foo", `(^|,)foo(,|$)`},
+		{"prefix", egv1a1.StringMatchPrefix, "foo", `(^|,)foo.*(,|$)`},
+		{"suffix", egv1a1.StringMatchSuffix, "foo", `(^|,).*foo(,|$)`},
+		// Regex metacharacters in the literal value must be escaped, or they'd change
+		// the meaning of the anchor wrapper instead of matching themselves literally.
+		{"exact escapes metacharacters", egv1a1.StringMatchExact, "a.b+c", `(^|,)a\.b\+c(,|$)`},
+		{"prefix escapes metacharacters", egv1a1.StringMatchPrefix, "a.b+c", `(^|,)a\.b\+c.*(,|$)`},
+		{"suffix escapes metacharacters", egv1a1.StringMatchSuffix, "a.b+c", `(^|,).*a\.b\+c(,|$)`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sm := &egv1a1.StringMatch{Type: ptr.To(tc.matchTyp), Value: tc.value}
+			require.Equal(t, tc.want, sanRegexPattern(t, sm))
+		})
+	}
+}
+
+func TestBuildSanStringMatcherFromEG_NilTypeDefaultsToExactFormula(t *testing.T) {
+	sm := &egv1a1.StringMatch{Value: "foo"} // Type is nil
+	require.Equal(t, `(^|,)foo(,|$)`, sanRegexPattern(t, sm))
+}
+
+func TestBuildSanStringMatcherFromEG_RegularExpressionPassesThroughUnwrapped(t *testing.T) {
+	// A user-authored regex is not spliced into the anchor wrapper: it continues to
+	// match against the raw joined SAN string exactly as buildXdsStringMatcherFromEG
+	// would build it.
+	sm := &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchRegularExpression), Value: "^foo.*bar$"}
+	got, err := buildSanStringMatcherFromEG(sm)
+	require.NoError(t, err)
+	want, err := buildXdsStringMatcherFromEG(sm)
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
+func TestBuildSanStringMatcherFromEG_UnknownTypeReturnsError(t *testing.T) {
+	sm := &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchType("bogus")), Value: "x"}
+	_, err := buildSanStringMatcherFromEG(sm)
+	require.Error(t, err)
+}
+
+// TestBuildSanStringMatcherFromEG_MatchesAnyTokenInJoinedSAN is the parametric hunt for
+// the bug the anchoring fix addresses: a naive Exact/Prefix/Suffix match against the
+// whole joined SAN string only ever "works" by accident for the first (Prefix) or last
+// (Suffix) SAN, and never for Exact once there's more than one SAN. It exercises every
+// combination of 0..5 URI SANs and 0..5 DNS SANs, verifying for every token at every
+// position that:
+//   - Exact/Prefix/Suffix match the real joined string built from that token, and
+//   - a decoy value straddling two adjacent tokens (spanning the comma that separates
+//     them) never matches, which is exactly the false-negative/false-positive pattern
+//     an un-anchored substring/prefix/suffix check would be fooled by.
+func TestBuildSanStringMatcherFromEG_MatchesAnyTokenInJoinedSAN(t *testing.T) {
+	uriToken := func(i int) string { return fmt.Sprintf("spiffe://trust-domain/ns/ns%d/sa/sa%d", i, i) }
+	dnsToken := func(i int) string { return fmt.Sprintf("svc%d.example.com", i) }
+
+	checkTokenList := func(t *testing.T, tokens []string) {
+		joined := strings.Join(tokens, ",")
+
+		for i, tok := range tokens {
+			t.Run(fmt.Sprintf("token[%d]", i), func(t *testing.T) {
+				mustMatch := func(desc string, sm *egv1a1.StringMatch) {
+					t.Helper()
+					re := regexp.MustCompile(sanRegexPattern(t, sm))
+					require.True(t, re.MatchString(joined), "%s: pattern %q should match joined SAN %q", desc, re.String(), joined)
+				}
+
+				mustMatch("exact", &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchExact), Value: tok})
+
+				half := len(tok) / 2
+				mustMatch("prefix", &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchPrefix), Value: tok[:half]})
+				mustMatch("suffix", &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchSuffix), Value: tok[half:]})
+			})
+		}
+
+		t.Run("absent value does not match", func(t *testing.T) {
+			re := regexp.MustCompile(sanRegexPattern(t, &egv1a1.StringMatch{
+				Type: ptr.To(egv1a1.StringMatchExact), Value: "not-present-value",
+			}))
+			require.False(t, re.MatchString(joined))
+		})
+
+		if len(tokens) >= 2 {
+			t.Run("boundary-straddling decoy does not match", func(t *testing.T) {
+				// suffix of token[0] + "," + prefix of token[1]: a real substring of the
+				// joined string, but not a real token — the anchors must reject it.
+				a, b := tokens[0], tokens[1]
+				decoy := a[len(a)-2:] + "," + b[:2]
+				require.Contains(t, joined, decoy, "decoy must be a genuine substring of the joined SAN string to be a meaningful negative case")
+
+				exact := regexp.MustCompile(sanRegexPattern(t, &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchExact), Value: decoy}))
+				require.False(t, exact.MatchString(joined), "Exact must not match a value spanning two tokens")
+
+				prefix := regexp.MustCompile(sanRegexPattern(t, &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchPrefix), Value: decoy}))
+				require.False(t, prefix.MatchString(joined), "Prefix must not match a value that doesn't start at a token boundary")
+
+				suffix := regexp.MustCompile(sanRegexPattern(t, &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchSuffix), Value: decoy}))
+				require.False(t, suffix.MatchString(joined), "Suffix must not match a value that doesn't end at a token boundary")
+			})
+		}
+	}
+
+	for uriCount := 0; uriCount <= 5; uriCount++ {
+		for dnsCount := 0; dnsCount <= 5; dnsCount++ {
+			t.Run(fmt.Sprintf("uris=%d/dns=%d", uriCount, dnsCount), func(t *testing.T) {
+				uris := make([]string, uriCount)
+				for i := range uris {
+					uris[i] = uriToken(i)
+				}
+				dns := make([]string, dnsCount)
+				for i := range dns {
+					dns[i] = dnsToken(i)
+				}
+
+				// uri_san and dns_san are independent inputs on the real cert/xDS side —
+				// each type gets its own joined string — so check each list on its own.
+				t.Run("uris", func(t *testing.T) { checkTokenList(t, uris) })
+				t.Run("dns", func(t *testing.T) { checkTokenList(t, dns) })
+			})
+		}
+	}
 }
 
 // Compile-time check: sslinput is referenced so the import is not pruned.

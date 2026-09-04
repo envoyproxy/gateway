@@ -34,14 +34,18 @@
                             typedConfig:
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.ssl.v3.UriSanInput
                           valueMatch:
-                            exact: spiffe://trust-domain/ns/client-ns/sa/client-sa
+                            safeRegex:
+                              googleRe2: {}
+                              regex: (^|,)spiffe://trust-domain/ns/client-ns/sa/client-sa(,|$)
                       - singlePredicate:
                           input:
                             name: client_cert_uri_san
                             typedConfig:
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.ssl.v3.UriSanInput
                           valueMatch:
-                            exact: spiffe://trust-domain/ns/other-ns/sa/other-sa
+                            safeRegex:
+                              googleRe2: {}
+                              regex: (^|,)spiffe://trust-domain/ns/other-ns/sa/other-sa(,|$)
               onNoMatch:
                 action:
                   name: default
@@ -79,14 +83,18 @@
                             typedConfig:
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.ssl.v3.UriSanInput
                           valueMatch:
-                            exact: spiffe://trust-domain/ns/client-ns/sa/client-sa
+                            safeRegex:
+                              googleRe2: {}
+                              regex: (^|,)spiffe://trust-domain/ns/client-ns/sa/client-sa(,|$)
                       - singlePredicate:
                           input:
                             name: client_cert_uri_san
                             typedConfig:
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.ssl.v3.UriSanInput
                           valueMatch:
-                            exact: spiffe://trust-domain/ns/other-ns/sa/other-sa
+                            safeRegex:
+                              googleRe2: {}
+                              regex: (^|,)spiffe://trust-domain/ns/other-ns/sa/other-sa(,|$)
               onNoMatch:
                 action:
                   name: default
@@ -121,7 +129,9 @@
                         typedConfig:
                           '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.ssl.v3.UriSanInput
                       valueMatch:
-                        exact: spiffe://envoy-gateway/ns/default/sa/client
+                        safeRegex:
+                          googleRe2: {}
+                          regex: (^|,)spiffe://envoy-gateway/ns/default/sa/client(,|$)
               onNoMatch:
                 action:
                   name: default

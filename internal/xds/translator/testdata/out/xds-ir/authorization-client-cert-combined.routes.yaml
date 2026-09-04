@@ -43,14 +43,18 @@
                                 typedConfig:
                                   '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.ssl.v3.UriSanInput
                               valueMatch:
-                                exact: spiffe://envoy-gateway/tests/clientcert/allowed
+                                safeRegex:
+                                  googleRe2: {}
+                                  regex: (^|,)spiffe://envoy-gateway/tests/clientcert/allowed(,|$)
                           - singlePredicate:
                               input:
                                 name: client_cert_dns_san
                                 typedConfig:
                                   '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.ssl.v3.DnsSanInput
                               valueMatch:
-                                exact: allowed-client.svc.cluster.local
+                                safeRegex:
+                                  googleRe2: {}
+                                  regex: (^|,)allowed-client\.svc\.cluster\.local(,|$)
               onNoMatch:
                 action:
                   name: default

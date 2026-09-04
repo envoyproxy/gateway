@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -1021,7 +1022,7 @@ func buildClientCertPredicate(clientCert *egv1a1.ClientCertPrincipal) ([]*matche
 			return nil, err
 		}
 		for i := range san.URIs {
-			stringMatcher, err := buildXdsStringMatcherFromEG(&san.URIs[i])
+			stringMatcher, err := buildSanStringMatcherFromEG(&san.URIs[i])
 			if err != nil {
 				return nil, err
 			}
@@ -1048,7 +1049,7 @@ func buildClientCertPredicate(clientCert *egv1a1.ClientCertPrincipal) ([]*matche
 			return nil, err
 		}
 		for i := range san.DNSNames {
-			stringMatcher, err := buildXdsStringMatcherFromEG(&san.DNSNames[i])
+			stringMatcher, err := buildSanStringMatcherFromEG(&san.DNSNames[i])
 			if err != nil {
 				return nil, err
 			}
@@ -1116,4 +1117,55 @@ func buildXdsStringMatcherFromEG(sm *egv1a1.StringMatch) (*matcherv3.StringMatch
 		}, nil
 	}
 	return nil, fmt.Errorf("unsupported StringMatch type: %q", matchType)
+}
+
+// sanTokenStart/sanTokenEnd anchor a pattern to one comma-delimited token in Envoy's
+// uri_san/dns_san matcher inputs, which join every SAN of that type on the peer
+// certificate into a single comma-separated string (e.g. two URI SANs "a" and "b"
+// become the one input value "a,b"). Without this anchoring, Exact never matches a
+// multi-SAN cert, and Prefix/Suffix only happen to match the first/last SAN.
+const (
+	sanTokenStart = `(^|,)`
+	sanTokenEnd   = `(,|$)`
+)
+
+// buildSanStringMatcherFromEG converts an EG egv1a1.StringMatch into a
+// matcherv3.StringMatcher for use against Envoy's uri_san/dns_san inputs.
+//
+// Exact/Prefix/Suffix lower to a regex anchored on comma boundaries so they match one
+// token anywhere in the joined SAN string, not just the string as a whole:
+//   - Exact X   -> (^|,)X(,|$)
+//   - Prefix P  -> (^|,)P.*(,|$)
+//   - Suffix S  -> (^|,).*S(,|$)
+//
+// RegularExpression is passed through unchanged via buildXdsStringMatcherFromEG: an
+// arbitrary user-supplied regex can't be safely spliced into the anchor wrapper (it may
+// already contain its own anchors, top-level alternation, or groups that the wrapping
+// would silently break), so it continues to match against the raw joined string.
+func buildSanStringMatcherFromEG(sm *egv1a1.StringMatch) (*matcherv3.StringMatcher, error) {
+	matchType := egv1a1.StringMatchExact
+	if sm.Type != nil {
+		matchType = *sm.Type
+	}
+
+	var pattern string
+	switch matchType {
+	case egv1a1.StringMatchExact:
+		pattern = sanTokenStart + regexp.QuoteMeta(sm.Value) + sanTokenEnd
+	case egv1a1.StringMatchPrefix:
+		pattern = sanTokenStart + regexp.QuoteMeta(sm.Value) + ".*" + sanTokenEnd
+	case egv1a1.StringMatchSuffix:
+		pattern = sanTokenStart + ".*" + regexp.QuoteMeta(sm.Value) + sanTokenEnd
+	default:
+		return buildXdsStringMatcherFromEG(sm)
+	}
+
+	return &matcherv3.StringMatcher{
+		MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+			SafeRegex: &matcherv3.RegexMatcher{
+				Regex:      pattern,
+				EngineType: &matcherv3.RegexMatcher_GoogleRe2{GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{}},
+			},
+		},
+	}, nil
 }
