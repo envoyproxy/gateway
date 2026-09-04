@@ -212,7 +212,38 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				"Route is accepted",
 			)
 		}
+
+		// Warn about dots in the HTTPRoute name or rule names. Envoy derives Prometheus
+		// stat labels by splitting cluster names on ".", so a dotted name is truncated at
+		// the first dot and can collide with another route into duplicate metric series.
+		// This is set after the Accepted condition so it doesn't suppress it (the block
+		// above only fires when no other condition is present).
+		// See https://github.com/envoyproxy/gateway/issues/9576.
+		if dotted := dottedRouteNames(httpRoute); len(dotted) > 0 {
+			status.SetRouteStatusCondition(GetRouteStatus(httpRoute),
+				parentRef.routeParentStatusIdx,
+				httpRoute.GetGeneration(),
+				status.RouteConditionWarning,
+				metav1.ConditionTrue,
+				status.RouteReasonDottedName,
+				fmt.Sprintf("A dot in the HTTPRoute name or rule name(s) %v causes Envoy to truncate Prometheus metric labels at the first dot, which can produce duplicate metric series; avoid dots in HTTPRoute and rule names.", dotted),
+			)
+		}
 	}
+}
+
+// dottedRouteNames returns the HTTPRoute name and any rule names that contain a dot.
+func dottedRouteNames(httpRoute *HTTPRouteContext) []string {
+	var names []string
+	if strings.Contains(httpRoute.GetName(), ".") {
+		names = append(names, httpRoute.GetName())
+	}
+	for _, rule := range httpRoute.Spec.Rules {
+		if rule.Name != nil && strings.Contains(string(*rule.Name), ".") {
+			names = append(names, string(*rule.Name))
+		}
+	}
+	return names
 }
 
 func formatDroppedRuleMessage(unacceptedRules []int, err status.Error) string {
