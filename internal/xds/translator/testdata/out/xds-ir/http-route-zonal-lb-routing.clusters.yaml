@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: route-with-settings-preferlocal-dest
   ignoreHealthOnHostRemoval: true
@@ -35,6 +36,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: route-with-lb-preferlocal-dest/backend/0
   ignoreHealthOnHostRemoval: true
@@ -59,6 +61,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: route-with-lb-and-settings-preferlocal-dest/backend/0
   ignoreHealthOnHostRemoval: true
