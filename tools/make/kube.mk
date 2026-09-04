@@ -39,7 +39,8 @@ E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 E2E_DISABLE_PARALLEL ?= false
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
-E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG) --cleanup-test-resources=$(E2E_CLEANUP) --disable-parallel-tests=$(E2E_DISABLE_PARALLEL)
+# TODO: remove --allow-crds-mismatch once we bump the Gateway API version to v1.7.0 or later in the e2e tests.
+E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG) --cleanup-test-resources=$(E2E_CLEANUP) --disable-parallel-tests=$(E2E_DISABLE_PARALLEL) --allow-crds-mismatch
 
 # Define the Gateway API channel used in tests
 E2E_GATEWAY_API_CHANNEL ?= experimental
