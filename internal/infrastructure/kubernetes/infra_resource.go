@@ -173,6 +173,16 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		return err
 	}
 
+	// A same-named Deployment that already exists may be an unrelated, unmanaged
+	// resource in GatewayNamespace mode (where the Gateway name is reused for the
+	// managed infra). Check ownership before the selector-migration workaround
+	// below, otherwise a pre-existing unmanaged Deployment with a different
+	// selector surfaces the misleading "illegal change in a custom label" error
+	// instead of a clear ownership-conflict error (see #9132).
+	if err := i.checkOwnership(ctx, deployment); err != nil {
+		return err
+	}
+
 	if !equality.Semantic.DeepEqual(old.Spec.Selector, deployment.Spec.Selector) {
 		// Note: Deployment created by the old gateway controller may have a different selector generated based on a custom label feature,
 		// and it caused the issue that the gateway controller cannot update the deployment when users change the custom labels.
@@ -202,7 +212,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		}
 	}
 
-	return i.applyIfOwned(ctx, deployment)
+	return i.Client.ServerSideApply(ctx, deployment)
 }
 
 // createOrUpdateDaemonSet creates a DaemonSet in the kube api server based on the provided
@@ -260,6 +270,15 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		return err
 	}
 
+	// A same-named DaemonSet that already exists may be an unrelated, unmanaged
+	// resource in GatewayNamespace mode. Check ownership before the
+	// selector-migration workaround below to surface a clear ownership-conflict
+	// error instead of the misleading "illegal change in a custom label" error
+	// (see #9132).
+	if err := i.checkOwnership(ctx, daemonSet); err != nil {
+		return err
+	}
+
 	if !equality.Semantic.DeepEqual(old.Spec.Selector, daemonSet.Spec.Selector) {
 		// Note: Daemonset created by the old gateway controller may have a different selector generated based on a custom label feature,
 		// and it caused the issue that the gateway controller cannot update the daemonset when users change the custom labels.
@@ -288,7 +307,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		}
 	}
 
-	return i.applyIfOwned(ctx, daemonSet)
+	return i.Client.ServerSideApply(ctx, daemonSet)
 }
 
 func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {
@@ -748,18 +767,19 @@ func noGatewayIdentityLabels(labels map[string]string) bool {
 // this Gateway, the apply is skipped to avoid hijacking (and later garbage-
 // collecting) an unrelated resource.
 //
-// This uses the cached client, so it is best-effort: there is a small window
-// where a same-named resource created just before this reconcile may not yet be
-// reflected in the cache and could be adopted. This is considered an acceptable
-// edge case — it does not cause EG to fail, and using the cache avoids extra
-// uncached API reads on every reconcile (see #8764).
+// For resource kinds behind a label-filtered cache, the existence read uses the
+// uncached API reader when available so it observes unmanaged resources that the
+// cache would miss. Other kinds use the cache to avoid unnecessary API-server
+// requests. Even with the live read there is a small window where a same-named
+// resource can be created between this check and the apply (see #8764, #9132).
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
 	if !i.EnvoyGateway.GatewayNamespaceMode() || noGatewayIdentityLabels(obj.GetLabels()) {
 		return nil
 	}
 
 	existing := obj.DeepCopyObject().(client.Object)
-	err := i.Client.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
+	reader := i.readerForOwnershipCheck(obj)
+	err := reader.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, existing)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -776,6 +796,21 @@ func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
 		return ownershipErr
 	}
 	return nil
+}
+
+// readerForOwnershipCheck returns the uncached API reader for resource kinds
+// whose caches are label-filtered. Other kinds use the cached client.
+func (i *Infra) readerForOwnershipCheck(obj client.Object) client.Reader {
+	if i.apiReader == nil {
+		return i.Client
+	}
+
+	switch obj.(type) {
+	case *appsv1.DaemonSet, *autoscalingv2.HorizontalPodAutoscaler, *policyv1.PodDisruptionBudget:
+		return i.apiReader
+	default:
+		return i.Client
+	}
 }
 
 func ownedByGateway(existingLabels, desiredLabels map[string]string) bool {
