@@ -4301,6 +4301,20 @@ _Appears in:_
 | `rules` | _[RateLimitRule](#ratelimitrule) array_ |  false  |  | Rules are a list of RateLimit selectors and limits. If a request matches<br />multiple rules, the strictest limit is applied. For example, if a request<br />matches two rules, one with 10rps and one with 20rps, the final limit will<br />be based on the rule with 10rps. |
 
 
+#### LocalWasmCodeSource
+
+
+
+LocalWasmCodeSource defines a local file containing the Wasm code.
+
+_Appears in:_
+- [WasmCodeSource](#wasmcodesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `filename` | _string_ |  true  |  | Filename is the path to the local file containing the Wasm code.<br />The file must be present on the Envoy proxy's filesystem at the time<br />the Wasm extension is loaded. |
+
+
 #### LogLevel
 
 _Underlying type:_ _string_
@@ -6863,9 +6877,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  |  | Type is the type of the source of the Wasm code.<br />Valid WasmCodeSourceType values are "HTTP" or "Image". |
+| `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  |  | Type is the type of the source of the Wasm code.<br />Valid WasmCodeSourceType values are "HTTP", "Image", or "Local". |
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  |  | HTTP is the HTTP URL containing the Wasm code.<br />Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  |  | Image is the OCI image containing the Wasm code.<br />Note that the image must be accessible from the Envoy Gateway. |
+| `local` | _[LocalWasmCodeSource](#localwasmcodesource)_ |  false  |  | Local is the local file containing the Wasm code.<br />The file must be present on the Envoy proxy's filesystem.<br />This is useful when the Wasm module is shipped as part of the Envoy<br />proxy image or mounted via a volume. |
 | `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  |  | PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.<br />This field is only applicable when the SHA256 field is not set.<br />If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests<br />the Wasm module even if the pull policy is set to Always.<br />It only updates the Wasm module when the EnvoyExtension resource version changes. |
 
 
@@ -6897,6 +6912,7 @@ _Appears in:_
 | ----- | ----------- |
 | `HTTP` | HTTPWasmCodeSourceType allows the user to specify the Wasm code in an HTTP URL.<br /> | 
 | `Image` | ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.<br /> | 
+| `Local` | LocalWasmCodeSourceType allows the user to specify the Wasm code as a local file<br />on the Envoy proxy's filesystem.<br /> | 
 
 
 #### WasmEnv
