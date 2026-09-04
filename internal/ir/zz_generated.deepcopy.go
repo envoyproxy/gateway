@@ -4201,6 +4201,11 @@ func (in *RateLimitRule) DeepCopyInto(out *RateLimitRule) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.DetailedMetric != nil {
+		in, out := &in.DetailedMetric, &out.DetailedMetric
+		*out = new(bool)
+		**out = **in
+	}
 	if in.XRateLimitOption != nil {
 		in, out := &in.XRateLimitOption, &out.XRateLimitOption
 		*out = new(v1alpha1.XRateLimitHeadersOption)
