@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -2139,7 +2140,99 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			irRule.ResponseCost = translateRateLimitCost(cost.Response)
 		}
 	}
+
+	if len(rule.Overrides) > 0 {
+		if err := validateRateLimitOverrides(rule); err != nil {
+			return nil, fmt.Errorf("unable to translate rateLimit: %w", err)
+		}
+		irRule.Overrides = make([]ir.RateLimitOverride, len(rule.Overrides))
+		for i, override := range rule.Overrides {
+			irRule.Overrides[i] = ir.RateLimitOverride{
+				Value: override.Value,
+				Limit: ir.RateLimitValue{
+					Requests: override.Limit.Requests,
+					Unit:     ir.RateLimitUnit(override.Limit.Unit),
+				},
+			}
+		}
+	}
 	return irRule, nil
+}
+
+// validateRateLimitOverrides enforces one Distinct identity, no extra AND'd
+// identities, no fromMetadata, and unique non-wildcard values. Method and path
+// matches are allowed; their descriptor suffix is cloned under each override.
+func validateRateLimitOverrides(rule *egv1a1.RateLimitRule) error {
+	if rule.Limit.FromMetadata != nil {
+		return fmt.Errorf("overrides and limit.fromMetadata are mutually exclusive")
+	}
+	if err := validateDistinctOnlyIdentity(rule); err != nil {
+		return err
+	}
+
+	seen := sets.New[string]()
+	for i, override := range rule.Overrides {
+		if override.Value == "" {
+			return fmt.Errorf("overrides[%d].value must be non-empty", i)
+		}
+		if override.Value == "*" {
+			return fmt.Errorf("overrides[%d].value must not be '*'", i)
+		}
+		if seen.Has(override.Value) {
+			return fmt.Errorf("override values must be unique: %q is duplicated", override.Value)
+		}
+		seen.Insert(override.Value)
+		if override.Limit.FromMetadata != nil {
+			return fmt.Errorf("overrides[%d].limit.fromMetadata is not supported", i)
+		}
+		if rule.ClientSelectors[0].SourceCIDR != nil && net.ParseIP(override.Value) == nil {
+			return fmt.Errorf("overrides[%d].value %q must be an IP address when the Distinct identity is sourceCIDR", i, override.Value)
+		}
+	}
+	return nil
+}
+
+// validateDistinctOnlyIdentity requires exactly one clientSelector with a single
+// Distinct header, Distinct query parameter, or Distinct CIDR. Method and path
+// matches may be combined; extra headers, query params, or a second identity may not.
+func validateDistinctOnlyIdentity(rule *egv1a1.RateLimitRule) error {
+	if len(rule.ClientSelectors) != 1 {
+		return fmt.Errorf("overrides requires exactly one clientSelector with a single Distinct identity")
+	}
+
+	sel := rule.ClientSelectors[0]
+
+	identities := 0
+	if len(sel.Headers) > 0 {
+		if len(sel.Headers) != 1 {
+			return fmt.Errorf("overrides requires exactly one Distinct header match")
+		}
+		header := sel.Headers[0]
+		if header.Type == nil || *header.Type != egv1a1.HeaderMatchDistinct {
+			return fmt.Errorf("overrides requires a Distinct header, query parameter, or CIDR identity")
+		}
+		identities++
+	}
+	if len(sel.QueryParams) > 0 {
+		if len(sel.QueryParams) != 1 {
+			return fmt.Errorf("overrides requires exactly one Distinct query parameter match")
+		}
+		query := sel.QueryParams[0]
+		if query.Type == nil || *query.Type != egv1a1.QueryParamMatchDistinct {
+			return fmt.Errorf("overrides requires a Distinct header, query parameter, or CIDR identity")
+		}
+		identities++
+	}
+	if sel.SourceCIDR != nil {
+		if sel.SourceCIDR.Type == nil || *sel.SourceCIDR.Type != egv1a1.SourceMatchDistinct {
+			return fmt.Errorf("overrides requires a Distinct header, query parameter, or CIDR identity")
+		}
+		identities++
+	}
+	if identities != 1 {
+		return fmt.Errorf("overrides requires exactly one Distinct identity (header, query parameter, or CIDR)")
+	}
+	return nil
 }
 
 func translateRateLimitCost(cost *egv1a1.RateLimitCostSpecifier) *ir.RateLimitCost {

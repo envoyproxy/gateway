@@ -3365,6 +3365,234 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{`limit fromMetadata is not supported for Local Rate Limits`},
 		},
 		{
+			desc: "valid Distinct header rate limit overrides",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											Headers: []egv1a1.HeaderMatch{
+												{
+													Name: "x-user-id",
+													Type: new(egv1a1.HeaderMatchDistinct),
+												},
+											},
+										},
+									},
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Second"},
+									Overrides: []egv1a1.RateLimitOverride{
+										{Value: "client-a", Limit: egv1a1.RateLimitValue{Requests: 15, Unit: "Second"}},
+										{Value: "client-b", Limit: egv1a1.RateLimitValue{Requests: 20, Unit: "Second"}},
+										{Value: "client-c", Limit: egv1a1.RateLimitValue{Requests: 5, Unit: "Second"}},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid Distinct query parameter rate limit overrides",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											QueryParams: []egv1a1.QueryParamMatch{
+												{
+													Name: "user",
+													Type: new(egv1a1.QueryParamMatchDistinct),
+												},
+											},
+										},
+									},
+									Limit:     egv1a1.RateLimitValue{Requests: 10, Unit: "Second"},
+									Overrides: []egv1a1.RateLimitOverride{{Value: "alice", Limit: egv1a1.RateLimitValue{Requests: 15, Unit: "Second"}}},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid Distinct CIDR rate limit overrides",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											SourceCIDR: &egv1a1.SourceMatch{
+												Type:  new(egv1a1.SourceMatchDistinct),
+												Value: "192.168.0.0/16",
+											},
+										},
+									},
+									Limit:     egv1a1.RateLimitValue{Requests: 10, Unit: "Second"},
+									Overrides: []egv1a1.RateLimitOverride{{Value: "192.168.0.10", Limit: egv1a1.RateLimitValue{Requests: 15, Unit: "Second"}}},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "overrides is not supported for Local Rate Limits",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											Headers: []egv1a1.HeaderMatch{
+												{
+													Name: "x-user-id",
+													Type: new(egv1a1.HeaderMatchDistinct),
+												},
+											},
+										},
+									},
+									Limit:     egv1a1.RateLimitValue{Requests: 10, Unit: "Second"},
+									Overrides: []egv1a1.RateLimitOverride{{Value: "client-a", Limit: egv1a1.RateLimitValue{Requests: 15, Unit: "Second"}}},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{`overrides is not supported for Local Rate Limits`},
+		},
+		{
+			desc: "overrides and limit.fromMetadata are mutually exclusive",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											Headers: []egv1a1.HeaderMatch{
+												{
+													Name: "x-user-id",
+													Type: new(egv1a1.HeaderMatchDistinct),
+												},
+											},
+										},
+									},
+									Limit: egv1a1.RateLimitValue{
+										Requests:     10,
+										Unit:         "Second",
+										FromMetadata: &egv1a1.RateLimitValueMetadata{Namespace: "something.com", Key: "some_limit"},
+									},
+									Overrides: []egv1a1.RateLimitOverride{{Value: "client-a", Limit: egv1a1.RateLimitValue{Requests: 15, Unit: "Second"}}},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"overrides and limit.fromMetadata are mutually exclusive"},
+		},
+		{
+			desc: "override value must not be wildcard",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											Headers: []egv1a1.HeaderMatch{
+												{
+													Name: "x-user-id",
+													Type: new(egv1a1.HeaderMatchDistinct),
+												},
+											},
+										},
+									},
+									Limit:     egv1a1.RateLimitValue{Requests: 10, Unit: "Second"},
+									Overrides: []egv1a1.RateLimitOverride{{Value: "*", Limit: egv1a1.RateLimitValue{Requests: 15, Unit: "Second"}}},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"override value must not be '*'"},
+		},
+		{
 			desc: "invalid RateLimitSelectCondition with no selectors",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
