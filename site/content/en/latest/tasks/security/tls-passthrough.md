@@ -76,7 +76,13 @@ You can also test the same functionality by sending traffic to the External IP o
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Curl the example app through the Gateway, e.g. Envoy proxy:
+Curl the example app through the Gateway, e.g. Envoy proxy.
+
+Use the **CA** certificate (`example.com.crt`) with `--cacert`. That is the
+issuer of `passthrough.example.com.crt`. Prefer the CA over the leaf server
+certificate: some TLS stacks accept an explicitly trusted leaf as a trust
+anchor, but others report `SSL certificate problem: unable to get local issuer
+certificate`. The CA path is the portable choice.
 
 ```shell
 curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:6443:${GATEWAY_HOST}" \
@@ -98,15 +104,59 @@ Port forward to the Envoy service:
 kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 6043:6443 &
 ```
 
-Curl the example app through Envoy proxy:
+Curl the example app through Envoy proxy. As above, `--cacert` must be the
+**CA** (`example.com.crt`), not the leaf `passthrough.example.com.crt`:
 
 ```shell
-curl -v --resolve "passthrough.example.com:6043:127.0.0.1" https://passthrough.example.com:6043 \
---cacert passthrough.example.com.crt
+curl -v --resolve "passthrough.example.com:6043:127.0.0.1" \
+  -HHost:passthrough.example.com \
+  --cacert example.com.crt \
+  https://passthrough.example.com:6043/get
 ```
 
 {{% /tab %}}
 {{< /tabpane >}}
+
+### Troubleshooting certificate verification
+
+If curl reports `unable to get local issuer certificate` or `unknown CA`:
+
+1. **Verify the client trust anchor**:
+   - For the sample certificates generated in this guide, confirm `--cacert` points at `example.com.crt` (the CA that signed the application certificate), not at `passthrough.example.com.crt`.
+   - If you replaced the sample certificates with a publicly trusted certificate (e.g., Let's Encrypt), omit the `--cacert` flag so curl uses the system trust store.
+   - If using a private or internal CA, point `--cacert` at that CA's root certificate bundle.
+2. Confirm the app Secret still holds the keypair created earlier:
+
+   ```shell
+   kubectl get secret server-certs -o yaml
+   ```
+
+3. If you replaced the sample certs with an intermediate-signed certificate, the TLS Secret presented by the **application** must include the full chain the client needs (leaf plus intermediates). Kubernetes `tls.crt` may contain multiple PEM blocks concatenated leaf-first:
+
+   ```shell
+   cat passthrough.example.com.crt intermediate.crt > fullchain.crt
+   kubectl create secret tls server-certs \
+     --key=passthrough.example.com.key \
+     --cert=fullchain.crt \
+     --dry-run=client -o yaml | kubectl apply -f -
+   ```
+
+   The sample Deployment mounts the Secret and loads the keypair at process
+   start. After replacing `server-certs`, restart the app so it presents the
+   new certificate:
+
+   ```shell
+   kubectl rollout restart deployment/passthrough-echoserver
+   kubectl rollout status deployment/passthrough-echoserver
+   ```
+
+4. For a quick connectivity check only, `curl -k` skips verification; do not use
+   that as a substitute for fixing the CA/chain in real deployments.
+
+Because this task uses **TLS Passthrough**, Envoy does not terminate TLS and
+does not use a Gateway TLS Secret for this listener. Certificate problems in
+the curl client almost always come from the **backend** certificate and the
+CA file passed to curl, not from Gateway TLS settings.
 
 ## Clean-Up
 
