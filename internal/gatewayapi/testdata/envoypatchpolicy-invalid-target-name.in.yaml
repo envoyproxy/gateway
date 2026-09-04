@@ -4,7 +4,6 @@ envoyPatchPolicies:
   metadata:
     namespace: envoy-gateway
     name: gateway-not-exists
-    generation: 10
   spec:
     type: "JSONPatch"
     targetRef:
@@ -23,7 +22,6 @@ envoyPatchPolicies:
   metadata:
     namespace: envoy-gateway
     name: edit-ignore-global-limit
-    generation: 10
   spec:
     type: "JSONPatch"
     targetRef:
@@ -39,6 +37,26 @@ envoyPatchPolicies:
         op: replace
         path: "/ignore_global_conn_limit"
         value: "true"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: invalid-regex
+  spec:
+    type: "JSONPatch"
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-not-exists
+    jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      nameSelector:
+        type: RegularExpression
+        value: "*.illegal.regex"
+      operation:
+        op: replace
+        path: "/per_connection_buffer_limit_bytes"
+        value: "1024"
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
