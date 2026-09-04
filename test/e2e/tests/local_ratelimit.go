@@ -27,6 +27,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests,
 		LocalRateLimitTest,
 		LocalRateLimitQueryParametersTest,
+		LocalRateLimitRetryAfterHeaderTest,
 	)
 }
 
@@ -34,6 +35,7 @@ const (
 	RatelimitLimitHeaderName     = "x-ratelimit-limit"
 	RatelimitRemainingHeaderName = "x-ratelimit-remaining"
 	RatelimitResetHeaderName     = "x-ratelimit-reset"
+	RetryAfterHeaderName         = "retry-after"
 )
 
 var allRateLimitHeaders = []string{
@@ -670,4 +672,51 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 		}
 		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse3)
 	})
+}
+
+var LocalRateLimitRetryAfterHeaderTest = suite.ConformanceTest{
+	ShortName:   "LocalRateLimitRetryAfterHeader",
+	Description: "Emit Retry-After header on local rate-limited 429 responses",
+	Manifests:   []string{"testdata/local-ratelimit-retry-after-header.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := gatewayAndHTTPRoutesMustBeAccepted(t, suite, gwNN)
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "local-ratelimit-retry-after-header-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+		okResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/retry-after-local",
+			},
+			Response: http.Response{
+				StatusCodes:   []int{200},
+				AbsentHeaders: []string{RetryAfterHeaderName},
+			},
+			Namespace: ns,
+		}
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
+
+		limitResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/retry-after-local",
+			},
+			Response: http.Response{
+				StatusCodes: []int{429},
+				// The value counts down from the 3600s (1 Hour) window, so allow a small
+				// tolerance rather than asserting an exact, time-dependent value.
+				ValidHeaderValues: map[string][]string{
+					RetryAfterHeaderName: {"3600", "3599", "3598"},
+				},
+			},
+			Namespace: ns,
+		}
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &limitResponse)
+	},
 }

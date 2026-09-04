@@ -5044,6 +5044,11 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.EnableRetryAfterHeader != nil {
+		in, out := &in.EnableRetryAfterHeader, &out.EnableRetryAfterHeader
+		*out = new(bool)
+		**out = **in
+	}
 	if in.XForwardedClientCert != nil {
 		in, out := &in.XForwardedClientCert, &out.XForwardedClientCert
 		*out = new(XForwardedClientCert)

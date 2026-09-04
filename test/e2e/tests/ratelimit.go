@@ -50,6 +50,7 @@ func init() {
 		RateLimitPathMatchTest,
 		GlobalRateLimitHeaderInvertMatchTest,
 		RateLimitHeadersDisabled,
+		RateLimitRetryAfterHeaderTest,
 		RateLimitBasedJwtClaimsTest,
 		RateLimitMultipleListenersTest,
 		RateLimitHeadersAndCIDRMatchTest,
@@ -741,6 +742,74 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 				t.Errorf("failed to get expected responses for the request: %v", err)
 			}
 		})
+	},
+}
+
+var RateLimitRetryAfterHeaderTest = suite.ConformanceTest{
+	ShortName:   "RateLimitRetryAfterHeader",
+	Description: "Emit Retry-After header on rate-limited 429 responses",
+	Manifests:   []string{"testdata/ratelimit-retry-after-header.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "ratelimit-retry-after-header", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
+			types.NamespacedName{Name: "ratelimit-retry-after-header-btp", Namespace: ns},
+			suite.ControllerName, gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			})
+
+		requestHeaders := map[string]string{
+			"x-user-id": "retry-after-global",
+		}
+
+		expectOkResp := http.ExpectedResponse{
+			Request: http.Request{
+				Path:    "/retry-after-global",
+				Headers: requestHeaders,
+			},
+			Response: http.Response{
+				StatusCodes:   []int{200},
+				AbsentHeaders: []string{RetryAfterHeaderName},
+			},
+			Namespace: ns,
+		}
+		expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+		expectLimitResp := http.ExpectedResponse{
+			Request: http.Request{
+				Path:    "/retry-after-global",
+				Headers: requestHeaders,
+			},
+			Response: http.Response{
+				StatusCodes: []int{429},
+				// The value counts down from the 3600s (1 Hour) window, so allow a small
+				// tolerance rather than asserting an exact, time-dependent value.
+				ValidHeaderValues: map[string][]string{
+					RetryAfterHeaderName: {"3600", "3599", "3598"},
+				},
+			},
+			Namespace: ns,
+		}
+		expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+
+		// should just send exactly 4 requests, and expect 429 with a Retry-After header on the last one
+
+		// keep sending requests till get 200 first, that will cost one 200
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
+
+		// fire the rest of the requests
+		if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+			t.Errorf("failed to get expected response for the first three requests: %v", err)
+		}
+		if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+			t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+		}
 	},
 }
 
