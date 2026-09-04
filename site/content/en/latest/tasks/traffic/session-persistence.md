@@ -89,7 +89,9 @@ when an edge proxy rewrites the request path before it reaches Envoy Gateway.
 
 Because the cookie is sent to every route on the same host, each HTTPRoute rule on a host that enables
 cookie-based session persistence must use a distinct `sessionName`. Rules that share a `sessionName` overwrite
-each other's cookie, and session persistence stops working for both.
+each other's cookie, and session persistence stops working for both. If `sessionName` is omitted, Envoy Gateway
+generates a unique cookie name for the rule, so leaving it unset is the safest choice unless the cookie name has
+to match an existing one, such as `JSESSIONID`.
 
 {{< boilerplate rollout-envoy-gateway >}}
 
