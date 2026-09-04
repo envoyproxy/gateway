@@ -1,0 +1,64 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10443
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: https-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https-10443
+        useRemoteAddress: true
+    name: https-listener
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  - filterChainMatch:
+      serverNames:
+      - repro.example.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: EmptyCluster
+        statPrefix: tls-passthrough-10443
+    name: EmptyCluster/tls-terminate-no-routes
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: https-listener
+  perConnectionBufferLimitBytes: 32768
