@@ -6361,6 +6361,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.CodeVerifierTTL != nil {
+		in, out := &in.CodeVerifierTTL, &out.CodeVerifierTTL
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.DisableTokenEncryption != nil {
 		in, out := &in.DisableTokenEncryption, &out.DisableTokenEncryption
 		*out = new(bool)
