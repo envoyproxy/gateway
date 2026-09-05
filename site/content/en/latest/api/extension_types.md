@@ -5257,6 +5257,7 @@ _Appears in:_
 | `port` | _integer_ |  false  | 4317 | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `reportCountersAsDeltas` | _boolean_ |  false  |  | ReportCountersAsDeltas configures the OpenTelemetry sink to report<br />counters as delta temporality instead of cumulative. |
 | `reportHistogramsAsDeltas` | _boolean_ |  false  |  | ReportHistogramsAsDeltas configures the OpenTelemetry sink to report<br />histograms as delta temporality instead of cumulative.<br />Required for backends like Elastic that drop cumulative histograms. |
+| `prefix` | _string_ |  false  |  | Prefix configures the OpenTelemetry sink to prepend the given prefix to emitted stat names,<br />the full stat name will be `<prefix>.<stat_name>`. |
 | `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 | `resourceAttributes` | _object (keys:string, values:string)_ |  false  |  | ResourceAttributes is a set of labels that describe the source of metrics.<br />It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/ |
 

@@ -162,6 +162,28 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "otel-metrics-prefix",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								Host:                     new("otel-collector.monitoring.svc"),
+								Port:                     4317,
+								ReportHistogramsAsDeltas: new(true),
+								Prefix:                   new("envoy"),
+							},
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
 			name: "otel-metrics-headers",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{

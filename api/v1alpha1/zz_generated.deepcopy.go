@@ -7358,6 +7358,11 @@ func (in *ProxyOpenTelemetrySink) DeepCopyInto(out *ProxyOpenTelemetrySink) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Prefix != nil {
+		in, out := &in.Prefix, &out.Prefix
+		*out = new(string)
+		**out = **in
+	}
 	if in.Headers != nil {
 		in, out := &in.Headers, &out.Headers
 		*out = make([]v1.HTTPHeader, len(*in))

@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -37,6 +38,7 @@ func init() {
 		MetricCompressorGzipTest,
 		MetricCompressorBrotliTest,
 		MetricCompressorZstdTest,
+		OtelMetricPrefixTest,
 	)
 }
 
@@ -178,6 +180,60 @@ var MetricCompressorZstdTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		runMetricCompressorTest(t, suite, "gateway-conformance-infra", egv1a1.ZstdCompressorType)
 	},
+}
+
+var OtelMetricPrefixTest = suite.ConformanceTest{
+	ShortName:   "OtelMetricPrefix",
+	Description: "Make sure metrics arrive with configured prefix",
+	Manifests:   []string{"testdata/metrics-with-prefix.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "metric-otel-prefix", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "metric-otel-prefix", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		expectedResponse := httputils.ExpectedResponse{
+			Request: httputils.Request{
+				Path: "/prom-prefix",
+			},
+			Response: httputils.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+
+		httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+		err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+			ok, err := scrapeMetricsHasPrefix(suite.Client, types.NamespacedName{
+				Namespace: "monitoring",
+				Name:      "prefix-metrix-gtw-metrics",
+			}, 19001, "/metrics", "eg_e2e_prefix")
+			if err != nil {
+				tlog.Logf(t, "failed to scrape metrics: %v", err)
+				return false, nil
+			}
+			return ok, nil
+		})
+		require.NoError(t, err, "failed to retrieve metrics with expected prefix within timeout.")
+	},
+}
+
+func scrapeMetricsHasPrefix(c client.Client, nn types.NamespacedName, port int32, path, prefix string) (bool, error) {
+	url, err := RetrieveURL(c, nn, port, path)
+	if err != nil {
+		return false, err
+	}
+	mfs, err := RetrieveMetrics(url, 5*time.Second)
+	if err != nil {
+		return false, err
+	}
+	for name := range mfs {
+		if strings.HasPrefix(name, prefix) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns string, compressorType egv1a1.CompressorType) {
