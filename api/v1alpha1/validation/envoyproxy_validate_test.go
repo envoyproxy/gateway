@@ -243,7 +243,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"1.1.1.1/32"},
 							},
 						},
 					},
@@ -264,7 +264,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"2001:db8::/32"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"2001:db8::/32"},
 							},
 						},
 					},
@@ -285,7 +285,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
-								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"1.1.1.1/32"},
 							},
 						},
 					},

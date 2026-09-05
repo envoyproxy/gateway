@@ -4089,7 +4089,7 @@ _Appears in:_
 | `type` | _[ServiceType](#servicetype)_ |  false  | LoadBalancer | Type determines how the Service is exposed. Defaults to LoadBalancer.<br />Valid options are ClusterIP, LoadBalancer and NodePort.<br />"LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it).<br />"ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP.<br />"NodePort" means a service will be exposed on a static Port on all Nodes of the cluster. |
 | `loadBalancerClass` | _string_ |  false  |  | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider<br />implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` | _boolean_ |  false  |  | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for<br />services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster<br />load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a<br />value), those requests will be respected, regardless of this field. This field may only be set for<br />services with type LoadBalancer and will be cleared if the type is changed to any other type. |
-| `loadBalancerSourceRanges` | _string array_ |  false  |  | LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as<br />firewall rules on the platform providers load balancer. This is not guaranteed to be working as<br />it happens outside of kubernetes and has to be supported and handled by the platform provider.<br />This field may only be set for services with type LoadBalancer and will be cleared if the type<br />is changed to any other type. |
+| `loadBalancerSourceRanges` | _[LoadBalancerSourceRange](#loadbalancersourcerange) array_ |  false  |  | LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as<br />firewall rules on the platform providers load balancer. This is not guaranteed to be working as<br />it happens outside of kubernetes and has to be supported and handled by the platform provider.<br />This field may only be set for services with type LoadBalancer and will be cleared if the type<br />is changed to any other type. |
 | `loadBalancerIP` | _string_ |  false  |  | LoadBalancerIP defines the IP Address of the underlying load balancer service. This field<br />may be ignored if the load balancer provider does not support this feature.<br />This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud<br />providers such as GCP. |
 | `externalTrafficPolicy` | _[ServiceExternalTrafficPolicy](#serviceexternaltrafficpolicy)_ |  false  | Local | ExternalTrafficPolicy determines the externalTrafficPolicy for the Envoy Service. Valid options<br />are Local and Cluster. Default is "Local". "Local" means traffic will only go to pods on the node<br />receiving the traffic. "Cluster" means connections are loadbalanced to all pods in the cluster. |
 | `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  |  | Patch defines how to perform the patch operation to the service |
@@ -4190,6 +4190,18 @@ _Appears in:_
 | `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
 | `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers. |
 | `zoneAware` | _[ZoneAware](#zoneaware)_ |  false  |  | ZoneAware defines the configuration related to the distribution of requests between locality zones. |
+
+
+#### LoadBalancerSourceRange
+
+_Underlying type:_ _string_
+
+LoadBalancerSourceRange is a CIDR string allowed in LoadBalancerSourceRanges.
+MaxLength bounds CEL cost estimation for isCIDR validation over this list.
+
+_Appears in:_
+- [KubernetesServiceSpec](#kubernetesservicespec)
+
 
 
 #### LoadBalancerType

@@ -5908,7 +5908,7 @@ func (in *KubernetesServiceSpec) DeepCopyInto(out *KubernetesServiceSpec) {
 	}
 	if in.LoadBalancerSourceRanges != nil {
 		in, out := &in.LoadBalancerSourceRanges, &out.LoadBalancerSourceRanges
-		*out = make([]string, len(*in))
+		*out = make([]LoadBalancerSourceRange, len(*in))
 		copy(*out, *in)
 	}
 	if in.LoadBalancerIP != nil {

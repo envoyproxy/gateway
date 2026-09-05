@@ -130,7 +130,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"1.1.1.1", "2001:db8::/32"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"1.1.1.1/32", "2001:db8::/32"},
 							},
 						},
 					},
@@ -147,7 +147,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"2001:db8::/32"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"2001:db8::/32"},
 							},
 						},
 					},
@@ -180,13 +180,51 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeClusterIP),
-								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"10.0.0.0/8"},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{"loadBalancerSourceRanges can only be set for LoadBalancer type"},
+		},
+		{
+			desc: "loadBalancerSourceRanges-invalid-cidr",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"not-a-cidr"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerSourceRanges must contain valid CIDR values"},
+		},
+		{
+			desc: "loadBalancerSourceRanges-too-many-items",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				sourceRanges := make([]egv1a1.LoadBalancerSourceRange, 65)
+				for i := range sourceRanges {
+					sourceRanges[i] = "10.0.0.0/8"
+				}
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: sourceRanges,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Too many: 65: must have at most 64 items"},
 		},
 		{
 			desc: "ServiceTypeLoadBalancer-with-valid-IP",
@@ -248,6 +286,23 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           new(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerIP: new("a.b.c.d"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerIP must be a valid IPv4 address"},
+		},
+		{
+			desc: "ServiceTypeLoadBalancer-with-IPv6-IP",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: new("2001:db8::68"),
 							},
 						},
 					},

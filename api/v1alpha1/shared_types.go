@@ -316,10 +316,16 @@ const (
 	ServiceExternalTrafficPolicyLocal ServiceExternalTrafficPolicy = "Local"
 )
 
+// LoadBalancerSourceRange is a CIDR string allowed in LoadBalancerSourceRanges.
+// MaxLength bounds CEL cost estimation for isCIDR validation over this list.
+// +kubebuilder:validation:MaxLength=64
+type LoadBalancerSourceRange string
+
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
 // +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges can only be set for LoadBalancer type",rule="!has(self.loadBalancerSourceRanges) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges must contain valid CIDR values",rule="!has(self.loadBalancerSourceRanges) || self.loadBalancerSourceRanges.all(r, isCIDR(r))"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
 	// By default, no annotations are appended.
@@ -360,15 +366,16 @@ type KubernetesServiceSpec struct {
 	// it happens outside of kubernetes and has to be supported and handled by the platform provider.
 	// This field may only be set for services with type LoadBalancer and will be cleared if the type
 	// is changed to any other type.
+	// +kubebuilder:validation:MaxItems=64
 	// +optional
-	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
+	LoadBalancerSourceRanges []LoadBalancerSourceRange `json:"loadBalancerSourceRanges,omitempty"`
 
 	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
 	// may be ignored if the load balancer provider does not support this feature.
 	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud
 	// providers such as GCP.
 	//
-	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="self.matches(r\"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$\")"
+	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="isIP(self) && ip(self).family() == 4"
 	// +optional
 	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
 
@@ -701,6 +708,7 @@ type ClusterSettings struct {
 
 // CIDR defines a CIDR Address range.
 // A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+// +kubebuilder:validation:MaxLength=64
 // +kubebuilder:validation:Pattern=`((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))`
 type CIDR string
 
