@@ -1,0 +1,42 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: plaintext-http2-auto
+      route:
+        cluster: plaintext-http2-auto-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tls-auto
+      route:
+        cluster: tls-auto-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tls-explicit-http2
+      route:
+        cluster: tls-explicit-http2-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tls-custom-alpn
+      route:
+        cluster: tls-custom-alpn-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tls-grpc
+      route:
+        cluster: tls-grpc-dest
+        upgradeConfigs:
+        - upgradeType: websocket

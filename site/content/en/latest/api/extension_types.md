@@ -3126,6 +3126,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `hostname` | _string_ |  false  |  | Hostname defines the HTTP Host header used for active HTTP health checks.<br />Host selection uses this order: this field, the associated Backend endpoint<br />hostname if available, then the effective Route hostname. |
 | `path` | _string_ |  true  |  | Path defines the HTTP path that will be requested during health checking. |
+| `version` | _[HTTPHealthCheckVersion](#httphealthcheckversion)_ |  false  | Auto | Version defines the HTTP protocol version used to send active health check<br />requests to the backend.<br />Envoy sends health check requests over a dedicated connection, using a fixed<br />protocol version that is not negotiated per request. If that version does not<br />match the protocol the backend speaks, every health check fails and all<br />endpoints of the backend are marked unhealthy.<br />Defaults to Auto, which resolves the version from the effective upstream protocol<br />of the backend: HTTP2 if the backend is configured to use HTTP/2, through a<br />`kubernetes.io/h2c`, `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or by being<br />the backend of a GRPCRoute, and HTTP1 otherwise.<br />How the resolved version is applied depends on the backend:<br />  - For plaintext backends, the resolved version is the version used, since no<br />    protocol is negotiated on the connection.<br />  - For backends that use TLS, the resolved version is also the version used, and<br />    the ALPN offered on health check connections is constrained to the matching<br />    protocol so that the handshake can't settle on a different one. This may<br />    change to the protocol negotiated during the handshake once<br />    https://github.com/envoyproxy/envoy/issues/46848 lands in Envoy.<br />Set this field explicitly when the health check endpoint and the application<br />endpoint of the backend use different protocols, for example when the backend<br />serves HTTP/1.1 traffic but only accepts HTTP/2 health check requests. An<br />explicitly configured version is always the version used. |
 | `method` | _string_ |  false  |  | Method defines the HTTP method used for health checking.<br />Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
 | `retriableStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | RetriableStatuses defines a list of HTTP response statuses considered retriable.<br />Responses matching these statuses count towards the unhealthy threshold but<br />do not result in the host being considered immediately unhealthy.<br />The expected statuses take precedence for any range overlaps with this field. |
@@ -3242,6 +3243,23 @@ _Appears in:_
 | `addIfAbsent` | _[HTTPHeader](#httpheader) array_ |  false  |  | AddIfAbsent adds the given header(s) (name, value) to the request/response<br />only if the header does not already exist. Unlike Add which appends to<br />existing values, this is a no-op if the header is already present.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  addIfAbsent:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo |
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
 | `removeOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | RemoveOnMatch removes headers whose names match the specified string matchers.<br />Matching is performed on the header name (case-insensitive). |
+
+
+#### HTTPHealthCheckVersion
+
+_Underlying type:_ _string_
+
+HTTPHealthCheckVersion specifies the HTTP protocol version used to send active
+HTTP health check requests to the backend.
+
+_Appears in:_
+- [HTTPActiveHealthChecker](#httpactivehealthchecker)
+
+| Value | Description |
+| ----- | ----------- |
+| `Auto` | HTTPHealthCheckVersionAuto derives the health check protocol version from the<br />effective upstream protocol of the backend.<br /> | 
+| `HTTP1` | HTTPHealthCheckVersionHTTP1 sends health check requests using HTTP/1.1.<br /> | 
+| `HTTP2` | HTTPHealthCheckVersionHTTP2 sends health check requests using HTTP/2.<br /> | 
 
 
 #### HTTPHostnameModifier
