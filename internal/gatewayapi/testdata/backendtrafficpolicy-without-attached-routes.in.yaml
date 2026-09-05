@@ -1,0 +1,125 @@
+backendtrafficpolicies:
+# The targeted ListenerSet has no attached route, so the policy is accepted but
+# never reaches the generated configuration.
+# this policy status
+# - Accepted: true
+# - Warning: true
+#   - NoAttachedRoutes
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-listenerset-without-routes
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+    loadBalancer:
+      type: RoundRobin
+# BackendTrafficPolicy also reaches TCP routes, so no warning is expected.
+# this policy status
+# - Accepted: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gw-tcp-section
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+      sectionName: tcp
+    loadBalancer:
+      type: RoundRobin
+# BackendTrafficPolicy also reaches UDP routes, so no warning is expected.
+# this policy status
+# - Accepted: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gw-udp-section
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+      sectionName: udp
+    loadBalancer:
+      type: RoundRobin
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: route-on-tcp
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: composite-gateway
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: route-on-udp
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: composite-gateway
+      sectionName: udp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: tcp
+      protocol: TCP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: udp
+      protocol: UDP
+      port: 8083
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: ext-http-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All

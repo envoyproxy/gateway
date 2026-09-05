@@ -70,6 +70,12 @@ const (
 	// PolicyReasonDeprecatedField is used with the "Warning" condition when the policy
 	// uses deprecated fields that should be migrated to newer alternatives.
 	PolicyReasonDeprecatedField gwapiv1.PolicyConditionReason = "DeprecatedField"
+
+	// PolicyReasonNoAttachedRoutes is used with the "Warning" condition when the policy
+	// attached to its target, but none of the targeted listeners has a route the policy
+	// can be applied to. The policy is accepted, but it is not reflected in the
+	// generated configuration.
+	PolicyReasonNoAttachedRoutes gwapiv1.PolicyConditionReason = "NoAttachedRoutes"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
