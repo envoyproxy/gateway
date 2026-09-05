@@ -292,6 +292,7 @@ xdsIR:
           kind: Backend
           name: otel-collector
           namespace: envoy-gateway
+        port: 4317
         type: OpenTelemetry
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway

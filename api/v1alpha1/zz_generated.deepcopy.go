@@ -9011,9 +9011,19 @@ func (in *Tracing) DeepCopy() *Tracing {
 func (in *TracingProvider) DeepCopyInto(out *TracingProvider) {
 	*out = *in
 	in.BackendCluster.DeepCopyInto(&out.BackendCluster)
+	if in.Type != nil {
+		in, out := &in.Type, &out.Type
+		*out = new(TracingProviderType)
+		**out = **in
+	}
 	if in.Host != nil {
 		in, out := &in.Host, &out.Host
 		*out = new(string)
+		**out = **in
+	}
+	if in.Port != nil {
+		in, out := &in.Port, &out.Port
+		*out = new(int32)
 		**out = **in
 	}
 	if in.ServiceName != nil {
