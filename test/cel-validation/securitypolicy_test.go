@@ -1733,6 +1733,46 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{"if authorization.rules.principal.jwt is used, jwt must be defined"},
 		},
 		{
+			desc: "authorization-jwt-claims-without-jwt-authn-but-merging",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					// The jwt providers are inherited from the parent policy this one
+					// merges into, so they are not required here.
+					MergeType: new(egv1a1.StrategicMerge),
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: &egv1a1.Principal{
+									JWT: &egv1a1.JWTPrincipal{
+										Provider: "example",
+										Claims: []egv1a1.JWTClaim{
+											{
+												Name:   "iss",
+												Values: []string{"https://example.com"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "authorization-jwt-empty-principal",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{

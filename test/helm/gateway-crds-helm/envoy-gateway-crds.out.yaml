@@ -30377,7 +30377,9 @@ spec:
                                   description: |-
                                     Provider is the name of the JWT provider that used to verify the JWT token.
                                     In order to use JWT claims for authorization, you must configure the JWT
-                                    authentication with the same provider in the same `SecurityPolicy`.
+                                    authentication with the same provider in the same `SecurityPolicy`, or,
+                                    when `mergeType` is set, in the parent `SecurityPolicy` this policy is
+                                    merged into.
                                   maxLength: 253
                                   minLength: 1
                                   type: string
@@ -37973,9 +37975,11 @@ spec:
                 || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'', ''GRPCRoute'',
                 ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
                 sel.kind in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''])))'
-            - message: if authorization.rules.principal.jwt is used, jwt must be defined
-              rule: '(has(self.authorization) && has(self.authorization.rules) &&
-                self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
+            - message: if authorization.rules.principal.jwt is used, jwt must be defined,
+                unless mergeType is set and the jwt providers are inherited from the
+                parent policy
+              rule: '(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules)
+                && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
                 : false)) ? has(self.jwt) : true'
           status:
             description: Status defines the current status of SecurityPolicy.
