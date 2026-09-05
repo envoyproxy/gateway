@@ -45,6 +45,11 @@ var HTTPWasmTest = suite.ConformanceTest{
 			testWasmHTTPCodeSource(t, suite, "http-with-http-wasm-source-no-sha", "http-wasm-source-test-no-sha", "/wasm-http-no-sha")
 		})
 
+		t.Run("http routes sharing a wasm vm", func(t *testing.T) {
+			testWasmHTTPCodeSource(t, suite, "http-with-shared-wasm-vm-a", "http-wasm-shared-vm-test-a", "/wasm-http-shared-a")
+			testWasmHTTPCodeSource(t, suite, "http-with-shared-wasm-vm-b", "http-wasm-shared-vm-test-b", "/wasm-http-shared-b")
+		})
+
 		t.Run("http route without wasm", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-without-wasm", Namespace: ns}
@@ -75,16 +80,16 @@ var HTTPWasmTest = suite.ConformanceTest{
 		})
 
 		// Unlike the shared/bounded Lua VM count (see the "lua vm count stays bounded" check in
-		// lua_http.go), wasmConfig() in internal/xds/translator/wasm.go sets VmId to a name that
-		// is unique per EnvoyExtensionPolicy wasm entry ("Do not share VMs across different
-		// filters"), so each of the 2 wasm-configured routes above gets its own dedicated Wasm
-		// filter/VM even though both reference the same underlying .wasm module. The
-		// process-wide "wasm.wasm_vm_count" gauge should therefore read exactly 2* (worker thread +2).
+		// lua_http.go), wasmConfig() in internal/xds/translator/wasm.go defaults VmId to a name
+		// that is unique per EnvoyExtensionPolicy wasm entry, so each of the 2 wasm-configured
+		// routes without a vmID gets its own dedicated Wasm filter/VM even though both reference
+		// the same underlying .wasm module. The 2 routes that set the same vmID share one VM, so
+		// the process-wide "wasm.wasm_vm_count" gauge should read exactly 3* (worker thread +2).
 		tlog.Logf(t, "concurrency: %d", runtime.NumCPU())
-		t.Run("wasm vm count is per-route", func(t *testing.T) {
+		t.Run("wasm vm count is per-route unless a vmID is shared", func(t *testing.T) {
 			promQL := `sum(envoy_wasm_wasm_vm_count{app_kubernetes_io_component="proxy", app_kubernetes_io_managed_by="envoy-gateway", app_kubernetes_io_name="envoy", gateway_envoyproxy_io_owning_gateway_name="same-namespace"})`
-			// 2 is the count of routes with WASM
-			expectedCount := model.SampleValue(2 * (runtime.NumCPU() + 2))
+			// 2 VMs for the routes without a vmID, plus 1 shared by the routes that set the same vmID
+			expectedCount := model.SampleValue(3 * (runtime.NumCPU() + 2))
 			tlog.Logf(t, "expected to got %v", expectedCount)
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (done bool, err error) {

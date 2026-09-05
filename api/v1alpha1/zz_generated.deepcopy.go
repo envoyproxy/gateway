@@ -9121,6 +9121,11 @@ func (in *Wasm) DeepCopyInto(out *Wasm) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.VMID != nil {
+		in, out := &in.VMID, &out.VMID
+		*out = new(string)
+		**out = **in
+	}
 	in.Code.DeepCopyInto(&out.Code)
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
