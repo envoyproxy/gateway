@@ -766,13 +766,11 @@ func IsParentRefEqual(ref1, ref2 gwapiv1.ParentReference, routeNS string) bool {
 	}
 
 	// Compare SectionName (optional field)
-	if ref1.SectionName == nil && ref2.SectionName == nil {
-		return true
-	}
 	if ref1.SectionName == nil || ref2.SectionName == nil {
-		return false
-	}
-	if *ref1.SectionName != *ref2.SectionName {
+		if ref1.SectionName != ref2.SectionName {
+			return false
+		}
+	} else if *ref1.SectionName != *ref2.SectionName {
 		return false
 	}
 
