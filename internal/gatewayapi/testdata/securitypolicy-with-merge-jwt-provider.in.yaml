@@ -1,0 +1,171 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    # No SecurityPolicy targets this listener, so a route attached to it has no
+    # parent policy to merge into.
+    - name: http-no-policy
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-inherited-provider
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/inherited"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-unknown-provider
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/unknown"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-no-parent-policy
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http-no-policy
+    rules:
+    - matches:
+      - path:
+          value: "/no-parent"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http
+    jwt:
+      providers:
+      - name: example
+        issuer: https://www.example.com
+        remoteJWKS:
+          uri: https://www.example.com/.well-known/jwks.json
+# Accepted: the jwt providers are inherited from the Gateway-level policy, so this
+# policy does not have to define them itself.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-inherited-provider
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-inherited-provider
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: allow-mygroup
+        action: Allow
+        principal:
+          jwt:
+            provider: example
+            claims:
+            - name: roles
+              valueType: StringArray
+              values:
+              - mygroup
+# Invalid: neither this policy nor the Gateway-level policy it merges into defines
+# this provider.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-unknown-provider
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-unknown-provider
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: allow-mygroup
+        action: Allow
+        principal:
+          jwt:
+            provider: does-not-exist
+            claims:
+            - name: roles
+              valueType: StringArray
+              values:
+              - mygroup
+# Invalid: the route's listener has no parent policy, so there is nothing to
+# inherit the provider from.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-no-parent-policy
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-no-parent-policy
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: allow-mygroup
+        action: Allow
+        principal:
+          jwt:
+            provider: example
+            claims:
+            - name: roles
+              valueType: StringArray
+              values:
+              - mygroup
