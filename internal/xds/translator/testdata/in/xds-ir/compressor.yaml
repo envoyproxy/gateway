@@ -38,7 +38,14 @@ http:
       compression:
       - type: Brotli
         minContentLength: 100
+        contentTypes:
+        - application/json
+        - text/html
       - type: Gzip
         minContentLength: 200
+        contentTypes:
+        - application/json
       - type: Zstd
         minContentLength: 300
+        contentTypes:
+        - text/plain
