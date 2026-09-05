@@ -540,7 +540,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-#### Modify a route Cluster timeout
+#### Bind upstream connections to a specific source address
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -550,7 +550,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:
-  name: tweak-route-cluster-timeout
+  name: cluster-source-bind
   namespace: default
 spec:
   targetRef:
@@ -565,9 +565,12 @@ spec:
       # e.g. httproute/default/backend/rule/0
       name: httproute/default/backend/rule/0
       operation:
-        op: replace
-        path: "/connect_timeout"
-        value: "5s"
+        op: add
+        path: "/upstream_bind_config"
+        value:
+          source_address:
+            address: 10.0.0.5
+            port_value: 0
 EOF
 ```
 
@@ -580,7 +583,7 @@ Save and apply the following resource to your cluster:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:
-  name: tweak-route-cluster-timeout
+  name: cluster-source-bind
   namespace: default
 spec:
   targetRef:
@@ -595,9 +598,12 @@ spec:
       # e.g. httproute/default/backend/rule/0
       name: httproute/default/backend/rule/0
       operation:
-        op: replace
-        path: "/connect_timeout"
-        value: "5s"
+        op: add
+        path: "/upstream_bind_config"
+        value:
+          source_address:
+            address: 10.0.0.5
+            port_value: 0
 ```
 
 {{% /tab %}}
