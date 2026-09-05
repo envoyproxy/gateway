@@ -5770,6 +5770,13 @@ func (in *Xds) DeepCopyInto(out *Xds) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Runtime != nil {
+		in, out := &in.Runtime, &out.Runtime
+		*out = make(map[string]apiextensionsv1.JSON, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
+		}
+	}
 	if in.GlobalResources != nil {
 		in, out := &in.GlobalResources, &out.GlobalResources
 		*out = new(GlobalResources)

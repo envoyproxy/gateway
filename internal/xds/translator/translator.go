@@ -255,6 +255,10 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		errs = errors.Join(errs, err)
 	}
 
+	if err := processRuntime(tCtx, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	// Patch global resources that are shared across listeners and routes.
 	// - the envoy client certificate
 	// - the OIDC HMAC secret

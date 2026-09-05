@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -67,6 +68,32 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Bootstrap *ProxyBootstrap `json:"bootstrap,omitempty"`
+
+	// Runtime defines Envoy runtime values for managed proxies, as a map of runtime key
+	// to value. Values are typed: numbers, booleans and strings are all preserved as
+	// written, which matters because Envoy resolves boolean runtime guards only from real
+	// booleans and numeric limits only from numbers or numeric strings.
+	//
+	// Runtime values are delivered over RTDS, so changes apply to running proxies without
+	// a restart and without triggering a CDS update.
+	//
+	// One use is tuning circuit breakers on clusters that Envoy Gateway does not build from
+	// its own configuration, such as clusters added by an extension server, which otherwise
+	// keep Envoy's built-in defaults:
+	//
+	//	runtime:
+	//	  circuit_breakers.my-extension-cluster.default.max_requests: 16384
+	//
+	// Runtime keys are an Envoy-level interface and are not validated by Envoy Gateway.
+	// Visit https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime
+	// to learn more about the available keys.
+	//
+	// Note: this has no effect when spec.bootstrap uses the Replace type with a bootstrap
+	// that omits the RTDS layer, since the proxy then has no layer for these values to
+	// land in.
+	//
+	// +optional
+	Runtime map[string]apiextensionsv1.JSON `json:"runtime,omitempty"`
 
 	// Concurrency defines the number of worker threads to run. If unset, it defaults to
 	// the number of cpuset threads on the platform.

@@ -62,6 +62,16 @@
                     "re2.max_program_size.error_level": 4294967295,
                     "re2.max_program_size.warn_level": 1000
                   }
+                },
+                {
+                  "name": "envoy-gateway-runtime",
+                  "rtdsLayer": {
+                    "name": "envoy-gateway-runtime",
+                    "rtdsConfig": {
+                      "ads": {},
+                      "resourceApiVersion": "V3"
+                    }
+                  }
                 }
               ]
             },

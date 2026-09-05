@@ -1,0 +1,5 @@
+- layer:
+    circuit_breakers.ai-gateway-extproc-uds.default.max_requests: 16384
+    envoy.reloadable_features.some_feature: false
+    overload.global_downstream_max_connections: 50000
+  name: envoy-gateway-runtime
