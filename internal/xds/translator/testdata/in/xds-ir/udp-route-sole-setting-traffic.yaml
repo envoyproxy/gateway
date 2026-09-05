@@ -1,0 +1,20 @@
+udp:
+- name: "udp-route"
+  address: "::"
+  port: 10080
+  route:
+    name: "udp-route"
+    loadBalancer:
+      roundRobin: {}
+    destination:
+      name: "udp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "udp-route-dest/backend/0"
+        traffic:
+          loadBalancer:
+            random: {}
+          circuitBreaker:
+            maxConnections: 100

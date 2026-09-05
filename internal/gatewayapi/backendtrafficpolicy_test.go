@@ -22,6 +22,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -3178,5 +3179,239 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		if !slices.Contains(actualFields, name) {
 			t.Errorf("classification map has stale entry %q - field no longer exists on BackendTrafficPolicySpec", name)
 		}
+	}
+}
+
+func TestIsBackendTargetKind(t *testing.T) {
+	tests := []struct {
+		name string
+		kind gwapiv1.Kind
+		want bool
+	}{
+		{name: "Service", kind: gwapiv1.Kind(gwapiresource.KindService), want: true},
+		{name: "ServiceImport", kind: gwapiv1.Kind(gwapiresource.KindServiceImport), want: true},
+		{name: "Backend", kind: gwapiv1.Kind(gwapiresource.KindBackend), want: true},
+		{name: "Gateway", kind: gwapiv1.Kind(gwapiresource.KindGateway), want: false},
+		{name: "HTTPRoute", kind: gwapiv1.Kind(gwapiresource.KindHTTPRoute), want: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			target := policyTargetReferenceWithSectionName{Kind: tc.kind}
+			require.Equal(t, tc.want, isBackendTargetKind(target))
+		})
+	}
+}
+
+func TestBackendPolicyKeyFromTarget(t *testing.T) {
+	target := policyTargetReferenceWithSectionName{
+		Kind:      gwapiv1.Kind(gwapiresource.KindService),
+		Name:      gwapiv1.ObjectName("svc-1"),
+		Namespace: gwapiv1.Namespace("default"),
+	}
+	want := backendPolicyKey{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	require.Equal(t, want, backendPolicyKeyFromTarget(target))
+}
+
+func TestBackendPolicyKeyFromMetadata(t *testing.T) {
+	md := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1", SectionName: "8080"}
+	want := backendPolicyKey{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	require.Equal(t, want, backendPolicyKeyFromMetadata(md))
+	require.Equal(t, backendPolicyKey{}, backendPolicyKeyFromMetadata(nil))
+}
+
+func TestGatewayReferencesBackend(t *testing.T) {
+	key := backendPolicyKey{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	otherMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-2"}
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+
+	tests := []struct {
+		name string
+		x    *ir.Xds
+		want bool
+	}{
+		{name: "empty", x: &ir.Xds{}, want: false},
+		{
+			name: "matches BackendClusters",
+			x:    &ir.Xds{BackendClusters: []*ir.BackendCluster{{Metadata: otherMD}, {Metadata: matchMD}}},
+			want: true,
+		},
+		{
+			name: "matches HTTP destination setting",
+			x: &ir.Xds{HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{
+				{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: otherMD}, {Metadata: matchMD}}}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "matches TCP destination setting",
+			x: &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{
+				{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: matchMD}}}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "matches UDP destination setting",
+			x: &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{
+				Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: matchMD}}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "no match anywhere",
+			x: &ir.Xds{
+				BackendClusters: []*ir.BackendCluster{{Metadata: otherMD}},
+				HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{
+					{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: otherMD}}}},
+				}}},
+			},
+			want: false,
+		},
+		{
+			name: "nil destinations and routes are skipped, not matched",
+			x: &ir.Xds{
+				HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{{Destination: nil}}}},
+				TCP:  []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: nil}}}},
+				UDP:  []*ir.UDPListener{{Route: nil}, {Route: &ir.UDPRoute{Destination: nil}}},
+			},
+			want: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, gatewayReferencesBackend(tc.x, key))
+		})
+	}
+}
+
+func newBackendTargetPolicy() *egv1a1.BackendTrafficPolicy {
+	return &egv1a1.BackendTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"),
+					}},
+				},
+			},
+			MergeType: new(egv1a1.StrategicMerge),
+			ClusterSettings: egv1a1.ClusterSettings{
+				CircuitBreaker: &egv1a1.CircuitBreaker{MaxConnections: new(int64(100))},
+			},
+		},
+	}
+}
+
+func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
+	// Every case targets Service/default/svc-1, whether the policy uses TargetRef or
+	// TargetRefs - the resolved target passed to processBackendTrafficPolicyForBackend is the
+	// same either way.
+	target := policyTargetReferenceWithSectionName{Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"), Namespace: gwapiv1.Namespace("default")}
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	otherMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-2"}
+	multiSettings := []*ir.DestinationSetting{{Metadata: matchMD}, {Metadata: otherMD}}
+	singleSetting := []*ir.DestinationSetting{{Metadata: matchMD}}
+
+	requireEmpty := func(t *testing.T, policy *egv1a1.BackendTrafficPolicy) {
+		require.Empty(t, policy.Status.Ancestors)
+	}
+
+	tests := []struct {
+		name   string
+		x      *ir.Xds // nil means the gateway has no xdsIR entry at all
+		policy *egv1a1.BackendTrafficPolicy
+		check  func(t *testing.T, policy *egv1a1.BackendTrafficPolicy)
+	}{
+		{
+			name:   "gateway with no xdsIR entry is skipped",
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name:   "HTTP destination nil is skipped, not matched",
+			x:      &ir.Xds{HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{{Destination: nil}}}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name:   "TCP destination nil is skipped, not matched",
+			x:      &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: nil}}}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name:   "UDP listener with no route is skipped, not matched",
+			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: nil}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name:   "UDP destination nil is skipped, not matched",
+			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{Destination: nil}}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			// No Metadata on the RouteDestination itself - the blocked-route name can't be
+			// recorded, so this occurrence is silently skipped rather than warned about.
+			name:   "TCP multi-setting match with nil route Metadata is silently skipped",
+			x:      &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: &ir.RouteDestination{Settings: multiSettings}}}}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name:   "UDP multi-setting match with nil route Metadata is silently skipped",
+			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{Destination: &ir.RouteDestination{Settings: multiSettings}}}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name: "deprecated singular targetRef still reports a DeprecatedField warning",
+			x:    &ir.Xds{HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{{Destination: &ir.RouteDestination{Settings: singleSetting}}}}}},
+			policy: &egv1a1.BackendTrafficPolicy{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+					ClusterSettings: egv1a1.ClusterSettings{
+						CircuitBreaker: &egv1a1.CircuitBreaker{MaxConnections: new(int64(100))},
+					},
+				},
+			},
+			check: func(t *testing.T, policy *egv1a1.BackendTrafficPolicy) {
+				require.Len(t, policy.Status.Ancestors, 1)
+				var sawWarning bool
+				for _, cond := range policy.Status.Ancestors[0].Conditions {
+					if cond.Type == string(egv1a1.PolicyConditionWarning) && cond.Reason == string(egv1a1.PolicyReasonDeprecatedField) {
+						sawWarning = true
+					}
+				}
+				require.True(t, sawWarning, "expected a DeprecatedField warning for using the deprecated singular targetRef")
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: &MergeBackendsConfig{}}
+			gw := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-1"}}}
+			xdsIR := gwapiresource.XdsIRMap{}
+			if tc.x != nil {
+				xdsIR[tr.getIRKey(gw.Gateway)] = tc.x
+			}
+
+			require.NotPanics(t, func() {
+				tr.processBackendTrafficPolicyForBackend(xdsIR, []*GatewayContext{gw},
+					map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy{}, tc.policy, target,
+					map[backendPolicyKey]*egv1a1.BackendTrafficPolicy{})
+			})
+			tc.check(t, tc.policy)
+		})
 	}
 }
