@@ -10,12 +10,20 @@ package tests
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
+	nethttp "net/http"
 	"testing"
 	"time"
 
@@ -48,6 +56,8 @@ const (
 	testGW               = "same-namespace"
 	testEEP              = "oci-wasm-source-test"
 	pullSecret           = "registry-secret"
+	registryTLSSecret    = "oci-registry-tls" // nolint:gosec // this is not a hardcoded credential.
+	registryCAConfigMap  = "oci-registry-ca"
 	httpRouteWithWasm    = "http-with-oci-wasm-source"
 	httpRouteWithoutWasm = "http-without-wasm"
 )
@@ -70,8 +80,10 @@ var OCIWasmTest = suite.ConformanceTest{
 		}
 		registryAddr := net.JoinHostPort(registryIP, "5000")
 
+		registryCAPEM := createRegistryTLSForWasmTest(t, suite, registryIP)
+
 		// Push the wasm image to the registry
-		digest := pushWasmImageForTest(t, suite, registryAddr)
+		digest := pushWasmImageForTest(t, suite, registryAddr, registryCAPEM)
 
 		// Create the pull secret for the wasm image
 		secret := createPullSecretForWasmTest(t, suite, registryAddr, dockerPassword)
@@ -226,7 +238,7 @@ var OCIWasmTest = suite.ConformanceTest{
 	},
 }
 
-func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, registryAddr string) string {
+func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, registryAddr string, registryCAPEM []byte) string {
 	// Wait for the registry pod to be ready
 	podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 	WaitForPods(
@@ -269,7 +281,7 @@ func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, regis
 		t.Fatalf("failed to print docker cli response: %v", err)
 	}
 
-	ref, err := name.ParseReference(tag, name.Insecure)
+	ref, err := name.ParseReference(tag)
 	if err != nil {
 		t.Fatalf("failed to parse reference: %v", err)
 	}
@@ -284,12 +296,13 @@ func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, regis
 		Username: dockerUsername,
 		Password: dockerPassword,
 	})
+	transportOption := remote.WithTransport(registryTLSTransport(t, registryCAPEM))
 
 	const retries = 5
 	for i := 0; i < retries; i++ {
 		// Push the image to the remote registry
 		// err = crane.Push(img, tag)
-		err = remote.Write(ref, img, authOption)
+		err = remote.Write(ref, img, authOption, transportOption)
 		if err == nil {
 			break
 		}
@@ -299,7 +312,7 @@ func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, regis
 		t.Fatalf("failed to push image: %v", err)
 	}
 
-	if img, err = remote.Image(ref, authOption); err != nil {
+	if img, err = remote.Image(ref, authOption, transportOption); err != nil {
 		t.Fatalf("failed to retrieve image: %v", err)
 	}
 	if digest, err = img.Digest(); err != nil {
@@ -339,6 +352,89 @@ func printDockerCLIResponse(rd io.Reader) error {
 	}
 
 	return nil
+}
+
+func createRegistryTLSForWasmTest(t *testing.T, suite *suite.ConformanceTestSuite, registryIP string) []byte {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate registry TLS key: %v", err)
+	}
+
+	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		t.Fatalf("failed to generate registry TLS serial number: %v", err)
+	}
+
+	tmpl := x509.Certificate{
+		SerialNumber: serial,
+		Subject: pkix.Name{
+			CommonName: "oci-registry",
+		},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		DNSNames: []string{
+			"oci-registry",
+			"oci-registry.gateway-conformance-infra",
+			"oci-registry.gateway-conformance-infra.svc",
+			"oci-registry.gateway-conformance-infra.svc.cluster.local",
+		},
+		IPAddresses: []net.IP{net.ParseIP(registryIP)},
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("failed to create registry TLS certificate: %v", err)
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      registryTLSSecret,
+			Namespace: testNS,
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       certPEM,
+			corev1.TLSPrivateKeyKey: keyPEM,
+		},
+	}
+	_ = suite.Client.Delete(context.Background(), secret)
+	if err := suite.Client.Create(context.Background(), secret); err != nil {
+		t.Fatalf("failed to create registry TLS secret: %v", err)
+	}
+
+	caConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      registryCAConfigMap,
+			Namespace: testNS,
+		},
+		Data: map[string]string{
+			"ca.crt": string(certPEM),
+		},
+	}
+	_ = suite.Client.Delete(context.Background(), caConfigMap)
+	if err := suite.Client.Create(context.Background(), caConfigMap); err != nil {
+		t.Fatalf("failed to create registry CA configmap: %v", err)
+	}
+
+	return certPEM
+}
+
+func registryTLSTransport(t *testing.T, registryCAPEM []byte) *nethttp.Transport {
+	rootCAs := x509.NewCertPool()
+	if !rootCAs.AppendCertsFromPEM(registryCAPEM) {
+		t.Fatal("failed to append registry CA certificate")
+	}
+
+	tr := remote.DefaultTransport.(*nethttp.Transport).Clone()
+	tr.TLSClientConfig = &tls.Config{RootCAs: rootCAs}
+	return tr
 }
 
 func createPullSecretForWasmTest(t *testing.T, suite *suite.ConformanceTestSuite, registryAddr, password string) *corev1.Secret {
@@ -398,6 +494,13 @@ func createEEPForWasmTest(
 						Image: &egv1a1.ImageWasmCodeSource{
 							URL:    fmt.Sprintf("%s/testwasm:v1.0.0", registryAddr),
 							SHA256: &digest,
+							TLS: &egv1a1.WasmCodeSourceTLSConfig{
+								CACertificateRef: gwapiv1.SecretObjectReference{
+									Name:  gwapiv1.ObjectName(registryCAConfigMap),
+									Group: gatewayapi.GroupPtr(""),
+									Kind:  gatewayapi.KindPtr(resource.KindConfigMap),
+								},
+							},
 						},
 					},
 				},

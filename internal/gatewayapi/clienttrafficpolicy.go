@@ -233,7 +233,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				// Check if another policy targeting the same section exists
-				section := string(*(targetRef.SectionName))
+				section := string(*targetRef.SectionName)
 				sectionKey := section
 				if targetRef.Kind == resource.KindListenerSet {
 					sectionKey = fmt.Sprintf("%s%s", lsPrefix(ls), section)
@@ -1009,6 +1009,10 @@ func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSetti
 	httpIR.ClientIPDetection = (*ir.ClientIPDetectionSettings)(clientIPDetection)
 }
 
+// maxRequestHeaderLimitKB is the maximum value (in KiB) that Envoy supports for
+// the HTTP connection manager max_request_headers_kb setting.
+const maxRequestHeaderLimitKB = 8192
+
 func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, httpIR *ir.HTTPListener) error {
 	if headerSettings == nil {
 		return nil
@@ -1042,6 +1046,25 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	}
 
 	var errs error
+
+	if headerSettings.MaxRequestHeaderLimit != nil {
+		// Envoy's max_request_headers_kb is expressed in KiB, so convert the
+		// byte quantity and round up to the nearest KiB.
+		bytes, ok := headerSettings.MaxRequestHeaderLimit.AsInt64()
+		switch {
+		case !ok || bytes < 1024:
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s must be at least 1Ki", headerSettings.MaxRequestHeaderLimit.String()))
+		// Compare against the byte-equivalent of the max before rounding up, so a
+		// bytes value close to math.MaxInt64 can't overflow the "bytes + 1023"
+		// addition below and slip past the maximum check.
+		case bytes > maxRequestHeaderLimitKB*1024:
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s exceeds the maximum of %dKi", headerSettings.MaxRequestHeaderLimit.String(), maxRequestHeaderLimitKB))
+		default:
+			kb := (bytes + 1023) / 1024
+			httpIR.Headers.MaxRequestHeadersKB = new(uint32)
+			*httpIR.Headers.MaxRequestHeadersKB = uint32(kb)
+		}
+	}
 
 	if headerSettings.EarlyRequestHeaders != nil {
 		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
@@ -1215,7 +1238,7 @@ func (t *Translator) buildListenerTLSParameters(
 	if tlsParams.Fingerprints != nil {
 		irTLSConfig.Fingerprints = make([]ir.TLSFingerprintType, len(tlsParams.Fingerprints))
 		for i := range tlsParams.Fingerprints {
-			irTLSConfig.Fingerprints[i] = (ir.TLSFingerprintType)(tlsParams.Fingerprints[i])
+			irTLSConfig.Fingerprints[i] = ir.TLSFingerprintType(tlsParams.Fingerprints[i])
 		}
 	}
 

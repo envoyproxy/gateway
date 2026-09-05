@@ -28,6 +28,7 @@
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         bodyFormat:
                           textFormat: Not Found
+                        preserveResponseCodeDetails: true
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
@@ -55,6 +56,7 @@
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         bodyFormat:
                           textFormat: '{"error": "Internal Server Error"}'
+                        preserveResponseCodeDetails: true
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
@@ -91,6 +93,7 @@
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         bodyFormat:
                           textFormat: '{"error": "Unauthorized"}'
+                        preserveResponseCodeDetails: true
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
@@ -123,7 +126,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: default/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH

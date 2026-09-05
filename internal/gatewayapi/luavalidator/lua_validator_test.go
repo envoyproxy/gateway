@@ -6,6 +6,8 @@
 package luavalidator
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -209,431 +211,422 @@ func Test_BasicValidation(t *testing.T) {
 	}
 }
 
-func Test_block_or_sanitize_io(t *testing.T) {
-	type testCase struct {
-		name                 string
-		code                 string
-		expectedErrSubstring string
-	}
-	tests := []testCase{
-		// io.open tests
-		{
-			name: "io.open critical path /certs",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/certs/tls.crt", "w")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
+// allowlistProxy returns an EnvoyProxy configured with the given Lua validation allowlists.
+func allowlistProxy(paths, envVars []string) *egv1a1.EnvoyProxy {
+	return &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			Lua: &egv1a1.LuaValidationConfig{
+				StrictValidation: &egv1a1.StrictValidation{
+					AllowedPaths:   paths,
+					AllowedEnvVars: envVars,
+				},
+			},
 		},
-		{
-			name: "io.open non-critical path /tmp",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/tmp/tls.crt", "w")
-                     if file then
-                       file:write("test")
-                       file:close()
-                     end
-                   end`,
-			expectedErrSubstring: "",
-		},
-		{
-			name: "io.open /etc/passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/etc/passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open /proc/self/environ",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/proc/self/environ", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open /sys/kernel",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/sys/kernel", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open /var/run/secrets/token",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/var/run/secrets/token", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open relative path etc/passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("etc/passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open path traversal /tmp/../etc/passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/tmp/../etc/passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "path traversals",
-		},
-		{
-			name: "io.open path traversal ../etc/passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("../etc/passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "path traversals",
-		},
-		{
-			name: "io.open relative path certs/tls.crt",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("certs/tls.crt", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open relative path var/run/secrets/token",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("var/run/secrets/token", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open with backslash etc\\passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("etc\\passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open path traversal with backslash",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("..\\etc\\passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "path traversals",
-		},
-		{
-			name: "io.open with string concatenation",
-			code: `function envoy_on_response(response_handle)
-                     local path = "/" .. "etc" .. "/" .. "passwd"
-                     local file = io.open(path, "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open with trailing slash /certs/",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/certs/", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open double-slash //etc/passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("//etc/passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open double-slash //var/run/secrets/token",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("//var/run/secrets/kubernetes.io/serviceaccount/token", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open run secrets alias /run/secrets/token",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/run/secrets/kubernetes.io/serviceaccount/token", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open run secrets alias double-slash //run/secrets/token",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("//run/secrets/kubernetes.io/serviceaccount/token", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open multiple-slash ///etc/passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("///etc/passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open embedded double-slash /etc//passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/etc//passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open double-slash //proc/self/environ",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("//proc/self/environ", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open double-slash //certs/tls.crt",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("//certs/tls.crt", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.open dot segment /etc/./passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/etc/./passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "path traversals",
-		},
-		{
-			name: "io.open leading dot ./etc/passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("./etc/passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "path traversals",
-		},
-		{
-			name: "io.open trailing dot /etc/.",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/etc/.", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "path traversals",
-		},
-		{
-			name: "io.open dot with backslash etc\\.\\passwd",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("etc\\.\\passwd", "r")
-                     if file then file:close() end
-                   end`,
-			expectedErrSubstring: "path traversals",
-		},
-		// io.input tests
-		{
-			name: "io.input critical path /certs",
-			code: `function envoy_on_response(response_handle)
-                     io.input("/certs/tls.crt")
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.input non-critical path /tmp",
-			code: `function envoy_on_response(response_handle)
-                     local file = io.open("/tmp/tls.crt", "w")
-                     if file then
-                       file:write("test content")
-                       file:close()
-                     end
-                     io.input("/tmp/tls.crt")
-                   end`,
-			expectedErrSubstring: "",
-		},
-		{
-			name: "io.input /etc/passwd",
-			code: `function envoy_on_response(response_handle)
-                     io.input("/etc/passwd")
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		// io.output tests
-		{
-			name: "io.output critical path /certs",
-			code: `function envoy_on_response(response_handle)
-                     io.output("/certs/tls.crt")
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.output non-critical path /tmp",
-			code: `function envoy_on_response(response_handle)
-                     io.output("/tmp/tls.crt")
-                   end`,
-			expectedErrSubstring: "",
-		},
-		// io.lines tests
-		{
-			name: "io.lines critical path /certs",
-			code: `function envoy_on_response(response_handle)
-                     for line in io.lines("/certs/tls.crt") do
-                       response_handle:logInfo(line)
-                     end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "io.lines non-critical path /tmp",
-			code: `function envoy_on_response(response_handle)
-                     for line in io.lines("/tmp/tls.crt") do
-                       response_handle:logInfo(line)
-                     end
-                   end`,
-			expectedErrSubstring: "",
-		},
-		{
-			name: "io.lines /etc/passwd",
-			code: `function envoy_on_response(response_handle)
-                     for line in io.lines("/etc/passwd") do
-                       response_handle:logInfo(line)
-                     end
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := NewLuaValidator(tt.code, nil)
-			if err := l.Validate(); err != nil && tt.expectedErrSubstring == "" {
-				t.Errorf("Unexpected error: %v", err)
-			} else if err != nil && !strings.Contains(err.Error(), tt.expectedErrSubstring) {
-				t.Errorf("Expected substring in error: %v, got error: %v", tt.expectedErrSubstring, err)
-			} else if err == nil && tt.expectedErrSubstring != "" {
-				t.Errorf("Expected error with substring: %v", tt.expectedErrSubstring)
-			}
-		})
 	}
 }
 
-func Test_block_or_sanitize_os(t *testing.T) {
-	type testCase struct {
+// Test_io_path_allowlist verifies the filesystem allowlist for the sanitized io functions.
+// The allowlist is fail-closed: only paths under /tmp are permitted; everything else is denied.
+// Path traversal segments are always rejected, regardless of the allowlist.
+func Test_io_path_allowlist(t *testing.T) {
+	proxy := allowlistProxy([]string{"/tmp"}, nil)
+
+	tests := []struct {
 		name                 string
 		code                 string
 		expectedErrSubstring string
+	}{
+		{
+			name:                 "io.open allowed /tmp",
+			code:                 `function envoy_on_response(h) local f = io.open("/tmp/x", "w") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "io.open allowed via subtree /tmp/sub/x",
+			code:                 `function envoy_on_response(h) local f = io.open("/tmp/sub/x", "w") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "io.open denied /etc/passwd",
+			code:                 `function envoy_on_response(h) io.open("/etc/passwd", "r") end`,
+			expectedErrSubstring: "io.open restricted for param",
+		},
+		{
+			name:                 "io.open denied path outside allowlist",
+			code:                 `function envoy_on_response(h) io.open("/tmpfoo/x", "r") end`,
+			expectedErrSubstring: "io.open restricted for param",
+		},
+		// Path normalization: relative, backslash, and multi-slash forms must normalize
+		// consistently before the allowlist match.
+		{
+			name:                 "io.open relative path normalizes under allowed root",
+			code:                 `function envoy_on_response(h) local f = io.open("tmp/x", "r") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "io.open allowed double-slash //tmp/x",
+			code:                 `function envoy_on_response(h) local f = io.open("//tmp/x", "w") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "io.open allowed trailing slash /tmp/",
+			code:                 `function envoy_on_response(h) local f = io.open("/tmp/", "r") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "io.open denied double-slash //etc/passwd",
+			code:                 `function envoy_on_response(h) io.open("//etc/passwd", "r") end`,
+			expectedErrSubstring: "io.open restricted for param",
+		},
+		{
+			name:                 "io.open denied embedded double-slash /etc//passwd",
+			code:                 `function envoy_on_response(h) io.open("/etc//passwd", "r") end`,
+			expectedErrSubstring: "io.open restricted for param",
+		},
+		{
+			name:                 "io.open denied multiple-slash ///etc/passwd",
+			code:                 `function envoy_on_response(h) io.open("///etc/passwd", "r") end`,
+			expectedErrSubstring: "io.open restricted for param",
+		},
+		{
+			name:                 "io.open denied backslash etc\\passwd",
+			code:                 `function envoy_on_response(h) io.open("etc\\passwd", "r") end`,
+			expectedErrSubstring: "io.open restricted for param",
+		},
+		{
+			name:                 "io.open denied string concatenation",
+			code:                 `function envoy_on_response(h) local p = "/" .. "etc" .. "/" .. "passwd" io.open(p, "r") end`,
+			expectedErrSubstring: "io.open restricted for param",
+		},
+		// Traversal segments are always rejected with a distinct error, regardless of the allowlist.
+		{
+			name:                 "io.open traversal rejected even under allowed root",
+			code:                 `function envoy_on_response(h) io.open("/tmp/../etc/passwd", "r") end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name:                 "io.open traversal rejected ../etc/passwd",
+			code:                 `function envoy_on_response(h) io.open("../etc/passwd", "r") end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name:                 "io.open traversal rejected with backslash",
+			code:                 `function envoy_on_response(h) io.open("..\\etc\\passwd", "r") end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name:                 "io.open traversal rejected dot segment /tmp/./x",
+			code:                 `function envoy_on_response(h) io.open("/tmp/./x", "r") end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name:                 "io.open traversal rejected leading dot ./tmp/x",
+			code:                 `function envoy_on_response(h) io.open("./tmp/x", "r") end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name:                 "io.open traversal rejected trailing dot /tmp/.",
+			code:                 `function envoy_on_response(h) io.open("/tmp/.", "r") end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name:                 "io.open traversal rejected dot with backslash tmp\\.\\x",
+			code:                 `function envoy_on_response(h) io.open("tmp\\.\\x", "r") end`,
+			expectedErrSubstring: "path traversals",
+		},
+		{
+			name:                 "io.input denied /etc/passwd",
+			code:                 `function envoy_on_response(h) io.input("/etc/passwd") end`,
+			expectedErrSubstring: "io.input restricted for param",
+		},
+		{
+			name:                 "io.output denied /certs",
+			code:                 `function envoy_on_response(h) io.output("/certs/tls.crt") end`,
+			expectedErrSubstring: "io.output restricted for param",
+		},
+		{
+			name:                 "io.lines denied /etc/passwd",
+			code:                 `function envoy_on_response(h) for l in io.lines("/etc/passwd") do end end`,
+			expectedErrSubstring: "io.lines restricted for param",
+		},
 	}
-	tests := []testCase{
-		// os.remove tests
+	runAllowlistCases(t, proxy, tests)
+}
+
+// Test_path_allowlist_literal_match ensures allowed prefixes containing Lua pattern magic characters
+// (e.g. ".") are matched literally and do not widen the security boundary.
+func Test_path_allowlist_literal_match(t *testing.T) {
+	proxy := allowlistProxy([]string{"/var/lib/app.v1"}, nil)
+
+	tests := []struct {
+		name                 string
+		code                 string
+		expectedErrSubstring string
+	}{
 		{
-			name: "os.remove critical path /certs",
-			code: `function envoy_on_response(response_handle)
-                     os.remove("/certs/tls.crt")
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "os.remove non-critical path /tmp",
-			code: `function envoy_on_response(response_handle)
-                     os.remove("/tmp/tls.crt")
-                   end`,
-			expectedErrSubstring: "",
-		},
-		// os.rename tests
-		{
-			name: "os.rename critical path /certs",
-			code: `function envoy_on_response(response_handle)
-                     os.rename("/certs/tls.crt", "/certs/tls.crt.bak")
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "os.rename non-critical path /tmp",
-			code: `function envoy_on_response(response_handle)
-                     os.rename("/tmp/tls.crt", "/tmp/tls.crt.bak")
-                   end`,
+			name:                 "exact allowed entry",
+			code:                 `function envoy_on_response(h) local f = io.open("/var/lib/app.v1", "r") if f then f:close() end end`,
 			expectedErrSubstring: "",
 		},
 		{
-			name: "os.rename critical source",
-			code: `function envoy_on_response(response_handle)
-                     os.rename("/certs/tls.crt", "/tmp/tls.crt.bak")
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "os.rename critical destination",
-			code: `function envoy_on_response(response_handle)
-                     os.rename("/tmp/tls.crt", "/certs/tls.crt.bak")
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "os.rename to critical path /etc",
-			code: `function envoy_on_response(response_handle)
-                     os.rename("/tmp/file", "/certs/file")
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		{
-			name: "os.rename from critical path /etc",
-			code: `function envoy_on_response(response_handle)
-                     os.rename("/certs/file", "/tmp/file")
-                   end`,
-			expectedErrSubstring: "critical path",
-		},
-		// os.getenv tests
-		{
-			name: "os.getenv critical env var PWD",
-			code: `function envoy_on_response(response_handle)
-                     local pwd = os.getenv("PWD")
-                   end`,
-			expectedErrSubstring: "critical environment variable",
-		},
-		{
-			name: "os.getenv critical env var pwd (lowercase)",
-			code: `function envoy_on_response(response_handle)
-                     local pwd = os.getenv("pwd")
-                   end`,
-			expectedErrSubstring: "critical environment variable",
-		},
-		// os.setenv tests
-		{
-			name: "os.setenv non-critical env var allowed",
-			code: `function envoy_on_response(response_handle)
-                     os.setenv("TEST", "value")
-                   end`,
+			name:                 "subtree of allowed entry",
+			code:                 `function envoy_on_response(h) local f = io.open("/var/lib/app.v1/data", "r") if f then f:close() end end`,
 			expectedErrSubstring: "",
 		},
 		{
-			name: "os.setenv critical env var PWD",
-			code: `function envoy_on_response(response_handle)
-                     os.setenv("PWD", "/etc")
-                   end`,
-			expectedErrSubstring: "setting critical environment variable",
-		},
-		{
-			name: "os.setenv critical env var pwd (lowercase)",
-			code: `function envoy_on_response(response_handle)
-                     os.setenv("pwd", "/etc")
-                   end`,
-			expectedErrSubstring: "setting critical environment variable",
+			name:                 "dot must not match arbitrary character",
+			code:                 `function envoy_on_response(h) io.open("/var/lib/appXv1/data", "r") end`,
+			expectedErrSubstring: "io.open restricted for param",
 		},
 	}
+	runAllowlistCases(t, proxy, tests)
+}
+
+// Test_path_allowlist_blank_entry_denied ensures a blank allowlist entry does not match every path
+// and silently disable the sandbox (defense in depth; the CRD also rejects blank entries).
+func Test_path_allowlist_blank_entry_denied(t *testing.T) {
+	proxy := allowlistProxy([]string{"", "  ", "/tmp"}, nil)
+
+	tests := []struct {
+		name                 string
+		code                 string
+		expectedErrSubstring string
+	}{
+		{
+			name:                 "blank entry does not allow arbitrary path",
+			code:                 `function envoy_on_response(h) io.open("/etc/passwd", "r") end`,
+			expectedErrSubstring: "io.open restricted for param",
+		},
+		{
+			name:                 "real entry still allowed",
+			code:                 `function envoy_on_response(h) local f = io.open("/tmp/x", "r") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+	}
+	runAllowlistCases(t, proxy, tests)
+}
+
+// Test_path_denylist_overrides_allowlist ensures hardcoded sensitive paths (service-account tokens,
+// credentials, kernel/process state) are always denied, even when the allowlist permits their parent.
+func Test_path_denylist_overrides_allowlist(t *testing.T) {
+	// Allow the parents of every denied path to prove the denylist still wins.
+	proxy := allowlistProxy([]string{"/etc", "/proc", "/sys", "/certs", "/var", "/run", "/tmp"}, nil)
+
+	tests := []struct {
+		name                 string
+		code                 string
+		expectedErrSubstring string
+	}{
+		{
+			name:                 "service account token dir denied",
+			code:                 `function envoy_on_response(h) io.open("/var/run/secrets/kubernetes.io/serviceaccount/token", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "run secrets denied",
+			code:                 `function envoy_on_response(h) io.open("/run/secrets/token", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "proc self environ denied",
+			code:                 `function envoy_on_response(h) io.open("/proc/self/environ", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "sys denied",
+			code:                 `function envoy_on_response(h) io.open("/sys/kernel/notes", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "etc denied",
+			code:                 `function envoy_on_response(h) io.open("/etc/shadow", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "certs denied",
+			code:                 `function envoy_on_response(h) io.open("/certs/tls.key", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "os.remove on denied path",
+			code:                 `function envoy_on_response(h) os.remove("/proc/1/mem") end`,
+			expectedErrSubstring: "protected system path",
+		},
+		{
+			name:                 "non-sensitive path under broad allowlist still allowed",
+			code:                 `function envoy_on_response(h) local f = io.open("/tmp/x", "w") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+	}
+	runAllowlistCases(t, proxy, tests)
+}
+
+// Test_path_symlink_resolution ensures the allowlist/denylist apply to the real symlink target, not
+// the lexical path: io.open resolves symlinks at open time, so a symlink under an allowed directory
+// must not be usable to escape the allowlist or reach a denied path.
+func Test_path_symlink_resolution(t *testing.T) {
+	dir := t.TempDir()
+	allowed := filepath.Join(dir, "allowed")
+	outside := filepath.Join(dir, "outside")
+	for _, d := range []string{allowed, outside} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// A symlink inside the allowed dir that escapes to a non-allowed sibling.
+	escape := filepath.Join(allowed, "escape")
+	if err := os.Symlink(outside, escape); err != nil {
+		t.Skipf("symlinks unsupported on this platform: %v", err)
+	}
+	// A symlink inside the allowed dir that aliases a hardcoded denied path.
+	etcLink := filepath.Join(allowed, "etclink")
+	if err := os.Symlink("/etc", etcLink); err != nil {
+		t.Skipf("symlinks unsupported on this platform: %v", err)
+	}
+
+	proxy := allowlistProxy([]string{allowed}, nil)
+
+	tests := []struct {
+		name                 string
+		code                 string
+		expectedErrSubstring string
+	}{
+		{
+			name:                 "real file under allowed dir is permitted",
+			code:                 `function envoy_on_response(h) local f = io.open("` + filepath.Join(allowed, "ok.txt") + `", "w") if f then f:close() end end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "symlink escaping the allowed dir is denied",
+			code:                 `function envoy_on_response(h) io.open("` + filepath.Join(escape, "secret") + `", "r") end`,
+			expectedErrSubstring: "restricted for param",
+		},
+		{
+			name:                 "symlink aliasing a denied path is denied",
+			code:                 `function envoy_on_response(h) io.open("` + filepath.Join(etcLink, "passwd") + `", "r") end`,
+			expectedErrSubstring: "protected system path",
+		},
+	}
+	runAllowlistCases(t, proxy, tests)
+}
+
+// Test_io_denied_by_default ensures that with no allowlist configured, all filesystem access is denied.
+func Test_io_denied_by_default(t *testing.T) {
+	code := `function envoy_on_response(h) io.open("/tmp/x", "w") end`
+	if err := NewLuaValidator(code, nil).Validate(); err == nil {
+		t.Errorf("Expected fail-closed denial with no allowlist, got no error")
+	} else if !strings.Contains(err.Error(), "io.open restricted for param") {
+		t.Errorf("Expected 'io.open restricted for param', got: %v", err)
+	}
+}
+
+// Test_os_path_allowlist verifies the filesystem allowlist for the sanitized os functions.
+// Only /tmp is permitted; os.rename requires both source and destination to be allowed.
+func Test_os_path_allowlist(t *testing.T) {
+	proxy := allowlistProxy([]string{"/tmp"}, nil)
+
+	tests := []struct {
+		name                 string
+		code                 string
+		expectedErrSubstring string
+	}{
+		{
+			name:                 "os.remove allowed /tmp",
+			code:                 `function envoy_on_response(h) os.remove("/tmp/x") end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "os.remove denied /certs",
+			code:                 `function envoy_on_response(h) os.remove("/certs/tls.crt") end`,
+			expectedErrSubstring: "os.remove restricted for param",
+		},
+		{
+			name:                 "os.rename allowed both /tmp",
+			code:                 `function envoy_on_response(h) os.rename("/tmp/a", "/tmp/b") end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "os.rename denied source",
+			code:                 `function envoy_on_response(h) os.rename("/certs/a", "/tmp/b") end`,
+			expectedErrSubstring: "os.rename restricted for param",
+		},
+		{
+			name:                 "os.rename denied destination",
+			code:                 `function envoy_on_response(h) os.rename("/tmp/a", "/certs/b") end`,
+			expectedErrSubstring: "os.rename restricted for param",
+		},
+	}
+	runAllowlistCases(t, proxy, tests)
+}
+
+// Test_os_env_allowlist verifies the environment variable allowlist (exact, case-sensitive match)
+// for os.getenv and os.setenv.
+func Test_os_env_allowlist(t *testing.T) {
+	proxy := allowlistProxy(nil, []string{"LOG_LEVEL"})
+
+	tests := []struct {
+		name                 string
+		code                 string
+		expectedErrSubstring string
+	}{
+		{
+			name:                 "os.getenv allowed LOG_LEVEL",
+			code:                 `function envoy_on_response(h) os.getenv("LOG_LEVEL") end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "os.getenv denied PWD",
+			code:                 `function envoy_on_response(h) os.getenv("PWD") end`,
+			expectedErrSubstring: "os.getenv restricted for param PWD",
+		},
+		{
+			name:                 "os.getenv match is case-sensitive",
+			code:                 `function envoy_on_response(h) os.getenv("log_level") end`,
+			expectedErrSubstring: "os.getenv restricted for param log_level",
+		},
+		{
+			name:                 "os.setenv allowed LOG_LEVEL",
+			code:                 `function envoy_on_response(h) os.setenv("LOG_LEVEL", "debug") end`,
+			expectedErrSubstring: "",
+		},
+		{
+			name:                 "os.setenv denied PWD",
+			code:                 `function envoy_on_response(h) os.setenv("PWD", "/etc") end`,
+			expectedErrSubstring: "os.setenv restricted for param PWD",
+		},
+	}
+	runAllowlistCases(t, proxy, tests)
+}
+
+// Test_env_denied_by_default ensures that with no allowlist configured, all env var access is denied.
+func Test_env_denied_by_default(t *testing.T) {
+	code := `function envoy_on_response(h) os.getenv("LOG_LEVEL") end`
+	if err := NewLuaValidator(code, nil).Validate(); err == nil {
+		t.Errorf("Expected fail-closed denial with no allowlist, got no error")
+	} else if !strings.Contains(err.Error(), "os.getenv restricted for param") {
+		t.Errorf("Expected 'os.getenv restricted for param', got: %v", err)
+	}
+}
+
+// runAllowlistCases runs a set of allowlist validation cases against the given proxy.
+func runAllowlistCases(t *testing.T, proxy *egv1a1.EnvoyProxy, tests []struct {
+	name                 string
+	code                 string
+	expectedErrSubstring string
+},
+) {
+	t.Helper()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := NewLuaValidator(tt.code, nil)
-			if err := l.Validate(); err != nil && tt.expectedErrSubstring == "" {
+			err := NewLuaValidator(tt.code, proxy).Validate()
+			switch {
+			case err != nil && tt.expectedErrSubstring == "":
 				t.Errorf("Unexpected error: %v", err)
-			} else if err != nil && !strings.Contains(err.Error(), tt.expectedErrSubstring) {
-				t.Errorf("Expected substring in error: %v, got error: %v", tt.expectedErrSubstring, err)
-			} else if err == nil && tt.expectedErrSubstring != "" {
-				t.Errorf("Expected error with substring: %v", tt.expectedErrSubstring)
+			case err != nil && !strings.Contains(err.Error(), tt.expectedErrSubstring):
+				t.Errorf("Expected substring %q in error, got: %v", tt.expectedErrSubstring, err)
+			case err == nil && tt.expectedErrSubstring != "":
+				t.Errorf("Expected error with substring %q, got none", tt.expectedErrSubstring)
 			}
 		})
 	}

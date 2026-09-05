@@ -1465,6 +1465,39 @@ _Appears in:_
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
+#### Debounce
+
+
+
+Debounce defines how Envoy Gateway coalesces bursts of resource changes before
+reconciling them into new configuration for Envoy Proxy.
+
+Without debouncing, each resource change costs a full reconcile, so a burst of
+changes rebuilds the resource tree, retranslates and pushes once per change even
+though only the resulting state matters. That spends control plane CPU on work that
+is immediately superseded, and makes the proxies apply configuration that will be
+replaced moments later.
+
+Debouncing merges changes that arrive close together into a single reconcile, so the
+cost of a burst approaches that of a single change. The tradeoff is that propagation
+of a change, and of the status derived from it, may be delayed by up to Max.
+
+Debouncing is opt in: it is on whenever this field is set, and off when it is
+left unset.
+
+This applies to the Kubernetes provider only. It has no effect when the resource
+provider is File, whose reconcile loop is driven directly by file change events.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `after` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 100ms | After is the quiet period. A pending batch of changes is flushed once no new<br />change has arrived for this duration, so isolated changes still propagate<br />promptly.<br />If unspecified, defaults to 100ms. |
+| `max` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 10s | Max bounds how long a change may be held before a flush is forced. Under<br />sustained churn the quiet period never elapses, so this caps how far behind<br />the proxies' configuration can fall.<br />Must be greater than or equal to After. If unspecified, defaults to 10s. |
+
+
 #### DirectSourceIPSettings
 
 
@@ -1709,6 +1742,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `admin` | _[EnvoyGatewayAdmin](#envoygatewayadmin)_ |  false  |  | Admin defines the desired admin related abilities.<br />If unspecified, the Admin is used with default configuration<br />parameters. |
 | `telemetry` | _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ |  false  |  | Telemetry defines the desired control plane telemetry related abilities.<br />If unspecified, the telemetry is used with default configuration. |
 | `xdsServer` | _[XDSServer](#xdsserver)_ |  false  |  | XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.<br />If unspecified, default connection keepalive settings will be used. |
+| `debounce` | _[Debounce](#debounce)_ |  false  |  | Debounce defines how Envoy Gateway coalesces bursts of resource changes<br />before reconciling them into new configuration for Envoy Proxy.<br />If unspecified, debouncing is disabled and every change is reconciled on<br />its own. Applies to the Kubernetes provider only. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.<br />Warning: Enabling an Extension Server may lead to complete security compromise of your system.<br />Users that control the Extension Server can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `extensionManagers` | _[ExtensionManager](#extensionmanager) array_ |  false  |  | ExtensionManagers defines multiple extension managers to register for the Envoy Gateway Control Plane.<br />Each extension's output becomes the next extension's input, enabling sequential chaining.<br />Each entry must have a unique Name field for identification.<br />This field is mutually exclusive with ExtensionManager.<br />Warning: Enabling Extension Servers may lead to complete security compromise of your system.<br />Users that control Extension Servers can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
@@ -2069,6 +2103,7 @@ _Appears in:_
 | `admin` | _[EnvoyGatewayAdmin](#envoygatewayadmin)_ |  false  |  | Admin defines the desired admin related abilities.<br />If unspecified, the Admin is used with default configuration<br />parameters. |
 | `telemetry` | _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ |  false  |  | Telemetry defines the desired control plane telemetry related abilities.<br />If unspecified, the telemetry is used with default configuration. |
 | `xdsServer` | _[XDSServer](#xdsserver)_ |  false  |  | XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.<br />If unspecified, default connection keepalive settings will be used. |
+| `debounce` | _[Debounce](#debounce)_ |  false  |  | Debounce defines how Envoy Gateway coalesces bursts of resource changes<br />before reconciling them into new configuration for Envoy Proxy.<br />If unspecified, debouncing is disabled and every change is reconciled on<br />its own. Applies to the Kubernetes provider only. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.<br />Warning: Enabling an Extension Server may lead to complete security compromise of your system.<br />Users that control the Extension Server can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `extensionManagers` | _[ExtensionManager](#extensionmanager) array_ |  false  |  | ExtensionManagers defines multiple extension managers to register for the Envoy Gateway Control Plane.<br />Each extension's output becomes the next extension's input, enabling sequential chaining.<br />Each entry must have a unique Name field for identification.<br />This field is mutually exclusive with ExtensionManager.<br />Warning: Enabling Extension Servers may lead to complete security compromise of your system.<br />Users that control Extension Servers can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
@@ -2350,7 +2385,8 @@ _Appears in:_
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
-| `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
+| `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict<br />Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release. |
+| `lua` | _[LuaValidationConfig](#luavalidationconfig)_ |  false  |  | Lua configures how Lua scripts from EnvoyExtensionPolicy resources are<br />validated in the gateway controller. It selects the validation mode and, for the Strict<br />mode, defines the filesystem paths and environment variables the scripts are permitted to<br />access during validation. |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
@@ -3392,7 +3428,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `url` | _string_ |  true  |  | URL is the URL containing the Wasm code. |
 | `sha256` | _string_ |  false  |  | SHA256 checksum that will be used to verify the Wasm code.<br />If not specified, Envoy Gateway will not verify the downloaded Wasm code.<br />kubebuilder:validation:Pattern=`^[a-f0-9]\{64\}$` |
-| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source. |
+| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source.<br />If unset, system trust store is used for HTTPS url. |
 
 
 #### Header
@@ -3464,6 +3500,7 @@ _Appears in:_
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
 | `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header set by clients can be normalized. |
+| `maxRequestHeaderLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MaxRequestHeaderLimit provides configuration for the maximum size of the<br />request headers allowed for incoming connections, mapping to the Envoy<br />`max_request_headers_kb` HTTP connection manager setting. Requests whose<br />headers exceed this limit receive a 431 (Request Header Fields Too Large)<br />response. The value is rounded up to the nearest KiB, must be at least 1Ki,<br />and cannot exceed 8192Ki (the maximum Envoy supports).<br />For example, 60Ki, 96Ki, 128Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 60Ki bytes. |
 
 
 #### HealthCheck
@@ -3604,7 +3641,7 @@ _Appears in:_
 | `url` | _string_ |  true  |  | URL is the URL of the OCI image.<br />URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`. |
 | `sha256` | _string_ |  false  |  | SHA256 checksum that will be used to verify the OCI image.<br />It must match the digest of the OCI image.<br />If not specified, Envoy Gateway will not verify the downloaded OCI image.<br />kubebuilder:validation:Pattern=`^[a-f0-9]\{64\}$` |
 | `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  false  |  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
-| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source. |
+| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source.<br />If unset, system trust store is used. |
 
 
 #### InfrastructureProviderType
@@ -4311,12 +4348,29 @@ _Underlying type:_ _string_
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
+- [LuaValidationConfig](#luavalidationconfig)
 
 | Value | Description |
 | ----- | ----------- |
 | `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API and no external libraries.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br />INFO: This validation mode executes Lua scripts from EnvoyExtensionPolicy (EEP) resources in the gateway controller.<br />Since the Gateway controller watches EEPs across all namespaces (or namespaces matching the configured selector),<br />unprivileged users can create EEPs in their namespaces and cause arbitrary Lua code to execute in the Gateway controller process.<br />Security measures are in place to prevent unsafe Lua code from accessing critical system resources on the controller<br />and fail validation, preventing the unsafe code from flowing to the data plane proxy.<br /> | 
 | `InsecureSyntax` | LuaValidationInsecureSyntax checks for Lua syntax errors only.<br />Useful if your scripts use external libraries other than the standard Envoy Lua stream handle API.<br />WARNING: This mode does NOT offer any runtime validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> | 
 | `Disabled` | LuaValidationDisabled disables all Lua script validations.<br />WARNING: This mode does NOT offer any runtime or syntax validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> | 
+
+
+#### LuaValidationConfig
+
+
+
+LuaValidationConfig configures how Lua scripts from EnvoyExtensionPolicy resources are validated
+in the gateway controller.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `validationType` | _[LuaValidation](#luavalidation)_ |  false  | Strict | ValidationType determines the strictness of the Lua script validation.<br />Default: Strict |
+| `strictValidation` | _[StrictValidation](#strictvalidation)_ |  false  |  | StrictValidation configures the security sandbox that the Strict validation mode executes Lua<br />scripts in, defining the filesystem paths and environment variables the scripts are permitted<br />to access during validation.<br />It has no effect for the InsecureSyntax or Disabled modes, which do not execute the security<br />sandbox. |
 
 
 #### LuaValueType
@@ -4415,7 +4469,7 @@ _Appears in:_
 | `clientID` | _string_ |  false  |  | The client ID to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />Only one of clientID or clientIDRef must be set. |
 | `clientIDRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  false  |  | The Kubernetes secret which contains the client ID to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />Exactly one of clientID or clientIDRef must be set.<br />This is an Opaque secret. The client ID should be stored in the key "client-id".<br />Only one of clientID or clientIDRef must be set. |
 | `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
-| `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | The optional cookie name overrides to be used for Bearer and IdToken cookies in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses a randomly generated suffix |
+| `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | CookieNames configures the names of the cookies that Envoy sets for the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />By default, every cookie is named "<Purpose>-<suffix>", where the suffix is<br />derived from the identity of this SecurityPolicy. Set "suffix" to pin that<br />suffix for all cookies at once, or set a per-cookie field to name a single<br />cookie outright. |
 | `cookieConfig` | _[OIDCCookieConfig](#oidccookieconfig)_ |  false  |  | CookieConfigs allows setting the SameSite attribute for OIDC cookies.<br />By default, its unset. |
 | `cookieDomain` | _string_ |  false  |  | The optional domain to set the access and ID token cookies on.<br />If not set, the cookies will default to the host of the request, not including the subdomains.<br />If set, the cookies will be set on the specified domain and all subdomains.<br />This means that requests to any subdomain will not require reauthentication after users log in to the parent domain. |
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
@@ -4451,15 +4505,30 @@ _Appears in:_
 
 
 
-OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+OIDCCookieNames defines the names of the cookies that Envoy sets for the OIDC flow.
+
+Envoy Gateway names every cookie "<Purpose>-<suffix>". By default the suffix is
+derived from the identity of the SecurityPolicy, which keeps the cookies of
+different policies from overwriting each other. Suffix replaces that generated
+suffix for all cookies at once, while the per-cookie fields replace the entire
+name of a single cookie and take precedence over Suffix.
+
+Each cookie holds a different value, so the resulting names must be distinct,
+otherwise the cookies would overwrite each other and break the OIDC flow.
 
 _Appears in:_
 - [OIDC](#oidc)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `accessToken` | _string_ |  false  |  | The name of the cookie used to store the AccessToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "AccessToken-(randomly generated uid)" |
-| `idToken` | _string_ |  false  |  | The name of the cookie used to store the IdToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "IdToken-(randomly generated uid)" |
+| `suffix` | _string_ |  false  |  | Suffix replaces the generated suffix in the default name of every OAuth2<br />cookie, for example "AccessToken-<suffix>" and "IdToken-<suffix>".<br />The generated suffix is derived from the identity of the SecurityPolicy, so<br />it changes when the policy is deleted and recreated, which logs users out.<br />Set this field to keep the cookie names stable across the lifetime of the<br />policy, or to share a session between policies that authenticate the same<br />users against the same provider. Policies sharing a suffix must also agree<br />on the OIDC provider, the client, and the cookieDomain.<br />If not specified, the generated suffix is used. |
+| `accessToken` | _string_ |  false  |  | The name of the cookie used to store the AccessToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "AccessToken-<suffix>", see the "suffix" field. |
+| `oauthExpires` | _string_ |  false  |  | The name of the cookie used to store the OAuth expires value.<br />If not specified, defaults to "OauthExpires-<suffix>", see the "suffix" field. |
+| `oauthHmac` | _string_ |  false  |  | The name of the cookie used to store the OAuth HMAC value.<br />If not specified, defaults to "OauthHMAC-<suffix>", see the "suffix" field. |
+| `idToken` | _string_ |  false  |  | The name of the cookie used to store the IdToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "IdToken-<suffix>", see the "suffix" field. |
+| `refreshToken` | _string_ |  false  |  | The name of the cookie used to store the RefreshToken.<br />If not specified, defaults to "RefreshToken-<suffix>", see the "suffix" field. |
+| `oauthNonce` | _string_ |  false  |  | The name of the cookie used to store the OAuth nonce value.<br />If not specified, defaults to "OauthNonce-<suffix>", see the "suffix" field. |
+| `codeVerifier` | _string_ |  false  |  | The name of the cookie used to store the PKCE code verifier.<br />If not specified, defaults to "CodeVerifier-<suffix>", see the "suffix" field. |
 
 
 #### OIDCDenyRedirect
@@ -6342,6 +6411,24 @@ _Appears in:_
 | ----- | ----------- |
 | `Value` | StatusCodeValueTypeValue defines the "Value" status code match type.<br /> | 
 | `Range` | StatusCodeValueTypeRange defines the "Range" status code match type.<br /> | 
+
+
+#### StrictValidation
+
+
+
+StrictValidation defines the configuration that Strict Lua validation runs with.
+
+This configuration only applies to the Strict validation mode; it has no effect on the
+InsecureSyntax and Disabled modes.
+
+_Appears in:_
+- [LuaValidationConfig](#luavalidationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `allowedPaths` | _string array_ |  false  |  | AllowedPaths is the list of filesystem path prefixes that Lua scripts are permitted to<br />access during validation (via io.open, io.input, io.output, io.lines, os.remove, os.rename).<br />A path is allowed when it equals an entry or is contained within an entry's subtree<br />(e.g. "/tmp" allows "/tmp/file.txt"). Paths are normalized (separators collapsed, made<br />absolute) before matching, and any "." or ".." traversal segment is always rejected.<br />When empty, all filesystem access is denied. Blank or whitespace-only entries are rejected,<br />as they would otherwise match every path and disable the sandbox. The filesystem root ("/")<br />is likewise rejected, as it would allow access to the entire filesystem and defeat the sandbox.<br />Note that a built-in set of sensitive paths is always denied, even if they are added to the<br />allowed paths here: /etc, /proc, /sys, /certs, /var/run/secrets, and /run/secrets. |
+| `allowedEnvVars` | _string array_ |  false  |  | AllowedEnvVars is the list of environment variable names that Lua scripts are permitted to<br />access during validation (via os.getenv, os.setenv). Matching is exact and case-sensitive.<br />When empty, access to all environment variables is denied. Blank or whitespace-only entries<br />are rejected. |
 
 
 #### StringMatch
