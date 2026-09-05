@@ -974,9 +974,12 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
 //
 // TCP supports Authorization with ClientCIDRs ONLY.
-// - Principals.JWT      => invalid (HTTP-only)
-// - Principals.Headers  => invalid (HTTP-only)
-// - Empty/no Authorization is allowed and results in no-op on TCP.
+//   - Principals.JWT       => invalid (HTTP-only)
+//   - Principals.Headers   => invalid (HTTP-only)
+//   - Principals.ClientCert => invalid (HTTP-only; mTLS validation results
+//     are not surfaced to TCP-route-scoped policies in EG today)
+//   - Empty/no Authorization is allowed and results in no-op on TCP.
+//
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
@@ -998,6 +1001,9 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 		}
 		if len(rule.Principal.Headers) > 0 {
 			return fmt.Errorf("rule %d: headers not supported for TCP", i)
+		}
+		if rule.Principal.ClientCert != nil {
+			return fmt.Errorf("rule %d: clientCert not supported for TCP", i)
 		}
 		if len(rule.Principal.ClientIPGeoLocations) > 0 {
 			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP", i)
@@ -3058,6 +3064,11 @@ func (t *Translator) buildAuthorization(
 			irPrincipal.JWT = rule.Principal.JWT
 			irPrincipal.Headers = rule.Principal.Headers
 			irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations
+
+			if err := validateClientCertPrincipal(rule.Principal.ClientCert); err != nil {
+				return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+			}
+			irPrincipal.ClientCert = rule.Principal.ClientCert
 		}
 
 		if err := validateAuthorizationOperation(rule.Operation); err != nil {
@@ -3104,6 +3115,47 @@ func validateAuthorizationOperation(operation *egv1a1.Operation) error {
 	default:
 		return fmt.Errorf("invalid path type")
 	}
+}
+
+// validateClientCertPrincipal validates any RegularExpression StringMatch values
+// configured on a ClientCertPrincipal. CEL admission only checks that the matcher
+// type is a recognized enum value and the value is nonempty; it cannot compile the
+// regex. An invalid regex left unvalidated here would otherwise reach xDS as a
+// malformed RegexMatcher, causing Envoy to reject the whole route configuration
+// instead of failing SecurityPolicy admission with a clear error.
+func validateClientCertPrincipal(clientCert *egv1a1.ClientCertPrincipal) error {
+	if clientCert == nil {
+		return nil
+	}
+
+	if err := validateStringMatchRegex(clientCert.Subject); err != nil {
+		return fmt.Errorf("invalid clientCert.subject: %w", err)
+	}
+
+	if san := clientCert.SubjectAltNames; san != nil {
+		for i := range san.URIs {
+			if err := validateStringMatchRegex(&san.URIs[i]); err != nil {
+				return fmt.Errorf("invalid clientCert.subjectAltNames.uris[%d]: %w", i, err)
+			}
+		}
+		for i := range san.DNSNames {
+			if err := validateStringMatchRegex(&san.DNSNames[i]); err != nil {
+				return fmt.Errorf("invalid clientCert.subjectAltNames.dnsNames[%d]: %w", i, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateStringMatchRegex validates the regex compiles when the matcher's type is
+// RegularExpression. Other match types require no additional validation beyond what
+// CEL admission already performs.
+func validateStringMatchRegex(sm *egv1a1.StringMatch) error {
+	if sm == nil || sm.Type == nil || *sm.Type != egv1a1.StringMatchRegularExpression {
+		return nil
+	}
+	return regex.Validate(sm.Value)
 }
 
 func validateAuthorizationGeoIP(
