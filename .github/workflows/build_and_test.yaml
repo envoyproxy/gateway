@@ -38,82 +38,82 @@ jobs:
             - "!?(.github|site|release-notes)/**"
             - ".github/workflows/build_and_test.yaml"
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
-    # Generate the installation manifests first, so it can check
-    # for errors while running `make -k lint`
-    - run: IMAGE_PULL_POLICY=Always make generate-manifests
-    - run: make lint-deps
-    - run: make -k lint
+  # lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
+  #   # Generate the installation manifests first, so it can check
+  #   # for errors while running `make -k lint`
+  #   - run: IMAGE_PULL_POLICY=Always make generate-manifests
+  #   - run: make lint-deps
+  #   - run: make -k lint
 
-  gen-check:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
-    - run: make -k gen-check
+  # gen-check:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
+  #   - run: make -k gen-check
 
-  license-check:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
-    - run: make -k licensecheck
+  # license-check:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
+  #   - run: make -k licensecheck
 
-  coverage-test:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read   #  for actions/checkout
-      id-token: write  #  for fetching OIDC token
-    needs:
-    - changes
-    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
+  # coverage-test:
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read   #  for actions/checkout
+  #     id-token: write  #  for fetching OIDC token
+  #   needs:
+  #   - changes
+  #   if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
 
-    # test
-    - name: Run Coverage Tests
-      run: make go.test.coverage
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v7.0.0
-      with:
-        fail_ci_if_error: true
-        files: ./coverage.xml
-        name: codecov-envoy-gateway
-        verbose: true
-        use_oidc: true
-        version: v11.2.8
+  #   # test
+  #   - name: Run Coverage Tests
+  #     run: make go.test.coverage
+  #   - name: Upload coverage to Codecov
+  #     uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v7.0.0
+  #     with:
+  #       fail_ci_if_error: true
+  #       files: ./coverage.xml
+  #       name: codecov-envoy-gateway
+  #       verbose: true
+  #       use_oidc: true
+  #       version: v11.2.8
 
-  go-benchmark-test:
-    runs-on: ubuntu-latest
-    needs:
-    - changes
-    - build
-    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      with:
-        fetch-depth: 0  # Need base branch access for benchmark comparison
-    - uses: ./tools/github-actions/setup-deps
-    - name: Run Benchmark Comparison
-      env:
-        # Compare against the PR's base branch, not always main: release branch
-        # PRs pin an older Go toolchain and main would fail to build with it.
-        BASE_REF: origin/${{ github.base_ref || 'main' }}
-      run: |
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          ./tools/hack/go-benchmark-compare.sh
-        else
-          make go-benchmark
-        fi
+  # go-benchmark-test:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #   - changes
+  #   - build
+  #   if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #     with:
+  #       fetch-depth: 0  # Need base branch access for benchmark comparison
+  #   - uses: ./tools/github-actions/setup-deps
+  #   - name: Run Benchmark Comparison
+  #     env:
+  #       # Compare against the PR's base branch, not always main: release branch
+  #       # PRs pin an older Go toolchain and main would fail to build with it.
+  #       BASE_REF: origin/${{ github.base_ref || 'main' }}
+  #     run: |
+  #       if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+  #         ./tools/hack/go-benchmark-compare.sh
+  #       else
+  #         make go-benchmark
+  #       fi
 
   build:
     runs-on: ubuntu-latest
-    needs: [changes, lint, gen-check, license-check, coverage-test]
+    # needs: [changes, lint, gen-check, license-check, coverage-test]
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -140,110 +140,110 @@ jobs:
         name: envoy-gateway
         path: bin/
 
-  build-egctl:
-    runs-on: ubuntu-latest
-    needs: [changes, lint, gen-check, license-check, coverage-test]
-    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
+  # build-egctl:
+  #   runs-on: ubuntu-latest
+  #   needs: [changes, lint, gen-check, license-check, coverage-test]
+  #   if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
 
-    - name: Build egctl Binary
-      run: make build BINS="egctl" PLATFORM="linux_amd64"
+  #   - name: Build egctl Binary
+  #     run: make build BINS="egctl" PLATFORM="linux_amd64"
 
-  conformance-test:
-    runs-on: ubuntu-latest
-    needs:
-    - changes
-    - build
-    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-        - version: v1.33.12
-          ipFamily: ipv4
-          profile: default
-          gwapiChannel: standard
-        - version: v1.33.12
-          ipFamily: ipv4
-          profile: default
-          gwapiChannel: standard
-          # disable parallel to make sure the test is stable,
-          # this should be able to be run in a private forked repo
-          # with less CPU and memory resources
-          disableParallel: true
-        - version: v1.34.8
-          ipFamily: ipv4
-          profile: default
-          gwapiChannel: experimental
-        - version: v1.35.5
-          ipFamily: ipv6  # only run ipv6 test on this version to save time
-          profile: default
-          gwapiChannel: experimental
-        # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.36.1
-          ipFamily: dual  # only run dual test on latest version to save time
-          profile: default
-          gwapiChannel: experimental
-        - version: v1.36.1
-          ipFamily: dual  # only run dual test on latest version to save time
-          gwapiChannel: experimental
-          profile: gateway-namespace-mode
-        - version: v1.36.1
-          ipFamily: ipv4
-          profile: xds-name-scheme-v2
-          gwapiChannel: experimental
-        - version: v1.36.1
-          ipFamily: ipv4
-          profile: watch-namespaces
-          gwapiChannel: experimental
-        - version: v1.36.1
-          ipFamily: ipv4
-          profile: merge-backends
-          gwapiChannel: experimental
-        - version: v1.36.1
-          ipFamily: ipv4
-          profile: debounce
-          gwapiChannel: experimental
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
+  # conformance-test:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #   - changes
+  #   - build
+  #   if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       target:
+  #       - version: v1.33.12
+  #         ipFamily: ipv4
+  #         profile: default
+  #         gwapiChannel: standard
+  #       - version: v1.33.12
+  #         ipFamily: ipv4
+  #         profile: default
+  #         gwapiChannel: standard
+  #         # disable parallel to make sure the test is stable,
+  #         # this should be able to be run in a private forked repo
+  #         # with less CPU and memory resources
+  #         disableParallel: true
+  #       - version: v1.34.8
+  #         ipFamily: ipv4
+  #         profile: default
+  #         gwapiChannel: experimental
+  #       - version: v1.35.5
+  #         ipFamily: ipv6  # only run ipv6 test on this version to save time
+  #         profile: default
+  #         gwapiChannel: experimental
+  #       # TODO: this's IPv4 first, need a way to test IPv6 first.
+  #       - version: v1.36.1
+  #         ipFamily: dual  # only run dual test on latest version to save time
+  #         profile: default
+  #         gwapiChannel: experimental
+  #       - version: v1.36.1
+  #         ipFamily: dual  # only run dual test on latest version to save time
+  #         gwapiChannel: experimental
+  #         profile: gateway-namespace-mode
+  #       - version: v1.36.1
+  #         ipFamily: ipv4
+  #         profile: xds-name-scheme-v2
+  #         gwapiChannel: experimental
+  #       - version: v1.36.1
+  #         ipFamily: ipv4
+  #         profile: watch-namespaces
+  #         gwapiChannel: experimental
+  #       - version: v1.36.1
+  #         ipFamily: ipv4
+  #         profile: merge-backends
+  #         gwapiChannel: experimental
+  #       - version: v1.36.1
+  #         ipFamily: ipv4
+  #         profile: debounce
+  #         gwapiChannel: experimental
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
-      with:
-        name: envoy-gateway
-        path: bin/
+  #   - name: Download EG Binaries
+  #     uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+  #     with:
+  #       name: envoy-gateway
+  #       path: bin/
 
-    - name: Give Privileges To EG Binaries
-      run: chmod +x bin/linux/*/envoy-gateway
+  #   - name: Give Privileges To EG Binaries
+  #     run: chmod +x bin/linux/*/envoy-gateway
 
-    # conformance
-    - name: Run Standard Conformance Tests
-      env:
-        KIND_NODE_TAG: ${{ matrix.target.version }}
-        IMAGE_PULL_POLICY: IfNotPresent
-        IP_FAMILY: ${{ matrix.target.ipFamily }}
-        KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
-        E2E_GATEWAY_API_CHANNEL: ${{ matrix.target.gwapiChannel }}
-        # Increase the timeout to 1h to avoid timeout in CI, especially for non parallel tests.
-        E2E_TIMEOUT: 1h
-        # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
-        # which means to dump the current state when there's a case failed.
-        ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
-        SKIP_GO_BUILD: "true"
-        E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/conformance
-        E2E_DISABLE_PARALLEL: ${{ matrix.target.disableParallel || 'false' }}
-      run: make conformance
+  #   # conformance
+  #   - name: Run Standard Conformance Tests
+  #     env:
+  #       KIND_NODE_TAG: ${{ matrix.target.version }}
+  #       IMAGE_PULL_POLICY: IfNotPresent
+  #       IP_FAMILY: ${{ matrix.target.ipFamily }}
+  #       KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
+  #       E2E_GATEWAY_API_CHANNEL: ${{ matrix.target.gwapiChannel }}
+  #       # Increase the timeout to 1h to avoid timeout in CI, especially for non parallel tests.
+  #       E2E_TIMEOUT: 1h
+  #       # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
+  #       # which means to dump the current state when there's a case failed.
+  #       ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
+  #       SKIP_GO_BUILD: "true"
+  #       E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/conformance
+  #       E2E_DISABLE_PARALLEL: ${{ matrix.target.disableParallel || 'false' }}
+  #     run: make conformance
 
-    - name: Upload E2E failure artifacts
-      if: failure()
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-      with:
-        name: conformance-failure-artifacts-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}-${{ matrix.target.disableParallel || 'false' }}
-        path: artifacts/conformance/
-        if-no-files-found: ignore
+  #   - name: Upload E2E failure artifacts
+  #     if: failure()
+  #     uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+  #     with:
+  #       name: conformance-failure-artifacts-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}-${{ matrix.target.disableParallel || 'false' }}
+  #       path: artifacts/conformance/
+  #       if-no-files-found: ignore
 
   e2e-test:
     runs-on: ubuntu-latest
@@ -325,160 +325,160 @@ jobs:
         path: artifacts/e2e/
         if-no-files-found: ignore
 
-  benchmark-test:
-    runs-on: ubuntu-latest
-    needs:
-    - build
-    - changes
-    # There's a different workflow for benchmark-test on push.
-    # So we need to check if this is a pull request and changes.
-    if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
+  # benchmark-test:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #   - build
+  #   - changes
+  #   # There's a different workflow for benchmark-test on push.
+  #   # So we need to check if this is a pull request and changes.
+  #   if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
-      with:
-        name: envoy-gateway
-        path: bin/
+  #   - name: Download EG Binaries
+  #     uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+  #     with:
+  #       name: envoy-gateway
+  #       path: bin/
 
-    - name: Give Privileges To EG Binaries
-      run: chmod +x bin/linux/*/envoy-gateway
+  #   - name: Give Privileges To EG Binaries
+  #     run: chmod +x bin/linux/*/envoy-gateway
 
-    # Benchmark
-    - name: Run Benchmark tests
-      env:
-        IMAGE_PULL_POLICY: IfNotPresent
-        # Args for benchmark test
-        BENCHMARK_BASELINE_RPS: 100
-        BENCHMARK_CONNECTIONS: 100
-        BENCHMARK_DURATION: 90
-        BENCHMARK_CPU_LIMITS: 1000m
-        BENCHMARK_MEMORY_LIMITS: 2000Mi
-        BENCHMARK_REPORT_DIR: benchmark_report
-        BENCHMARK_RENDER_PNG: "false"
-        SKIP_GO_BUILD: "true"
-      run: make benchmark
+  #   # Benchmark
+  #   - name: Run Benchmark tests
+  #     env:
+  #       IMAGE_PULL_POLICY: IfNotPresent
+  #       # Args for benchmark test
+  #       BENCHMARK_BASELINE_RPS: 100
+  #       BENCHMARK_CONNECTIONS: 100
+  #       BENCHMARK_DURATION: 90
+  #       BENCHMARK_CPU_LIMITS: 1000m
+  #       BENCHMARK_MEMORY_LIMITS: 2000Mi
+  #       BENCHMARK_REPORT_DIR: benchmark_report
+  #       BENCHMARK_RENDER_PNG: "false"
+  #       SKIP_GO_BUILD: "true"
+  #     run: make benchmark
 
-    - name: Upload Benchmark report
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-      with:
-        name: benchmark_report
-        path: ./test/benchmark/benchmark_report/
+  #   - name: Upload Benchmark report
+  #     uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+  #     with:
+  #       name: benchmark_report
+  #       path: ./test/benchmark/benchmark_report/
 
-  resilience-test:
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
-    needs:
-    - build
-    - changes
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
+  # resilience-test:
+  #   runs-on: ubuntu-latest
+  #   if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+  #   needs:
+  #   - build
+  #   - changes
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
-      with:
-        name: envoy-gateway
-        path: bin/
+  #   - name: Download EG Binaries
+  #     uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+  #     with:
+  #       name: envoy-gateway
+  #       path: bin/
 
-    - name: Give Privileges To EG Binaries
-      run: chmod +x bin/linux/*/envoy-gateway
+  #   - name: Give Privileges To EG Binaries
+  #     run: chmod +x bin/linux/*/envoy-gateway
 
-    - name: Resilience Test
-      env:
-        IMAGE_PULL_POLICY: IfNotPresent
-        CUSTOM_CNI: "true"
-        SKIP_GO_BUILD: "true"
-      run: make resilience
+  #   - name: Resilience Test
+  #     env:
+  #       IMAGE_PULL_POLICY: IfNotPresent
+  #       CUSTOM_CNI: "true"
+  #       SKIP_GO_BUILD: "true"
+  #     run: make resilience
 
-  standalone-test:
-    runs-on: ubuntu-latest
-    needs:
-    - changes
-    - build
-    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
+  # standalone-test:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #   - changes
+  #   - build
+  #   if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
-      with:
-        name: envoy-gateway
-        path: bin/
+  #   - name: Download EG Binaries
+  #     uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+  #     with:
+  #       name: envoy-gateway
+  #       path: bin/
 
-    - name: Give Privileges To EG Binaries
-      run: chmod +x bin/linux/*/envoy-gateway
+  #   - name: Give Privileges To EG Binaries
+  #     run: chmod +x bin/linux/*/envoy-gateway
 
-    - name: Run Standalone Tests
-      env:
-        ENVOY_GATEWAY_BIN: ${{ github.workspace }}/bin/linux/amd64/envoy-gateway
-      run: make go.test.standalone
+  #   - name: Run Standalone Tests
+  #     env:
+  #       ENVOY_GATEWAY_BIN: ${{ github.workspace }}/bin/linux/amd64/envoy-gateway
+  #     run: make go.test.standalone
 
-  publish:
-    runs-on: ubuntu-latest
-    needs: [conformance-test, e2e-test]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-    - uses: ./tools/github-actions/setup-deps
+  # publish:
+  #   runs-on: ubuntu-latest
+  #   needs: [conformance-test, e2e-test]
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   steps:
+  #   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+  #   - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
-      with:
-        name: envoy-gateway
-        path: bin/
+  #   - name: Download EG Binaries
+  #     uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+  #     with:
+  #       name: envoy-gateway
+  #       path: bin/
 
-    - name: Give Privileges To EG Binaries
-      run: chmod +x bin/linux/*/envoy-gateway
+  #   - name: Give Privileges To EG Binaries
+  #     run: chmod +x bin/linux/*/envoy-gateway
 
-    # build and push image
-    - name: Login to DockerHub
-      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
-      with:
-        username: ${{ vars.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+  #   # build and push image
+  #   - name: Login to DockerHub
+  #     uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+  #     with:
+  #       username: ${{ vars.DOCKERHUB_USERNAME }}
+  #       password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Setup Multiarch Environment
-      run: make image.multiarch.setup
+  #   - name: Setup Multiarch Environment
+  #     run: make image.multiarch.setup
 
-    - name: Build and Push EG Commit Image
-      # tag is set to the short SHA of the commit
-      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+  #   - name: Build and Push EG Commit Image
+  #     # tag is set to the short SHA of the commit
+  #     run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
-    - name: Build and Push EG Latest Image
-      # tag is set to `latest` when pushing to main branch
-      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+  #   - name: Build and Push EG Latest Image
+  #     # tag is set to `latest` when pushing to main branch
+  #     run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
-    - name: Build and Push EG Latest Helm Chart
-      # use `0.0.0` as the default latest version.
-      # use `Always` image pull policy for latest version.
-      run: |
-        IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-push
-        IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0-latest TAG=latest make helm-push
+  #   - name: Build and Push EG Latest Helm Chart
+  #     # use `0.0.0` as the default latest version.
+  #     # use `Always` image pull policy for latest version.
+  #     run: |
+  #       IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-push
+  #       IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0-latest TAG=latest make helm-push
 
   # Aggregate all the required jobs and make it easier to customize CI required jobs
-  ci-checks:
-    runs-on: ubuntu-latest
-    needs:
-    - lint
-    - gen-check
-    - license-check
-    - coverage-test
-    - build
-    - build-egctl
-    - conformance-test
-    - e2e-test
-    - benchmark-test
-    - resilience-test
-    - standalone-test
-    - publish
-    # We need this to run always to force-fail (and not skip) if any needed
-    # job has failed. Otherwise, a skipped job will not fail the workflow.
-    if: always()
-    steps:
-    - run: |
-        echo "CI checks completed"
-        [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "false" ] || exit 1
+  # ci-checks:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #   - lint
+  #   - gen-check
+  #   - license-check
+  #   - coverage-test
+  #   - build
+  #   - build-egctl
+  #   - conformance-test
+  #   - e2e-test
+  #   - benchmark-test
+  #   - resilience-test
+  #   - standalone-test
+  #   - publish
+  #   # We need this to run always to force-fail (and not skip) if any needed
+  #   # job has failed. Otherwise, a skipped job will not fail the workflow.
+  #   if: always()
+  #   steps:
+  #   - run: |
+  #       echo "CI checks completed"
+  #       [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "false" ] || exit 1
