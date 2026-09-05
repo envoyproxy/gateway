@@ -3451,6 +3451,8 @@ spec:
                           description: |-
                             Status Code of the Custom Response
                             If unset, does not override the status of response.
+                          maximum: 599
+                          minimum: 200
                           type: integer
                       type: object
                     source:
