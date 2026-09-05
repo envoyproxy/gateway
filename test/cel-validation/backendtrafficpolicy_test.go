@@ -3536,7 +3536,113 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "request buffer with mode LimitOnly and http upgrade",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1Mi"),
+						Mode:  new(egv1a1.RequestBufferModeLimitOnly),
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "websocket",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid request buffer limit format",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1m"),
+						Mode:  new(egv1a1.RequestBufferModeLimitOnly),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestBuffer.limit: Invalid value: \"1m\": spec.requestBuffer.limit in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'",
+			},
+		},
+		{
+			desc: "invalid request buffer mode",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1Mi"),
+						Mode:  new(egv1a1.RequestBufferMode("Foo")),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestBuffer.mode: Unsupported value: \"Foo\": supported values: \"BufferAndLimit\", \"LimitOnly\"",
+			},
+		},
+		{
 			desc: "request buffer with websocket upgrade",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1Mi"),
+						Mode:  new(egv1a1.RequestBufferModeBufferAndLimit),
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "websocket",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"},
+		},
+		{
+			desc: "request buffer with defaulted mode and websocket upgrade",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -3560,7 +3666,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"requestBuffer cannot be used together with httpUpgrade"},
+			wantErrors: []string{"requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"},
 		},
 		{
 			desc: "request buffer with connect upgrade",
@@ -3587,7 +3693,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"requestBuffer cannot be used together with httpUpgrade"},
+			wantErrors: []string{"requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"},
 		},
 		{
 			desc: "http with connect config",
