@@ -15,38 +15,37 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.compressor.brotli/e26d3c81
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
-            compressorLibrary:
-              name: envoy.compression.brotli.compressor
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
-            responseDirectionConfig:
-              commonConfig:
-                minContentLength: 100
-        - disabled: true
-          name: envoy.filters.http.compressor.gzip/7a4115a
+          name: envoy.filters.http.compressor.gzip/323f3e9b
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
             compressorLibrary:
               name: envoy.compression.gzip.compressor
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+                chunkSize: 8192
+                compressionLevel: COMPRESSION_LEVEL_9
+                compressionStrategy: FIXED
+                memoryLevel: 8
+                windowBits: 15
             responseDirectionConfig:
               commonConfig:
                 minContentLength: 200
         - disabled: true
-          name: envoy.filters.http.compressor.zstd/8fc9f56
+          name: envoy.filters.http.compressor.gzip/63b70d49
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
             compressorLibrary:
-              name: envoy.compression.zstd.compressor
+              name: envoy.compression.gzip.compressor
               typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+                '@type': type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+                chunkSize: 4096
+                compressionLevel: BEST_SPEED
+                compressionStrategy: RLE
+                memoryLevel: 4
+                windowBits: 12
             responseDirectionConfig:
               commonConfig:
-                minContentLength: 300
+                minContentLength: 100
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
