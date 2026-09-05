@@ -583,6 +583,82 @@ explicitly, such as `IdToken-myapp` and `OauthHMAC-myapp`.
 
 Each cookie holds a different value, so all the resulting names must be distinct.
 
+## Logout
+
+Requesting the `logoutPath` clears the OIDC cookies Envoy Gateway set for the session. If not
+specified, `logoutPath` defaults to `/logout`. Like `redirectURL`, it must match the target
+HTTPRoute or Gateway, otherwise the logout request can't be processed by the OIDC filter.
+
+Clearing the cookies only ends the session at the gateway; the user remains logged in at the OIDC
+provider. To also terminate the provider-side session, configure the provider's
+[end session endpoint](https://openid.net/specs/openid-connect-rpinitiated-1_0.html), which enables
+[RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html):
+
+```yaml
+  oidc:
+    provider:
+      issuer: "https://accounts.google.com"
+      endSessionEndpoint: "https://accounts.google.com/o/oauth2/v2/logout"
+    logoutPath: "/myapp/logout"
+```
+
+Envoy Gateway also discovers `endSessionEndpoint` from the provider's
+[Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse)
+when `authorizationEndpoint` or `tokenEndpoint` is not specified, so RP-Initiated Logout may be
+active even if you did not set the field explicitly.
+
+When an end session endpoint is in use, requesting the `logoutPath` returns a redirect to the
+provider that carries a `post_logout_redirect_uri` parameter telling the provider where to send the
+user once the logout completes. By default Envoy sends the root of the request's host,
+`<scheme>://<host>/`.
+
+### Setting the post logout redirect URI
+
+Most providers require the post logout redirect URI to be **registered for the client** and reject
+the logout request otherwise. If the default value is not registered, set an explicit URI:
+
+```yaml
+  oidc:
+    logoutPath: "/myapp/logout"
+    postLogoutRedirect:
+      uri: "https://www.example.com/myapp/loggedout"
+```
+
+The URI may contain the Envoy `%REQ(header)%` [command operator][command-operators], which is useful
+when the same policy serves more than one host:
+
+```yaml
+  oidc:
+    postLogoutRedirect:
+      uri: "%REQ(x-forwarded-proto)%://%REQ(:authority)%/myapp/loggedout"
+```
+
+Only `%REQ(header)%` is accepted here, since it is the only operator meaningful in a URI derived from
+the request. Envoy Gateway rejects any other operator and reports the error on the SecurityPolicy
+status, so that a typo such as `%REQ(x-tenant)` or `%BOGUS%` surfaces on the policy rather than
+causing Envoy to reject the configuration. Envoy percent-encodes the URI when it builds the logout
+redirect, so write it unencoded; a literal percent is written as `%%`.
+
+### Omitting the post logout redirect URI
+
+`post_logout_redirect_uri` is optional in the OIDC specification. If you cannot register a URI with
+your provider, or you do not need the user redirected back to your application, omit the parameter
+entirely:
+
+```yaml
+  oidc:
+    logoutPath: "/myapp/logout"
+    postLogoutRedirect:
+      disabled: true
+```
+
+The logout itself still completes - Envoy Gateway clears its cookies and the provider terminates the
+session - but because the provider is not told where to send the user, the browser is left on a page
+controlled by the provider rather than returning to your application.
+
+Exactly one of `uri` or `disabled` must be set. `postLogoutRedirect` has no effect when no end
+session endpoint is configured or discovered, because in that case Envoy Gateway does not redirect to
+the provider at all.
 
 ## Providers
 
@@ -669,3 +745,4 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [backend-routing]: ../traffic/backend
 [backend-tls]: ../backend-tls
 [BackendSettings]: ../../../api/extension_types/#clustersettings
+[command-operators]: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
