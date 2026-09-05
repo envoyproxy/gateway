@@ -3796,6 +3796,75 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "compressor missing matching codec configuration",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"compressor type must match its configuration"},
+		},
+		{
+			desc: "merge compressor may omit codec configuration to disable it",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "HTTPRoute",
+								Name:  "httpbin-route",
+							},
+						},
+					},
+					MergeType: new(egv1a1.JSONMerge),
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "merge compressor has mismatched codec configuration",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "HTTPRoute",
+								Name:  "httpbin-route",
+							},
+						},
+					},
+					MergeType: new(egv1a1.JSONMerge),
+					Compressor: []*egv1a1.Compression{
+						{
+							Type:   egv1a1.GzipCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"compressor type must match its configuration"},
+		},
+		{
 			desc: "both compression and compressor fields specified - should fail",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
