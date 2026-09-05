@@ -359,6 +359,29 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      envoyExtensions:
+        extProcs:
+        - authority: grpc-backend-2.envoy-gateway:8002
+          destination:
+            metadata:
+              kind: EnvoyExtensionPolicy
+              name: policy-for-gateway-1-listener-1
+              namespace: envoy-gateway
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0
+            settings:
+            - addressType: IP
+              endpoints:
+              - host: 7.7.7.2
+                port: 8002
+              metadata:
+                kind: Service
+                name: grpc-backend-2
+                namespace: envoy-gateway
+                sectionName: "8002"
+              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0/backend/0
+              protocol: GRPC
+              weight: 1
+          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0
       externalPort: 8081
       hostnames:
       - '*'
@@ -503,29 +526,6 @@ xdsIR:
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          extProcs:
-          - authority: grpc-backend-2.envoy-gateway:8002
-            destination:
-              metadata:
-                kind: EnvoyExtensionPolicy
-                name: policy-for-gateway-1-listener-1
-                namespace: envoy-gateway
-              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 7.7.7.2
-                  port: 8002
-                metadata:
-                  kind: Service
-                  name: grpc-backend-2
-                  namespace: envoy-gateway
-                  sectionName: "8002"
-                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0/backend/0
-                protocol: GRPC
-                weight: 1
-            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -539,6 +539,29 @@ xdsIR:
           name: ""
           prefix: /baz
     - address: 0.0.0.0
+      envoyExtensions:
+        extProcs:
+        - authority: grpc-backend-1.envoy-gateway:8001
+          destination:
+            metadata:
+              kind: EnvoyExtensionPolicy
+              name: policy-for-gateway-1
+              namespace: envoy-gateway
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
+            settings:
+            - addressType: IP
+              endpoints:
+              - host: 7.7.7.1
+                port: 8001
+              metadata:
+                kind: Service
+                name: grpc-backend-1
+                namespace: envoy-gateway
+                sectionName: "8001"
+              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0/backend/0
+              protocol: GRPC
+              weight: 1
+          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
       externalPort: 8082
       hostnames:
       - '*'
@@ -573,29 +596,6 @@ xdsIR:
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          extProcs:
-          - authority: grpc-backend-1.envoy-gateway:8001
-            destination:
-              metadata:
-                kind: EnvoyExtensionPolicy
-                name: policy-for-gateway-1
-                namespace: envoy-gateway
-              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
-              settings:
-              - addressType: IP
-                endpoints:
-                - host: 7.7.7.1
-                  port: 8001
-                metadata:
-                  kind: Service
-                  name: grpc-backend-1
-                  namespace: envoy-gateway
-                  sectionName: "8001"
-                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0/backend/0
-                protocol: GRPC
-                weight: 1
-            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

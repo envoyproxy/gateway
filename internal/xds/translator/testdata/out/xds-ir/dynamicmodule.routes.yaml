@@ -52,3 +52,32 @@
         envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-path/dynamic-module/0:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-2
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http-2/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /inherits-listener
+      name: httproute/default/httproute-5/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-5/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-for-gateway/dynamic-module/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    - match:
+        pathSeparatedPrefix: /route-overrides
+      name: httproute/default/httproute-6/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-6/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-for-route/dynamic-module/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

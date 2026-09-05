@@ -118,6 +118,22 @@ func enableFilterOnRoute(route *routev3.Route, filterName string, routeCfg proto
 	return nil
 }
 
+// effectiveEnvoyExtensions returns the EnvoyExtensionFeatures that apply to irRoute: its own,
+// more-specific EnvoyExtensions when a route(-rule)-scoped policy set them, otherwise whatever a
+// Gateway/Listener-scoped policy attached to irListener (nil if neither has one). A route-scoped
+// policy always wins outright and never merges with the listener's - see
+// translateEnvoyExtensionPolicyForListeners/translateEnvoyExtensionPolicyForRoute in the
+// gatewayapi package.
+func effectiveEnvoyExtensions(irRoute *ir.HTTPRoute, irListener *ir.HTTPListener) *ir.EnvoyExtensionFeatures {
+	if irRoute.EnvoyExtensions != nil {
+		return irRoute.EnvoyExtensions
+	}
+	if irListener != nil {
+		return irListener.EnvoyExtensions
+	}
+	return nil
+}
+
 // perRouteFilterName generates a unique filter name for the provided filterType and configName.
 func perRouteFilterName(filterType egv1a1.EnvoyFilter, configName string) string {
 	return fmt.Sprintf("%s/%s", filterType, configName)
