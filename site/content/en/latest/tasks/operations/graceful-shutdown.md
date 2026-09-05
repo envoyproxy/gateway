@@ -105,3 +105,51 @@ spec:
 
 {{% /tab %}}
 {{< /tabpane >}}
+
+## Known Limitations
+
+### hostNetwork deployments
+
+When the Envoy proxy Deployment/DaemonSet is patched to run with `hostNetwork: true`, the envoy
+container's PreStop lifecycle hook (an HTTP GET to the shutdown-manager's `/shutdown/ready`
+endpoint) can fail with a kubelet error like `failed to find networking container`. This is
+caused by a known kubelet bug
+([kubernetes/kubernetes#134285](https://github.com/kubernetes/kubernetes/issues/134285)): for
+hostNetwork pods, kubelet cannot resolve an implicit target address for the PreStop `httpGet`
+action because the pod IP reported by the CRI is empty.
+
+Because the PreStop hook never completes, shutdown-manager doesn't get a chance to drain
+connections before Envoy exits, so in-flight connections can be dropped on pod termination.
+
+As a workaround, you can patch the envoy container's PreStop `httpGet` action to target
+`127.0.0.1` explicitly, which is reachable because the pod shares the node's network namespace:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: eg
+  namespace: default
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  hostNetwork: true
+                  containers:
+                  - name: envoy
+                    lifecycle:
+                      preStop:
+                        httpGet:
+                          host: 127.0.0.1
+```
+
+Only set `host: 127.0.0.1` for hostNetwork pods. For the default (non-hostNetwork) case, kubelet
+runs `httpGet` lifecycle hooks from the node's network namespace, so hardcoding `127.0.0.1` would
+target the node instead of the pod and break the hook.
