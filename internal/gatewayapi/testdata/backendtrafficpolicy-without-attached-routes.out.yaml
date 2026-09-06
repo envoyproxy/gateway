@@ -470,7 +470,7 @@ udpRoutes:
     rules:
     - backendRefs:
       - name: service-1
-        port: 8080
+        port: 8162
   status:
     parents:
     - conditions:
@@ -480,9 +480,9 @@ udpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: UDP Port 8080 not found on Service default/service-1
-        reason: PortNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -506,7 +506,7 @@ udpRoutes:
     rules:
     - backendRefs:
       - name: service-1
-        port: 8080
+        port: 8162
   status:
     parents:
     - conditions:
@@ -516,9 +516,9 @@ udpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: UDP Port 8080 not found on Service default/service-1
-        reason: PortNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -669,6 +669,19 @@ xdsIR:
             name: route-on-udp
             namespace: default
           name: udproute/default/route-on-udp/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8162
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8162"
+            name: udproute/default/route-on-udp/rule/-1/backend/0
+            protocol: UDP
+            weight: 1
         loadBalancer:
           roundRobin: {}
         name: udproute/default/route-on-udp
@@ -688,4 +701,17 @@ xdsIR:
             name: route-on-udp-http-only
             namespace: default
           name: udproute/default/route-on-udp-http-only/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8162
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8162"
+            name: udproute/default/route-on-udp-http-only/rule/-1/backend/0
+            protocol: UDP
+            weight: 1
         name: udproute/default/route-on-udp-http-only
