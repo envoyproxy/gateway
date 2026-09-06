@@ -117,8 +117,14 @@ func (r *Loader) runHook(ctx context.Context) error {
 	if r.hook == nil {
 		return nil
 	}
-	r.logger.Info("running hook")
+
 	cfgCopy := r.snapshotConfig()
+	if cfgCopy != nil && cfgCopy.EnvoyGateway != nil {
+		r.logger.Info("running hook", "envoyGateway", cfgCopy.EnvoyGateway.EnvoyGatewaySpec)
+	} else {
+		r.logger.Info("running hook")
+	}
+
 	c, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
 	r.hookMutex.Lock()

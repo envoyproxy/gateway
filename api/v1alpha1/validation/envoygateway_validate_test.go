@@ -1066,6 +1066,26 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			},
 			expect: true,
 		},
+		{
+			name: "invalid EnvoyProxy in EnvoyGateway",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					EnvoyProxy: &egv1a1.EnvoyProxySpec{
+						Provider: &egv1a1.EnvoyProxyProvider{
+							// Invalid provider type
+							Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+								EnvoyService: &egv1a1.KubernetesServiceSpec{
+									Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
 	}
 
 	for _, tc := range testCases {
