@@ -7,25 +7,11 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
+    debounce:
+      after: 1s
+      max: 10s
     provider:
       type: Kubernetes
-      kubernetes:
-        watch:
-          type: NamespaceSelector
-          namespaceSelector:
-            matchExpressions:
-            - key: kubernetes.io/metadata.name
-              operator: In
-              values:
-              - btp-cross-ns-denied
-              - btp-cross-ns-granted
-              - gateway-conformance-infra
-              - gateway-upgrade-infra
-              - listenerset-tls-termination-secret
-              - monitoring
-              - multireferencegrants-ns
-              - sp-cross-ns
-              - namespace-selector-relabel-app
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:

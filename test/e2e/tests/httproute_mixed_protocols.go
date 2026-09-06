@@ -85,8 +85,7 @@ var HTTPRouteMixedProtocols = suite.ConformanceTest{
 		}
 
 		for _, res := range responses {
-			req := http.MakeRequest(t, &res, gwAddr, "HTTP", "http")
-			http.WaitForConsistentResponse(t, suite.RoundTripper, req, res, 1, suite.TimeoutConfig.MaxTimeToConsistency)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, res)
 		}
 	},
 }
