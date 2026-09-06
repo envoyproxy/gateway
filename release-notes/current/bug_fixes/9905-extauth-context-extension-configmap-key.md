@@ -1,0 +1,1 @@
+Fixed an ExtAuth `contextExtensions` value being rejected when its ConfigMap held more than one `data` entry. The informer cache trims a ConfigMap to a fixed set of known keys plus its lexicographically first key, and the key a SecurityPolicy names is in neither, so the policy failed with "can't find the key" for a value that reads back fine with `kubectl get configmap`.
