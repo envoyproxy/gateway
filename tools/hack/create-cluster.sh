@@ -6,7 +6,7 @@ set -euo pipefail
 KIND=${KIND:-go tool -modfile=tools/go.mod kind}
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 METALLB_VERSION=${METALLB_VERSION:-"v0.16.1"}
-KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.36.1"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.37.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
 CUSTOM_CNI=${CUSTOM_CNI:-"false"}
