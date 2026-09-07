@@ -130,7 +130,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"1.1.1.1/32", "2001:db8::/32"},
+								LoadBalancerSourceRanges: []string{"1.1.1.1/32", "2001:db8::/32"},
 							},
 						},
 					},
@@ -147,7 +147,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"2001:db8::/32"},
+								LoadBalancerSourceRanges: []string{"2001:db8::/32"},
 							},
 						},
 					},
@@ -180,7 +180,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeClusterIP),
-								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"10.0.0.0/8"},
+								LoadBalancerSourceRanges: []string{"10.0.0.0/8"},
 							},
 						},
 					},
@@ -197,18 +197,18 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []egv1a1.LoadBalancerSourceRange{"not-a-cidr"},
+								LoadBalancerSourceRanges: []string{"not-a-cidr"},
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"loadBalancerSourceRanges must contain valid CIDR values"},
+			wantErrors: []string{"must be of type cidr"},
 		},
 		{
 			desc: "loadBalancerSourceRanges-too-many-items",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				sourceRanges := make([]egv1a1.LoadBalancerSourceRange, 65)
+				sourceRanges := make([]string, 65)
 				for i := range sourceRanges {
 					sourceRanges[i] = "10.0.0.0/8"
 				}

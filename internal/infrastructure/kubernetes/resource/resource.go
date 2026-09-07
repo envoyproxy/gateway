@@ -39,7 +39,7 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 		if len(service.LoadBalancerSourceRanges) > 0 {
 			ranges := make([]string, len(service.LoadBalancerSourceRanges))
 			for i, r := range service.LoadBalancerSourceRanges {
-				ranges[i] = string(r)
+				ranges[i] = r
 			}
 			serviceSpec.LoadBalancerSourceRanges = ranges
 		}

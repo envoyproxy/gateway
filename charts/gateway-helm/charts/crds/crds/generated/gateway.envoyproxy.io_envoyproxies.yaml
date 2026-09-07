@@ -11255,10 +11255,7 @@ spec:
                               This field may only be set for services with type LoadBalancer and will be cleared if the type
                               is changed to any other type.
                             items:
-                              description: |-
-                                LoadBalancerSourceRange is a CIDR string allowed in LoadBalancerSourceRanges.
-                                MaxLength bounds CEL cost estimation for isCIDR validation over this list.
-                              maxLength: 64
+                              format: cidr
                               type: string
                             maxItems: 64
                             type: array
@@ -11310,10 +11307,6 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
-                        - message: loadBalancerSourceRanges must contain valid CIDR
-                            values
-                          rule: '!has(self.loadBalancerSourceRanges) || self.loadBalancerSourceRanges.all(r,
-                            isCIDR(r))'
                       envoyServiceAccount:
                         description: EnvoyServiceAccount defines the desired state
                           of the Envoy service account resource.

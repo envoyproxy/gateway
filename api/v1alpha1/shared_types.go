@@ -316,16 +316,10 @@ const (
 	ServiceExternalTrafficPolicyLocal ServiceExternalTrafficPolicy = "Local"
 )
 
-// LoadBalancerSourceRange is a CIDR string allowed in LoadBalancerSourceRanges.
-// MaxLength bounds CEL cost estimation for isCIDR validation over this list.
-// +kubebuilder:validation:MaxLength=64
-type LoadBalancerSourceRange string
-
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
 // +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges can only be set for LoadBalancer type",rule="!has(self.loadBalancerSourceRanges) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
-// +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges must contain valid CIDR values",rule="!has(self.loadBalancerSourceRanges) || self.loadBalancerSourceRanges.all(r, isCIDR(r))"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
 	// By default, no annotations are appended.
@@ -366,9 +360,10 @@ type KubernetesServiceSpec struct {
 	// it happens outside of kubernetes and has to be supported and handled by the platform provider.
 	// This field may only be set for services with type LoadBalancer and will be cleared if the type
 	// is changed to any other type.
+	// +kubebuilder:validation:items:Format=cidr
 	// +kubebuilder:validation:MaxItems=64
 	// +optional
-	LoadBalancerSourceRanges []LoadBalancerSourceRange `json:"loadBalancerSourceRanges,omitempty"`
+	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
 
 	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
 	// may be ignored if the load balancer provider does not support this feature.

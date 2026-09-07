@@ -277,9 +277,9 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 	case "envoy-gateway/gateway-1/http1":
 		if len(req.PostListenerContext.ExtensionResources) != 1 {
 			return &pb.PostHTTPListenerModifyResponse{
-					Listener: req.Listener,
-				}, fmt.Errorf("received %d extension policies when expecting 1: %s",
-					len(req.PostListenerContext.ExtensionResources), req.Listener.Name)
+				Listener: req.Listener,
+			}, fmt.Errorf("received %d extension policies when expecting 1: %s",
+				len(req.PostListenerContext.ExtensionResources), req.Listener.Name)
 		}
 		modifiedListener := proto.Clone(req.Listener).(*listenerV3.Listener)
 		modifiedListener.StatPrefix = req.Listener.Name
@@ -293,9 +293,9 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 	case "envoy-gateway/gateway-1/udp1":
 		if len(req.PostListenerContext.ExtensionResources) != 1 {
 			return &pb.PostHTTPListenerModifyResponse{
-					Listener: req.Listener,
-				}, fmt.Errorf("received %d extension policies when expecting 1: %s",
-					len(req.PostListenerContext.ExtensionResources), req.Listener.Name)
+				Listener: req.Listener,
+			}, fmt.Errorf("received %d extension policies when expecting 1: %s",
+				len(req.PostListenerContext.ExtensionResources), req.Listener.Name)
 		}
 		modifiedListener := proto.Clone(req.Listener).(*listenerV3.Listener)
 		modifiedListener.StatPrefix = req.Listener.Name
