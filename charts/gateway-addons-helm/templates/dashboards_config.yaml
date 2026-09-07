@@ -1,3 +1,7 @@
+{{- if not (or (eq .Values.dashboard.mode "configmap") (eq .Values.dashboard.mode "grafana-operator")) }}
+{{- fail "dashboard.mode must be one of: configmap, grafana-operator" }}
+{{- end }}
+{{- if eq .Values.dashboard.mode "configmap" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -15,3 +19,4 @@ data:
   {{ $path | base }}: |-
     {{- $files.Get $path | nindent 6 -}}
   {{ end }}
+{{- end }}
