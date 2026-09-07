@@ -1,1 +1,1 @@
-Added the `spec.features.detectMisdirectedRequests` EnvoyProxy API field for future HTTP/2 misdirected request detection support. The field is disabled by default and currently does not change runtime behavior.
+Added the `spec.tls.overlappingTLSHandling` ClientTrafficPolicy API field for GEP-3567. It accepts `DowngradeToHTTP1` and `Reject`, defaults to the existing downgrade behavior, and has no runtime effect yet.

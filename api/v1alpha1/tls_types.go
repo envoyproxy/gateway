@@ -9,8 +9,20 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// TLSOCSPKey is the key for the OCSP stapled response in a Secret.
-const TLSOCSPKey = "tls.ocsp-staple"
+// OverlappingTLSHandling controls how overlapping TLS listeners handle HTTP/2 requests.
+// +kubebuilder:validation:Enum=DowngradeToHTTP1;Reject
+type OverlappingTLSHandling string
+
+const (
+	// TLSOCSPKey is the key for the OCSP stapled response in a Secret.
+	TLSOCSPKey = "tls.ocsp-staple"
+
+	// OverlappingTLSHandlingDowngradeToHTTP1 preserves the default ALPN downgrade.
+	OverlappingTLSHandlingDowngradeToHTTP1 OverlappingTLSHandling = "DowngradeToHTTP1"
+	// OverlappingTLSHandlingReject keeps HTTP/2 enabled and returns 421 when the
+	// request authority does not match the SNI used for the connection.
+	OverlappingTLSHandlingReject OverlappingTLSHandling = "Reject"
+)
 
 type ClientTLSSettings struct {
 	// ClientValidation specifies the configuration to validate the client
@@ -19,15 +31,15 @@ type ClientTLSSettings struct {
 	ClientValidation *ClientValidationContext `json:"clientValidation,omitempty"`
 	TLSSettings      `json:",inline"`
 
-	// DetectMisdirectedRequests enables 421 responses for HTTP/2 requests
-	// coalesced onto a TLS connection selected by a different SNI, as described in
-	// [GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).
-	// When disabled, overlapping TLS listeners keep the default ALPN downgrade to
-	// HTTP/1.1 unless ClientTrafficPolicy configures ALPN.
-	// Default: false
+	// OverlappingTLSHandling controls how overlapping TLS listeners handle HTTP/2
+	// requests. Reject keeps HTTP/2 enabled and returns 421 Misdirected Request
+	// when the request authority does not match the connection's SNI, as described
+	// in [GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).
+	// When unset or set to DowngradeToHTTP1, the existing ALPN downgrade is preserved
+	// unless alpnProtocols is explicitly configured.
 	//
 	// +optional
-	DetectMisdirectedRequests *bool `json:"detectMisdirectedRequests,omitempty"`
+	OverlappingTLSHandling *OverlappingTLSHandling `json:"overlappingTLSHandling,omitempty"`
 
 	// Session defines settings related to TLS session management.
 	// +optional

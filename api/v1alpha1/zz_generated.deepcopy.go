@@ -1366,9 +1366,9 @@ func (in *ClientTLSSettings) DeepCopyInto(out *ClientTLSSettings) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.TLSSettings.DeepCopyInto(&out.TLSSettings)
-	if in.DetectMisdirectedRequests != nil {
-		in, out := &in.DetectMisdirectedRequests, &out.DetectMisdirectedRequests
-		*out = new(bool)
+	if in.OverlappingTLSHandling != nil {
+		in, out := &in.OverlappingTLSHandling, &out.OverlappingTLSHandling
+		*out = new(OverlappingTLSHandling)
 		**out = **in
 	}
 	if in.Session != nil {

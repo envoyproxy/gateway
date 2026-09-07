@@ -192,6 +192,29 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "invalid overlapping TLS handling",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				handling := egv1a1.OverlappingTLSHandling("Invalid")
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					TLS: &egv1a1.ClientTLSSettings{
+						OverlappingTLSHandling: &handling,
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.tls.overlappingTLSHandling: Unsupported value: "Invalid": supported values: "DowngradeToHTTP1", "Reject"`,
+			},
+		},
+		{
 			desc: "tls maximal version lesser than default tls minimal version",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
