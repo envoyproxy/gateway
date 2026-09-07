@@ -28,6 +28,7 @@ data:
           url: redis.redis-system.svc.cluster.local:6379
     envoyProxy:
       provider:
+        type: Kubernetes
         kubernetes:
           envoyDeployment:
             container:
