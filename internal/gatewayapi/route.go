@@ -223,7 +223,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				httpRoute.GetGeneration(),
 				status.RouteConditionWarning,
 				metav1.ConditionTrue,
-				status.RouteReasonDottedName,
+				status.RouteReasonNameContainsDots,
 				fmt.Sprintf("A dot in the HTTPRoute name or rule name(s) %v causes Envoy to truncate Prometheus metric labels at the first dot, which can produce duplicate metric series; avoid dots in HTTPRoute and rule names.", dotted),
 			)
 		}

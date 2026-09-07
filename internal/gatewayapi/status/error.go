@@ -38,10 +38,10 @@ const (
 	// non-critical issues that are accepted but require attention.
 	RouteConditionWarning gwapiv1.RouteConditionType = "Warning"
 
-	// RouteReasonDottedName is used with the "Warning" condition when the route
+	// RouteReasonNameContainsDots is used with the "Warning" condition when the route
 	// name or a rule name contains a dot, which causes Envoy to truncate Prometheus
 	// metric labels at the first dot and can produce duplicate metric series.
-	RouteReasonDottedName gwapiv1.RouteConditionReason = "DottedName"
+	RouteReasonNameContainsDots gwapiv1.RouteConditionReason = "NameContainsDots"
 )
 
 // Listener condition reasons for various error scenarios

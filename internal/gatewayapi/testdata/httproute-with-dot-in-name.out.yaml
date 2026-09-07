@@ -72,7 +72,7 @@ httpRoutes:
         message: A dot in the HTTPRoute name or rule name(s) [echo.a.example.com]
           causes Envoy to truncate Prometheus metric labels at the first dot, which
           can produce duplicate metric series; avoid dots in HTTPRoute and rule names.
-        reason: DottedName
+        reason: NameContainsDots
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
