@@ -70,7 +70,6 @@ func BuildProxyArgs(
 		"--service-node", serviceNode,
 		"--config-yaml", bootstrapConfigurations,
 		"--log-level", string(logging.DefaultEnvoyProxyLoggingLevel()),
-		"--cpuset-threads",
 		"--drain-strategy", "immediate",
 	}
 

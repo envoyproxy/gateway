@@ -64,7 +64,7 @@ func ShutdownManager(readyTimeout time.Duration) error {
 		signal.Notify(s, os.Interrupt, syscall.SIGTERM)
 
 		r := <-s
-		logger.Info(fmt.Sprintf("received %s", (r.(syscall.Signal)).String()))
+		logger.Info(fmt.Sprintf("received %s", r.(syscall.Signal).String()))
 
 		// Shutdown HTTP server without interrupting active connections
 		if err := srv.Shutdown(context.Background()); err != nil {

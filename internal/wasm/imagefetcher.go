@@ -31,7 +31,6 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
-	"strings"
 
 	"github.com/docker/cli/cli/config/configfile"
 	dtypes "github.com/docker/cli/cli/config/types"
@@ -67,6 +66,7 @@ func (o *ImageFetcherOption) String() string {
 
 type ImageFetcher struct {
 	fetchOpts []remote.Option
+	insecure  bool
 	logger    logging.Logger
 }
 
@@ -102,6 +102,7 @@ func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging
 
 	return &ImageFetcher{
 		fetchOpts: append(fetchOpts, remote.WithContext(ctx)),
+		insecure:  opt.Insecure,
 		logger:    logger,
 	}, nil
 }
@@ -110,7 +111,14 @@ func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging
 // Wasm binary is not fetched immediately, but returned by `binaryFetcher` function, which is returned by PrepareFetch.
 // By this way, we can have another chance to check cache with `actualDigest` without downloading the OCI image.
 func (o *ImageFetcher) PrepareFetch(url string) (func() ([]byte, error), string, error) {
-	ref, err := name.ParseReference(url)
+	// name.ParseReference talks to the registry via HTTPS by default.
+	// When the user has explicitly marked the registry as insecure, parse with
+	// name.Insecure so go-containerregistry uses plain HTTP for that registry.
+	parseOpts := []name.Option{}
+	if o.insecure {
+		parseOpts = append(parseOpts, name.Insecure)
+	}
+	ref, err := name.ParseReference(url, parseOpts...)
 	if err != nil {
 		err = fmt.Errorf("could not parse url in image reference: %w", err)
 		return nil, "", err
@@ -118,17 +126,7 @@ func (o *ImageFetcher) PrepareFetch(url string) (func() ([]byte, error), string,
 	o.logger.Info("fetching image", "image", ref.Context().RepositoryStr(),
 		"registry", ref.Context().RegistryStr(), "tag", ref.Identifier())
 
-	// fallback to http based request, inspired by [helm](https://github.com/helm/helm/blob/12f1bc0acdeb675a8c50a78462ed3917fb7b2e37/pkg/registry/client.go#L594)
-	// only deal with https fallback instead of attributing all other type of errors to URL parsing error
 	desc, err := remote.Get(ref, o.fetchOpts...)
-	if err != nil && strings.Contains(err.Error(), "server gave HTTP response") {
-		o.logger.Info("fetching image with plain text", "url", url)
-		ref, err = name.ParseReference(url, name.Insecure)
-		if err == nil {
-			desc, err = remote.Get(ref, o.fetchOpts...)
-		}
-	}
-
 	if err != nil {
 		err = fmt.Errorf("could not fetch manifest: %w", err)
 		return nil, "", err

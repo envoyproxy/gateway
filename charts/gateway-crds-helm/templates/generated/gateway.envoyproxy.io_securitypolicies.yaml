@@ -6020,23 +6020,98 @@ spec:
                     type: string
                   cookieNames:
                     description: |-
-                      The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+                      CookieNames configures the names of the cookies that Envoy sets for the
                       [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-                      If not specified, uses a randomly generated suffix
+
+                      By default, every cookie is named "<Purpose>-<suffix>", where the suffix is
+                      derived from the identity of this SecurityPolicy. Set "suffix" to pin that
+                      suffix for all cookies at once, or set a per-cookie field to name a single
+                      cookie outright.
                     properties:
                       accessToken:
                         description: |-
                           The name of the cookie used to store the AccessToken in the
                           [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-                          If not specified, defaults to "AccessToken-(randomly generated uid)"
+                          If not specified, defaults to "AccessToken-<suffix>", see the "suffix" field.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      codeVerifier:
+                        description: |-
+                          The name of the cookie used to store the PKCE code verifier.
+                          If not specified, defaults to "CodeVerifier-<suffix>", see the "suffix" field.
+                        maxLength: 256
+                        minLength: 1
                         type: string
                       idToken:
                         description: |-
                           The name of the cookie used to store the IdToken in the
                           [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-                          If not specified, defaults to "IdToken-(randomly generated uid)"
+                          If not specified, defaults to "IdToken-<suffix>", see the "suffix" field.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      oauthExpires:
+                        description: |-
+                          The name of the cookie used to store the OAuth expires value.
+                          If not specified, defaults to "OauthExpires-<suffix>", see the "suffix" field.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      oauthHmac:
+                        description: |-
+                          The name of the cookie used to store the OAuth HMAC value.
+                          If not specified, defaults to "OauthHMAC-<suffix>", see the "suffix" field.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      oauthNonce:
+                        description: |-
+                          The name of the cookie used to store the OAuth nonce value.
+                          If not specified, defaults to "OauthNonce-<suffix>", see the "suffix" field.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      refreshToken:
+                        description: |-
+                          The name of the cookie used to store the RefreshToken.
+                          If not specified, defaults to "RefreshToken-<suffix>", see the "suffix" field.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      suffix:
+                        description: |-
+                          Suffix replaces the generated suffix in the default name of every OAuth2
+                          cookie, for example "AccessToken-<suffix>" and "IdToken-<suffix>".
+
+                          The generated suffix is derived from the identity of the SecurityPolicy, so
+                          it changes when the policy is deleted and recreated, which logs users out.
+                          Set this field to keep the cookie names stable across the lifetime of the
+                          policy, or to share a session between policies that authenticate the same
+                          users against the same provider. Policies sharing a suffix must also agree
+                          on the OIDC provider, the client, and the cookieDomain.
+
+                          If not specified, the generated suffix is used.
+                        maxLength: 238
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                         type: string
                     type: object
+                    x-kubernetes-validations:
+                    - message: cookie names must be unique
+                      rule: '[(has(self.accessToken) ? [self.accessToken] : (has(self.suffix)
+                        ? [''AccessToken-'' + self.suffix] : [])) + (has(self.oauthExpires)
+                        ? [self.oauthExpires] : (has(self.suffix) ? [''OauthExpires-''
+                        + self.suffix] : [])) + (has(self.oauthHmac) ? [self.oauthHmac]
+                        : (has(self.suffix) ? [''OauthHMAC-'' + self.suffix] : []))
+                        + (has(self.idToken) ? [self.idToken] : (has(self.suffix)
+                        ? [''IdToken-'' + self.suffix] : [])) + (has(self.refreshToken)
+                        ? [self.refreshToken] : (has(self.suffix) ? [''RefreshToken-''
+                        + self.suffix] : [])) + (has(self.oauthNonce) ? [self.oauthNonce]
+                        : (has(self.suffix) ? [''OauthNonce-'' + self.suffix] : []))
+                        + (has(self.codeVerifier) ? [self.codeVerifier] : (has(self.suffix)
+                        ? [''CodeVerifier-'' + self.suffix] : []))].all(names, names.all(n,
+                        names.filter(m, m == n).size() == 1))'
                   csrfTokenTTL:
                     description: |-
                       CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.
@@ -7707,7 +7782,7 @@ spec:
                           Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST
                           be https, a host component, and optionally, port and path components and
                           no query or fragment components.
-                        minLength: 1
+                        pattern: ^https://[^/?#@]+(/[^?#]*)?$
                         type: string
                       tokenEndpoint:
                         description: |-

@@ -1465,6 +1465,39 @@ _Appears in:_
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
+#### Debounce
+
+
+
+Debounce defines how Envoy Gateway coalesces bursts of resource changes before
+reconciling them into new configuration for Envoy Proxy.
+
+Without debouncing, each resource change costs a full reconcile, so a burst of
+changes rebuilds the resource tree, retranslates and pushes once per change even
+though only the resulting state matters. That spends control plane CPU on work that
+is immediately superseded, and makes the proxies apply configuration that will be
+replaced moments later.
+
+Debouncing merges changes that arrive close together into a single reconcile, so the
+cost of a burst approaches that of a single change. The tradeoff is that propagation
+of a change, and of the status derived from it, may be delayed by up to Max.
+
+Debouncing is opt in: it is on whenever this field is set, and off when it is
+left unset.
+
+This applies to the Kubernetes provider only. It has no effect when the resource
+provider is File, whose reconcile loop is driven directly by file change events.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `after` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 100ms | After is the quiet period. A pending batch of changes is flushed once no new<br />change has arrived for this duration, so isolated changes still propagate<br />promptly.<br />If unspecified, defaults to 100ms. |
+| `max` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 10s | Max bounds how long a change may be held before a flush is forced. Under<br />sustained churn the quiet period never elapses, so this caps how far behind<br />the proxies' configuration can fall.<br />Must be greater than or equal to After. If unspecified, defaults to 10s. |
+
+
 #### DirectSourceIPSettings
 
 
@@ -1709,6 +1742,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `admin` | _[EnvoyGatewayAdmin](#envoygatewayadmin)_ |  false  |  | Admin defines the desired admin related abilities.<br />If unspecified, the Admin is used with default configuration<br />parameters. |
 | `telemetry` | _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ |  false  |  | Telemetry defines the desired control plane telemetry related abilities.<br />If unspecified, the telemetry is used with default configuration. |
 | `xdsServer` | _[XDSServer](#xdsserver)_ |  false  |  | XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.<br />If unspecified, default connection keepalive settings will be used. |
+| `debounce` | _[Debounce](#debounce)_ |  false  |  | Debounce defines how Envoy Gateway coalesces bursts of resource changes<br />before reconciling them into new configuration for Envoy Proxy.<br />If unspecified, debouncing is disabled and every change is reconciled on<br />its own. Applies to the Kubernetes provider only. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.<br />Warning: Enabling an Extension Server may lead to complete security compromise of your system.<br />Users that control the Extension Server can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `extensionManagers` | _[ExtensionManager](#extensionmanager) array_ |  false  |  | ExtensionManagers defines multiple extension managers to register for the Envoy Gateway Control Plane.<br />Each extension's output becomes the next extension's input, enabling sequential chaining.<br />Each entry must have a unique Name field for identification.<br />This field is mutually exclusive with ExtensionManager.<br />Warning: Enabling Extension Servers may lead to complete security compromise of your system.<br />Users that control Extension Servers can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
@@ -2069,6 +2103,7 @@ _Appears in:_
 | `admin` | _[EnvoyGatewayAdmin](#envoygatewayadmin)_ |  false  |  | Admin defines the desired admin related abilities.<br />If unspecified, the Admin is used with default configuration<br />parameters. |
 | `telemetry` | _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ |  false  |  | Telemetry defines the desired control plane telemetry related abilities.<br />If unspecified, the telemetry is used with default configuration. |
 | `xdsServer` | _[XDSServer](#xdsserver)_ |  false  |  | XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.<br />If unspecified, default connection keepalive settings will be used. |
+| `debounce` | _[Debounce](#debounce)_ |  false  |  | Debounce defines how Envoy Gateway coalesces bursts of resource changes<br />before reconciling them into new configuration for Envoy Proxy.<br />If unspecified, debouncing is disabled and every change is reconciled on<br />its own. Applies to the Kubernetes provider only. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.<br />Warning: Enabling an Extension Server may lead to complete security compromise of your system.<br />Users that control the Extension Server can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `extensionManagers` | _[ExtensionManager](#extensionmanager) array_ |  false  |  | ExtensionManagers defines multiple extension managers to register for the Envoy Gateway Control Plane.<br />Each extension's output becomes the next extension's input, enabling sequential chaining.<br />Each entry must have a unique Name field for identification.<br />This field is mutually exclusive with ExtensionManager.<br />Warning: Enabling Extension Servers may lead to complete security compromise of your system.<br />Users that control Extension Servers can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
@@ -3393,7 +3428,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `url` | _string_ |  true  |  | URL is the URL containing the Wasm code. |
 | `sha256` | _string_ |  false  |  | SHA256 checksum that will be used to verify the Wasm code.<br />If not specified, Envoy Gateway will not verify the downloaded Wasm code.<br />kubebuilder:validation:Pattern=`^[a-f0-9]\{64\}$` |
-| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source. |
+| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source.<br />If unset, system trust store is used for HTTPS url. |
 
 
 #### Header
@@ -3606,7 +3641,7 @@ _Appears in:_
 | `url` | _string_ |  true  |  | URL is the URL of the OCI image.<br />URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`. |
 | `sha256` | _string_ |  false  |  | SHA256 checksum that will be used to verify the OCI image.<br />It must match the digest of the OCI image.<br />If not specified, Envoy Gateway will not verify the downloaded OCI image.<br />kubebuilder:validation:Pattern=`^[a-f0-9]\{64\}$` |
 | `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  false  |  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
-| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source. |
+| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source.<br />If unset, system trust store is used. |
 
 
 #### InfrastructureProviderType
@@ -4434,7 +4469,7 @@ _Appears in:_
 | `clientID` | _string_ |  false  |  | The client ID to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />Only one of clientID or clientIDRef must be set. |
 | `clientIDRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  false  |  | The Kubernetes secret which contains the client ID to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />Exactly one of clientID or clientIDRef must be set.<br />This is an Opaque secret. The client ID should be stored in the key "client-id".<br />Only one of clientID or clientIDRef must be set. |
 | `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
-| `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | The optional cookie name overrides to be used for Bearer and IdToken cookies in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses a randomly generated suffix |
+| `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | CookieNames configures the names of the cookies that Envoy sets for the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />By default, every cookie is named "<Purpose>-<suffix>", where the suffix is<br />derived from the identity of this SecurityPolicy. Set "suffix" to pin that<br />suffix for all cookies at once, or set a per-cookie field to name a single<br />cookie outright. |
 | `cookieConfig` | _[OIDCCookieConfig](#oidccookieconfig)_ |  false  |  | CookieConfigs allows setting the SameSite attribute for OIDC cookies.<br />By default, its unset. |
 | `cookieDomain` | _string_ |  false  |  | The optional domain to set the access and ID token cookies on.<br />If not set, the cookies will default to the host of the request, not including the subdomains.<br />If set, the cookies will be set on the specified domain and all subdomains.<br />This means that requests to any subdomain will not require reauthentication after users log in to the parent domain. |
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
@@ -4470,15 +4505,30 @@ _Appears in:_
 
 
 
-OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+OIDCCookieNames defines the names of the cookies that Envoy sets for the OIDC flow.
+
+Envoy Gateway names every cookie "<Purpose>-<suffix>". By default the suffix is
+derived from the identity of the SecurityPolicy, which keeps the cookies of
+different policies from overwriting each other. Suffix replaces that generated
+suffix for all cookies at once, while the per-cookie fields replace the entire
+name of a single cookie and take precedence over Suffix.
+
+Each cookie holds a different value, so the resulting names must be distinct,
+otherwise the cookies would overwrite each other and break the OIDC flow.
 
 _Appears in:_
 - [OIDC](#oidc)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `accessToken` | _string_ |  false  |  | The name of the cookie used to store the AccessToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "AccessToken-(randomly generated uid)" |
-| `idToken` | _string_ |  false  |  | The name of the cookie used to store the IdToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "IdToken-(randomly generated uid)" |
+| `suffix` | _string_ |  false  |  | Suffix replaces the generated suffix in the default name of every OAuth2<br />cookie, for example "AccessToken-<suffix>" and "IdToken-<suffix>".<br />The generated suffix is derived from the identity of the SecurityPolicy, so<br />it changes when the policy is deleted and recreated, which logs users out.<br />Set this field to keep the cookie names stable across the lifetime of the<br />policy, or to share a session between policies that authenticate the same<br />users against the same provider. Policies sharing a suffix must also agree<br />on the OIDC provider, the client, and the cookieDomain.<br />If not specified, the generated suffix is used. |
+| `accessToken` | _string_ |  false  |  | The name of the cookie used to store the AccessToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "AccessToken-<suffix>", see the "suffix" field. |
+| `oauthExpires` | _string_ |  false  |  | The name of the cookie used to store the OAuth expires value.<br />If not specified, defaults to "OauthExpires-<suffix>", see the "suffix" field. |
+| `oauthHmac` | _string_ |  false  |  | The name of the cookie used to store the OAuth HMAC value.<br />If not specified, defaults to "OauthHMAC-<suffix>", see the "suffix" field. |
+| `idToken` | _string_ |  false  |  | The name of the cookie used to store the IdToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "IdToken-<suffix>", see the "suffix" field. |
+| `refreshToken` | _string_ |  false  |  | The name of the cookie used to store the RefreshToken.<br />If not specified, defaults to "RefreshToken-<suffix>", see the "suffix" field. |
+| `oauthNonce` | _string_ |  false  |  | The name of the cookie used to store the OAuth nonce value.<br />If not specified, defaults to "OauthNonce-<suffix>", see the "suffix" field. |
+| `codeVerifier` | _string_ |  false  |  | The name of the cookie used to store the PKCE code verifier.<br />If not specified, defaults to "CodeVerifier-<suffix>", see the "suffix" field. |
 
 
 #### OIDCDenyRedirect

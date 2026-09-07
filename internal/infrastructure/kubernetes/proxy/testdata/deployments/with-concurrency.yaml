@@ -50,7 +50,6 @@ spec:
         - test bootstrap config
         - --log-level
         - warn
-        - --cpuset-threads
         - --drain-strategy
         - immediate
         - --concurrency

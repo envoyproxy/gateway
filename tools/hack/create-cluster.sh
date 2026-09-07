@@ -6,7 +6,7 @@ set -euo pipefail
 KIND=${KIND:-go tool -modfile=tools/go.mod kind}
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 METALLB_VERSION=${METALLB_VERSION:-"v0.16.1"}
-KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.36.1"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.37.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
 CUSTOM_CNI=${CUSTOM_CNI:-"false"}
@@ -22,14 +22,26 @@ else
   CNI_CONFIG="disableDefaultCNI: false"
 fi
 
+# Only emit the ClusterTrustBundle knobs when the feature is asked for. The gates went GA and
+# default-on in Kubernetes 1.37 and are locked to that default in 1.38, where writing "false"
+# is rejected outright. On 1.33-1.36 both the v1beta1 API and the gates are off by default, so
+# leaving them out is equivalent to the explicit "false" this used to write.
+CLUSTER_TRUST_BUNDLE_CONFIG=""
+if [ "${ENABLE_CLUSTER_TRUST_BUNDLE}" = "true" ]; then
+  CLUSTER_TRUST_BUNDLE_CONFIG=$(cat <<-EOM
+runtimeConfig:
+  certificates.k8s.io/v1beta1/clustertrustbundles: true
+featureGates:
+  "ClusterTrustBundle": true
+  "ClusterTrustBundleProjection": true
+EOM
+)
+fi
+
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-runtimeConfig:
-  certificates.k8s.io/v1beta1/clustertrustbundles: ${ENABLE_CLUSTER_TRUST_BUNDLE}
-featureGates:
-  "ClusterTrustBundle": ${ENABLE_CLUSTER_TRUST_BUNDLE}
-  "ClusterTrustBundleProjection": ${ENABLE_CLUSTER_TRUST_BUNDLE}
+${CLUSTER_TRUST_BUNDLE_CONFIG}
 networking:
   ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}
