@@ -111,10 +111,17 @@ func buildStatefulSessionFilterConfig(route *ir.HTTPRoute) (*statefulsessionv3.S
 	switch {
 	case sp.Cookie != nil:
 		configName = cookieConfigName
+		// By default the cookie Path is derived from the matched route path, but it
+		// can be overridden (e.g. via BackendTrafficPolicy) when the request path is
+		// rewritten upstream before reaching Envoy Gateway.
+		cookiePath := routePathToCookiePath(route.PathMatch)
+		if sp.Cookie.Path != nil {
+			cookiePath = *sp.Cookie.Path
+		}
 		cookieCfg := &cookiev3.CookieBasedSessionState{
 			Cookie: &httpv3.Cookie{
 				Name: sp.Cookie.Name,
-				Path: routePathToCookiePath(route.PathMatch),
+				Path: cookiePath,
 			},
 		}
 
