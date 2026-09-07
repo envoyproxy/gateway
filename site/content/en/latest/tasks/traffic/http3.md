@@ -97,6 +97,16 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+By default, Envoy Gateway advertises the Gateway listener port in the HTTP/3 `alt-svc` response header.
+If an external load balancer exposes the Gateway on a different port, set `advertisedPort` to the
+external port without changing the listener or Service ports:
+
+```yaml
+spec:
+  http3:
+    advertisedPort: 443
+```
+
 Verify the [Gateway][] status:
 
 ```shell
