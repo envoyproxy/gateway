@@ -39,6 +39,7 @@ type ClientTLSSettings struct {
 	// unless alpnProtocols is explicitly configured.
 	//
 	// +optional
+	// +kubebuilder:default=DowngradeToHTTP1
 	OverlappingTLSHandling *OverlappingTLSHandling `json:"overlappingTLSHandling,omitempty"`
 
 	// Session defines settings related to TLS session management.

@@ -1870,6 +1870,7 @@ spec:
                     - "1.3"
                     type: string
                   overlappingTLSHandling:
+                    default: DowngradeToHTTP1
                     description: |-
                       OverlappingTLSHandling controls how overlapping TLS listeners handle HTTP/2
                       requests. Reject keeps HTTP/2 enabled and returns 421 Misdirected Request

@@ -47,9 +47,13 @@ type OIDC struct {
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1.SecretObjectReference `json:"clientSecret"`
 
-	// The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+	// CookieNames configures the names of the cookies that Envoy sets for the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	// If not specified, uses a randomly generated suffix
+	//
+	// By default, every cookie is named "<Purpose>-<suffix>", where the suffix is
+	// derived from the identity of this SecurityPolicy. Set "suffix" to pin that
+	// suffix for all cookies at once, or set a per-cookie field to name a single
+	// cookie outright.
 	// +optional
 	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
 
@@ -233,18 +237,80 @@ type OIDCDenyRedirectHeader struct {
 	StringMatch `json:",inline"`
 }
 
-// OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+// OIDCCookieNames defines the names of the cookies that Envoy sets for the OIDC flow.
+//
+// Envoy Gateway names every cookie "<Purpose>-<suffix>". By default the suffix is
+// derived from the identity of the SecurityPolicy, which keeps the cookies of
+// different policies from overwriting each other. Suffix replaces that generated
+// suffix for all cookies at once, while the per-cookie fields replace the entire
+// name of a single cookie and take precedence over Suffix.
+//
+// Each cookie holds a different value, so the resulting names must be distinct,
+// otherwise the cookies would overwrite each other and break the OIDC flow.
+//
+// +kubebuilder:validation:XValidation:rule="[(has(self.accessToken) ? [self.accessToken] : (has(self.suffix) ? ['AccessToken-' + self.suffix] : [])) + (has(self.oauthExpires) ? [self.oauthExpires] : (has(self.suffix) ? ['OauthExpires-' + self.suffix] : [])) + (has(self.oauthHmac) ? [self.oauthHmac] : (has(self.suffix) ? ['OauthHMAC-' + self.suffix] : [])) + (has(self.idToken) ? [self.idToken] : (has(self.suffix) ? ['IdToken-' + self.suffix] : [])) + (has(self.refreshToken) ? [self.refreshToken] : (has(self.suffix) ? ['RefreshToken-' + self.suffix] : [])) + (has(self.oauthNonce) ? [self.oauthNonce] : (has(self.suffix) ? ['OauthNonce-' + self.suffix] : [])) + (has(self.codeVerifier) ? [self.codeVerifier] : (has(self.suffix) ? ['CodeVerifier-' + self.suffix] : []))].all(names, names.all(n, names.filter(m, m == n).size() == 1))",message="cookie names must be unique"
 type OIDCCookieNames struct {
+	// Suffix replaces the generated suffix in the default name of every OAuth2
+	// cookie, for example "AccessToken-<suffix>" and "IdToken-<suffix>".
+	//
+	// The generated suffix is derived from the identity of the SecurityPolicy, so
+	// it changes when the policy is deleted and recreated, which logs users out.
+	// Set this field to keep the cookie names stable across the lifetime of the
+	// policy, or to share a session between policies that authenticate the same
+	// users against the same provider. Policies sharing a suffix must also agree
+	// on the OIDC provider, the client, and the cookieDomain.
+	//
+	// If not specified, the generated suffix is used.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=238
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$`
+	Suffix *string `json:"suffix,omitempty"`
+
 	// The name of the cookie used to store the AccessToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	// If not specified, defaults to "AccessToken-(randomly generated uid)"
+	// If not specified, defaults to "AccessToken-<suffix>", see the "suffix" field.
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	AccessToken *string `json:"accessToken,omitempty"`
+	// The name of the cookie used to store the OAuth expires value.
+	// If not specified, defaults to "OauthExpires-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	OAuthExpires *string `json:"oauthExpires,omitempty"`
+	// The name of the cookie used to store the OAuth HMAC value.
+	// If not specified, defaults to "OauthHMAC-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	OAuthHMAC *string `json:"oauthHmac,omitempty"`
 	// The name of the cookie used to store the IdToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	// If not specified, defaults to "IdToken-(randomly generated uid)"
+	// If not specified, defaults to "IdToken-<suffix>", see the "suffix" field.
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	IDToken *string `json:"idToken,omitempty"`
+	// The name of the cookie used to store the RefreshToken.
+	// If not specified, defaults to "RefreshToken-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	RefreshToken *string `json:"refreshToken,omitempty"`
+	// The name of the cookie used to store the OAuth nonce value.
+	// If not specified, defaults to "OauthNonce-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	OAuthNonce *string `json:"oauthNonce,omitempty"`
+	// The name of the cookie used to store the PKCE code verifier.
+	// If not specified, defaults to "CodeVerifier-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	CodeVerifier *string `json:"codeVerifier,omitempty"`
 }
 
 // OIDCTokenForwarding defines how an OIDC token is forwarded upstream.
