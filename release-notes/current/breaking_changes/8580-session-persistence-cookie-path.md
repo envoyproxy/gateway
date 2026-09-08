@@ -1,11 +1,3 @@
-The cookie-based session persistence cookie is now always issued with `Path=/`, following the updated
-GEP-1619 guidance, instead of being scoped to the matched HTTPRoute path. This fixes session persistence
-breaking when the path the client requests differs from the path Envoy Gateway matches, for example when
-an edge proxy rewrites `/` to `/foo/bar` before the request reaches the gateway: the cookie was scoped to
-`/foo/bar`, so the browser never sent it back on the client-visible URL.
-Because the cookie is now sent to every route on the same host, HTTPRoute rules on the same host that
-enable cookie-based session persistence must use distinct `sessionName` values. Rules that share a
-`sessionName` previously got separate cookies because their paths differed; they now overwrite each other's
-cookie and session persistence stops working for both. Omitting `sessionName` makes Envoy Gateway generate a
-unique cookie name per rule. Clients holding a cookie scoped to the old path keep
-sending it until it expires, and are issued a new one at `Path=/` on their next request.
+Cookie-based session persistence now always uses `Path=/` instead of the matched HTTPRoute path, following updated GEP-1619 guidance. This fixes persistence when an upstream proxy rewrites the request path.
+
+Rules on the same host must use distinct `sessionName` values to avoid cookie conflicts, or omit `sessionName` to generate unique names per rule. Existing cookies remain until they expire; clients receive a new cookie with `Path=/` on their next request.
