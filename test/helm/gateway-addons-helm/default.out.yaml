@@ -1740,7 +1740,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "sum(irate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=~\"http-.*\"}[$__rate_interval]))",
+                "expr": "sum(irate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=~\"https?-.*\"}[$__rate_interval]))",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{service}} - in",
@@ -1752,7 +1752,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "sum(irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"http-.*\"}[$__rate_interval]))",
+                "expr": "sum(irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"https?-.*\"}[$__rate_interval]))",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{service}} - out",
@@ -2968,6 +2968,7 @@ data:
         "uid": "8WkEOMnANKE6PW5hhpVv",
         "version": 40
       }
+      
   envoy-gateway-global.json: |-
       {
         "annotations": {
