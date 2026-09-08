@@ -330,6 +330,7 @@ backendTrafficPolicies:
   spec:
     healthCheck:
       active:
+        disableConnectionReuse: true
         healthyThreshold: 1
         http:
           expectedResponse:
@@ -887,6 +888,7 @@ xdsIR:
         traffic:
           healthCheck:
             active:
+              disableConnectionReuse: true
               healthyThreshold: 1
               http:
                 expectedResponse:
