@@ -98,7 +98,7 @@ func (s *Server) Validate() ([]string, error) {
 	case len(s.ControllerNamespace) == 0:
 		return nil, errors.New("namespace is empty string")
 	}
-	if err := validateEnvoyGateway(s.EnvoyGateway); err != nil {
+	if err := ValidateEnvoyGateway(s.EnvoyGateway); err != nil {
 		return nil, err
 	}
 
@@ -118,7 +118,7 @@ func (s *Server) Validate() ([]string, error) {
 // equivalent for the merged default spec used by the config loader, so that
 // an override which breaks dynamic_resources or the xDS cluster is rejected
 // here too, rather than leaving Envoy unable to reach the control plane.
-func validateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
+func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	if err := validation.ValidateEnvoyGateway(eg); err != nil {
 		return err
 	}
