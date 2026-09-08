@@ -1140,6 +1140,8 @@ type DNS struct {
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 	// LookupFamily allows to configure the dns lookup policy
 	LookupFamily *egv1a1.DNSLookupFamily `json:"lookupFamily,omitempty"`
+	// MaxHosts is the maximum number of hosts that the DNS cache will hold.
+	MaxHosts *uint32 `json:"maxHosts,omitempty"`
 	// Name is a unique name for a DNS configuration.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }

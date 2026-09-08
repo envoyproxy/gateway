@@ -724,6 +724,7 @@ func translateDNS(policy *egv1a1.ClusterSettings, policyName string) *ir.DNS {
 	irDNS := &ir.DNS{
 		LookupFamily:  policy.DNS.LookupFamily,
 		RespectDNSTTL: policy.DNS.RespectDNSTTL,
+		MaxHosts:      policy.DNS.MaxHosts,
 		Name:          policyName,
 	}
 

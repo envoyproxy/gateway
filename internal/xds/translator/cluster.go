@@ -224,6 +224,10 @@ func buildDFPDNSCacheConfig(name string, dns *ir.DNS, dnsLookupFamily clusterv3.
 		dnsCacheConfig.DnsRefreshRate = durationpb.New(dns.DNSRefreshRate.Duration)
 	}
 
+	if dns != nil && dns.MaxHosts != nil {
+		dnsCacheConfig.MaxHosts = wrapperspb.UInt32(*dns.MaxHosts)
+	}
+
 	return dnsCacheConfig
 }
 

@@ -25150,6 +25150,15 @@ spec:
                     - IPv6Preferred
                     - IPv4AndIPv6
                     type: string
+                  maxHosts:
+                    description: |-
+                      MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                      When the cache is full, new hosts will not be added and their DNS
+                      resolution will fail until existing entries are evicted.
+                      Defaults to 1024.
+                    format: int32
+                    minimum: 1
+                    type: integer
                   respectDnsTtl:
                     description: |-
                       RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -31279,6 +31288,15 @@ spec:
                               - IPv6Preferred
                               - IPv4AndIPv6
                               type: string
+                            maxHosts:
+                              description: |-
+                                MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                                When the cache is full, new hosts will not be added and their DNS
+                                resolution will fail until existing entries are evicted.
+                                Defaults to 1024.
+                              format: int32
+                              minimum: 1
+                              type: integer
                             respectDnsTtl:
                               description: |-
                                 RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -46302,6 +46320,15 @@ spec:
                                                 - IPv6Preferred
                                                 - IPv4AndIPv6
                                                 type: string
+                                              maxHosts:
+                                                description: |-
+                                                  MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                                                  When the cache is full, new hosts will not be added and their DNS
+                                                  resolution will fail until existing entries are evicted.
+                                                  Defaults to 1024.
+                                                format: int32
+                                                minimum: 1
+                                                type: integer
                                               respectDnsTtl:
                                                 description: |-
                                                   RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -47996,6 +48023,15 @@ spec:
                                                 - IPv6Preferred
                                                 - IPv4AndIPv6
                                                 type: string
+                                              maxHosts:
+                                                description: |-
+                                                  MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                                                  When the cache is full, new hosts will not be added and their DNS
+                                                  resolution will fail until existing entries are evicted.
+                                                  Defaults to 1024.
+                                                format: int32
+                                                minimum: 1
+                                                type: integer
                                               respectDnsTtl:
                                                 description: |-
                                                   RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -49946,6 +49982,15 @@ spec:
                                           - IPv6Preferred
                                           - IPv4AndIPv6
                                           type: string
+                                        maxHosts:
+                                          description: |-
+                                            MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                                            When the cache is full, new hosts will not be added and their DNS
+                                            resolution will fail until existing entries are evicted.
+                                            Defaults to 1024.
+                                          format: int32
+                                          minimum: 1
+                                          type: integer
                                         respectDnsTtl:
                                           description: |-
                                             RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -51756,6 +51801,15 @@ spec:
                                     - IPv6Preferred
                                     - IPv4AndIPv6
                                     type: string
+                                  maxHosts:
+                                    description: |-
+                                      MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                                      When the cache is full, new hosts will not be added and their DNS
+                                      resolution will fail until existing entries are evicted.
+                                      Defaults to 1024.
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
                                   respectDnsTtl:
                                     description: |-
                                       RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -55183,6 +55237,15 @@ spec:
                                 - IPv6Preferred
                                 - IPv4AndIPv6
                                 type: string
+                              maxHosts:
+                                description: |-
+                                  MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                                  When the cache is full, new hosts will not be added and their DNS
+                                  resolution will fail until existing entries are evicted.
+                                  Defaults to 1024.
+                                format: int32
+                                minimum: 1
+                                type: integer
                               respectDnsTtl:
                                 description: |-
                                   RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -56737,6 +56800,15 @@ spec:
                                 - IPv6Preferred
                                 - IPv4AndIPv6
                                 type: string
+                              maxHosts:
+                                description: |-
+                                  MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                                  When the cache is full, new hosts will not be added and their DNS
+                                  resolution will fail until existing entries are evicted.
+                                  Defaults to 1024.
+                                format: int32
+                                minimum: 1
+                                type: integer
                               respectDnsTtl:
                                 description: |-
                                   RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -58583,6 +58655,15 @@ spec:
                                       - IPv6Preferred
                                       - IPv4AndIPv6
                                       type: string
+                                    maxHosts:
+                                      description: |-
+                                        MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                                        When the cache is full, new hosts will not be added and their DNS
+                                        resolution will fail until existing entries are evicted.
+                                        Defaults to 1024.
+                                      format: int32
+                                      minimum: 1
+                                      type: integer
                                     respectDnsTtl:
                                       description: |-
                                         RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -60576,6 +60657,15 @@ spec:
                                 - IPv6Preferred
                                 - IPv4AndIPv6
                                 type: string
+                              maxHosts:
+                                description: |-
+                                  MaxHosts is the maximum number of hosts that the DNS cache will hold.
+                                  When the cache is full, new hosts will not be added and their DNS
+                                  resolution will fail until existing entries are evicted.
+                                  Defaults to 1024.
+                                format: int32
+                                minimum: 1
+                                type: integer
                               respectDnsTtl:
                                 description: |-
                                   RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
