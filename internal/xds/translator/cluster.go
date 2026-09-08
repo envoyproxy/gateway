@@ -357,8 +357,14 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.TransportSocket = dummyTransportSocket
 	}
 
+	requiresHTTP1Options := args.http1Settings != nil &&
+		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
+	upstreamProto := resolveUpstreamProtocol(args.useClientProtocol, forceHTTP1UpstreamProtocol,
+		requiresHTTP2Options, requiresHTTP1Options, requiresAutoHTTPConfig)
+
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol)
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, upstreamProto, requiresAutoHTTPConfig,
+		requiresHTTP2Options, requiresHTTP1Options, requiresAutoSNI, forceHTTP1UpstreamProtocol)
 	if err != nil {
 		return nil, err
 	}
@@ -1208,12 +1214,49 @@ func hasTimeoutArgs(args *xdsClusterArgs) bool {
 		(!args.isRoute && timeout.MaxStreamDuration != nil) // Only set cluster-level maxStreamDuration for non-route clusters
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
+// upstreamProtocol describes how a cluster settles the protocol of its upstream connections.
+type upstreamProtocol int
+
+const (
+	// upstreamProtocolHTTP1 and upstreamProtocolHTTP2 are fixed by the cluster's explicit
+	// protocol options.
+	upstreamProtocolHTTP1 upstreamProtocol = iota
+	upstreamProtocolHTTP2
+	// upstreamProtocolDownstream mirrors the protocol of the downstream request.
+	upstreamProtocolDownstream
+	// upstreamProtocolNegotiated is settled per connection through ALPN.
+	upstreamProtocolNegotiated
+)
+
+// resolveUpstreamProtocol returns how the cluster settles the protocol of its upstream
+// connections. It's the single source of truth for that precedence: the protocol options
+// of the cluster are built from it, and health checks are sent over the same protocol.
+func resolveUpstreamProtocol(useClientProtocol, forceHTTP1UpstreamProtocol,
+	requiresHTTP2Options, requiresHTTP1Options, requiresAutoHTTPConfig bool,
+) upstreamProtocol {
+	switch {
+	// useClientProtocol wins over the protocol of the backend itself.
+	case useClientProtocol:
+		return upstreamProtocolDownstream
+	// A backend that must use HTTP/1, a WebSocket one for example, wins over its own protocol.
+	case forceHTTP1UpstreamProtocol:
+		return upstreamProtocolHTTP1
+	case requiresHTTP2Options:
+		return upstreamProtocolHTTP2
+	case requiresHTTP1Options:
+		return upstreamProtocolHTTP1
+	case requiresAutoHTTPConfig:
+		return upstreamProtocolNegotiated
+	default:
+		return upstreamProtocolHTTP1
+	}
+}
+
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, upstreamProto upstreamProtocol,
+	requiresAutoHTTPConfig, requiresHTTP2Options, requiresHTTP1Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool,
+) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresCommonHTTPOptions := hasTimeoutArgs(args) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
-
-	requiresHTTP1Options := args.http1Settings != nil &&
-		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
 		args.admissionControl != nil
@@ -1258,28 +1301,17 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	}
 
 	http1Opts, http2Opts := buildHTTP1Settings(args.http1Settings), buildHTTP2Settings(args.http2Settings)
-	// When setting any Typed Extension Protocol Options, UpstreamProtocolOptions are mandatory
-	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
-	// Default to http1 otherwise
-	switch {
-	// If useClientProtocol is set, force Envoy to use the same protocol upstream as downstream, regardless of other settings.
-	case args.useClientProtocol:
+	// When setting any Typed Extension Protocol Options, UpstreamProtocolOptions are mandatory.
+	switch upstreamProto {
+	// Envoy uses the same protocol upstream as downstream.
+	case upstreamProtocolDownstream:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
 			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
 				HttpProtocolOptions:  http1Opts,
 				Http2ProtocolOptions: http2Opts,
 			},
 		}
-	// If forceHTTP1UpstreamProtocol is set, force Envoy to use HTTP1 upstream regardless of other settings.
-	case forceHTTP1UpstreamProtocol:
-		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
-			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
-				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
-					HttpProtocolOptions: http1Opts,
-				},
-			},
-		}
-	case requiresHTTP2Options:
+	case upstreamProtocolHTTP2:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{
@@ -1287,16 +1319,8 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 				},
 			},
 		}
-	case requiresHTTP1Options:
-		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
-			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
-				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
-					HttpProtocolOptions: http1Opts,
-				},
-			},
-		}
-	case requiresAutoHTTPConfig:
-		// use Auto when there's a transport socket
+	// Envoy negotiates the protocol per connection through ALPN, which requires a transport socket.
+	case upstreamProtocolNegotiated:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_AutoConfig{
 			AutoConfig: &httpv3.HttpProtocolOptions_AutoHttpConfig{
 				HttpProtocolOptions:  http1Opts,
@@ -1304,9 +1328,15 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 			},
 		}
 	default:
+		explicitHTTP1 := &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{}
+		// The HTTP/1 options are only attached when the upstream protocol was settled by
+		// them, or by a backend that must use HTTP/1.
+		if forceHTTP1UpstreamProtocol || requiresHTTP1Options {
+			explicitHTTP1.HttpProtocolOptions = http1Opts
+		}
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
-				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{},
+				ProtocolConfig: explicitHTTP1,
 			},
 		}
 	}
