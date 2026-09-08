@@ -127,3 +127,81 @@ http:
               name: "tls-grpc-dest/backend/0"
               tls:
                 insecureSkipVerify: true
+      # TLS backend declared as HTTP/2: the cluster uses a fixed protocol, so health check
+      # connections only offer that one.
+      - name: "tls-pinned-http2"
+        hostname: "*"
+        traffic:
+          healthCheck:
+            active:
+              timeout: "1s"
+              interval: "3s"
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              http:
+                path: "/healthz"
+                expectedStatuses:
+                  - 200
+        destination:
+          name: "tls-pinned-http2-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "tls-pinned-http2-dest/backend/0"
+              protocol: HTTP2
+              tls:
+                insecureSkipVerify: true
+      # TLS backend whose ALPN only leaves h2 negotiable: it can only speak HTTP/2, even
+      # though it isn't declared as an HTTP/2 backend.
+      - name: "tls-alpn-http2-only"
+        hostname: "*"
+        traffic:
+          healthCheck:
+            active:
+              timeout: "1s"
+              interval: "3s"
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              http:
+                path: "/healthz"
+                expectedStatuses:
+                  - 200
+        destination:
+          name: "tls-alpn-http2-only-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "tls-alpn-http2-only-dest/backend/0"
+              tls:
+                insecureSkipVerify: true
+                alpnProtocols:
+                  - h2
+      # TLS backend that allows both protocols: health checks negotiate the protocol the
+      # same way requests to the endpoint do.
+      - name: "tls-alpn-both"
+        hostname: "*"
+        traffic:
+          healthCheck:
+            active:
+              timeout: "1s"
+              interval: "3s"
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              http:
+                path: "/healthz"
+                expectedStatuses:
+                  - 200
+        destination:
+          name: "tls-alpn-both-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "tls-alpn-both-dest/backend/0"
+              tls:
+                insecureSkipVerify: true
+                alpnProtocols:
+                  - h2
+                  - http/1.1
