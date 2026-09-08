@@ -31,8 +31,9 @@ const (
 	// token buckets that Envoy keeps for each wildcard descriptor (an entry
 	// without a value, as produced by Distinct matches). Envoy defaults to 20,
 	// which is far too small for per-client limits on a public listener.
-	// Default to 10k, assuming a listener has 10k unique active users to be
-	// rate limited. We can make this configurable in the API if needed.
+	// Keep the intended capacity of 10k entries per wildcard descriptor in
+	// each route configuration; entries are allocated on demand. This can be
+	// made configurable in the API if needed.
 	localRateLimitMaxDynamicDescriptors = 10000
 )
 

@@ -94,6 +94,10 @@ var LocalRateLimitDistinctHeaderTest = suite.ConformanceTest{
 			cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
 			require.NoError(t, err)
 			require.NoError(t, http.CompareRoundTrip(t, &req, cReq, cRes, expectedResp))
+			// CompareRoundTrip checks response headers only on 200 and 204, so
+			// attribute the rejection to the original user's exhausted bucket.
+			require.Equal(t, []string{"3"}, cRes.Headers["X-Ratelimit-Limit"])
+			require.Equal(t, []string{"0"}, cRes.Headers["X-Ratelimit-Remaining"])
 		})
 
 		t.Run("requests with x-user-id header and matching x-org-id header should be limited per user", func(t *testing.T) {
