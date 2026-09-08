@@ -1891,6 +1891,15 @@ spec:
                                       specified
                                     rule: '!(has(self.number) && has(self.metadata))'
                               type: object
+                            detailedMetric:
+                              description: |-
+                                DetailedMetric indicates whether the rate limit service should emit detailed
+                                metrics for this rule, including the resolved descriptor value for each request.
+                                This makes the near-limit and over-limit metrics more granular, at the cost of
+                                potentially high metric cardinality if the descriptor has many distinct values.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             limit:
                               description: |-
                                 Limit holds the rate limit values.
@@ -2303,6 +2312,15 @@ spec:
                                       specified
                                     rule: '!(has(self.number) && has(self.metadata))'
                               type: object
+                            detailedMetric:
+                              description: |-
+                                DetailedMetric indicates whether the rate limit service should emit detailed
+                                metrics for this rule, including the resolved descriptor value for each request.
+                                This makes the near-limit and over-limit metrics more granular, at the cost of
+                                potentially high metric cardinality if the descriptor has many distinct values.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             limit:
                               description: |-
                                 Limit holds the rate limit values.
@@ -2399,6 +2417,9 @@ spec:
                         - message: limit fromMetadata is not supported for Local Rate
                             Limits
                           rule: self.all(r, !has(r.limit.fromMetadata))
+                        - message: detailedMetric is not supported for Local Rate
+                            Limits
+                          rule: self.all(r, !has(r.detailedMetric))
                     type: object
                   type:
                     description: |-

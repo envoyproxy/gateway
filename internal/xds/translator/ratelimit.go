@@ -801,6 +801,11 @@ func isRuleShadowMode(rule *ir.RateLimitRule) bool {
 	return rule != nil && rule.ShadowMode != nil && *rule.ShadowMode
 }
 
+// Helper function to check if a specific rule has detailed metrics enabled
+func isRuleDetailedMetric(rule *ir.RateLimitRule) bool {
+	return rule != nil && rule.DetailedMetric != nil && *rule.DetailedMetric
+}
+
 // Helper function to map a global rule index to a domain-specific rule index
 // This ensures that both shared and non-shared rules have indices starting from 0 in their own domains.
 func getDomainRuleIndex(rules []*ir.RateLimitRule, globalRuleIdx int, ruleIsShared bool) int {
@@ -856,6 +861,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		for mIdx, match := range rule.HeaderMatches {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.DetailedMetric = isRuleDetailedMetric(rule)
 			// Distinct vs HeaderValueMatch
 			if match.Distinct {
 				// RequestHeader case
@@ -881,6 +887,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		if len(rule.MethodMatches) > 0 {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.DetailedMetric = isRuleDetailedMetric(rule)
 			pbDesc.Key = getRouteRuleMethodDescriptor(domainRuleIdx)
 			pbDesc.Value = getRouteRuleMethodDescriptor(domainRuleIdx)
 
@@ -901,6 +908,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		if rule.PathMatch != nil {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.DetailedMetric = isRuleDetailedMetric(rule)
 			pbDesc.Key = getRouteRulePathDescriptor(domainRuleIdx)
 			pbDesc.Value = getRouteRulePathDescriptor(domainRuleIdx)
 
@@ -943,6 +951,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			// MaskedRemoteAddress case.
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.DetailedMetric = isRuleDetailedMetric(rule)
 			pbDesc.Key = descriptorKeyMaskedRemoteAddress
 			pbDesc.Value = exactCIDRDescriptorValue(rule.CIDRMatch.CIDR, rule.CIDRMatch.Invert)
 
@@ -958,6 +967,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			if rule.CIDRMatch.Distinct {
 				pbDesc := new(rlsconfv3.RateLimitDescriptor)
 				pbDesc.ShadowMode = isRuleShadowMode(rule)
+				pbDesc.DetailedMetric = isRuleDetailedMetric(rule)
 				pbDesc.Key = descriptorKeyRemoteAddress
 				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
 				cur = pbDesc
@@ -970,6 +980,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		for mIdx, queryParam := range rule.QueryParamMatches {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.DetailedMetric = isRuleDetailedMetric(rule)
 			// Use the same descriptor key pattern as header matches for consistency.
 			// For distinct matches, only set the key; for non-distinct, set both key and value.
 			if queryParam.Distinct {
@@ -995,6 +1006,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.DetailedMetric = isRuleDetailedMetric(rule)
 			pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, -1)
 			pbDesc.Value = getRouteRuleDescriptor(domainRuleIdx, -1)
 			head = pbDesc
