@@ -3317,7 +3317,9 @@ func (in *JWTProvider) DeepCopyInto(out *JWTProvider) {
 	if in.ClaimToHeaders != nil {
 		in, out := &in.ClaimToHeaders, &out.ClaimToHeaders
 		*out = make([]v1alpha1.ClaimToHeader, len(*in))
-		copy(*out, *in)
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.RecomputeRoute != nil {
 		in, out := &in.RecomputeRoute, &out.RecomputeRoute

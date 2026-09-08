@@ -1932,8 +1932,16 @@ func validateJWTProvider(providers []egv1a1.JWTProvider) error {
 			switch {
 			case len(claimToHeader.Header) == 0:
 				errs = append(errs, fmt.Errorf("header must be set for claimToHeader provider: %s", claimToHeader.Header))
-			case len(claimToHeader.Claim) == 0:
-				errs = append(errs, fmt.Errorf("claim must be set for claimToHeader provider: %s", claimToHeader.Claim))
+			case len(claimToHeader.Claim) == 0 && len(claimToHeader.ClaimPath) == 0:
+				errs = append(errs, fmt.Errorf("either claim or claimPath must be set for claimToHeader header: %s", claimToHeader.Header))
+			case len(claimToHeader.Claim) != 0 && len(claimToHeader.ClaimPath) != 0:
+				errs = append(errs, fmt.Errorf("only one of claim or claimPath may be set for claimToHeader header: %s", claimToHeader.Header))
+			}
+			for _, segment := range claimToHeader.ClaimPath {
+				if len(segment) == 0 {
+					errs = append(errs, fmt.Errorf("claimPath segments must not be empty for claimToHeader header: %s", claimToHeader.Header))
+					break
+				}
 			}
 		}
 	}
