@@ -1564,7 +1564,17 @@ func (t *Translator) buildWasms(
 
 	wasmIRList := make([]ir.Wasm, 0, len(policy.Spec.Wasm))
 
-	if t.WasmCache == nil {
+	// Local Wasm code sources are read directly from the Envoy proxy's filesystem
+	// and do not require the Wasm cache. Only check the cache when there are
+	// non-local (HTTP or Image) sources.
+	needsCache := false
+	for _, wasm := range policy.Spec.Wasm {
+		if wasm.Code.Type != egv1a1.LocalWasmCodeSourceType {
+			needsCache = true
+			break
+		}
+	}
+	if needsCache && t.WasmCache == nil {
 		return nil, fmt.Errorf("wasm cache is not initialized"), failOpen
 	}
 
@@ -1605,6 +1615,7 @@ func (t *Translator) buildWasm(
 	var (
 		failOpen   = false
 		code       *ir.HTTPWasmCode
+		localCode  *ir.LocalWasmCode
 		pullPolicy wasm.PullPolicy
 		// the checksum provided by the user, it's used to validate the wasm module
 		// downloaded from the original HTTP server or the OCI registry
@@ -1751,6 +1762,16 @@ func (t *Translator) buildWasm(
 			SHA256:      checksum,
 			OriginalURL: imageURL,
 		}
+	case egv1a1.LocalWasmCodeSourceType:
+		// This is a sanity check, the validation should have caught this
+		if config.Code.Local == nil {
+			return nil, fmt.Errorf("missing Local field in Wasm code source")
+		}
+
+		localCode = &ir.LocalWasmCode{
+			Filename: config.Code.Local.Filename,
+		}
+
 	default:
 		// should never happen because of kubebuilder validation, just a sanity check
 		return nil, fmt.Errorf("unsupported Wasm code source type %q", config.Code.Type)
@@ -1761,12 +1782,13 @@ func (t *Translator) buildWasm(
 		wasmName = *config.Name
 	}
 	wasmIR := &ir.Wasm{
-		Name:     name,
-		RootID:   config.RootID,
-		WasmName: wasmName,
-		Config:   config.Config,
-		FailOpen: failOpen,
-		Code:     code,
+		Name:      name,
+		RootID:    config.RootID,
+		WasmName:  wasmName,
+		Config:    config.Config,
+		FailOpen:  failOpen,
+		Code:      code,
+		LocalCode: localCode,
 	}
 
 	if config.Env != nil && len(config.Env.HostKeys) > 0 {
