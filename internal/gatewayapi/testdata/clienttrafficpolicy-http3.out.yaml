@@ -5,7 +5,8 @@ clientTrafficPolicies:
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
-    http3: {}
+    http3:
+      advertisedPort: 8443
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -217,7 +218,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - http3: {}
+      - http3:
+          advertisedPort: 8443
         name: envoy-gateway/gateway-1/https-wildcard
         ports:
         - containerPort: 10443
@@ -264,7 +266,8 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*.wildcard.example.com'
-      http3: {}
+      http3:
+        advertisedPort: 8443
       metadata:
         kind: Gateway
         name: gateway-1
@@ -287,7 +290,8 @@ xdsIR:
       externalPort: 443
       hostnames:
       - foo.example.com
-      http3: {}
+      http3:
+        advertisedPort: 8443
       metadata:
         kind: Gateway
         name: gateway-1
@@ -341,7 +345,8 @@ xdsIR:
       externalPort: 443
       hostnames:
       - bar.example.com
-      http3: {}
+      http3:
+        advertisedPort: 8443
       metadata:
         kind: Gateway
         name: gateway-1
