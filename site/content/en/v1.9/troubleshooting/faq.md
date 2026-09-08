@@ -31,7 +31,7 @@ Gateway and kube-apiserver negotiates HTTP/2 instead, that upgrade request has n
 the request resets. `get`/`list`/`watch` don't ask for an upgrade, so HTTP/2 handles them without
 issue.
 
-There are three ways to fix this:
+There are two ways to fix this:
 
 1. **Match the upstream protocol to the client's, on the route (recommended)**
 
@@ -61,26 +61,7 @@ There are three ways to fix this:
    `spdy/3.1` (older versions) and `websocket` (current versions) across its history, so list both
    unless you control every client's kubectl version.
 
-2. **Force HTTP/1.1 on the Gateway**
-
-   A `ClientTrafficPolicy` with `http1: {}` targeting the `Gateway` avoids the negotiation
-   question for that listener entirely, at the cost of also affecting every other route on it.
-
-   ```yaml
-   apiVersion: gateway.envoyproxy.io/v1alpha1
-   kind: ClientTrafficPolicy
-   metadata:
-     name: kube-api
-     namespace: default
-   spec:
-     targetRefs:
-       - group: gateway.networking.k8s.io
-         kind: Gateway
-         name: envoy
-     http1: {}
-   ```
-
-3. **Use a `TLSRoute` instead of an `HTTPRoute`**
+2. **Use a `TLSRoute` instead of an `HTTPRoute`**
 
    Passing the connection through at L4 avoids terminating TLS (and negotiating HTTP/2) at the
    gateway at all. This only works if kube-apiserver's own certificate is valid for the hostname
@@ -89,16 +70,9 @@ There are three ways to fix this:
 
 {{% alert title="Recommendation" color="primary" %}}
 Option 1 (`useClientProtocol: true`) is the best default: it's scoped to a single route and keeps
-HTTP/2 for every call that doesn't need an upgrade. Reach for option 2 only if you're fine forcing
-HTTP/1.1 gateway-wide, and option 3 only if you control the apiserver's certificate.
+HTTP/2 for every call that doesn't need an upgrade. Reach for option 2 only if you control the
+apiserver's certificate.
 {{% /alert %}}
-
-As a one-off, client-side-only workaround that needs no gateway changes, you can also force
-kubectl's own HTTP client down to HTTP/1.1 for a single command:
-
-```shell
-GODEBUG=http2client=0 kubectl exec -ti <pod> -- sh
-```
 
 ## Why does `kubectl logs -f` fail or get cut off after a while?
 
