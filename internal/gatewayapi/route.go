@@ -25,6 +25,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -304,6 +305,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		gatewayCtx := GetRouteParentContext(httpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
 		btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, httpRoute, parentRef, rule.Name)
+		btpEndpointHostname := t.resolveBTPEndpointHostname(gatewayCtx, httpRoute, parentRef, rule.Name)
 
 		var mergeUnsafeForRule bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
@@ -320,7 +322,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 
 			// backendDest.ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			backendDest, unstructuredRef, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, httpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeUnsafeForRule)
+			backendDest, unstructuredRef, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, httpRoute, resources, gatewayCtx, btpRoutingType, btpEndpointHostname, xdsIR, mergeUnsafeForRule)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -542,6 +544,23 @@ func (t *Translator) rejectPathRegexHostRewriteWithDynamicResolver(
 	}
 }
 
+// parentListenerSetNN returns the ListenerSet parentRef attaches through, or nil when the route
+// attaches directly to a Gateway. BTP index lookups need it to tell the two sibling listener
+// scopes apart.
+func parentListenerSetNN(routeCtx RouteContext, parentRef *RouteParentContext) *types.NamespacedName {
+	if parentRef.Kind == nil || *parentRef.Kind != resource.KindListenerSet {
+		return nil
+	}
+	parentNamespace := routeCtx.GetNamespace()
+	if parentRef.Namespace != nil {
+		parentNamespace = string(*parentRef.Namespace)
+	}
+	return &types.NamespacedName{
+		Namespace: parentNamespace,
+		Name:      string(parentRef.Name),
+	}
+}
+
 // resolveBTPRoutingType resolves the effective BTP RoutingType override (if any) for a route
 // rule, given gatewayCtx already resolved.
 func (t *Translator) resolveBTPRoutingType(
@@ -553,23 +572,33 @@ func (t *Translator) resolveBTPRoutingType(
 	if gatewayCtx == nil {
 		return nil
 	}
-	var listenerSetNN *types.NamespacedName
-	if parentRef.Kind != nil && *parentRef.Kind == resource.KindListenerSet {
-		parentNamespace := routeCtx.GetNamespace()
-		if parentRef.Namespace != nil {
-			parentNamespace = string(*parentRef.Namespace)
-		}
-		listenerSetNN = &types.NamespacedName{
-			Namespace: parentNamespace,
-			Name:      string(parentRef.Name),
-		}
-	}
 	return t.BTPRoutingTypeIndex.LookupBTPRoutingType(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
 		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
 		parentRef.SectionName,
-		listenerSetNN,
+		parentListenerSetNN(routeCtx, parentRef),
+		routeRuleName,
+	)
+}
+
+// resolveBTPEndpointHostname resolves the effective BTP EndpointHostname (if any) for a route
+// rule, given gatewayCtx already resolved. It's resolveBTPRoutingType's counterpart.
+func (t *Translator) resolveBTPEndpointHostname(
+	gatewayCtx *GatewayContext,
+	routeCtx RouteContext,
+	parentRef *RouteParentContext,
+	routeRuleName *gwapiv1.SectionName,
+) *egv1a1.BackendEndpointHostname {
+	if gatewayCtx == nil {
+		return nil
+	}
+	return t.BTPEndpointHostnameIndex.LookupBTPEndpointHostname(
+		routeCtx.GetRouteType(),
+		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
+		types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
+		parentRef.SectionName,
+		parentListenerSetNN(routeCtx, parentRef),
 		routeRuleName,
 	)
 }
@@ -768,10 +797,11 @@ func (t *Translator) processBackendRef(
 	resources *resource.Resources,
 	gatewayCtx *GatewayContext,
 	btpRoutingType *egv1a1.RoutingType,
+	btpEndpointHostname *egv1a1.BackendEndpointHostname,
 	xdsIR resource.XdsIRMap,
 	mergeUnsafeForRule bool,
 ) (backendDest routeBackendRefDestination, unstructuredRef *ir.UnstructuredRef, err status.Error) {
-	ds, unstructuredRef, err := t.processDestination(irDestinationSettingName(destName, backendIdx), backendRefContext, parentRef, route, resources, gatewayCtx, btpRoutingType, xdsIR)
+	ds, unstructuredRef, err := t.processDestination(irDestinationSettingName(destName, backendIdx), backendRefContext, parentRef, route, resources, gatewayCtx, btpRoutingType, btpEndpointHostname, xdsIR)
 
 	backendRef := backendRefContext.GetBackendRef().BackendObjectReference
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
@@ -1557,6 +1587,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 		gatewayCtx := GetRouteParentContext(grpcRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
 		btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, grpcRoute, parentRef, rule.Name)
+		btpEndpointHostname := t.resolveBTPEndpointHostname(gatewayCtx, grpcRoute, parentRef, rule.Name)
 
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
@@ -1572,7 +1603,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				Filters:    rule.BackendRefs[i].Filters,
 			}
 			// backendDest.ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, grpcRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, grpcRoute, resources, gatewayCtx, btpRoutingType, btpEndpointHostname, xdsIR, mergeIncompatible)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -2324,6 +2355,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, tlsRoute, parentRef, rule.Name)
+			btpEndpointHostname := t.resolveBTPEndpointHostname(gatewayCtx, tlsRoute, parentRef, rule.Name)
 
 			var mergeIncompatible bool
 			if mergeBackendsEnabled {
@@ -2334,7 +2366,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
 
 				// backendDest.ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-				backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+				backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tlsRoute, resources, gatewayCtx, btpRoutingType, btpEndpointHostname, xdsIR, mergeIncompatible)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
@@ -2560,6 +2592,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 		gatewayCtx := GetRouteParentContext(udpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
 		btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, udpRoute, parentRef, udpRoute.Spec.Rules[0].Name)
+		btpEndpointHostname := t.resolveBTPEndpointHostname(gatewayCtx, udpRoute, parentRef, udpRoute.Spec.Rules[0].Name)
 
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
@@ -2571,7 +2604,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
 
 			// backendDest.ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, btpEndpointHostname, xdsIR, mergeIncompatible)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
@@ -2725,6 +2758,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 		gatewayCtx := GetRouteParentContext(tcpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
 		btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name)
+		btpEndpointHostname := t.resolveBTPEndpointHostname(gatewayCtx, tcpRoute, parentRef, tcpRoute.Spec.Rules[0].Name)
 
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
@@ -2734,7 +2768,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
-			backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
+			backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, btpEndpointHostname, xdsIR, mergeIncompatible)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				resolveErrs.Add(err)
@@ -2850,7 +2884,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // This will result in a direct 500 response for HTTP-based requests.
 func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
-	gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType, xdsIR resource.XdsIRMap,
+	gatewayCtx *GatewayContext, btpRoutingType *egv1a1.RoutingType,
+	btpEndpointHostname *egv1a1.BackendEndpointHostname, xdsIR resource.XdsIRMap,
 ) (ds *ir.DestinationSetting, unstructuredRef *ir.UnstructuredRef, err status.Error) {
 	var (
 		routeType  = route.GetRouteType()
@@ -2919,7 +2954,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			return emptyDS, nil, err
 		}
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
+		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType, btpEndpointHostname)
 		if err != nil {
 			return emptyDS, nil, err
 		}
@@ -2960,7 +2995,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	if filtersErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
-
 	if err := validateDestinationSettings(ds, t.IsServiceRouting(envoyProxy, btpRoutingType), backendRef.Kind); err != nil {
 		return emptyDS, nil, err
 	}
@@ -2987,6 +3021,13 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, isS
 	}
 
 	return nil
+}
+
+func (t *Translator) dnsDomain() string {
+	if t.DNSDomain != "" {
+		return t.DNSDomain
+	}
+	return config.DefaultDNSDomain
 }
 
 // isServiceHeadless reports true when a Kubernetes Service is headless.
@@ -3044,7 +3085,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	useEndpointRouting := !t.IsServiceRouting(envoyProxy, btpRoutingType) || isHeadless
 	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
-		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol), nil)
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related ServiceImport %s/%s", backendNamespace, backendRef.Name),
@@ -3076,6 +3117,7 @@ func (t *Translator) processServiceDestinationSetting(
 	defaultProtocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
+	btpEndpointHostname *egv1a1.BackendEndpointHostname,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
@@ -3114,9 +3156,10 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// Route to endpoints by default, or if service routing is enabled but service is headless
 	useEndpointRouting := !t.IsServiceRouting(envoyProxy, btpRoutingType) || isHeadless
+	endpointHostname := t.serviceEndpointHostname(service, btpEndpointHostname)
 	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
-		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol), endpointHostname)
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related Service %s/%s", backendNamespace, backendRef.Name),
@@ -3125,7 +3168,7 @@ func (t *Translator) processServiceDestinationSetting(
 		}
 	} else {
 		// Use Service ClusterIP routing
-		ep := ir.NewDestEndpoint(nil, service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
+		ep := ir.NewDestEndpoint(endpointHostname, service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
 		endpoints = append(endpoints, ep)
 	}
 
@@ -3138,6 +3181,27 @@ func (t *Translator) processServiceDestinationSetting(
 		PreferLocal:        processPreferLocalZone(service),
 		Metadata:           buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
+}
+
+func (t *Translator) serviceEndpointHostname(service *corev1.Service, endpointHostname *egv1a1.BackendEndpointHostname) *string {
+	if endpointHostname == nil {
+		return nil
+	}
+
+	switch endpointHostname.Type {
+	case egv1a1.BackendEndpointHostnameTypeKubernetesService:
+		if service == nil || service.Name == "" || service.Namespace == "" {
+			return nil
+		}
+		return new(fmt.Sprintf("%s.%s.svc.%s", service.Name, service.Namespace, t.dnsDomain()))
+	case egv1a1.BackendEndpointHostnameTypeStatic:
+		if endpointHostname.Hostname == nil || *endpointHostname.Hostname == "" {
+			return nil
+		}
+		return endpointHostname.Hostname
+	default:
+		return nil
+	}
 }
 
 func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {
@@ -3329,7 +3393,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 	return relevantRoute
 }
 
-func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
+func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol, endpointHostname *string) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
 	var (
 		dstEndpoints []*ir.DestinationEndpoint
 		dstAddrType  *ir.DestinationAddressType
@@ -3342,7 +3406,7 @@ func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlic
 		} else {
 			addrTypeMap[ir.IP]++
 		}
-		endpoints := getIREndpointsFromEndpointSlice(endpointSlice, portName, portProtocol)
+		endpoints := getIREndpointsFromEndpointSlice(endpointSlice, portName, portProtocol, endpointHostname)
 		dstEndpoints = append(dstEndpoints, endpoints...)
 	}
 
@@ -3360,7 +3424,7 @@ func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlic
 	return dstEndpoints, dstAddrType
 }
 
-func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
+func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol, endpointHostname *string) []*ir.DestinationEndpoint {
 	var endpoints []*ir.DestinationEndpoint
 	for _, endpoint := range endpointSlice.Endpoints {
 		for _, endpointPort := range endpointSlice.Ports {
@@ -3382,7 +3446,7 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 			}
 
 			for _, address := range endpoint.Addresses {
-				ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
+				ep := ir.NewDestEndpoint(endpointHostname, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
 				endpoints = append(endpoints, ep)
 			}
 

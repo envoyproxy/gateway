@@ -110,7 +110,7 @@ func (t *Translator) processExtServiceDestination(
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, gtwCtx.envoyProxy, nil)
+		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, gtwCtx.envoyProxy, nil, nil)
 		if err != nil {
 			return nil, err
 		}
