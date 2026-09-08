@@ -1,0 +1,1 @@
+BackendTrafficPolicy now rejects `compressor` entries that omit the codec configuration matching their `type`. Add the matching empty codec object, such as `type: Gzip` with `gzip: {}`. Merge policies may still use a missing codec configuration to disable an inherited compressor.

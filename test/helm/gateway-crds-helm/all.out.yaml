@@ -25023,6 +25023,8 @@ spec:
                   The compressor config for the http streams.
                   This provides more granular control over compression configuration.
                   Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal.
+                  Each entry must configure the codec matching its type, for example, type: Gzip with gzip: {}.
+                  A merge policy may omit the matching codec configuration to disable an inherited compressor.
                 items:
                   description: |-
                     Compression defines the config of enabling compression.
@@ -28169,6 +28171,13 @@ spec:
                 in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])))'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
+            - message: compressor type must match its configuration; merge policies
+                may omit the configuration to disable that compressor
+              rule: '!has(self.compressor) || self.compressor.all(c, (c.type == ''Gzip''
+                && !has(c.brotli) && !has(c.zstd) && (has(c.gzip) || has(self.mergeType)))
+                || (c.type == ''Brotli'' && !has(c.gzip) && !has(c.zstd) && (has(c.brotli)
+                || has(self.mergeType))) || (c.type == ''Zstd'' && !has(c.brotli)
+                && !has(c.gzip) && (has(c.zstd) || has(self.mergeType))))'
             - message: requestBuffer cannot be used together with httpUpgrade
               rule: '!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size()
                 == 0'
