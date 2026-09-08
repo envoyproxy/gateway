@@ -66,9 +66,34 @@ The `example-route` matches any traffic for "example.com" and forwards it to the
 
 Before testing HTTP routing to the `example-svc` backend, get the Gateway's address.
 
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/example-gateway -o jsonpath='{.status.addresses[0].value}')
 ```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
+Get the name of the Envoy service created by the example Gateway:
+
+```shell
+export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=example-gateway -o jsonpath='{.items[0].metadata.name}')
+```
+
+Port forward to the Envoy service:
+
+```shell
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
+```
+
+```shell
+export GATEWAY_HOST=localhost:8888
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Test HTTP routing to the `example-svc` backend.
 
