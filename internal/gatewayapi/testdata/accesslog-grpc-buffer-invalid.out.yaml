@@ -1,3 +1,21 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-otel
+    namespace: envoy-gateway
+  spec:
+    endpoints:
+    - ip:
+        address: 2.2.2.2
+        port: 4317
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -16,8 +34,8 @@ gateways:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Invalid access log configuration in the referenced EnvoyProxy: service
-        monitoring/service-not-found not found'
+      message: 'Invalid access log configuration in the referenced EnvoyProxy: access
+        log buffer sizeBytes value 5Gi is out of range'
       reason: InvalidParameters
       status: "False"
       type: Accepted
@@ -56,72 +74,19 @@ infraIR:
           namespace: envoy-gateway-system
         spec:
           logging: {}
-          provider:
-            kubernetes:
-              envoyDeployment:
-                container:
-                  env:
-                  - name: env_a
-                    value: env_a_value
-                  - name: env_b
-                    value: env_b_name
-                  image: envoyproxy/envoy:distroless-dev
-                  resources:
-                    requests:
-                      cpu: 100m
-                      memory: 512Mi
-                  securityContext:
-                    allowPrivilegeEscalation: false
-                    runAsUser: 2000
-                pod:
-                  affinity:
-                    nodeAffinity:
-                      requiredDuringSchedulingIgnoredDuringExecution:
-                        nodeSelectorTerms:
-                        - matchExpressions:
-                          - key: cloud.google.com/gke-nodepool
-                            operator: In
-                            values:
-                            - router-node
-                  annotations:
-                    key1: val1
-                    key2: val2
-                  securityContext:
-                    fsGroup: 2000
-                    fsGroupChangePolicy: OnRootMismatch
-                    runAsGroup: 3000
-                    runAsUser: 1000
-                  tolerations:
-                  - effect: NoSchedule
-                    key: node-type
-                    operator: Exists
-                    value: router
-                  volumes:
-                  - name: certs
-                    secret:
-                      secretName: envoy-cert
-                replicas: 2
-              envoyService:
-                type: LoadBalancer
-            type: Kubernetes
           telemetry:
             accessLog:
               settings:
-              - format:
-                  text: |
-                    [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-                  type: Text
-                sinks:
-                - file:
-                    path: /dev/stdout
-                  type: File
+              - sinks:
                 - openTelemetry:
                     backendRefs:
-                    - name: service-not-found
-                      namespace: monitoring
+                    - group: gateway.envoyproxy.io
+                      kind: Backend
+                      name: backend-otel
+                      namespace: envoy-gateway
                       port: 4317
-                    resourceAttributes:
-                      k8s.cluster.name: cluster-1
+                    buffer:
+                      sizeBytes: 5Gi
                   type: OpenTelemetry
         status: {}
       listeners:

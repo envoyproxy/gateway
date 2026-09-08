@@ -5,7 +5,10 @@
 
 package v1alpha1
 
-import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+import (
+	"k8s.io/apimachinery/pkg/api/resource"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 type ProxyAccessLog struct {
 	// Disable disables access logging for managed proxies if set to true.
@@ -134,6 +137,36 @@ type ProxyAccessLogSink struct {
 	OpenTelemetry *OpenTelemetryEnvoyProxyAccessLog `json:"openTelemetry,omitempty"`
 }
 
+// GRPCAccessLogBufferSettings configures how Envoy buffers access log entries before
+// flushing them to a gRPC access log sink.
+//
+// Entries accumulate until FlushInterval elapses or SizeBytes worth have been buffered,
+// whichever comes first, at which point Envoy flushes. Entries are discarded, and counted
+// by the sink's `logs_dropped` stat, only when a flush cannot drain the buffer. How much
+// of a sink outage the buffer absorbs therefore depends on both settings, since only
+// entries still buffered when the sink returns are delivered.
+type GRPCAccessLogBufferSettings struct {
+	// FlushInterval defines how often buffered access log entries are flushed to the sink.
+	// Entries are flushed when this interval elapses or when SizeBytes worth of entries have
+	// been buffered, whichever comes first.
+	// Must be greater than 0. Defaults to 1s.
+	//
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="flushInterval must be greater than 0"
+	// +optional
+	FlushInterval *gwapiv1.Duration `json:"flushInterval,omitempty"`
+	// SizeBytes defines the soft size limit of the access log entry buffer.
+	// For example, 20Mi, 1Gi, 256Ki etc.
+	// Note that when the suffix is not provided, the value is interpreted as bytes.
+	// Envoy carries this as a 32-bit unsigned integer, so values of 4Gi and above are
+	// rejected when the EnvoyProxy is translated rather than at admission.
+	// Defaults to 16384 bytes.
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	SizeBytes *resource.Quantity `json:"sizeBytes,omitempty"`
+}
+
 type ALSEnvoyProxyAccessLogType string
 
 const (
@@ -169,6 +202,10 @@ type ALSEnvoyProxyAccessLog struct {
 	// HTTP defines additional configuration specific to HTTP access logs.
 	// +optional
 	HTTP *ALSEnvoyProxyHTTPAccessLogConfig `json:"http,omitempty"`
+	// Buffer defines how access log entries are buffered before being flushed to the
+	// access log service.
+	// +optional
+	Buffer *GRPCAccessLogBufferSettings `json:"buffer,omitempty"`
 }
 
 type ALSEnvoyProxyHTTPAccessLogConfig struct {
@@ -228,6 +265,10 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=32
 	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
+	// Buffer defines how access log entries are buffered before being flushed to the
+	// OpenTelemetry collector.
+	// +optional
+	Buffer *GRPCAccessLogBufferSettings `json:"buffer,omitempty"`
 
 	// TODO: support more OpenTelemetry accesslog options(e.g. TLS, auth etc.) in the future.
 }
