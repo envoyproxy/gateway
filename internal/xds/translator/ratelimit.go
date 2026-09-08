@@ -39,6 +39,7 @@ const (
 	descriptorKeyRemoteAddress                     = "remote_address"
 	descriptorValueInvertPrefix                    = "invert:"
 	downstreamRemoteAddressWithoutPortCelFormatter = "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+	namedRuleDescriptorIndex                       = -1
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -257,33 +258,17 @@ func buildRouteRateLimits(listenerName string, route *ir.HTTPRoute) map[string][
 			// Create a list of rate limit actions for the current rule.
 			var rlActions []*routev3.RateLimit_Action
 
-			// Create the route descriptor using the rule's shared attribute
-			var descriptorKey, descriptorValue string
 			if ruleShared {
-				// For shared rule, use full rule name
-				descriptorKey = rule.Name
-				descriptorValue = rule.Name
+				rlActions = append(rlActions, buildGenericKeyRateLimitAction(rule.Name))
 			} else {
-				// For non-shared rule, use route name in descriptor
-				descriptorKey = getRouteDescriptor(route.Name)
-				descriptorValue = descriptorKey
+				rlActions = append(rlActions, buildGenericKeyRateLimitAction(getRouteDescriptor(route.Name)))
+				if rule.NameFromUser {
+					rlActions = append(rlActions, buildGenericKeyRateLimitAction(rule.Name))
+				}
 			}
-
-			// Create a generic key action for the route descriptor.
-			routeDescriptor := &routev3.RateLimit_Action{
-				ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
-					GenericKey: &routev3.RateLimit_Action_GenericKey{
-						DescriptorKey:   descriptorKey,
-						DescriptorValue: descriptorValue,
-					},
-				},
-			}
-
-			// Add the generic key action
-			rlActions = append(rlActions, routeDescriptor)
 
 			// Calculate the domain-specific rule index (0-based for each domain)
-			domainRuleIdx := getDomainRuleIndex(global.Rules, rIdx, ruleShared)
+			domainRuleIdx := getRuleDescriptorIndex(rule, getDomainRuleIndex(global.Rules, rIdx, ruleShared))
 
 			// Process each header match in the rule.
 			buildHeaderMatchRateLimitActions(&rlActions, domainRuleIdx, rule.HeaderMatches)
@@ -343,6 +328,17 @@ func buildRouteRateLimits(listenerName string, route *ir.HTTPRoute) map[string][
 		}
 	}
 	return rateLimitsByDomain
+}
+
+func buildGenericKeyRateLimitAction(descriptor string) *routev3.RateLimit_Action {
+	return &routev3.RateLimit_Action{
+		ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
+			GenericKey: &routev3.RateLimit_Action_GenericKey{
+				DescriptorKey:   descriptor,
+				DescriptorValue: descriptor,
+			},
+		},
+	}
 }
 
 // toEnvoyXRateLimitOption maps the EG API XRateLimitHeadersOption to the Envoy
@@ -778,6 +774,14 @@ func addRateLimitDescriptor(
 		domainDescriptors[domain] = append(domainDescriptors[domain], descriptorRule)
 	}
 
+	if !isRuleShared(rule) && rule.NameFromUser {
+		descriptor = &rlsconfv3.RateLimitDescriptor{
+			Key:         rule.Name,
+			Value:       rule.Name,
+			Descriptors: []*rlsconfv3.RateLimitDescriptor{descriptor},
+		}
+	}
+
 	// Ensure no duplicate descriptors
 	alreadyExists := false
 	for _, existing := range descriptorRule.Descriptors {
@@ -850,7 +854,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 
 		// Calculate the domain-specific rule index (0-based for each domain)
 		ruleIsShared := isRuleShared(rule)
-		domainRuleIdx := getDomainRuleIndex(global.Rules, rIdx, ruleIsShared)
+		domainRuleIdx := getRuleDescriptorIndex(rule, getDomainRuleIndex(global.Rules, rIdx, ruleIsShared))
 
 		// 1) Header Matches
 		for mIdx, match := range rule.HeaderMatches {
@@ -1010,23 +1014,48 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 }
 
 func getRouteRuleDescriptor(ruleIndex, matchIndex int) string {
+	if ruleIndex < 0 {
+		if matchIndex < 0 {
+			return "rule-no-match"
+		}
+		return "rule-match-" + strconv.Itoa(matchIndex)
+	}
 	return "rule-" + strconv.Itoa(ruleIndex) + "-match-" + strconv.Itoa(matchIndex)
 }
 
 func getRouteRuleMethodDescriptor(ruleIndex int) string {
+	if ruleIndex < 0 {
+		return "rule-method"
+	}
 	return "rule-" + strconv.Itoa(ruleIndex) + "-method"
 }
 
 func getRouteRulePathDescriptor(ruleIndex int) string {
+	if ruleIndex < 0 {
+		return "rule-path"
+	}
 	return "rule-" + strconv.Itoa(ruleIndex) + "-path"
 }
 
 func getRouteRuleMaskedRemoteAddressDescriptor(ruleIndex int) string {
+	if ruleIndex < 0 {
+		return "rule-masked-remote-address"
+	}
 	return "rule-" + strconv.Itoa(ruleIndex) + "-masked-remote-address"
 }
 
 func getRouteRuleRemoteAddressDescriptor(ruleIndex int) string {
+	if ruleIndex < 0 {
+		return "rule-remote-address"
+	}
 	return "rule-" + strconv.Itoa(ruleIndex) + "-remote-address"
+}
+
+func getRuleDescriptorIndex(rule *ir.RateLimitRule, fallback int) int {
+	if rule.NameFromUser {
+		return namedRuleDescriptorIndex
+	}
+	return fallback
 }
 
 func getRouteDescriptor(routeName string) string {
