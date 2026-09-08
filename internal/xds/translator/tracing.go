@@ -44,7 +44,11 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	var providerName string
 	var providerConfig typConfigGen
 
-	switch tracing.Provider.Type {
+	// Defaulted here as well as in the Gateway API translation, so that an IR built
+	// without an explicit provider type still resolves to the documented default.
+	providerType := ptr.Deref(tracing.Provider.Type, egv1a1.DefaultTracingProviderType)
+
+	switch providerType {
 	case egv1a1.TracingProviderTypeDatadog:
 		providerName = envoyDatadog
 
@@ -99,7 +103,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 			return proto.ToAnyWithValidation(config)
 		}
 	default:
-		return nil, fmt.Errorf("unknown tracing provider type: %s", tracing.Provider.Type)
+		return nil, fmt.Errorf("unknown tracing provider type: %s", providerType)
 	}
 
 	ocAny, err := providerConfig()

@@ -1380,7 +1380,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				},
 				Tracing: &egv1a1.ProxyTracing{
 					Provider: egv1a1.TracingProvider{
-						Type: egv1a1.TracingProviderTypeOpenTelemetry,
+						Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
 						BackendCluster: egv1a1.BackendCluster{
 							BackendRefs: []egv1a1.BackendRef{
 								{
