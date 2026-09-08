@@ -195,6 +195,9 @@ securityPolicies:
         headersToBackend:
         - header1
         - header2
+        headersToClientOnSuccess:
+        - set-cookie
+        - x-rate-limit-remaining
         path: /auth
     targetRef:
       group: gateway.networking.k8s.io
@@ -442,6 +445,9 @@ xdsIR:
               headersToBackend:
               - header1
               - header2
+              headersToClientOnSuccess:
+              - set-cookie
+              - x-rate-limit-remaining
               path: /auth
             name: securitypolicy/default/policy-for-gateway-1
     readyListener:

@@ -3957,6 +3957,15 @@ spec:
                         items:
                           type: string
                         type: array
+                      headersToClientOnSuccess:
+                        description: |-
+                          HeadersToClientOnSuccess are the authorization response headers that will be added
+                          to the response sent to the client when the authorization response is successful.
+                          If not specified, no authorization response headers will be added to the client
+                          response on success.
+                        items:
+                          type: string
+                        type: array
                       path:
                         description: |-
                           Path is the path of the HTTP External Authorization service.

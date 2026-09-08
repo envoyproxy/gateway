@@ -71,6 +71,7 @@ spec:
         namespace: gateway-conformance-infra
         port: 8080
       headersToBackend: ["x-current-user", "x-ext-auth-req-path"]
+      headersToClientOnSuccess: ["set-cookie"]
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy

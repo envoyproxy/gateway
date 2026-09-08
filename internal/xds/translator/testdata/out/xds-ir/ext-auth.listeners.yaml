@@ -21,6 +21,12 @@
             failureModeAllow: true
             httpService:
               authorizationResponse:
+                allowedClientHeadersOnSuccess:
+                  patterns:
+                  - exact: set-cookie
+                    ignoreCase: true
+                  - exact: x-rate-limit-remaining
+                    ignoreCase: true
                 allowedUpstreamHeaders:
                   patterns:
                   - exact: header1
