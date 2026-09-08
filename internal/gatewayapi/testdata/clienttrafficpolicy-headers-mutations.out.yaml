@@ -7,21 +7,42 @@ clientTrafficPolicies:
   spec:
     headers:
       earlyRequestHeaders:
-        addIfAbsent:
-        - name: my-early-default-header
-          value: my-early-default-value
-        - name: my-early-default-header
-          value: duplicate-should-be-ignored
-        - name: another-early-default-header
-          value: another-early-value
+        add:
+        - name: x-legacy
+          value: legacy-value
+        mutations:
+        - write:
+            action: Overwrite
+            header:
+              name: x-foo
+              value: "1"
+        - write:
+            action: Append
+            header:
+              name: x-foo
+              value: "2"
+        - remove: x-secret
+        - removeOnMatch:
+            type: RegularExpression
+            value: ^x-internal-.*
+        - write:
+            action: OverwriteIfExists
+            header:
+              name: x-if-exists
+              value: override
       lateResponseHeaders:
-        addIfAbsent:
-        - name: my-default-header
-          value: my-default-value
-        - name: my-default-header
-          value: duplicate-should-be-ignored
-        - name: another-default-header
-          value: another-value
+        mutations:
+        - write:
+            action: Overwrite
+            header:
+              name: x-resp
+              value: a
+        - write:
+            action: Append
+            header:
+              name: x-resp
+              value: b
+        - remove: server
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -136,22 +157,36 @@ xdsIR:
       headers:
         earlyRequestHeaderMutations:
         - write:
-            action: AddIfAbsent
-            name: my-early-default-header
-            value: my-early-default-value
+            action: Overwrite
+            name: x-foo
+            value: "1"
         - write:
-            action: AddIfAbsent
-            name: another-early-default-header
-            value: another-early-value
+            action: Append
+            name: x-foo
+            value: "2"
+        - remove: x-secret
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            safeRegex: ^x-internal-.*
+        - write:
+            action: OverwriteIfExists
+            name: x-if-exists
+            value: override
+        - write:
+            action: Append
+            name: x-legacy
+            value: legacy-value
         lateResponseHeaderMutations:
         - write:
-            action: AddIfAbsent
-            name: my-default-header
-            value: my-default-value
+            action: Overwrite
+            name: x-resp
+            value: a
         - write:
-            action: AddIfAbsent
-            name: another-default-header
-            value: another-value
+            action: Append
+            name: x-resp
+            value: b
+        - remove: server
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
