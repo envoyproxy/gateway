@@ -1688,8 +1688,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				continue
 			}
 
-			removeName := removedHeader
-			mutations = append(mutations, ir.HeaderMutation{Remove: &removeName})
+			mutations = append(mutations, ir.HeaderMutation{Remove: &removedHeader})
 		}
 	}
 

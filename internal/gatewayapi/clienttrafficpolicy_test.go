@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -309,7 +308,7 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 				Mutations: []egv1a1.HTTPHeaderMutation{
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-a", Value: "1"}, Action: egv1a1.HeaderWriteOverwrite}},
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-a", Value: "2"}, Action: egv1a1.HeaderWriteAppend}},
-					{Remove: ptr.To("x-b")},
+					{Remove: new("x-b")},
 					{RemoveOnMatch: &egv1a1.StringMatch{Type: &regexpType, Value: "^x-internal-.*"}},
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-c", Value: "3"}, Action: egv1a1.HeaderWriteAddIfAbsent}},
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-d", Value: "4"}, Action: egv1a1.HeaderWriteOverwriteIfExists}},
@@ -318,7 +317,7 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 			want: []ir.HeaderMutation{
 				{Write: &ir.HeaderWrite{Name: "x-a", Value: "1", Action: ir.HeaderWriteOverwrite}},
 				{Write: &ir.HeaderWrite{Name: "x-a", Value: "2", Action: ir.HeaderWriteAppend}},
-				{Remove: ptr.To("x-b")},
+				{Remove: new("x-b")},
 				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: &regexpType, Value: "^x-internal-.*"})},
 				{Write: &ir.HeaderWrite{Name: "x-c", Value: "3", Action: ir.HeaderWriteAddIfAbsent}},
 				{Write: &ir.HeaderWrite{Name: "x-d", Value: "4", Action: ir.HeaderWriteOverwriteIfExists}},
@@ -345,12 +344,12 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 			name: "remove then re-add the same header",
 			in: &egv1a1.HTTPHeaderFilter{
 				Mutations: []egv1a1.HTTPHeaderMutation{
-					{Remove: ptr.To("x-recreate")},
+					{Remove: new("x-recreate")},
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-recreate", Value: "fresh"}, Action: egv1a1.HeaderWriteAppend}},
 				},
 			},
 			want: []ir.HeaderMutation{
-				{Remove: ptr.To("x-recreate")},
+				{Remove: new("x-recreate")},
 				{Write: &ir.HeaderWrite{Name: "x-recreate", Value: "fresh", Action: ir.HeaderWriteAppend}},
 			},
 		},
@@ -369,8 +368,8 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 			name: "explicit keepEmptyValue is honored",
 			in: &egv1a1.HTTPHeaderFilter{
 				Mutations: []egv1a1.HTTPHeaderMutation{
-					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-a", Value: "v"}, Action: egv1a1.HeaderWriteAppend, KeepEmptyValue: ptr.To(true)}},
-					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-b", Value: "w"}, Action: egv1a1.HeaderWriteAppend, KeepEmptyValue: ptr.To(false)}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-a", Value: "v"}, Action: egv1a1.HeaderWriteAppend, KeepEmptyValue: new(true)}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-b", Value: "w"}, Action: egv1a1.HeaderWriteAppend, KeepEmptyValue: new(false)}},
 				},
 			},
 			want: []ir.HeaderMutation{
@@ -383,15 +382,15 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 			in: &egv1a1.HTTPHeaderFilter{
 				Mutations: []egv1a1.HTTPHeaderMutation{
 					{RemoveOnMatch: &egv1a1.StringMatch{Value: "x-exact"}},
-					{RemoveOnMatch: &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchPrefix), Value: "x-pre-"}},
-					{RemoveOnMatch: &egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchSuffix), Value: "-suf"}},
+					{RemoveOnMatch: &egv1a1.StringMatch{Type: new(egv1a1.StringMatchPrefix), Value: "x-pre-"}},
+					{RemoveOnMatch: &egv1a1.StringMatch{Type: new(egv1a1.StringMatchSuffix), Value: "-suf"}},
 					{RemoveOnMatch: &egv1a1.StringMatch{Type: &regexpType, Value: "^x-re-.*"}},
 				},
 			},
 			want: []ir.HeaderMutation{
 				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Value: "x-exact"})},
-				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchPrefix), Value: "x-pre-"})},
-				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: ptr.To(egv1a1.StringMatchSuffix), Value: "-suf"})},
+				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: new(egv1a1.StringMatchPrefix), Value: "x-pre-"})},
+				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: new(egv1a1.StringMatchSuffix), Value: "-suf"})},
 				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: &regexpType, Value: "^x-re-.*"})},
 			},
 		},
@@ -400,7 +399,7 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 			in: &egv1a1.HTTPHeaderFilter{
 				Mutations: []egv1a1.HTTPHeaderMutation{
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-m", Value: "m"}, Action: egv1a1.HeaderWriteAppend}},
-					{Remove: ptr.To("x-m-rm")},
+					{Remove: new("x-m-rm")},
 				},
 				Add:           []gwapiv1.HTTPHeader{{Name: "x-add", Value: "a"}},
 				Set:           []gwapiv1.HTTPHeader{{Name: "x-set", Value: "s"}},
@@ -410,11 +409,11 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 			},
 			want: []ir.HeaderMutation{
 				{Write: &ir.HeaderWrite{Name: "x-m", Value: "m", Action: ir.HeaderWriteAppend}},
-				{Remove: ptr.To("x-m-rm")},
+				{Remove: new("x-m-rm")},
 				{Write: &ir.HeaderWrite{Name: "x-add", Value: "a", Action: ir.HeaderWriteAppend}},
 				{Write: &ir.HeaderWrite{Name: "x-set", Value: "s", Action: ir.HeaderWriteOverwrite}},
 				{Write: &ir.HeaderWrite{Name: "x-abs", Value: "d", Action: ir.HeaderWriteAddIfAbsent}},
-				{Remove: ptr.To("x-rm")},
+				{Remove: new("x-rm")},
 				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: &regexpType, Value: "^x-drop-.*"})},
 			},
 		},
@@ -437,13 +436,13 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 			name: "legacy remove is de-duplicated against an earlier explicit mutation",
 			in: &egv1a1.HTTPHeaderFilter{
 				Mutations: []egv1a1.HTTPHeaderMutation{
-					{Remove: ptr.To("x-bar")},
+					{Remove: new("x-bar")},
 				},
 				Remove: []string{"X-Bar", "x-other"},
 			},
 			want: []ir.HeaderMutation{
-				{Remove: ptr.To("x-bar")},
-				{Remove: ptr.To("x-other")},
+				{Remove: new("x-bar")},
+				{Remove: new("x-other")},
 			},
 		},
 		{
@@ -454,7 +453,7 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "bad:name", Value: "v"}, Action: egv1a1.HeaderWriteAppend}},
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "", Value: "v"}, Action: egv1a1.HeaderWriteAppend}},
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-bad-value", Value: "  invalid"}, Action: egv1a1.HeaderWriteAppend}},
-					{Remove: ptr.To("")},
+					{Remove: new("")},
 					{RemoveOnMatch: &egv1a1.StringMatch{Value: ""}},
 					{},
 					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-ok", Value: "v"}, Action: egv1a1.HeaderWriteAppend}},
@@ -469,7 +468,7 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 			name: "a filter whose only mutations are invalid reports an error and yields nothing",
 			in: &egv1a1.HTTPHeaderFilter{
 				Mutations: []egv1a1.HTTPHeaderMutation{
-					{Remove: ptr.To("")},
+					{Remove: new("")},
 				},
 			},
 			want:    nil,
