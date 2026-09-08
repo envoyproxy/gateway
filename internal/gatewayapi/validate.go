@@ -1174,6 +1174,7 @@ func (t *Translator) validateConflictedHostnameListeners(gateways []*GatewayCont
 				if winner, hasWinner := hostnameWinners[hostname]; hasWinner {
 					// A winner exists: only the non-winner listeners are conflicted.
 					if listener != winner {
+						listener.hostnameConflictLoser = true
 						setConflictedConditions(listener, gwapiv1.ListenerReasonHostnameConflict, conflictMsg)
 					}
 				} else if info.hostnames[hostname] > 1 {

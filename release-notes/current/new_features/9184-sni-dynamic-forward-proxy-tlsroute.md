@@ -1,1 +1,0 @@
-Added support for SNI based dynamic forward proxy by allowing a `Backend` of type `DynamicResolver` to be referenced by a `TLSRoute`. The upstream host is resolved from the TLS SNI of the incoming connection.

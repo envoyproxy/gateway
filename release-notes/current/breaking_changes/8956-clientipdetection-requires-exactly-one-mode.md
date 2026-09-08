@@ -1,1 +1,0 @@
-`ClientTrafficPolicy.spec.clientIPDetection` now requires exactly one of `xForwardedFor`, `customHeader`, or `directSourceIP` to be set. Previously an empty `clientIPDetection: {}` was accepted; it is now rejected by CEL validation.

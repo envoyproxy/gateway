@@ -20,10 +20,16 @@
             - openid
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            cookieConfigs:
+              codeVerifierCookieConfig:
+                path: /bar/oauth2/callback
+              oauthNonceCookieConfig:
+                path: /bar/oauth2/callback
             credentials:
               clientId: client1.apps.googleusercontent.com
               cookieNames:
                 bearerToken: AccessToken-b0a1b740
+                codeVerifier: CodeVerifier-b0a1b740
                 idToken: IdToken-b0a1b740
                 oauthExpires: OauthExpires-b0a1b740
                 oauthHmac: OauthHMAC-b0a1b740
@@ -33,13 +39,11 @@
                 name: oauth2/hmac_secret/securitypolicy/envoy-gateway/policy-for-gateway
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/envoy-gateway/policy-for-gateway
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             defaultExpiresIn: 1800s
             defaultRefreshTokenExpiresIn: 86400s

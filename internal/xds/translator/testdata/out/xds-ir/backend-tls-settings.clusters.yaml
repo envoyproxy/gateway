@@ -54,13 +54,11 @@
               name: policy-btls-for-backend-1/default-ca
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway-system/client-auth
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
           tlsParams:
             cipherSuites:
@@ -132,13 +130,11 @@
               name: backend-2/default-ca
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway-system/client-auth
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
           tlsParams:
             cipherSuites:
@@ -217,13 +213,11 @@
               name: policy-btls-for-backend-3/default-ca
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway-system/client-auth
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
           tlsParams:
             cipherSuites:
@@ -298,13 +292,11 @@
               name: policy-btls-for-backend-4/default-ca
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway-system/client-auth
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
           tlsParams:
             cipherSuites:

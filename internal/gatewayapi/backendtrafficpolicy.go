@@ -111,7 +111,7 @@ func newBTPClusterSettingsIndex() *BTPClusterSettingsIndex {
 	return &BTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
 }
 
-// HasClusterSettingsBelowGateway reports whether a route-rule, route, or listener-level
+// HasClusterSettingsBelowGateway reports whether a route-rule, route, listener, or ListenerSet-level
 // BackendTrafficPolicy contributes backend-cluster-scoped settings for the given target, or
 // targets it with MergeType unset. A gateway-level setting is never the answer here: it applies
 // uniformly to every route sharing a merged cluster, so it can't cause a divergence -
@@ -122,12 +122,13 @@ func (idx *BTPClusterSettingsIndex) HasClusterSettingsBelowGateway(
 	routeNN types.NamespacedName,
 	gatewayNN types.NamespacedName,
 	listenerName *gwapiv1.SectionName,
+	listenerSetNN *types.NamespacedName,
 	routeRuleName *gwapiv1.SectionName,
 ) bool {
 	if idx == nil {
 		return false
 	}
-	hasClusterSettings, replacesParent := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, nil, routeRuleName)
+	hasClusterSettings, replacesParent := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
 	// replacesParent catches what hasClusterSettings alone would miss: a rule's own BTP with
 	// MergeType nil and no cluster-scoped field (false) still resolves to its own empty settings,
 	// not the gateway's - diverging from a sibling rule that has no BTP and does inherit the
@@ -228,29 +229,29 @@ func BuildBTPIndexes(
 			// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
 			// accepted gateway can enable merging; RoutingType (above) applies regardless.
 			if mergeBackendsEnabled {
-				// TODO(#9619): unlike routingTypeIdx above, this switch has no ListenerSet case, so
-				// ListenerSet-level BTP attachment isn't tracked here.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName != nil:
 					clusterSettingsIdx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
 				case kind == resource.KindGateway:
 					// Gateway-level settings apply uniformly to every route sharing a merged
 					// cluster, so they don't disqualify merging - no entry needed.
+				case kind == resource.KindListenerSet && ref.SectionName != nil:
+					clusterSettingsIdx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+				case kind == resource.KindListenerSet:
+					clusterSettingsIdx.setListenerSetLevel(nn, hasClusterScoped, true)
 				case ref.SectionName != nil:
 					clusterSettingsIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, hasClusterScoped, btp.Spec.MergeType)
 				default:
 					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
 				}
 
-				// TODO(#9619): same gap as clusterSettingsIdx above - this switch has no
-				// ListenerSet case either, so ListenerSet-level BTP attachment isn't tracked here.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName == nil:
 					// Every accepted Gateway-wide BTP must claim this slot, even one that leaves
 					// LoadBalancer unset, so a younger conflicting BTP can't silently win it.
 					loadBalancerIdx.setGatewayLevel(nn, hasLoadBalancer && btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType)
 				default:
-					// A listener/route-rule/route-level LoadBalancer setting already disqualifies
+					// A listener/listenerSet/route-rule/route-level LoadBalancer setting already disqualifies
 					// its own rule from merging on its own, so it's never looked up here.
 				}
 			}
@@ -2323,13 +2324,13 @@ func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
 }
 
 func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
-	triggerSet := sets.NewString()
+	triggerSet := sets.New[string]()
 	for _, r := range in {
 		triggerSet.Insert(string(r))
 	}
 	irTriggers := make([]ir.TriggerEnum, 0, triggerSet.Len())
 
-	for _, r := range triggerSet.List() {
+	for _, r := range sets.List(triggerSet) {
 		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers

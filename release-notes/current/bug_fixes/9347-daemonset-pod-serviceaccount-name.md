@@ -1,1 +1,0 @@
-Fixed DaemonSet pod not using the configured custom ServiceAccount name.

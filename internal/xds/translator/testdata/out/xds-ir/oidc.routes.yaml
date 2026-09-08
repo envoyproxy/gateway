@@ -22,10 +22,16 @@
             - profile
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            cookieConfigs:
+              codeVerifierCookieConfig:
+                path: /foo/oauth2/callback
+              oauthNonceCookieConfig:
+                path: /foo/oauth2/callback
             credentials:
               clientId: client.oauth.foo.com
               cookieNames:
                 bearerToken: AccessToken-5F93C2E4
+                codeVerifier: CodeVerifier-5F93C2E4
                 idToken: IdToken-5F93C2E4
                 oauthExpires: OauthExpires-5F93C2E4
                 oauthHmac: OauthHMAC-5F93C2E4
@@ -35,13 +41,11 @@
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-first-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/default/policy-for-first-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             csrfTokenExpiresIn: 2100s
             defaultExpiresIn: 3600s
@@ -81,27 +85,31 @@
             - profile
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
+            cookieConfigs:
+              codeVerifierCookieConfig:
+                path: /bar/oauth2/callback
+              oauthNonceCookieConfig:
+                path: /bar/oauth2/callback
             credentials:
               clientId: client.oauth.bar.com
               cookieDomain: example.com
               cookieNames:
                 bearerToken: CustomAccessTokenOverride
+                codeVerifier: CustomCodeVerifierOverride
                 idToken: CustomIdTokenOverride
-                oauthExpires: OauthExpires-5f93c2e4
-                oauthHmac: OauthHMAC-5f93c2e4
-                oauthNonce: OauthNonce-5f93c2e4
-                refreshToken: RefreshToken-5f93c2e4
+                oauthExpires: CustomOauthExpiresOverride
+                oauthHmac: CustomOauthHMACOverride
+                oauthNonce: CustomOauthNonceOverride
+                refreshToken: CustomRefreshTokenOverride
               hmacSecret:
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-second-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/default/policy-for-second-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             denyRedirectMatcher:
             - name: test-exact

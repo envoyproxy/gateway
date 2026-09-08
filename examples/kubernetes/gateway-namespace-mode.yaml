@@ -46,7 +46,7 @@ spec:
     spec:
       serviceAccountName: team-a-backend
       containers:
-        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        - image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           imagePullPolicy: IfNotPresent
           name: team-a-backend
           ports:
@@ -102,7 +102,7 @@ spec:
     spec:
       serviceAccountName: team-b-backend
       containers:
-        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        - image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           imagePullPolicy: IfNotPresent
           name: team-b-backend
           ports:

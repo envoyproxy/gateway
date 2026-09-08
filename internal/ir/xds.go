@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -978,6 +979,10 @@ type HeaderSettings struct {
 
 	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
 	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
+
+	// MaxRequestHeadersKB defines the maximum request headers size in KiB allowed for incoming connections.
+	// Maps to the Envoy `max_request_headers_kb` HTTP connection manager setting.
+	MaxRequestHeadersKB *uint32 `json:"maxRequestHeadersKB,omitempty" yaml:"maxRequestHeadersKB,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -1281,6 +1286,19 @@ type ConnectConfig struct {
 	Terminate bool `json:"terminate" yaml:"terminate"`
 }
 
+// HasConnectUpgrade returns true if the HTTP CONNECT upgrade is enabled.
+func (b *TrafficFeatures) HasConnectUpgrade() bool {
+	if b == nil {
+		return false
+	}
+	for _, protocol := range b.HTTPUpgrade {
+		if strings.EqualFold(protocol.Type, "CONNECT") {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *TrafficFeatures) Validate() error {
 	var errs error
 
@@ -1527,7 +1545,9 @@ type OIDC struct {
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
 	// These cookies are set by the oauth filter, including: AccessToken,
-	// OauthHMAC, OauthExpires, IdToken, and RefreshToken.
+	// OauthHMAC, OauthExpires, IdToken, RefreshToken, OauthNonce and CodeVerifier.
+	// It defaults to a digest of the policy identity, and can be pinned by the user
+	// through the OIDC cookieNames.suffix field.
 	CookieSuffix string `json:"cookieSuffix,omitempty"`
 
 	// CookieNameOverrides can optionally override the generated name of the cookies set by the oauth filter.
@@ -2026,7 +2046,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddRequestHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.AddRequestHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
@@ -2039,7 +2059,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.RemoveRequestHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.RemoveRequestHeaders {
 			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
@@ -2049,7 +2069,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.AddResponseHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.AddResponseHeaders {
 			if err := header.Validate(); err != nil {
 				errs = errors.Join(errs, err)
@@ -2062,7 +2082,7 @@ func (h *HTTPRoute) Validate() error {
 		}
 	}
 	if len(h.RemoveResponseHeaders) > 0 {
-		occurred := sets.NewString()
+		occurred := sets.New[string]()
 		for _, header := range h.RemoveResponseHeaders {
 			if occurred.Has(header) {
 				errs = errors.Join(errs, ErrRemoveHeaderDuplicate)
@@ -2860,6 +2880,8 @@ type GlobalResources struct {
 	// EnvoyClientCertificate holds the client certificate secret for envoy to use when establishing a TLS connection to
 	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
+	// RateLimitServiceCluster holds the rate limit service endpoints discovered from Kubernetes resources.
+	RateLimitServiceCluster *RouteDestination `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
 	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.

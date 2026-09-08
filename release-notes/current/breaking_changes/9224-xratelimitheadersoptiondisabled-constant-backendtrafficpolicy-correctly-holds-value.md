@@ -1,1 +1,0 @@
-The `XRateLimitHeadersOptionDisabled` constant in `BackendTrafficPolicy` now correctly holds the value `"Off"` to match the CRD enum (previously `"Disabled"`). Since `"Disabled"` was never a valid CRD enum value and would have been rejected by the API server, no existing manifests are affected.

@@ -44,7 +44,6 @@
               name: system_ca_certificates
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: websocket.example.com
   type: EDS
@@ -99,7 +98,6 @@
               name: system_ca_certificates
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: ordinary.example.com
   type: EDS

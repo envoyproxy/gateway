@@ -27,7 +27,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: test1
         serverHeaderTransformation: PASS_THROUGH
@@ -66,7 +65,6 @@
           - name: inline
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -103,7 +101,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: test2
         serverHeaderTransformation: PASS_THROUGH

@@ -6,17 +6,61 @@
 package message
 
 import (
+	"context"
 	"fmt"
 	"runtime/debug"
 	"time"
 
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
-type Update[K comparable, V any] watchable.Update[K, V]
+type Update[K comparable, V any] struct {
+	Key    K
+	Value  V
+	Delete bool
+	// Initial identifies an entry replayed from the map state when this subscriber
+	// started. Its StoredAt describes resource age, not queue time for this subscriber.
+	Initial bool
+}
+
+// RecordQueueWait records, as a short-lived "WatchableQueue.Wait" span, how long a value sat
+// buffered in a watchable map's internal queue between being Store()'d (storedAt) and being
+// dequeued by this subscriber (now). The span is backdated to storedAt so it shows up as a
+// real gap in the trace waterfall between the producer's span and the subscriber's own
+// processing span, rather than being folded into either one's duration.
+//
+// The wait span and the caller's processing span are siblings, because a completed
+// span must never become the parent of later work. To preserve the causal edge in
+// backends that render links, this returns SpanStartOptions that link the caller's
+// eventual processing span back to the recorded wait span.
+//
+// storedAt is the zero Time for values that were already present in the map when the
+// subscriber first subscribed (e.g. at process startup) rather than having transited the
+// queue; those carry no meaningful wait, so no span is recorded and ctx is returned
+// unchanged with no link options.
+//
+// runnerName identifies the subscriber recording the wait (e.g. r.Name()), so waits from
+// different runners draining the same watchable map can be told apart in a trace backend.
+func RecordQueueWait(ctx context.Context, tracer trace.Tracer, runnerName string, storedAt time.Time) (context.Context, []trace.SpanStartOption) {
+	if storedAt.IsZero() {
+		return ctx, nil
+	}
+	now := time.Now()
+	_, span := tracer.Start(ctx, "WatchableQueue.Wait", trace.WithTimestamp(storedAt))
+	span.SetAttributes(
+		attribute.String("runner.name", runnerName),
+		attribute.String("queue.wait", now.Sub(storedAt).String()),
+	)
+	span.End(trace.WithTimestamp(now))
+	return ctx, []trace.SpanStartOption{
+		trace.WithLinks(trace.Link{SpanContext: span.SpanContext()}),
+	}
+}
 
 type Metadata struct {
 	Runner  string
@@ -99,9 +143,11 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 
 	if snapshot, ok := <-subscription; ok {
 		for k, v := range snapshot.State {
+			// Mark initial state so consumers do not report its age as queue latency.
 			handleWithCrashRecovery(l, handle, Update[K, V]{
-				Key:   k,
-				Value: v,
+				Key:     k,
+				Value:   v,
+				Initial: true,
 			}, meta, errChans)
 		}
 	}
@@ -109,7 +155,11 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
 
 		for _, update := range coalesceUpdates(l, snapshot.Updates) {
-			handleWithCrashRecovery(l, handle, Update[K, V](update), meta, errChans)
+			handleWithCrashRecovery(l, handle, Update[K, V]{
+				Key:    update.Key,
+				Value:  update.Value,
+				Delete: update.Delete,
+			}, meta, errChans)
 		}
 	}
 }

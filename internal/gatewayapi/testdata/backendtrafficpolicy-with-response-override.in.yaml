@@ -96,7 +96,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: "/"
+                value: "/route-3"
           backendRefs:
             - name: service-1
               port: 8080

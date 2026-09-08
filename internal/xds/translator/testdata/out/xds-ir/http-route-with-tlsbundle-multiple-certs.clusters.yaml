@@ -44,7 +44,6 @@
               name: policy-btls/policies-ca2
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: bar.example.com
   - match:
@@ -65,7 +64,6 @@
               name: policy-btls/policies-ca
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: example.com
   type: EDS
@@ -134,7 +132,6 @@
                   name: policy-btls-2/policies-ca
                   sdsConfig:
                     ads: {}
-                    initialFetchTimeout: 0s
                     resourceApiVersion: V3
             sni: example.com
   type: EDS

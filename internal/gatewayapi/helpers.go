@@ -309,7 +309,7 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		return []string{"*"}
 	}
 
-	hostnamesSet := sets.NewString()
+	hostnamesSet := sets.New[string]()
 
 	// Find intersecting hostnames
 	for i := range routeHostnames {
@@ -368,6 +368,9 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		if listenerContext == listener {
 			continue
 		}
+		if listener.hostnameConflictLoser {
+			continue
+		}
 		if listenerContext != nil && listenerContext.Port != listener.Port {
 			continue
 		}
@@ -377,7 +380,7 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		hostnamesSet.Delete(string(*listener.Hostname))
 	}
 
-	return hostnamesSet.List()
+	return sets.List(hostnamesSet)
 }
 
 // wildcardHostnameMatchesHostname returns true if wildcardHostname matches hostname.
