@@ -5,7 +5,7 @@ description: This section includes Compatibility Matrix of Envoy Gateway.
 
 Envoy Gateway relies on the Envoy Proxy and the Gateway API, and runs within a Kubernetes cluster. Not all versions of each of these products can function together for Envoy Gateway. Supported version combinations are listed below; **bold** type indicates the versions of the Envoy Proxy and the Gateway API actually compiled into each Envoy Gateway release.
 
-Each Envoy Gateway release supports exactly one Envoy Proxy minor version: the one it is built and tested against. This is unlike the Kubernetes column, which lists a range of tested versions. Running a different Envoy Proxy minor version is not supported.
+Each Envoy Gateway release ships with, and is tested against, a single Envoy Proxy minor version. This is unlike the Kubernetes column, which lists a range of tested versions. Compatibility with older or newer Envoy Proxy minor versions has not been tested and is unknown.
 
 | Envoy Gateway version | Envoy Proxy version         | Rate Limit version | Gateway API version | Kubernetes version         | End of Life |
 | --------------------- | --------------------------- | ------------------ | ------------------- | -------------------------- | ----------- |
@@ -29,7 +29,7 @@ Each Envoy Gateway release supports exactly one Envoy Proxy minor version: the o
 The Envoy Proxy column shows the supported minor version. The exact image that a given Envoy Gateway patch release ships may be a newer patch within that same minor version. To find the exact image for a release, check that release's notes.
 
 {{% alert title="Overriding the Envoy Proxy image" color="warning" %}}
-Setting `image` on the EnvoyProxy resource pins the data plane independently of the control plane. If the pinned image is a different Envoy Proxy minor version than the one listed above, Envoy Gateway may generate configuration that the proxy rejects.
+Setting `image` on the EnvoyProxy resource pins the data plane independently of the control plane. If the pinned image is a different Envoy Proxy minor version than the one listed above, the combination is untested, and Envoy Gateway may generate configuration that the proxy rejects.
 
 A rejected configuration is silent while the proxies keep running, because Envoy continues to serve its last known good configuration. The failure surfaces when a proxy restarts, because a new proxy has no previous configuration to fall back on — and pod readiness can still pass while a listener is missing. To detect this, watch the xDS rejection metrics described in [Gateway Exported Metrics](/latest/tasks/observability/gateway-exported-metrics/).
 
