@@ -1,0 +1,1 @@
+Fixed a bug where enabling both HTTP/3 and proxy protocol on the same ClientTrafficPolicy generated an invalid QUIC listener that Envoy continuously rejected with an LDS NACK. The HTTP/3 is now disabled for the affected listener and a Warning condition is reported on the policy.

@@ -284,7 +284,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							if shouldDisableHTTP3ForClientValidation(policy, httpIR) {
 								http3WarningMessage = disabledHTTP3WarningMessage([]string{string(l.Name)})
 							}
-							if shouldDisableHTTP3ForProxyProtocol(policy) {
+							if shouldDisableHTTP3ForProxyProtocol(policy, httpIR) {
 								http3PPWarning = disabledHTTP3ForProxyProtocolWarningMessage([]string{string(l.Name)})
 							}
 							err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
@@ -496,7 +496,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
 								http3DisabledListeners = append(http3DisabledListeners, string(l.Name))
 							}
-							if shouldDisableHTTP3ForProxyProtocol(policy) {
+							if shouldDisableHTTP3ForProxyProtocol(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
 								http3PPDisabledListeners = append(http3PPDisabledListeners, string(l.Name))
 							}
 							if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
@@ -697,8 +697,8 @@ func shouldDisableHTTP3ForClientValidation(policy *egv1a1.ClientTrafficPolicy, h
 
 // shouldDisableHTTP3ForProxyProtocol checks if HTTP/3 should be disabled for a listener
 // because the proxy protocol listener filter is not supported on QUIC (UDP) listeners.
-func shouldDisableHTTP3ForProxyProtocol(policy *egv1a1.ClientTrafficPolicy) bool {
-	if policy.Spec.HTTP3 == nil {
+func shouldDisableHTTP3ForProxyProtocol(policy *egv1a1.ClientTrafficPolicy, httpIR *ir.HTTPListener) bool {
+	if httpIR == nil || httpIR.TLS == nil || policy.Spec.HTTP3 == nil {
 		return false
 	}
 	return policy.Spec.ProxyProtocol != nil || ptr.Deref(policy.Spec.EnableProxyProtocol, false)
@@ -843,7 +843,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		}
 
 		// enable http3 if set and TLS is enabled
-		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil && !shouldDisableHTTP3ForClientValidation(policy, httpIR) && !shouldDisableHTTP3ForProxyProtocol(policy) {
+		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil && !shouldDisableHTTP3ForClientValidation(policy, httpIR) && !shouldDisableHTTP3ForProxyProtocol(policy, httpIR) {
 			http3 := &ir.HTTP3Settings{}
 			httpIR.HTTP3 = http3
 			var proxyListenerIR *ir.ProxyListener
