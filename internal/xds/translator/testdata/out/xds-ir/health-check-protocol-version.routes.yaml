@@ -40,3 +40,24 @@
         cluster: tls-grpc-dest
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tls-pinned-http2
+      route:
+        cluster: tls-pinned-http2-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tls-alpn-http2-only
+      route:
+        cluster: tls-alpn-http2-only-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tls-alpn-both
+      route:
+        cluster: tls-alpn-both-dest
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -74,3 +74,51 @@
     loadBalancingWeight: 1
     locality:
       region: tls-grpc-dest/backend/0
+- clusterName: tls-pinned-http2-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-pinned-http2-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tls-pinned-http2-dest/backend/0
+- clusterName: tls-alpn-http2-only-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-alpn-http2-only-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tls-alpn-http2-only-dest/backend/0
+- clusterName: tls-alpn-both-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-alpn-both-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tls-alpn-both-dest/backend/0

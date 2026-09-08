@@ -106,6 +106,10 @@ const (
 	EndpointTypeDynamicResolver
 )
 
+// httpALPNProtocols are the protocols an HTTP health check can speak, in the order they are
+// offered on a health check connection.
+var httpALPNProtocols = []string{string(egv1a1.HTTPProtocolVersion2), string(egv1a1.HTTPProtocolVersion1_1)}
+
 var (
 	// we need a dummy transport socket to pass the validation,
 	// it's a no-op since transportSocketMatches takes effect
@@ -497,9 +501,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
 		var err error
-		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol
 		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog,
-			args.settings, upstreamHTTP2, hasBackendTLS)
+			args.settings, upstreamProto, hasBackendTLS)
 		if err != nil {
 			return nil, err
 		}
@@ -640,7 +643,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 }
 
 func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog,
-	settings []*ir.DestinationSetting, upstreamHTTP2, hasBackendTLS bool,
+	settings []*ir.DestinationSetting, upstreamProto upstreamProtocol, hasBackendTLS bool,
 ) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
@@ -672,9 +675,13 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			httpChecker.Receive = append(httpChecker.Receive, receive)
 		}
 		httpChecker.Send = buildHealthCheckPayload(healthcheck.HTTP.RequestBody)
-		httpChecker.CodecClientType = buildHealthCheckCodecClientType(healthcheck.HTTP.Version, upstreamHTTP2)
+		httpChecker.CodecClientType = buildHealthCheckCodecClientType(healthcheck.HTTP.Version, upstreamProto, settings)
 		if hasBackendTLS {
-			hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType)
+			// A cluster that negotiates its upstream protocol lets its health checks negotiate
+			// theirs too, unless a version was configured explicitly.
+			negotiate := upstreamProto == upstreamProtocolNegotiated &&
+				ptr.Deref(healthcheck.HTTP.Version, egv1a1.HTTPHealthCheckVersionAuto) == egv1a1.HTTPHealthCheckVersionAuto
+			hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType, negotiate)
 		}
 		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
 			HttpHealthCheck: httpChecker,
@@ -693,7 +700,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 		// Envoy always uses HTTP/2 to send gRPC health check requests, and exposes no
 		// codec setting for them.
 		if hasBackendTLS {
-			hc.TlsOptions = buildHealthCheckTLSOptions(settings, xdstype.CodecClientType_HTTP2)
+			hc.TlsOptions = buildHealthCheckTLSOptions(settings, xdstype.CodecClientType_HTTP2, false)
 		}
 		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
 			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
@@ -730,61 +737,107 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 // buildHealthCheckCodecClientType returns the codec that Envoy uses to send HTTP health
 // check requests.
 //
-// Envoy has no auto codec: it's fixed when the health checker is created and is never
-// negotiated per request, so Auto is resolved here from the effective upstream protocol
-// of the backend.
+// buildHealthCheckCodecClientType returns the codec that Envoy uses to send HTTP health check
+// requests over a connection that negotiated no protocol: a plaintext one, or a TLS one whose
+// peer doesn't do ALPN. A health check that negotiates a protocol is sent over that one
+// instead, so this is the fallback rather than the codec of every check.
 //
-// UseClientProtocol isn't considered here, even though it takes precedence over the
-// backend protocol on the data path: it makes the upstream protocol vary per request, and
-// a health check has no downstream request to mirror. The protocol declared by the backend
-// is the only usable signal. An explicit version is the way out for a backend whose health
-// check endpoint doesn't serve that protocol.
-func buildHealthCheckCodecClientType(version *egv1a1.HTTPHealthCheckVersion, upstreamHTTP2 bool) xdstype.CodecClientType {
+// UseClientProtocol isn't considered here, even though it takes precedence over the backend
+// protocol on the data path: it makes the upstream protocol vary per request, and a health
+// check has no downstream request to mirror. The protocol declared by the backend is the only
+// usable signal. An explicit version is the way out for a backend whose health check endpoint
+// doesn't serve that protocol.
+func buildHealthCheckCodecClientType(version *egv1a1.HTTPHealthCheckVersion, upstreamProto upstreamProtocol,
+	settings []*ir.DestinationSetting,
+) xdstype.CodecClientType {
 	switch ptr.Deref(version, egv1a1.HTTPHealthCheckVersionAuto) {
 	case egv1a1.HTTPHealthCheckVersionHTTP1:
 		return xdstype.CodecClientType_HTTP1
 	case egv1a1.HTTPHealthCheckVersionHTTP2:
 		return xdstype.CodecClientType_HTTP2
 	default:
-		if upstreamHTTP2 {
+		if upstreamProto == upstreamProtocolHTTP2 {
 			return xdstype.CodecClientType_HTTP2
+		}
+		// A backend whose TLS settings only leave one of the two protocols negotiable can
+		// only speak that one, whatever protocol the cluster itself uses.
+		if negotiable := healthCheckALPNProtocols(settings, httpALPNProtocols); len(negotiable) == 1 {
+			return codecClientTypeForALPN(negotiable[0])
 		}
 		return xdstype.CodecClientType_HTTP1
 	}
 }
 
-// buildHealthCheckTLSOptions pins the ALPN protocol offered on health check connections to
-// the one matching the health check codec. It's only meaningful for a backend that uses
-// TLS: a plaintext health check connection negotiates nothing, and the codec alone decides
-// what Envoy sends.
+// buildHealthCheckTLSOptions returns the ALPN protocols offered on health check connections
+// to a backend that uses TLS. Envoy takes the codec of a health check from the protocol
+// negotiated on its connection, so what's offered here decides which protocol a probe can
+// speak. It's only meaningful for a backend that uses TLS: a plaintext health check
+// connection negotiates nothing, and the codec alone decides what Envoy sends.
 //
-// Health check connections are created outside of the connection pool, so they don't get
-// the ALPN protocols that the pool derives from the cluster protocol options. Without a
-// pin, the protocol negotiated during the handshake can differ from the codec that Envoy
-// uses to send the health check request, and every health check fails.
+// Health check connections are created outside of the connection pool, so they don't get the
+// ALPN protocols that the pool derives from the cluster protocol options, and a cluster that
+// configures none advertises nothing on its health checks.
 //
-// TODO: if https://github.com/envoyproxy/envoy/issues/46848 lands, a health check whose
-// version is Auto should offer both `h2` and `http/1.1` to a TLS backend and let the
-// handshake decide, with the resolved codec kept as the fallback for peers that don't
-// negotiate. An explicitly configured version keeps the pin. That has to be gated on the
-// Envoy version shipped with Envoy Gateway: offering both protocols to an Envoy that
-// still discards the negotiated one brings back the codec mismatch the pin avoids.
-func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype.CodecClientType) *corev3.HealthCheck_TlsOptions {
-	var alpn string
+// A cluster that negotiates its upstream protocol offers both protocols, so that every
+// endpoint is checked over the protocol that requests to it use, including a backend whose
+// endpoints don't all speak the same one. A cluster that uses a fixed protocol offers only
+// that protocol: an endpoint that selected the other one would be checked over a protocol
+// that requests to it never use, and could be reported healthy while they fail.
+//
+// Protocols that the backend TLS settings don't allow are left out, and nothing is offered
+// when none of them is allowed, for example by a backend that only accepts the `istio` ALPN
+// protocol. Overriding its ALPN would break the handshake instead of keeping the health
+// check consistent.
+func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype.CodecClientType,
+	negotiate bool,
+) *corev3.HealthCheck_TlsOptions {
+	candidates := httpALPNProtocols
+	if !negotiate {
+		alpn := alpnForCodecClientType(codec)
+		if alpn == "" {
+			return nil
+		}
+		candidates = []string{alpn}
+	}
+
+	alpn := healthCheckALPNProtocols(settings, candidates)
+	if len(alpn) == 0 {
+		return nil
+	}
+
+	return &corev3.HealthCheck_TlsOptions{AlpnProtocols: alpn}
+}
+
+// healthCheckALPNProtocols keeps the candidate ALPN protocols that every destination using
+// TLS can negotiate.
+func healthCheckALPNProtocols(settings []*ir.DestinationSetting, candidates []string) []string {
+	var alpn []string
+	for _, candidate := range candidates {
+		if backendTLSCanNegotiateALPN(settings, candidate) {
+			alpn = append(alpn, candidate)
+		}
+	}
+
+	return alpn
+}
+
+func codecClientTypeForALPN(alpn string) xdstype.CodecClientType {
+	if alpn == string(egv1a1.HTTPProtocolVersion2) {
+		return xdstype.CodecClientType_HTTP2
+	}
+
+	return xdstype.CodecClientType_HTTP1
+}
+
+func alpnForCodecClientType(codec xdstype.CodecClientType) string {
 	switch codec {
 	case xdstype.CodecClientType_HTTP1:
-		alpn = string(egv1a1.HTTPProtocolVersion1_1)
+		return string(egv1a1.HTTPProtocolVersion1_1)
 	case xdstype.CodecClientType_HTTP2:
-		alpn = string(egv1a1.HTTPProtocolVersion2)
+		return string(egv1a1.HTTPProtocolVersion2)
 	default:
-		return nil
+		return ""
 	}
-
-	if !backendTLSCanNegotiateALPN(settings, alpn) {
-		return nil
-	}
-
-	return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{alpn}}
 }
 
 // backendTLSCanNegotiateALPN reports whether the backend TLS settings can negotiate the

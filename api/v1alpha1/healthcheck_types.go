@@ -200,10 +200,9 @@ type HTTPActiveHealthChecker struct {
 	// Version defines the HTTP protocol version used to send active health check
 	// requests to the backend.
 	//
-	// Envoy sends health check requests over a dedicated connection, using a fixed
-	// protocol version that is not negotiated per request. If that version does not
-	// match the protocol the backend speaks, every health check fails and all
-	// endpoints of the backend are marked unhealthy.
+	// Envoy sends health check requests over dedicated connections. If their protocol
+	// version doesn't match the protocol the backend speaks, every health check fails and
+	// all endpoints of the backend are marked unhealthy.
 	//
 	// Defaults to Auto, which resolves the version from the effective upstream protocol
 	// of the backend: HTTP2 if the backend is configured to use HTTP/2, through a
@@ -214,11 +213,13 @@ type HTTPActiveHealthChecker struct {
 	//
 	//   - For plaintext backends, the resolved version is the version used, since no
 	//     protocol is negotiated on the connection.
-	//   - For backends that use TLS, the resolved version is also the version used, and
-	//     the ALPN offered on health check connections is constrained to the matching
-	//     protocol so that the handshake can't settle on a different one. This may
-	//     change to the protocol negotiated during the handshake once
-	//     https://github.com/envoyproxy/envoy/issues/46848 lands in Envoy.
+	//   - For backends that use TLS and negotiate their protocol through ALPN, health
+	//     checks negotiate it the same way: both HTTP/2 and HTTP/1.1 are offered on health
+	//     check connections, and every endpoint is checked over the protocol it selects.
+	//     The resolved version is used for an endpoint that negotiates nothing.
+	//   - For backends that use TLS and a fixed protocol, health check connections only
+	//     offer the protocol matching the resolved version, so that an endpoint isn't
+	//     checked over a protocol that requests to it never use.
 	//
 	// Set this field explicitly when the health check endpoint and the application
 	// endpoint of the backend use different protocols, for example when the backend
