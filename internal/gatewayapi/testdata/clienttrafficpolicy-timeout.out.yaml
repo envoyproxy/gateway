@@ -12,7 +12,11 @@ clientTrafficPolicies:
       sectionName: http-1
     timeout:
       http:
+        requestHeadersReceivedTimeout: 5s
         requestReceivedTimeout: 5s
+      tcp:
+        connectionInspectionTimeout: 60s
+        tlsHandshakeTimeout: 10s
   status:
     ancestors:
     - ancestorRef:
@@ -170,7 +174,11 @@ xdsIR:
       port: 10080
       timeout:
         http:
+          requestHeadersReceivedTimeout: 5s
           requestReceivedTimeout: 5s
+        tcp:
+          connectionInspectionTimeout: 1m0s
+          tlsHandshakeTimeout: 10s
     - address: 0.0.0.0
       externalPort: 8080
       hostnames:

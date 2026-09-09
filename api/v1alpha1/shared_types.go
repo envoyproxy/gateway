@@ -639,23 +639,16 @@ type BackendCluster struct {
 	// to the backend.
 	//
 	// +optional
-	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
+	BackendSettings *BackendSettings `json:"backendSettings,omitempty"`
 }
 
-// ClusterSettings provides the various knobs that can be set to control how traffic to a given
-// backend will be configured.
-//
+// ClusterSettings contains CDS-only fields that configure the upstream Envoy Cluster.
 // +kubebuilder:validation:XValidation:rule="!((has(self.connection) && has(self.connection.preconnect) && has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer) && has(self.loadBalancer.type) && self.loadBalancer.type in ['Random', 'RoundRobin']))",message="predictivePercent in preconnect policy only works with RoundRobin or Random load balancers"
 type ClusterSettings struct {
 	// LoadBalancer policy to apply when routing traffic from the gateway to
 	// the backend endpoints. Defaults to `LeastRequest`.
 	// +optional
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
-
-	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
-	// If not set, retry will be disabled.
-	// +optional
-	Retry *Retry `json:"retry,omitempty"`
 
 	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
 	// +optional
@@ -697,6 +690,18 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+}
+
+// BackendSettings provides the various knobs that can be set to control how traffic to a given
+// backend will be configured. It embeds ClusterSettings (CDS-only fields) and adds
+// route-level fields like Retry.
+type BackendSettings struct {
+	ClusterSettings `json:",inline"`
+
+	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
+	// If not set, retry will be disabled.
+	// +optional
+	Retry *Retry `json:"retry,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.
@@ -819,11 +824,33 @@ type ResponseOverride struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+// When both statusCodes and responseHeaders are specified, both must match.
+// +kubebuilder:validation:XValidation:rule="has(self.statusCodes) || has(self.responseHeaders)",message="at least one of statusCodes or responseHeaders must be specified"
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
+	//
+	// +optional
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
-	StatusCodes []StatusCodeMatch `json:"statusCodes"`
+	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// Response headers to match on. The match evaluates to true if all matches are successful.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	ResponseHeaders []ResponseOverrideHeaderMatch `json:"responseHeaders,omitempty"`
+}
+
+// ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+type ResponseOverrideHeaderMatch struct {
+	// Name of the HTTP header.
+	// The header name is case-insensitive.
+	// For example, "Foo" and "foo" are considered the same header.
+	Name gwapiv1.HTTPHeaderName `json:"name"`
+
+	// Value within the HTTP header to match against.
+	Value StringMatch `json:"value"`
 }
 
 // StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.

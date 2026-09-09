@@ -34,6 +34,8 @@ import (
 
 var _ ListenersTranslator = (*Translator)(nil)
 
+const sdsCertificateOpaqueConditionMessage = "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default."
+
 type ListenersTranslator interface {
 	ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources)
 }
@@ -338,6 +340,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
+				tlsConfig := irTLSConfigs(&listener.tls)
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -347,7 +350,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Metadata:     buildListenerMetadata(listener, gateway),
 						IPFamily:     ipFamily,
 					},
-					TLS: irTLSConfigs(&listener.tls),
+					TLS: tlsConfig,
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -368,6 +371,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
 				listener.httpIR = irListener
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
+				tlsConfig := irTLSConfigsForTCPListener(&listener.tls)
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -382,7 +386,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
 					// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
 					// refers to the Listener TLS.
-					TLS: irTLSConfigsForTCPListener(&listener.tls),
+					TLS: tlsConfig,
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
@@ -536,6 +540,61 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 // checkOverlappingCertificates checks for overlapping certificates SANs between HTTPSlisteners and sets
 // the `OverlappingTLSConfig` condition if there are overlapping certificates.
 func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
+	// Envoy Gateway cannot inspect certificates served over SDS. When multiple
+	// valid listeners share a port, disable HTTP/2 on SDS-backed listeners and on
+	// peers whose known certificate SANs may overlap the SDS listener hostname. A
+	// nil SDS listener hostname matches every peer because it accepts all hostnames.
+	validListenerCountByPort := make(map[gwapiv1.PortNumber]int)
+	sdsListenersByPort := make(map[gwapiv1.PortNumber][]*ListenerContext)
+	for _, listener := range httpsListeners {
+		if hasInvalidCondition(listener) {
+			continue
+		}
+		validListenerCountByPort[listener.Port]++
+
+		for _, secret := range listener.tls.secrets {
+			if secret.Type == egv1a1.SDSSecretType {
+				sdsListenersByPort[listener.Port] = append(sdsListenersByPort[listener.Port], listener)
+				break
+			}
+		}
+	}
+
+	for _, listener := range httpsListeners {
+		if hasInvalidCondition(listener) || validListenerCountByPort[listener.Port] < 2 {
+			continue
+		}
+
+		disableHTTP2 := false
+		for _, sdsListener := range sdsListenersByPort[listener.Port] {
+			if listener == sdsListener || sdsListener.Hostname == nil {
+				disableHTTP2 = true
+				break
+			}
+			for _, dnsName := range listener.tls.certDNSNames {
+				if areOverlappingHostnames(sdsListener.Hostname, new(gwapiv1.Hostname(dnsName))) {
+					disableHTTP2 = true
+					break
+				}
+			}
+			if disableHTTP2 {
+				break
+			}
+		}
+		if !disableHTTP2 {
+			continue
+		}
+		if listener.httpIR != nil {
+			listener.httpIR.TLSOverlaps = true
+		}
+		listener.SetCondition(
+			gwapiv1.ListenerConditionOverlappingTLSConfig,
+			metav1.ConditionTrue,
+			status.ListenerReasonSDSCertificateOpaque,
+			sdsCertificateOpaqueConditionMessage,
+		)
+	}
+
 	type overlappingListener struct {
 		gateway1  *GatewayContext
 		gateway2  *GatewayContext
@@ -727,6 +786,8 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 		return
 	}
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
+
+	xdsIR.HealthCheckLog = processHealthCheckLog(envoyProxy)
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
@@ -803,6 +864,22 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 			}
 		}
 
+		// ProxyAccessLogFormat.Type is optional: when it is unset the API only requires that
+		// one of text or json is set. The File and ALS sinks can render just one of the two,
+		// so resolve the effective type once here instead of defaulting to JSON at each sink
+		// and silently dropping a text format that was accepted by the API server.
+		// An unset type with both text and json set stays JSON, which is what those sinks
+		// have always picked for that input; only the text-only case changes.
+		// OpenTelemetry is deliberately excluded below: it can carry text and attributes at
+		// the same time and handles the unset type itself.
+		formatType := egv1a1.ProxyAccessLogFormatTypeJSON
+		switch {
+		case format.Type != nil:
+			formatType = *format.Type
+		case format.Text != nil && format.JSON == nil:
+			formatType = egv1a1.ProxyAccessLogFormatTypeText
+		}
+
 		var (
 			validExprs []string
 			errs       []error
@@ -819,13 +896,23 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 		}
 
 		if len(accessLog.Sinks) == 0 {
-			al := &ir.JSONAccessLog{
-				JSON:       ir.MapToSlice(format.JSON),
-				CELMatches: validExprs,
-				LogType:    accessLogType,
-				Path:       "/dev/stdout",
+			if formatType == egv1a1.ProxyAccessLogFormatTypeText {
+				al := &ir.TextAccessLog{
+					Format:     format.Text,
+					CELMatches: validExprs,
+					LogType:    accessLogType,
+					Path:       "/dev/stdout",
+				}
+				irAccessLog.Text = append(irAccessLog.Text, al)
+			} else {
+				al := &ir.JSONAccessLog{
+					JSON:       ir.MapToSlice(format.JSON),
+					CELMatches: validExprs,
+					LogType:    accessLogType,
+					Path:       "/dev/stdout",
+				}
+				irAccessLog.JSON = append(irAccessLog.JSON, al)
 			}
-			irAccessLog.JSON = append(irAccessLog.JSON, al)
 		}
 
 		for j, sink := range accessLog.Sinks {
@@ -835,7 +922,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					continue
 				}
 
-				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
+				if formatType == egv1a1.ProxyAccessLogFormatTypeText {
 					al := &ir.TextAccessLog{
 						Format:     format.Text,
 						Path:       sink.File.Path,
@@ -899,10 +986,9 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					}
 					al.HTTP = http
 				}
-				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
+				if formatType == egv1a1.ProxyAccessLogFormatTypeText {
 					al.Text = format.Text
 				} else {
-					// Default to JSON format if type is nil or JSON
 					al.Attributes = ir.MapToSlice(format.JSON)
 				}
 
@@ -1110,6 +1196,59 @@ func getOpenTelemetryTracingResourceAttributes(provider *egv1a1.TracingProvider)
 	return nil
 }
 
+// processHealthCheckLog extracts the gateway-level HC event log config from EnvoyProxy telemetry.
+func processHealthCheckLog(envoyProxy *egv1a1.EnvoyProxy) *ir.ProxyHealthCheckLog {
+	if envoyProxy == nil ||
+		envoyProxy.Spec.Telemetry == nil ||
+		envoyProxy.Spec.Telemetry.HealthCheckLog == nil {
+		return nil
+	}
+	return translateHealthCheckLog(envoyProxy.Spec.Telemetry.HealthCheckLog)
+}
+
+// translateHealthCheckLog converts a ProxyHealthCheckLog API type to its IR representation.
+func translateHealthCheckLog(hcLogging *egv1a1.ProxyHealthCheckLog) *ir.ProxyHealthCheckLog {
+	if hcLogging == nil {
+		return nil
+	}
+
+	irHCLogging := &ir.ProxyHealthCheckLog{}
+
+	// Empty/omitted Matches means log everything.
+	if len(hcLogging.Matches) == 0 {
+		irHCLogging.AlwaysLogHealthCheckFailures = true
+		irHCLogging.AlwaysLogHealthCheckSuccess = true
+	} else {
+		for _, et := range hcLogging.Matches {
+			switch et {
+			case egv1a1.ProxyHealthCheckLogEventTypeFailure:
+				irHCLogging.AlwaysLogHealthCheckFailures = true
+			case egv1a1.ProxyHealthCheckLogEventTypeSuccess:
+				irHCLogging.AlwaysLogHealthCheckSuccess = true
+			case egv1a1.ProxyHealthCheckLogEventTypeFailureSeriesStart,
+				egv1a1.ProxyHealthCheckLogEventTypeHealthyTransition:
+				// Intentional no-op: leaving the flag false tells Envoy transition-only mode
+			}
+		}
+	}
+
+	// Default to /dev/stdout when no sinks are configured, matching access log behavior.
+	if len(hcLogging.Sinks) == 0 {
+		irHCLogging.FileSinks = append(irHCLogging.FileSinks, ir.FileEnvoyProxyHealthCheckLog{
+			Path: "/dev/stdout",
+		})
+	}
+	for _, sink := range hcLogging.Sinks {
+		if sink.Type == egv1a1.ProxyHealthCheckLogSinkTypeFile && sink.File != nil {
+			irHCLogging.FileSinks = append(irHCLogging.FileSinks, ir.FileEnvoyProxyHealthCheckLog{
+				Path: sink.File.Path,
+			})
+		}
+	}
+
+	return irHCLogging
+}
+
 func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, []ir.ResolvedMetricSink, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
@@ -1118,7 +1257,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	var resolvedSinks []ir.ResolvedMetricSink
-	seen := sets.NewString()
+	seen := sets.New[string]()
 
 	for i, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
 		if sink.OpenTelemetry == nil {

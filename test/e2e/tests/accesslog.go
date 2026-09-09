@@ -138,7 +138,7 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		labels := getOTELLabels(ns)
 		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "accesslog-otel-gtw", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("Positive", func(t *testing.T) {
@@ -187,7 +187,7 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		labels := getOTELLabels(ns)
 		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "accesslog-otel-default-gtw", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("Positive", func(t *testing.T) {
@@ -236,7 +236,7 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		labels := getOTELLabels(ns)
 		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "accesslog-otel-json-gtw", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("Positive", func(t *testing.T) {
@@ -290,7 +290,7 @@ var ALSTest = suite.ConformanceTest{
 		t.Run("HTTP", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "accesslog-als-gtw", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := httputils.ExpectedResponse{
@@ -308,7 +308,7 @@ var ALSTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 1)
 		})
 	},
 }

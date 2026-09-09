@@ -160,6 +160,12 @@ type ActiveHealthCheck struct {
 	// from the main service configuration.
 	// +optional
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
+
+	// HealthCheckLog defines health check event logging configuration for this cluster.
+	// When set, HC probe outcomes are logged to the configured sinks.
+	// Takes precedence over the gateway-level EnvoyProxy.spec.telemetry.healthCheckLog.
+	// +optional
+	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty" yaml:"healthCheckLog,omitempty"`
 }
 
 // ActiveHealthCheckerType is the type of health checker.

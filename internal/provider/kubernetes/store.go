@@ -84,3 +84,16 @@ func (p *kubernetesProviderStore) listNodeAddresses() status.NodeAddresses {
 	}
 	return addrs
 }
+
+func (p *kubernetesProviderStore) listNodeAddressesForNodes(nodeNames []string) status.NodeAddresses {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	addrs := status.NodeAddresses{}
+	for _, name := range nodeNames {
+		if n, ok := p.nodes[name]; ok {
+			addrs.IPv4 = append(addrs.IPv4, n.addresses.IPv4...)
+			addrs.IPv6 = append(addrs.IPv6, n.addresses.IPv6...)
+		}
+	}
+	return addrs
+}

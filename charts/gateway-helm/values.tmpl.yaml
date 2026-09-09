@@ -48,6 +48,7 @@ commonLabels: {}
 podDisruptionBudget:
   minAvailable: 0
   # maxUnavailable: 1
+  # unhealthyPodEvictionPolicy: IfHealthyBudget
 
 deployment:
   annotations: {}

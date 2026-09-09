@@ -489,6 +489,26 @@ func TestBuildClusterWithEndpointOverrideBackendUtilizationWeightedZones(t *test
 	require.Equal(t, 10*time.Second, cswrr.BlackoutPeriod.AsDuration())
 }
 
+func TestBuildClusterHTTPFiltersCredentialInjectionInvalidHeader(t *testing.T) {
+	args := &xdsClusterArgs{
+		settings: []*ir.DestinationSetting{{
+			Filters: &ir.DestinationFilters{
+				CredentialInjection: &ir.CredentialInjection{
+					Name:       "test",
+					Header:     new("invalid header"),
+					Credential: []byte("credential"),
+				},
+			},
+		}},
+	}
+
+	filters, secrets, err := buildClusterHTTPFilters(args)
+
+	require.Error(t, err)
+	require.Nil(t, filters)
+	require.Nil(t, secrets)
+}
+
 func TestGetHealthCheckOverridesHostname(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -661,7 +681,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 
 func TestBackendClusterTranslatorAsClusterArgsAppliesTraffic(t *testing.T) {
 	circuitBreaker := &ir.CircuitBreaker{}
-	traffic := &ir.TrafficFeatures{CircuitBreaker: circuitBreaker}
+	traffic := &ir.ClusterTrafficFeatures{CircuitBreaker: circuitBreaker}
 
 	args := BackendClusterTranslator{}.asClusterArgs("backend-1", nil, &ExtraArgs{traffic: traffic}, nil)
 

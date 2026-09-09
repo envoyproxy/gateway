@@ -64,6 +64,11 @@ spec:
             - type: File
               file:
                 path: /dev/stdout
+    healthCheckLog:
+      sinks:
+        - type: File
+          file:
+            path: /dev/stdout
   shutdown:
     drainTimeout: 5s
     minDrainDuration: 1s

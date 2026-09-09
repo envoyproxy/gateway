@@ -111,7 +111,7 @@ func newBTPClusterSettingsIndex() *BTPClusterSettingsIndex {
 	return &BTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
 }
 
-// HasClusterSettingsBelowGateway reports whether a route-rule, route, or listener-level
+// HasClusterSettingsBelowGateway reports whether a route-rule, route, listener, or ListenerSet-level
 // BackendTrafficPolicy contributes backend-cluster-scoped settings for the given target, or
 // targets it with MergeType unset. A gateway-level setting is never the answer here: it applies
 // uniformly to every route sharing a merged cluster, so it can't cause a divergence -
@@ -122,12 +122,13 @@ func (idx *BTPClusterSettingsIndex) HasClusterSettingsBelowGateway(
 	routeNN types.NamespacedName,
 	gatewayNN types.NamespacedName,
 	listenerName *gwapiv1.SectionName,
+	listenerSetNN *types.NamespacedName,
 	routeRuleName *gwapiv1.SectionName,
 ) bool {
 	if idx == nil {
 		return false
 	}
-	hasClusterSettings, replacesParent := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, nil, routeRuleName)
+	hasClusterSettings, replacesParent := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
 	// replacesParent catches what hasClusterSettings alone would miss: a rule's own BTP with
 	// MergeType nil and no cluster-scoped field (false) still resolves to its own empty settings,
 	// not the gateway's - diverging from a sibling rule that has no BTP and does inherit the
@@ -228,29 +229,29 @@ func BuildBTPIndexes(
 			// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
 			// accepted gateway can enable merging; RoutingType (above) applies regardless.
 			if mergeBackendsEnabled {
-				// TODO(#9619): unlike routingTypeIdx above, this switch has no ListenerSet case, so
-				// ListenerSet-level BTP attachment isn't tracked here.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName != nil:
 					clusterSettingsIdx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
 				case kind == resource.KindGateway:
 					// Gateway-level settings apply uniformly to every route sharing a merged
 					// cluster, so they don't disqualify merging - no entry needed.
+				case kind == resource.KindListenerSet && ref.SectionName != nil:
+					clusterSettingsIdx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+				case kind == resource.KindListenerSet:
+					clusterSettingsIdx.setListenerSetLevel(nn, hasClusterScoped, true)
 				case ref.SectionName != nil:
 					clusterSettingsIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, hasClusterScoped, btp.Spec.MergeType)
 				default:
 					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
 				}
 
-				// TODO(#9619): same gap as clusterSettingsIdx above - this switch has no
-				// ListenerSet case either, so ListenerSet-level BTP attachment isn't tracked here.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName == nil:
 					// Every accepted Gateway-wide BTP must claim this slot, even one that leaves
 					// LoadBalancer unset, so a younger conflicting BTP can't silently win it.
 					loadBalancerIdx.setGatewayLevel(nn, hasLoadBalancer && btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType)
 				default:
-					// A listener/route-rule/route-level LoadBalancer setting already disqualifies
+					// A listener/listenerSet/route-rule/route-level LoadBalancer setting already disqualifies
 					// its own rule from merging on its own, so it's never looked up here.
 				}
 			}
@@ -1432,7 +1433,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 					}
 				}
 
-				if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
+				if localTo, err := buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err == nil {
 					r.Traffic.Timeout = localTo
 				}
 
@@ -1505,13 +1506,13 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 			errs = errors.Join(errs, err)
 		}
 	}
-	if lb, err = buildLoadBalancer(&policy.Spec.ClusterSettings); err != nil {
+	if lb, err = buildLoadBalancer(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
 	}
-	pp = buildProxyProtocol(&policy.Spec.ClusterSettings)
-	hc = buildHealthCheck(&policy.Spec.ClusterSettings)
-	if cb, err = buildCircuitBreaker(&policy.Spec.ClusterSettings); err != nil {
+	pp = buildProxyProtocol(&policy.Spec.BackendSettings)
+	hc = buildHealthCheck(&policy.Spec.BackendSettings)
+	if cb, err = buildCircuitBreaker(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "CircuitBreaker")
 		errs = errors.Join(errs, err)
 	}
@@ -1521,7 +1522,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 	if policy.Spec.AdmissionControl != nil {
 		ac = t.buildAdmissionControl(policy)
 	}
-	if ka, err = buildTCPKeepAlive(&policy.Spec.ClusterSettings); err != nil {
+	if ka, err = buildTCPKeepAlive(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "TCPKeepalive")
 		errs = errors.Join(errs, err)
 	}
@@ -1531,12 +1532,12 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	if to, err = buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err != nil {
+	if to, err = buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
 
-	if bc, err = buildBackendConnection(&policy.Spec.ClusterSettings); err != nil {
+	if bc, err = buildBackendConnection(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "BackendConnection")
 		errs = errors.Join(errs, err)
 	}
@@ -1569,28 +1570,30 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
+	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
-		RateLimit:         rl,
-		BandwidthLimit:    bl,
-		LoadBalancer:      lb,
-		ProxyProtocol:     pp,
-		HealthCheck:       hc,
-		CircuitBreaker:    cb,
-		FaultInjection:    fi,
-		AdmissionControl:  ac,
-		TCPKeepalive:      ka,
-		Retry:             rt,
-		BackendConnection: bc,
-		HTTP2:             h2,
-		DNS:               ds,
-		Timeout:           to,
-		ResponseOverride:  ro,
-		RequestBuffer:     rb,
-		Compression:       cp,
-		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
+		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+			LoadBalancer:      lb,
+			ProxyProtocol:     pp,
+			HealthCheck:       hc,
+			AdmissionControl:  ac,
+			CircuitBreaker:    cb,
+			Timeout:           to,
+			TCPKeepalive:      ka,
+			BackendConnection: bc,
+			HTTP2:             h2,
+			DNS:               ds,
+		},
+		RateLimit:        rl,
+		BandwidthLimit:   bl,
+		FaultInjection:   fi,
+		Retry:            rt,
+		ResponseOverride: ro,
+		Compression:      cp,
+		HTTPUpgrade:      httpUpgrade,
+		Telemetry:        buildBackendTelemetry(policy.Spec.Telemetry),
+		RequestBuffer:    rb,
 	}, errs
 }
 
@@ -1748,7 +1751,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 			}
 
 			r.Traffic = tf.DeepCopy()
-			if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
+			if localTo, err := buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err == nil {
 				r.Traffic.Timeout = localTo
 			}
 
@@ -1772,7 +1775,10 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 	// via hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here.
 	if applyToBackendClusters && errs == nil {
 		for _, bc := range x.BackendClusters {
-			bc.Traffic = tf.DeepCopy()
+			bc.Traffic = tf.ClusterTrafficFeatures.DeepCopy()
+			// Drop the route-scoped timeout members: they are never read from a cluster, and a
+			// merged cluster must not advertise settings it cannot honor.
+			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
 			bc.UseClientProtocol = policy.Spec.UseClientProtocol
 		}
 	}
@@ -2318,13 +2324,13 @@ func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
 }
 
 func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
-	triggerSet := sets.NewString()
+	triggerSet := sets.New[string]()
 	for _, r := range in {
 		triggerSet.Insert(string(r))
 	}
 	irTriggers := make([]ir.TriggerEnum, 0, triggerSet.Len())
 
-	for _, r := range triggerSet.List() {
+	for _, r := range sets.List(triggerSet) {
 		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers
@@ -2380,6 +2386,10 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, 
 					Value: code.Value,
 				})
 			}
+		}
+
+		for _, h := range ro.Match.ResponseHeaders {
+			match.ResponseHeaders = append(match.ResponseHeaders, *irStringMatch(string(h.Name), h.Value))
 		}
 
 		if ro.Redirect != nil {

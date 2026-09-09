@@ -1,0 +1,14 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    name: envoy-gateway/gateway-1/http/*
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/http-route-1/rule/0/match/0/*
+      route:
+        cluster: service/default/service-1/8080/http
+        upgradeConfigs:
+        - upgradeType: websocket

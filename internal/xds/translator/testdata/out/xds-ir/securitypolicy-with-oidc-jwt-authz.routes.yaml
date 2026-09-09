@@ -40,10 +40,16 @@
             - profile
             authType: BASIC_AUTH
             authorizationEndpoint: https://oidc.example.com/authorize
+            cookieConfigs:
+              codeVerifierCookieConfig:
+                path: /oauth2/callback
+              oauthNonceCookieConfig:
+                path: /oauth2/callback
             credentials:
               clientId: prometheus
               cookieNames:
                 bearerToken: AccessToken-5f93c2e4
+                codeVerifier: CodeVerifier-5f93c2e4
                 idToken: IdToken
                 oauthExpires: OauthExpires-5f93c2e4
                 oauthHmac: OauthHMAC-5f93c2e4
@@ -53,13 +59,11 @@
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-http-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/default/policy-for-http-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             preserveAuthorizationHeader: true
             redirectPathMatcher:

@@ -429,7 +429,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo
+          value: /baz
   status:
     parents:
     - conditions:
@@ -633,7 +633,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
+          prefix: /baz
         traffic:
           httpUpgrade:
           - type: spdy/3.1
@@ -694,7 +694,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
+          prefix: /baz
         traffic:
           httpUpgrade:
           - type: spdy/3.1

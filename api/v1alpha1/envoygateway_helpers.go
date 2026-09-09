@@ -6,8 +6,10 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"net"
 	"strconv"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -237,6 +239,52 @@ func DefaultGateway() *Gateway {
 // DefaultXDSServer returns a new XDSServer with default configuration parameters.
 func DefaultXDSServer() *XDSServer {
 	return &XDSServer{}
+}
+
+const (
+	// DefaultDebounceAfter is the default quiet period before a pending batch of
+	// resource changes is flushed.
+	DefaultDebounceAfter = 100 * time.Millisecond
+
+	// DefaultDebounceMax is the default upper bound on how long a resource change
+	// may be held before a flush is forced.
+	DefaultDebounceMax = 10 * time.Second
+)
+
+// Enabled reports whether debouncing of resource changes is turned on. Debouncing
+// is opt in, so defining the config is what turns it on.
+func (d *Debounce) Enabled() bool {
+	return d != nil
+}
+
+// ResolveDurations returns the quiet period and the maximum hold time, substituting
+// the defaults for any field left unset. It is the single place these fields are
+// parsed, so every consumer agrees on what a given configuration means.
+func (d *Debounce) ResolveDurations() (after, maxHold time.Duration, err error) {
+	after, maxHold = DefaultDebounceAfter, DefaultDebounceMax
+	if d == nil {
+		return after, maxHold, nil
+	}
+
+	if d.After != nil {
+		if after, err = time.ParseDuration(string(*d.After)); err != nil {
+			return 0, 0, fmt.Errorf("invalid debounce.after: %w", err)
+		}
+		if after <= 0 {
+			return 0, 0, fmt.Errorf("debounce.after must be greater than zero")
+		}
+	}
+
+	if d.Max != nil {
+		if maxHold, err = time.ParseDuration(string(*d.Max)); err != nil {
+			return 0, 0, fmt.Errorf("invalid debounce.max: %w", err)
+		}
+		if maxHold <= 0 {
+			return 0, 0, fmt.Errorf("debounce.max must be greater than zero")
+		}
+	}
+
+	return after, maxHold, nil
 }
 
 // DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.

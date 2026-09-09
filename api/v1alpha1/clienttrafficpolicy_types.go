@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -188,6 +189,21 @@ type HeaderSettings struct {
 	//
 	// +optional
 	Host *HostSettings `json:"host,omitempty"`
+
+	// MaxRequestHeaderLimit provides configuration for the maximum size of the
+	// request headers allowed for incoming connections, mapping to the Envoy
+	// `max_request_headers_kb` HTTP connection manager setting. Requests whose
+	// headers exceed this limit receive a 431 (Request Header Fields Too Large)
+	// response. The value is rounded up to the nearest KiB, must be at least 1Ki,
+	// and cannot exceed 8192Ki (the maximum Envoy supports).
+	// For example, 60Ki, 96Ki, 128Ki etc.
+	// Note that when the suffix is not provided, the value is interpreted as bytes.
+	// Default: 60Ki bytes.
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	MaxRequestHeaderLimit *resource.Quantity `json:"maxRequestHeaderLimit,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -381,7 +397,15 @@ type CustomHeaderExtensionSettings struct {
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
-type HTTP3Settings struct{}
+type HTTP3Settings struct {
+	// AdvertisedPort specifies the port advertised to clients in the HTTP/3
+	// `alt-svc` response header. It does not change the listener or Service port.
+	// If unset, the Gateway listener port is advertised.
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self >= 1 && self <= 65535",message="advertisedPort must be between 1 and 65535"
+	AdvertisedPort *gwapiv1.PortNumber `json:"advertisedPort,omitempty"`
+}
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 type HTTP1Settings struct {

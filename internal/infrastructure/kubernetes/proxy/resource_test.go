@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
@@ -31,10 +32,19 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 		return sc
 	}
 
-	customSc := &corev1.SecurityContext{
+	// User-supplied fields override the hardened defaults; unset fields retain defaults.
+	// Privilege enforcement is delegated to external policy tools (Kyverno, PSA, etc.).
+	customScInput := &corev1.SecurityContext{
 		Privileged: new(true),
 		RunAsUser:  new(int64(21)),
 		RunAsGroup: new(int64(2100)),
+	}
+	customScExpected := func() *corev1.SecurityContext {
+		sc := defaultSecurityContext()
+		sc.Privileged = new(true)
+		sc.RunAsUser = new(int64(21))
+		sc.RunAsGroup = new(int64(2100))
+		return sc
 	}
 
 	tests := []struct {
@@ -48,11 +58,11 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 			expected: defaultSecurityContext(),
 		},
 		{
-			name: "default",
+			name: "user overrides are merged over defaults",
 			in: &egv1a1.KubernetesContainerSpec{
-				SecurityContext: customSc,
+				SecurityContext: customScInput,
 			},
-			expected: customSc,
+			expected: customScExpected(),
 		},
 	}
 	for _, tc := range tests {
@@ -179,6 +189,54 @@ func TestGetImageTag(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tt.expectedTag, tag)
 			}
+		})
+	}
+}
+
+func TestExpectedShutdownPreStopCommand(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      *egv1a1.ShutdownConfig
+		expected []string
+	}{
+		{
+			name:     "nil config",
+			cfg:      nil,
+			expected: []string{"envoy-gateway", "envoy", "shutdown"},
+		},
+		{
+			name: "health check failure delay",
+			cfg: &egv1a1.ShutdownConfig{
+				HealthCheckFailureDelay: new(gwapiv1.Duration("15s")),
+				DrainTimeout:            new(gwapiv1.Duration("30s")),
+				MinDrainDuration:        new(gwapiv1.Duration("5s")),
+			},
+			expected: []string{
+				"envoy-gateway",
+				"envoy",
+				"shutdown",
+				"--health-check-failure-delay=15s",
+				"--drain-timeout=30s",
+				"--min-drain-duration=5s",
+			},
+		},
+		{
+			name: "subsecond health check failure delay",
+			cfg: &egv1a1.ShutdownConfig{
+				HealthCheckFailureDelay: new(gwapiv1.Duration("400ms")),
+			},
+			expected: []string{
+				"envoy-gateway",
+				"envoy",
+				"shutdown",
+				"--health-check-failure-delay=400ms",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, expectedShutdownPreStopCommand(tt.cfg))
 		})
 	}
 }

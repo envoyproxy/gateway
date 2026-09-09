@@ -1409,6 +1409,100 @@ func TestWildcardHostnameMatchesHostname(t *testing.T) {
 	}
 }
 
+func TestComputeHostsConflictOwnership(t *testing.T) {
+	const hostname = "winner.example.com"
+
+	newListener := func(gateway *GatewayContext, name, listenerHostname string) *ListenerContext {
+		listener := &ListenerContext{
+			Listener: &gwapiv1.Listener{
+				Name:     gwapiv1.SectionName(name),
+				Port:     80,
+				Protocol: gwapiv1.HTTPProtocolType,
+				Hostname: new(gwapiv1.Hostname(listenerHostname)),
+			},
+			gateway: gateway,
+		}
+		return listener
+	}
+
+	tests := []struct {
+		name            string
+		winnerHostname  string
+		routeHostname   string
+		siblingHostname string
+		configure       func(*ListenerContext)
+		want            []string
+	}{
+		{
+			name:            "normal sibling reserves hostname",
+			siblingHostname: hostname,
+			want:            []string{},
+		},
+		{
+			name:            "hostname conflict loser does not reserve hostname",
+			siblingHostname: hostname,
+			configure: func(listener *ListenerContext) {
+				listener.hostnameConflictLoser = true
+			},
+			want: []string{hostname},
+		},
+		{
+			name:            "invalid non-conflicted sibling reserves hostname",
+			siblingHostname: hostname,
+			configure: func(listener *ListenerContext) {
+				listener.specValid = false
+			},
+			want: []string{},
+		},
+		{
+			name:            "no-winner gateway conflict reserves hostname",
+			siblingHostname: hostname,
+			configure: func(listener *ListenerContext) {
+				listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionTrue, gwapiv1.ListenerReasonHostnameConflict, "no winner")
+			},
+			want: []string{},
+		},
+		{
+			name:            "wildcard hostname conflict loser does not suppress intersection",
+			winnerHostname:  "*.example.com",
+			routeHostname:   "*.example.com",
+			siblingHostname: "*.example.com",
+			configure: func(listener *ListenerContext) {
+				listener.hostnameConflictLoser = true
+			},
+			want: []string{"*.example.com"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+			winnerHostname := tc.winnerHostname
+			if winnerHostname == "" {
+				winnerHostname = hostname
+			}
+			routeHostname := tc.routeHostname
+			if routeHostname == "" {
+				routeHostname = hostname
+			}
+			winner := newListener(gateway, "winner", winnerHostname)
+			sibling := newListener(gateway, "sibling", tc.siblingHostname)
+			gateway.listeners = []*ListenerContext{winner, sibling}
+			gateway.Status.Listeners = []gwapiv1.ListenerStatus{
+				{Name: winner.Name},
+				{Name: sibling.Name},
+			}
+			winner.listenerStatusIdx = 0
+			sibling.listenerStatusIdx = 1
+			if tc.configure != nil {
+				tc.configure(sibling)
+			}
+
+			require.ElementsMatch(t, tc.want, computeHosts([]string{routeHostname}, winner))
+		})
+	}
+}
+
 func TestPolicyScopeGraphGetDirectChildren(t *testing.T) {
 	gatewayNN := types.NamespacedName{Namespace: "default", Name: "gateway"}
 	listenerSetNN := types.NamespacedName{Namespace: "default", Name: "listener-set"}
@@ -1649,27 +1743,29 @@ func TestIrBackendClusterName(t *testing.T) {
 	}
 }
 
-func TestIsMergeBackendsEnabled(t *testing.T) {
+func TestResolveMergeBackendsConfig(t *testing.T) {
+	fooSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
+	barSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "qux"}}
 	enabled := &egv1a1.MergeBackendsConfig{}
 
 	tests := []struct {
 		name string
 		res  *resource.Resources
-		want bool
+		want *MergeBackendsConfig
 	}{
 		{
 			name: "gatewayclass envoyproxy set",
 			res: &resource.Resources{
 				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{MergeBackends: enabled}},
 			},
-			want: true,
+			want: &MergeBackendsConfig{},
 		},
 		{
 			name: "default spec set",
 			res: &resource.Resources{
 				EnvoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{MergeBackends: enabled},
 			},
-			want: true,
+			want: &MergeBackendsConfig{},
 		},
 		{
 			name: "gatewayclass envoyproxy set but MergeBackends nil falls back to default spec",
@@ -1677,17 +1773,38 @@ func TestIsMergeBackendsEnabled(t *testing.T) {
 				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{}},
 				EnvoyProxyDefaultSpec:     &egv1a1.EnvoyProxySpec{MergeBackends: enabled},
 			},
-			want: true,
+			want: &MergeBackendsConfig{},
 		},
 		{
 			name: "unset",
 			res:  &resource.Resources{},
-			want: false,
+			want: nil,
+		},
+		{
+			name: "gatewayclass-level selector wins over global default's selector",
+			res: &resource.Resources{
+				EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+					MergeBackends: &egv1a1.MergeBackendsConfig{Selector: fooSelector},
+				}},
+				EnvoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+					MergeBackends: &egv1a1.MergeBackendsConfig{Selector: barSelector},
+				},
+			},
+			want: &MergeBackendsConfig{Selector: fooSelector},
+		},
+		{
+			name: "falls back to global default's selector when gatewayclass-level MergeBackends is unset",
+			res: &resource.Resources{
+				EnvoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+					MergeBackends: &egv1a1.MergeBackendsConfig{Selector: barSelector},
+				},
+			},
+			want: &MergeBackendsConfig{Selector: barSelector},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, IsMergeBackendsEnabled(tc.res))
+			require.Equal(t, tc.want, ResolveMergeBackendsConfig(tc.res))
 		})
 	}
 }
@@ -1718,7 +1835,7 @@ func structWithFieldSet[T any](fieldName string) *T {
 	v := reflect.ValueOf(specPtr).Elem()
 	field := v.FieldByName(fieldName)
 	switch field.Kind() {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		field.Set(reflect.New(field.Type().Elem()))
 	case reflect.Slice:
 		field.Set(reflect.MakeSlice(field.Type(), 1, 1))

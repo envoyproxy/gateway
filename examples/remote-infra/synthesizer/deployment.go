@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 )
 
 // GetDeployment renders the desired Deployment for the IR.
@@ -36,7 +35,7 @@ func (is *InfraSynthesizer) GetDeployment(ctx context.Context, ir *Infra) (*apps
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: ptr.To(int32(1)),
+			Replicas: new(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -45,13 +44,13 @@ func (is *InfraSynthesizer) GetDeployment(ctx context.Context, ir *Infra) (*apps
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					Containers:                   containers,
 					Volumes:                      is.GetDeploymentVolumes(),
 				},
 			},
-			RevisionHistoryLimit:    ptr.To(int32(10)),
-			ProgressDeadlineSeconds: ptr.To(int32(600)),
+			RevisionHistoryLimit:    new(int32(10)),
+			ProgressDeadlineSeconds: new(int32(600)),
 		},
 	}, nil
 }
@@ -80,7 +79,6 @@ func (is *InfraSynthesizer) GetDeploymentContainers(ctx context.Context, ir *Inf
 		"--service-node", ir.Proxy.Name,
 		"--config-yaml", buf.String(),
 		"--log-level", "info",
-		"--cpuset-threads",
 		"--drain-strategy", "immediate",
 	}
 
@@ -124,18 +122,18 @@ func (is *InfraSynthesizer) GetDeploymentContainers(ctx context.Context, ir *Inf
 			Args:            args,
 			Env:             env,
 			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
+				AllowPrivilegeEscalation: new(false),
 				Capabilities: &corev1.Capabilities{
 					Drop: []corev1.Capability{"ALL"},
 				},
-				Privileged:             ptr.To(false),
-				ReadOnlyRootFilesystem: ptr.To(false),
-				RunAsNonRoot:           ptr.To(true),
+				Privileged:             new(false),
+				ReadOnlyRootFilesystem: new(false),
+				RunAsNonRoot:           new(true),
 				SeccompProfile: &corev1.SeccompProfile{
 					Type: corev1.SeccompProfileTypeRuntimeDefault,
 				},
-				RunAsUser:  ptr.To(int64(65532)),
-				RunAsGroup: ptr.To(int64(65532)),
+				RunAsUser:  new(int64(65532)),
+				RunAsGroup: new(int64(65532)),
 			},
 			Ports:                    ports,
 			VolumeMounts:             volumeMounts,
@@ -194,7 +192,7 @@ func (is *InfraSynthesizer) GetDeploymentVolumes() []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  "envoy",
-					DefaultMode: ptr.To(int32(420)),
+					DefaultMode: new(int32(420)),
 				},
 			},
 		},

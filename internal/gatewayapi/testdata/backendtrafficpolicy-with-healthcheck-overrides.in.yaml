@@ -115,6 +115,8 @@ grpcRoutes:
     namespace: default
     name: grpcroute-with-overrides
   spec:
+    hostnames:
+    - grpc-with-overrides.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway
@@ -129,6 +131,8 @@ grpcRoutes:
     namespace: default
     name: grpcroute-with-no-overrides
   spec:
+    hostnames:
+    - grpc-with-no-overrides.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway

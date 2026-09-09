@@ -1,0 +1,37 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: patched
+spec:
+  dynamicModule:
+  - filterName: parent-filter
+    name: parent-dm
+  extProc:
+  - backendRefs:
+    - kind: Service
+      name: ext-proc-route
+      port: 9002
+    failOpen: true
+    messageTimeout: 10s
+  lua:
+  - type: ValueRef
+    valueRef:
+      group: v1
+      kind: ConfigMap
+      name: route-lua
+  mergeType: StrategicMerge
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: route-1
+  wasm:
+  - code:
+      http:
+        sha256: null
+        url: https://wasm.parent.example.com/filter.wasm
+      type: HTTP
+    failOpen: false
+    name: wasm-parent
+    rootID: parent-root
+status:
+  ancestors: null

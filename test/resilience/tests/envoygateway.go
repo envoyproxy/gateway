@@ -41,14 +41,13 @@ func init() {
 
 var EGResilience = suite.ResilienceTest{
 	ShortName:   "EGResilience",
-	Description: "Envoygateway resilience test",
+	Description: "EnvoyGateway resilience test",
 	Test: func(t *testing.T, suite *suite.ResilienceTestSuite) {
 		ap := kubernetes.Applier{
 			ManifestFS:     suite.ManifestFS,
 			GatewayClass:   suite.GatewayClassName,
 			ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 		}
-		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
 		// Preserve original convergence semantics for resilience tests
 		localTimeout := suite.TimeoutConfig

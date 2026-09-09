@@ -1,0 +1,64 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    telemetry:
+      healthCheckLog: {}
+      tracing:
+        samplingRate: 100
+        provider:
+          backendSettings:
+            healthCheck:
+              active:
+                type: HTTP
+                http:
+                  path: /healthz
+                interval: 5s
+                timeout: 500ms
+                unhealthyThreshold: 3
+                healthyThreshold: 1
+            circuitBreaker:
+              maxConnections: 1024
+          backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 4317
+          type: OpenTelemetry
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /foo
+      backendRefs:
+      - name: service-1
+        port: 8080

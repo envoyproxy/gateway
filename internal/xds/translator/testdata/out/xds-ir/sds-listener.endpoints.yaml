@@ -1,0 +1,36 @@
+- clusterName: test1-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: test1-dest/backend/0
+- clusterName: test2-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.3.4.5
+            portValue: 50001
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: test2-dest/backend/0
+- clusterName: test3-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.4.5.6
+            portValue: 50002
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: test3-dest/backend/0

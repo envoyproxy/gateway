@@ -1,9 +1,9 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= 1.36.0
+ENVTEST_K8S_VERSION ?= 1.37.0
 # Need run cel validation across multiple versions of k8s
-ENVTEST_K8S_VERSIONS ?= 1.33.0 1.34.1 1.35.0 1.36.0
+ENVTEST_K8S_VERSIONS ?= 1.34.1 1.35.0 1.36.2 1.37.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
@@ -15,6 +15,9 @@ EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-
 STANDARD_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/standard-install.yaml
 
 WAIT_TIMEOUT ?= 15m
+
+CLUSTER_NAME ?= envoy-gateway
+export CLUSTER_NAME
 
 IP_FAMILY ?= ipv4
 BENCHMARK_TIMEOUT ?= 60m
@@ -37,8 +40,10 @@ E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 # If E2E_DEBUG is not explicitly defined, set it based on the ACTIONS_STEP_DEBUG environment variable.
 E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
+E2E_DISABLE_PARALLEL ?= false
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
-E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG) --cleanup-test-resources=$(E2E_CLEANUP)
+# TODO: remove --allow-crds-mismatch once we bump the Gateway API version to v1.7.0 or later in the e2e tests.
+E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG) --cleanup-test-resources=$(E2E_CLEANUP) --disable-parallel-tests=$(E2E_DISABLE_PARALLEL) --allow-crds-mismatch
 
 # Define the Gateway API channel used in tests
 E2E_GATEWAY_API_CHANNEL ?= experimental
@@ -271,6 +276,12 @@ e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
 	e2e-prepare setup-mac-net-connect run-e2e delete-cluster
 
+.PHONY: e2e-mac conformance-mac
+e2e-mac conformance-mac: CLUSTER_NAME = envoy-gateway-mac
+e2e-mac conformance-mac: export KUBECONFIG = $(OUTPUT_DIR)/kind-$(CLUSTER_NAME).kubeconfig
+e2e-mac: setup-mac-net-connect e2e ## Run end-to-end tests on macOS using an isolated kind cluster.
+conformance-mac: setup-mac-net-connect conformance ## Run Gateway API conformance on macOS using an isolated kind cluster.
+
 .PHONY: install-ratelimit
 install-ratelimit:
 	@$(LOG_TARGET)
@@ -444,7 +455,7 @@ endif
 .PHONY: delete-cluster
 delete-cluster: ## Delete kind cluster.
 	@$(LOG_TARGET)
-	$(GO_TOOL) kind delete cluster --name envoy-gateway
+	$(GO_TOOL) kind delete cluster --name $(CLUSTER_NAME)
 
 .PHONY: generate-manifests
 generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release manifests.

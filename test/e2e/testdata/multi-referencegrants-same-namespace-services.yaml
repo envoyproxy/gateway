@@ -35,7 +35,7 @@ spec:
     spec:
       containers:
       - name: app-backend-v1
-        image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
         env:
         - name: POD_NAME
           valueFrom:
@@ -47,6 +47,12 @@ spec:
               fieldPath: metadata.namespace
         - name: SERVICE_NAME
           value: app-backend-v1
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 1
+          periodSeconds: 1
         resources:
           requests:
             cpu: 10m
@@ -83,7 +89,7 @@ spec:
     spec:
       containers:
       - name: app-backend-v2
-        image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
         env:
         - name: POD_NAME
           valueFrom:
@@ -95,6 +101,12 @@ spec:
               fieldPath: metadata.namespace
         - name: SERVICE_NAME
           value: app-backend-v2
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 1
+          periodSeconds: 1
         resources:
           requests:
             cpu: 10m
@@ -131,7 +143,7 @@ spec:
     spec:
       containers:
       - name: app-backend-v3
-        image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
         env:
         - name: POD_NAME
           valueFrom:
@@ -143,6 +155,12 @@ spec:
               fieldPath: metadata.namespace
         - name: SERVICE_NAME
           value: app-backend-v3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 1
+          periodSeconds: 1
         resources:
           requests:
             cpu: 10m

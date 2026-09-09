@@ -1,0 +1,151 @@
+configmaps:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: cm-policy-for-gateway
+    namespace: envoy-gateway
+  data:
+    lua: |
+      function envoy_on_request(request_handle)
+      request_handle:logInfo('hello from parent')
+      end
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: cm-policy-for-http-route
+    namespace: default
+  data:
+    lua: |
+      function envoy_on_response(response_handle)
+      response_handle:logWarn('hello from route')
+      end
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: envoy-gateway
+    name: grpc-backend
+  spec:
+    ports:
+    - port: 9000
+      name: grpc
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    namespace: envoy-gateway
+    name: endpointslice-grpc-backend
+    labels:
+      kubernetes.io/service-name: grpc-backend
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    port: 9000
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true
+envoyextensionpolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http
+    lua:
+    - type: ValueRef
+      valueRef:
+        name: cm-policy-for-gateway
+        kind: ConfigMap
+        group: v1
+    extProc:
+    - backendRefs:
+      - name: grpc-backend
+        port: 9000
+      processingMode:
+        allowModeOverride: true
+        request:
+          body: Buffered
+          attributes:
+          - request.path
+        response:
+          body: Streamed
+          attributes:
+          - xds.route_metadata
+          - connection.requested_server_name
+      metadata:
+        accessibleNamespaces:
+        - envoy.filters.http.ext_authz
+        writableNamespaces:
+        - envoy.filters.http.my_custom
+      messageTimeout: 5s
+      failOpen: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    lua:
+    - type: ValueRef
+      valueRef:
+        name: cm-policy-for-http-route
+        kind: ConfigMap
+        group: v1
+    wasm:
+    - name: wasm-filter-1
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/wasm-filter-1.wasm
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+      env:
+        hostKeys:
+        - SOME_KEY
+        - ANOTHER_KEY

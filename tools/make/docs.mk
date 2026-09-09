@@ -10,6 +10,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	blog.envoyproxy.io \
 	envoyproxy.io/slack \
 	ntia.gov \
+	nvd.nist.gov \
 	github.com \
 	jwt.io \
 	githubusercontent.com \
@@ -19,6 +20,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	gnu.org \
 	_print \
 	canva.com \
+	communityinviter.com \
 	sched.co \
 	sap.com \
 	httpbin.org \
@@ -26,6 +28,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	verve.com \
 	goteleport.com \
 	developer.hashicorp.com \
+	www.signal-ai.com \
 	v0.1 \
 	v0.2 \
 	v0.3 \
@@ -90,76 +93,28 @@ endif
 .PHONY: docs-api
 docs-api: docs-api-gen helm-readme-gen
 
-# Define base URLs for downloading documentation, examples, and images from the gateway-api repository.
-DOC_SRC_URL=https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/site-src/api-types
-YAML_SRC_BASE_URL=https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/examples
-IMAGE_SRC_BASE_URL=https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/site-src/images
+# Gateway API documentation sync.
+# Since Gateway API v1.6 the upstream docs are a Hugo site, so the sources live
+# under site/content/en/reference/api-types (BackendTLSPolicy under policy/)
+# instead of the old MkDocs site-src/api-types tree. The rewriting rules live in
+# tools/hack/gwapi-doc-sync.sh.
+GWAPI_DOC_SRC_PATH ?= site/content/en/reference/api-types
 
-# Define destination directories for images and documentation within the envoy gateway repository.
-IMAGE_DEST_DIR=$(ROOT_DIR)/site/static/img
+# List of documentation files to synchronize, relative to GWAPI_DOC_SRC_PATH.
+GWAPI_SYNC_FILES ?= gateway.md gatewayclass.md httproute.md grpcroute.md referencegrant.md policy/backendtlspolicy.md
+
+# Destination directory for the synchronized documentation.
 DOC_DEST_DIR=$(ROOT_DIR)/site/content/en/latest/api/gateway_api
 
-# List of documentation files to synchronize.
-SYNC_FILES := gateway.md gatewayclass.md httproute.md grpcroute.md backendtlspolicy.md referencegrant.md
-
-# Main target to synchronize all gateway-api documentation components.
-sync-gwapi-docs: gwapi-doc-download gwapi-doc-transform \
-	gwapi-doc-download-includes gwapi-doc-replace-includes gwapi-doc-clean-includes \
-	gwapi-doc-remove-special-lines gwapi-doc-update-relative-links
-
-# Download the documentation files from the gateway-api repository to the local destination directory.
-gwapi-doc-download:
+.PHONY: sync-gwapi-docs
+sync-gwapi-docs: ## Sync the gateway-api api-types docs for the bundled Gateway API version.
 	@$(LOG_TARGET)
-	@mkdir -p $(DOC_DEST_DIR)
-	@$(foreach file, $(SYNC_FILES), curl -s -o $(DOC_DEST_DIR)/$(file) $(DOC_SRC_URL)/$(file);)
-
-# Transform the first line of each markdown file to a header format suitable for Hugo.
-gwapi-doc-transform:
-	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), $(SED) '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
-
-# Download included YAML files referenced within the documentation.
-gwapi-doc-download-includes:
-	@$(LOG_TARGET)
-	@DOC_DEST_DIR=$(DOC_DEST_DIR) YAML_SRC_BASE_URL=$(YAML_SRC_BASE_URL) SYNC_FILES="$(SYNC_FILES)" ./tools/hack/gwapi-doc-download-includes.sh
-
-# Replace include statements with the actual content of the YAML files.
-gwapi-doc-replace-includes:
-	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), \
-		perl -0777 -i -pe ' \
-			while (/{% include '\''(.*?)'\'' %}/) { \
-				$$yaml_path = $$1; \
-				$$yaml_file = `basename $$yaml_path`; \
-				$$yaml_content = `cat $(DOC_DEST_DIR)/$$yaml_file`; \
-				s/{% include '\''$$yaml_path'\'' %}/$$yaml_content/; \
-			} \
-		' $(DOC_DEST_DIR)/$(file);)
-
-# Clean up by removing downloaded YAML files after processing.
-gwapi-doc-clean-includes:
-	@$(LOG_TARGET)
-	@find $(DOC_DEST_DIR) -name '*.yaml' -exec rm {} +
-
-# Remove special lines that start with '!!!' or `???` from the documentation.
-gwapi-doc-remove-special-lines:
-	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), \
-		$(SED) '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
-
-# Update relative links
-gwapi-doc-update-relative-links:
-	@$(LOG_TARGET)
-	# Replace ../reference/spec.md to https://gateway-api.sigs.k8s.io/reference/api-spec/$(GATEWAY_API_MINOR_VERSION)/spec/
-	@$(foreach file, $(SYNC_FILES), \
- 		$(SED) -e 's/\(\[.*\]\)(\(\.\.\/reference\/spec.md\))/\1(https:\/\/gateway-api.sigs.k8s.io\/reference\/api-spec\/$(GATEWAY_API_MINOR_VERSION)\/spec\/)/g' -e 's/\(\[.*\]: \)\(\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/api-spec\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' -e 's/\(\[.*\]: \)\(\.\.\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/api-spec\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' $(DOC_DEST_DIR)/$(file);)
-	@$(foreach file, $(SYNC_FILES), \
- 		$(SED) -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
-	@$(foreach file, $(SYNC_FILES), \
- 		$(SED) -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
- 	# Remove .md from links
-	@$(foreach file, $(SYNC_FILES), \
- 		$(SED) -e 's/\((https:\/\/gateway-api.sigs.k8s.io[^)]*\)\.md/\1/g' $(DOC_DEST_DIR)/$(file);)
+	@GATEWAY_API_VERSION=$(GATEWAY_API_VERSION) \
+		GATEWAY_API_MINOR_VERSION=$(GATEWAY_API_MINOR_VERSION) \
+		DOC_SRC_PATH=$(GWAPI_DOC_SRC_PATH) \
+		DOC_DEST_DIR=$(DOC_DEST_DIR) \
+		SYNC_FILES="$(GWAPI_SYNC_FILES)" \
+		./tools/hack/gwapi-doc-sync.sh
 
 .PHONY: helm-readme-gen
 helm-readme-gen:

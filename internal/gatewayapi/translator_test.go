@@ -124,6 +124,16 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled:            true,
 			PerResourceSystemCASecret: true,
 		},
+		{
+			name:           "sds-listener",
+			BackendEnabled: true,
+			SDSEnabled:     true,
+		},
+		{
+			name:           "sds-listener-invalid",
+			BackendEnabled: true,
+			SDSEnabled:     true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -173,7 +183,7 @@ func TestTranslate(t *testing.T) {
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
-				MergeBackends:                   IsMergeBackendsEnabled(resources),
+				MergeBackends:                   ResolveMergeBackendsConfig(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
@@ -517,7 +527,7 @@ func TestTranslate(t *testing.T) {
 				},
 			})
 
-			got, _ := translator.Translate(resources)
+			got, _ := translator.Translate(t.Context(), resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
@@ -825,7 +835,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				},
 			})
 
-			got, _ := translator.Translate(resources)
+			got, _ := translator.Translate(t.Context(), resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 			// Also fix lastTransitionTime in unstructured members
 			for i := range got.ExtensionServerPolicies {
@@ -1201,6 +1211,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		AccessLog               *ir.AccessLog
 		Tracing                 *ir.Tracing
 		Metrics                 *ir.Metrics
+		HealthCheckLog          *ir.ProxyHealthCheckLog
 		HTTP                    []*ir.HTTPListener
 		TCP                     []*ir.TCPListener
 		UDP                     []*ir.UDPListener
@@ -1214,6 +1225,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		AccessLog:               a.AccessLog,
 		Tracing:                 a.Tracing,
 		Metrics:                 a.Metrics,
+		HealthCheckLog:          a.HealthCheckLog,
 		HTTP:                    a.HTTP,
 		TCP:                     a.TCP,
 		UDP:                     a.UDP,

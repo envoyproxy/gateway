@@ -1,1 +1,0 @@
-Added support for referencing an Envoy Gateway HTTPRouteFilter from a GRPCRoute rule via an `extensionRef` filter, enabling URL rewrite (authority/host and regex `:path`), direct response, credential injection, and cookie-based matches for gRPC traffic.
