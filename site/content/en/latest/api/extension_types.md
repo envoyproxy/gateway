@@ -2353,7 +2353,7 @@ _Appears in:_
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict<br />Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release. |
 | `lua` | _[LuaValidationConfig](#luavalidationconfig)_ |  false  |  | Lua configures how Lua scripts from EnvoyExtensionPolicy resources are<br />validated in the gateway controller. It selects the validation mode and, for the Strict<br />mode, defines the filesystem paths and environment variables the scripts are permitted to<br />access during validation. |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
-| `wasmModules` | _[WasmModuleEntry](#wasmmoduleentry) array_ |  false  |  | WasmModules defines the set of Wasm modules that are allowed to be used by<br />EnvoyExtensionPolicy resources with an EnvoyProxy code source. Each<br />entry registers a module by a logical name and a source (currently Local path).<br />The EnvoyProxy owner is responsible for ensuring Local modules are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path. |
+| `wasmModules` | _[WasmModuleEntry](#wasmmoduleentry) array_ |  false  |  | WasmModules defines the set of Wasm modules that are allowed to be used by<br />EnvoyExtensionPolicy resources. Each entry registers a module by a logical<br />name and a source (currently Local path).<br />When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up<br />in this list.<br />The EnvoyProxy owner is responsible for ensuring Local modules are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path. |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
 
@@ -2369,20 +2369,6 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-
-
-#### EnvoyProxyWasmCodeSource
-
-
-
-EnvoyProxyWasmCodeSource references a Wasm module registered in EnvoyProxy.spec.wasmModules.
-
-_Appears in:_
-- [WasmCodeSource](#wasmcodesource)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  true  |  | Name is the logical name of a module in the EnvoyProxy wasmModules allowlist. |
 
 
 #### EnvoyResourceType
@@ -6823,9 +6809,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension. |
+| `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension.<br />When Code is omitted, Name is required and must match a module registered<br />in EnvoyProxy.spec.wasmModules. |
 | `rootID` | _string_ |  true  |  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
-| `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  |  | Code is the Wasm code for the extension. |
+| `code` | _[WasmCodeSource](#wasmcodesource)_ |  false  |  | Code is the Wasm code for the extension.<br />When omitted, Name must match a module in EnvoyProxy.spec.wasmModules. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the Wasm extension will also be bypassed if the configuration is invalid. |
 | `env` | _[WasmEnv](#wasmenv)_ |  false  |  | Env configures the environment for the Wasm extension |
@@ -6842,11 +6828,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  |  | Type is the type of the source of the Wasm code.<br />Valid WasmCodeSourceType values are "HTTP", "Image", or "EnvoyProxy". |
+| `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  |  | Type is the type of the source of the Wasm code.<br />Valid WasmCodeSourceType values are "HTTP" or "Image". |
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  |  | HTTP is the HTTP URL containing the Wasm code.<br />Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  |  | Image is the OCI image containing the Wasm code.<br />Note that the image must be accessible from the Envoy Gateway. |
-| `envoyProxy` | _[EnvoyProxyWasmCodeSource](#envoyproxywasmcodesource)_ |  false  |  | EnvoyProxy loads Wasm code from a module registered on the EnvoyProxy<br />wasmModules allowlist. The policy references the module by name only;<br />the module source is configured by the infrastructure operator on EnvoyProxy.<br />For Local modules this skips the control-plane fetch/cache path used by<br />HTTP and Image sources. The operator must ensure the file is present on<br />the Envoy proxy (for example via a custom image or volume mount). |
-| `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  |  | PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.<br />This field is only applicable when the SHA256 field is not set.<br />If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests<br />the Wasm module even if the pull policy is set to Always.<br />It only updates the Wasm module when the EnvoyExtension resource version changes.<br />PullPolicy must not be set when Type is EnvoyProxy. |
+| `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  |  | PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.<br />This field is only applicable when the SHA256 field is not set.<br />If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests<br />the Wasm module even if the pull policy is set to Always.<br />It only updates the Wasm module when the EnvoyExtension resource version changes. |
 
 
 #### WasmCodeSourceTLSConfig
@@ -6877,7 +6862,6 @@ _Appears in:_
 | ----- | ----------- |
 | `HTTP` | HTTPWasmCodeSourceType allows the user to specify the Wasm code in an HTTP URL.<br /> | 
 | `Image` | ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.<br /> | 
-| `EnvoyProxy` | EnvoyProxyWasmCodeSourceType loads Wasm code from a module registered on EnvoyProxy.<br /> | 
 
 
 #### WasmEnv
@@ -6899,14 +6883,14 @@ _Appears in:_
 
 
 WasmModuleEntry defines a Wasm module that is registered and allowed for use
-by EnvoyExtensionPolicy resources with an EnvoyProxy code source.
+by EnvoyExtensionPolicy resources.
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  true  |  | Name is the logical name for this module. EnvoyExtensionPolicy resources<br />reference modules by this name. |
+| `name` | _string_ |  true  |  | Name is the logical name for this module. EnvoyExtensionPolicy resources<br />reference modules by this name when wasm[].code is omitted. |
 | `source` | _[WasmModuleSource](#wasmmodulesource)_ |  true  |  | Source defines where the Wasm module code is loaded from. |
 
 

@@ -1090,18 +1090,82 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				": Exactly one of inline or valueRef must be set with correct type.",
 			},
 		},
-		// Wasm EnvoyProxy code source
+		// Wasm name-only registry lookup
 		{
-			desc: "valid Wasm EnvoyProxy code source",
+			desc: "valid Wasm name-only registry reference",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Name: new("wasm-filter"),
-							Code: egv1a1.WasmCodeSource{
-								Type: egv1a1.EnvoyProxyWasmCodeSourceType,
-								EnvoyProxy: &egv1a1.EnvoyProxyWasmCodeSource{
-									Name: "security-filter",
+							Name: new("security-filter"),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Wasm with neither code nor name",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"either code must be set, or name must be set and match the wasmModules name pattern"},
+		},
+		{
+			desc: "Wasm name-only with invalid name",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Name: new("MyFilter"),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"either code must be set, or name must be set and match the wasmModules name pattern"},
+		},
+		{
+			desc: "valid Wasm HTTP code with name that does not match wasmModules pattern",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Name: new("MyFilter"),
+							Code: &egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/filter.wasm",
 								},
 							},
 						},
@@ -1120,43 +1184,16 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "Wasm EnvoyProxy without envoyProxy field",
+			desc: "valid Wasm HTTP code without name",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
-								Type: egv1a1.EnvoyProxyWasmCodeSourceType,
-							},
-						},
-					},
-					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: "gateway.networking.k8s.io",
-								Kind:  "Gateway",
-								Name:  "eg",
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"If type is EnvoyProxy, envoyProxy field needs to be set"},
-		},
-		{
-			desc: "Wasm HTTP with envoyProxy field set",
-			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
-				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					Wasm: []egv1a1.Wasm{
-						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									URL: "https://example.com/filter.wasm",
 								},
-								EnvoyProxy: &egv1a1.EnvoyProxyWasmCodeSource{
-									Name: "security-filter",
-								},
 							},
 						},
 					},
@@ -1171,65 +1208,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"If type is EnvoyProxy, envoyProxy field needs to be set"},
-		},
-		{
-			desc: "Wasm EnvoyProxy with pullPolicy set",
-			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
-				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					Wasm: []egv1a1.Wasm{
-						{
-							Code: egv1a1.WasmCodeSource{
-								Type: egv1a1.EnvoyProxyWasmCodeSourceType,
-								EnvoyProxy: &egv1a1.EnvoyProxyWasmCodeSource{
-									Name: "security-filter",
-								},
-								PullPolicy: new(egv1a1.ImagePullPolicyAlways),
-							},
-						},
-					},
-					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: "gateway.networking.k8s.io",
-								Kind:  "Gateway",
-								Name:  "eg",
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"PullPolicy is only valid for HTTP and Image code sources"},
-		},
-		{
-			desc: "Wasm EnvoyProxy with empty module name",
-			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
-				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					Wasm: []egv1a1.Wasm{
-						{
-							Code: egv1a1.WasmCodeSource{
-								Type: egv1a1.EnvoyProxyWasmCodeSourceType,
-								EnvoyProxy: &egv1a1.EnvoyProxyWasmCodeSource{
-									Name: "",
-								},
-							},
-						},
-					},
-					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: "gateway.networking.k8s.io",
-								Kind:  "Gateway",
-								Name:  "eg",
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec.wasm[0].code.envoyProxy.name: Invalid value:",
-				"should be at least 1 chars long",
-			},
+			wantErrors: []string{},
 		},
 		// DynamicModules
 		{

@@ -115,8 +115,8 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 }
 
 // containsWasm reports whether any route uses a remote Wasm code source
-// (HTTP/Image). EnvoyProxy Local Wasm does not use the control-plane
-// wasm HTTP service or its client certificate.
+// (HTTP/Image). Name-only Wasm (path from EnvoyProxy.spec.wasmModules)
+// does not use the control-plane wasm HTTP service or its client certificate.
 func containsWasm(httpListeners []*ir.HTTPListener) bool {
 	for _, httpListener := range httpListeners {
 		for _, route := range httpListener.Routes {

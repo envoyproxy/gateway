@@ -67,9 +67,5 @@ spec:
       kind: HTTPRoute
       name: http-with-wasm-module
   wasm:
-    - name: wasm-filter
+    - name: example-filter
       rootID: my_root_id
-      code:
-        type: EnvoyProxy
-        envoyProxy:
-          name: example-filter

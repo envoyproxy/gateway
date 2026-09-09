@@ -63,8 +63,4 @@ envoyextensionpolicies:
       kind: HTTPRoute
       name: httproute-1
     wasm:
-    - name: wasm-filter-missing
-      code:
-        type: EnvoyProxy
-        envoyProxy:
-          name: not-registered
+    - name: not-registered

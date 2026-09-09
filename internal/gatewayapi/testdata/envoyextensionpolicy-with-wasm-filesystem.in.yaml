@@ -87,11 +87,7 @@ envoyextensionpolicies:
       kind: Gateway
       name: gateway-1
     wasm:
-    - name: wasm-filter-1
-      code:
-        type: EnvoyProxy
-        envoyProxy:
-          name: security-filter
+    - name: security-filter
       config:
         mode: enforce
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -105,10 +101,6 @@ envoyextensionpolicies:
       kind: HTTPRoute
       name: httproute-1
     wasm:
-    - name: wasm-filter-2
+    - name: metrics-filter
       rootID: my-root-id
-      code:
-        type: EnvoyProxy
-        envoyProxy:
-          name: metrics-filter
       failOpen: true

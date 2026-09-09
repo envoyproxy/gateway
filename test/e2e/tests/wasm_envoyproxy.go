@@ -29,7 +29,7 @@ func init() {
 // The Envoy image (envoyproxy/gateway-wasm-module-test) embeds the example .wasm.
 var WasmEnvoyProxyTest = suite.ConformanceTest{
 	ShortName:   "WasmEnvoyProxy",
-	Description: "Test EnvoyProxy Wasm source that loads a local module and adds response headers",
+	Description: "Test name-only Wasm that loads a local module registered on EnvoyProxy and adds response headers",
 	Manifests:   []string{"testdata/wasm-envoyproxy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with envoy proxy module wasm", func(t *testing.T) {

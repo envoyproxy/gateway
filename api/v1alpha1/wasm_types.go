@@ -22,11 +22,15 @@ type WasmEnv struct {
 //
 // Note: at the moment, Envoy Gateway does not support configuring Wasm runtime.
 // v8 is used as the VM runtime for the Wasm extensions.
+// +kubebuilder:validation:XValidation:rule="has(self.code) || (has(self.name) && self.name.matches('^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$'))",message="either code must be set, or name must be set and match the wasmModules name pattern"
 type Wasm struct {
 	// Name is a unique name for this Wasm extension. It is used to identify the
 	// Wasm extension if multiple extensions are handled by the same vm_id and root_id.
 	// It's also used for logging/debugging.
 	// If not specified, EG will generate a unique name for the Wasm extension.
+	//
+	// When Code is omitted, Name is required and must match a module registered
+	// in EnvoyProxy.spec.wasmModules.
 	//
 	// +optional
 	Name *string `json:"name,omitempty"`
@@ -39,7 +43,10 @@ type Wasm struct {
 	RootID *string `json:"rootID,omitempty"`
 
 	// Code is the Wasm code for the extension.
-	Code WasmCodeSource `json:"code"`
+	// When omitted, Name must match a module in EnvoyProxy.spec.wasmModules.
+	//
+	// +optional
+	Code *WasmCodeSource `json:"code,omitempty"`
 
 	// Config is the configuration for the Wasm extension.
 	// This configuration will be passed as a JSON string to the Wasm extension.
@@ -74,13 +81,11 @@ type Wasm struct {
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If type is HTTP, http field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Image' ? has(self.image) : !has(self.image)",message="If type is Image, image field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'EnvoyProxy' ? has(self.envoyProxy) : !has(self.envoyProxy)",message="If type is EnvoyProxy, envoyProxy field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'EnvoyProxy' ? !has(self.pullPolicy) : true",message="PullPolicy is only valid for HTTP and Image code sources."
 type WasmCodeSource struct {
 	// Type is the type of the source of the Wasm code.
-	// Valid WasmCodeSourceType values are "HTTP", "Image", or "EnvoyProxy".
+	// Valid WasmCodeSourceType values are "HTTP" or "Image".
 	//
-	// +kubebuilder:validation:Enum=HTTP;Image;EnvoyProxy
+	// +kubebuilder:validation:Enum=HTTP;Image
 	// +unionDiscriminator
 	Type WasmCodeSourceType `json:"type"`
 
@@ -96,16 +101,6 @@ type WasmCodeSource struct {
 	// +optional
 	Image *ImageWasmCodeSource `json:"image,omitempty"`
 
-	// EnvoyProxy loads Wasm code from a module registered on the EnvoyProxy
-	// wasmModules allowlist. The policy references the module by name only;
-	// the module source is configured by the infrastructure operator on EnvoyProxy.
-	//
-	// For Local modules this skips the control-plane fetch/cache path used by
-	// HTTP and Image sources. The operator must ensure the file is present on
-	// the Envoy proxy (for example via a custom image or volume mount).
-	// +optional
-	EnvoyProxy *EnvoyProxyWasmCodeSource `json:"envoyProxy,omitempty"`
-
 	// PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.
 	// This field is only applicable when the SHA256 field is not set.
 	//
@@ -115,13 +110,12 @@ type WasmCodeSource struct {
 	// the Wasm module even if the pull policy is set to Always.
 	// It only updates the Wasm module when the EnvoyExtension resource version changes.
 	//
-	// PullPolicy must not be set when Type is EnvoyProxy.
 	// +optional
 	PullPolicy *ImagePullPolicy `json:"pullPolicy,omitempty"`
 }
 
 // WasmCodeSourceType specifies the types of sources for the Wasm code.
-// +kubebuilder:validation:Enum=HTTP;Image;EnvoyProxy
+// +kubebuilder:validation:Enum=HTTP;Image
 type WasmCodeSourceType string
 
 const (
@@ -130,20 +124,7 @@ const (
 
 	// ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.
 	ImageWasmCodeSourceType WasmCodeSourceType = "Image"
-
-	// EnvoyProxyWasmCodeSourceType loads Wasm code from a module registered on EnvoyProxy.
-	EnvoyProxyWasmCodeSourceType WasmCodeSourceType = "EnvoyProxy"
 )
-
-// EnvoyProxyWasmCodeSource references a Wasm module registered in EnvoyProxy.spec.wasmModules.
-type EnvoyProxyWasmCodeSource struct {
-	// Name is the logical name of a module in the EnvoyProxy wasmModules allowlist.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`
-	Name string `json:"name"`
-}
 
 // WasmModuleSourceType specifies the types of sources for registered Wasm modules.
 // +kubebuilder:validation:Enum=Local
@@ -186,10 +167,10 @@ type LocalWasmModuleSource struct {
 }
 
 // WasmModuleEntry defines a Wasm module that is registered and allowed for use
-// by EnvoyExtensionPolicy resources with an EnvoyProxy code source.
+// by EnvoyExtensionPolicy resources.
 type WasmModuleEntry struct {
 	// Name is the logical name for this module. EnvoyExtensionPolicy resources
-	// reference modules by this name.
+	// reference modules by this name when wasm[].code is omitted.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253

@@ -847,7 +847,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 							{
 								Name:   new("wasm-filter"),
 								RootID: new("my_root_id"),
-								Code: egv1a1.WasmCodeSource{
+								Code: &egv1a1.WasmCodeSource{
 									Type: egv1a1.ImageWasmCodeSourceType,
 									Image: &egv1a1.ImageWasmCodeSource{
 										URL: "https://example.com/testwasm:v1.0.0",

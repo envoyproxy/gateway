@@ -10,12 +10,8 @@ envoyExtensionPolicies:
       kind: HTTPRoute
       name: httproute-1
     wasm:
-    - code:
-        envoyProxy:
-          name: metrics-filter
-        type: EnvoyProxy
-      failOpen: true
-      name: wasm-filter-2
+    - failOpen: true
+      name: metrics-filter
       rootID: my-root-id
   status:
     ancestors:
@@ -48,13 +44,9 @@ envoyExtensionPolicies:
       kind: Gateway
       name: gateway-1
     wasm:
-    - code:
-        envoyProxy:
-          name: security-filter
-        type: EnvoyProxy
-      config:
+    - config:
         mode: enforce
-      name: wasm-filter-1
+      name: security-filter
   status:
     ancestors:
     - ancestorRef:
@@ -351,7 +343,7 @@ xdsIR:
             name: envoyextensionpolicy/default/policy-for-http-route/wasm/0
             path: /opt/wasm/metrics.wasm
             rootID: my-root-id
-            wasmName: wasm-filter-2
+            wasmName: metrics-filter
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -389,7 +381,7 @@ xdsIR:
             failOpen: false
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
             path: /var/lib/envoy/security-filter.wasm
-            wasmName: wasm-filter-1
+            wasmName: security-filter
         hostname: www.example.com
         isHTTP2: false
         metadata:

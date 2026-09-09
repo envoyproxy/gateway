@@ -731,7 +731,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									URL: "https://example.com/test.wasm",
@@ -765,7 +765,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									URL: "https://example.com/test.wasm",
@@ -911,7 +911,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									URL: "https://example.com/test.wasm",
@@ -944,7 +944,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.ImageWasmCodeSourceType,
 								Image: &egv1a1.ImageWasmCodeSource{
 									URL: "oci://example.com/test.wasm:v1.0.0",
@@ -977,7 +977,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.ImageWasmCodeSourceType,
 								Image: &egv1a1.ImageWasmCodeSource{
 									URL: "oci://example.com/test.wasm:v1.0.0",
@@ -1011,7 +1011,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									URL: "https://example.com/test1.wasm",
@@ -1025,7 +1025,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 							},
 						},
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.ImageWasmCodeSourceType,
 								Image: &egv1a1.ImageWasmCodeSource{
 									URL: "oci://example.com/test2.wasm:v1.0.0",

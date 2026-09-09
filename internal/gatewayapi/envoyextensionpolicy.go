@@ -1572,10 +1572,10 @@ func (t *Translator) buildWasms(
 
 	wasmIRList := make([]ir.Wasm, 0, len(policy.Spec.Wasm))
 
-	// EnvoyProxy sources resolve from EnvoyProxy and skip the control-plane cache.
+	// Name-only entries do not need cache (local path references).
 	needsCache := false
 	for _, wasm := range policy.Spec.Wasm {
-		if wasm.Code.Type == egv1a1.HTTPWasmCodeSourceType || wasm.Code.Type == egv1a1.ImageWasmCodeSourceType {
+		if wasm.Code != nil && (wasm.Code.Type == egv1a1.HTTPWasmCodeSourceType || wasm.Code.Type == egv1a1.ImageWasmCodeSourceType) {
 			needsCache = true
 			break
 		}
@@ -1632,178 +1632,166 @@ func (t *Translator) buildWasm(
 		failOpen = *config.FailOpen
 	}
 
-	if config.Code.PullPolicy != nil {
-		switch *config.Code.PullPolicy {
-		case egv1a1.ImagePullPolicyAlways:
-			pullPolicy = wasm.Always
-		case egv1a1.ImagePullPolicyIfNotPresent:
-			pullPolicy = wasm.IfNotPresent
-		default:
-			pullPolicy = wasm.Unspecified
+	if config.Code == nil {
+		// Name is the wasmModules registry key when code is omitted
+		if config.Name == nil || *config.Name == "" {
+			return nil, fmt.Errorf("wasm name must be set when code is omitted")
 		}
-	}
-
-	switch config.Code.Type {
-	case egv1a1.EnvoyProxyWasmCodeSourceType:
-		// Sanity check; CEL validation should have caught this.
-		if config.Code.EnvoyProxy == nil {
-			return nil, fmt.Errorf("missing EnvoyProxy field in Wasm code source")
-		}
-		moduleName := config.Code.EnvoyProxy.Name
-		if moduleName == "" {
-			return nil, fmt.Errorf("EnvoyProxy name must not be empty")
-		}
-
 		var entry *egv1a1.WasmModuleEntry
 		if envoyProxy != nil {
 			for i := range envoyProxy.Spec.WasmModules {
-				if envoyProxy.Spec.WasmModules[i].Name == moduleName {
+				if envoyProxy.Spec.WasmModules[i].Name == *config.Name {
 					entry = &envoyProxy.Spec.WasmModules[i]
 					break
 				}
 			}
 		}
 		if entry == nil {
-			return nil, fmt.Errorf("wasm module %q is not registered in the EnvoyProxy wasmModules allowlist", moduleName)
+			return nil, fmt.Errorf("wasm module %q is not registered in the EnvoyProxy wasmModules allowlist", *config.Name)
+		}
+		if entry.Source.Local == nil || entry.Source.Local.Path == "" {
+			return nil, fmt.Errorf("wasm module %q has no local source configured", *config.Name)
+		}
+		localPath = entry.Source.Local.Path
+
+	} else {
+		if config.Code.PullPolicy != nil {
+			switch *config.Code.PullPolicy {
+			case egv1a1.ImagePullPolicyAlways:
+				pullPolicy = wasm.Always
+			case egv1a1.ImagePullPolicyIfNotPresent:
+				pullPolicy = wasm.IfNotPresent
+			default:
+				pullPolicy = wasm.Unspecified
+			}
 		}
 
-		switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalWasmModuleSourceType); sourceType {
-		case egv1a1.LocalWasmModuleSourceType:
-			if entry.Source.Local == nil {
-				return nil, fmt.Errorf("wasm module %q has no local source configured", moduleName)
+		switch config.Code.Type {
+		case egv1a1.HTTPWasmCodeSourceType:
+			var checksum string
+
+			// This is a sanity check, the validation should have caught this
+			if config.Code.HTTP == nil {
+				return nil, fmt.Errorf("missing HTTP field in Wasm code source")
 			}
-			if entry.Source.Local.Path == "" {
-				return nil, fmt.Errorf("wasm module %q has empty path", moduleName)
+
+			if config.Code.HTTP.SHA256 != nil {
+				originalChecksum = *config.Code.HTTP.SHA256
 			}
-			localPath = entry.Source.Local.Path
+
+			http := config.Code.HTTP
+
+			if http.TLS != nil {
+				from := crossNamespaceFrom{
+					group:     egv1a1.GroupName,
+					kind:      resource.KindEnvoyExtensionPolicy,
+					namespace: policy.Namespace,
+				}
+				if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
+					return nil, err
+				}
+			}
+
+			if servingURL, checksum, err = t.WasmCache.Get(http.URL, &wasm.GetOptions{
+				Checksum:        originalChecksum,
+				PullPolicy:      pullPolicy,
+				ResourceName:    irConfigNameForWasm(policy, idx),
+				ResourceVersion: policy.ResourceVersion,
+				CACert:          caCert,
+			}); err != nil {
+				return nil, err
+			}
+
+			code = &ir.HTTPWasmCode{
+				ServingURL:  servingURL,
+				OriginalURL: http.URL,
+				SHA256:      checksum,
+			}
+
+		case egv1a1.ImageWasmCodeSourceType:
+			var (
+				image      = config.Code.Image
+				secret     *corev1.Secret
+				pullSecret []byte
+				// the checksum of the wasm module extracted from the OCI image
+				// it's different from the checksum for the OCI image
+				checksum string
+			)
+
+			// This is a sanity check, the validation should have caught this
+			if image == nil {
+				return nil, fmt.Errorf("missing Image field in Wasm code source")
+			}
+
+			if image.TLS != nil {
+				from := crossNamespaceFrom{
+					group:     egv1a1.GroupName,
+					kind:      resource.KindEnvoyExtensionPolicy,
+					namespace: policy.Namespace,
+				}
+				if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
+					return nil, err
+				}
+			}
+
+			if image.PullSecretRef != nil {
+				from := crossNamespaceFrom{
+					group:     egv1a1.GroupName,
+					kind:      resource.KindEnvoyExtensionPolicy,
+					namespace: policy.Namespace,
+				}
+
+				if secret, err = t.validateSecretRef(
+					true, from, *image.PullSecretRef, resources); err != nil {
+					return nil, err
+				}
+
+				if data, ok := secret.Data[corev1.DockerConfigJsonKey]; ok {
+					pullSecret = data
+				} else {
+					return nil, fmt.Errorf("missing %s key in secret %s/%s", corev1.DockerConfigJsonKey, secret.Namespace, secret.Name)
+				}
+			}
+
+			// Wasm Cache requires the URL to be in the format "scheme://<URL>"
+			imageURL := image.URL
+			if !strings.HasPrefix(image.URL, ociURLPrefix) {
+				imageURL = fmt.Sprintf("%s%s", ociURLPrefix, image.URL)
+			}
+
+			// If the url is an OCI image, and neither digest nor tag is provided, use the latest tag.
+			if !hasDigest(imageURL) && !hasTag(imageURL) {
+				imageURL += ":latest"
+			}
+
+			if config.Code.Image.SHA256 != nil {
+				originalChecksum = *config.Code.Image.SHA256
+			}
+
+			// The wasm checksum is different from the OCI image digest.
+			// The original checksum in the EEP is used to match the digest of OCI image.
+			// The returned checksum from the cache is the checksum of the wasm file
+			// extracted from the OCI image, which is used by the envoy to verify the wasm file.
+			if servingURL, checksum, err = t.WasmCache.Get(imageURL, &wasm.GetOptions{
+				Checksum:        originalChecksum,
+				PullSecret:      pullSecret,
+				PullPolicy:      pullPolicy,
+				ResourceName:    irConfigNameForWasm(policy, idx),
+				ResourceVersion: policy.ResourceVersion,
+				CACert:          caCert,
+			}); err != nil {
+				return nil, err
+			}
+
+			code = &ir.HTTPWasmCode{
+				ServingURL:  servingURL,
+				SHA256:      checksum,
+				OriginalURL: imageURL,
+			}
 		default:
-			return nil, fmt.Errorf("wasm module %q has unsupported source type %q", moduleName, sourceType)
+			// should never happen because of kubebuilder validation, just a sanity check
+			return nil, fmt.Errorf("unsupported Wasm code source type %q", config.Code.Type)
 		}
-
-	case egv1a1.HTTPWasmCodeSourceType:
-		var checksum string
-
-		// This is a sanity check, the validation should have caught this
-		if config.Code.HTTP == nil {
-			return nil, fmt.Errorf("missing HTTP field in Wasm code source")
-		}
-
-		if config.Code.HTTP.SHA256 != nil {
-			originalChecksum = *config.Code.HTTP.SHA256
-		}
-
-		http := config.Code.HTTP
-
-		if http.TLS != nil {
-			from := crossNamespaceFrom{
-				group:     egv1a1.GroupName,
-				kind:      resource.KindEnvoyExtensionPolicy,
-				namespace: policy.Namespace,
-			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
-				return nil, err
-			}
-		}
-
-		if servingURL, checksum, err = t.WasmCache.Get(http.URL, &wasm.GetOptions{
-			Checksum:        originalChecksum,
-			PullPolicy:      pullPolicy,
-			ResourceName:    irConfigNameForWasm(policy, idx),
-			ResourceVersion: policy.ResourceVersion,
-			CACert:          caCert,
-		}); err != nil {
-			return nil, err
-		}
-
-		code = &ir.HTTPWasmCode{
-			ServingURL:  servingURL,
-			OriginalURL: http.URL,
-			SHA256:      checksum,
-		}
-
-	case egv1a1.ImageWasmCodeSourceType:
-		var (
-			image      = config.Code.Image
-			secret     *corev1.Secret
-			pullSecret []byte
-			// the checksum of the wasm module extracted from the OCI image
-			// it's different from the checksum for the OCI image
-			checksum string
-		)
-
-		// This is a sanity check, the validation should have caught this
-		if image == nil {
-			return nil, fmt.Errorf("missing Image field in Wasm code source")
-		}
-
-		if image.TLS != nil {
-			from := crossNamespaceFrom{
-				group:     egv1a1.GroupName,
-				kind:      resource.KindEnvoyExtensionPolicy,
-				namespace: policy.Namespace,
-			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
-				return nil, err
-			}
-		}
-
-		if image.PullSecretRef != nil {
-			from := crossNamespaceFrom{
-				group:     egv1a1.GroupName,
-				kind:      resource.KindEnvoyExtensionPolicy,
-				namespace: policy.Namespace,
-			}
-
-			if secret, err = t.validateSecretRef(
-				true, from, *image.PullSecretRef, resources); err != nil {
-				return nil, err
-			}
-
-			if data, ok := secret.Data[corev1.DockerConfigJsonKey]; ok {
-				pullSecret = data
-			} else {
-				return nil, fmt.Errorf("missing %s key in secret %s/%s", corev1.DockerConfigJsonKey, secret.Namespace, secret.Name)
-			}
-		}
-
-		// Wasm Cache requires the URL to be in the format "scheme://<URL>"
-		imageURL := image.URL
-		if !strings.HasPrefix(image.URL, ociURLPrefix) {
-			imageURL = fmt.Sprintf("%s%s", ociURLPrefix, image.URL)
-		}
-
-		// If the url is an OCI image, and neither digest nor tag is provided, use the latest tag.
-		if !hasDigest(imageURL) && !hasTag(imageURL) {
-			imageURL += ":latest"
-		}
-
-		if config.Code.Image.SHA256 != nil {
-			originalChecksum = *config.Code.Image.SHA256
-		}
-
-		// The wasm checksum is different from the OCI image digest.
-		// The original checksum in the EEP is used to match the digest of OCI image.
-		// The returned checksum from the cache is the checksum of the wasm file
-		// extracted from the OCI image, which is used by the envoy to verify the wasm file.
-		if servingURL, checksum, err = t.WasmCache.Get(imageURL, &wasm.GetOptions{
-			Checksum:        originalChecksum,
-			PullSecret:      pullSecret,
-			PullPolicy:      pullPolicy,
-			ResourceName:    irConfigNameForWasm(policy, idx),
-			ResourceVersion: policy.ResourceVersion,
-			CACert:          caCert,
-		}); err != nil {
-			return nil, err
-		}
-
-		code = &ir.HTTPWasmCode{
-			ServingURL:  servingURL,
-			SHA256:      checksum,
-			OriginalURL: imageURL,
-		}
-	default:
-		// should never happen because of kubebuilder validation, just a sanity check
-		return nil, fmt.Errorf("unsupported Wasm code source type %q", config.Code.Type)
 	}
 
 	wasmName := name

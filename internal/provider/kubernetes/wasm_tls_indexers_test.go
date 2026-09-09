@@ -52,7 +52,7 @@ func TestWasmTLSIndexers(t *testing.T) {
 				{
 					Name:   new("http-wasm-filter"),
 					RootID: new("http_root_id"),
-					Code: egv1a1.WasmCodeSource{
+					Code: &egv1a1.WasmCodeSource{
 						Type: egv1a1.HTTPWasmCodeSourceType,
 						HTTP: &egv1a1.HTTPWasmCodeSource{
 							URL: "https://example.com/wasm-http.wasm",
@@ -89,7 +89,7 @@ func TestWasmTLSIndexers(t *testing.T) {
 				{
 					Name:   new("http-wasm-filter-cm"),
 					RootID: new("http_root_id_cm"),
-					Code: egv1a1.WasmCodeSource{
+					Code: &egv1a1.WasmCodeSource{
 						Type: egv1a1.HTTPWasmCodeSourceType,
 						HTTP: &egv1a1.HTTPWasmCodeSource{
 							URL: "https://example.com/wasm-http-cm.wasm",
@@ -127,7 +127,7 @@ func TestWasmTLSIndexers(t *testing.T) {
 				{
 					Name:   new("http-wasm-filter-ctb"),
 					RootID: new("http_root_id_ctb"),
-					Code: egv1a1.WasmCodeSource{
+					Code: &egv1a1.WasmCodeSource{
 						Type: egv1a1.HTTPWasmCodeSourceType,
 						HTTP: &egv1a1.HTTPWasmCodeSource{
 							URL: "https://example.com/wasm-http-ctb.wasm",
@@ -165,7 +165,7 @@ func TestWasmTLSIndexers(t *testing.T) {
 				{
 					Name:   new("image-wasm-filter"),
 					RootID: new("image_root_id"),
-					Code: egv1a1.WasmCodeSource{
+					Code: &egv1a1.WasmCodeSource{
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{
 							URL: "oci://example.com/wasm-image:v1.0.0",
@@ -202,7 +202,7 @@ func TestWasmTLSIndexers(t *testing.T) {
 				{
 					Name:   new("image-wasm-filter-cm"),
 					RootID: new("image_root_id_cm"),
-					Code: egv1a1.WasmCodeSource{
+					Code: &egv1a1.WasmCodeSource{
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{
 							URL: "oci://example.com/wasm-image-cm:v1.0.0",
@@ -240,7 +240,7 @@ func TestWasmTLSIndexers(t *testing.T) {
 				{
 					Name:   new("image-wasm-filter-ctb"),
 					RootID: new("image_root_id_ctb"),
-					Code: egv1a1.WasmCodeSource{
+					Code: &egv1a1.WasmCodeSource{
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{
 							URL: "oci://example.com/wasm-image-ctb:v1.0.0",
@@ -411,7 +411,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									URL: "https://example.com/wasm.wasm",
@@ -440,7 +440,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.ImageWasmCodeSourceType,
 								Image: &egv1a1.ImageWasmCodeSource{
 									URL: "oci://example.com/wasm:v1.0.0",
@@ -470,7 +470,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									URL: "https://example.com/wasm.wasm",
@@ -500,7 +500,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
@@ -512,7 +512,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 							},
 						},
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.ImageWasmCodeSourceType,
 								Image: &egv1a1.ImageWasmCodeSource{
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
@@ -525,7 +525,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 							},
 						},
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
@@ -554,7 +554,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
@@ -583,7 +583,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
-							Code: egv1a1.WasmCodeSource{
+							Code: &egv1a1.WasmCodeSource{
 								Type: egv1a1.HTTPWasmCodeSourceType,
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									URL: "https://example.com/wasm.wasm",
