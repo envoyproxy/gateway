@@ -399,6 +399,82 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "sectionName rejected for TLSRoute - targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("TLSRoute"),
+								Name:  gwapiv1.ObjectName("backend"),
+							},
+							SectionName: &sectionName,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
+		},
+		{
+			desc: "sectionName rejected for TLSRoute - targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("TLSRoute"),
+									Name:  gwapiv1.ObjectName("backend"),
+								},
+								SectionName: &sectionName,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
+		},
+		{
+			desc: "sectionName rejected for TCPRoute - targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("TCPRoute"),
+								Name:  gwapiv1.ObjectName("backend"),
+							},
+							SectionName: &sectionName,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
+		},
+		{
+			desc: "sectionName rejected for TCPRoute - targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("TCPRoute"),
+									Name:  gwapiv1.ObjectName("backend"),
+								},
+								SectionName: &sectionName,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
+		},
 
 		// cors
 		{

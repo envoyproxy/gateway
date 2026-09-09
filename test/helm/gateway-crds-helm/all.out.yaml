@@ -60646,6 +60646,12 @@ spec:
                 ''GRPCRoute'', ''TCPRoute'', ''TLSRoute''])) && (!has(self.targetSelectors)
                 || self.targetSelectors.all(sel, sel.kind in [''HTTPRoute'', ''GRPCRoute'',
                 ''TCPRoute'', ''TLSRoute''])))'
+            - message: sectionName is not supported for TCPRoute/TLSRoute targets
+              rule: 'has(self.targetRef) ? !(self.targetRef.kind in [''TCPRoute'',
+                ''TLSRoute''] && has(self.targetRef.sectionName)) : true'
+            - message: sectionName is not supported for TCPRoute/TLSRoute targets
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !(ref.kind in
+                [''TCPRoute'', ''TLSRoute''] && has(ref.sectionName))) : true'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
