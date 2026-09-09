@@ -83,6 +83,16 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+The session cookie is always issued with `Path=/`, as recommended by [GEP-1619](https://gateway-api.sigs.k8s.io/geps/gep-1619/#path),
+so it keeps working when the path seen by the client differs from the path matched by the HTTPRoute, for example
+when an edge proxy rewrites the request path before it reaches Envoy Gateway.
+
+Because the cookie is sent to every route on the same host, each HTTPRoute rule on a host that enables
+cookie-based session persistence must use a distinct `sessionName`. Rules that share a `sessionName` overwrite
+each other's cookie, and session persistence stops working for both. If `sessionName` is omitted, Envoy Gateway
+generates a unique cookie name for the rule, so leaving it unset is the safest choice unless the cookie name has
+to match an existing one, such as `JSESSIONID`.
+
 {{< boilerplate rollout-envoy-gateway >}}
 
 ### Testing
