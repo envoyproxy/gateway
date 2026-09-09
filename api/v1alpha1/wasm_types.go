@@ -33,6 +33,7 @@ type Wasm struct {
 	// in EnvoyProxy.spec.wasmModules.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=253
 	Name *string `json:"name,omitempty"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a

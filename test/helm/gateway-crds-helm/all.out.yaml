@@ -33220,6 +33220,7 @@ spec:
 
                         When Code is omitted, Name is required and must match a module registered
                         in EnvoyProxy.spec.wasmModules.
+                      maxLength: 253
                       type: string
                     rootID:
                       description: |-
