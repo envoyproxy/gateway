@@ -148,16 +148,18 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 304
 	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
 		order = 305
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCJSONTranscoder):
 		order = 306
-	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
 		order = 307
-	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
+	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 308
-	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
+	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
 		order = 309
-	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
 		order = 310
+	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+		order = 311
 	}
 
 	return &OrderedHTTPFilter{

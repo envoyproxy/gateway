@@ -51,6 +51,7 @@ type HTTPFilterIR struct {
 	DirectResponse      *ir.CustomResponse
 	RedirectResponse    *ir.Redirect
 	CredentialInjection *ir.CredentialInjection
+	GRPCJSONTranscoder  *ir.GRPCJSONTranscoder
 
 	URLRewrite *ir.URLRewrite
 
@@ -1023,6 +1024,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						Credential: secretBytes,
 					}
 					filterContext.CredentialInjection = injection
+				}
+
+				if hrf.Spec.GRPCJSONTranscoder != nil {
+					if err := t.applyGRPCJSONTranscoder(hrf, filterContext); err != nil {
+						return err
+					}
 				}
 			}
 		}

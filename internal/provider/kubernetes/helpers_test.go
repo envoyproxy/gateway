@@ -551,6 +551,26 @@ func TestTransformConfigMapData(t *testing.T) {
 			},
 		},
 		{
+			// A descriptor ConfigMap paired with any key sorting before "proto-descriptor"
+			// used to lose the descriptor here, and the route was then rejected for a
+			// corrupt descriptor that was fine in the API server.
+			name: "configmap with proto descriptor and an earlier-sorting key",
+			input: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string]string{
+					"notes.txt":                            "notes",
+					gatewayapi.ProtoDescriptorConfigMapKey: "descriptor-data",
+				},
+			},
+			expected: map[string]string{
+				"notes.txt":                            "notes", // first key in sorted order, added as fallback
+				gatewayapi.ProtoDescriptorConfigMapKey: "descriptor-data",
+			},
+		},
+		{
 			name: "configmap with non-expected key first",
 			input: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
