@@ -16,9 +16,21 @@ spec:
           - claimPath:
               - "https://example.com/claims/tenant_name"
             header: x-tenant-name
-        remoteJWKS:
-          uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
-          cacheDuration: 300s
+        # A dedicated keypair generated for this test only (private key never checked in), so
+        # verification doesn't depend on the shared static-file-server image being rebuilt.
+        localJWKS:
+          inline: |
+            {
+                "keys": [
+                    {
+                        "kty": "RSA",
+                        "n": "0lvFH2l1dl2QdmJoIMHBsA5be_J1J0xik9KTf0sUd-URSSyV-NWF0y9m-KoNr3tKxymFOKV3vvSdZM8c8oiF1lsikRoUQKZGzwLj_9jkZP3v-o_v0rMDCdRk2VT5n_eKDqpE0_exA04LV08wzeXKfB3qSz7g9pV-S-sWngear7gk94AuM05CcteS0EUtLtvld6-sDb8145kloZmahCWEejxnBPdD6VUgaEur0Mz_lLuLG7Vf1nVuzQjiU2curD0MkySWayoxLDgoKUczmEPaIIk__4cPZvsPHcm4034BoO-5ttfzTWeBq0nqZS6aKU81cvs2y9KUayBkvYCooW8Olw",
+                        "e": "AQAB",
+                        "alg": "RS256",
+                        "use": "sig"
+                    }
+                ]
+            }
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
