@@ -25,6 +25,7 @@ type ProxyTopologyInjector struct {
 	APIReader client.Reader
 	Decoder   admission.Decoder
 	Logger    logging.Logger
+	platform  *clusterPlatform
 }
 
 // Handle implements admission.Handler; the interface requires admission.Request by value.
@@ -83,7 +84,12 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	}
 	logger = logger.WithValues("node", node)
 
-	if zone, ok := node.Labels[corev1.LabelTopologyZone]; ok {
+	zone, hasZone := node.Labels[corev1.LabelTopologyZone]
+	if zoneID := m.platform.zoneID(node); zoneID != "" {
+		zone = zoneID
+		hasZone = true
+	}
+	if hasZone {
 		if binding.Annotations == nil {
 			binding.Annotations = map[string]string{}
 		}
