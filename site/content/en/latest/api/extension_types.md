@@ -868,11 +868,29 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `allowOrigins` | _[Origin](#origin) array_ |  false  |  | AllowOrigins defines the origins that are allowed to make requests.<br />It specifies the allowed origins in the Access-Control-Allow-Origin CORS response header.<br />The value "*" allows any origin to make requests. |
+| `allowOriginRegexes` | _[CORSOriginRegex](#corsoriginregex) array_ |  false  |  | AllowOriginRegexes defines regular expressions that are matched against the Origin header.<br />It specifies additional allowed origins in the Access-Control-Allow-Origin CORS response header.<br />An origin is allowed when it matches any entry in AllowOrigins or AllowOriginRegexes. |
 | `allowMethods` | _string array_ |  false  |  | AllowMethods defines the methods that are allowed to make requests.<br />It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..<br />The value "*" allows any method to be used. |
 | `allowHeaders` | _string array_ |  false  |  | AllowHeaders defines the headers that are allowed to be sent with requests.<br />It specifies the allowed headers in the Access-Control-Allow-Headers CORS response header..<br />The value "*" allows any header to be sent. |
 | `exposeHeaders` | _string array_ |  false  |  | ExposeHeaders defines which response headers should be made accessible to<br />scripts running in the browser.<br />It specifies the headers in the Access-Control-Expose-Headers CORS response header..<br />The value "*" allows any header to be exposed. |
 | `maxAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
 | `allowCredentials` | _boolean_ |  false  |  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
+
+
+#### CORSOriginRegex
+
+_Underlying type:_ _string_
+
+CORSOriginRegex is a regular expression that is matched against the full Origin header value,
+including the scheme and the port if present.
+The regex string must adhere to the syntax documented in
+https://github.com/google/re2/wiki/Syntax, except for the \C escape sequence,
+which is not supported.
+A regular expression that matches the literal string "*" is rejected.
+The value "*" in AllowOrigins allows any origin.
+
+_Appears in:_
+- [CORS](#cors)
+
 
 
 #### CSRF

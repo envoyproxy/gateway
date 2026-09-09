@@ -2275,6 +2275,80 @@ func TestSecurityPolicyTarget(t *testing.T) {
 	}
 }
 
+func TestSecurityPolicyCORSOriginRegexes(t *testing.T) {
+	ctx := context.Background()
+	baseSP := egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sp",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: egv1a1.SecurityPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group("gateway.networking.k8s.io"),
+						Kind:  gwapiv1.Kind("Gateway"),
+						Name:  gwapiv1.ObjectName("eg"),
+					},
+				},
+			},
+			CORS: &egv1a1.CORS{},
+		},
+	}
+
+	cases := []struct {
+		desc               string
+		allowOriginRegexes []egv1a1.CORSOriginRegex
+		wantErrors         []string
+	}{
+		{
+			desc: "valid regular expression",
+			allowOriginRegexes: []egv1a1.CORSOriginRegex{
+				`https://preview-[0-9]+\.example\.com`,
+			},
+		},
+		{
+			desc: "empty regular expression",
+			allowOriginRegexes: []egv1a1.CORSOriginRegex{
+				"",
+			},
+			wantErrors: []string{"spec.cors.allowOriginRegexes[0]", "should be at least 1 chars long"},
+		},
+		{
+			desc: "regular expression too long",
+			allowOriginRegexes: []egv1a1.CORSOriginRegex{
+				egv1a1.CORSOriginRegex(strings.Repeat("a", 1025)),
+			},
+			// The exact wording after "Too long" varies across apiserver versions,
+			// so only assert on the stable prefix.
+			wantErrors: []string{"spec.cors.allowOriginRegexes[0]", "Too long"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sp := baseSP.DeepCopy()
+			sp.Name = fmt.Sprintf("sp-cors-origin-regexes-%v", time.Now().UnixNano())
+			sp.Spec.CORS.AllowOriginRegexes = tc.allowOriginRegexes
+
+			err := c.Create(ctx, sp)
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}
+
 func TestSecurityPolicyAPIKeyAuthExtractFrom(t *testing.T) {
 	ctx := context.Background()
 	baseSP := egv1a1.SecurityPolicy{
