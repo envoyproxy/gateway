@@ -31,6 +31,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 )
@@ -60,16 +61,31 @@ func (l LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 	return res, err
 }
 
+// cookieKey identifies a stored cookie. Name alone is not enough: the OAuth2
+// filter scopes the OIDC flow cookies to the redirect path while the session
+// cookies stay at "/", so the same name can legitimately exist at two paths.
+type cookieKey struct {
+	name string
+	path string
+}
+
 // CookieTracker is a http.RoundTripper that tracks cookies received from the server.
+//
+// It is deliberately not a full net/http/cookiejar: the OAuth2 filter marks every
+// cookie "secure" and these tests run over plain HTTP, so a spec-compliant jar
+// would store the cookies and then never send them back. It does honour Path and
+// cookie deletion, which is what the OIDC flow depends on.
 type CookieTracker struct {
 	Delegate http.RoundTripper
-	Cookies  map[string]*http.Cookie
+	Cookies  map[cookieKey]*http.Cookie
 }
 
 // RoundTrip tracks the cookies received from the server.
 func (c *CookieTracker) RoundTrip(req *http.Request) (*http.Response, error) {
-	for _, ck := range c.Cookies {
-		req.AddCookie(ck)
+	for key, ck := range c.Cookies {
+		if pathMatches(req.URL.Path, key.path) {
+			req.AddCookie(ck)
+		}
 	}
 
 	res, err := c.Delegate.RoundTrip(req)
@@ -77,21 +93,78 @@ func (c *CookieTracker) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err == nil {
 		// Track the cookies received from the server
 		for _, ck := range res.Cookies() {
-			c.Cookies[ck.Name] = ck
+			key := cookieKey{name: ck.Name, path: cookiePath(ck, req.URL.Path)}
+			if ck.MaxAge < 0 || (!ck.Expires.IsZero() && !ck.Expires.After(time.Now())) {
+				delete(c.Cookies, key)
+				continue
+			}
+			c.Cookies[key] = ck
 		}
 	}
 
 	return res, err
 }
 
+// CookiesForPath returns the cookies the client would send to the given request path.
+func (c *CookieTracker) CookiesForPath(path string) []*http.Cookie {
+	var cookies []*http.Cookie
+	for key, ck := range c.Cookies {
+		if pathMatches(path, key.path) {
+			cookies = append(cookies, ck)
+		}
+	}
+	return cookies
+}
+
+// cookiePath returns the path a Set-Cookie applies to, defaulting to the
+// directory of the request path as described in RFC 6265 section 5.1.4.
+func cookiePath(ck *http.Cookie, requestPath string) string {
+	if ck.Path != "" {
+		return ck.Path
+	}
+	if i := strings.LastIndex(requestPath, "/"); i > 0 {
+		return requestPath[:i]
+	}
+	return "/"
+}
+
+// pathMatches implements the RFC 6265 section 5.1.4 path-match algorithm.
+func pathMatches(requestPath, cookiePath string) bool {
+	if requestPath == "" {
+		requestPath = "/"
+	}
+	if cookiePath == requestPath {
+		return true
+	}
+	if !strings.HasPrefix(requestPath, cookiePath) {
+		return false
+	}
+	return strings.HasSuffix(cookiePath, "/") || requestPath[len(cookiePath)] == '/'
+}
+
 // OIDCTestClient encapsulates a http.Client and keeps track of the state of the OIDC login process.
 type OIDCTestClient struct {
 	http        *http.Client     // Delegate HTTP client
+	cookies     *CookieTracker   // Cookies received from the server
 	loginURL    string           // URL of the IdP where users need to authenticate
 	loginMethod string           // Method (GET/POST) to use when posting the credentials to the IdP
 	mappings    *AddressMappings // Custom address mappings
 	logFunc     func(...any)     // Logging function to log all requests and responses
 	logBody     bool             // Whether to log the request and response bodies
+}
+
+// Cookies returns every cookie the client is currently holding, regardless of path.
+func (o *OIDCTestClient) Cookies() []*http.Cookie {
+	cookies := make([]*http.Cookie, 0, len(o.cookies.Cookies))
+	for _, ck := range o.cookies.Cookies {
+		cookies = append(cookies, ck)
+	}
+	return cookies
+}
+
+// CookiesForPath returns the cookies the client would send to the given request path.
+func (o *OIDCTestClient) CookiesForPath(path string) []*http.Cookie {
+	return o.cookies.CookiesForPath(path)
 }
 
 // Option is a functional option for configuring the OIDCTestClient.
@@ -135,8 +208,8 @@ func NewOIDCTestClient(opts ...Option) (*OIDCTestClient, error) {
 	var (
 		defaultTransport = http.DefaultTransport.(*http.Transport).Clone()
 		logging          = &LoggingRoundTripper{Delegate: defaultTransport}
-		cookieTracker    = &CookieTracker{Cookies: make(map[string]*http.Cookie), Delegate: logging}
-		client           = &OIDCTestClient{http: &http.Client{Transport: cookieTracker}}
+		cookieTracker    = &CookieTracker{Cookies: make(map[cookieKey]*http.Cookie), Delegate: logging}
+		client           = &OIDCTestClient{http: &http.Client{Transport: cookieTracker}, cookies: cookieTracker}
 	)
 
 	for _, opt := range opts {

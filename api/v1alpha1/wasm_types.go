@@ -195,6 +195,7 @@ type HTTPWasmCodeSource struct {
 	SHA256 *string `json:"sha256"`
 
 	// TLS configuration when connecting to the Wasm code source.
+	// If unset, system trust store is used for HTTPS url.
 	// +optional
 	TLS *WasmCodeSourceTLSConfig `json:"tls,omitempty"`
 }
@@ -220,6 +221,7 @@ type ImageWasmCodeSource struct {
 	PullSecretRef *gwapiv1.SecretObjectReference `json:"pullSecretRef,omitempty"`
 
 	// TLS configuration when connecting to the Wasm code source.
+	// If unset, system trust store is used.
 	// +optional
 	TLS *WasmCodeSourceTLSConfig `json:"tls,omitempty"`
 }

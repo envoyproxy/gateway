@@ -50,7 +50,6 @@ spec:
         - test bootstrap config
         - --log-level
         - "off"
-        - --cpuset-threads
         - --drain-strategy
         - immediate
         - --component-log-level

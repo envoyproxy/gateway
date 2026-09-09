@@ -96,7 +96,6 @@
               name: policy-btls-grpc/envoy-gateway-ca
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: grpc-backend
   - match:
@@ -117,7 +116,6 @@
               name: policy-btls-backend-ip/envoy-gateway-ca
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: ip-backend
   type: EDS

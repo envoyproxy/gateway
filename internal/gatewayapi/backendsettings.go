@@ -25,13 +25,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
-func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatures, error) {
+func translateTrafficFeatures(policy *egv1a1.BackendSettings) (*ir.TrafficFeatures, error) {
 	if policy == nil {
 		return nil, nil
 	}
 	ret := &ir.TrafficFeatures{}
 
-	if timeout, err := buildClusterSettingsTimeout(policy); err != nil {
+	if timeout, err := buildBackendSettingsTimeout(policy); err != nil {
 		return nil, err
 	} else {
 		ret.Timeout = timeout
@@ -89,7 +89,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	return ret, nil
 }
 
-func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, error) {
+func buildBackendSettingsTimeout(policy *egv1a1.BackendSettings) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
 		return nil, nil
 	}
@@ -176,7 +176,7 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 	return to, errs
 }
 
-func buildBackendConnection(policy *egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
+func buildBackendConnection(policy *egv1a1.BackendSettings) (*ir.BackendConnection, error) {
 	if policy.Connection == nil {
 		return nil, nil
 	}
@@ -215,7 +215,7 @@ func buildBackendConnection(policy *egv1a1.ClusterSettings) (*ir.BackendConnecti
 	return bcIR, nil
 }
 
-func buildTCPKeepAlive(policy *egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) {
+func buildTCPKeepAlive(policy *egv1a1.BackendSettings) (*ir.TCPKeepalive, error) {
 	if policy.TCPKeepalive == nil {
 		return nil, nil
 	}
@@ -245,7 +245,7 @@ func buildTCPKeepAlive(policy *egv1a1.ClusterSettings) (*ir.TCPKeepalive, error)
 	return ka, nil
 }
 
-func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, error) {
+func buildCircuitBreaker(policy *egv1a1.BackendSettings) (*ir.CircuitBreaker, error) {
 	if policy.CircuitBreaker == nil {
 		return nil, nil
 	}
@@ -314,7 +314,7 @@ func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, er
 	return cb, nil
 }
 
-func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error) {
+func buildLoadBalancer(policy *egv1a1.BackendSettings) (*ir.LoadBalancer, error) {
 	if policy.LoadBalancer == nil {
 		return nil, nil
 	}
@@ -514,7 +514,7 @@ func buildEndpointOverride(policy egv1a1.EndpointOverride) *ir.EndpointOverride 
 	return endpointOverride
 }
 
-func buildProxyProtocol(policy *egv1a1.ClusterSettings) *ir.ProxyProtocol {
+func buildProxyProtocol(policy *egv1a1.BackendSettings) *ir.ProxyProtocol {
 	if policy.ProxyProtocol == nil {
 		return nil
 	}
@@ -533,7 +533,7 @@ func buildProxyProtocol(policy *egv1a1.ClusterSettings) *ir.ProxyProtocol {
 	return pp
 }
 
-func buildHealthCheck(policy *egv1a1.ClusterSettings) *ir.HealthCheck {
+func buildHealthCheck(policy *egv1a1.BackendSettings) *ir.HealthCheck {
 	if policy.HealthCheck == nil {
 		return nil
 	}
@@ -717,7 +717,7 @@ func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.H
 	return irPayload
 }
 
-func translateDNS(policy *egv1a1.ClusterSettings, policyName string) *ir.DNS {
+func translateDNS(policy *egv1a1.BackendSettings, policyName string) *ir.DNS {
 	if policy.DNS == nil {
 		return nil
 	}

@@ -79,7 +79,6 @@ func (is *InfraSynthesizer) GetDeploymentContainers(ctx context.Context, ir *Inf
 		"--service-node", ir.Proxy.Name,
 		"--config-yaml", buf.String(),
 		"--log-level", "info",
-		"--cpuset-threads",
 		"--drain-strategy", "immediate",
 	}
 

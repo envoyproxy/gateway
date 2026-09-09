@@ -1181,6 +1181,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		name          string
 		configs       []client.Object
 		endpointSlice client.Object
+		namespace     string
+		envoyGateway  *egv1a1.EnvoyGateway
 		expect        bool
 	}{
 		{
@@ -1268,6 +1270,29 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "mirror-service", false),
 			expect:        true,
 		},
+		{
+			name:         "rate limit service endpointslice with global rate limit enabled",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			endpointSlice: test.GetEndpointSlice(
+				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+			expect: true,
+		},
+		{
+			name:      "rate limit service endpointslice but global rate limit disabled",
+			namespace: "envoy-gateway-system",
+			endpointSlice: test.GetEndpointSlice(
+				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+			expect: false,
+		},
+		{
+			name:         "endpointslice for an unrelated service named envoy-ratelimit in another namespace",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			endpointSlice: test.GetEndpointSlice(
+				types.NamespacedName{Namespace: "other-namespace", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+			expect: false,
+		},
 	}
 
 	// Create the reconciler.
@@ -1279,6 +1304,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.namespace = tc.namespace
+		r.envoyGateway = tc.envoyGateway
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -1381,6 +1408,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		tlsRouteCRDAbsent  bool
 		configs            []client.Object
 		service            client.Object
+		namespace          string
+		envoyGateway       *egv1a1.EnvoyGateway
 		expect             bool
 	}{
 		{
@@ -1725,6 +1754,26 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			}, nil),
 			expect: false,
 		},
+		{
+			name:         "rate limit service in controller namespace with global rate limit enabled",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			service:      test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceName}, nil, nil),
+			expect:       true,
+		},
+		{
+			name:      "rate limit service in controller namespace but global rate limit disabled",
+			namespace: "envoy-gateway-system",
+			service:   test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceName}, nil, nil),
+			expect:    false,
+		},
+		{
+			name:         "unrelated service named envoy-ratelimit in a different namespace",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			service:      test.GetService(types.NamespacedName{Namespace: "other-namespace", Name: rateLimitServiceName}, nil, nil),
+			expect:       false,
+		},
 	}
 
 	// Create the reconciler.
@@ -1745,6 +1794,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		r.grpcRouteCRDExists = !tc.grpcRouteCRDAbsent
 		r.tlsRouteCRDExists = !tc.tlsRouteCRDAbsent
+		r.namespace = tc.namespace
+		r.envoyGateway = tc.envoyGateway
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsRunningOnKubernetes(t *testing.T) {
@@ -429,4 +430,21 @@ func TestGetKubernetesInfrastructureConfiguration(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func TestDebounceDefaultsToDisabled(t *testing.T) {
+	eg := &EnvoyGateway{}
+	eg.SetEnvoyGatewayDefaults()
+
+	// Debouncing is opt in, so defaulting must not define the config, and defining
+	// it is what turns debouncing on.
+	require.Nil(t, eg.Debounce)
+	require.False(t, eg.Debounce.Enabled())
+	require.True(t, (&Debounce{}).Enabled())
+
+	// A config that sets no durations falls back to the advertised defaults.
+	after, maxHold, err := (&Debounce{}).ResolveDurations()
+	require.NoError(t, err)
+	require.Equal(t, DefaultDebounceAfter, after)
+	require.Equal(t, DefaultDebounceMax, maxHold)
 }

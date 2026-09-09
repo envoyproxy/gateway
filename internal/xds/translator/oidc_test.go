@@ -17,6 +17,31 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+// expectedCookieConfigs returns the cookie configs EG emits for the given SameSite
+// policy: the nonce and code verifier cookies are always scoped to the redirect path,
+// every cookie carries the SameSite policy.
+func expectedCookieConfigs(sameSite oauth2v3.CookieConfig_SameSite, redirectPath string) *oauth2v3.CookieConfigs {
+	return &oauth2v3.CookieConfigs{
+		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: sameSite},
+		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: sameSite, Path: redirectPath},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite, Path: redirectPath},
+	}
+}
+
+// expectedRedirectPathOnlyCookieConfigs returns the cookie configs EG emits when the
+// user did not configure SameSite: only the two flow cookies are configured, so the
+// session cookies keep Envoy's defaults.
+func expectedRedirectPathOnlyCookieConfigs(redirectPath string) *oauth2v3.CookieConfigs {
+	return &oauth2v3.CookieConfigs{
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{Path: redirectPath},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{Path: redirectPath},
+	}
+}
+
 func TestOIDCCookieConfigSameSite(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -24,94 +49,82 @@ func TestOIDCCookieConfigSameSite(t *testing.T) {
 		expect *oauth2v3.CookieConfigs
 	}{
 		{
-			name:   "defaults all cookie to unset/niul",
-			input:  ir.OIDC{},
-			expect: nil,
+			name:   "SameSite unset still scopes the flow cookies to the redirect path",
+			input:  ir.OIDC{RedirectPath: "/oauth2/callback"},
+			expect: expectedRedirectPathOnlyCookieConfigs("/oauth2/callback"),
 		},
 		{
 			name: "all cookie configs set to None",
 			input: ir.OIDC{
+				RedirectPath: "/oauth2/callback",
 				CookieConfig: &egv1a1.OIDCCookieConfig{
 					SameSite: new("None"),
 				},
 			},
-			expect: &oauth2v3.CookieConfigs{
-				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
-				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
-				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
-				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
-				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
-				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
-				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
-			},
+			expect: expectedCookieConfigs(oauth2v3.CookieConfig_NONE, "/oauth2/callback"),
 		},
 		{
 			name: "all cookie configs set to Lax",
 			input: ir.OIDC{
+				RedirectPath: "/oauth2/callback",
 				CookieConfig: &egv1a1.OIDCCookieConfig{
 					SameSite: new("Lax"),
 				},
 			},
-			expect: &oauth2v3.CookieConfigs{
-				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
-				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
-				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
-				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
-				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
-				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
-				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
-			},
+			expect: expectedCookieConfigs(oauth2v3.CookieConfig_LAX, "/oauth2/callback"),
 		},
 		{
 			name: "all cookie configs set to Strict",
 			input: ir.OIDC{
+				RedirectPath: "/oauth2/callback",
 				CookieConfig: &egv1a1.OIDCCookieConfig{
 					SameSite: new("Strict"),
 				},
 			},
-			expect: &oauth2v3.CookieConfigs{
-				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-			},
+			expect: expectedCookieConfigs(oauth2v3.CookieConfig_STRICT, "/oauth2/callback"),
 		},
 		{
 			name: "all cookie configs set to Disabled",
 			input: ir.OIDC{
+				RedirectPath: "/oauth2/callback",
 				CookieConfig: &egv1a1.OIDCCookieConfig{
 					SameSite: new("Disabled"),
 				},
 			},
-			expect: &oauth2v3.CookieConfigs{
-				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-			},
+			expect: expectedCookieConfigs(oauth2v3.CookieConfig_DISABLED, "/oauth2/callback"),
 		},
 		{
 			name: "cookie config received invalid SameSite value will default to Disabled",
 			input: ir.OIDC{
+				RedirectPath: "/oauth2/callback",
 				CookieConfig: &egv1a1.OIDCCookieConfig{
 					SameSite: new("InvalidValue"),
 				},
 			},
-			expect: &oauth2v3.CookieConfigs{
-				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
+			expect: expectedCookieConfigs(oauth2v3.CookieConfig_DISABLED, "/oauth2/callback"),
+		},
+		{
+			name: "a custom redirect path scopes the flow cookies to that path",
+			input: ir.OIDC{
+				RedirectPath: "/auth/callback",
+				CookieConfig: &egv1a1.OIDCCookieConfig{
+					SameSite: new("Lax"),
+				},
 			},
+			expect: expectedCookieConfigs(oauth2v3.CookieConfig_LAX, "/auth/callback"),
+		},
+		{
+			// Envoy defaults an empty cookie path to "/".
+			name:   "an empty redirect path leaves the cookie path unset",
+			input:  ir.OIDC{},
+			expect: expectedRedirectPathOnlyCookieConfigs(""),
+		},
+		{
+			// Envoy rejects ";" in a cookie path, and an invalid path would fail
+			// xDS validation and drop the route, so the path is left unset.
+			name:   "a redirect path Envoy rejects on a cookie leaves the cookie path unset",
+			input:  ir.OIDC{RedirectPath: "/oauth2;v2/callback"},
+			expect: expectedRedirectPathOnlyCookieConfigs(""),
 		},
 	}
 

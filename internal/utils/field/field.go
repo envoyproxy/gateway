@@ -41,7 +41,7 @@ func SetValue(s any, fieldName string, fieldValue any) error {
 	}
 
 	// Check if the input is a pointer.
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Pointer {
 		return errors.New("setValue: input is not a pointer")
 	}
 

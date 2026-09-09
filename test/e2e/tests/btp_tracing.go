@@ -10,6 +10,7 @@ package tests
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -31,6 +32,11 @@ var BTPTracingTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		gwNN := types.NamespacedName{Name: "tracing-otel", Namespace: ns}
+
+		WaitForPods(t, suite.Client, GetGatewayResourceNamespace(), map[string]string{
+			"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+			"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
+		}, corev1.PodRunning, &PodReady)
 
 		// For non-override, the tracing provider this's simply same as OpenTelemetryTracingTest
 		t.Run("NonOverride", func(t *testing.T) {

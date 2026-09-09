@@ -26,12 +26,13 @@ import (
 )
 
 const (
-	DefaultPurgeInterval         = 1 * time.Hour
-	DefaultModuleExpiry          = 24 * time.Hour
-	DefaultHTTPRequestTimeout    = 15 * time.Second
-	DefaultHTTPRequestMaxRetries = 5
-	DefaultPullTimeout           = 5 * time.Minute
-	DefaultMaxCacheSize          = 1024 * 1024 * 1024 // 1GB
+	DefaultPurgeInterval          = 1 * time.Hour
+	DefaultModuleExpiry           = 24 * time.Hour
+	DefaultHTTPRequestTimeout     = 15 * time.Second
+	DefaultHTTPRequestMaxRetries  = 5
+	DefaultPullTimeout            = 5 * time.Minute
+	DefaultPermissionCheckTimeout = 30 * time.Second
+	DefaultMaxCacheSize           = 1024 * 1024 * 1024 // 1GB
 )
 
 // CacheOptions contains configurations to create a Cache instance.

@@ -32,6 +32,8 @@ layered_runtime:
   layers:
   - name: global_config
     static_layer:
+      envoy.reloadable_features.oauth2_legacy_cbc_decrypt_compat: false
+      envoy.reloadable_features.oauth2_use_gcm_encryption: true
       envoy.restart_features.use_eds_cache_for_ads: false
       envoy.something.completely.made.up: arbitrary string
       re2.max_program_size.error_level: 4294967295
