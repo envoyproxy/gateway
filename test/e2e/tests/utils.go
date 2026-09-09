@@ -80,8 +80,12 @@ func TimeoutConfig() config.TimeoutConfig {
 	// The default value of RequiredConsecutiveSuccesses is 3,
 	// which means a test needs to pass 3 times in a row to be considered successful.
 	// This's not necessary for E2E test.
-	timeout.RequiredConsecutiveSuccesses = 0
+	timeout.RequiredConsecutiveSuccesses = 1
 	return timeout
+}
+
+func WaitForPodsReady(t *testing.T, cl client.Client, namespace string, selectors map[string]string) {
+	WaitForPods(t, cl, namespace, selectors, corev1.PodRunning, &PodReady)
 }
 
 // WaitForPods waits for the pods in the given namespace and with the given selector
@@ -939,20 +943,6 @@ func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption
 	if _, err := tb.CollectResult(t.Context(), rest, opts...); err != nil {
 		tlog.Logf(t, "failed to collect all data: %v", err)
 	}
-}
-
-func consistentHashDump(t *testing.T, rest *rest.Config) {
-	dumpedNamespaces := []string{"envoy-gateway-system"}
-	if IsGatewayNamespaceMode() {
-		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
-	}
-
-	runCollectAndDump(t, rest,
-		tb.WithCollectedNamespaces(dumpedNamespaces),
-		tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
-		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
-		tb.WithSelector("gateway.envoyproxy.io/owning-gateway-name=lb-backend-gateway"),
-	)
 }
 
 func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {

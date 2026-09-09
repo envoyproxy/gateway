@@ -802,6 +802,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil && !shouldDisableHTTP3ForClientValidation(policy, httpIR) {
 			http3 := &ir.HTTP3Settings{}
+			if policy.Spec.HTTP3.AdvertisedPort != nil {
+				http3.AdvertisedPort = new(uint32(*policy.Spec.HTTP3.AdvertisedPort))
+			}
 			httpIR.HTTP3 = http3
 			var proxyListenerIR *ir.ProxyListener
 			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
