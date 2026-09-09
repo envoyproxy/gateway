@@ -134,3 +134,7 @@ adopters:
     logo: "/logos/openai.svg"
     url: "https://openai.com/"
     description: ""
+  - name: "24metrics"
+    logo: "/logos/24metrics.svg"
+    url: "https://www.24metrics.com"
+    description: "24metrics uses Envoy Gateway to manage ingress traffic across its Kubernetes clusters, routing its ad fraud detection and tracking APIs, and using SecurityPolicy extAuth with oauth2-proxy to place internal tools behind SSO."
