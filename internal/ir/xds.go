@@ -3080,10 +3080,11 @@ type ReadyListener struct {
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
 type AccessLog struct {
-	Text          []*TextAccessLog          `json:"text,omitempty" yaml:"text,omitempty"`
-	JSON          []*JSONAccessLog          `json:"json,omitempty" yaml:"json,omitempty"`
-	ALS           []*ALSAccessLog           `json:"als,omitempty" yaml:"als,omitempty"`
-	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty" yaml:"openTelemetry,omitempty"`
+	Text            []*TextAccessLog          `json:"text,omitempty" yaml:"text,omitempty"`
+	JSON            []*JSONAccessLog          `json:"json,omitempty" yaml:"json,omitempty"`
+	ALS             []*ALSAccessLog           `json:"als,omitempty" yaml:"als,omitempty"`
+	OpenTelemetry   []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty" yaml:"openTelemetry,omitempty"`
+	OmitEmptyValues bool                      `json:"omitEmptyValues,omitempty" yaml:"omitEmptyValues,omitempty"`
 }
 
 // TextAccessLog holds the configuration for text access logging.
