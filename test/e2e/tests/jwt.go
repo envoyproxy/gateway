@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, JWTTest, OptionalJWTTest, LocalJWKSInlineTest, LocalJWKSValueRefTest)
+	ConformanceTests = append(ConformanceTests, JWTTest, JWTClaimPathTest, OptionalJWTTest, LocalJWKSInlineTest, LocalJWKSValueRefTest)
 }
 
 const (
@@ -32,6 +32,10 @@ const (
 	anotherToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkplcnJ5IiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.VKLURpaPLWanwE5xoGTfuYKqT9a91Fg1tRBAOyFzNa5t9SbtK8As7-3iJg4f_VlBHj13OeKjfpDEvgLerIt5TKnU708YKERB45di_7TNURoiVZayq3_gFznMqoSarP3irLDzh0YKUjc7Vuh3MX99fueTdbeA-c4pMhG_nwiFeRJhZNQQDzzKtmL9C_L2uwP4bDupmcYz6FAA2EN_r67WoXCjPWQoRQmE435EVQ-FYKgAR7qZ5TdjoSN91ByRQ7Ior9srPl7gOvjuaRbu7fjC-LT7wRE26v2vu-BCM2PveJf2NMobNb8q0pcmpB1TWhSXp1MIZs9yxbqEAZLOumYfUw"
 	// nolint: gosec
 	invalidToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+	// Signed with examples/kubernetes/jwt/key.json (verifiable with examples/kubernetes/jwt/jwks.json), carrying
+	// a URI-namespaced dotted claim: {"sub":"1234567890","name":"John Doe","https://example.com/claims/tenant_name":"acme","admin":true,"iat":1516239022}
+	// nolint: gosec
+	dottedClaimToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaHR0cHM6Ly9leGFtcGxlLmNvbS9jbGFpbXMvdGVuYW50X25hbWUiOiJhY21lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.ppJaxjBqAnRY5jNxEHfyvre85K1q34Ynlw8Hi1zgL_I0eWSUHNsgX10fTMLfvzX4f70N423QV0vqFao4jpEJBFN3HTUCIIPnQCwPJD7QdualSe98wqxWN99y-kilWkdsNVZUumm4QXIqBXVltXI2H9dX6Q-D0tevYEpfQNebB_B0GxZ2VkMVoemh_cQugAC3rSfoMsagbN3m6hVsSC_Yc53XAIEvgDhYbOA7GN3mYTju4fKlywagSbdVtHnB9-AJH2fVk0qWc79SyUZVA4sx8OKK3CCMi005MFheWZXs7cnIT1Ri2NefPmkkxNkqz6qddMKAaRE1f9NjZfNa8yeldyr2OmoISwD-zTD8TP3X_cDgr72pitOFF8k7wtWWWVT2_TEb5zGT_GEczDGcFpI9fcU4B86-62C5XOvsbSEjMgRd_dYxUisb87STUgLWku41VpmAoiKUoZlNMSwk2FFdILBOjU9Z7eZH6Q5tjou583u6Z24nKkQSSwc7DEF31zCV"
 )
 
 var JWTTest = suite.ConformanceTest{
@@ -99,6 +103,63 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 				},
 			},
 			Backend: "infra-backend-v2",
+			Response: http.Response{
+				StatusCodes: []int{401},
+			},
+			Namespace: ns,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
+			t.Parallel()
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
+		})
+	}
+}
+
+var JWTClaimPathTest = suite.ConformanceTest{
+	ShortName:   "JWTClaimPath",
+	Description: "JWT claimPath extraction of a dotted, URI-namespaced claim",
+	Manifests:   []string{"testdata/jwt-claim-path.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("jwt claim path routing", func(t *testing.T) {
+			testClaimPathBasedRouting(t, suite)
+		})
+	},
+}
+
+func testClaimPathBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
+	ns := "gateway-conformance-infra"
+	routeNN := types.NamespacedName{Name: "jwt-claim-path-routing", Namespace: ns}
+	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+	testCases := []http.ExpectedResponse{
+		{
+			TestCaseName: "dotted claim extracted and routed via x-tenant-name",
+			Request: http.Request{
+				Path: "/get",
+				Headers: map[string]string{
+					"Authorization": "Bearer " + dottedClaimToken,
+				},
+			},
+			Backend: "infra-backend-v1",
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		},
+		{
+			TestCaseName: "spoofed x-tenant-name header is not trusted without a valid JWT",
+			Request: http.Request{
+				Path: "/get",
+				Headers: map[string]string{
+					"x-tenant-name": "acme",
+				},
+			},
+			Backend: "infra-backend-v1",
 			Response: http.Response{
 				StatusCodes: []int{401},
 			},
