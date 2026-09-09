@@ -3229,11 +3229,17 @@ _Appears in:_
 
 
 HTTPHeaderFilter defines a filter that modifies the headers of an HTTP
-request or response. Only one action for a given header name is
-permitted. Filters specifying multiple actions of the same or different
-type for any one header name are invalid. Configuration to set or add
-multiple values for a header must use RFC 7230 header value formatting,
-separating each value with a comma.
+request or response.
+
+The Set, Add, AddIfAbsent, Remove and RemoveOnMatch fields permit only one
+action for a given header name. Specifying multiple actions of the same or
+different type for any one header name via those fields is invalid, and
+configuration to set or add multiple values for a header must use RFC 7230
+header value formatting, separating each value with a comma.
+
+The Mutations field has no such restriction. It is an ordered list, so the
+same header name may appear in any number of operations and each one is
+applied in turn.
 
 _Appears in:_
 - [HeaderSettings](#headersettings)
@@ -3277,9 +3283,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `header` | _[HTTPHeader](#httpheader)_ |  true  |  | Header is the header name and value to write. |
+| `header` | _[HTTPHeader](#httpheader)_ |  true  |  | Header is the header name and value to write. The value may contain<br />Envoy substitution format operators such as "%REQ(x-foo)%", which are<br />evaluated per request.<br />See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators |
 | `action` | _[HeaderWriteAction](#headerwriteaction)_ |  false  | Append | Action controls how the header value is written when a header with the<br />same name already exists. Defaults to Append. |
-| `keepEmptyValue` | _boolean_ |  false  |  | KeepEmptyValue controls whether a header with an empty value is kept.<br />When unset, an empty value is kept only if the provided value is empty. |
+| `keepEmptyValue` | _boolean_ |  false  |  | KeepEmptyValue controls whether the header is still written when its<br />value is empty. This matters for values produced by substitution<br />formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at<br />request time. Envoy drops such headers by default; set this to true to<br />keep them with an empty value.<br />When unset, it defaults to true only if the configured value itself is<br />the empty string, so a literal empty header is always written. |
 
 
 #### HTTPHostnameModifier

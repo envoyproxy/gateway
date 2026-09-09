@@ -401,6 +401,7 @@ spec:
                               description: |-
                                 Remove removes the named header if it exists. Header names are
                                 case-insensitive.
+                              minLength: 1
                               type: string
                             removeOnMatch:
                               description: |-
@@ -442,8 +443,11 @@ spec:
                                   - OverwriteIfExists
                                   type: string
                                 header:
-                                  description: Header is the header name and value
-                                    to write.
+                                  description: |-
+                                    Header is the header name and value to write. The value may contain
+                                    Envoy substitution format operators such as "%REQ(x-foo)%", which are
+                                    evaluated per request.
+                                    See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
                                   properties:
                                     name:
                                       description: |-
@@ -477,8 +481,14 @@ spec:
                                   type: object
                                 keepEmptyValue:
                                   description: |-
-                                    KeepEmptyValue controls whether a header with an empty value is kept.
-                                    When unset, an empty value is kept only if the provided value is empty.
+                                    KeepEmptyValue controls whether the header is still written when its
+                                    value is empty. This matters for values produced by substitution
+                                    formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at
+                                    request time. Envoy drops such headers by default; set this to true to
+                                    keep them with an empty value.
+
+                                    When unset, it defaults to true only if the configured value itself is
+                                    the empty string, so a literal empty header is always written.
                                   type: boolean
                               required:
                               - header
@@ -761,6 +771,7 @@ spec:
                               description: |-
                                 Remove removes the named header if it exists. Header names are
                                 case-insensitive.
+                              minLength: 1
                               type: string
                             removeOnMatch:
                               description: |-
@@ -802,8 +813,11 @@ spec:
                                   - OverwriteIfExists
                                   type: string
                                 header:
-                                  description: Header is the header name and value
-                                    to write.
+                                  description: |-
+                                    Header is the header name and value to write. The value may contain
+                                    Envoy substitution format operators such as "%REQ(x-foo)%", which are
+                                    evaluated per request.
+                                    See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
                                   properties:
                                     name:
                                       description: |-
@@ -837,8 +851,14 @@ spec:
                                   type: object
                                 keepEmptyValue:
                                   description: |-
-                                    KeepEmptyValue controls whether a header with an empty value is kept.
-                                    When unset, an empty value is kept only if the provided value is empty.
+                                    KeepEmptyValue controls whether the header is still written when its
+                                    value is empty. This matters for values produced by substitution
+                                    formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at
+                                    request time. Envoy drops such headers by default; set this to true to
+                                    keep them with an empty value.
+
+                                    When unset, it defaults to true only if the configured value itself is
+                                    the empty string, so a literal empty header is always written.
                                   type: boolean
                               required:
                               - header

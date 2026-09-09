@@ -1068,11 +1068,17 @@ type CustomRedirect struct {
 // Remove this definition and reuse the upstream one once it supports items more than 64
 
 // HTTPHeaderFilter defines a filter that modifies the headers of an HTTP
-// request or response. Only one action for a given header name is
-// permitted. Filters specifying multiple actions of the same or different
-// type for any one header name are invalid. Configuration to set or add
-// multiple values for a header must use RFC 7230 header value formatting,
-// separating each value with a comma.
+// request or response.
+//
+// The Set, Add, AddIfAbsent, Remove and RemoveOnMatch fields permit only one
+// action for a given header name. Specifying multiple actions of the same or
+// different type for any one header name via those fields is invalid, and
+// configuration to set or add multiple values for a header must use RFC 7230
+// header value formatting, separating each value with a comma.
+//
+// The Mutations field has no such restriction. It is an ordered list, so the
+// same header name may appear in any number of operations and each one is
+// applied in turn.
 type HTTPHeaderFilter struct {
 	// Mutations is an ordered list of header operations that are applied in
 	// exactly the order specified. Use this field when the sequence of
@@ -1206,6 +1212,7 @@ type HTTPHeaderMutation struct {
 	// case-insensitive.
 	//
 	// +optional
+	// +kubebuilder:validation:MinLength=1
 	Remove *string `json:"remove,omitempty"`
 
 	// RemoveOnMatch removes every header whose name matches the specified string
@@ -1219,7 +1226,10 @@ type HTTPHeaderMutation struct {
 // header with the same name already exists. It mirrors Envoy's
 // core.v3.HeaderValueOption.
 type HTTPHeaderWrite struct {
-	// Header is the header name and value to write.
+	// Header is the header name and value to write. The value may contain
+	// Envoy substitution format operators such as "%REQ(x-foo)%", which are
+	// evaluated per request.
+	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
 	Header gwapiv1.HTTPHeader `json:"header"`
 
 	// Action controls how the header value is written when a header with the
@@ -1229,8 +1239,14 @@ type HTTPHeaderWrite struct {
 	// +kubebuilder:default=Append
 	Action HeaderWriteAction `json:"action,omitempty"`
 
-	// KeepEmptyValue controls whether a header with an empty value is kept.
-	// When unset, an empty value is kept only if the provided value is empty.
+	// KeepEmptyValue controls whether the header is still written when its
+	// value is empty. This matters for values produced by substitution
+	// formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at
+	// request time. Envoy drops such headers by default; set this to true to
+	// keep them with an empty value.
+	//
+	// When unset, it defaults to true only if the configured value itself is
+	// the empty string, so a literal empty header is always written.
 	//
 	// +optional
 	KeepEmptyValue *bool `json:"keepEmptyValue,omitempty"`
