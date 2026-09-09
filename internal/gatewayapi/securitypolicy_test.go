@@ -778,7 +778,7 @@ func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 	}
 }
 
-func TestValidateAuthorizationJWTProviders(t *testing.T) {
+func TestBuildAuthorizationJWTProvider(t *testing.T) {
 	jwtWith := func(names ...string) *egv1a1.JWT {
 		providers := make([]egv1a1.JWTProvider, 0, len(names))
 		for _, name := range names {
@@ -811,7 +811,7 @@ func TestValidateAuthorizationJWTProviders(t *testing.T) {
 		{
 			name:          "no authorization rules",
 			jwt:           jwtWith("example"),
-			authorization: nil,
+			authorization: &egv1a1.Authorization{},
 		},
 		{
 			name: "principal without a jwt is ignored",
@@ -852,8 +852,9 @@ func TestValidateAuthorizationJWTProviders(t *testing.T) {
 				},
 			}
 
-			err := validateAuthorizationJWTProviders(policy)
-			require.Equal(t, tt.wantError, err != nil, "validateAuthorizationJWTProviders() error = %v", err)
+			translator := &Translator{}
+			_, err := translator.buildAuthorization(policy, &securityPolicyOwners{})
+			require.Equal(t, tt.wantError, err != nil, "buildAuthorization() error = %v", err)
 		})
 	}
 }

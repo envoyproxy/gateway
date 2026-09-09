@@ -44,7 +44,7 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -138,6 +138,41 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-typo-provider
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-no-policy
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /typo
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-no-policy
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
@@ -277,8 +312,8 @@ securityPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'Authorization rule 0: jwt provider "does-not-exist" is not defined
-          in jwt.providers.'
+        message: 'Authorization: unable to translate authorization rule: jwt provider
+          "does-not-exist" is not defined in jwt.providers.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -317,7 +352,53 @@ securityPolicies:
         sectionName: http-no-policy
       conditions:
       - lastTransitionTime: null
-        message: 'Authorization rule 0: jwt provider "example" is not defined in jwt.providers.'
+        message: 'Authorization: unable to translate authorization rule: jwt provider
+          "example" is not defined in jwt.providers.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-typo-provider
+    namespace: default
+  spec:
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-mygroup
+        principal:
+          jwt:
+            claims:
+            - name: roles
+              valueType: StringArray
+              values:
+              - mygroup
+            provider: does-not-exist
+    jwt:
+      providers:
+      - issuer: https://www.example.com
+        name: example
+        remoteJWKS:
+          uri: https://www.example.com/.well-known/jwks.json
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-typo-provider
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-no-policy
+      conditions:
+      - lastTransitionTime: null
+        message: 'Authorization: unable to translate authorization rule: jwt provider
+          "does-not-exist" is not defined in jwt.providers.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -477,6 +558,8 @@ xdsIR:
             name: httproute/default/httproute-unknown-provider/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -529,6 +612,8 @@ xdsIR:
             name: httproute/default/httproute-no-parent-policy/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -540,6 +625,46 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /no-parent
+        security: {}
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-typo-provider
+            namespace: default
+          name: httproute/default/httproute-typo-provider/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-typo-provider/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-typo-provider
+          namespace: default
+        name: httproute/default/httproute-typo-provider/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /typo
+        security:
+          jwt:
+            providers:
+            - issuer: https://www.example.com
+              name: example
+              remoteJWKS:
+                uri: https://www.example.com/.well-known/jwks.json
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

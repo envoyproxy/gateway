@@ -60,6 +60,23 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     namespace: default
+    name: httproute-typo-provider
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http-no-policy
+    rules:
+    - matches:
+      - path:
+          value: "/typo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
     name: httproute-no-parent-policy
   spec:
     parentRefs:
@@ -164,6 +181,37 @@ securityPolicies:
         principal:
           jwt:
             provider: example
+            claims:
+            - name: roles
+              valueType: StringArray
+              values:
+              - mygroup
+# Invalid: no merging is involved, so the provider must be defined by this
+# policy - "does-not-exist" is a typo that never matches a JWT provider.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-typo-provider
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-typo-provider
+    jwt:
+      providers:
+      - name: example
+        issuer: https://www.example.com
+        remoteJWKS:
+          uri: https://www.example.com/.well-known/jwks.json
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: allow-mygroup
+        action: Allow
+        principal:
+          jwt:
+            provider: does-not-exist
             claims:
             - name: roles
               valueType: StringArray

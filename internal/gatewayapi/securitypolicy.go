@@ -511,30 +511,28 @@ func (t *Translator) processSecurityPolicyForRoute(
 		return
 	}
 
-	// Protocol-specific validation: pick the appropriate validator and message.
-	// A merging policy is only complete once it has been merged - its authorization
-	// rules may reference a JWT provider that the parent policy defines - so each
-	// branch below validates at the point where the policy is whole.
+	// Protocol-specific validation: pick the appropriate validator and message,
+	// then run it once to keep the flow linear and easier to read.
 	validator := validateSecurityPolicy
 	errMsg := "invalid SecurityPolicy"
 	if currTarget.Kind == resource.KindTCPRoute {
 		validator = validateSecurityPolicyForTCP
 		errMsg = "invalid SecurityPolicy for TCP route"
 	}
+	if err := validator(policy); err != nil {
+		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+			ancestorRefs,
+			t.GatewayControllerName,
+			policy.Generation,
+			status.Error2ConditionMsg(fmt.Errorf("%s: %w", errMsg, err)),
+		)
+
+		return
+	}
 
 	// Check if merging is enabled
 	if policy.Spec.MergeType == nil {
-		// No merging - validate and translate the policy as it was written.
-		if err := validator(policy); err != nil {
-			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
-				t.GatewayControllerName,
-				policy.Generation,
-				status.Error2ConditionMsg(fmt.Errorf("%s: %w", errMsg, err)),
-			)
-			return
-		}
-
+		// No merging - use existing translation logic
 		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
@@ -591,20 +589,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				if parentPolicy == nil {
-					// No parent policy found, fall back to the current policy. Nothing was
-					// inherited, so validate the policy exactly as it was written.
-					if err := validator(policy); err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
-							policy.Generation,
-						)
-						continue
-					}
-
+					// No parent policy found, fall back to current policy
 					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
@@ -983,39 +968,7 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 			return err
 		}
 	}
-
-	if err := validateAuthorizationJWTProviders(p); err != nil {
-		return err
-	}
 	return nil
-}
-
-// validateAuthorizationJWTProviders ensures every JWT principal in the authorization
-// rules references a JWT provider that the policy defines.
-func validateAuthorizationJWTProviders(p *egv1a1.SecurityPolicy) error {
-	if p.Spec.Authorization == nil {
-		return nil
-	}
-
-	providers := sets.New[string]()
-	if p.Spec.JWT != nil {
-		for _, provider := range p.Spec.JWT.Providers {
-			providers.Insert(provider.Name)
-		}
-	}
-
-	var errs []error
-	for i, rule := range p.Spec.Authorization.Rules {
-		if rule.Principal == nil || rule.Principal.JWT == nil {
-			continue
-		}
-		if !providers.Has(rule.Principal.JWT.Provider) {
-			errs = append(errs, fmt.Errorf(
-				"authorization rule %d: jwt provider %q is not defined in jwt.providers",
-				i, rule.Principal.JWT.Provider))
-		}
-	}
-	return errors.Join(errs...)
 }
 
 // validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
@@ -3079,7 +3032,17 @@ func (t *Translator) buildAuthorization(
 		irAuth        = &ir.Authorization{}
 		// The default action is Deny if not specified
 		defaultAction = egv1a1.AuthorizationActionDeny
+		// The JWT providers this policy resolves a rule's JWT principal against. For a
+		// merging policy this is the merged set, so a rule may reference a provider that
+		// only the parent policy defines.
+		jwtProviders = sets.New[string]()
 	)
+
+	if policy.Spec.JWT != nil {
+		for _, provider := range policy.Spec.JWT.Providers {
+			jwtProviders.Insert(provider.Name)
+		}
+	}
 
 	ownerPolicy := policyOwnerOr(owners.authorizationRules, policy)
 
@@ -3100,6 +3063,13 @@ func (t *Translator) buildAuthorization(
 				}
 
 				irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
+			}
+
+			// The JWT provider name is the key the JWT authn filter writes its payload
+			// under, so a rule naming a provider that is not configured can never match.
+			// Reject it here instead of silently never matching the rule.
+			if rule.Principal.JWT != nil && !jwtProviders.Has(rule.Principal.JWT.Provider) {
+				return nil, fmt.Errorf("unable to translate authorization rule: jwt provider %q is not defined in jwt.providers", rule.Principal.JWT.Provider)
 			}
 
 			irPrincipal.JWT = rule.Principal.JWT
